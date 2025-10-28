@@ -90,19 +90,19 @@ const mockClients = [
   }
 ]
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   'active': 'bg-green-100 text-green-800',
   'prospect': 'bg-blue-100 text-blue-800',
   'inactive': 'bg-gray-100 text-gray-800'
 }
 
-const performanceIcons = {
+const performanceIcons: Record<string, any> = {
   'up': TrendingUp,
   'down': TrendingDown,
   'neutral': BarChart3
 }
 
-const performanceColors = {
+const performanceColors: Record<string, string> = {
   'up': 'text-green-600',
   'down': 'text-red-600',
   'neutral': 'text-gray-600'

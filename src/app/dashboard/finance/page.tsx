@@ -77,7 +77,7 @@ const mockInvoices = [
   }
 ]
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   'draft': 'bg-gray-100 text-gray-800',
   'sent': 'bg-blue-100 text-blue-800',
   'paid': 'bg-green-100 text-green-800',
@@ -300,10 +300,10 @@ export default function FinancePage() {
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900">
-                      ${[(25000, 18000, 12000, 15000)][index].toLocaleString()}
+                      ${([25000, 18000, 12000, 15000][index]).toLocaleString()}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {[(15, 12, 8, 10)][index]}% of total
+                      {[15, 12, 8, 10][index]}% of total
                     </p>
                   </div>
                 </div>

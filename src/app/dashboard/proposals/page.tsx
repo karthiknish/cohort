@@ -64,14 +64,14 @@ const mockProposals = [
   }
 ]
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   'draft': 'bg-gray-100 text-gray-800',
   'sent': 'bg-blue-100 text-blue-800',
   'accepted': 'bg-green-100 text-green-800',
   'rejected': 'bg-red-100 text-red-800'
 }
 
-const statusIcons = {
+const statusIcons: Record<string, any> = {
   'draft': Clock,
   'sent': Send,
   'accepted': CheckCircle,

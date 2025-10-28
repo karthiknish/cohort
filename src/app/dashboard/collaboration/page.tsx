@@ -104,7 +104,7 @@ const mockMessages = [
   }
 ]
 
-const channelTypeColors = {
+const channelTypeColors: Record<string, string> = {
   'client': 'bg-blue-100 text-blue-800',
   'team': 'bg-green-100 text-green-800',
   'project': 'bg-purple-100 text-purple-800'

@@ -11,7 +11,7 @@ import { collection, addDoc, getDocs } from 'firebase/firestore'
 export const signInWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider()
-    const result = await signInWithPopup(auth, user)
+    const result = await signInWithPopup(auth, provider)
     return result.user
   } catch (error) {
     console.error('Error signing in with Google:', error)

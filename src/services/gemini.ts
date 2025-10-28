@@ -200,7 +200,7 @@ export class GeminiAIService {
       Key Metrics:
       Total Spend: $${metrics?.reduce((sum, m) => sum + m.spend, 0).toFixed(2)}
       Total Revenue: $${metrics?.reduce((sum, m) => sum + m.revenue, 0).toFixed(2)}
-      Average ROAS: ${(metrics?.reduce((sum, m) => sum + m.roas, 0) / (metrics?.length || 1)).toFixed(2)}
+      Average ROAS: ${metrics ? (metrics.reduce((sum, m) => sum + m.roas, 0) / metrics.length).toFixed(2) : '0.00'}
       Total Clicks: ${metrics?.reduce((sum, m) => sum + m.clicks, 0)}
       Total Conversions: ${metrics?.reduce((sum, m) => sum + m.conversions, 0)}
       
