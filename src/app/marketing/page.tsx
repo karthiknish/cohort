@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import Chatbot from '@/components/chatbot'
 import { 
   BarChart3, 
   Users, 
@@ -471,6 +472,7 @@ export default function MarketingPage() {
           </div>
         </div>
       </footer>
+      <Chatbot />
     </div>
   )
 }
