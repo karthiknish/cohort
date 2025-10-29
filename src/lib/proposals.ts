@@ -1,4 +1,4 @@
-import { serverTimestamp } from 'firebase/firestore'
+import { Timestamp, serverTimestamp } from 'firebase/firestore'
 import { z } from 'zod'
 
 export const proposalFormSchema = z.object({
@@ -73,7 +73,7 @@ export function mergeProposalForm(partial?: Partial<ProposalFormData> | null): P
   }
 }
 
-export function buildProposalDocument(input: ProposalDraftInput, userId: string) {
+export function buildProposalDocument(input: ProposalDraftInput, userId: string, timestampValue: unknown = serverTimestamp()) {
   const baseData = proposalDraftSchema.parse(input)
   const mergedForm = mergeProposalForm(baseData.formData as Partial<ProposalFormData>)
 
@@ -84,17 +84,17 @@ export function buildProposalDocument(input: ProposalDraftInput, userId: string)
     formData: mergedForm,
     aiInsights: null,
     pdfUrl: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    lastAutosaveAt: serverTimestamp(),
+    createdAt: timestampValue,
+    updatedAt: timestampValue,
+    lastAutosaveAt: timestampValue,
   }
 }
 
-export function sanitizeProposalUpdate(data: Partial<ProposalDraftInput>) {
+export function sanitizeProposalUpdate(data: Partial<ProposalDraftInput>, timestampValue: unknown = serverTimestamp()) {
   const parsed = proposalDraftSchema.partial().parse(data)
   const updates: Record<string, unknown> = {
-    updatedAt: serverTimestamp(),
-    lastAutosaveAt: serverTimestamp(),
+    updatedAt: timestampValue,
+    lastAutosaveAt: timestampValue,
   }
 
   if (parsed.status) {
@@ -140,18 +140,57 @@ export function sanitizeProposalUpdate(data: Partial<ProposalDraftInput>) {
   return updates
 }
 
-export function serializeProposalDoc(doc: any) {
+type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
+
+interface FirestoreProposalDoc {
+  id?: string | null
+  status?: string | null
+  stepProgress?: number | null
+  formData?: Partial<ProposalFormData> | null
+  aiInsights?: unknown
+  pdfUrl?: string | null
+  createdAt?: TimestampLike
+  updatedAt?: TimestampLike
+  lastAutosaveAt?: TimestampLike
+}
+
+export function serializeProposalDoc(doc: FirestoreProposalDoc | null | undefined) {
   if (!doc) return null
-  const formData = mergeProposalForm(doc.formData)
+  const formData = mergeProposalForm(doc.formData ?? undefined)
   return {
     id: doc.id ?? null,
     status: doc.status ?? 'draft',
-    stepProgress: doc.stepProgress ?? 0,
+    stepProgress: typeof doc.stepProgress === 'number' ? doc.stepProgress : 0,
     formData,
     aiInsights: doc.aiInsights ?? null,
     pdfUrl: doc.pdfUrl ?? null,
-    createdAt: doc.createdAt ?? null,
-    updatedAt: doc.updatedAt ?? null,
-    lastAutosaveAt: doc.lastAutosaveAt ?? null,
+    createdAt: serializeTimestamp(doc.createdAt),
+    updatedAt: serializeTimestamp(doc.updatedAt),
+    lastAutosaveAt: serializeTimestamp(doc.lastAutosaveAt),
   }
+}
+
+function serializeTimestamp(value: TimestampLike): string | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString()
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (typeof value === 'object' && typeof value.toDate === 'function') {
+    const date = value.toDate()
+    return date instanceof Date ? date.toISOString() : null
+  }
+
+  return null
 }

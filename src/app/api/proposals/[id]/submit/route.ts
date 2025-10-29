@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { FieldValue } from 'firebase-admin/firestore'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { mergeProposalForm } from '@/lib/proposals'
+import type { ProposalFormData } from '@/lib/proposals'
 import { geminiAI } from '@/services/gemini'
 
 interface SubmitBody {
@@ -29,63 +30,91 @@ export async function POST(
     const body = (await request.json().catch(() => ({}))) as SubmitBody
     const deliveryMode = body.delivery ?? 'summary'
 
-    const proposalRef = doc(db, `users/${auth.uid}/proposals/${proposalId}`)
-    const proposalSnap = await getDoc(proposalRef)
+    const proposalRef = adminDb
+      .collection('users')
+      .doc(auth.uid)
+      .collection('proposals')
+      .doc(proposalId)
+    const proposalSnap = await proposalRef.get()
 
-    if (!proposalSnap.exists()) {
+    if (!proposalSnap.exists) {
       return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
     }
 
-    const proposalData = proposalSnap.data()
+    const proposalData = proposalSnap.data() as Record<string, unknown>
+    const ownerId = typeof proposalData.ownerId === 'string' ? proposalData.ownerId : null
 
-    if (proposalData.ownerId && proposalData.ownerId !== auth.uid) {
+    if (ownerId && ownerId !== auth.uid) {
       return NextResponse.json({ error: 'Not authorized to submit this proposal' }, { status: 403 })
     }
 
-    const formData = mergeProposalForm(proposalData.formData)
+    const formDataRaw = proposalData.formData
+    const formData = mergeProposalForm(
+      formDataRaw && typeof formDataRaw === 'object'
+        ? (formDataRaw as Partial<ProposalFormData>)
+        : null
+    )
 
-    await updateDoc(proposalRef, {
+    await proposalRef.update({
       status: 'in_progress',
-      updatedAt: serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     const summaryPrompt = buildProposalSummaryPrompt(formData)
 
     let summary: string | null = null
+    let generationError: unknown = null
     try {
       summary = await geminiAI.generateContent(summaryPrompt)
     } catch (err) {
       console.error('[ProposalSubmit] AI generation failed', err)
+      generationError = err ?? new Error('Failed to generate proposal summary')
       summary = null
     }
 
+    const existingInsights = proposalData.aiInsights
     const aiInsights = summary
       ? {
           type: 'summary',
           content: summary,
-          generatedAt: serverTimestamp(),
+          generatedAt: FieldValue.serverTimestamp(),
         }
-      : proposalData.aiInsights ?? null
+      : (typeof existingInsights === 'object' && existingInsights !== null ? existingInsights : null)
+
+    const nextStatus: 'ready' | 'in_progress' = summary ? 'ready' : 'in_progress'
 
     const updates: Record<string, unknown> = {
-      status: summary ? 'ready' : 'in_progress',
+      status: nextStatus,
       aiInsights,
-      updatedAt: serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
 
     if (deliveryMode === 'summary_and_pdf') {
       // Placeholder for future PDF generation
-      updates.pdfUrl = proposalData.pdfUrl ?? null
+      updates.pdfUrl = typeof proposalData.pdfUrl === 'string' ? proposalData.pdfUrl : null
     }
 
-    await updateDoc(proposalRef, updates)
+    await proposalRef.update(updates)
+
+    if (generationError) {
+      const message = 'Unable to generate an AI summary right now. Please try again in a few minutes.'
+      return NextResponse.json(
+        {
+          ok: false,
+          status: nextStatus,
+          aiInsights: null,
+          error: message,
+        },
+        { status: 503 }
+      )
+    }
 
     return NextResponse.json({
       ok: true,
-      status: updates.status,
+      status: nextStatus,
       aiInsights: summary,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp, collection, getDocs } from 'firebase/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 
 export async function GET(request: NextRequest) {
@@ -22,8 +22,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
-    const integrationsRef = collection(db, 'users', userId, 'adIntegrations')
-    const snapshot = await getDocs(integrationsRef)
+    const snapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('adIntegrations')
+      .get()
 
     const toISO = (value: unknown) => {
       if (!value) return null
@@ -31,14 +34,19 @@ export async function GET(request: NextRequest) {
         return value.toDate().toISOString()
       }
       // Handle Firestore timestamp-like objects
-      if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        'toDate' in value &&
+        typeof (value as { toDate?: () => Date }).toDate === 'function'
+      ) {
         return (value as Timestamp).toDate().toISOString()
       }
       return value as string
     }
 
     const statuses = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data() as Record<string, any>
+      const data = docSnap.data() as Record<string, unknown>
       return {
         providerId: docSnap.id,
         status: (data.lastSyncStatus as string | undefined) ?? 'never',
@@ -50,7 +58,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ statuses })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }

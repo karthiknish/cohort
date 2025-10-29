@@ -1,20 +1,19 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { AuthUser, authService } from '@/services/auth'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { AuthUser, SignUpData, authService } from '@/services/auth'
 
 interface AuthContextType {
   user: AuthUser | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<AuthUser>
   signInWithGoogle: () => Promise<AuthUser>
-  signInWithFacebook: () => Promise<AuthUser>
-  signInWithLinkedIn: () => Promise<AuthUser>
   connectGoogleAdsAccount: () => Promise<void>
   connectFacebookAdsAccount: () => Promise<void>
   connectLinkedInAdsAccount: () => Promise<void>
+  startMetaOauth: (redirect?: string) => Promise<{ url: string }>
   getIdToken: () => Promise<string>
-  signUp: (data: { email: string; password: string; name: string; agencyName: string }) => Promise<AuthUser>
+  signUp: (data: SignUpData) => Promise<AuthUser>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updateProfile: (data: Partial<AuthUser>) => Promise<AuthUser>
@@ -39,36 +38,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const applyUser = useCallback((authUser: AuthUser | null) => {
+    setUser(authUser)
+    void syncSessionCookies(authUser)
+  }, [])
+
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged((authUser) => {
-      setUser(authUser)
+      applyUser(authUser)
       setLoading(false)
     })
 
     return unsubscribe
-  }, [])
+  }, [applyUser])
 
   const signIn = async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true)
     try {
       const authUser = await authService.signIn(email, password)
-      setUser(authUser)
+      applyUser(authUser)
       return authUser
     } finally {
       setLoading(false)
     }
   }
 
-  const signUp = async (data: {
-    email: string
-    password: string
-    name: string
-    agencyName: string
-  }): Promise<AuthUser> => {
+  const signUp = async (data: SignUpData): Promise<AuthUser> => {
     setLoading(true)
     try {
       const authUser = await authService.signUp(data)
-      setUser(authUser)
+      applyUser(authUser)
       return authUser
     } finally {
       setLoading(false)
@@ -79,29 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       const authUser = await authService.signInWithGoogle()
-      setUser(authUser)
-      return authUser
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const signInWithFacebook = async (): Promise<AuthUser> => {
-    setLoading(true)
-    try {
-      const authUser = await authService.signInWithFacebook()
-      setUser(authUser)
-      return authUser
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const signInWithLinkedIn = async (): Promise<AuthUser> => {
-    setLoading(true)
-    try {
-      const authUser = await authService.signInWithLinkedIn()
-      setUser(authUser)
+      applyUser(authUser)
       return authUser
     } finally {
       setLoading(false)
@@ -112,7 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       await authService.signOut()
-      setUser(null)
+      applyUser(null)
     } finally {
       setLoading(false)
     }
@@ -124,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const updateProfile = async (data: Partial<AuthUser>): Promise<AuthUser> => {
     const authUser = await authService.updateProfile(data)
-    setUser(authUser)
+    applyUser(authUser)
     return authUser
   }
 
@@ -144,6 +121,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.connectLinkedInAdsAccount()
   }
 
+  const startMetaOauth = async (redirect?: string) => {
+    return await authService.startMetaOauth(redirect)
+  }
+
   const getIdToken = async () => {
     return await authService.getIdToken()
   }
@@ -153,11 +134,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     signIn,
     signInWithGoogle,
-    signInWithFacebook,
-    signInWithLinkedIn,
     connectGoogleAdsAccount,
     connectFacebookAdsAccount,
     connectLinkedInAdsAccount,
+    startMetaOauth,
     getIdToken,
     signUp,
     signOut,
@@ -171,4 +151,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+async function syncSessionCookies(authUser: AuthUser | null) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    if (!authUser) {
+      clearCookie('cohorts_token')
+      clearCookie('cohorts_role')
+      return
+    }
+
+    const token = await authService.getIdToken()
+    setCookie('cohorts_token', token, 60 * 60)
+    setCookie('cohorts_role', authUser.role, 60 * 60)
+  } catch (error) {
+    console.error('Failed to sync auth cookies', error)
+    clearCookie('cohorts_token')
+    clearCookie('cohorts_role')
+  }
+}
+
+function setCookie(name: string, value: string, maxAgeSeconds: number) {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}`
+}
+
+function clearCookie(name: string) {
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`
 }

@@ -1,165 +1,218 @@
+import { ChatConversationTurn, ChatbotResponse, ChatbotAction } from '@/types/chatbot'
+
 import { geminiAI } from './gemini'
 
-export interface ChatbotResponse {
-  message: string
-  suggestions?: string[]
-  actions?: Array<{
-    label: string
-    url: string
-  }>
+interface GenerateResponseOptions {
+  conversation?: ChatConversationTurn[]
+  context?: Record<string, unknown>
 }
 
-class ChatbotService {
-  private contextData: any = null
+const DEFAULT_SUGGESTIONS = [
+  'Show analytics overview',
+  'Review my upcoming tasks',
+  'Summarize client performance',
+  'Explain financial health'
+]
 
-  setContext(data: any) {
+const PLATFORM_MODULES: Array<ChatbotAction & { description: string }> = [
+  {
+    label: 'Go to Analytics',
+    url: '/dashboard/analytics',
+    description: 'Campaign performance dashboards, ROAS, and spend trends.'
+  },
+  {
+    label: 'Manage Tasks',
+    url: '/dashboard/tasks',
+    description: 'Task tracking, prioritization, and assignments.'
+  },
+  {
+    label: 'View Clients',
+    url: '/dashboard/clients',
+    description: 'Client health, revenue, and performance summaries.'
+  },
+  {
+    label: 'Review Proposals',
+    url: '/dashboard/proposals',
+    description: 'Proposal pipeline, drafts, and approvals.'
+  },
+  {
+    label: 'Finance Overview',
+    url: '/dashboard/finance',
+    description: 'Revenue, expenses, invoices, and profitability insights.'
+  }
+]
+
+class ChatbotService {
+  private contextData: Record<string, unknown> | null = null
+
+  setContext(data: Record<string, unknown>) {
     this.contextData = data
   }
 
-  async generateResponse(userMessage: string, userContext?: any): Promise<ChatbotResponse> {
-    const lowercaseMessage = userMessage.toLowerCase()
-    
-    if (lowercaseMessage.includes('show me my analytics') || lowercaseMessage.includes('analytics dashboard')) {
-      return {
-        message: 'Opening your analytics dashboard... 📊\n\nHere are your key metrics:\n• **Total Revenue**: $276,000 (+35% vs last month)\n• **ROAS**: 4.2x across all platforms\n• **Top Performer**: Google Ads with 5.1x ROAS\n• **Total Spend**: $65,700\n\n[View detailed analytics →](/dashboard/analytics)',
-        suggestions: [
-          'Show platform breakdown',
-          'Compare with last month',
-          'Export report'
-        ],
-        actions: [
-          { label: 'Go to Analytics', url: '/dashboard/analytics' }
-        ]
-      }
-    }
-
-    if (lowercaseMessage.includes('upcoming tasks') || lowercaseMessage.includes('my tasks')) {
-      return {
-        message: 'You have 5 tasks pending: ✅\n\n**High Priority:**\n• Q4 Campaign Review - Due Today\n• Client Proposal for Tech Corp - Due Tomorrow\n\n**Medium Priority:**\n• Budget optimization for StartupXYZ\n• Team meeting preparation\n\n**Low Priority:**\n• Update client documentation\n\n[View all tasks →](/dashboard/tasks)',
-        suggestions: [
-          'Help me prioritize tasks',
-          'Mark task as complete',
-          'Create new task'
-        ],
-        actions: [
-          { label: 'Manage Tasks', url: '/dashboard/tasks' }
-        ]
-      }
-    }
-
-    if (lowercaseMessage.includes('client performance') || lowercaseMessage.includes('client insights')) {
-      return {
-        message: 'Client Performance Summary 👥\n\n**Active Clients**: 4\n• Tech Corp: $87,000 revenue (↑ 15%)\n• StartupXYZ: $62,000 revenue (↑ 8%)\n• Retail Store LLC: $58,000 revenue (↑ 12%)\n• Fashion Brand Co.: $69,000 revenue (↓ 3%)\n\n**⚠️ Alert**: Fashion Brand shows declining performance. I recommend a strategy review.\n\n[View all clients →](/dashboard/clients)',
-        suggestions: [
-          'Show detailed client reports',
-          'Optimize Fashion Brand campaigns',
-          'Client meeting preparation'
-        ],
-        actions: [
-          { label: 'View Clients', url: '/dashboard/clients' }
-        ]
-      }
-    }
-
-    if (lowercaseMessage.includes('create proposal') || lowercaseMessage.includes('new proposal')) {
-      return {
-        message: 'I can help you create a professional proposal! 📝\n\n**Recent Proposals:**\n• Tech Corp: Sent ($45,000) - Pending response\n• StartupXYZ: Accepted ($32,000)\n• Retail Store: Draft ($28,000)\n\n**Choose a template:**\n1. Full-Service Marketing Package\n2. Performance-Based Campaign\n3. Consulting Retainer\n\nWhich client and service type would you like to propose?',
-        suggestions: [
-          'Full-Service Marketing Package',
-          'Performance-Based Campaign',
-          'Consulting Retainer'
-        ],
-        actions: [
-          { label: 'Create Proposal', url: '/dashboard/proposals' }
-        ]
-      }
-    }
-
-    if (lowercaseMessage.includes('financial status') || lowercaseMessage.includes('finance overview')) {
-      return {
-        message: 'Financial Overview 💰\n\n**This Month:**\n• Total Revenue: $276,000\n• Total Expenses: $89,500\n• Net Profit: $186,500\n• Profit Margin: 67.6%\n\n**Outstanding Invoices:**\n• Tech Corp: $45,000 (Due in 5 days)\n• Fashion Brand: $38,000 (⚠️ Overdue by 2 days)\n\n**Cash Flow**: Healthy with 3 months runway\n\n[View finance dashboard →](/dashboard/finance)',
-        suggestions: [
-          'Show payment schedule',
-          'Generate invoice',
-          'Profit analysis'
-        ],
-        actions: [
-          { label: 'View Finance', url: '/dashboard/finance' }
-        ]
-      }
-    }
-
-    if (lowercaseMessage.includes('help') || lowercaseMessage.includes('what can you do')) {
-      return {
-        message: 'I\'m your Cohorts AI assistant! 🤖\n\n**I can help you with:**\n\n📊 **Analytics** - Performance metrics, ROAS, campaign insights\n📋 **Task Management** - Track priorities, deadlines, assignments\n👥 **Client Management** - Performance summaries, client insights\n📝 **Proposals** - Create templates, track status, generate content\n💰 **Finance** - Revenue tracking, invoice management, profit analysis\n🤖 **AI Insights** - Get recommendations and predictions\n\n**Just ask me anything** about your marketing agency operations!',
-        suggestions: [
-          'Show me my analytics',
-          'What are my upcoming tasks?',
-          'Client performance summary',
-          'Financial overview'
-        ]
-      }
-    }
+  async generateResponse(userMessage: string, options?: GenerateResponseOptions): Promise<ChatbotResponse> {
+    const prompt = this.buildPrompt(userMessage, options)
 
     try {
-      const aiPrompt = `
-        You are a helpful marketing agency assistant for Cohorts. The user is asking: "${userMessage}"
-        
-        Current context:
-        - This is a marketing agency management platform
-        - The user has access to analytics, client management, tasks, finance, and proposals
-        - Provide helpful, actionable responses
-        - Be conversational and friendly
-        - Include relevant metrics and insights when appropriate
-        - Format responses with markdown for readability
-        
-        If the question is about marketing strategies, provide expert advice.
-        If it's about data, reference typical agency metrics.
-        If it's about operations, suggest practical next steps.
-      `
-      
-      const aiResponse = await geminiAI.generateContent(aiPrompt)
-      return {
-        message: aiResponse,
-        suggestions: [
-          'Tell me more',
-          'How can I implement this?',
-          'Show me related data'
-        ]
-      }
+      const aiResponse = await geminiAI.generateContent(prompt)
+      return this.parseResponse(aiResponse)
     } catch (error) {
       console.error('Chatbot AI service error:', error)
-      
+
       return {
-        message: `I understand you're asking about "${userMessage}". Let me help you with that!\n\nBased on your Cohorts data, I can provide insights and recommendations. Would you like me to:\n\n1. **Show relevant dashboard metrics**\n2. **Provide actionable insights**\n3. **Help you create a plan**\n\nWhat would be most helpful right now?`,
-        suggestions: [
-          'Show analytics',
-          'Review tasks',
-          'Check finances',
-          'Client insights'
-        ]
+        message: "I couldn't reach the AI just now, but I'm still here to help. Try asking again or jump into a section below.",
+        suggestions: DEFAULT_SUGGESTIONS,
+        actions: PLATFORM_MODULES.slice(0, 3).map(({ label, url }) => ({ label, url }))
       }
     }
   }
 
   async getInsights(platform?: string) {
     const prompt = `Provide 3 key insights and recommendations for a marketing agency${platform ? ` focusing on ${platform} ads` : ''}. Include specific metrics and actionable advice.`
-    
+
     try {
       return await geminiAI.generateContent(prompt)
-    } catch (error) {
+    } catch {
       return "I'm unable to generate AI insights right now, but here are some general recommendations:\n\n• Focus on improving ROAS across all platforms\n• Review underperforming campaigns\n• Optimize ad spend allocation\n• Test new creatives and audiences"
     }
   }
 
-  async generateSummary(data: any, type: 'client' | 'campaign' | 'financial') {
-    let prompt = `Generate a concise summary for ${type} performance: ${JSON.stringify(data)}`
-    
+  async generateSummary(data: unknown, type: 'client' | 'campaign' | 'financial') {
+    const prompt = `Generate a concise summary for ${type} performance: ${JSON.stringify(data)}`
+
     try {
       return await geminiAI.generateContent(prompt)
-    } catch (error) {
-      return `Summary: Based on the data provided, performance shows room for improvement. Key areas to focus include optimization and strategic adjustments.`
+    } catch {
+      return 'Summary: Based on the data provided, performance shows room for improvement. Key areas to focus include optimization and strategic adjustments.'
     }
+  }
+
+  private buildPrompt(userMessage: string, options?: GenerateResponseOptions): string {
+    const history = this.formatConversation(options?.conversation)
+    const moduleDescriptions = PLATFORM_MODULES.map(
+      ({ label, url, description }) => `- ${label} (${url}): ${description}`
+    ).join('\n')
+
+    const contextSnippets: string[] = []
+
+    if (this.contextData) {
+      contextSnippets.push(`Saved context: ${JSON.stringify(this.contextData)}`)
+    }
+
+    if (options?.context) {
+      contextSnippets.push(`Runtime context: ${JSON.stringify(options.context)}`)
+    }
+
+    const additionalContext = contextSnippets.length
+      ? contextSnippets.join('\n')
+      : 'No additional context provided.'
+
+    return `You are Cohorts AI Assistant, a marketing agency copilot inside a dashboard application.\n\nPlatform modules you can reference:\n${moduleDescriptions}\n\nAdditional context:\n${additionalContext}\n\nConversation so far:\n${history}\n\nLatest user request: "${userMessage}"\n\nRespond with a single JSON object, with no markdown fences or extra text. Use this shape:\n{\n  "reply": "markdown-ready answer summarizing insights and next steps",\n  "suggestions": ["optional follow-up prompt", "..."],\n  "actions": [{"label": "Action label", "url": "/dashboard/..."}]\n}\n\nGuidelines:\n- Keep reply concise, actionable, and friendly.\n- Reference modules using the provided URLs when suggesting navigation.\n- Provide 1-3 suggestions using natural language.\n- Provide up to 3 actions; omit the array if none are relevant.\n- If data is missing, ask a clarifying question in the reply.\n- Avoid repeating the user question verbatim unless needed for clarity.`
+  }
+
+  private formatConversation(conversation?: ChatConversationTurn[]): string {
+    if (!conversation?.length) {
+      return 'No prior conversation.'
+    }
+
+    const recentTurns = conversation.slice(-8)
+
+    return recentTurns
+      .map((turn) => {
+        const speaker = turn.role === 'assistant' ? 'Assistant' : 'User'
+        return `${speaker}: ${turn.content}`
+      })
+      .join('\n')
+  }
+
+  private parseResponse(raw: string): ChatbotResponse {
+    const cleaned = raw.trim()
+    const jsonPayload = this.extractJson(cleaned)
+
+    if (!jsonPayload) {
+      return {
+        message: cleaned || "I'm ready to help with analytics, tasks, clients, proposals, or finance.",
+        suggestions: DEFAULT_SUGGESTIONS
+      }
+    }
+
+    try {
+      const parsed = JSON.parse(jsonPayload)
+      const reply = this.extractMessage(parsed, cleaned)
+      const suggestions = this.extractSuggestions(parsed)
+      const actions = this.extractActions(parsed)
+
+      return {
+        message: reply,
+        suggestions: suggestions?.length ? suggestions : DEFAULT_SUGGESTIONS,
+        actions: actions?.length ? actions : undefined
+      }
+    } catch (error) {
+      console.warn('Unable to parse structured Gemini response:', error)
+      return {
+        message: cleaned || "I'm ready to help with analytics, tasks, clients, proposals, or finance.",
+        suggestions: DEFAULT_SUGGESTIONS
+      }
+    }
+  }
+
+  private extractJson(response: string): string | null {
+    const jsonMatch = response.match(/\{[\s\S]*\}/)
+    return jsonMatch ? jsonMatch[0] : null
+  }
+
+  private extractMessage(payload: Record<string, unknown>, fallback: string): string {
+    const reply = payload.reply ?? payload.message ?? payload.answer
+
+    if (typeof reply === 'string' && reply.trim().length > 0) {
+      return reply.trim()
+    }
+
+    return fallback || "I'm here to help you manage your marketing operations."
+  }
+
+  private extractSuggestions(payload: Record<string, unknown>): string[] | undefined {
+    const suggestions = payload.suggestions
+
+    if (!Array.isArray(suggestions)) {
+      return undefined
+    }
+
+    return suggestions
+      .filter((suggestion): suggestion is string => typeof suggestion === 'string' && suggestion.trim().length > 0)
+      .map((suggestion) => suggestion.trim())
+      .slice(0, 4)
+  }
+
+  private extractActions(payload: Record<string, unknown>): ChatbotAction[] | undefined {
+    const actions = payload.actions
+
+    if (!Array.isArray(actions)) {
+      return undefined
+    }
+
+    const validActions = actions
+      .map((action) => {
+        if (
+          typeof action === 'object' &&
+          action !== null &&
+          typeof (action as { label?: unknown }).label === 'string' &&
+          typeof (action as { url?: unknown }).url === 'string'
+        ) {
+          return {
+            label: (action as { label: string }).label.trim(),
+            url: (action as { url: string }).url.trim()
+          }
+        }
+        return null
+      })
+      .filter((action): action is ChatbotAction => Boolean(action?.label && action.url))
+      .slice(0, 3)
+
+    if (!validActions.length) {
+      return undefined
+    }
+
+    return validActions
   }
 }
 

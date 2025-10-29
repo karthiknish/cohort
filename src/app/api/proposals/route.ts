@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import type { Query, DocumentData } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { buildProposalDocument, proposalDraftSchema, sanitizeProposalUpdate } from '@/lib/proposals'
 
@@ -11,6 +12,17 @@ const createSchema = proposalDraftSchema.extend({
 })
 
 const updateSchema = proposalDraftSchema.partial()
+
+type ProposalSnapshot = {
+  status?: string
+  stepProgress?: number
+  formData?: unknown
+  aiInsights?: unknown
+  pdfUrl?: string | null
+  createdAt?: Timestamp | string | null
+  updatedAt?: Timestamp | string | null
+  lastAutosaveAt?: Timestamp | string | null
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,31 +33,32 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url)
     const statusParam = url.searchParams.get('status')
-    const baseCollection = collection(db, `users/${auth.uid}/proposals`)
+    const proposalsRef = adminDb.collection('users').doc(auth.uid).collection('proposals')
+    let proposalsQuery: Query<DocumentData> = proposalsRef
 
-    const constraints = []
     if (statusParam) {
-      constraints.push(where('status', '==', statusParam))
+      proposalsQuery = proposalsQuery.where('status', '==', statusParam)
     }
 
-    const proposalsQuery = constraints.length ? query(baseCollection, ...constraints) : query(baseCollection)
-    const snapshot = await getDocs(proposalsQuery)
+    const snapshot = await proposalsQuery.get()
     const results = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data()
+      const data = docSnap.data() as ProposalSnapshot
+
       return {
         id: docSnap.id,
-        ...data,
-        createdAt: 'createdAt' in data && data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt ?? null,
-        updatedAt: 'updatedAt' in data && data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt ?? null,
-        lastAutosaveAt:
-          'lastAutosaveAt' in data && data.lastAutosaveAt?.toDate
-            ? data.lastAutosaveAt.toDate().toISOString()
-            : data.lastAutosaveAt ?? null,
+        status: data.status ?? 'draft',
+        stepProgress: typeof data.stepProgress === 'number' ? data.stepProgress : 0,
+        formData: data.formData ?? {},
+        aiInsights: data.aiInsights ?? null,
+        pdfUrl: data.pdfUrl ?? null,
+        createdAt: serializeTimestamp(data.createdAt),
+        updatedAt: serializeTimestamp(data.updatedAt),
+        lastAutosaveAt: serializeTimestamp(data.lastAutosaveAt),
       }
     })
 
     return NextResponse.json({ proposals: results })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
@@ -61,13 +74,17 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('Authentication required', 401)
     }
 
-    const body = await request.json().catch(() => null)
+    const body = (await request.json().catch(() => null)) as unknown
     const parsed = createSchema.parse(body ?? {})
 
-    const docRef = await addDoc(collection(db, `users/${auth.uid}/proposals`), buildProposalDocument(parsed, auth.uid))
+    const docRef = await adminDb
+      .collection('users')
+      .doc(auth.uid)
+      .collection('proposals')
+      .add(buildProposalDocument(parsed, auth.uid, FieldValue.serverTimestamp()))
 
     return NextResponse.json({ id: docRef.id }, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
@@ -86,19 +103,23 @@ export async function PATCH(request: NextRequest) {
       throw new AuthenticationError('Authentication required', 401)
     }
 
-    const body = await request.json().catch(() => null)
+    const body = (await request.json().catch(() => null)) as unknown
     const parsed = updateSchema.parse(body ?? {})
-    const proposalId = (body?.id as string | undefined)?.trim()
+    const proposalId = extractProposalId(body)
 
     if (!proposalId) {
       return NextResponse.json({ error: 'Proposal id required' }, { status: 400 })
     }
 
-    const proposalRef = doc(db, `users/${auth.uid}/proposals/${proposalId}`)
-    await updateDoc(proposalRef, sanitizeProposalUpdate(parsed))
+    const proposalRef = adminDb
+      .collection('users')
+      .doc(auth.uid)
+      .collection('proposals')
+      .doc(proposalId)
+    await proposalRef.update(sanitizeProposalUpdate(parsed, FieldValue.serverTimestamp()))
 
     return NextResponse.json({ ok: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
@@ -108,4 +129,46 @@ export async function PATCH(request: NextRequest) {
     console.error('[api/proposals] PATCH failed', error)
     return NextResponse.json({ error: 'Failed to update proposal' }, { status: 500 })
   }
+}
+
+type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
+
+function serializeTimestamp(value: TimestampLike): string | null {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString()
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    const date = value.toDate()
+    return date instanceof Date ? date.toISOString() : null
+  }
+
+  return null
+}
+
+function extractProposalId(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const record = payload as Record<string, unknown>
+  const rawId = record.id
+  if (typeof rawId === 'string') {
+    const trimmed = rawId.trim()
+    return trimmed.length ? trimmed : null
+  }
+
+  return null
 }

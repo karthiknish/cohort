@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp, collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { geminiAI } from '@/services/gemini'
 
@@ -13,6 +13,7 @@ interface MetricRecord {
   clicks: number
   conversions: number
   revenue?: number | null
+  createdAt?: string | null
 }
 
 interface ProviderSummary {
@@ -31,7 +32,12 @@ function toISO(value: unknown): string | null {
   if (value instanceof Timestamp) {
     return value.toDate().toISOString()
   }
-  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
     return (value as Timestamp).toDate().toISOString()
   }
   if (typeof value === 'string') {
@@ -62,16 +68,20 @@ export async function GET(request: NextRequest) {
     const periodDays = periodParam ? Math.max(Number(periodParam) || 30, 1) : 30
     const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
 
-    const metricsRef = collection(db, 'users', userId, 'adMetrics')
-    const metricsQuery = query(metricsRef, orderBy('createdAt', 'desc'), limit(150))
-    const snapshot = await getDocs(metricsQuery)
+    const metricsQuery = adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('adMetrics')
+      .orderBy('createdAt', 'desc')
+      .limit(150)
+    const snapshot = await metricsQuery.get()
 
     const records: MetricRecord[] = snapshot.docs
       .map((docSnap) => {
-        const data = docSnap.data() as Record<string, any>
+        const data = docSnap.data() as Record<string, unknown>
         return {
-          providerId: (data.providerId as string | undefined) ?? 'unknown',
-          date: (data.date as string | undefined) ?? 'unknown',
+          providerId: typeof data.providerId === 'string' ? data.providerId : 'unknown',
+          date: typeof data.date === 'string' ? data.date : 'unknown',
           spend: Number(data.spend ?? 0),
           impressions: Number(data.impressions ?? 0),
           clicks: Number(data.clicks ?? 0),
@@ -94,7 +104,7 @@ export async function GET(request: NextRequest) {
     const insights = await generateInsightsFromGemini(summaries)
 
     return NextResponse.json({ insights })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }

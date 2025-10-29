@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock, Facebook, Linkedin } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -31,12 +31,26 @@ export default function AuthPage() {
   const [signUpData, setSignUpData] = useState({
     email: '',
     password: '',
-    name: '',
-    agencyName: ''
+    confirmPassword: '',
+    displayName: ''
   })
   const [error, setError] = useState('')
-  const { signIn, signInWithGoogle, signInWithFacebook, signInWithLinkedIn, signUp, loading } = useAuth()
+  const { user, signIn, signInWithGoogle, signUp, loading } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/dashboard')
+    }
+  }, [loading, user, router])
+
+  if (!loading && user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/50 py-12 px-4">
+        <div className="text-sm text-muted-foreground">Redirecting to your dashboard…</div>
+      </div>
+    )
+  }
 
   const handleSubmit = (type: 'signin' | 'signup') => async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,14 +58,23 @@ export default function AuthPage() {
 
     try {
       if (type === 'signup') {
-        await signUp(signUpData)
+        if (signUpData.password !== signUpData.confirmPassword) {
+          setError('Passwords do not match. Please confirm your password and try again.')
+          return
+        }
+
+        await signUp({
+          email: signUpData.email,
+          password: signUpData.password,
+          displayName: signUpData.displayName.trim() || undefined,
+        })
       } else {
         await signIn(signInData.email, signInData.password)
       }
       // Redirect to dashboard on success
       router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please try again.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Authentication failed. Please try again.'))
     }
   }
 
@@ -60,28 +83,8 @@ export default function AuthPage() {
     try {
       await signInWithGoogle()
       router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed. Please try again.')
-    }
-  }
-
-  const handleFacebookSignIn = async () => {
-    setError('')
-    try {
-      await signInWithFacebook()
-      router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Facebook sign-in failed. Please try again.')
-    }
-  }
-
-  const handleLinkedInSignIn = async () => {
-    setError('')
-    try {
-      await signInWithLinkedIn()
-      router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'LinkedIn sign-in failed. Please try again.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Google sign-in failed. Please try again.'))
     }
   }
 
@@ -190,28 +193,14 @@ export default function AuthPage() {
               <TabsContent value="signup">
                 <form className="space-y-5" onSubmit={handleSubmit('signup')}>
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                    <Label htmlFor="displayName">Full name (optional)</Label>
                     <Input
-                      id="fullName"
-                      name="name"
+                      id="displayName"
+                      name="displayName"
                       type="text"
-                      required
-                      value={signUpData.name}
+                      value={signUpData.displayName}
                       onChange={handleSignUpChange}
-                      placeholder="John Doe"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="agencyName">Agency Name</Label>
-                    <Input
-                      id="agencyName"
-                      name="agencyName"
-                      type="text"
-                      required
-                      value={signUpData.agencyName}
-                      onChange={handleSignUpChange}
-                      placeholder="Marketing Agency Inc."
+                      placeholder="Jane Smith"
                     />
                   </div>
 
@@ -264,6 +253,20 @@ export default function AuthPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm password</Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={signUpData.confirmPassword}
+                      onChange={handleSignUpChange}
+                      placeholder="Re-enter your password"
+                    />
+                  </div>
+
                   {error && activeTab === 'signup' && (
                     <Alert variant="destructive">
                       <AlertTitle>Authentication error</AlertTitle>
@@ -303,31 +306,8 @@ export default function AuthPage() {
                 {loading ? 'Signing in…' : 'Continue with Google'}
               </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={handleFacebookSignIn}
-                className="w-full"
-              >
-                <Facebook className="mr-2 h-4 w-4" />
-                {loading ? 'Signing in…' : 'Continue with Facebook'}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={handleLinkedInSignIn}
-                className="w-full"
-              >
-                <Linkedin className="mr-2 h-4 w-4" />
-                {loading ? 'Signing in…' : 'Continue with LinkedIn'}
-              </Button>
-
               <p className="text-center text-xs text-muted-foreground">
-                Connecting with your ad platforms lets Cohorts import campaign data automatically once you’re in the
-                dashboard.
+                You can link your advertising accounts separately from the dashboard once you are signed in.
               </p>
             </div>
           </CardContent>
@@ -349,4 +329,19 @@ export default function AuthPage() {
       </div>
     </div>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message
+    }
+  }
+
+  return fallback
 }

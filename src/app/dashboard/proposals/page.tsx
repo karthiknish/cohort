@@ -112,6 +112,19 @@ const initialFormState: ProposalFormData = {
   },
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') {
+    return error
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message
+    }
+  }
+  return fallback
+}
+
 export default function ProposalsPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [formState, setFormState] = useState(initialFormState)
@@ -140,12 +153,15 @@ export default function ProposalsPage() {
   const toggleArrayValue = (path: string[], value: string) => {
     setFormState((prev) => {
       const updated = structuredClone(prev) as typeof prev
-      let target: any = updated
+      let target: Record<string, unknown> = updated as unknown as Record<string, unknown>
       path.slice(0, -1).forEach((key) => {
-        target = target[key]
+        const next = target[key]
+        if (next && typeof next === 'object') {
+          target = next as Record<string, unknown>
+        }
       })
       const field = path[path.length - 1]
-      const array = target[field] as string[]
+      const array = Array.isArray(target[field]) ? (target[field] as string[]) : []
       target[field] = array.includes(value) ? array.filter((item) => item !== value) : [...array, value]
       return updated
     })
@@ -165,9 +181,12 @@ export default function ProposalsPage() {
   const updateField = (path: string[], value: string) => {
     setFormState((prev) => {
       const updated = structuredClone(prev) as typeof prev
-      let target: any = updated
+      let target: Record<string, unknown> = updated as unknown as Record<string, unknown>
       path.slice(0, -1).forEach((key) => {
-        target = target[key]
+        const next = target[key]
+        if (next && typeof next === 'object') {
+          target = next as Record<string, unknown>
+        }
       })
       target[path[path.length - 1]] = value
       return updated
@@ -305,8 +324,8 @@ export default function ProposalsPage() {
       const result = await listProposals()
       setProposals(result)
       return result
-    } catch (err: any) {
-      const message = err?.message ?? 'Failed to load proposals'
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Failed to load proposals')
       setProposalsError(message)
       return []
     } finally {
@@ -323,16 +342,25 @@ export default function ProposalsPage() {
     try {
       setIsSubmitting(true)
       setSubmissionError('')
+      setError('')
       clearErrors(stepErrorPaths.value)
       const response = await submitProposalDraft(draftId)
       setAiSummary(response.aiInsights ?? null)
-      setSubmitted(true)
+      const isReady = response.status === 'ready'
+      setSubmitted(isReady)
+
+      if (!isReady) {
+        const pendingMessage = 'We could not generate an AI summary yet. Please try again in a few minutes.'
+        setSubmissionError(pendingMessage)
+      }
+
       await refreshProposals()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[ProposalWizard] submit failed', err)
-      const message = err?.message ?? 'Failed to submit proposal'
+      const message = getErrorMessage(err, 'Failed to submit proposal')
       setSubmissionError(message)
       setError(message)
+      setSubmitted(false)
     } finally {
       setIsSubmitting(false)
     }
@@ -357,9 +385,9 @@ export default function ProposalsPage() {
           setDraftId(id)
           await refreshProposals()
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[ProposalWizard] bootstrap failed', err)
-        setBootstrapError(err?.message ?? 'Unable to start proposal wizard')
+        setBootstrapError(getErrorMessage(err, 'Unable to start proposal wizard'))
       } finally {
         hydrationRef.current = true
         setIsBootstrapping(false)
@@ -389,10 +417,10 @@ export default function ProposalsPage() {
           stepProgress: currentStep,
         })
         setAutosaveStatus('saved')
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[ProposalWizard] autosave failed', err)
         setAutosaveStatus('error')
-        setAutosaveError(err?.message ?? 'Failed to autosave proposal')
+        setAutosaveError(getErrorMessage(err, 'Failed to autosave proposal'))
       }
     }, 1500)
 

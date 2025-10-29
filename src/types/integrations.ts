@@ -1,4 +1,7 @@
-import type { Timestamp } from 'firebase/firestore'
+import type { Timestamp as ClientTimestamp } from 'firebase/firestore'
+import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore'
+
+export type AnyFirestoreTimestamp = ClientTimestamp | AdminTimestamp
 
 export type SyncJobStatus = 'queued' | 'running' | 'success' | 'error'
 export type SyncJobType = 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
@@ -9,9 +12,9 @@ export interface SyncJob {
   jobType: SyncJobType
   timeframeDays: number
   status: SyncJobStatus
-  createdAt?: Timestamp | null
-  startedAt?: Timestamp | null
-  processedAt?: Timestamp | null
+  createdAt?: AnyFirestoreTimestamp | null
+  startedAt?: AnyFirestoreTimestamp | null
+  processedAt?: AnyFirestoreTimestamp | null
   errorMessage?: string | null
 }
 
@@ -27,8 +30,11 @@ export interface AdIntegration {
   loginCustomerId?: string | null
   lastSyncStatus?: 'never' | 'pending' | 'success' | 'error'
   lastSyncMessage?: string | null
-  lastSyncedAt?: Timestamp | null
-  linkedAt?: Timestamp | null
+  lastSyncedAt?: AnyFirestoreTimestamp | null
+  linkedAt?: AnyFirestoreTimestamp | null
+  managerCustomerId?: string | null
+  accessTokenExpiresAt?: AnyFirestoreTimestamp | null
+  refreshTokenExpiresAt?: AnyFirestoreTimestamp | null
 }
 
 export interface NormalizedMetric {

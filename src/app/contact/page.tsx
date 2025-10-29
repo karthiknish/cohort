@@ -61,8 +61,8 @@ export default function ContactPage() {
 
       setStatus('success')
       form.reset()
-    } catch (error: any) {
-      setServerError(error?.message ?? 'We were unable to send your message. Please try again.')
+    } catch (error: unknown) {
+      setServerError(getErrorMessage(error, 'We were unable to send your message. Please try again.'))
       setStatus('error')
     }
   }
@@ -184,4 +184,19 @@ export default function ContactPage() {
       </div>
     </div>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message
+    }
+  }
+
+  return fallback
 }

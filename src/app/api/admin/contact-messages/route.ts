@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  Timestamp,
-  collection,
-  doc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
+import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
 
 const statusSchema = z.enum(['new', 'in_progress', 'resolved'])
@@ -25,7 +14,7 @@ function toISO(value: unknown): string | null {
     if (timestamp) {
       return timestamp.toISOString()
     }
-  } catch (error) {
+  } catch {
     // noop
   }
   if (typeof value === 'string') {
@@ -46,22 +35,19 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(Math.max(Number(sizeParam) || 20, 1), 100)
     const cursorParam = url.searchParams.get('cursor')
 
-    const baseCollection = collection(db, 'contactMessages')
-    let messagesQuery = query(
-      baseCollection,
-      orderBy('createdAt', 'desc'),
-      orderBy('__name__', 'desc'),
-      limit(pageSize)
-    )
+    let messagesQuery = adminDb
+      .collection('contactMessages')
+      .orderBy('createdAt', 'desc')
+      .orderBy(FieldPath.documentId(), 'desc')
+      .limit(pageSize)
 
     if (statusFilter) {
-      messagesQuery = query(
-        baseCollection,
-        where('status', '==', statusFilter),
-        orderBy('createdAt', 'desc'),
-        orderBy('__name__', 'desc'),
-        limit(pageSize)
-      )
+      messagesQuery = adminDb
+        .collection('contactMessages')
+        .where('status', '==', statusFilter)
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+        .limit(pageSize)
     }
 
     if (cursorParam) {
@@ -69,22 +55,22 @@ export async function GET(request: NextRequest) {
       if (cursorTime && cursorId) {
         const cursorDate = new Date(cursorTime)
         if (!Number.isNaN(cursorDate.getTime())) {
-          messagesQuery = query(messagesQuery, startAfter(Timestamp.fromDate(cursorDate), cursorId))
+          messagesQuery = messagesQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
         }
       }
     }
 
-    const snapshot = await getDocs(messagesQuery)
+    const snapshot = await messagesQuery.get()
 
     const results = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data() as Record<string, any>
+      const data = docSnap.data() as Record<string, unknown>
       return {
         id: docSnap.id,
-        name: data.name ?? '',
-        email: data.email ?? '',
-        company: data.company ?? null,
-        message: data.message ?? '',
-        status: data.status ?? 'new',
+        name: typeof data.name === 'string' ? data.name : '',
+        email: typeof data.email === 'string' ? data.email : '',
+        company: typeof data.company === 'string' ? data.company : null,
+        message: typeof data.message === 'string' ? data.message : '',
+        status: statusSchema.safeParse(data.status).success ? (data.status as ContactMessageStatus) : 'new',
         createdAt: toISO(data.createdAt),
       }
     })
@@ -92,7 +78,7 @@ export async function GET(request: NextRequest) {
     const lastDoc = snapshot.docs[snapshot.docs.length - 1]
     let nextCursor: string | null = null
     if (lastDoc && snapshot.docs.length === pageSize) {
-      const lastData = lastDoc.data() as Record<string, any>
+      const lastData = lastDoc.data() as Record<string, unknown>
       const createdAt = toISO(lastData.createdAt)
       if (createdAt) {
         nextCursor = `${createdAt}|${lastDoc.id}`
@@ -100,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ messages: results, nextCursor })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
@@ -125,14 +111,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { id, status } = parseResult.data
-    const messageRef = doc(db, 'contactMessages', id)
+    const messageRef = adminDb.collection('contactMessages').doc(id)
 
-    await updateDoc(messageRef, {
+    await messageRef.update({
       status,
+      updatedAt: FieldValue.serverTimestamp(),
     })
 
     return NextResponse.json({ ok: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
@@ -140,3 +127,5 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update message' }, { status: 500 })
   }
 }
+
+type ContactMessageStatus = z.infer<typeof statusSchema>

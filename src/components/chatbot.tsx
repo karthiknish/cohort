@@ -1,34 +1,25 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   MessageCircle,
   Send,
   X,
-  Minimize2,
-  Maximize2,
   Bot,
   User,
-  TrendingUp,
-  FileText,
-  Users,
-  CreditCard,
-  CheckSquare,
 } from 'lucide-react'
 
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { chatbotService, ChatbotResponse } from '@/services/chatbot'
+import { ChatConversationTurn, ChatbotGenerateRequest, ChatbotResponse } from '@/types/chatbot'
 
 interface Message {
   id: string
@@ -38,134 +29,98 @@ interface Message {
   type?: 'text' | 'suggestion'
 }
 
-interface QuickAction {
-  id: string
-  label: string
-  icon: React.ElementType
-  action: string
-}
-
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
-  const [isMinimized, setIsMinimized] = useState(false)
   const [inputMessage, setInputMessage] = useState('')
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hi! I\'m your Cohorts AI assistant. I can help you with analytics, client management, task tracking, and more. How can I assist you today?',
+      text: 'Hi! I\'m your Cohorts AI assistant. Ask me anything about your analytics, tasks, or clients.',
       sender: 'bot',
       timestamp: new Date(),
       type: 'text'
     }
   ])
   const [isTyping, setIsTyping] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const quickActions: QuickAction[] = [
-    {
-      id: 'analytics',
-      label: 'View Analytics',
-      icon: TrendingUp,
-      action: 'show me my analytics dashboard',
-    },
-    {
-      id: 'tasks',
-      label: 'My Tasks',
-      icon: CheckSquare,
-      action: 'what are my upcoming tasks',
-    },
-    {
-      id: 'clients',
-      label: 'Client Insights',
-      icon: Users,
-      action: 'show me client performance summary',
-    },
-    {
-      id: 'proposals',
-      label: 'Create Proposal',
-      icon: FileText,
-      action: 'help me create a new proposal',
-    },
-    {
-      id: 'finance',
-      label: 'Financial Overview',
-      icon: CreditCard,
-      action: "what's my current financial status",
-    }
-  ]
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const generateBotResponse = async (userMessage: string): Promise<ChatbotResponse> => {
-    try {
-      const response = await chatbotService.generateResponse(userMessage)
-      return response
-    } catch (error) {
-      console.error('Chatbot error:', error)
-      return {
-        message: 'Sorry, I encountered an error. Please try again or contact support.',
-        suggestions: ['Try asking again', 'Contact support', 'View help docs']
-      }
+  const generateMessageId = useCallback(() => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
     }
-  }
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim()) return
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }, [])
+
+  const conversationFromMessages = useCallback((history: Message[]): ChatConversationTurn[] => {
+    return history
+      .filter((message) => message.sender === 'user' || message.sender === 'bot')
+      .map((message) => ({
+        role: message.sender === 'user' ? 'user' : 'assistant',
+        content: message.text
+      }))
+  }, [])
+
+  const sendMessage = useCallback(async (overrideMessage?: string) => {
+    const messageText = (overrideMessage ?? inputMessage).trim()
+    if (!messageText) return
 
     const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputMessage,
+      id: generateMessageId(),
+      text: messageText,
       sender: 'user',
       timestamp: new Date()
     }
 
-    setMessages(prev => [...prev, userMessage])
+    const conversationHistory = conversationFromMessages([...messages, userMessage]).slice(-8)
+
+    setMessages((prev) => [...prev, userMessage])
     setInputMessage('')
     setIsTyping(true)
+    setErrorMessage(null)
 
-    setTimeout(async () => {
-      try {
-        const botResponse = await generateBotResponse(inputMessage)
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: botResponse.message,
-          sender: 'bot',
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, botMessage])
+    try {
+      const botResponse = await requestChatbotResponse({
+        message: messageText,
+        conversation: conversationHistory,
+      })
 
-        if (botResponse.suggestions && botResponse.suggestions.length > 0) {
-          setTimeout(() => {
-            const suggestionMessage: Message = {
-              id: (Date.now() + 2).toString(),
-              text: `💡 **Suggestions:**\n${botResponse.suggestions?.map(s => `• ${s}`).join('\n')}`,
-              sender: 'bot',
-              timestamp: new Date(),
-              type: 'suggestion'
-            }
-            setMessages(prev => [...prev, suggestionMessage])
-          }, 500)
-        }
-      } catch (error) {
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: 'Sorry, I encountered an error. Please try again or contact support.',
-          sender: 'bot',
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, errorMessage])
-      } finally {
-        setIsTyping(false)
+      await new Promise((resolve) => setTimeout(resolve, 350))
+
+      const botMessage: Message = {
+        id: generateMessageId(),
+        text: botResponse.message,
+        sender: 'bot',
+        timestamp: new Date()
       }
-    }, 1000)
-  }
 
-  const handleQuickAction = (action: string) => {
-    setInputMessage(action)
-    setTimeout(() => sendMessage(), 100)
-  }
+      setMessages((prev) => [...prev, botMessage])
+    } catch (error) {
+      console.error('Chatbot error:', error)
+
+      const fallbackText =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Sorry, something went wrong reaching our AI assistant. Please try again in a moment.'
+
+      const fallbackMessage: Message = {
+        id: generateMessageId(),
+        text: fallbackText,
+        sender: 'bot',
+        timestamp: new Date()
+      }
+
+      setMessages((prev) => [...prev, fallbackMessage])
+      setErrorMessage('We had trouble contacting the AI. Try sending your question again soon.')
+    } finally {
+      setIsTyping(false)
+    }
+  }, [conversationFromMessages, generateMessageId, inputMessage, messages])
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -186,151 +141,141 @@ export default function Chatbot() {
             </span>
             <span className="sr-only">Open chatbot</span>
           </Button>
-          <span className="pointer-events-none absolute right-full mr-3 hidden translate-x-2 rounded-full bg-popover px-3 py-1 text-xs text-popover-foreground shadow-lg transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block">
-            Need help? Chat with AI
-          </span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[min(100vw-1.5rem,24rem)] sm:bottom-6 sm:right-6">
-      <Card
-        data-state={isMinimized ? 'minimized' : 'expanded'}
-        className="overflow-hidden border-border shadow-2xl data-[state=minimized]:rounded-full data-[state=minimized]:border-muted/60"
-      >
-        <CardHeader className="bg-primary text-primary-foreground p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/10 text-primary-foreground">
-                <Bot className="h-4 w-4" />
-              </span>
-              <div>
-                <CardTitle className="text-base">Cohorts AI Assistant</CardTitle>
-                <CardDescription className="text-xs text-primary-foreground/70">
-                  Always here to help
-                </CardDescription>
-              </div>
+    <div className="fixed bottom-4 right-4 z-50 w-[min(100vw-1.5rem,22rem)] sm:bottom-6 sm:right-6">
+      <Card className="overflow-hidden border-border shadow-2xl">
+        <CardHeader className="bg-primary p-4 text-primary-foreground">
+          <div className="flex w-full items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-base font-semibold tracking-tight text-primary-foreground">
+                Cohorts AI Assistant
+              </CardTitle>
+              <p className="text-xs text-primary-foreground/75">
+                Ask a question to get started
+              </p>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground hover:bg-primary-foreground/10"
-                onClick={() => setIsMinimized(!isMinimized)}
-              >
-                {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground hover:bg-primary-foreground/10"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mt-1 text-primary-foreground hover:bg-primary-foreground/10"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close chatbot"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </CardHeader>
 
-        {!isMinimized && (
-          <>
-            <CardContent className="bg-muted/40 p-0">
-              <ScrollArea className="h-[480px] p-4 sm:h-[460px]">
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex items-start gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {message.sender === 'bot' && (
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Bot className="h-4 w-4" />
-                        </span>
-                      )}
-                      <div
-                        className={`max-w-[85%] rounded-xl px-4 py-2 text-sm shadow-sm ${
-                          message.sender === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-background border'
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
-                        <p
-                          className={`mt-1 text-xs ${
-                            message.sender === 'user' ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                          }`}
-                        >
-                          {formatTime(message.timestamp)}
-                        </p>
-                      </div>
-                      {message.sender === 'user' && (
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                          <User className="h-4 w-4" />
-                        </span>
-                      )}
-                    </div>
-                  ))}
-
-                  {isTyping && (
-                    <div className="flex items-start gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Bot className="h-4 w-4" />
-                      </span>
-                      <div className="rounded-xl border bg-background px-4 py-2">
-                        <div className="flex items-center gap-1">
-                          <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
-                          <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.1s]" />
-                          <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.2s]" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-            </CardContent>
-
-            <CardContent className="space-y-3 border-t bg-background p-4">
-              <div className="flex flex-wrap gap-2">
-                {quickActions.map((action) => (
-                  <Badge
-                    key={action.id}
-                    variant="secondary"
-                    className="flex cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
-                    onClick={() => handleQuickAction(action.action)}
-                  >
-                    <action.icon className="h-3 w-3" />
-                    {action.label}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-
-            <CardFooter className="border-t bg-background p-4">
-              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Ask me anything..."
-                  disabled={isTyping}
-                />
-                <Button
-                  onClick={sendMessage}
-                  className="w-full sm:w-auto"
-                  size="default"
-                  disabled={!inputMessage.trim() || isTyping}
+        <CardContent className="bg-muted/40 p-0">
+          <ScrollArea className="h-[360px] p-4">
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex items-start gap-2 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  Send
-                </Button>
-              </div>
-            </CardFooter>
-          </>
-        )}
+                  {message.sender === 'bot' && (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Bot className="h-4 w-4" />
+                    </span>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-xl px-4 py-2 text-sm shadow-sm ${
+                      message.sender === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-background border'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
+                    <p
+                      className={`mt-1 text-xs ${
+                        message.sender === 'user' ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                      }`}
+                    >
+                      {formatTime(message.timestamp)}
+                    </p>
+                  </div>
+                  {message.sender === 'user' && (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <User className="h-4 w-4" />
+                    </span>
+                  )}
+                </div>
+              ))}
+
+              {isTyping && (
+                <div className="flex items-start gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bot className="h-4 w-4" />
+                  </span>
+                  <div className="rounded-xl border bg-background px-4 py-2">
+                    <div className="flex items-center gap-1">
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.1s]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.2s]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </CardContent>
+
+        <CardFooter className="flex-col items-stretch gap-3 border-t bg-background p-4">
+          {errorMessage && (
+            <p className="text-xs text-destructive" role="alert">
+              {errorMessage}
+            </p>
+          )}
+          <div className="flex w-full gap-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  void sendMessage()
+                }
+              }}
+              placeholder="Type a message..."
+              disabled={isTyping}
+            />
+            <Button
+              onClick={() => void sendMessage()}
+              size="icon"
+              disabled={!inputMessage.trim() || isTyping}
+              aria-label="Send message"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardFooter>
       </Card>
     </div>
   )
+}
+
+async function requestChatbotResponse(payload: ChatbotGenerateRequest): Promise<ChatbotResponse> {
+  const response = await fetch('/api/chatbot', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => null)
+    const message = (errorPayload as { error?: string } | null)?.error ?? 'Failed to reach Cohorts AI assistant.'
+    throw new Error(message)
+  }
+
+  const data = (await response.json()) as ChatbotResponse
+  return data
 }

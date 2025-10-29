@@ -6,6 +6,18 @@ interface LinkedInAdsOptions {
   timeframeDays: number
 }
 
+type LinkedInAnalyticsRow = {
+  timeRange?: {
+    start?: string
+    end?: string
+  }
+  costInLocalCurrency?: unknown
+  impressions?: unknown
+  clicks?: unknown
+  conversions?: unknown
+  [key: string]: unknown
+}
+
 function buildTimeRange(timeframeDays: number) {
   const end = new Date()
   const start = new Date(end)
@@ -17,14 +29,20 @@ function buildTimeRange(timeframeDays: number) {
   }
 }
 
-function normalizeCurrency(value: any): number {
+function normalizeCurrency(value: unknown): number {
   if (!value) return 0
   if (typeof value === 'object' && 'amount' in value) {
-    const amount = (value as any).amount
-    return typeof amount === 'number' ? amount : parseFloat(amount)
+    const amount = (value as { amount?: unknown }).amount
+    if (typeof amount === 'number') return amount
+    if (typeof amount === 'string') {
+      const parsed = parseFloat(amount)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+    return 0
   }
   if (typeof value === 'string') {
-    return parseFloat(value)
+    const parsed = parseFloat(value)
+    return Number.isFinite(parsed) ? parsed : 0
   }
   return Number(value) || 0
 }
@@ -67,8 +85,8 @@ export async function fetchLinkedInAdsMetrics(options: LinkedInAdsOptions): Prom
     throw new Error(`LinkedIn Ads API error (${response.status}): ${errorPayload}`)
   }
 
-  const payload = await response.json()
-  const rows: any[] = Array.isArray(payload?.elements) ? payload.elements : []
+  const payload = (await response.json()) as { elements?: LinkedInAnalyticsRow[] }
+  const rows: LinkedInAnalyticsRow[] = Array.isArray(payload?.elements) ? payload.elements : []
 
   const metrics: NormalizedMetric[] = rows.map((row) => {
     const date = row?.timeRange?.start ? new Date(row.timeRange.start).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)

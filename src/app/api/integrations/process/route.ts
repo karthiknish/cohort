@@ -7,11 +7,18 @@ import {
   getAdIntegration,
   updateIntegrationStatus,
   writeMetricsBatch,
-} from '@/lib/firestore-integrations'
+} from '@/lib/firestore-integrations-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
+import { NormalizedMetric, SyncJob } from '@/types/integrations'
+import {
+  IntegrationTokenError,
+  isTokenExpiringSoon,
+  refreshGoogleAccessToken,
+  refreshMetaAccessToken,
+} from '@/lib/integration-token-refresh'
 
 function ensureString(value: unknown, message: string): string {
   if (typeof value === 'string' && value.length > 0) return value
@@ -19,6 +26,10 @@ function ensureString(value: unknown, message: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  let resolvedUserId: string | null = null
+  let activeJob: SyncJob | null = null
+  let jobFailed = false
+
   try {
     const authResult = await authenticateRequest(request)
 
@@ -39,11 +50,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
     }
 
+    resolvedUserId = targetUserId
+
     const job = await claimNextSyncJob({ userId: targetUserId })
 
     if (!job) {
       return NextResponse.json({ message: 'No queued jobs available' }, { status: 204 })
     }
+
+    activeJob = job
 
     const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId })
 
@@ -53,29 +68,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Integration credentials missing' }, { status: 400 })
     }
 
-    let metrics = []
+    let metrics: NormalizedMetric[] = []
 
     switch (job.providerId) {
       case 'google': {
+        const accountId = ensureString(
+          integration.accountId,
+          'Google Ads accountId must be stored on the integration'
+        )
         const loginCustomerId = ensureString(
           integration.loginCustomerId,
           'Google Ads loginCustomerId must be stored on the integration'
         )
 
+        let googleAccessToken = integration.accessToken
+        if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
+          googleAccessToken = await refreshGoogleAccessToken({ userId: targetUserId })
+        }
+
         metrics = await fetchGoogleAdsMetrics({
-          accessToken: integration.accessToken,
+          accessToken: googleAccessToken,
           developerToken: integration.developerToken,
+          customerId: accountId,
           loginCustomerId,
+          managerCustomerId: integration.managerCustomerId ?? null,
           timeframeDays: job.timeframeDays,
+          refreshAccessToken: async () => {
+            const refreshed = await refreshGoogleAccessToken({ userId: targetUserId })
+            googleAccessToken = refreshed
+            return refreshed
+          },
         })
         break
       }
       case 'facebook': {
         const accountId = ensureString(integration.accountId, 'Meta Ads accountId must be stored on the integration')
+
+        let metaAccessToken = integration.accessToken
+        if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
+          metaAccessToken = await refreshMetaAccessToken({ userId: targetUserId })
+        }
+
         metrics = await fetchMetaAdsMetrics({
-          accessToken: integration.accessToken,
+          accessToken: metaAccessToken,
           adAccountId: accountId,
           timeframeDays: job.timeframeDays,
+          refreshAccessToken: async () => {
+            const refreshed = await refreshMetaAccessToken({ userId: targetUserId })
+            metaAccessToken = refreshed
+            return refreshed
+          },
         })
         break
       }
@@ -99,25 +141,67 @@ export async function POST(request: NextRequest) {
     await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'success', message: null })
 
     return NextResponse.json({ jobId: job.id, providerId: job.providerId, metricsCount: metrics.length })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[integrations/process] error', error)
 
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
 
-    const userId = typeof error?.userId === 'string' ? error.userId : null
-    const jobId = typeof error?.jobId === 'string' ? error.jobId : null
-    const providerId = typeof error?.providerId === 'string' ? error.providerId : null
+    if (error instanceof IntegrationTokenError) {
+      const { userId, providerId, message } = error
+      if (resolvedUserId && activeJob && !jobFailed) {
+        await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Token refresh failed' })
+        jobFailed = true
+      }
+      if (userId && providerId) {
+        await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Token refresh failed' })
+      }
+      return NextResponse.json({ error: message ?? 'Token refresh failed' }, { status: 400 })
+    }
+
+    const { userId, jobId, providerId, message } = extractSyncErrorDetails(error)
 
     if (userId && jobId) {
-      await failSyncJob({ userId, jobId, message: error.message || 'Unknown error' })
+      await failSyncJob({ userId, jobId, message: message ?? 'Unknown error' })
+      jobFailed = true
     }
 
     if (userId && providerId) {
-      await updateIntegrationStatus({ userId, providerId, status: 'error', message: error.message || 'Sync failed' })
+      await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Sync failed' })
     }
 
-    return NextResponse.json({ error: error.message || 'Failed to process sync job' }, { status: 500 })
+    if (resolvedUserId && activeJob && !jobFailed) {
+      await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' })
+      jobFailed = true
+      await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, status: 'error', message: message ?? 'Sync failed' })
+    }
+
+    return NextResponse.json({ error: message ?? 'Failed to process sync job' }, { status: 500 })
   }
+}
+
+interface SyncJobErrorLike {
+  message?: string
+  userId?: string
+  jobId?: string
+  providerId?: string
+}
+
+function extractSyncErrorDetails(error: unknown): SyncJobErrorLike {
+  if (typeof error === 'object' && error !== null) {
+    const candidate = error as SyncJobErrorLike
+    return {
+      message: typeof candidate.message === 'string' ? candidate.message : undefined,
+      userId: typeof candidate.userId === 'string' ? candidate.userId : undefined,
+      jobId: typeof candidate.jobId === 'string' ? candidate.jobId : undefined,
+      providerId: typeof candidate.providerId === 'string' ? candidate.providerId : undefined,
+    }
+  }
+
+  if (error instanceof Error) {
+    return { message: error.message }
+  }
+
+  return {}
 }

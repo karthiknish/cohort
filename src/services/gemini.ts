@@ -13,15 +13,21 @@ export interface GeminiPrompt {
 
 export class GeminiAIService {
   private apiKey: string
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
+  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
   }
 
   async generateContent(prompt: string): Promise<string> {
+    const apiKey = this.resolveApiKey()
+
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured')
+    }
+
     try {
-      const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
+      const response = await fetch(`${this.baseUrl}?key=${apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,15 +42,85 @@ export class GeminiAIService {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const details = await response.text()
+        throw new Error(`Gemini API error ${response.status}: ${details}`)
       }
 
       const data = await response.json()
-      return data.candidates[0].content.parts[0].text
+      const text = this.extractTextFromResponse(data)
+
+      if (!text) {
+        throw new Error('Gemini API returned an empty response')
+      }
+
+      return text
     } catch (error) {
       console.error('Gemini API error:', error)
       throw new Error('Failed to generate content with Gemini AI')
     }
+  }
+
+  private extractTextFromResponse(payload: unknown): string | null {
+    if (!payload || typeof payload !== 'object') {
+      return null
+    }
+
+    const root = payload as {
+      candidates?: Array<{
+        content?: { parts?: unknown[] }
+        text?: string
+      }>
+      promptFeedback?: { safetyRatings?: unknown }
+    }
+
+    const candidates = Array.isArray(root.candidates) ? root.candidates : []
+    for (const candidate of candidates) {
+      const parts = candidate?.content?.parts
+      if (Array.isArray(parts)) {
+        const firstText = parts
+          .map((part: unknown) => {
+            if (typeof part === 'string') {
+              return part
+            }
+            if (typeof part === 'object' && part !== null && 'text' in part && typeof (part as { text: unknown }).text === 'string') {
+              return (part as { text: string }).text
+            }
+            return null
+          })
+          .filter((value: string | null): value is string => Boolean(value))
+          .join('\n')
+        if (firstText) {
+          return firstText.trim()
+        }
+      }
+
+      if (typeof candidate?.text === 'string' && candidate.text.trim()) {
+        return candidate.text.trim()
+      }
+    }
+
+    const promptFeedback = root.promptFeedback
+    if (promptFeedback?.safetyRatings) {
+      console.warn('Gemini safety feedback:', promptFeedback.safetyRatings)
+    }
+
+    return null
+  }
+
+  private resolveApiKey(): string {
+    if (this.apiKey) {
+      return this.apiKey
+    }
+
+    const processEnv = typeof process !== 'undefined' ? process.env : undefined
+    const candidate = processEnv?.GEMINI_API_KEY || processEnv?.NEXT_PUBLIC_GEMINI_API_KEY
+
+    if (candidate) {
+      this.apiKey = candidate
+      return candidate
+    }
+
+    return ''
   }
 
   async analyzePerformance(context: GeminiPrompt['context']): Promise<AIAnalysis> {
@@ -62,7 +138,7 @@ export class GeminiAIService {
         generatedAt: new Date(),
         confidence: 0.85 // Mock confidence score
       }
-    } catch (error) {
+    } catch {
       throw new Error('Failed to analyze performance with Gemini AI')
     }
   }
@@ -82,7 +158,7 @@ export class GeminiAIService {
         generatedAt: new Date(),
         confidence: 0.82
       }
-    } catch (error) {
+    } catch {
       throw new Error('Failed to generate recommendations with Gemini AI')
     }
   }
@@ -102,7 +178,7 @@ export class GeminiAIService {
         generatedAt: new Date(),
         confidence: 0.90
       }
-    } catch (error) {
+    } catch {
       throw new Error('Failed to generate summary with Gemini AI')
     }
   }
@@ -122,7 +198,7 @@ export class GeminiAIService {
         generatedAt: new Date(),
         confidence: 0.75
       }
-    } catch (error) {
+    } catch {
       throw new Error('Failed to generate forecast with Gemini AI')
     }
   }

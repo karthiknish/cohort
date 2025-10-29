@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarChart3,
   TrendingUp,
@@ -27,9 +27,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/contexts/auth-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 
 interface IntegrationStatusResponse {
   statuses: Array<{
@@ -235,8 +235,8 @@ export default function DashboardPage() {
   const {
     user,
     connectGoogleAdsAccount,
-    connectFacebookAdsAccount,
     connectLinkedInAdsAccount,
+    startMetaOauth,
     getIdToken,
   } = useAuth()
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
@@ -247,6 +247,7 @@ export default function DashboardPage() {
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricError, setMetricError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+  const hasMetricData = metrics.length > 0
 
   useEffect(() => {
     if (!user?.id) {
@@ -274,9 +275,9 @@ export default function DashboardPage() {
           setIntegrationStatuses(statusResponse)
           setMetrics(metricResponse)
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isSubscribed) {
-          setMetricError(error.message ?? 'Failed to load marketing data')
+          setMetricError(getErrorMessage(error, 'Failed to load marketing data'))
         }
       } finally {
         if (isSubscribed) setMetricsLoading(false)
@@ -328,7 +329,7 @@ export default function DashboardPage() {
       name: 'Meta Ads Manager',
       description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
       icon: Facebook,
-      connect: connectFacebookAdsAccount,
+      mode: 'oauth' as const,
     },
     {
       id: 'linkedin',
@@ -346,8 +347,8 @@ export default function DashboardPage() {
       await action()
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       setRefreshTick((tick) => tick + 1)
-    } catch (error: any) {
-      const message = error?.message || 'Unable to connect. Please try again.'
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Unable to connect. Please try again.')
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
     } finally {
       setConnectingProvider(null)
@@ -359,98 +360,52 @@ export default function DashboardPage() {
     setRefreshTick((tick) => tick + 1)
   }
 
+  const handleMetaOauthRedirect = async (providerId: string) => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    setConnectingProvider(providerId)
+    setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
+
+    try {
+      const redirectTarget = `${window.location.origin}/dashboard`
+      const { url } = await startMetaOauth(redirectTarget)
+      window.location.href = url
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Unable to start Meta OAuth. Please try again.')
+      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
+      setConnectingProvider(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Welcome back! Here's an overview of your agency performance.
+          Welcome back! Here&apos;s an overview of your agency performance.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <StatsCard key={stat.name} stat={stat} />
-        ))}
-      </div>
+      {hasMetricData && (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <StatsCard key={stat.name} stat={stat} />
+          ))}
+        </div>
+      )}
 
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="flex flex-col gap-1">
-            <CardTitle className="text-lg">Ad platform connections</CardTitle>
-            <CardDescription>
-              Connect your paid media accounts to import spend, conversions, and creative performance into Cohorts.
-            </CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={metricsLoading}
-            className="inline-flex items-center gap-2"
-          >
-            <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} /> Refresh status
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {adPlatforms.map((platform) => {
-              const Icon = platform.icon
-              const isConnecting = connectingProvider === platform.id
-              const isConnected = connectedProviders[platform.id]
-              const error = connectionErrors[platform.id]
-
-              return (
-                <Card key={platform.id} className="border-muted/70 bg-background shadow-sm">
-                  <CardHeader className="space-y-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <CardTitle className="text-base">{platform.name}</CardTitle>
-                      <CardDescription className="text-sm leading-relaxed">
-                        {platform.description}
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-2 text-xs">
-                      <Badge variant={isConnected ? 'default' : 'outline'} className="rounded-full">
-                        {isConnected ? 'Connected' : 'Not connected'}
-                      </Badge>
-                      {isConnecting && <span className="text-muted-foreground">Connecting…</span>}
-                    </div>
-                    {error && (
-                      <Alert variant="destructive" className="text-xs">
-                        <AlertTitle>Connection failed</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-                    <Button
-                      type="button"
-                      className="w-full"
-                      variant={isConnected ? 'outline' : 'default'}
-                      disabled={isConnecting}
-                      onClick={() => handleConnect(platform.id, platform.connect)}
-                    >
-                      {isConnected ? 'Reconnect account' : `Connect ${platform.name}`}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <Separator />
-            <p>
-              After connecting, Cohorts will queue an initial data sync covering the last 90 days of performance. You can
-              review sync status from the Integrations settings page.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <AdConnectionsCard
+        providers={adPlatforms}
+        connectedProviders={connectedProviders}
+        connectingProvider={connectingProvider}
+        connectionErrors={connectionErrors}
+        onConnect={handleConnect}
+        onOauthRedirect={handleMetaOauthRedirect}
+        onRefresh={handleManualRefresh}
+        refreshing={metricsLoading}
+      />
 
       <Card className="shadow-sm">
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -646,4 +601,19 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message
+    }
+  }
+
+  return fallback
 }

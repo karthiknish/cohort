@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp, collection, getDocs, limit, orderBy, query } from 'firebase/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 
 interface MetricRecord {
@@ -21,7 +21,12 @@ function toISO(value: unknown): string | null {
   if (value instanceof Timestamp) {
     return value.toDate().toISOString()
   }
-  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
     return (value as Timestamp).toDate().toISOString()
   }
   if (typeof value === 'string') {
@@ -48,12 +53,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
-    const metricsRef = collection(db, 'users', userId, 'adMetrics')
-    const metricsQuery = query(metricsRef, orderBy('createdAt', 'desc'), limit(100))
-    const snapshot = await getDocs(metricsQuery)
+    const metricsQuery = adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('adMetrics')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+    const snapshot = await metricsQuery.get()
 
     const records: MetricRecord[] = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data() as Record<string, any>
+      const data = docSnap.data() as Record<string, unknown>
       return {
         id: docSnap.id,
         providerId: (data.providerId as string | undefined) ?? 'unknown',
@@ -68,7 +77,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(records)
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }

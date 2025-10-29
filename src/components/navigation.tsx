@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 
@@ -64,13 +64,15 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
               <Button
                 key={item.name}
                 asChild
-                variant={isActive ? 'secondary' : 'ghost'}
+                variant={isActive ? 'default' : 'ghost'}
                 className={cn(
                   'w-full justify-start gap-2 text-sm font-medium',
-                  isActive && 'text-primary'
+                  isActive
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
-                <Link href={item.href} onClick={onNavigate} className="flex items-center gap-2">
+                <Link href={item.href} onClick={onNavigate} className="flex w-full items-center gap-2">
                   <item.icon className="h-4 w-4" />
                   <span>{item.name}</span>
                 </Link>
@@ -130,9 +132,9 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[260px] p-0">
-                <div className="flex items-center justify-between border-b px-4 py-3">
-                  <span className="text-base font-semibold">Cohorts</span>
-                </div>
+                <SheetHeader className="border-b px-4 py-3">
+                  <SheetTitle className="text-base font-semibold">Cohorts</SheetTitle>
+                </SheetHeader>
                 <div className="p-4">
                   <NavigationList onNavigate={() => setOpen(false)} />
                   <Button

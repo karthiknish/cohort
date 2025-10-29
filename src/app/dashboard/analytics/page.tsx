@@ -19,18 +19,14 @@ import {
 } from 'recharts'
 import {
   TrendingUp,
-  TrendingDown,
   DollarSign,
-  MousePointer,
   Users,
   Target,
-  AlertCircle,
   RefreshCw,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { authService } from '@/services/auth'
 
@@ -135,13 +131,6 @@ function formatCurrency(value: number) {
   return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 }
 
-function daysFromNow(dateString: string) {
-  const today = new Date()
-  const date = new Date(dateString)
-  const diff = today.getTime() - date.getTime()
-  return diff / (1000 * 60 * 60 * 24)
-}
-
 export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
@@ -182,10 +171,16 @@ export default function AnalyticsPage() {
   } = useAnalyticsData(token, periodDays)
 
   const metrics = metricsData
+  const referenceTimestamp = useMemo(() => {
+    return metrics.reduce((latest, metric) => {
+      const timestamp = new Date(metric.date).getTime()
+      return timestamp > latest ? timestamp : latest
+    }, 0)
+  }, [metrics])
 
   const filteredMetrics = useMemo(() => {
     if (!metrics.length) return []
-    const cutoff = periodDays ? Date.now() - periodDays * 24 * 60 * 60 * 1000 : null
+    const cutoff = periodDays ? referenceTimestamp - periodDays * 24 * 60 * 60 * 1000 : null
     return metrics.filter((metric) => {
       const inPlatform = selectedPlatform === 'all' || metric.providerId === selectedPlatform
       if (!inPlatform) return false
@@ -193,7 +188,7 @@ export default function AnalyticsPage() {
       const metricDate = new Date(metric.date).getTime()
       return metricDate >= cutoff
     })
-  }, [metrics, selectedPlatform, periodDays])
+  }, [metrics, selectedPlatform, periodDays, referenceTimestamp])
 
   const aggregatedByDate = useMemo(() => {
     const map = new Map<string, { date: string; spend: number; revenue: number; clicks: number; conversions: number }>()
@@ -270,13 +265,6 @@ export default function AnalyticsPage() {
       .slice(0, 10)
   }, [filteredMetrics])
 
-
-  const providerInsightMap = useMemo(() => {
-    return insights.reduce<Record<string, string>>((acc, insight) => {
-      acc[insight.providerId] = insight.summary
-      return acc
-    }, {})
-  }, [insights])
 
   const chartData = useMemo(() => {
     return aggregatedByDate.map((entry) => ({
@@ -446,7 +434,7 @@ export default function AnalyticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={platformBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
-                    {platformBreakdown.map((entry, index) => (
+                    {platformBreakdown.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>

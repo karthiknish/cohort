@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, ShieldAlert, CheckCircle2 } from 'lucide-react'
 
@@ -35,7 +36,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -55,7 +56,7 @@ export default function AdminPage() {
     try {
       const token = await getIdToken()
       const params = new URLSearchParams()
-      if (statusFilter) params.set('status', statusFilter)
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
       if (cursor) params.set('cursor', cursor)
       params.set('pageSize', '20')
       const queryString = params.toString()
@@ -75,8 +76,8 @@ export default function AdminPage() {
       const payload = await response.json()
       setMessages((prev) => (append ? [...prev, ...payload.messages] : payload.messages))
       setNextCursor(payload.nextCursor ?? null)
-    } catch (err: any) {
-      setError(err.message || 'Unable to load admin data')
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Unable to load admin data'))
     } finally {
       if (append) {
         setIsLoadingMore(false)
@@ -125,15 +126,15 @@ export default function AdminPage() {
 
       setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, status: nextStatus } : msg)))
       setSuccessMessage('Message updated successfully')
-    } catch (err: any) {
-      setError(err.message || 'Unable to update message')
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, 'Unable to update message'))
     } finally {
       setSavingId(null)
     }
   }
 
   const handleRefresh = () => {
-    setStatusFilter('')
+    setStatusFilter('all')
     setMessages([])
     setNextCursor(null)
     void fetchMessages()
@@ -166,7 +167,7 @@ export default function AdminPage() {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All statuses</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 {STATUS_OPTIONS.map((status) => (
                   <SelectItem key={status} value={status}>
                     {status.replace('_', ' ')}
@@ -176,6 +177,9 @@ export default function AdminPage() {
             </Select>
             <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
               Refresh
+            </Button>
+            <Button asChild>
+              <Link href="/admin/users">Manage users</Link>
             </Button>
           </div>
         </div>
@@ -250,7 +254,7 @@ export default function AdminPage() {
                   {messages.length === 0 && !isLoading ? (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                        {statusFilter ? 'No messages match this status.' : 'No contact messages yet.'}
+                        {statusFilter !== 'all' ? 'No messages match this status.' : 'No contact messages yet.'}
                       </td>
                     </tr>
                   ) : (
@@ -320,4 +324,17 @@ export default function AdminPage() {
       </div>
     </div>
   )
+}
+
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message
+    }
+  }
+  return fallback
 }

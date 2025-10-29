@@ -1,4 +1,5 @@
 import {
+  Timestamp,
   addDoc,
   collection,
   doc,
@@ -21,6 +22,67 @@ import {
   SyncJob,
 } from '@/types/integrations'
 
+type StoredIntegration = {
+  accessToken?: string | null
+  idToken?: string | null
+  refreshToken?: string | null
+  scopes?: unknown
+  accountId?: string | null
+  developerToken?: string | null
+  loginCustomerId?: string | null
+  managerCustomerId?: string | null
+  accessTokenExpiresAt?: Timestamp | null
+  refreshTokenExpiresAt?: Timestamp | null
+  lastSyncStatus?: AdIntegration['lastSyncStatus']
+  lastSyncMessage?: string | null
+  lastSyncedAt?: Timestamp | null
+  linkedAt?: Timestamp | null
+  lastSyncRequestedAt?: Timestamp | null
+}
+
+type StoredSyncJob = {
+  providerId?: string
+  jobType?: SyncJob['jobType']
+  timeframeDays?: number
+  status?: SyncJob['status']
+  createdAt?: Timestamp | null
+  startedAt?: Timestamp | null
+  processedAt?: Timestamp | null
+  errorMessage?: string | null
+}
+
+function coerceStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
+type TimestampInput = Date | string | number | null | undefined
+
+function toTimestamp(value: TimestampInput): Timestamp | null {
+  if (!value && value !== 0) {
+    return null
+  }
+
+  if (value instanceof Timestamp) {
+    return value
+  }
+
+  if (value instanceof Date) {
+    return Timestamp.fromDate(value)
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value)
+    if (!Number.isNaN(date.getTime())) {
+      return Timestamp.fromDate(date)
+    }
+  }
+
+  return null
+}
+
 export async function persistIntegrationTokens(options: {
   userId: string
   providerId: string
@@ -30,6 +92,11 @@ export async function persistIntegrationTokens(options: {
   status?: 'pending' | 'success' | 'error' | 'never'
   refreshToken?: string | null
   accountId?: string | null
+  developerToken?: string | null
+  loginCustomerId?: string | null
+  managerCustomerId?: string | null
+  accessTokenExpiresAt?: TimestampInput
+  refreshTokenExpiresAt?: TimestampInput
 }): Promise<void> {
   const {
     userId,
@@ -40,6 +107,11 @@ export async function persistIntegrationTokens(options: {
     status = 'pending',
     refreshToken = null,
     accountId = null,
+    developerToken = null,
+    loginCustomerId = null,
+    managerCustomerId = null,
+    accessTokenExpiresAt = null,
+    refreshTokenExpiresAt = null,
   } = options
   const integrationRef = doc(db, 'users', userId, 'adIntegrations', providerId)
 
@@ -54,9 +126,60 @@ export async function persistIntegrationTokens(options: {
       lastSyncStatus: status,
       lastSyncRequestedAt: serverTimestamp(),
       accountId: accountId ?? null,
+      developerToken,
+      loginCustomerId,
+      managerCustomerId,
+      accessTokenExpiresAt: toTimestamp(accessTokenExpiresAt),
+      refreshTokenExpiresAt: toTimestamp(refreshTokenExpiresAt),
     },
     { merge: true }
   )
+}
+
+export async function updateIntegrationCredentials(options: {
+  userId: string
+  providerId: string
+  accessToken?: string | null
+  refreshToken?: string | null
+  idToken?: string | null
+  accessTokenExpiresAt?: TimestampInput
+  refreshTokenExpiresAt?: TimestampInput
+  developerToken?: string | null
+  loginCustomerId?: string | null
+  managerCustomerId?: string | null
+  accountId?: string | null
+}): Promise<void> {
+  const {
+    userId,
+    providerId,
+    accessToken,
+    refreshToken,
+    idToken,
+    accessTokenExpiresAt,
+    refreshTokenExpiresAt,
+    developerToken,
+    loginCustomerId,
+    managerCustomerId,
+    accountId,
+  } = options
+
+  const integrationRef = doc(db, 'users', userId, 'adIntegrations', providerId)
+
+  const updatePayload: Record<string, unknown> = {
+    lastSyncRequestedAt: serverTimestamp(),
+  }
+
+  if (accessToken !== undefined) updatePayload.accessToken = accessToken
+  if (refreshToken !== undefined) updatePayload.refreshToken = refreshToken
+  if (idToken !== undefined) updatePayload.idToken = idToken
+  if (developerToken !== undefined) updatePayload.developerToken = developerToken
+  if (loginCustomerId !== undefined) updatePayload.loginCustomerId = loginCustomerId
+  if (managerCustomerId !== undefined) updatePayload.managerCustomerId = managerCustomerId
+  if (accountId !== undefined) updatePayload.accountId = accountId
+  if (accessTokenExpiresAt !== undefined) updatePayload.accessTokenExpiresAt = toTimestamp(accessTokenExpiresAt)
+  if (refreshTokenExpiresAt !== undefined) updatePayload.refreshTokenExpiresAt = toTimestamp(refreshTokenExpiresAt)
+
+  await setDoc(integrationRef, updatePayload, { merge: true })
 }
 
 export async function enqueueSyncJob(options: {
@@ -89,18 +212,21 @@ export async function getAdIntegration(options: {
     return null
   }
 
-  const data = snapshot.data() as Record<string, any>
+  const data = snapshot.data() as StoredIntegration
   return {
     id: snapshot.id,
     providerId,
     accessToken: (data.accessToken as string | null) ?? null,
     idToken: (data.idToken as string | null) ?? null,
     refreshToken: (data.refreshToken as string | null) ?? null,
-    scopes: (data.scopes as string[] | undefined) ?? [],
+    scopes: coerceStringArray(data.scopes),
     accountId: (data.accountId as string | undefined) ?? null,
     developerToken: (data.developerToken as string | undefined) ?? null,
     loginCustomerId: (data.loginCustomerId as string | undefined) ?? null,
-    lastSyncStatus: (data.lastSyncStatus as any) ?? 'never',
+    managerCustomerId: (data.managerCustomerId as string | undefined) ?? null,
+    accessTokenExpiresAt: data.accessTokenExpiresAt ?? null,
+    refreshTokenExpiresAt: data.refreshTokenExpiresAt ?? null,
+    lastSyncStatus: data.lastSyncStatus ?? 'never',
     lastSyncMessage: (data.lastSyncMessage as string | undefined) ?? null,
     lastSyncedAt: data.lastSyncedAt ?? null,
     linkedAt: data.linkedAt ?? null,
@@ -126,17 +252,17 @@ export async function claimNextSyncJob(options: {
     errorMessage: null,
   })
 
-  const data = jobDoc.data() as Record<string, any>
+  const data = jobDoc.data() as StoredSyncJob
   return {
     id: jobDoc.id,
-    providerId: data.providerId as string,
+    providerId: data.providerId ?? jobDoc.id,
     jobType: (data.jobType as SyncJob['jobType']) ?? 'initial-backfill',
     timeframeDays: (data.timeframeDays as number | undefined) ?? 90,
     status: 'running',
     createdAt: data.createdAt ?? null,
-    startedAt: null,
-    processedAt: null,
-    errorMessage: null,
+    startedAt: data.startedAt ?? null,
+    processedAt: data.processedAt ?? null,
+    errorMessage: data.errorMessage ?? null,
   }
 }
 

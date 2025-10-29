@@ -16,7 +16,6 @@ import {
 import {
   DollarSign,
   TrendingUp,
-  TrendingDown,
   CreditCard,
   FileText,
   Calendar,
@@ -35,7 +34,6 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import {
   Select,
   SelectContent,

@@ -1,16 +1,25 @@
 import { CampaignMetrics } from '@/types'
 
+export type PlatformCredentials = Record<string, string>
+
+export interface CampaignOverview {
+  id: string
+  name?: string
+  referenceId?: string
+  [key: string]: unknown
+}
+
 export interface AdPlatform {
   name: string
-  authenticate: (credentials: any) => Promise<boolean>
-  getCampaigns: (accountId: string) => Promise<any[]>
+  authenticate: (credentials: PlatformCredentials) => Promise<boolean>
+  getCampaigns: (accountId: string) => Promise<CampaignOverview[]>
   getMetrics: (campaignId: string, dateRange: { start: Date; end: Date }) => Promise<CampaignMetrics[]>
 }
 
 export class GoogleAdsService implements AdPlatform {
   name = 'Google Ads'
 
-  async authenticate(credentials: { clientId: string; clientSecret: string; developerToken: string }) {
+  async authenticate(credentials: PlatformCredentials) {
     try {
       // Implementation for Google Ads OAuth
       // This would use the Google Ads API client library
@@ -22,7 +31,7 @@ export class GoogleAdsService implements AdPlatform {
     }
   }
 
-  async getCampaigns(accountId: string) {
+  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
     try {
       // Implementation to fetch Google Ads campaigns
       // This would use the Google Ads API
@@ -50,7 +59,7 @@ export class GoogleAdsService implements AdPlatform {
 export class MetaAdsService implements AdPlatform {
   name = 'Meta Ads'
 
-  async authenticate(credentials: { appId: string; appSecret: string; accessToken: string }) {
+  async authenticate(credentials: PlatformCredentials) {
     try {
       // Implementation for Meta Ads OAuth
       console.log('Authenticating with Meta Ads...', credentials)
@@ -61,7 +70,7 @@ export class MetaAdsService implements AdPlatform {
     }
   }
 
-  async getCampaigns(accountId: string) {
+  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
     try {
       // Implementation to fetch Meta Ads campaigns
       console.log('Fetching Meta Ads campaigns for account:', accountId)
@@ -87,7 +96,7 @@ export class MetaAdsService implements AdPlatform {
 export class TikTokAdsService implements AdPlatform {
   name = 'TikTok Ads'
 
-  async authenticate(credentials: { appId: string; appSecret: string; accessToken: string }) {
+  async authenticate(credentials: PlatformCredentials) {
     try {
       // Implementation for TikTok Ads OAuth
       console.log('Authenticating with TikTok Ads...', credentials)
@@ -98,7 +107,7 @@ export class TikTokAdsService implements AdPlatform {
     }
   }
 
-  async getCampaigns(accountId: string) {
+  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
     try {
       // Implementation to fetch TikTok Ads campaigns
       console.log('Fetching TikTok Ads campaigns for account:', accountId)
@@ -124,7 +133,7 @@ export class TikTokAdsService implements AdPlatform {
 export class LinkedInAdsService implements AdPlatform {
   name = 'LinkedIn Ads'
 
-  async authenticate(credentials: { clientId: string; clientSecret: string; accessToken: string }) {
+  async authenticate(credentials: PlatformCredentials) {
     try {
       // Implementation for LinkedIn Ads OAuth
       console.log('Authenticating with LinkedIn Ads...', credentials)
@@ -135,7 +144,7 @@ export class LinkedInAdsService implements AdPlatform {
     }
   }
 
-  async getCampaigns(accountId: string) {
+  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
     try {
       // Implementation to fetch LinkedIn Ads campaigns
       console.log('Fetching LinkedIn Ads campaigns for account:', accountId)
@@ -197,7 +206,7 @@ export class AdsManager {
     return allMetrics
   }
 
-  async authenticatePlatform(platform: string, credentials: any): Promise<boolean> {
+  async authenticatePlatform(platform: string, credentials: PlatformCredentials): Promise<boolean> {
     const service = this.getPlatform(platform)
     if (!service) {
       throw new Error(`Unsupported platform: ${platform}`)

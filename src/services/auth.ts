@@ -1,4 +1,3 @@
-import { User } from '@/types'
 import { auth } from '@/lib/firebase'
 import {
   enqueueSyncJob,
@@ -13,6 +12,8 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   OAuthProvider,
+  OAuthCredential,
+  updateProfile,
   linkWithPopup,
   User as FirebaseUser,
 } from 'firebase/auth'
@@ -30,8 +31,7 @@ export interface AuthUser {
 export interface SignUpData {
   email: string
   password: string
-  name: string
-  agencyName: string
+  displayName?: string
 }
 
 export class AuthService {
@@ -67,17 +67,47 @@ export class AuthService {
   }
 
   private async mapFirebaseUser(firebaseUser: FirebaseUser): Promise<AuthUser> {
-    // In a real implementation, you would fetch user data from Firestore
-    // For now, we'll create a basic user object from Firebase user
+    const role = await this.resolveUserRole(firebaseUser)
+
     return {
       id: firebaseUser.uid,
       email: firebaseUser.email!,
       name: firebaseUser.displayName || 'User',
-      role: 'admin', // Default role, would be fetched from database
+      role,
       agencyId: 'default-agency', // Would be fetched from database
       createdAt: new Date(),
       updatedAt: new Date()
     }
+  }
+
+  private async resolveUserRole(firebaseUser: FirebaseUser): Promise<AuthUser['role']> {
+    try {
+      const tokenResult = await firebaseUser.getIdTokenResult()
+      const claimRole = tokenResult?.claims?.role
+      if (isRole(claimRole)) {
+        return claimRole
+      }
+    } catch (error) {
+      console.warn('Failed to resolve role from token claims', error)
+    }
+
+    if (typeof window !== 'undefined') {
+      const cookieRole = getBrowserCookie('cohorts_role')
+      if (isRole(cookieRole)) {
+        return cookieRole
+      }
+
+      try {
+        const storedRole = window.localStorage?.getItem('cohorts_role')
+        if (isRole(storedRole)) {
+          return storedRole
+        }
+      } catch (error) {
+        console.warn('Failed to read stored role from localStorage', error)
+      }
+    }
+
+    return 'member'
   }
 
   ensureAuthenticatedFirebaseUser(): FirebaseUser {
@@ -94,21 +124,44 @@ export class AuthService {
     provider.addScope('https://www.googleapis.com/auth/adwords')
     provider.addScope('email')
 
+    provider.setCustomParameters({
+      prompt: 'consent',
+      access_type: 'offline',
+    })
+
     try {
       const result = await linkWithPopup(currentUser, provider)
       const credential = GoogleAuthProvider.credentialFromResult(result)
+      const tokenResponse = (result as {
+        _tokenResponse?: {
+          oauthAccessToken?: string
+          oauthRefreshToken?: string
+          refreshToken?: string
+          expiresIn?: string | number
+          expires_in?: string | number
+        }
+      })._tokenResponse
+
+      const resolvedAccessToken = credential?.accessToken ?? tokenResponse?.oauthAccessToken ?? null
+      const refreshToken = extractRefreshToken(credential, tokenResponse)
+      const expiresInSeconds = Number(tokenResponse?.expiresIn ?? tokenResponse?.expires_in ?? 0)
+      const accessTokenExpiresAt = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+        ? new Date(Date.now() + expiresInSeconds * 1000)
+        : undefined
 
       await persistIntegrationTokens({
         userId: currentUser.uid,
         providerId: 'google',
-        accessToken: credential?.accessToken ?? null,
+        accessToken: resolvedAccessToken,
         idToken: credential?.idToken ?? null,
         scopes: ['https://www.googleapis.com/auth/adwords', 'email'],
+        refreshToken,
+        accessTokenExpiresAt,
       })
       await enqueueSyncJob({ userId: currentUser.uid, providerId: 'google' })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google Ads connection error:', error)
-      if (error.code === 'auth/credential-already-in-use') {
+      if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
         throw new Error('This Google account is already linked to another user.')
       }
       throw new Error('Failed to connect Google Ads. Please try again.')
@@ -119,31 +172,39 @@ export class AuthService {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
     const provider = new FacebookAuthProvider()
     provider.addScope('ads_management')
+    provider.addScope('ads_read')
     provider.addScope('business_management')
+    provider.setCustomParameters({ display: 'popup', auth_type: 'rerequest' })
 
     try {
       const result = await linkWithPopup(currentUser, provider)
       const credential = FacebookAuthProvider.credentialFromResult(result)
-      const rawScopes = (result as any)?._tokenResponse?.oauthAccessTokenScopes
-      const rawAccountId = Array.isArray(rawScopes)
-        ? rawScopes.find((scope: unknown) => typeof scope === 'string' && scope.includes('act_'))
-        : null
-      const rawUserInfo = (result as any)?._tokenResponse?.rawUserInfo
-      const accountId =
-        (typeof rawAccountId === 'string' && rawAccountId) ||
-        (typeof rawUserInfo === 'string' ? extractAccountIdFromRaw(rawUserInfo) : null)
+
+      const tokenResponse = (result as {
+        _tokenResponse?: {
+          oauthAccessToken?: string
+          expiresIn?: string | number
+          expires_in?: string | number
+        }
+      })._tokenResponse
+      const resolvedAccessToken = credential?.accessToken ?? tokenResponse?.oauthAccessToken ?? null
+      const expiresInSeconds = Number(tokenResponse?.expiresIn ?? tokenResponse?.expires_in ?? 0)
+      const accessTokenExpiresAt = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+        ? new Date(Date.now() + expiresInSeconds * 1000)
+        : undefined
 
       await persistIntegrationTokens({
         userId: currentUser.uid,
         providerId: 'facebook',
-        accessToken: credential?.accessToken ?? null,
-        scopes: ['ads_management', 'business_management'],
-        accountId,
+        accessToken: resolvedAccessToken,
+        scopes: ['ads_management', 'ads_read', 'business_management'],
+        accessTokenExpiresAt,
       })
+
       await enqueueSyncJob({ userId: currentUser.uid, providerId: 'facebook' })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Facebook Ads connection error:', error)
-      if (error.code === 'auth/credential-already-in-use') {
+      if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
         throw new Error('This Facebook account is already linked to another user.')
       }
       throw new Error('Failed to connect Facebook Ads. Please try again.')
@@ -168,12 +229,12 @@ export class AuthService {
         scopes: ['r_ads', 'rw_ads'],
       })
       await enqueueSyncJob({ userId: currentUser.uid, providerId: 'linkedin' })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('LinkedIn Ads connection error:', error)
-      if (error.code === 'auth/credential-already-in-use') {
+      if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
         throw new Error('This LinkedIn account is already linked to another user.')
       }
-      if (error.code === 'auth/operation-not-allowed') {
+      if (isFirebaseError(error) && error.code === 'auth/operation-not-allowed') {
         throw new Error('LinkedIn Ads connection is not enabled. Contact support to enable this provider.')
       }
       throw new Error('Failed to connect LinkedIn Ads. Please try again.')
@@ -185,6 +246,26 @@ export class AuthService {
     return currentUser.getIdToken()
   }
 
+  async startMetaOauth(redirect?: string): Promise<{ url: string }> {
+    const idToken = await this.getIdToken()
+    const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
+    const response = await fetch(`/api/integrations/meta/oauth/url${search}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string }
+      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to start Meta OAuth'
+      throw new Error(message)
+    }
+
+    return (await response.json()) as { url: string }
+  }
+
   async signInWithFacebook(): Promise<AuthUser> {
     try {
       const provider = new FacebookAuthProvider()
@@ -193,12 +274,12 @@ export class AuthService {
 
       const userCredential = await signInWithPopup(auth, provider)
       return await this.mapFirebaseUser(userCredential.user)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Facebook sign-in error:', error)
-      if (error.code === 'auth/popup-closed-by-user') {
+      if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
       }
-      if (error.code === 'auth/account-exists-with-different-credential') {
+      if (isFirebaseError(error) && error.code === 'auth/account-exists-with-different-credential') {
         throw new Error('An account already exists with the same email. Please sign in using that provider.')
       }
       throw new Error('Failed to sign in with Facebook. Please try again.')
@@ -217,12 +298,12 @@ export class AuthService {
 
       const userCredential = await signInWithPopup(auth, provider)
       return await this.mapFirebaseUser(userCredential.user)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('LinkedIn sign-in error:', error)
-      if (error.code === 'auth/popup-closed-by-user') {
+      if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
       }
-      if (error.code === 'auth/operation-not-allowed') {
+      if (isFirebaseError(error) && error.code === 'auth/operation-not-allowed') {
         throw new Error('LinkedIn sign-in is not enabled. Please contact support to enable this provider.')
       }
       throw new Error('Failed to sign in with LinkedIn. Please try again.')
@@ -233,7 +314,15 @@ export class AuthService {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       return await this.mapFirebaseUser(userCredential.user)
-    } catch (error) {
+    } catch (error: unknown) {
+      if (isFirebaseError(error)) {
+        if (error.code === 'auth/user-not-found') {
+          throw new Error('No account found with that email')
+        }
+        if (error.code === 'auth/wrong-password') {
+          throw new Error('Incorrect password. Please try again.')
+        }
+      }
       throw new Error('Invalid email or password')
     }
   }
@@ -252,13 +341,13 @@ export class AuthService {
 
       const userCredential = await signInWithPopup(auth, provider)
       return await this.mapFirebaseUser(userCredential.user)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Google sign-in error:', error)
-      if (error.code === 'auth/popup-closed-by-user') {
+      if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
-      } else if (error.code === 'auth/popup-blocked') {
+      } else if (isFirebaseError(error) && error.code === 'auth/popup-blocked') {
         throw new Error('Sign-in popup was blocked by the browser. Please allow popups for this site.')
-      } else if (error.code === 'auth/unauthorized-domain') {
+      } else if (isFirebaseError(error) && error.code === 'auth/unauthorized-domain') {
         throw new Error('This domain is not authorized for Google sign-in. Please contact support.')
       } else {
         throw new Error('Failed to sign in with Google. Please try again.')
@@ -275,6 +364,14 @@ export class AuthService {
         data.password
       )
 
+        if (data.displayName && userCredential.user) {
+          try {
+            await updateProfile(userCredential.user, { displayName: data.displayName })
+          } catch (error) {
+            console.warn('Failed to set display name during sign up:', error)
+          }
+      }
+
       // In a real implementation, you would also:
       // 1. Create user document in Firestore
       // 2. Create agency document
@@ -282,10 +379,10 @@ export class AuthService {
       
       const authUser = await this.mapFirebaseUser(userCredential.user)
       return authUser
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
+    } catch (error: unknown) {
+      if (isFirebaseError(error) && error.code === 'auth/email-already-in-use') {
         throw new Error('Email already in use')
-      } else if (error.code === 'auth/weak-password') {
+      } else if (isFirebaseError(error) && error.code === 'auth/weak-password') {
         throw new Error('Password is too weak')
       } else {
         throw new Error('Failed to create account')
@@ -296,7 +393,7 @@ export class AuthService {
   async signOut(): Promise<void> {
     try {
       await firebaseSignOut(auth)
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Sign out error:', error)
       throw new Error('Failed to sign out')
     }
@@ -329,7 +426,8 @@ export class AuthService {
     try {
       // In a real implementation, you would use Firebase's sendPasswordResetEmail
       console.log('Password reset email sent to:', email)
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Password reset error:', error)
       throw new Error('Failed to send password reset email')
     }
   }
@@ -351,7 +449,8 @@ export class AuthService {
       
       this.notifyListeners(this.currentUser)
       return this.currentUser
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Profile update error:', error)
       throw new Error('Failed to update profile')
     }
   }
@@ -361,11 +460,16 @@ export class AuthService {
       throw new Error('No authenticated user')
     }
 
+    if (!currentPassword || !newPassword) {
+      throw new Error('Current and new passwords are required')
+    }
+
     try {
       // In a real implementation, you would use Firebase's updatePassword
       // after re-authenticating the user
       console.log('Password changed successfully')
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Password change error:', error)
       throw new Error('Failed to change password')
     }
   }
@@ -381,26 +485,68 @@ export class AuthService {
       // 2. Delete associated data (clients, campaigns, etc.)
       // 3. Delete Firebase user
       console.log('Account deleted successfully')
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('Account deletion error:', error)
       throw new Error('Failed to delete account')
     }
   }
 }
 
-function extractAccountIdFromRaw(raw: string): string | null {
-  try {
-    const parsed = JSON.parse(raw)
-    const accounts = parsed?.data?.adaccounts || parsed?.adaccounts || []
-    if (Array.isArray(accounts) && accounts.length > 0) {
-      const firstAccount = accounts[0]
-      if (typeof firstAccount === 'string') return firstAccount
-      if (typeof firstAccount?.id === 'string') return firstAccount.id
-      if (typeof firstAccount?.account_id === 'string') return firstAccount.account_id
-    }
-  } catch (error) {
-    console.warn('Failed to parse Meta raw user info for ad account id', error)
-  }
-  return null
+function isFirebaseError(error: unknown): error is { code: string } {
+  return typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
 }
 
 export const authService = AuthService.getInstance()
+
+function extractRefreshToken(
+  credential: OAuthCredential | null,
+  tokenResponse?: {
+    oauthRefreshToken?: string
+    refreshToken?: string
+  }
+): string | null {
+  if (credential && typeof credential === 'object' && 'refreshToken' in credential) {
+    const candidate = (credential as { refreshToken?: unknown }).refreshToken
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate
+    }
+  }
+
+  const oauthRefreshToken = tokenResponse?.oauthRefreshToken
+  if (typeof oauthRefreshToken === 'string' && oauthRefreshToken.length > 0) {
+    return oauthRefreshToken
+  }
+
+  const refreshToken = tokenResponse?.refreshToken
+  if (typeof refreshToken === 'string' && refreshToken.length > 0) {
+    return refreshToken
+  }
+
+  return null
+}
+
+function isRole(value: unknown): value is AuthUser['role'] {
+  return value === 'admin' || value === 'manager' || value === 'member'
+}
+
+function getBrowserCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') {
+    return undefined
+  }
+
+  const match = document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+
+  if (!match) {
+    return undefined
+  }
+
+  try {
+    return decodeURIComponent(match.split('=')[1] ?? '') || undefined
+  } catch (error) {
+    console.warn('Failed to decode cookie value', error)
+    return undefined
+  }
+}

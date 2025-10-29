@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { db } from '@/lib/firebase'
+import { adminDb } from '@/lib/firebase-admin'
 import { notifyContactEmail, notifyContactSlack } from '@/lib/notifications'
 
 const contactSchema = z.object({
@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
       company: parseResult.data.company?.trim() || null,
     }
 
-    await addDoc(collection(db, 'contactMessages'), {
+    await adminDb.collection('contactMessages').add({
       ...payload,
-      createdAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       status: 'new',
     })
 
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     ])
 
     return NextResponse.json({ ok: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[contact] failed to handle submission', error)
     return NextResponse.json({ error: 'Unable to send your message right now.' }, { status: 500 })
   }

@@ -1,9 +1,72 @@
+import { createHmac } from 'node:crypto'
+
 import { NormalizedMetric } from '@/types/integrations'
 
 interface MetaAdsOptions {
   accessToken: string
   adAccountId: string
   timeframeDays: number
+  maxPages?: number
+  refreshAccessToken?: () => Promise<string>
+}
+
+type MetaInsightAction = {
+  action_type?: string
+  value?: unknown
+}
+
+type MetaInsightsRow = {
+  date_start?: string
+  date_stop?: string
+  campaign_id?: string
+  campaign_name?: string
+  spend?: unknown
+  impressions?: unknown
+  clicks?: unknown
+  actions?: MetaInsightAction[]
+  action_values?: MetaInsightAction[]
+}
+
+type MetaInsightsResponse = {
+  data?: MetaInsightsRow[]
+  paging?: {
+    cursors?: {
+      before?: string
+      after?: string
+    }
+    next?: string
+  }
+}
+
+type MetaAdCreative = {
+  id?: string
+  name?: string
+  thumbnail_url?: string
+}
+
+type MetaAdInsight = {
+  actions?: MetaInsightAction[]
+  action_values?: MetaInsightAction[]
+  spend?: unknown
+  impressions?: unknown
+  clicks?: unknown
+}
+
+type MetaAdData = {
+  id?: string
+  name?: string
+  status?: string
+  effective_status?: string
+  adcreatives?: {
+    data?: MetaAdCreative[]
+  }
+  insights?: {
+    data?: MetaAdInsight[]
+  }
+}
+
+type MetaAdsListResponse = {
+  data?: MetaAdData[]
 }
 
 function buildTimeRange(timeframeDays: number) {
@@ -19,13 +82,26 @@ function buildTimeRange(timeframeDays: number) {
   }
 }
 
+type MetaPagingState = {
+  after?: string
+  next?: string
+}
+
 function coerceNumber(value: unknown): number {
   const parsed = typeof value === 'string' ? parseFloat(value) : Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<NormalizedMetric[]> {
-  const { accessToken, adAccountId, timeframeDays } = options
+  const { accessToken, adAccountId, timeframeDays, maxPages = 10, refreshAccessToken } = options
 
   if (!accessToken) {
     throw new Error('Missing Meta access token')
@@ -36,86 +112,143 @@ export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<Norm
   }
 
   const timeRange = buildTimeRange(timeframeDays)
+  let paging: MetaPagingState | undefined
+  let activeAccessToken = accessToken
+  let attemptedRefresh = false
+  const metrics: NormalizedMetric[] = []
+  const appSecret = process.env.META_APP_SECRET
 
-  const params = new URLSearchParams({
-    level: 'campaign',
-    fields: [
-      'date_start',
-      'date_stop',
-      'campaign_id',
-      'campaign_name',
-      'impressions',
-      'clicks',
-      'spend',
-      'actions',
-      'action_values',
-    ].join(','),
-    time_range: JSON.stringify(timeRange),
-    time_increment: '1',
-    breakdowns: ['publisher_platform'].join(','),
-  })
+  for (let page = 0; page < maxPages; page += 1) {
+    const params = new URLSearchParams({
+      level: 'campaign',
+      fields: [
+        'date_start',
+        'date_stop',
+        'campaign_id',
+        'campaign_name',
+        'impressions',
+        'clicks',
+        'spend',
+        'actions',
+        'action_values',
+      ].join(','),
+      time_range: JSON.stringify(timeRange),
+      time_increment: '1',
+      breakdowns: 'publisher_platform',
+      limit: '500',
+    })
 
-  const response = await fetch(`https://graph.facebook.com/v18.0/${adAccountId}/insights?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  })
+    appendMetaAuthParams({ params, accessToken: activeAccessToken, appSecret })
 
-  if (!response.ok) {
-    const errorPayload = await response.text()
-    throw new Error(`Meta Ads API error (${response.status}): ${errorPayload}`)
-  }
-
-  const payload = await response.json()
-  const rows: any[] = Array.isArray(payload?.data) ? payload.data : []
-
-  const creativesMap = await fetchCampaignCreatives({ accessToken, adAccountId, campaignIds: rows.map((row) => row?.campaign_id).filter(Boolean) })
-
-  const metrics: NormalizedMetric[] = rows.map((row) => {
-    const spend = coerceNumber(row?.spend)
-    const impressions = coerceNumber(row?.impressions)
-    const clicks = coerceNumber(row?.clicks)
-
-    const actions = Array.isArray(row?.actions) ? row.actions : []
-    const conversions = actions.reduce((acc: number, action: any) => {
-      if (action?.action_type === 'offsite_conversion' || action?.action_type === 'purchase') {
-        return acc + coerceNumber(action?.value)
-      }
-      return acc
-    }, 0)
-
-    const actionValues = Array.isArray(row?.action_values) ? row.action_values : []
-    const revenue = actionValues.reduce((acc: number, action: any) => {
-      if (action?.action_type === 'offsite_conversion.purchase' || action?.action_type === 'omni_purchase') {
-        return acc + coerceNumber(action?.value)
-      }
-      return acc
-    }, 0)
-
-    const creatives = creativesMap.get(row?.campaign_id)
-
-    return {
-      providerId: 'facebook',
-      date: row?.date_start ?? row?.date_stop ?? new Date().toISOString().slice(0, 10),
-      spend,
-      impressions,
-      clicks,
-      conversions,
-      revenue,
-      creatives,
-      rawPayload: row,
+    if (paging?.after) {
+      params.set('after', paging.after)
     }
-  })
+
+    const url = `https://graph.facebook.com/v18.0/${adAccountId}/insights?${params.toString()}`
+    let response: Response | null = null
+    let attempt = 0
+
+    while (attempt < 3) {
+      response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${activeAccessToken}`,
+        },
+      })
+
+      if ((response.status === 401 || response.status === 403) && refreshAccessToken && !attemptedRefresh) {
+        attemptedRefresh = true
+        activeAccessToken = await refreshAccessToken()
+        attempt = 0
+        continue
+      }
+
+      if (!response.ok && isRetryableStatus(response.status) && attempt < 2) {
+        attempt += 1
+        await sleep(200 * 2 ** attempt)
+        continue
+      }
+
+      break
+    }
+
+    if (!response) {
+      throw new Error('Meta Ads API request failed without a response')
+    }
+
+    if (!response.ok) {
+      const errorPayload = await response.text()
+      throw new Error(`Meta Ads API error (${response.status}): ${errorPayload}`)
+    }
+
+    const payload = (await response.json()) as MetaInsightsResponse
+    const rows: MetaInsightsRow[] = Array.isArray(payload?.data) ? payload.data : []
+
+    const creativesMap = await fetchCampaignCreatives({
+      accessToken: activeAccessToken,
+      campaignIds: rows
+        .map((row) => row?.campaign_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      appSecret,
+    })
+
+    rows.forEach((row) => {
+      const spend = coerceNumber(row?.spend)
+      const impressions = coerceNumber(row?.impressions)
+      const clicks = coerceNumber(row?.clicks)
+
+      const actions = Array.isArray(row?.actions) ? row.actions : []
+      const conversions = actions.reduce((acc: number, action) => {
+        if (action?.action_type === 'offsite_conversion' || action?.action_type === 'purchase') {
+          return acc + coerceNumber(action?.value)
+        }
+        return acc
+      }, 0)
+
+      const actionValues = Array.isArray(row?.action_values) ? row.action_values : []
+      const revenue = actionValues.reduce((acc: number, action) => {
+        if (action?.action_type === 'offsite_conversion.purchase' || action?.action_type === 'omni_purchase') {
+          return acc + coerceNumber(action?.value)
+        }
+        return acc
+      }, 0)
+
+      const campaignId = typeof row?.campaign_id === 'string' && row.campaign_id.length > 0 ? row.campaign_id : undefined
+      const campaignName = typeof row?.campaign_name === 'string' && row.campaign_name.length > 0 ? row.campaign_name : undefined
+      const creatives = campaignId ? creativesMap.get(campaignId) : undefined
+
+      metrics.push({
+        providerId: 'facebook',
+        date: row?.date_start ?? row?.date_stop ?? new Date().toISOString().slice(0, 10),
+        spend,
+        impressions,
+        clicks,
+        conversions,
+        revenue,
+        campaignId,
+        campaignName,
+        creatives,
+        rawPayload: row,
+      })
+    })
+
+    const nextCursor = payload?.paging?.cursors?.after ?? null
+    const nextLink = payload?.paging?.next ?? null
+    paging = nextCursor ? { after: nextCursor, next: nextLink ?? undefined } : undefined
+
+    if (!paging?.after) {
+      break
+    }
+  }
 
   return metrics
 }
 
 async function fetchCampaignCreatives(options: {
   accessToken: string
-  adAccountId: string
   campaignIds: string[]
+  appSecret?: string | null
 }): Promise<Map<string, NormalizedMetric['creatives']>> {
-  const { accessToken, adAccountId, campaignIds } = options
+  const { accessToken, campaignIds, appSecret } = options
   const creativeMap = new Map<string, NormalizedMetric['creatives']>()
 
   if (!campaignIds.length) {
@@ -141,6 +274,8 @@ async function fetchCampaignCreatives(options: {
         )
         params.set('limit', '25')
 
+        appendMetaAuthParams({ params, accessToken, appSecret })
+
         const url = `https://graph.facebook.com/v18.0/${campaignId}/ads?${params.toString()}`
         const response = await fetch(url, {
           headers: {
@@ -153,13 +288,13 @@ async function fetchCampaignCreatives(options: {
           throw new Error(`Meta Ads API error (${response.status}): ${errorPayload}`)
         }
 
-        const payload = await response.json()
-        const ads: any[] = Array.isArray(payload?.data) ? payload.data : []
+        const payload = (await response.json()) as MetaAdsListResponse
+        const ads: MetaAdData[] = Array.isArray(payload?.data) ? payload.data : []
 
         const creatives: NonNullable<NormalizedMetric['creatives']> = []
 
         ads.forEach((ad) => {
-          const adCreative = ad?.adcreatives?.data?.[0]
+          const adCreative = Array.isArray(ad?.adcreatives?.data) ? ad.adcreatives?.data[0] : undefined
           const insight = Array.isArray(ad?.insights?.data) ? ad.insights.data[0] : undefined
 
           if (!adCreative && !insight) {
@@ -169,14 +304,14 @@ async function fetchCampaignCreatives(options: {
           const actions = Array.isArray(insight?.actions) ? insight.actions : []
           const actionValues = Array.isArray(insight?.action_values) ? insight.action_values : []
 
-          const conversions = actions.reduce((acc: number, action: any) => {
+          const conversions = actions.reduce((acc: number, action) => {
             if (typeof action?.action_type === 'string' && (action.action_type.includes('purchase') || action.action_type === 'offsite_conversion')) {
               return acc + coerceNumber(action?.value)
             }
             return acc
           }, 0)
 
-          const revenue = actionValues.reduce((acc: number, action: any) => {
+          const revenue = actionValues.reduce((acc: number, action) => {
             if (typeof action?.action_type === 'string' && action.action_type.includes('purchase')) {
               return acc + coerceNumber(action?.value)
             }
@@ -206,4 +341,86 @@ async function fetchCampaignCreatives(options: {
   )
 
   return creativeMap
+}
+
+function appendMetaAuthParams(options: { params: URLSearchParams; accessToken: string; appSecret?: string | null }) {
+  const { params, accessToken, appSecret } = options
+  params.set('access_token', accessToken)
+
+  if (!appSecret) {
+    return
+  }
+
+  try {
+    const proof = createHmac('sha256', appSecret).update(accessToken).digest('hex')
+    params.set('appsecret_proof', proof)
+  } catch (error) {
+    console.warn('Failed to compute Meta appsecret_proof', error)
+  }
+}
+
+export type MetaAdAccount = {
+  id: string
+  name: string
+  account_status?: number
+  currency?: string
+}
+
+export async function fetchMetaAdAccounts(options: {
+  accessToken: string
+  appSecret?: string | null
+  limit?: number
+}): Promise<MetaAdAccount[]> {
+  const { accessToken, appSecret = process.env.META_APP_SECRET, limit = 25 } = options
+
+  if (!accessToken) {
+    throw new Error('Missing Meta access token')
+  }
+
+  const params = new URLSearchParams({
+    fields: ['id', 'name', 'account_status', 'currency'].join(','),
+    limit: String(limit),
+  })
+
+  appendMetaAuthParams({ params, accessToken, appSecret })
+
+  const url = `https://graph.facebook.com/v18.0/me/adaccounts?${params.toString()}`
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    const errorPayload = await response.text()
+    throw new Error(`Meta ad accounts request failed (${response.status}): ${errorPayload}`)
+  }
+
+  const payload = (await response.json()) as {
+    data?: Array<{
+      id?: unknown
+      name?: unknown
+      account_status?: unknown
+      currency?: unknown
+    }>
+  }
+
+  const accounts = Array.isArray(payload?.data) ? payload.data : []
+
+  return (accounts ?? [])
+    .map((candidate): MetaAdAccount | null => {
+      const id = typeof candidate?.id === 'string' ? candidate.id : null
+      const name = typeof candidate?.name === 'string' ? candidate.name : 'Meta ad account'
+      const accountStatusRaw = candidate?.account_status
+      const accountStatus = typeof accountStatusRaw === 'number' ? accountStatusRaw : Number(accountStatusRaw)
+      const currency = typeof candidate?.currency === 'string' ? candidate.currency : undefined
+
+      if (!id) {
+        return null
+      }
+
+      return {
+        id,
+        name,
+        account_status: Number.isFinite(accountStatus) ? Number(accountStatus) : undefined,
+        currency,
+      } satisfies MetaAdAccount
+    })
+    .filter((account): account is MetaAdAccount => Boolean(account))
 }

@@ -12,7 +12,7 @@ import {
   Video,
   Info,
   FileText,
-  Image,
+  Image as ImageIcon,
   Download,
 } from 'lucide-react'
 
@@ -372,7 +372,7 @@ export default function CollaborationPage() {
               </Card>
               <Card className="border-muted/40 bg-muted/10">
                 <CardContent className="flex items-center gap-2 p-3">
-                  <Image className="h-4 w-4 text-muted-foreground" />
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
                   <span className="truncate text-xs text-foreground">Campaign_Ad.jpg</span>
                 </CardContent>
               </Card>
