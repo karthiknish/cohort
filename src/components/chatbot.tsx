@@ -173,26 +173,33 @@ export default function Chatbot() {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={() => setIsOpen(true)}
-          className="bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-110 group"
-        >
-          <MessageCircle className="h-6 w-6" />
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-            1
-          </span>
-          <div className="absolute bottom-16 right-0 bg-gray-900 text-white text-sm rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+      <div className="fixed bottom-4 right-4 z-50 sm:bottom-6 sm:right-6">
+        <div className="group relative flex items-center justify-end">
+          <Button
+            size="icon"
+            className="relative h-12 w-12 rounded-full shadow-lg transition-transform hover:translate-y-[-2px] sm:h-14 sm:w-14"
+            onClick={() => setIsOpen(true)}
+          >
+            <MessageCircle className="h-6 w-6" />
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[11px] font-semibold text-destructive-foreground">
+              1
+            </span>
+            <span className="sr-only">Open chatbot</span>
+          </Button>
+          <span className="pointer-events-none absolute right-full mr-3 hidden translate-x-2 rounded-full bg-popover px-3 py-1 text-xs text-popover-foreground shadow-lg transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block">
             Need help? Chat with AI
-          </div>
-        </button>
+          </span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 ${isMinimized ? 'w-80' : 'w-96'}`}>
-      <Card className="overflow-hidden border-border shadow-xl">
+    <div className="fixed bottom-4 right-4 z-50 w-[min(100vw-1.5rem,24rem)] sm:bottom-6 sm:right-6">
+      <Card
+        data-state={isMinimized ? 'minimized' : 'expanded'}
+        className="overflow-hidden border-border shadow-2xl data-[state=minimized]:rounded-full data-[state=minimized]:border-muted/60"
+      >
         <CardHeader className="bg-primary text-primary-foreground p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -230,7 +237,7 @@ export default function Chatbot() {
         {!isMinimized && (
           <>
             <CardContent className="bg-muted/40 p-0">
-              <ScrollArea className="h-96 p-4">
+              <ScrollArea className="h-[480px] p-4 sm:h-[460px]">
                 <div className="space-y-4">
                   {messages.map((message) => (
                     <div
@@ -243,7 +250,7 @@ export default function Chatbot() {
                         </span>
                       )}
                       <div
-                        className={`max-w-xs rounded-xl px-4 py-2 text-sm shadow-sm ${
+                        className={`max-w-[85%] rounded-xl px-4 py-2 text-sm shadow-sm ${
                           message.sender === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-background border'
@@ -302,7 +309,7 @@ export default function Chatbot() {
             </CardContent>
 
             <CardFooter className="border-t bg-background p-4">
-              <div className="flex w-full items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
@@ -310,9 +317,14 @@ export default function Chatbot() {
                   placeholder="Ask me anything..."
                   disabled={isTyping}
                 />
-                <Button onClick={sendMessage} size="icon" disabled={!inputMessage.trim() || isTyping}>
-                  <Send className="h-4 w-4" />
-                  <span className="sr-only">Send message</span>
+                <Button
+                  onClick={sendMessage}
+                  className="w-full sm:w-auto"
+                  size="default"
+                  disabled={!inputMessage.trim() || isTyping}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send
                 </Button>
               </div>
             </CardFooter>
