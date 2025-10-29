@@ -5,13 +5,11 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
-import { buildProposalDocument, proposalDraftSchema, sanitizeProposalUpdate } from '@/lib/proposals'
+import { buildProposalDocument, proposalDraftSchema, proposalDraftUpdateSchema, sanitizeProposalUpdate } from '@/lib/proposals'
 
-const createSchema = proposalDraftSchema.extend({
-  formData: proposalDraftSchema.shape.formData.default({}),
-})
+const createSchema = proposalDraftSchema
 
-const updateSchema = proposalDraftSchema.partial()
+const updateSchema = proposalDraftUpdateSchema
 
 type ProposalSnapshot = {
   status?: string

@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -32,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/use-toast'
 
 interface AdminUserRecord {
   id: string
@@ -63,9 +63,9 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const fetchUsers = useCallback(
     async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
@@ -77,7 +77,6 @@ export default function AdminUsersPage() {
       } else {
         setLoading(true)
         setError(null)
-        setSuccessMessage('')
       }
 
       try {
@@ -107,7 +106,9 @@ export default function AdminUsersPage() {
         setUsers((prev) => (append ? [...prev, ...payload.users!] : payload.users!))
         setNextCursor(payload.nextCursor ?? null)
       } catch (err: unknown) {
-        setError(extractErrorMessage(err, 'Unable to fetch users'))
+        const message = extractErrorMessage(err, 'Unable to fetch users')
+        setError(message)
+        toast({ title: 'Admin error', description: message, variant: 'destructive' })
       } finally {
         if (append) {
           setLoadingMore(false)
@@ -116,7 +117,7 @@ export default function AdminUsersPage() {
         }
       }
     },
-    [user?.id, getIdToken]
+    [user?.id, getIdToken, toast]
   )
 
   useEffect(() => {
@@ -158,7 +159,6 @@ export default function AdminUsersPage() {
 
   const handleRoleChange = async (userId: string, role: AdminUserRecord['role']) => {
     setSavingId(userId)
-    setSuccessMessage('')
     setError(null)
 
     try {
@@ -179,9 +179,11 @@ export default function AdminUsersPage() {
       }
 
       setUsers((prev) => prev.map((record) => (record.id === userId ? { ...record, role } : record)))
-      setSuccessMessage('Role updated successfully')
+      toast({ title: 'Role updated', description: `Role changed to ${role}.` })
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, 'Unable to update user role'))
+      const message = extractErrorMessage(err, 'Unable to update user role')
+      setError(message)
+      toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
     }
@@ -189,7 +191,6 @@ export default function AdminUsersPage() {
 
   const handleStatusAction = async (userRecord: AdminUserRecord) => {
     setSavingId(userRecord.id)
-    setSuccessMessage('')
     setError(null)
 
     const nextStatus = deriveNextStatus(userRecord.status)
@@ -212,9 +213,14 @@ export default function AdminUsersPage() {
       }
 
       setUsers((prev) => prev.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record)))
-      setSuccessMessage('User status updated')
+      toast({
+        title: 'Status updated',
+        description: `User status set to ${nextStatus.replace('_', ' ')}.`,
+      })
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, 'Unable to update user status'))
+      const message = extractErrorMessage(err, 'Unable to update user status')
+      setError(message)
+      toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
     }
@@ -259,13 +265,6 @@ export default function AdminUsersPage() {
             </Button>
           </div>
         </div>
-
-        {(error || successMessage) && (
-          <Alert variant={error ? 'destructive' : 'default'}>
-            <AlertTitle>{error ? 'Admin error' : 'Success'}</AlertTitle>
-            <AlertDescription>{error ?? successMessage}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="border-muted/60 bg-background">
@@ -359,7 +358,11 @@ export default function AdminUsersPage() {
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                        {loading ? 'Loading users…' : 'No users match the current filters.'}
+                        {loading
+                          ? 'Loading users…'
+                          : error
+                          ? `Unable to load users: ${error}`
+                          : 'No users match the current filters.'}
                       </td>
                     </tr>
                   ) : (

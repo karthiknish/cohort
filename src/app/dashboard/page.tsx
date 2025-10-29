@@ -30,6 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/auth-context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
+import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 
 interface IntegrationStatusResponse {
   statuses: Array<{
@@ -381,33 +382,40 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Welcome back! Here&apos;s an overview of your agency performance.
-        </p>
-      </div>
+      <FadeIn>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Welcome back! Here&apos;s an overview of your agency performance.
+          </p>
+        </div>
+      </FadeIn>
 
       {hasMetricData && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <FadeInStagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <StatsCard key={stat.name} stat={stat} />
+            <FadeInItem key={stat.name}>
+              <StatsCard stat={stat} />
+            </FadeInItem>
           ))}
-        </div>
+        </FadeInStagger>
       )}
 
-      <AdConnectionsCard
-        providers={adPlatforms}
-        connectedProviders={connectedProviders}
-        connectingProvider={connectingProvider}
-        connectionErrors={connectionErrors}
-        onConnect={handleConnect}
-        onOauthRedirect={handleMetaOauthRedirect}
-        onRefresh={handleManualRefresh}
-        refreshing={metricsLoading}
-      />
+      <FadeIn>
+        <AdConnectionsCard
+          providers={adPlatforms}
+          connectedProviders={connectedProviders}
+          connectingProvider={connectingProvider}
+          connectionErrors={connectionErrors}
+          onConnect={handleConnect}
+          onOauthRedirect={handleMetaOauthRedirect}
+          onRefresh={handleManualRefresh}
+          refreshing={metricsLoading}
+        />
+      </FadeIn>
 
-      <Card className="shadow-sm">
+      <FadeIn>
+        <Card className="shadow-sm">
         <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="flex flex-col gap-1">
             <CardTitle className="text-lg">Ad performance summary</CardTitle>
@@ -470,9 +478,11 @@ export default function DashboardPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </FadeIn>
 
-      <Card className="shadow-sm">
+      <FadeIn>
+        <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-lg">Latest synced rows</CardTitle>
@@ -536,69 +546,82 @@ export default function DashboardPage() {
             </ScrollArea>
           )}
         </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Performance Overview</CardTitle>
-              <CardDescription>Key metrics from all active campaigns</CardDescription>
-            </div>
-            <Button variant="outline" size="sm">
-              View detailed report
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-muted">
-              <p className="text-sm text-muted-foreground">
-                Analytics chart will be displayed here
-              </p>
-            </div>
-          </CardContent>
         </Card>
+      </FadeIn>
 
-        <div className="space-y-6">
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                  <Clock className="h-4 w-4 text-primary" />
-                </span>
+      <FadeIn>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <FadeInItem className="lg:col-span-2">
+            <Card className="h-full">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">Recent Activity</CardTitle>
-                  <CardDescription>Latest updates from your teams</CardDescription>
+                  <CardTitle className="text-lg">Performance Overview</CardTitle>
+                  <CardDescription>Key metrics from all active campaigns</CardDescription>
                 </div>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs">
-                View all
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentActivity.map((item) => (
-                <ActivityItem key={item.id} item={item} />
-              ))}
-            </CardContent>
-          </Card>
+                <Button variant="outline" size="sm">
+                  View detailed report
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-muted">
+                  <p className="text-sm text-muted-foreground">
+                    Analytics chart will be displayed here
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeInItem>
 
-          <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Upcoming Tasks</CardTitle>
-                <CardDescription>Important actions scheduled this week</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" className="text-xs">
-                Manage tasks
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {upcomingTasks.map((task) => (
-                <TaskItem key={task.id} task={task} />
-              ))}
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <FadeInItem>
+              <Card className="shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                      <Clock className="h-4 w-4 text-primary" />
+                    </span>
+                    <div>
+                      <CardTitle className="text-base">Recent Activity</CardTitle>
+                      <CardDescription>Latest updates from your teams</CardDescription>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    View all
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {recentActivity.map((item) => (
+                    <FadeInItem key={item.id}>
+                      <ActivityItem item={item} />
+                    </FadeInItem>
+                  ))}
+                </CardContent>
+              </Card>
+            </FadeInItem>
+
+            <FadeInItem>
+              <Card className="shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Upcoming Tasks</CardTitle>
+                    <CardDescription>Important actions scheduled this week</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    Manage tasks
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {upcomingTasks.map((task) => (
+                    <FadeInItem key={task.id}>
+                      <TaskItem task={task} />
+                    </FadeInItem>
+                  ))}
+                </CardContent>
+              </Card>
+            </FadeInItem>
+          </div>
         </div>
-      </div>
+      </FadeIn>
     </div>
   )
 }

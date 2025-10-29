@@ -14,9 +14,9 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/use-toast'
 
 interface ContactMessage {
   id: string
@@ -38,8 +38,8 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState('')
   const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const fetchMessages = async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
     if (!user?.id) return
@@ -50,7 +50,6 @@ export default function AdminPage() {
     } else {
       setIsLoading(true)
       setError(null)
-      setSuccessMessage('')
     }
 
     try {
@@ -77,7 +76,9 @@ export default function AdminPage() {
       setMessages((prev) => (append ? [...prev, ...payload.messages] : payload.messages))
       setNextCursor(payload.nextCursor ?? null)
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, 'Unable to load admin data'))
+      const message = extractErrorMessage(err, 'Unable to load admin data')
+      setError(message)
+      toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       if (append) {
         setIsLoadingMore(false)
@@ -108,7 +109,6 @@ export default function AdminPage() {
   const handleStatusUpdate = async (id: string, nextStatus: ContactMessage['status']) => {
     try {
       setSavingId(id)
-      setSuccessMessage('')
       const token = await getIdToken()
       const response = await fetch('/api/admin/contact-messages', {
         method: 'PATCH',
@@ -125,9 +125,14 @@ export default function AdminPage() {
       }
 
       setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, status: nextStatus } : msg)))
-      setSuccessMessage('Message updated successfully')
+      toast({
+        title: 'Status updated',
+        description: `Marked message as ${nextStatus.replace('_', ' ')}`,
+      })
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, 'Unable to update message'))
+      const message = extractErrorMessage(err, 'Unable to update message')
+      setError(message)
+      toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
     }
@@ -183,20 +188,6 @@ export default function AdminPage() {
             </Button>
           </div>
         </div>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Admin error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {successMessage && !error && (
-          <Alert>
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{successMessage}</AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="border-muted/60 bg-background">
@@ -254,7 +245,11 @@ export default function AdminPage() {
                   {messages.length === 0 && !isLoading ? (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                        {statusFilter !== 'all' ? 'No messages match this status.' : 'No contact messages yet.'}
+                        {error
+                          ? `Unable to load contact messages: ${error}`
+                          : statusFilter !== 'all'
+                          ? 'No messages match this status.'
+                          : 'No contact messages yet.'}
                       </td>
                     </tr>
                   ) : (

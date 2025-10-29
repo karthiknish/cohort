@@ -38,13 +38,32 @@ export const proposalFormSchema = z.object({
 
 export type ProposalFormData = z.infer<typeof proposalFormSchema>
 
+const proposalFormPartialSchema = z
+  .object({
+    company: proposalFormSchema.shape.company.partial().optional(),
+    marketing: proposalFormSchema.shape.marketing.partial().optional(),
+    goals: proposalFormSchema.shape.goals.partial().optional(),
+    scope: proposalFormSchema.shape.scope.partial().optional(),
+    timelines: proposalFormSchema.shape.timelines.partial().optional(),
+    value: proposalFormSchema.shape.value.partial().optional(),
+  })
+  .default({})
+
 export const proposalDraftSchema = z.object({
-  formData: proposalFormSchema.partial().default({}),
+  formData: proposalFormPartialSchema.default({}),
   stepProgress: z.number().int().min(0).max(10).default(0),
   status: z.enum(['draft', 'in_progress', 'ready', 'sent']).default('draft'),
 })
 
 export type ProposalDraftInput = z.infer<typeof proposalDraftSchema>
+
+export const proposalDraftUpdateSchema = z.object({
+  formData: proposalFormPartialSchema.optional(),
+  stepProgress: z.number().int().min(0).max(10).optional(),
+  status: z.enum(['draft', 'in_progress', 'ready', 'sent']).optional(),
+})
+
+export type ProposalDraftUpdateInput = z.infer<typeof proposalDraftUpdateSchema>
 
 export function createDefaultProposalForm(): ProposalFormData {
   return proposalFormSchema.parse({})
@@ -90,8 +109,8 @@ export function buildProposalDocument(input: ProposalDraftInput, userId: string,
   }
 }
 
-export function sanitizeProposalUpdate(data: Partial<ProposalDraftInput>, timestampValue: unknown = serverTimestamp()) {
-  const parsed = proposalDraftSchema.partial().parse(data)
+export function sanitizeProposalUpdate(data: ProposalDraftUpdateInput, timestampValue: unknown = serverTimestamp()) {
+  const parsed = proposalDraftUpdateSchema.parse(data)
   const updates: Record<string, unknown> = {
     updatedAt: timestampValue,
     lastAutosaveAt: timestampValue,
@@ -106,7 +125,7 @@ export function sanitizeProposalUpdate(data: Partial<ProposalDraftInput>, timest
   }
 
   if (parsed.formData) {
-    const current = proposalFormSchema.partial().parse(parsed.formData)
+    const current = proposalFormPartialSchema.parse(parsed.formData)
 
     const assignUpdates = (value: unknown, path: string) => {
       if (value === undefined) return

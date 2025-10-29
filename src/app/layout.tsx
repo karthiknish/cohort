@@ -7,6 +7,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/contexts/auth-context'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
+import { Toaster } from '@/components/ui/toaster'
+import { MotionProvider } from '@/components/providers/motion-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -39,12 +41,15 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            <div className="flex min-h-screen flex-col">
-              <SiteHeader />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
-            </div>
+            <MotionProvider>
+              <div className="flex min-h-screen flex-col">
+                <SiteHeader />
+                <main className="flex-1">{children}</main>
+                <SiteFooter />
+              </div>
+            </MotionProvider>
           </AuthProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

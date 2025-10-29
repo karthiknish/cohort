@@ -18,9 +18,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { createProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
+import { useToast } from '@/components/ui/use-toast'
 
 type ProposalStep = {
   id: string
@@ -129,22 +129,18 @@ export default function ProposalsPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [formState, setFormState] = useState(initialFormState)
   const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState('')
   const [draftId, setDraftId] = useState<string | null>(null)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
-  const [bootstrapError, setBootstrapError] = useState('')
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [autosaveError, setAutosaveError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionError, setSubmissionError] = useState('')
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
-  const [proposalsError, setProposalsError] = useState('')
   const hydrationRef = useRef(false)
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wizardRef = useRef<HTMLDivElement | null>(null)
+  const { toast } = useToast()
 
   const step = steps[currentStep]
   const isFirstStep = currentStep === 0
@@ -279,9 +275,9 @@ export default function ProposalsPage() {
   }
 
   const handleNext = () => {
-    setError('')
     if (!validateStep()) {
-      setError('Please complete the required fields before continuing.')
+      const message = 'Please complete the required fields before continuing.'
+      toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
       const stepErrors = collectStepErrors(step.id)
       setValidationErrors((prev) => ({ ...prev, ...stepErrors }))
       return
@@ -295,7 +291,6 @@ export default function ProposalsPage() {
   }
 
   const handleBack = () => {
-    setError('')
     if (!isFirstStep) {
       setCurrentStep((prev) => prev - 1)
     }
@@ -319,30 +314,31 @@ export default function ProposalsPage() {
 
   const refreshProposals = useCallback(async () => {
     setIsLoadingProposals(true)
-    setProposalsError('')
     try {
       const result = await listProposals()
       setProposals(result)
       return result
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'Failed to load proposals')
-      setProposalsError(message)
+      toast({ title: 'Unable to load proposals', description: message, variant: 'destructive' })
       return []
     } finally {
       setIsLoadingProposals(false)
     }
-  }, [])
+  }, [toast])
 
   const submitProposal = async () => {
     if (!draftId) {
-      setError('Draft is not ready yet. Please wait for autosave to finish.')
+      toast({
+        title: 'Draft not ready',
+        description: 'Please wait for autosave to finish before submitting.',
+        variant: 'destructive',
+      })
       return
     }
 
     try {
       setIsSubmitting(true)
-      setSubmissionError('')
-      setError('')
       clearErrors(stepErrorPaths.value)
       const response = await submitProposalDraft(draftId)
       setAiSummary(response.aiInsights ?? null)
@@ -350,17 +346,23 @@ export default function ProposalsPage() {
       setSubmitted(isReady)
 
       if (!isReady) {
-        const pendingMessage = 'We could not generate an AI summary yet. Please try again in a few minutes.'
-        setSubmissionError(pendingMessage)
+        toast({
+          title: 'Summary pending',
+          description: 'We could not generate an AI summary yet. Please try again in a few minutes.',
+        })
+      } else {
+        toast({
+          title: 'Proposal ready',
+          description: 'Your AI summary is ready for review.',
+        })
       }
 
       await refreshProposals()
     } catch (err: unknown) {
       console.error('[ProposalWizard] submit failed', err)
       const message = getErrorMessage(err, 'Failed to submit proposal')
-      setSubmissionError(message)
-      setError(message)
       setSubmitted(false)
+      toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
     }
@@ -369,7 +371,6 @@ export default function ProposalsPage() {
   useEffect(() => {
     const bootstrapDraft = async () => {
       setIsBootstrapping(true)
-      setBootstrapError('')
       try {
         const allProposals = await refreshProposals()
         const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0]
@@ -387,7 +388,7 @@ export default function ProposalsPage() {
         }
       } catch (err: unknown) {
         console.error('[ProposalWizard] bootstrap failed', err)
-        setBootstrapError(getErrorMessage(err, 'Unable to start proposal wizard'))
+        toast({ title: 'Unable to start proposal wizard', description: getErrorMessage(err, 'Unable to start proposal wizard'), variant: 'destructive' })
       } finally {
         hydrationRef.current = true
         setIsBootstrapping(false)
@@ -408,7 +409,6 @@ export default function ProposalsPage() {
     }
 
     setAutosaveStatus('saving')
-    setAutosaveError('')
 
     autosaveTimeoutRef.current = setTimeout(async () => {
       try {
@@ -420,7 +420,11 @@ export default function ProposalsPage() {
       } catch (err: unknown) {
         console.error('[ProposalWizard] autosave failed', err)
         setAutosaveStatus('error')
-        setAutosaveError(getErrorMessage(err, 'Failed to autosave proposal'))
+        toast({
+          title: 'Autosave failed',
+          description: getErrorMessage(err, 'Failed to autosave proposal'),
+          variant: 'destructive',
+        })
       }
     }, 1500)
 
@@ -429,7 +433,7 @@ export default function ProposalsPage() {
         clearTimeout(autosaveTimeoutRef.current)
       }
     }
-  }, [formState, currentStep, draftId, submitted])
+  }, [formState, currentStep, draftId, submitted, toast])
 
   const renderStepContent = () => {
     switch (step.id) {
@@ -820,12 +824,6 @@ export default function ProposalsPage() {
 
   return (
     <div className="space-y-6">
-      {bootstrapError && (
-        <Alert variant="destructive">
-          <AlertTitle>Wizard unavailable</AlertTitle>
-          <AlertDescription>{bootstrapError}</AlertDescription>
-        </Alert>
-      )}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -870,13 +868,13 @@ export default function ProposalsPage() {
             </div>
           ) : submitted ? (
             <div className="space-y-6">
-              <Alert>
-                <Sparkles className="h-4 w-4" />
-                <AlertTitle>Proposal ready</AlertTitle>
-                <AlertDescription>
-                  Your proposal draft is ready for review. Share with your team or export it for the client.
-                </AlertDescription>
-              </Alert>
+              <div className="flex items-start gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
+                <Sparkles className="mt-1 h-4 w-4" />
+                <div className="space-y-1">
+                  <p className="font-semibold">Proposal ready</p>
+                  <p className="text-primary/80">Your proposal draft is ready for review. Share with your team or export it for the client.</p>
+                </div>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-2">
@@ -916,24 +914,6 @@ export default function ProposalsPage() {
             </div>
           ) : (
             <>
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTitle>Hold on</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              {autosaveStatus === 'error' && autosaveError && (
-                <Alert variant="destructive">
-                  <AlertTitle>Autosave failed</AlertTitle>
-                  <AlertDescription>{autosaveError}</AlertDescription>
-                </Alert>
-              )}
-              {submissionError && (
-                <Alert variant="destructive">
-                  <AlertTitle>Submission error</AlertTitle>
-                  <AlertDescription>{submissionError}</AlertDescription>
-                </Alert>
-              )}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Draft ID: {draftId ?? 'pending...'}</span>
                 <span>
@@ -970,12 +950,6 @@ export default function ProposalsPage() {
           <CardDescription>Access draft, ready, and sent proposals in one place.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {proposalsError && (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load proposals</AlertTitle>
-              <AlertDescription>{proposalsError}</AlertDescription>
-            </Alert>
-          )}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{isLoadingProposals ? 'Refreshing proposals…' : `${proposals.length} total proposals`}</span>
             <Button variant="outline" size="sm" onClick={() => void refreshProposals()} disabled={isLoadingProposals}>
