@@ -2,6 +2,7 @@ import { Sidebar, Header } from '@/components/navigation'
 import { ProtectedRoute } from '@/components/protected-route'
 import { AuthProvider } from '@/contexts/auth-context'
 import Chatbot from '@/components/chatbot'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function DashboardLayout({
   children,
@@ -11,16 +12,16 @@ export default function DashboardLayout({
   return (
     <AuthProvider>
       <ProtectedRoute>
-        <div className="h-screen bg-white">
-          <div className="flex h-full">
+        <div className="relative flex min-h-screen bg-background">
+          <div className="flex h-full w-full">
             <Sidebar />
-            <div className="flex flex-1 flex-col">
+            <div className="flex flex-1 flex-col bg-muted/20">
               <Header />
-              <main className="flex-1 overflow-y-auto bg-gray-50">
-                <div className="p-6">
+              <ScrollArea className="flex-1">
+                <main className="min-h-full px-6 py-6">
                   {children}
-                </div>
-              </main>
+                </main>
+              </ScrollArea>
             </div>
           </div>
           <Chatbot />

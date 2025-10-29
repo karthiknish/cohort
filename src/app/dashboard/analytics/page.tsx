@@ -1,276 +1,583 @@
 'use client'
 
-import { useState } from 'react'
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  PieChart, 
+import useSWR from 'swr'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
   Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
-  PieLabelRenderProps
 } from 'recharts'
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  MousePointer, 
-  Users, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  MousePointer,
+  Users,
   Target,
-  Calendar,
-  Filter,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 
-const mockData = {
-  performance: [
-    { date: '2024-01-01', revenue: 4000, spend: 2400, roas: 1.67, clicks: 240 },
-    { date: '2024-01-02', revenue: 3000, spend: 1398, roas: 2.15, clicks: 221 },
-    { date: '2024-01-03', revenue: 2000, spend: 9800, roas: 0.20, clicks: 229 },
-    { date: '2024-01-04', revenue: 2780, spend: 3908, roas: 0.71, clicks: 200 },
-    { date: '2024-01-05', revenue: 1890, spend: 4800, roas: 0.39, clicks: 218 },
-    { date: '2024-01-06', revenue: 2390, spend: 3800, roas: 0.63, clicks: 250 },
-    { date: '2024-01-07', revenue: 3490, spend: 4300, roas: 0.81, clicks: 210 },
-  ],
-  platformBreakdown: [
-    { name: 'Google Ads', value: 4000, color: '#4285F4' },
-    { name: 'Meta Ads', value: 3000, color: '#1877F2' },
-    { name: 'TikTok Ads', value: 2000, color: '#000000' },
-    { name: 'LinkedIn Ads', value: 1000, color: '#0A66C2' },
-  ],
-  kpis: [
-    {
-      metric: 'Total Spend',
-      value: '$28,506',
-      change: '+12.5%',
-      trend: 'up',
-      icon: DollarSign
-    },
-    {
-      metric: 'Total Revenue',
-      value: '$45,231',
-      change: '+8.2%',
-      trend: 'up',
-      icon: TrendingUp
-    },
-    {
-      metric: 'Total Clicks',
-      value: '1,568',
-      change: '-2.4%',
-      trend: 'down',
-      icon: MousePointer
-    },
-    {
-      metric: 'Conversions',
-      value: '89',
-      change: '+15.7%',
-      trend: 'up',
-      icon: Target
-    },
-    {
-      metric: 'Avg CPC',
-      value: '$18.18',
-      change: '-5.3%',
-      trend: 'down',
-      icon: TrendingDown
-    },
-    {
-      metric: 'Conversion Rate',
-      value: '5.67%',
-      change: '+1.2%',
-      trend: 'up',
-      icon: Users
-    },
-  ]
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { authService } from '@/services/auth'
+
+interface MetricRecord {
+  id: string
+  providerId: string
+  date: string
+  spend: number
+  impressions: number
+  clicks: number
+  conversions: number
+  revenue?: number | null
+  creatives?: Array<{
+    id: string
+    name: string
+    type: string
+    url?: string
+    spend?: number
+    impressions?: number
+    clicks?: number
+    conversions?: number
+    revenue?: number
+  }>
+}
+
+interface ProviderInsight {
+  providerId: string
+  summary: string
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  google: 'Google Ads',
+  facebook: 'Meta Ads',
+  linkedin: 'LinkedIn Ads',
+  tiktok: 'TikTok Ads',
+}
+
+const fetcher = async (url: string, token: string) => {
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.error || 'Failed to load analytics data')
+  }
+  return response.json()
+}
+
+function useAnalyticsData(token: string | null, periodDays: number) {
+  const shouldFetch = Boolean(token)
+  const metricsKey: [string, string] | null = shouldFetch && token ? ['/api/metrics', token] : null
+  const insightsKey: [string, string] | null = shouldFetch && token ? [`/api/analytics/insights?periodDays=${periodDays}`, token] : null
+
+  const {
+    data,
+    error,
+    isLoading,
+    isValidating,
+    mutate: mutateMetrics,
+  } = useSWR(metricsKey, ([url, jwt]) => fetcher(url, jwt))
+
+  const {
+    data: insightsData,
+    error: insightsError,
+    isLoading: insightsLoading,
+    isValidating: insightsValidating,
+    mutate: mutateInsights,
+  } = useSWR(
+    insightsKey,
+    ([url, jwt]) => fetcher(url, jwt)
+  )
+
+  return {
+    metricsData: (data as MetricRecord[]) ?? [],
+    metricsError: error as Error | undefined,
+    metricsLoading: isLoading,
+    metricsRefreshing: isValidating,
+    mutateMetrics,
+    insights: (insightsData as { insights: ProviderInsight[] } | undefined)?.insights ?? [],
+    insightsError: insightsError as Error | undefined,
+    insightsLoading,
+    insightsRefreshing: insightsValidating,
+    mutateInsights,
+  }
+}
+
+const PERIOD_OPTIONS = [
+  { value: '7d', label: '7 days', days: 7 },
+  { value: '30d', label: '30 days', days: 30 },
+  { value: '90d', label: '90 days', days: 90 },
+]
+
+const PLATFORM_OPTIONS = [
+  { value: 'all', label: 'All platforms' },
+  { value: 'google', label: 'Google Ads' },
+  { value: 'facebook', label: 'Meta Ads' },
+  { value: 'linkedin', label: 'LinkedIn Ads' },
+]
+
+function formatCurrency(value: number) {
+  return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+}
+
+function daysFromNow(dateString: string) {
+  const today = new Date()
+  const date = new Date(dateString)
+  const diff = today.getTime() - date.getTime()
+  return diff / (1000 * 60 * 60 * 24)
 }
 
 export default function AnalyticsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState('7d')
+  const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
 
-  const periods = [
-    { value: '1d', label: 'Today' },
-    { value: '7d', label: '7 Days' },
-    { value: '30d', label: '30 Days' },
-    { value: '90d', label: '90 Days' },
-  ]
+  const [token, setToken] = useState<string | null>(null)
 
-  const platforms = [
-    { value: 'all', label: 'All Platforms' },
-    { value: 'google', label: 'Google Ads' },
-    { value: 'meta', label: 'Meta Ads' },
-    { value: 'tiktok', label: 'TikTok Ads' },
-    { value: 'linkedin', label: 'LinkedIn Ads' },
-  ]
+  useEffect(() => {
+    let cancelled = false
+    const fetchToken = async () => {
+      if (token) return
+      const jwt = await authService.getIdToken().catch(() => null)
+      if (!cancelled) {
+        setToken(jwt)
+      }
+    }
+    void fetchToken()
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  const periodDays = useMemo(() => {
+    const option = PERIOD_OPTIONS.find((opt) => opt.value === selectedPeriod)
+    return option?.days ?? 7
+  }, [selectedPeriod])
+
+  const {
+    metricsData,
+    metricsError,
+    metricsLoading,
+    metricsRefreshing,
+    mutateMetrics,
+    insights,
+    insightsError,
+    insightsLoading,
+    insightsRefreshing,
+    mutateInsights,
+  } = useAnalyticsData(token, periodDays)
+
+  const metrics = metricsData
+
+  const filteredMetrics = useMemo(() => {
+    if (!metrics.length) return []
+    const cutoff = periodDays ? Date.now() - periodDays * 24 * 60 * 60 * 1000 : null
+    return metrics.filter((metric) => {
+      const inPlatform = selectedPlatform === 'all' || metric.providerId === selectedPlatform
+      if (!inPlatform) return false
+      if (!cutoff) return true
+      const metricDate = new Date(metric.date).getTime()
+      return metricDate >= cutoff
+    })
+  }, [metrics, selectedPlatform, periodDays])
+
+  const aggregatedByDate = useMemo(() => {
+    const map = new Map<string, { date: string; spend: number; revenue: number; clicks: number; conversions: number }>()
+    filteredMetrics.forEach((metric) => {
+      const key = metric.date
+      if (!map.has(key)) {
+        map.set(key, { date: key, spend: 0, revenue: 0, clicks: 0, conversions: 0 })
+      }
+      const entry = map.get(key)!
+      entry.spend += metric.spend
+      entry.revenue += metric.revenue ?? 0
+      entry.clicks += metric.clicks
+      entry.conversions += metric.conversions
+    })
+    return Array.from(map.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }, [filteredMetrics])
+
+  const platformTotals = useMemo(() => {
+    const summary: Record<string, { spend: number; revenue: number; clicks: number; conversions: number }> = {}
+    filteredMetrics.forEach((metric) => {
+      const key = metric.providerId
+      if (!summary[key]) {
+        summary[key] = { spend: 0, revenue: 0, clicks: 0, conversions: 0 }
+      }
+      summary[key].spend += metric.spend
+      summary[key].revenue += metric.revenue ?? 0
+      summary[key].clicks += metric.clicks
+      summary[key].conversions += metric.conversions
+    })
+    return summary
+  }, [filteredMetrics])
+
+  const totals = useMemo(() => {
+    return filteredMetrics.reduce(
+      (acc, metric) => {
+        acc.spend += metric.spend
+        acc.revenue += metric.revenue ?? 0
+        acc.clicks += metric.clicks
+        acc.conversions += metric.conversions
+        return acc
+      },
+      { spend: 0, revenue: 0, clicks: 0, conversions: 0 }
+    )
+  }, [filteredMetrics])
+
+  const averageRoaS = totals.spend > 0 ? totals.revenue / totals.spend : 0
+  const conversionRate = totals.clicks > 0 ? (totals.conversions / totals.clicks) * 100 : 0
+  const averageCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
+
+  const platformBreakdown = useMemo(() => {
+    return Object.entries(platformTotals).map(([providerId, summary]) => ({
+      name: PROVIDER_LABELS[providerId] ?? providerId,
+      value: summary.spend,
+      color: providerId === 'facebook' ? '#1877F2' : providerId === 'google' ? '#4285F4' : '#6366f1',
+    }))
+  }, [platformTotals])
+
+  const creativeBreakdown = useMemo(() => {
+    return filteredMetrics
+      .filter((metric) => metric.providerId === 'facebook' && Array.isArray(metric.creatives) && metric.creatives.length > 0)
+      .flatMap((metric) =>
+        metric.creatives!.map((creative) => ({
+          id: creative.id,
+          name: creative.name || 'Untitled creative',
+          spend: creative.spend ?? metric.spend,
+          impressions: creative.impressions ?? metric.impressions,
+          clicks: creative.clicks ?? metric.clicks,
+          conversions: creative.conversions ?? metric.conversions,
+          revenue: creative.revenue ?? metric.revenue ?? 0,
+          date: metric.date,
+        }))
+      )
+      .sort((a, b) => b.spend - a.spend)
+      .slice(0, 10)
+  }, [filteredMetrics])
+
+
+  const providerInsightMap = useMemo(() => {
+    return insights.reduce<Record<string, string>>((acc, insight) => {
+      acc[insight.providerId] = insight.summary
+      return acc
+    }, {})
+  }, [insights])
+
+  const chartData = useMemo(() => {
+    return aggregatedByDate.map((entry) => ({
+      ...entry,
+      roas: entry.spend > 0 ? entry.revenue / entry.spend : 0,
+    }))
+  }, [aggregatedByDate])
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Track and analyze your advertising performance across all platforms.
+          <h1 className="text-2xl font-bold text-foreground">Analytics dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Track spend, performance, and creative efficiency across connected ad platforms.
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <select
             value={selectedPlatform}
             onChange={(e) => setSelectedPlatform(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            {platforms.map((platform) => (
-              <option key={platform.value} value={platform.value}>
-                {platform.label}
+            {PLATFORM_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            {periods.map((period) => (
-              <option key={period.value} value={period.value}>
-                {period.label}
+            {PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        {mockData.kpis.map((kpi) => {
-          const Icon = kpi.icon
-          return (
-            <div key={kpi.metric} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Icon className="h-5 w-5 text-gray-400" />
-                <span className={`text-sm font-medium ${
-                  kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {kpi.change}
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
-              <p className="text-sm text-gray-600 mt-1">{kpi.metric}</p>
-            </div>
-          )
-        })}
+      {metricsError && (
+        <Alert variant="destructive">
+          <AlertTitle>Unable to load analytics</AlertTitle>
+          <AlertDescription>{metricsError.message}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium text-muted-foreground">Performance summary</h2>
+        <button
+          type="button"
+          onClick={() => mutateMetrics()}
+          disabled={metricsLoading || metricsRefreshing}
+          className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+          Refresh metrics
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total spend</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{formatCurrency(totals.spend)}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{formatCurrency(totals.revenue)}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average ROAS</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{averageRoaS.toFixed(2)}x</div>
+          </CardContent>
+        </Card>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Conversion rate</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold">{conversionRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Avg CPC {formatCurrency(averageCpc)}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Revenue vs Spend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mockData.performance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader>
+            <CardTitle>Revenue vs spend</CardTitle>
+            <CardDescription>Daily totals for the selected period</CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            {metricsLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            ) : chartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
+                  <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} name="Spend" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">ROAS Performance</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={mockData.performance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="roas" fill="#6366f1" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader>
+            <CardTitle>ROAS performance</CardTitle>
+            <CardDescription>Return on ad spend across the selected period</CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            {metricsLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            ) : chartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="roas" fill="#6366f1" name="ROAS" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Platform Budget Allocation</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={mockData.platformBreakdown}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(props: any) => {
-                  if (props.name && props.percent !== undefined) {
-                    return `${props.name} ${(props.percent * 100).toFixed(0)}%`
-                  }
-                  return ''
-                }}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {mockData.platformBreakdown.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader>
+            <CardTitle>Platform budget distribution</CardTitle>
+            <CardDescription>Spend share across connected platforms</CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            {metricsLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            ) : platformBreakdown.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Connect a platform to see spend distribution.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={platformBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                    {platformBreakdown.map((entry, index) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number, _name, props) => [`${formatCurrency(value)}`, props?.payload?.name]} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Click Performance</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mockData.performance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader>
+            <CardTitle>Click performance</CardTitle>
+            <CardDescription>Breakdown of daily click volume</CardDescription>
+          </CardHeader>
+          <CardContent className="h-80">
+            {metricsLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            ) : chartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data available.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} name="Clicks" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">AI-Powered Insights</h3>
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">Performance Recommendation</h3>
-                  <div className="mt-2 text-sm text-blue-700">
-                    <p>Meta Ads campaigns are showing strong ROAS (2.15x). Consider increasing budget by 20% to capitalize on momentum.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800">Budget Alert</h3>
-                  <div className="mt-2 text-sm text-yellow-700">
-                    <p>TikTok Ads spend increased by 200% but conversions only increased by 15%. Review targeting and creative assets.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <Card className="border-muted/60 bg-background">
+        <CardHeader>
+          <CardTitle>AI-powered insights</CardTitle>
+          <div className="mt-1 flex items-center justify-between gap-4">
+            <CardDescription>Platform-specific takeaways generated by Gemini</CardDescription>
+            <button
+              type="button"
+              onClick={() => mutateInsights()}
+              disabled={insightsLoading || insightsRefreshing}
+              className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${insightsRefreshing ? 'animate-spin' : ''}`} />
+              Refresh insights
+            </button>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {insightsError && (
+            <Alert variant="destructive">
+              <AlertTitle>Insight generation failed</AlertTitle>
+              <AlertDescription>{insightsError.message}</AlertDescription>
+            </Alert>
+          )}
+          {insightsLoading ? (
+            <p className="text-sm text-muted-foreground">Generating fresh insights…</p>
+          ) : insights.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Link a platform and run a sync to unlock insights.</p>
+          ) : (
+            insights.map((insight) => (
+              <div key={insight.providerId} className="rounded-md border border-muted/60 bg-muted/20 p-4">
+                <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{PROVIDER_LABELS[insight.providerId] ?? insight.providerId}</span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{insight.summary}</p>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-muted/60 bg-background">
+        <CardHeader>
+          <CardTitle>Meta creative highlights</CardTitle>
+          <CardDescription className="flex items-center justify-between gap-4">
+            <span>Top-performing creatives from Meta Ads (based on spend)</span>
+            <button
+              type="button"
+              onClick={() => mutateMetrics()}
+              disabled={metricsLoading || metricsRefreshing}
+              className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+              Refresh creatives
+            </button>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {creativeBreakdown.length === 0 ? (
+            <div className="rounded border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
+              No creative-level data yet. Ensure Meta syncs are configured with creative insights.
+            </div>
+          ) : (
+            <ScrollArea className="h-72">
+              <table className="w-full table-fixed text-left text-sm">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="border-b border-muted/60 text-xs uppercase text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Creative</th>
+                    <th className="py-2 pr-4 font-medium">Spend</th>
+                    <th className="py-2 pr-4 font-medium">Clicks</th>
+                    <th className="py-2 pr-4 font-medium">Conversions</th>
+                    <th className="py-2 pr-4 font-medium">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {creativeBreakdown.map((creative) => (
+                    <tr key={`${creative.id}-${creative.date}`} className="border-b border-muted/40">
+                      <td className="py-2 pr-4">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground line-clamp-1">{creative.name}</span>
+                          <span className="text-xs text-muted-foreground">{creative.date}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 pr-4">{formatCurrency(creative.spend ?? 0)}</td>
+                      <td className="py-2 pr-4">{creative.clicks?.toLocaleString() ?? '—'}</td>
+                      <td className="py-2 pr-4">{creative.conversions?.toLocaleString() ?? '—'}</td>
+                      <td className="py-2">{formatCurrency(creative.revenue ?? 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

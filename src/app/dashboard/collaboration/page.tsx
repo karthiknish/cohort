@@ -1,23 +1,67 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  Plus, 
-  Search, 
-  MessageSquare, 
+import {
+  Plus,
+  Search,
+  MessageSquare,
   Users,
   Paperclip,
   Send,
-  MoreHorizontal,
   Phone,
   Video,
   Info,
   FileText,
   Image,
-  Download
+  Download,
 } from 'lucide-react'
 
-const mockChannels = [
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
+
+type ChannelType = 'client' | 'team' | 'project'
+
+interface Channel {
+  id: string
+  name: string
+  type: ChannelType
+  participants: string[]
+  lastMessage: string
+  lastMessageTime: string
+  unreadCount: number
+  clientId?: string
+}
+
+interface MessageAttachment {
+  name: string
+  size: string
+  type: string
+}
+
+interface Message {
+  id: string
+  senderId: string
+  senderName: string
+  senderAvatar: string
+  content: string
+  timestamp: string
+  type: 'text' | 'file'
+  attachments?: MessageAttachment[]
+}
+
+const mockChannels: Channel[] = [
   {
     id: '1',
     name: 'Tech Corp - Campaign Updates',
@@ -58,7 +102,7 @@ const mockChannels = [
   }
 ]
 
-const mockMessages = [
+const mockMessages: Message[] = [
   {
     id: '1',
     senderId: 'john-doe',
@@ -104,10 +148,10 @@ const mockMessages = [
   }
 ]
 
-const channelTypeColors: Record<string, string> = {
-  'client': 'bg-blue-100 text-blue-800',
-  'team': 'bg-green-100 text-green-800',
-  'project': 'bg-purple-100 text-purple-800'
+const channelTypeColors: Record<ChannelType, string> = {
+  client: 'bg-blue-100 text-blue-800',
+  team: 'bg-green-100 text-green-800',
+  project: 'bg-purple-100 text-purple-800',
 }
 
 export default function CollaborationPage() {
@@ -127,211 +171,215 @@ export default function CollaborationPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Team Collaboration</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Communicate with your team and clients in real-time.
+          <h1 className="text-2xl font-semibold text-foreground">Team collaboration</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Communicate with teams and clients, share updates, and stay aligned in real-time.
           </p>
         </div>
-        <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          <Plus className="h-4 w-4 mr-2" />
-          New Channel
-        </button>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          New channel
+        </Button>
       </div>
 
-      <div className="flex-1 flex space-x-6 bg-white rounded-lg shadow overflow-hidden">
-        {/* Channels Sidebar */}
-        <div className="w-80 border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Search channels..."
-              />
-            </div>
+      <Card className="border-muted/60 bg-background">
+        <CardHeader className="border-b border-muted/40 pb-4">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" /> {mockChannels.length} active channels
+            </Badge>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <MessageSquare className="h-3.5 w-3.5" /> Collaborative workspace
+            </Badge>
           </div>
-          
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-2">
-              {filteredChannels.map((channel) => (
-                <button
-                  key={channel.id}
-                  onClick={() => setSelectedChannel(channel)}
-                  className={`w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors ${
-                    selectedChannel.id === channel.id ? 'bg-indigo-50 border-indigo-200' : ''
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {channel.name}
-                        </p>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${channelTypeColors[channel.type]}`}>
-                          {channel.type}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 truncate mt-1">
-                        {channel.lastMessage}
-                      </p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-400">{channel.lastMessageTime}</span>
-                        {channel.unreadCount > 0 && (
-                          <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-indigo-600 rounded-full">
-                            {channel.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Chat Header */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-lg font-medium text-gray-900">{selectedChannel.name}</h3>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${channelTypeColors[selectedChannel.type]}`}>
-                    {selectedChannel.type}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  {selectedChannel.participants.join(', ')}
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button className="p-2 text-gray-400 hover:text-gray-600">
-                  <Phone className="h-5 w-5" />
-                </button>
-                <button className="p-2 text-gray-400 hover:text-gray-600">
-                  <Video className="h-5 w-5" />
-                </button>
-                <button className="p-2 text-gray-400 hover:text-gray-600">
-                  <Info className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {mockMessages.map((message) => (
-              <div key={message.id} className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">{message.senderAvatar}</span>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <p className="text-sm font-medium text-gray-900">{message.senderName}</p>
-                    <span className="text-xs text-gray-500">{message.timestamp}</span>
-                  </div>
-                  <div className="mt-1">
-                    <p className="text-sm text-gray-900">{message.content}</p>
-                    {message.attachments && (
-                      <div className="mt-2 space-y-2">
-                        {message.attachments.map((attachment, index) => (
-                          <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
-                            <FileText className="h-4 w-4 text-gray-400" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{attachment.name}</p>
-                              <p className="text-xs text-gray-500">{attachment.size}</p>
-                            </div>
-                            <button className="p-1 text-gray-400 hover:text-indigo-600">
-                              <Download className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Message Input */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center space-x-3">
-              <button className="p-2 text-gray-400 hover:text-gray-600">
-                <Paperclip className="h-5 w-5" />
-              </button>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Type a message..."
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 p-0 lg:flex-row">
+          <div className="flex h-full w-full flex-col border-b border-muted/40 lg:h-[640px] lg:w-80 lg:border-b-0 lg:border-r">
+            <div className="p-4">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search channels…"
+                  className="pl-9"
                 />
               </div>
-              <button
-                onClick={handleSendMessage}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+            </div>
+            <Separator className="lg:hidden" />
+            <ScrollArea className="flex-1">
+              <div className="space-y-2 p-3">
+                {filteredChannels.map((channel) => (
+                  <Button
+                    key={channel.id}
+                    variant="ghost"
+                    onClick={() => setSelectedChannel(channel)}
+                    className={cn(
+                      'h-auto w-full justify-start rounded-lg border border-transparent bg-transparent px-3 py-3 text-left shadow-none transition hover:bg-muted',
+                      selectedChannel.id === channel.id && 'border-primary/40 bg-muted'
+                    )}
+                  >
+                    <div className="flex w-full items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground truncate">
+                            {channel.name}
+                          </p>
+                          <Badge variant="outline" className={channelTypeColors[channel.type]}>
+                            {channel.type}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {channel.lastMessage}
+                        </p>
+                        <span className="text-xs text-muted-foreground">{channel.lastMessageTime}</span>
+                      </div>
+                      {channel.unreadCount > 0 && (
+                        <Badge className="shrink-0" variant="default">
+                          {channel.unreadCount}
+                        </Badge>
+                      )}
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="flex min-h-[480px] flex-1 flex-col lg:h-[640px]">
+            <div className="flex items-start justify-between gap-3 border-b border-muted/40 p-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="text-lg font-semibold text-foreground">
+                    {selectedChannel.name}
+                  </CardTitle>
+                  <Badge variant="outline" className={channelTypeColors[selectedChannel.type]}>
+                    {selectedChannel.type}
+                  </Badge>
+                </div>
+                <CardDescription className="mt-1">
+                  {selectedChannel.participants.join(', ')}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Phone className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Video className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Info className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1">
+              <div className="space-y-4 p-4">
+                {mockMessages.map((message) => (
+                  <div key={message.id} className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+                      {message.senderAvatar}
+                    </span>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">{message.senderName}</p>
+                        <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                      </div>
+                      <p className="text-sm text-foreground">{message.content}</p>
+                      {message.attachments && (
+                        <div className="space-y-2">
+                          {message.attachments.map((attachment) => (
+                            <Card key={attachment.name} className="border-dashed border-muted/60 bg-muted/20">
+                              <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
+                                <div className="flex items-center gap-2 truncate">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span className="truncate">
+                                    {attachment.name}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{attachment.size}</span>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+
+            <div className="border-t border-muted/40 p-4">
+              <div className="flex items-end gap-3">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Textarea
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="Type a message…"
+                  className="min-h-[48px] flex-1"
+                />
+                <Button onClick={handleSendMessage} className="h-9">
+                  <Send className="mr-2 h-4 w-4" /> Send
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Sidebar Info */}
-        <div className="w-64 border-l border-gray-200 p-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Channel Info</h4>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Participants</p>
-              <div className="mt-2 space-y-2">
+          <Separator orientation="vertical" className="hidden h-[640px] lg:block" />
+
+          <div className="flex w-full flex-col gap-6 border-t border-muted/40 p-4 text-sm text-muted-foreground lg:h-[640px] lg:w-64 lg:border-t-0">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Participants</p>
+              <div className="space-y-2">
                 {selectedChannel.participants.map((participant) => (
-                  <div key={participant} className="flex items-center space-x-2">
-                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">
-                        {participant.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-900">{participant}</span>
+                  <div key={participant} className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[11px] font-medium text-foreground">
+                      {participant
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </span>
+                    <span className="text-sm text-foreground">{participant}</span>
                   </div>
                 ))}
               </div>
             </div>
-            
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Shared Files</p>
-              <div className="mt-2 space-y-2">
-                <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                  <FileText className="h-4 w-4 text-gray-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 truncate">Q4_Report.pdf</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                  <Image className="h-4 w-4 text-gray-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 truncate">Campaign_Ad.jpg</p>
-                  </div>
-                </div>
-              </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Shared files</p>
+              <Card className="border-muted/40 bg-muted/10">
+                <CardContent className="flex items-center gap-2 p-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate text-xs text-foreground">Q4_Report.pdf</span>
+                </CardContent>
+              </Card>
+              <Card className="border-muted/40 bg-muted/10">
+                <CardContent className="flex items-center gap-2 p-3">
+                  <Image className="h-4 w-4 text-muted-foreground" />
+                  <span className="truncate text-xs text-foreground">Campaign_Ad.jpg</span>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

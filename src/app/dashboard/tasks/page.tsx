@@ -1,17 +1,37 @@
 'use client'
 
 import { useState } from 'react'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import {
+  Plus,
+  Search,
   Calendar,
   User,
   Clock,
   CheckCircle,
   AlertCircle,
-  MoreHorizontal
+  MoreHorizontal,
 } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
 const mockTasks = [
   {
@@ -83,18 +103,21 @@ const teamMembers = [
   { id: '4', name: 'Sarah Wilson', avatar: 'SW' }
 ]
 
-const statusColors: Record<string, string> = {
-  'todo': 'bg-gray-100 text-gray-800',
+type TaskStatus = 'todo' | 'in-progress' | 'review' | 'completed'
+type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+const statusColors: Record<TaskStatus, string> = {
+  todo: 'bg-muted text-muted-foreground',
   'in-progress': 'bg-blue-100 text-blue-800',
-  'review': 'bg-yellow-100 text-yellow-800',
-  'completed': 'bg-green-100 text-green-800'
+  review: 'bg-amber-100 text-amber-800',
+  completed: 'bg-emerald-100 text-emerald-800',
 }
 
-const priorityColors: Record<string, string> = {
-  'low': 'bg-green-100 text-green-800',
-  'medium': 'bg-yellow-100 text-yellow-800',
-  'high': 'bg-orange-100 text-orange-800',
-  'urgent': 'bg-red-100 text-red-800'
+const priorityColors: Record<TaskPriority, string> = {
+  low: 'bg-emerald-100 text-emerald-800',
+  medium: 'bg-amber-100 text-amber-800',
+  high: 'bg-orange-100 text-orange-800',
+  urgent: 'bg-red-100 text-red-800',
 }
 
 export default function TasksPage() {
@@ -102,179 +125,182 @@ export default function TasksPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAssignee, setSelectedAssignee] = useState('all')
 
-  const filteredTasks = mockTasks.filter(task => {
+  const filteredTasks = mockTasks.filter((task) => {
     const matchesStatus = selectedStatus === 'all' || task.status === selectedStatus
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesAssignee = selectedAssignee === 'all' || 
-                           task.assignedTo.some(assignee => assignee.toLowerCase().includes(selectedAssignee.toLowerCase()))
-    
+    const matchesAssignee = selectedAssignee === 'all' ||
+      task.assignedTo.some((assignee) => assignee.toLowerCase().includes(selectedAssignee.toLowerCase()))
+
     return matchesStatus && matchesSearch && matchesAssignee
   })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage and track tasks across your team and clients.
+          <h1 className="text-2xl font-semibold text-foreground">Task management</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage and track assignments across teams and clients.
           </p>
         </div>
-        <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          <Plus className="h-4 w-4 mr-2" />
-          New Task
-        </button>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" /> New task
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 bg-gray-100 rounded-full p-2">
-              <Clock className="h-5 w-5 text-gray-600" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-muted/60 bg-background">
+          <CardContent className="flex items-center gap-3 p-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Clock className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">To do</p>
+              <p className="text-lg font-semibold text-foreground">2</p>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">To Do</p>
-              <p className="text-lg font-bold text-gray-900">2</p>
+          </CardContent>
+        </Card>
+        <Card className="border-muted/60 bg-background">
+          <CardContent className="flex items-center gap-3 p-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+              <AlertCircle className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">In progress</p>
+              <p className="text-lg font-semibold text-foreground">1</p>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 bg-blue-100 rounded-full p-2">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
+          </CardContent>
+        </Card>
+        <Card className="border-muted/60 bg-background">
+          <CardContent className="flex items-center gap-3 p-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <Clock className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Review</p>
+              <p className="text-lg font-semibold text-foreground">1</p>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">In Progress</p>
-              <p className="text-lg font-bold text-gray-900">1</p>
+          </CardContent>
+        </Card>
+        <Card className="border-muted/60 bg-background">
+          <CardContent className="flex items-center gap-3 p-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <CheckCircle className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Completed</p>
+              <p className="text-lg font-semibold text-foreground">1</p>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 bg-yellow-100 rounded-full p-2">
-              <Clock className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">Review</p>
-              <p className="text-lg font-bold text-gray-900">1</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 bg-green-100 rounded-full p-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">Completed</p>
-              <p className="text-lg font-bold text-gray-900">1</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            <div className="flex-1 min-w-0">
+      <Card className="border-muted/60 bg-background">
+        <CardHeader className="border-b border-muted/40 pb-4">
+          <CardTitle>All tasks</CardTitle>
+          <CardDescription>Search, filter, and monitor active work across the agency.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="flex flex-col gap-3 border-b border-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="w-full sm:max-w-sm">
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Search tasks..."
+                  placeholder="Search tasks…"
+                  className="pl-9"
                 />
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-              >
-                <option value="all">All Status</option>
-                <option value="todo">To Do</option>
-                <option value="in-progress">In Progress</option>
-                <option value="review">Review</option>
-                <option value="completed">Completed</option>
-              </select>
-              <select
-                value={selectedAssignee}
-                onChange={(e) => setSelectedAssignee(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-              >
-                <option value="all">All Assignees</option>
-                {teamMembers.map((member) => (
-                  <option key={member.id} value={member.name}>{member.name}</option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All status</SelectItem>
+                  <SelectItem value="todo">To do</SelectItem>
+                  <SelectItem value="in-progress">In progress</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All assignees</SelectItem>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.name}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
 
-        <div className="overflow-hidden">
-          <ul className="divide-y divide-gray-200">
-            {filteredTasks.map((task) => (
-              <li key={task.id}>
-                <div className="px-6 py-4 hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-3">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+          <ScrollArea className="max-h-[520px]">
+            <div className="divide-y divide-muted/30">
+              {filteredTasks.map((task) => (
+                <div key={task.id} className="px-6 py-4 transition hover:bg-muted/40">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground truncate max-w-[260px] sm:max-w-[360px]">
                           {task.title}
                         </p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[task.status]}`}>
+                        <Badge variant="secondary" className={statusColors[task.status as TaskStatus]}>
                           {task.status}
-                        </span>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>
+                        </Badge>
+                        <Badge variant="outline" className={priorityColors[task.priority as TaskPriority]}>
                           {task.priority}
-                        </span>
+                        </Badge>
                       </div>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {task.description}
-                      </p>
-                      <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
+                      <p className="text-sm text-muted-foreground">{task.description}</p>
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <User className="h-3.5 w-3.5" />
                           {task.assignedTo.join(', ')}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
                           Due {task.dueDate}
-                        </div>
-                        <div className="flex items-center">
-                          <span className="text-xs font-medium bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                            {task.client}
-                          </span>
-                        </div>
+                        </span>
+                        <Badge variant="outline" className="border border-dashed">
+                          {task.client}
+                        </Badge>
                       </div>
                       {task.tags.length > 0 && (
-                        <div className="mt-2 flex items-center space-x-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           {task.tags.map((tag) => (
-                            <span key={tag} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                            <Badge key={tag} variant="secondary" className="bg-muted text-muted-foreground">
                               #{tag}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-gray-600">
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
+                    <div className="flex items-center justify-end">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Task actions">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+              ))}
+              {filteredTasks.length === 0 && (
+                <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+                  No tasks match the current filters.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   )
 }

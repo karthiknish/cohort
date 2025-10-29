@@ -7,6 +7,13 @@ interface AuthContextType {
   user: AuthUser | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<AuthUser>
+  signInWithGoogle: () => Promise<AuthUser>
+  signInWithFacebook: () => Promise<AuthUser>
+  signInWithLinkedIn: () => Promise<AuthUser>
+  connectGoogleAdsAccount: () => Promise<void>
+  connectFacebookAdsAccount: () => Promise<void>
+  connectLinkedInAdsAccount: () => Promise<void>
+  getIdToken: () => Promise<string>
   signUp: (data: { email: string; password: string; name: string; agencyName: string }) => Promise<AuthUser>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
@@ -68,6 +75,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const signInWithGoogle = async (): Promise<AuthUser> => {
+    setLoading(true)
+    try {
+      const authUser = await authService.signInWithGoogle()
+      setUser(authUser)
+      return authUser
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithFacebook = async (): Promise<AuthUser> => {
+    setLoading(true)
+    try {
+      const authUser = await authService.signInWithFacebook()
+      setUser(authUser)
+      return authUser
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithLinkedIn = async (): Promise<AuthUser> => {
+    setLoading(true)
+    try {
+      const authUser = await authService.signInWithLinkedIn()
+      setUser(authUser)
+      return authUser
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const signOut = async (): Promise<void> => {
     setLoading(true)
     try {
@@ -92,10 +132,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await authService.changePassword(currentPassword, newPassword)
   }
 
+  const connectGoogleAdsAccount = async () => {
+    await authService.connectGoogleAdsAccount()
+  }
+
+  const connectFacebookAdsAccount = async () => {
+    await authService.connectFacebookAdsAccount()
+  }
+
+  const connectLinkedInAdsAccount = async () => {
+    await authService.connectLinkedInAdsAccount()
+  }
+
+  const getIdToken = async () => {
+    return await authService.getIdToken()
+  }
+
   const value: AuthContextType = {
     user,
     loading,
     signIn,
+    signInWithGoogle,
+    signInWithFacebook,
+    signInWithLinkedIn,
+    connectGoogleAdsAccount,
+    connectFacebookAdsAccount,
+    connectLinkedInAdsAccount,
+    getIdToken,
     signUp,
     signOut,
     resetPassword,
