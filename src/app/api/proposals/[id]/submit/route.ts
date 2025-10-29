@@ -12,9 +12,9 @@ interface SubmitBody {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const proposalId = params.id
+  const { id: proposalId } = await context.params
 
   if (!proposalId) {
     return NextResponse.json({ error: 'Proposal id is required' }, { status: 400 })
