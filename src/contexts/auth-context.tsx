@@ -194,16 +194,19 @@ async function syncSessionCookies(authUser: AuthUser | null) {
     if (!authUser) {
       clearCookie('cohorts_token')
       clearCookie('cohorts_role')
+      clearCookie('cohorts_status')
       return
     }
 
     const token = await authService.getIdToken()
     setCookie('cohorts_token', token, 60 * 60)
     setCookie('cohorts_role', authUser.role, 60 * 60)
+    setCookie('cohorts_status', authUser.status, 60 * 60)
   } catch (error) {
     console.error('Failed to sync auth cookies', error)
     clearCookie('cohorts_token')
     clearCookie('cohorts_role')
+    clearCookie('cohorts_status')
   }
 }
 

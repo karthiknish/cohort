@@ -185,6 +185,39 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request)
+    if (!auth.uid) {
+      throw new AuthenticationError('Authentication required', 401)
+    }
+
+    const body = (await request.json().catch(() => null)) as { id?: unknown } | null
+    const rawId = body?.id
+    if (typeof rawId !== 'string' || rawId.trim().length === 0) {
+      return NextResponse.json({ error: 'Proposal id required' }, { status: 400 })
+    }
+
+    const proposalId = rawId.trim()
+    const proposalRef = adminDb.collection('users').doc(auth.uid).collection('proposals').doc(proposalId)
+    const snapshot = await proposalRef.get()
+
+    if (!snapshot.exists) {
+      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+    }
+
+    await proposalRef.delete()
+
+    return NextResponse.json({ ok: true })
+  } catch (error: unknown) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    console.error('[api/proposals] DELETE failed', error)
+    return NextResponse.json({ error: 'Failed to delete proposal' }, { status: 500 })
+  }
+}
+
 type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
 
 function serializeTimestamp(value: TimestampLike): string | null {

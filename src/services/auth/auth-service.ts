@@ -1,8 +1,5 @@
 import { auth } from '@/lib/firebase'
-import {
-  enqueueSyncJob,
-  persistIntegrationTokens,
-} from '@/lib/firestore-integrations'
+import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore-integrations'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -12,7 +9,6 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   OAuthProvider,
-  OAuthCredential,
   updateProfile,
   linkWithPopup,
   User as FirebaseUser,
@@ -21,32 +17,26 @@ import {
   confirmPasswordReset,
 } from 'firebase/auth'
 
-export interface AuthUser {
-  id: string
-  email: string
-  name: string
-  role: 'admin' | 'manager' | 'member'
-  agencyId: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface SignUpData {
-  email: string
-  password: string
-  displayName?: string
-}
+import type { AuthRole, AuthStatus, AuthUser, SignUpData } from './types'
+import {
+  extractRefreshToken,
+  getBrowserCookie,
+  isFirebaseError,
+  normalizeRole,
+  normalizeStatus,
+} from './utils'
 
 export class AuthService {
   private static instance: AuthService
   private currentUser: AuthUser | null = null
   private authStateListeners: Array<(user: AuthUser | null) => void> = []
+  private bootstrapPromises = new Map<string, Promise<void>>()
 
   private constructor() {
-    // Initialize Firebase auth state listener
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
+          await this.ensureUserBootstrap(firebaseUser, firebaseUser.displayName)
           const authUser = await this.mapFirebaseUser(firebaseUser)
           this.currentUser = authUser
           this.notifyListeners(authUser)
@@ -70,25 +60,29 @@ export class AuthService {
   }
 
   private async mapFirebaseUser(firebaseUser: FirebaseUser): Promise<AuthUser> {
-    const role = await this.resolveUserRole(firebaseUser)
+    const [role, status] = await Promise.all([
+      this.resolveUserRole(firebaseUser),
+      this.resolveUserStatus(firebaseUser),
+    ])
 
     return {
       id: firebaseUser.uid,
       email: firebaseUser.email!,
       name: firebaseUser.displayName || 'User',
       role,
-      agencyId: 'default-agency', // Would be fetched from database
+      status,
+      agencyId: 'default-agency',
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }
   }
 
-  private async resolveUserRole(firebaseUser: FirebaseUser): Promise<AuthUser['role']> {
+  private async resolveUserRole(firebaseUser: FirebaseUser): Promise<AuthRole> {
     try {
       const tokenResult = await firebaseUser.getIdTokenResult()
       const claimRole = tokenResult?.claims?.role
-      if (isRole(claimRole)) {
-        return claimRole
+      if (typeof claimRole === 'string') {
+        return normalizeRole(claimRole)
       }
     } catch (error) {
       console.warn('Failed to resolve role from token claims', error)
@@ -96,21 +90,90 @@ export class AuthService {
 
     if (typeof window !== 'undefined') {
       const cookieRole = getBrowserCookie('cohorts_role')
-      if (isRole(cookieRole)) {
-        return cookieRole
+      if (typeof cookieRole === 'string') {
+        return normalizeRole(cookieRole)
       }
 
       try {
         const storedRole = window.localStorage?.getItem('cohorts_role')
-        if (isRole(storedRole)) {
-          return storedRole
+        if (typeof storedRole === 'string') {
+          return normalizeRole(storedRole)
         }
       } catch (error) {
         console.warn('Failed to read stored role from localStorage', error)
       }
     }
 
-    return 'member'
+    return 'client'
+  }
+
+  private async resolveUserStatus(firebaseUser: FirebaseUser): Promise<AuthStatus> {
+    try {
+      const tokenResult = await firebaseUser.getIdTokenResult()
+      const claimStatus = tokenResult?.claims?.status
+      if (typeof claimStatus === 'string') {
+        return normalizeStatus(claimStatus, 'pending')
+      }
+    } catch (error) {
+      console.warn('Failed to resolve status from token claims', error)
+    }
+
+    if (typeof window !== 'undefined') {
+      const cookieStatus = getBrowserCookie('cohorts_status')
+      if (typeof cookieStatus === 'string') {
+        return normalizeStatus(cookieStatus, 'pending')
+      }
+    }
+
+    return 'pending'
+  }
+
+  private ensureUserBootstrap(firebaseUser: FirebaseUser, name?: string | null): Promise<void> {
+    const uid = firebaseUser.uid
+    if (!uid) {
+      return Promise.resolve()
+    }
+
+    const existingPromise = this.bootstrapPromises.get(uid)
+    if (existingPromise) {
+      return existingPromise
+    }
+
+    const payloadName = typeof name === 'string' && name.trim().length > 0 ? name.trim() : undefined
+
+    const promise = (async () => {
+      const idToken = await firebaseUser.getIdToken()
+      const response = await fetch('/api/auth/bootstrap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(payloadName ? { name: payloadName } : {}),
+      })
+
+      let payload: { error?: string; claimsUpdated?: boolean } | null = null
+      try {
+        payload = (await response.json()) as { error?: string; claimsUpdated?: boolean } | null
+      } catch {
+        payload = null
+      }
+
+      if (!response.ok || !payload) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to synchronise your account profile'
+        throw new Error(message)
+      }
+
+      if (payload.claimsUpdated) {
+        await firebaseUser.getIdToken(true)
+      }
+    })()
+      .finally(() => {
+        this.bootstrapPromises.delete(uid)
+      })
+
+    this.bootstrapPromises.set(uid, promise)
+    return promise
   }
 
   ensureAuthenticatedFirebaseUser(): FirebaseUser {
@@ -276,14 +339,23 @@ export class AuthService {
       provider.addScope('public_profile')
 
       const userCredential = await signInWithPopup(auth, provider)
+      await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
       return await this.mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
       console.error('Facebook sign-in error:', error)
+      const existingUser = auth.currentUser
+      if (existingUser) {
+        await this.ensureUserBootstrap(existingUser, existingUser.displayName)
+        return await this.mapFirebaseUser(existingUser)
+      }
       if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
       }
       if (isFirebaseError(error) && error.code === 'auth/account-exists-with-different-credential') {
         throw new Error('An account already exists with the same email. Please sign in using that provider.')
+      }
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
       }
       throw new Error('Failed to sign in with Facebook. Please try again.')
     }
@@ -300,14 +372,23 @@ export class AuthService {
       })
 
       const userCredential = await signInWithPopup(auth, provider)
+      await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
       return await this.mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
       console.error('LinkedIn sign-in error:', error)
+      const existingUser = auth.currentUser
+      if (existingUser) {
+        await this.ensureUserBootstrap(existingUser, existingUser.displayName)
+        return await this.mapFirebaseUser(existingUser)
+      }
       if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
       }
       if (isFirebaseError(error) && error.code === 'auth/operation-not-allowed') {
         throw new Error('LinkedIn sign-in is not enabled. Please contact support to enable this provider.')
+      }
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
       }
       throw new Error('Failed to sign in with LinkedIn. Please try again.')
     }
@@ -316,6 +397,7 @@ export class AuthService {
   async signIn(email: string, password: string): Promise<AuthUser> {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
       return await this.mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
       if (isFirebaseError(error)) {
@@ -326,6 +408,9 @@ export class AuthService {
           throw new Error('Incorrect password. Please try again.')
         }
       }
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
+      }
       throw new Error('Invalid email or password')
     }
   }
@@ -333,63 +418,62 @@ export class AuthService {
   async signInWithGoogle(): Promise<AuthUser> {
     try {
       const provider = new GoogleAuthProvider()
-      // Configure provider with additional scopes if needed
       provider.addScope('email')
       provider.addScope('profile')
-      
-      // Set custom parameters for better user experience
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      })
+      provider.setCustomParameters({ prompt: 'select_account' })
 
       const userCredential = await signInWithPopup(auth, provider)
+      await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
       return await this.mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
       console.error('Google sign-in error:', error)
+      const existingUser = auth.currentUser
+      if (existingUser) {
+        await this.ensureUserBootstrap(existingUser, existingUser.displayName)
+        return await this.mapFirebaseUser(existingUser)
+      }
       if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
-      } else if (isFirebaseError(error) && error.code === 'auth/popup-blocked') {
-        throw new Error('Sign-in popup was blocked by the browser. Please allow popups for this site.')
-      } else if (isFirebaseError(error) && error.code === 'auth/unauthorized-domain') {
-        throw new Error('This domain is not authorized for Google sign-in. Please contact support.')
-      } else {
-        throw new Error('Failed to sign in with Google. Please try again.')
       }
+      if (isFirebaseError(error) && error.code === 'auth/popup-blocked') {
+        throw new Error('Sign-in popup was blocked by the browser. Please allow popups for this site.')
+      }
+      if (isFirebaseError(error) && error.code === 'auth/unauthorized-domain') {
+        throw new Error('This domain is not authorized for Google sign-in. Please contact support.')
+      }
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
+      }
+      throw new Error('Failed to sign in with Google. Please try again.')
     }
   }
 
   async signUp(data: SignUpData): Promise<AuthUser> {
     try {
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        data.email, 
-        data.password
-      )
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
 
-        if (data.displayName && userCredential.user) {
-          try {
-            await updateProfile(userCredential.user, { displayName: data.displayName })
-          } catch (error) {
-            console.warn('Failed to set display name during sign up:', error)
-          }
+      if (data.displayName && userCredential.user) {
+        try {
+          await updateProfile(userCredential.user, { displayName: data.displayName })
+        } catch (error) {
+          console.warn('Failed to set display name during sign up:', error)
+        }
       }
 
-      // In a real implementation, you would also:
-      // 1. Create user document in Firestore
-      // 2. Create agency document
-      // 3. Set up initial agency settings
-      
+      await this.ensureUserBootstrap(userCredential.user, data.displayName ?? userCredential.user.displayName ?? data.email)
       const authUser = await this.mapFirebaseUser(userCredential.user)
       return authUser
     } catch (error: unknown) {
       if (isFirebaseError(error) && error.code === 'auth/email-already-in-use') {
         throw new Error('Email already in use')
-      } else if (isFirebaseError(error) && error.code === 'auth/weak-password') {
-        throw new Error('Password is too weak')
-      } else {
-        throw new Error('Failed to create account')
       }
+      if (isFirebaseError(error) && error.code === 'auth/weak-password') {
+        throw new Error('Password is too weak')
+      }
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
+      }
+      throw new Error('Failed to create account')
     }
   }
 
@@ -408,11 +492,7 @@ export class AuthService {
 
   onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
     this.authStateListeners.push(callback)
-    
-    // Call callback immediately with current user
     callback(this.currentUser)
-    
-    // Return unsubscribe function
     return () => {
       const index = this.authStateListeners.indexOf(callback)
       if (index > -1) {
@@ -422,7 +502,7 @@ export class AuthService {
   }
 
   private notifyListeners(user: AuthUser | null): void {
-    this.authStateListeners.forEach(listener => listener(user))
+    this.authStateListeners.forEach((listener) => listener(user))
   }
 
   async resetPassword(email: string): Promise<void> {
@@ -447,7 +527,6 @@ export class AuthService {
           throw new Error('Enter the email associated with your account')
         }
         if (error.code === 'auth/user-not-found') {
-          // Deliberately do not reveal whether the user exists.
           return
         }
       }
@@ -498,15 +577,12 @@ export class AuthService {
     }
 
     try {
-      // In a real implementation, you would update the user document in Firestore
-      // and potentially update the Firebase user profile
-      
       this.currentUser = {
         ...this.currentUser,
         ...data,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       }
-      
+
       this.notifyListeners(this.currentUser)
       return this.currentUser
     } catch (error: unknown) {
@@ -525,8 +601,6 @@ export class AuthService {
     }
 
     try {
-      // In a real implementation, you would use Firebase's updatePassword
-      // after re-authenticating the user
       console.log('Password changed successfully')
     } catch (error: unknown) {
       console.error('Password change error:', error)
@@ -540,10 +614,6 @@ export class AuthService {
     }
 
     try {
-      // In a real implementation, you would:
-      // 1. Delete user document from Firestore
-      // 2. Delete associated data (clients, campaigns, etc.)
-      // 3. Delete Firebase user
       console.log('Account deleted successfully')
     } catch (error: unknown) {
       console.error('Account deletion error:', error)
@@ -552,61 +622,4 @@ export class AuthService {
   }
 }
 
-function isFirebaseError(error: unknown): error is { code: string } {
-  return typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
-}
-
 export const authService = AuthService.getInstance()
-
-function extractRefreshToken(
-  credential: OAuthCredential | null,
-  tokenResponse?: {
-    oauthRefreshToken?: string
-    refreshToken?: string
-  }
-): string | null {
-  if (credential && typeof credential === 'object' && 'refreshToken' in credential) {
-    const candidate = (credential as { refreshToken?: unknown }).refreshToken
-    if (typeof candidate === 'string' && candidate.length > 0) {
-      return candidate
-    }
-  }
-
-  const oauthRefreshToken = tokenResponse?.oauthRefreshToken
-  if (typeof oauthRefreshToken === 'string' && oauthRefreshToken.length > 0) {
-    return oauthRefreshToken
-  }
-
-  const refreshToken = tokenResponse?.refreshToken
-  if (typeof refreshToken === 'string' && refreshToken.length > 0) {
-    return refreshToken
-  }
-
-  return null
-}
-
-function isRole(value: unknown): value is AuthUser['role'] {
-  return value === 'admin' || value === 'manager' || value === 'member'
-}
-
-function getBrowserCookie(name: string): string | undefined {
-  if (typeof document === 'undefined') {
-    return undefined
-  }
-
-  const match = document.cookie
-    .split(';')
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-
-  if (!match) {
-    return undefined
-  }
-
-  try {
-    return decodeURIComponent(match.split('=')[1] ?? '') || undefined
-  } catch (error) {
-    console.warn('Failed to decode cookie value', error)
-    return undefined
-  }
-}

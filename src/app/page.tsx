@@ -172,7 +172,7 @@ export default function HomePage() {
         ))}
       </FadeInStagger>
 
-      <FadeIn as="section" className="relative mx-auto grid w-full max-w-5xl gap-6 overflow-hidden rounded-2xl border bg-white/80 p-8 shadow-sm sm:grid-cols-[1.2fr_1fr]">
+      <FadeIn as="section" className="relative mx-auto grid w-full max-w-5xl gap-6 overflow-hidden rounded-2xl border p-8 shadow-sm sm:grid-cols-[1.2fr_1fr]">
         <SectionGlow variant="features" className="-left-40 -top-32 h-[26rem] opacity-80" />
         <FadeInItem as="div" className="space-y-4">
           <h2 className="text-2xl font-semibold tracking-tight">Why agencies choose Cohorts</h2>
@@ -303,7 +303,7 @@ export default function HomePage() {
         </FadeInStagger>
       </FadeIn>
 
-      <FadeIn as="section" id="contact" className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border bg-white/90 shadow-sm">
+      <FadeIn as="section" id="contact" className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border shadow-sm">
         <SectionGlow variant="contact" className="-right-24 -top-16 h-[30rem]" />
         <div className="grid gap-8 p-8 md:grid-cols-[1.4fr_1fr]">
           <FadeInItem as="div" className="space-y-4">

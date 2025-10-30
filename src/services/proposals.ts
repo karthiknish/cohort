@@ -92,5 +92,24 @@ export async function submitProposalDraft(id: string, delivery: 'summary' | 'sum
     throw new Error(payload.error || 'Failed to submit proposal draft')
   }
 
-  return response.json() as Promise<{ ok: boolean; status: ProposalStatus; aiInsights: string | null }>
+  return response.json() as Promise<{
+    ok: boolean
+    status: ProposalStatus
+    aiInsights: string | null
+    pdfUrl: string | null
+  }>
+}
+
+export async function deleteProposalDraft(id: string) {
+  const response = await authorizedFetch('/api/proposals', {
+    method: 'DELETE',
+    body: JSON.stringify({ id }),
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.error || 'Failed to delete proposal')
+  }
+
+  return true
 }

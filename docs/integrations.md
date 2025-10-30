@@ -9,6 +9,10 @@ This document outlines how Cohorts links paid media accounts, ingests campaign d
    - `AuthService.connect{Provider}AdsAccount` links the provider credential with Firebase Auth and persists tokens/scopes inside Firestore at `users/{userId}/adIntegrations/{providerId}`.
    - A `syncJobs` Firestore document is enqueued to request an initial 90-day backfill after each successful link.
 
+  > **Meta redirect URI**
+  >
+  > When enabling the Meta Ads integration, set the authorized redirect URI inside Meta Business settings to `https://<your-domain>/api/integrations/meta/oauth/callback` (use `http://localhost:3000/api/integrations/meta/oauth/callback` during local development) and mirror that value in the `META_OAUTH_REDIRECT_URI` environment variable.
+
 2. **Job processing (server)**
    - Server-side jobs (Cloud Functions or Next.js API routes run on the App Router) poll for queued records in `users/{userId}/syncJobs` with `status === 'queued'` and claim them atomically.
    - Each job exchanges stored access tokens for provider-specific API clients, requests spend/conversions/creative assets, normalizes the payload, and persists metrics in `users/{userId}/adMetrics/{yyyy-mm-dd}/{providerId}` documents.

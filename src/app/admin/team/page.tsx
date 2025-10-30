@@ -38,7 +38,7 @@ interface AdminUserRecord {
   id: string
   name: string
   email: string
-  role: 'admin' | 'manager' | 'member'
+  role: 'admin' | 'team' | 'client'
   status: UserStatus
   agencyId: string | null
   createdAt: string | null
@@ -52,7 +52,7 @@ type StatusFilter = 'all' | UserStatus
 
 type RoleFilter = 'all' | AdminUserRecord['role']
 
-const ROLE_OPTIONS: AdminUserRecord['role'][] = ['admin', 'manager', 'member']
+const ROLE_OPTIONS: AdminUserRecord['role'][] = ['admin', 'team', 'client']
 const STATUS_OPTIONS: StatusFilter[] = ['all', 'active', 'invited', 'pending', 'disabled', 'suspended']
 
 export default function AdminTeamPage() {
@@ -199,7 +199,7 @@ export default function AdminTeamPage() {
       return
     }
 
-    const fallbackRole: AdminUserRecord['role'] = makeAdmin ? 'admin' : 'member'
+    const fallbackRole: AdminUserRecord['role'] = makeAdmin ? 'admin' : 'team'
     void handleRoleChange(record.id, fallbackRole)
   }
 
@@ -496,6 +496,10 @@ function statusActionLabel(status: UserStatus): string {
       return 'Activate'
     case 'suspended':
       return 'Reinstate'
+    case 'pending':
+      return 'Approve access'
+    case 'invited':
+      return 'Activate'
     default:
       return 'Activate'
   }

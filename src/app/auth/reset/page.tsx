@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Lock } from 'lucide-react'
@@ -13,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useToast } from '@/components/ui/use-toast'
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
@@ -213,6 +215,23 @@ export default function ResetPasswordPage() {
         </Alert>
       )}
     </FadeIn>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <FadeIn as="div" className="mx-auto max-w-md space-y-6">
+          <Alert>
+            <AlertTitle>Loading reset link…</AlertTitle>
+            <AlertDescription>Preparing your password reset request.</AlertDescription>
+          </Alert>
+        </FadeIn>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
 

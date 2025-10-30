@@ -4,6 +4,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 import { ClientProvider } from '@/contexts/client-context'
 import Chatbot from '@/components/chatbot'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 
 export default function DashboardLayout({
   children,
@@ -21,7 +22,9 @@ export default function DashboardLayout({
                 <Header />
                 <ScrollArea className="flex-1">
                   <main className="min-h-full px-6 py-6">
-                    {children}
+                    <ClientAccessGate>
+                      {children}
+                    </ClientAccessGate>
                   </main>
                 </ScrollArea>
               </div>

@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'manager' | 'member';
+  role: 'admin' | 'team' | 'client';
   avatar?: string;
   agencyId: string;
   createdAt: Date;

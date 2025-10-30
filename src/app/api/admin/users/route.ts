@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
 
-const roleSchema = z.enum(['admin', 'manager', 'member'])
+const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'invited', 'pending', 'disabled', 'suspended'])
 
 function toISO(value: unknown): string | null {
@@ -70,10 +70,8 @@ export async function GET(request: NextRequest) {
       const data = docSnap.data() as Record<string, unknown>
       const roleValue = typeof data.role === 'string' ? data.role : null
       const statusValue = typeof data.status === 'string' ? data.status : null
-      const role = roleSchema.safeParse(roleValue).success ? (roleValue as z.infer<typeof roleSchema>) : 'member'
-      const status = statusSchema.safeParse(statusValue).success
-        ? (statusValue as z.infer<typeof statusSchema>)
-        : 'active'
+      const role = normalizeRole(roleValue)
+      const status = normalizeStatus(statusValue, 'active')
 
       return {
         id: docSnap.id,
@@ -94,8 +92,12 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((record) => record.status === statusParam)
     }
 
-    if (roleParam && roleSchema.safeParse(roleParam).success) {
-      filtered = filtered.filter((record) => record.role === roleParam)
+    if (roleParam) {
+      const normalizedFilterRole = normalizeRole(roleParam)
+      const acceptedFilter = roleParam === normalizedFilterRole || roleParam === 'manager' || roleParam === 'member'
+      if (acceptedFilter) {
+        filtered = filtered.filter((record) => record.role === normalizedFilterRole)
+      }
     }
 
     if (searchParam && searchParam.trim().length > 0) {
@@ -156,21 +158,49 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    const docData = userSnapshot.data() as Record<string, unknown>
+    const currentRole = normalizeRole(docData?.role)
+    const currentStatus = normalizeStatus(docData?.status, 'active')
+
+    const nextRole = role ?? currentRole
+    let nextStatus = status ?? currentStatus
+    if (nextRole === 'admin' && nextStatus !== 'active') {
+      nextStatus = 'active'
+    }
+
     const updatePayload: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
     }
 
-    if (role !== undefined) {
-      updatePayload.role = role
+    if (docData?.role !== nextRole) {
+      updatePayload.role = nextRole
     }
 
-    if (status !== undefined) {
-      updatePayload.status = status
+    if (docData?.status !== nextStatus) {
+      updatePayload.status = nextStatus
     }
 
-    await userRef.update(updatePayload)
+    if (Object.keys(updatePayload).length > 1) {
+      await userRef.update(updatePayload)
+    }
 
-    return NextResponse.json({ ok: true })
+    const userRecord = await adminAuth.getUser(id).catch(() => null)
+    if (!userRecord) {
+      return NextResponse.json({ error: 'Firebase user not found' }, { status: 404 })
+    }
+
+    const existingClaims = userRecord.customClaims ?? {}
+    const nextClaims = {
+      ...Object.fromEntries(
+        Object.entries(existingClaims).filter(([key]) => key !== 'role' && key !== 'status')
+      ),
+      role: nextRole,
+      status: nextStatus,
+    }
+
+    await adminAuth.setCustomUserClaims(id, nextClaims)
+
+    return NextResponse.json({ ok: true, role: nextRole, status: nextStatus })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
@@ -178,4 +208,27 @@ export async function PATCH(request: NextRequest) {
     console.error('[admin/users] patch failed', error)
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
   }
+}
+
+function normalizeRole(value: unknown): z.infer<typeof roleSchema> {
+  if (value === 'admin' || value === 'team' || value === 'client') {
+    return value
+  }
+  if (value === 'manager') {
+    return 'team'
+  }
+  if (value === 'member') {
+    return 'client'
+  }
+  return 'client'
+}
+
+function normalizeStatus(value: unknown, fallback: z.infer<typeof statusSchema> = 'active'): z.infer<typeof statusSchema> {
+  if (value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended') {
+    return value
+  }
+  if (value === 'inactive' || value === 'blocked') {
+    return 'disabled'
+  }
+  return fallback
 }

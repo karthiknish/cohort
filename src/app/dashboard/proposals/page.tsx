@@ -1,9 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle, ChevronLeft, ChevronRight, ClipboardList, Sparkles } from 'lucide-react'
-
-import { cn } from '@/lib/utils'
+import { ChevronLeft, ChevronRight, ClipboardList, Sparkles } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -12,22 +10,15 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { createProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft } from '@/services/proposals'
+import { createProposalDraft, deleteProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
-
-type ProposalStep = {
-  id: string
-  title: string
-  description: string
-}
+import { ProposalStepContent, type ProposalStepId } from './components/proposal-step-content'
+import { ProposalStepIndicator, type ProposalStep } from './components/proposal-step-indicator'
+import { ProposalHistory } from './components/proposal-history'
+import { ProposalDeleteDialog } from './components/proposal-delete-dialog'
 
 const steps: ProposalStep[] = [
   {
@@ -61,22 +52,6 @@ const steps: ProposalStep[] = [
     description: 'Set expectations around budget and engagement.',
   },
 ]
-
-const marketingPlatforms = ['Google Ads', 'Meta Ads', 'LinkedIn Ads', 'TikTok Ads', 'Other']
-const socialHandles = ['Facebook', 'Instagram', 'LinkedIn', 'TikTok', 'X / Twitter', 'YouTube']
-const goalOptions = ['Lead generation', 'Sales', 'Brand awareness', 'Recruitment', 'Other']
-const challenges = ['Low leads', 'High cost per lead', 'Lack of brand awareness', 'Scaling issues', 'Other']
-const scopeOptions = [
-  'PPC (Google Ads)',
-  'Paid Social (Meta/TikTok/LinkedIn)',
-  'SEO & Content Marketing',
-  'Email Marketing',
-  'Creative & Design',
-  'Strategy & Consulting',
-  'Other',
-]
-const startTimelineOptions = ['ASAP', 'Within 1 month', 'Within 3 months', 'Flexible']
-const proposalValueOptions = ['£2,000 – £5,000', '£5,000 – £10,000', '£10,000+']
 
 const initialFormState: ProposalFormData = {
   company: {
@@ -139,6 +114,10 @@ export default function ProposalsPage() {
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
+  const [proposalPdfCache, setProposalPdfCache] = useState<Record<string, string>>({})
+  const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
+  const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const hydrationRef = useRef(false)
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wizardRef = useRef<HTMLDivElement | null>(null)
@@ -192,6 +171,66 @@ export default function ProposalsPage() {
     })
     clearErrors(path.join('.'))
   }
+
+  const handleSocialHandleChange = useCallback((handle: string, value: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      marketing: {
+        ...prev.marketing,
+        socialHandles: {
+          ...prev.marketing.socialHandles,
+          [handle]: value,
+        },
+      },
+    }))
+  }, [])
+
+  const handleDeleteProposal = useCallback(async (proposal: ProposalDraft) => {
+    if (deletingProposalId && deletingProposalId !== proposal.id) {
+      return
+    }
+
+    try {
+      setDeletingProposalId(proposal.id)
+      await deleteProposalDraft(proposal.id)
+
+      setProposals((prev) => prev.filter((candidate) => candidate.id !== proposal.id))
+      setProposalPdfCache((prev) => {
+        const next = { ...prev }
+        delete next[proposal.id]
+        return next
+      })
+
+      if (draftId === proposal.id) {
+        setDraftId(null)
+        setFormState(initialFormState)
+        setCurrentStep(0)
+        setSubmitted(false)
+        setAiSummary(null)
+      }
+
+      toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Failed to delete proposal')
+      toast({ title: 'Unable to delete proposal', description: message, variant: 'destructive' })
+    } finally {
+      setDeletingProposalId(null)
+      setProposalPendingDelete(null)
+      setIsDeleteDialogOpen(false)
+    }
+  }, [deletingProposalId, draftId, toast])
+
+  const requestDeleteProposal = useCallback((proposal: ProposalDraft) => {
+    setProposalPendingDelete(proposal)
+    setIsDeleteDialogOpen(true)
+  }, [])
+
+  const handleDeleteDialogChange = useCallback((open: boolean) => {
+    setIsDeleteDialogOpen(open)
+    if (!open) {
+      setProposalPendingDelete(null)
+    }
+  }, [])
 
   const validateStep = () => {
     switch (step.id) {
@@ -299,14 +338,6 @@ export default function ProposalsPage() {
     }
   }
 
-  const summary = useMemo(() => {
-    return {
-      ...formState,
-    }
-  }, [formState])
-
-  const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
-
   const mapAiSummary = useCallback((proposal: ProposalDraft | null | undefined) => {
     if (!proposal || !proposal.aiInsights) return null
     if (typeof proposal.aiInsights === 'string') return proposal.aiInsights
@@ -316,6 +347,23 @@ export default function ProposalsPage() {
     }
     return null
   }, [])
+
+  const handleResumeProposal = useCallback((proposal: ProposalDraft) => {
+    setDraftId(proposal.id)
+    setFormState(mergeProposalForm(proposal.formData as Partial<ProposalFormData>))
+    setCurrentStep(Math.min(proposal.stepProgress ?? 0, steps.length - 1))
+    setSubmitted(proposal.status === 'ready')
+    setAiSummary(mapAiSummary(proposal))
+    wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [mapAiSummary])
+
+  const summary = useMemo(() => {
+    return {
+      ...formState,
+    }
+  }, [formState])
+
+  const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
 
   const refreshProposals = useCallback(async () => {
     if (!selectedClientId) {
@@ -328,6 +376,16 @@ export default function ProposalsPage() {
     try {
       const result = await listProposals({ clientId: selectedClientId })
       setProposals(result)
+      setProposalPdfCache((prev) => {
+        const next = { ...prev }
+        result.forEach((proposal) => {
+          const pdfUrl = proposal.pdfUrl
+          if (typeof pdfUrl === 'string') {
+            next[proposal.id] = pdfUrl
+          }
+        })
+        return next
+      })
       return result
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'Failed to load proposals')
@@ -351,10 +409,29 @@ export default function ProposalsPage() {
     try {
       setIsSubmitting(true)
       clearErrors(stepErrorPaths.value)
-      const response = await submitProposalDraft(draftId)
+      const activeDraftId = draftId
+      const response = await submitProposalDraft(draftId, 'summary_and_pdf')
       setAiSummary(response.aiInsights ?? null)
       const isReady = response.status === 'ready'
       setSubmitted(isReady)
+
+      const pdfUrl = response.pdfUrl
+      if (activeDraftId && typeof pdfUrl === 'string') {
+        setProposalPdfCache((prev) => ({ ...prev, [activeDraftId]: pdfUrl }))
+      }
+
+      if (isReady) {
+        setFormState(initialFormState)
+        setCurrentStep(0)
+        setDraftId(null)
+      }
+
+      if (response.pdfUrl) {
+        toast({
+          title: 'PDF ready',
+          description: 'A downloadable proposal PDF has been generated.',
+        })
+      }
 
       if (!isReady) {
         toast({
@@ -533,392 +610,17 @@ export default function ProposalsPage() {
     }
   }, [formState, currentStep, draftId, submitted, toast, hasPersistableData, isCreatingDraft, refreshProposals, selectedClientId, selectedClient])
 
-  const renderStepContent = () => {
-    switch (step.id) {
-      case 'company':
-        return (
-          <div className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  placeholder="Acme Corporation"
-                  value={formState.company.name}
-                  onChange={(e) => updateField(['company', 'name'], e.target.value)}
-                />
-                {validationErrors['company.name'] && (
-                  <p className="mt-1 text-xs text-destructive">{validationErrors['company.name']}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="website">Website URL</Label>
-                <Input
-                  id="website"
-                  type="url"
-                  placeholder="https://acme.com"
-                  value={formState.company.website}
-                  onChange={(e) => updateField(['company', 'website'], e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="industry">Industry / Sector</Label>
-                <Input
-                  id="industry"
-                  placeholder="e.g. SaaS, Retail, Healthcare"
-                  value={formState.company.industry}
-                  onChange={(e) => updateField(['company', 'industry'], e.target.value)}
-                />
-                {validationErrors['company.industry'] && (
-                  <p className="mt-1 text-xs text-destructive">{validationErrors['company.industry']}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="companySize">Company Size</Label>
-                <Input
-                  id="companySize"
-                  placeholder="e.g. 25 employees"
-                  value={formState.company.size}
-                  onChange={(e) => updateField(['company', 'size'], e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="locations">Locations</Label>
-              <Textarea
-                id="locations"
-                placeholder="List primary offices or regions served"
-                value={formState.company.locations}
-                onChange={(e) => updateField(['company', 'locations'], e.target.value)}
-              />
-            </div>
-          </div>
-        )
-
-      case 'marketing':
-        return (
-          <div className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="budget">Monthly marketing budget</Label>
-                <Input
-                  id="budget"
-                  placeholder="e.g. £7,500"
-                  value={formState.marketing.budget}
-                  onChange={(e) => updateField(['marketing', 'budget'], e.target.value)}
-                />
-                {validationErrors['marketing.budget'] && (
-                  <p className="mt-1 text-xs text-destructive">{validationErrors['marketing.budget']}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="adAccounts">Existing ad accounts?</Label>
-                <Select
-                  value={formState.marketing.adAccounts}
-                  onValueChange={(value) => updateField(['marketing', 'adAccounts'], value)}
-                >
-                  <SelectTrigger id="adAccounts">
-                    <SelectValue placeholder="Select an option" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Yes">Yes</SelectItem>
-                    <SelectItem value="No">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label>Current advertising platforms</Label>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {marketingPlatforms.map((platform) => (
-                  <label key={platform} className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2">
-                    <Checkbox
-                      checked={formState.marketing.platforms.includes(platform)}
-                      onChange={() => toggleArrayValue(['marketing', 'platforms'], platform)}
-                    />
-                    <span className="text-sm">{platform}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Social handles</Label>
-              <div className="grid gap-3 md:grid-cols-2">
-                {socialHandles.map((handle) => (
-                  <div key={handle}>
-                    <Label className="text-xs font-medium text-muted-foreground">{handle}</Label>
-                    <Input
-                      placeholder={`https://.../${handle.toLowerCase().split(' ')[0]}`}
-                      value={formState.marketing.socialHandles[handle] ?? ''}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        setFormState((prev) => ({
-                          ...prev,
-                          marketing: {
-                            ...prev.marketing,
-                            socialHandles: {
-                              ...prev.marketing.socialHandles,
-                              [handle]: value,
-                            },
-                          },
-                        }))
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )
-
-      case 'goals':
-        return (
-          <div className="space-y-5">
-            <div>
-              <Label>Primary goals</Label>
-              <p className="mt-1 text-sm text-muted-foreground">Select all that apply.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {goalOptions.map((goal) => (
-                  <label key={goal} className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2">
-                    <Checkbox
-                      checked={formState.goals.objectives.includes(goal)}
-                      onChange={() => toggleArrayValue(['goals', 'objectives'], goal)}
-                    />
-                    <span className="text-sm">{goal}</span>
-                  </label>
-                ))}
-              </div>
-              {validationErrors['goals.objectives'] && (
-                <p className="mt-2 text-xs text-destructive">{validationErrors['goals.objectives']}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="audience">Target audience</Label>
-              <Textarea
-                id="audience"
-                placeholder="Describe the demographics, regions, or personas you want to reach."
-                value={formState.goals.audience}
-                onChange={(e) => updateField(['goals', 'audience'], e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Label>Current challenges</Label>
-              <p className="mt-1 text-sm text-muted-foreground">Select the obstacles you are facing.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {challenges.map((challenge) => (
-                  <label key={challenge} className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2">
-                    <Checkbox
-                      checked={formState.goals.challenges.includes(challenge)}
-                      onChange={() => toggleArrayValue(['goals', 'challenges'], challenge)}
-                    />
-                    <span className="text-sm">{challenge}</span>
-                  </label>
-                ))}
-              </div>
-              {formState.goals.challenges.includes('Other') && (
-                <Input
-                  className="mt-3"
-                  placeholder="Describe other challenges"
-                  value={formState.goals.customChallenge}
-                  onChange={(e) => updateField(['goals', 'customChallenge'], e.target.value)}
-                />
-              )}
-            </div>
-          </div>
-        )
-
-      case 'scope':
-        return (
-          <div className="space-y-5">
-            <div>
-              <Label>Services required</Label>
-              <p className="mt-1 text-sm text-muted-foreground">Pick the specific areas where you need support.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {scopeOptions.map((service) => (
-                  <label key={service} className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2">
-                    <Checkbox
-                      checked={formState.scope.services.includes(service)}
-                      onChange={() => toggleArrayValue(['scope', 'services'], service)}
-                    />
-                    <span className="text-sm">{service}</span>
-                  </label>
-                ))}
-              </div>
-              {validationErrors['scope.services'] && (
-                <p className="mt-2 text-xs text-destructive">{validationErrors['scope.services']}</p>
-              )}
-            </div>
-            {formState.scope.services.includes('Other') && (
-              <div>
-                <Label htmlFor="otherService">Other services</Label>
-                <Input
-                  id="otherService"
-                  placeholder="Describe any other support you need"
-                  value={formState.scope.otherService}
-                  onChange={(e) => updateField(['scope', 'otherService'], e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-        )
-
-      case 'timelines':
-        return (
-          <div className="space-y-5">
-            <div>
-              <Label>Preferred start timeline</Label>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {startTimelineOptions.map((option) => {
-                  const isActive = formState.timelines.startTime === option
-                  return (
-                    <Button
-                      key={option}
-                      type="button"
-                      variant={isActive ? 'default' : 'outline'}
-                      onClick={() => updateField(['timelines', 'startTime'], option)}
-                    >
-                      {option}
-                    </Button>
-                  )
-                })}
-              </div>
-              {validationErrors['timelines.startTime'] && (
-                <p className="mt-2 text-xs text-destructive">{validationErrors['timelines.startTime']}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="upcomingEvents">Upcoming campaigns or events</Label>
-              <Textarea
-                id="upcomingEvents"
-                placeholder="Share launches, seasonality, or milestones we should plan for."
-                value={formState.timelines.upcomingEvents}
-                onChange={(e) => updateField(['timelines', 'upcomingEvents'], e.target.value)}
-              />
-            </div>
-          </div>
-        )
-
-      case 'value':
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label>Expected proposal value</Label>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {proposalValueOptions.map((option) => {
-                  const isActive = formState.value.proposalSize === option
-                  return (
-                    <Button
-                      key={option}
-                      type="button"
-                      variant={isActive ? 'default' : 'outline'}
-                      onClick={() => updateField(['value', 'proposalSize'], option)}
-                    >
-                      {option}
-                    </Button>
-                  )
-                })}
-              </div>
-              {validationErrors['value.proposalSize'] && (
-                <p className="mt-2 text-xs text-destructive">{validationErrors['value.proposalSize']}</p>
-              )}
-            </div>
-
-            <div>
-              <Label>Engagement preference</Label>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {['One-off project', 'Ongoing monthly support'].map((option) => {
-                  const isActive = formState.value.engagementType === option
-                  return (
-                    <Button
-                      key={option}
-                      type="button"
-                      variant={isActive ? 'default' : 'outline'}
-                      onClick={() => updateField(['value', 'engagementType'], option)}
-                    >
-                      {option}
-                    </Button>
-                  )
-                })}
-              </div>
-              {validationErrors['value.engagementType'] && (
-                <p className="mt-2 text-xs text-destructive">{validationErrors['value.engagementType']}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="additionalNotes">Additional notes</Label>
-              <Textarea
-                id="additionalNotes"
-                placeholder="Anything else we should know before drafting your proposal?"
-                value={formState.value.additionalNotes}
-                onChange={(e) => updateField(['value', 'additionalNotes'], e.target.value)}
-              />
-            </div>
-
-            <Card className="border-dashed border-muted-foreground/40">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-base">Proposal summary</CardTitle>
-                <CardDescription>Review the information before submitting.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div>
-                  <h4 className="font-semibold text-foreground">Company</h4>
-                  <p className="text-muted-foreground">
-                    {summary.company.name || '—'} · {summary.company.industry || '—'} · {summary.company.size || 'Size not provided'}
-                  </p>
-                  <p className="text-muted-foreground">Website: {summary.company.website || '—'}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">Marketing</h4>
-                  <p className="text-muted-foreground">Budget: {summary.marketing.budget || '—'}</p>
-                  <p className="text-muted-foreground">
-                    Platforms: {summary.marketing.platforms.length ? summary.marketing.platforms.join(', ') : 'None selected'}
-                  </p>
-                  <p className="text-muted-foreground">Ad accounts: {summary.marketing.adAccounts}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">Goals & Challenges</h4>
-                  <p className="text-muted-foreground">
-                    Goals: {summary.goals.objectives.length ? summary.goals.objectives.join(', ') : 'Not specified'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    Challenges: {summary.goals.challenges.length ? summary.goals.challenges.join(', ') : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">Scope & Timeline</h4>
-                  <p className="text-muted-foreground">
-                    Services: {summary.scope.services.length ? summary.scope.services.join(', ') : 'Not selected'}
-                  </p>
-                  <p className="text-muted-foreground">Start: {summary.timelines.startTime || 'No preference'}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">Value & Engagement</h4>
-                  <p className="text-muted-foreground">
-                    Expected value: {summary.value.proposalSize || 'Not specified'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    Engagement: {summary.value.engagementType || 'Not specified'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )
-
-      default:
-        return null
-    }
-  }
+  const renderStepContent = () => (
+    <ProposalStepContent
+      stepId={step.id}
+      formState={formState}
+      summary={summary}
+      validationErrors={validationErrors}
+      onUpdateField={updateField}
+      onToggleArrayValue={toggleArrayValue}
+      onChangeSocialHandle={handleSocialHandleChange}
+    />
+  )
 
   return (
     <div className="space-y-6">
@@ -937,27 +639,7 @@ export default function ProposalsPage() {
 
       <Card className="border-muted/60 bg-background">
         <CardHeader>
-          <div className="flex flex-wrap items-center gap-3">
-            {steps.map((item, index) => {
-              const isCurrent = index === currentStep
-              const isComplete = index < currentStep || submitted
-              return (
-                <div key={item.id} className="flex items-center gap-2">
-                  {index > 0 && <div className="h-px w-6 bg-muted" />}
-                  <div className={cn('flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
-                    isCurrent ? 'border-primary bg-primary/10 text-primary' : 'border-muted bg-muted text-muted-foreground')
-                  }>
-                    {isComplete ? <CheckCircle className="h-3 w-3" /> : <span className="h-2 w-2 rounded-full bg-current" />}
-                    <span>{index + 1}</span>
-                  </div>
-                  <div>
-                    <p className={cn('text-sm font-semibold', isCurrent ? 'text-foreground' : 'text-muted-foreground')}>{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{item.description}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted} />
         </CardHeader>
         <CardContent className="space-y-6">
           {isBootstrapping ? (
@@ -1042,76 +724,28 @@ export default function ProposalsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-background">
-        <CardHeader>
-          <CardTitle className="text-lg">Proposal history</CardTitle>
-          <CardDescription>Access draft, ready, and sent proposals in one place.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{isLoadingProposals ? 'Refreshing proposals…' : `${proposals.length} total proposals`}</span>
-            <Button variant="outline" size="sm" onClick={() => void refreshProposals()} disabled={isLoadingProposals}>
-              Refresh
-            </Button>
-          </div>
-          <div className="space-y-3">
-            {proposals.length === 0 && !isLoadingProposals ? (
-              <div className="rounded-md border border-dashed border-muted p-6 text-center text-sm text-muted-foreground">
-                No proposals yet. Start by completing the wizard above.
-              </div>
-            ) : (
-              proposals.map((proposal) => {
-                const isActiveDraft = proposal.id === draftId
-                const resumeDisabled = isActiveDraft && !submitted
-                const summary = mapAiSummary(proposal)
-
-                return (
-                  <div key={proposal.id} className={cn('rounded-lg border bg-card p-4 transition hover:bg-muted/40', isActiveDraft && 'border-primary')}
-                  >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 text-sm font-semibold">
-                          {proposal.id}
-                          <Badge variant={proposal.status === 'ready' ? 'default' : 'outline'}>{proposal.status}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Updated {proposal.updatedAt ? new Date(proposal.updatedAt).toLocaleString() : 'recently'}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={resumeDisabled}
-                          onClick={() => {
-                            setDraftId(proposal.id)
-                            setFormState(mergeProposalForm(proposal.formData as Partial<ProposalFormData>))
-                            setCurrentStep(Math.min(proposal.stepProgress ?? 0, steps.length - 1))
-                            setSubmitted(proposal.status === 'ready')
-                            setAiSummary(mapAiSummary(proposal))
-                            wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                          }}
-                        >
-                          {proposal.status === 'ready' ? 'View summary' : 'Resume editing'}
-                        </Button>
-                        <Button size="sm" variant="ghost" disabled={!proposal.pdfUrl}>
-                          Download PDF
-                        </Button>
-                      </div>
-                    </div>
-                    {summary && (
-                      <div className="mt-3 rounded-md bg-muted/70 p-3 text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground">AI summary preview</p>
-                        <p className="mt-1 line-clamp-2">{summary}</p>
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <ProposalHistory
+        proposals={proposals}
+        draftId={draftId}
+        isLoading={isLoadingProposals}
+        proposalPdfCache={proposalPdfCache}
+        deletingProposalId={deletingProposalId}
+        mapAiSummary={mapAiSummary}
+        onRefresh={() => void refreshProposals()}
+        onResume={handleResumeProposal}
+        onRequestDelete={requestDeleteProposal}
+      />
+      <ProposalDeleteDialog
+        open={isDeleteDialogOpen}
+        isDeleting={Boolean(deletingProposalId)}
+        proposalName={proposalPendingDelete?.clientName ?? proposalPendingDelete?.id ?? null}
+        onOpenChange={handleDeleteDialogChange}
+        onConfirm={() => {
+          if (proposalPendingDelete) {
+            void handleDeleteProposal(proposalPendingDelete)
+          }
+        }}
+      />
     </div>
   )
 }

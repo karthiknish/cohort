@@ -23,6 +23,7 @@ import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useToast } from '@/components/ui/use-toast'
 
 export default function AuthPage() {
+  const TAB_STORAGE_KEY = 'cohorts.auth.activeTab'
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin')
   const [showPassword, setShowPassword] = useState(false)
   const [signInData, setSignInData] = useState({
@@ -44,6 +45,36 @@ export default function AuthPage() {
       router.replace('/dashboard')
     }
   }, [loading, user, router])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    try {
+      const stored = window.localStorage.getItem(TAB_STORAGE_KEY)
+      if (stored === 'signin' || stored === 'signup') {
+        setActiveTab(stored)
+      }
+    } catch (storageError) {
+      console.warn('[AuthPage] failed to hydrate tab selection', storageError)
+    }
+  }, [])
+
+  const handleTabChange = (value: string) => {
+    const nextTab = value === 'signup' ? 'signup' : 'signin'
+    setActiveTab(nextTab)
+
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    try {
+      window.localStorage.setItem(TAB_STORAGE_KEY, nextTab)
+    } catch (storageError) {
+      console.warn('[AuthPage] failed to persist tab selection', storageError)
+    }
+  }
 
   if (!loading && user) {
     return (
@@ -139,7 +170,7 @@ export default function AuthPage() {
           </CardHeader>
 
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'signin' | 'signup')} className="space-y-6">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
               <TabsList className="w-full">
                 <TabsTrigger value="signin" className="flex-1">
                   Sign in
