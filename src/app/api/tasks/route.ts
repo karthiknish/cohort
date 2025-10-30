@@ -6,7 +6,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
 
-const baseTaskSchema = z.object({
+export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
   description: z.string().trim().max(2000).optional(),
   status: z.enum(TASK_STATUSES).default('todo'),
@@ -28,7 +28,7 @@ const baseTaskSchema = z.object({
 
 type CreateTaskInput = z.infer<typeof baseTaskSchema>
 
-type StoredTask = {
+export type StoredTask = {
   title?: unknown
   description?: unknown
   status?: unknown
@@ -42,7 +42,7 @@ type StoredTask = {
   updatedAt?: unknown
 }
 
-function toISO(value: unknown): string | null {
+export function toISO(value: unknown): string | null {
   if (!value && value !== 0) return null
   if (value instanceof Timestamp) {
     return value.toDate().toISOString()
@@ -68,7 +68,7 @@ function toISO(value: unknown): string | null {
   return null
 }
 
-function coerceStringArray(value: unknown): string[] {
+export function coerceStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return []
   }
@@ -77,7 +77,7 @@ function coerceStringArray(value: unknown): string[] {
     .filter((item) => item.length > 0)
 }
 
-function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
+export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
   const status = (typeof data.status === 'string' ? data.status : 'todo') as TaskStatus
   const priority = (typeof data.priority === 'string' ? data.priority : 'medium') as TaskPriority
 

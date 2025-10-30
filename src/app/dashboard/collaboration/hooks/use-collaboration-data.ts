@@ -1,15 +1,27 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Timestamp,
+  collection,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+  type DocumentData,
+  type QueryConstraint,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
+import { db } from '@/lib/firebase'
 
 import {
-  CHANNEL_TYPE_COLORS,
   aggregateTeamMembers,
   collectSharedFiles,
   formatRelativeTime,
@@ -78,6 +90,7 @@ export function useCollaborationData() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const sessionTokenRef = useRef<string | null>(null)
   const pendingSessionPromiseRef = useRef<Promise<string> | null>(null)
+  const channelUnsubscribeRef = useRef<(() => void) | null>(null)
 
   const selectedChannel = useMemo(
     () => channels.find((channel) => channel.id === selectedChannelId) ?? null,
@@ -248,6 +261,64 @@ export function useCollaborationData() {
     [ensureSessionToken, toast]
   )
 
+  useEffect(() => {
+    channelUnsubscribeRef.current?.()
+    channelUnsubscribeRef.current = null
+
+    if (!selectedChannel || !user?.id) {
+      return
+    }
+
+    const channelId = selectedChannel.id
+    setLoadingChannelId(channelId)
+    setMessagesError(null)
+
+    const baseCollection = collection(db, 'users', user.id, 'collaborationMessages')
+    const constraints: QueryConstraint[] = [where('channelType', '==', selectedChannel.type)]
+
+    if (selectedChannel.type === 'client') {
+      if (!selectedChannel.clientId) {
+        setMessagesError('Client channel is missing an identifier')
+        setLoadingChannelId((current) => (current === channelId ? null : current))
+        return
+      }
+      constraints.push(where('clientId', '==', selectedChannel.clientId))
+    }
+
+    constraints.push(orderBy('createdAt', 'asc'), limit(200))
+    const channelQuery = query(baseCollection, ...constraints)
+
+    const unsubscribe = onSnapshot(
+      channelQuery,
+      (snapshot) => {
+        const next = snapshot.docs.map((doc) => mapRealtimeMessage(doc))
+        setMessagesByChannel((prev) => ({
+          ...prev,
+          [channelId]: next,
+        }))
+        setLoadingChannelId((current) => (current === channelId ? null : current))
+        setMessagesError(null)
+      },
+      (error) => {
+        console.error('[collaboration] realtime subscription error', error)
+        const message = error instanceof Error ? error.message : 'Unable to subscribe to messages'
+        setMessagesError(message)
+        setLoadingChannelId((current) => (current === channelId ? null : current))
+        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+        void fetchMessages(selectedChannel)
+      }
+    )
+
+    channelUnsubscribeRef.current = unsubscribe
+
+    return () => {
+      unsubscribe()
+      if (channelUnsubscribeRef.current === unsubscribe) {
+        channelUnsubscribeRef.current = null
+      }
+    }
+  }, [fetchMessages, selectedChannel, toast, user?.id])
+
   const handleSendMessage = useCallback(async () => {
     if (!selectedChannel) return
     const content = messageInput.trim()
@@ -346,12 +417,6 @@ export function useCollaborationData() {
   }, [channels, selectedClient])
 
   useEffect(() => {
-    if (!selectedChannel) return
-    if (messagesByChannel[selectedChannel.id]) return
-    void fetchMessages(selectedChannel)
-  }, [fetchMessages, messagesByChannel, selectedChannel])
-
-  useEffect(() => {
     if (!selectedChannel) {
       setSenderSelection('')
       return
@@ -422,4 +487,85 @@ function readSessionTokenCookie(): string | null {
     console.warn('Failed to decode session token cookie', error)
     return null
   }
+}
+
+function mapRealtimeMessage(doc: QueryDocumentSnapshot<DocumentData>): CollaborationMessage {
+  const data = doc.data()
+  const channelType = parseChannelType(data?.channelType)
+
+  const attachments = Array.isArray(data?.attachments)
+    ? data.attachments
+        .map((entry: unknown) => sanitizeAttachment(entry))
+        .filter((entry): entry is CollaborationAttachment => Boolean(entry))
+    : undefined
+
+  return {
+    id: doc.id,
+    channelType,
+    clientId: typeof data?.clientId === 'string' ? data.clientId : null,
+    content: typeof data?.content === 'string' ? data.content : '',
+    senderId: typeof data?.senderId === 'string' ? data.senderId : null,
+    senderName:
+      typeof data?.senderName === 'string' && data.senderName.trim().length > 0 ? data.senderName : 'Teammate',
+    senderRole: typeof data?.senderRole === 'string' ? data.senderRole : null,
+    createdAt: convertToIso(data?.createdAt),
+    attachments,
+  }
+}
+
+function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
+  if (!input || typeof input !== 'object') {
+    return null
+  }
+
+  const data = input as Record<string, unknown>
+  const name = typeof data.name === 'string' ? data.name : null
+  const url = typeof data.url === 'string' ? data.url : null
+
+  if (!name || !url) {
+    return null
+  }
+
+  return {
+    name,
+    url,
+    type: typeof data.type === 'string' ? data.type : null,
+    size: typeof data.size === 'string' ? data.size : null,
+  }
+}
+
+function convertToIso(value: unknown): string | null {
+  if (!value && value !== 0) {
+    return null
+  }
+
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString()
+  }
+
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
+    return (value as { toDate: () => Date }).toDate().toISOString()
+  }
+
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+    return value
+  }
+
+  return null
+}
+
+function parseChannelType(value: unknown): Channel['type'] {
+  if (value === 'client' || value === 'team' || value === 'project') {
+    return value
+  }
+  return 'team'
 }

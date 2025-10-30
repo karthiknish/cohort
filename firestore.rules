@@ -37,6 +37,37 @@ service cloud.firestore {
       match /proposals/{proposalId} {
         allow read, write: if isSelf(userId) || isAdmin();
       }
+
+      match /tasks/{taskId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create, update, delete: if isSelf(userId) || isAdmin();
+      }
+
+      match /clients/{clientId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create, update, delete: if isAdmin();
+      }
+
+      match /financeRevenue/{revenueId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create, update, delete: if isAdmin();
+      }
+
+      match /financeInvoices/{invoiceId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create, update, delete: if isAdmin();
+      }
+
+      match /financeCosts/{costId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create, update, delete: if isAdmin();
+      }
+
+      match /collaborationMessages/{messageId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create: if isSelf(userId) || isAdmin();
+        allow update, delete: if isAdmin();
+      }
     }
 
     match /contactMessages/{messageId} {

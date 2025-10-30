@@ -29,6 +29,8 @@ import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceSummaryResponse } from '@/types/finance'
+import type { TaskRecord } from '@/types/tasks'
+import type { CollaborationMessage } from '@/types/collaboration'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -50,6 +52,22 @@ type SummaryStat = {
   helper: string
   icon: LucideIcon
   emphasis?: 'positive' | 'negative' | 'neutral'
+}
+
+type ActivityFeedItem = {
+  id: string
+  message: string
+  timestampLabel: string
+  icon: LucideIcon
+  accentClass?: string
+}
+
+type DashboardTaskItem = {
+  id: string
+  title: string
+  dueLabel: string
+  priority: TaskRecord['priority']
+  clientName: string
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -99,54 +117,51 @@ const quickLinks = [
   },
 ]
 
-const recentActivity = [
+const DEFAULT_ACTIVITY: ActivityFeedItem[] = [
   {
-    id: 1,
-    type: 'task',
+    id: 'default-activity-1',
     message: 'New task assigned: "Q4 Campaign Review"',
-    time: '2 minutes ago',
+    timestampLabel: '2 minutes ago',
     icon: CheckCircle,
-    color: 'text-green-600',
+    accentClass: 'text-green-600',
   },
   {
-    id: 2,
-    type: 'alert',
+    id: 'default-activity-2',
     message: 'Google Ads budget exceeded for Client ABC',
-    time: '1 hour ago',
+    timestampLabel: '1 hour ago',
     icon: Activity,
-    color: 'text-red-600',
+    accentClass: 'text-red-600',
   },
   {
-    id: 3,
-    type: 'activity',
+    id: 'default-activity-3',
     message: 'Meta campaign "Holiday Sale" reached 50% of budget',
-    time: '3 hours ago',
+    timestampLabel: '3 hours ago',
     icon: Activity,
-    color: 'text-blue-600',
+    accentClass: 'text-blue-600',
   },
 ]
 
-const upcomingTasks = [
+const DEFAULT_TASKS: DashboardTaskItem[] = [
   {
-    id: 1,
+    id: 'default-task-1',
     title: 'Review Q3 performance report',
-    dueDate: 'Today',
+    dueLabel: 'Today',
     priority: 'high',
-    client: 'Tech Corp',
+    clientName: 'Tech Corp',
   },
   {
-    id: 2,
+    id: 'default-task-2',
     title: 'Create proposal for new client',
-    dueDate: 'Tomorrow',
+    dueLabel: 'Tomorrow',
     priority: 'medium',
-    client: 'StartupXYZ',
+    clientName: 'StartupXYZ',
   },
   {
-    id: 3,
+    id: 'default-task-3',
     title: 'Optimize Google Ads campaigns',
-    dueDate: 'This week',
+    dueLabel: 'This week',
     priority: 'low',
-    client: 'Retail Store',
+    clientName: 'Retail Store',
   },
 ]
 
@@ -159,6 +174,12 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<MetricRecord[]>([])
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricsError, setMetricsError] = useState<string | null>(null)
+  const [activityItems, setActivityItems] = useState<ActivityFeedItem[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [activityError, setActivityError] = useState<string | null>(null)
+  const [taskItems, setTaskItems] = useState<DashboardTaskItem[]>([])
+  const [tasksLoading, setTasksLoading] = useState(false)
+  const [tasksError, setTasksError] = useState<string | null>(null)
 
   useEffect(() => {
     let isCancelled = false
@@ -170,6 +191,12 @@ export default function DashboardPage() {
       setMetricsError(null)
       setFinanceLoading(false)
       setMetricsLoading(false)
+      setActivityItems([])
+      setActivityError(null)
+      setActivityLoading(false)
+      setTaskItems([])
+      setTasksError(null)
+      setTasksLoading(false)
       return () => {
         isCancelled = true
       }
@@ -259,8 +286,102 @@ export default function DashboardPage() {
       }
     }
 
+    const loadTasks = async () => {
+      setTasksLoading(true)
+      setTasksError(null)
+      try {
+        const token = await getIdToken()
+        const response = await fetch(`/api/tasks${query}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          let message = 'Failed to load tasks'
+          try {
+            const payload = (await response.json()) as { error?: unknown }
+            if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
+              message = payload.error
+            }
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(message)
+        }
+
+        const data = (await response.json()) as TaskRecord[]
+        if (!isCancelled) {
+          setTaskItems(mapTasksForDashboard(data))
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setTaskItems([])
+          setTasksError(getErrorMessage(error, 'Unable to load tasks'))
+        }
+      } finally {
+        if (!isCancelled) {
+          setTasksLoading(false)
+        }
+      }
+    }
+
+    const loadActivity = async () => {
+      setActivityLoading(true)
+      setActivityError(null)
+      try {
+        const token = await getIdToken()
+        const params = new URLSearchParams()
+        if (selectedClientId) {
+          params.set('channelType', 'client')
+          params.set('clientId', selectedClientId)
+        } else {
+          params.set('channelType', 'team')
+        }
+
+        const endpoint = `/api/collaboration/messages?${params.toString()}`
+        const response = await fetch(endpoint, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          let message = 'Failed to load recent activity'
+          try {
+            const payload = (await response.json()) as { error?: unknown }
+            if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
+              message = payload.error
+            }
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(message)
+        }
+
+        const payload = (await response.json()) as { messages?: CollaborationMessage[] }
+        const messages = Array.isArray(payload.messages) ? payload.messages : []
+        if (!isCancelled) {
+          setActivityItems(mapActivityMessages(messages))
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setActivityItems([])
+          setActivityError(getErrorMessage(error, 'Unable to load recent activity'))
+        }
+      } finally {
+        if (!isCancelled) {
+          setActivityLoading(false)
+        }
+      }
+    }
+
     void loadFinance()
     void loadMetrics()
+    void loadTasks()
+    void loadActivity()
 
     return () => {
       isCancelled = true
@@ -319,28 +440,65 @@ export default function DashboardPage() {
 
   const statsLoading = financeLoading || metricsLoading
   const combinedErrors = useMemo(
-    () => [financeError, metricsError].filter((message): message is string => Boolean(message)),
-    [financeError, metricsError],
+    () => [financeError, metricsError, tasksError, activityError].filter((message): message is string => Boolean(message)),
+    [financeError, metricsError, tasksError, activityError],
   )
 
+  const resolvedActivity = useMemo(() => {
+    if (activityItems.length > 0) {
+      return activityItems
+    }
+    if (activityError) {
+      return DEFAULT_ACTIVITY
+    }
+    return []
+  }, [activityItems, activityError])
+
   const filteredActivity = useMemo(() => {
-    if (!selectedClient) return recentActivity
-    const matches = recentActivity.filter((activity) => activity.message.includes(selectedClient.name))
-    return matches.length > 0 ? matches : recentActivity
-  }, [selectedClient])
+    if (resolvedActivity.length === 0) {
+      return resolvedActivity
+    }
+
+    if (!selectedClient?.name) {
+      return resolvedActivity
+    }
+
+    const needle = selectedClient.name.toLowerCase()
+    const matches = resolvedActivity.filter((activity) => activity.message.toLowerCase().includes(needle))
+    return matches.length > 0 ? matches : resolvedActivity
+  }, [resolvedActivity, selectedClient?.name])
+
+  const resolvedTasks = useMemo(() => {
+    if (taskItems.length > 0) {
+      return taskItems
+    }
+    if (tasksError) {
+      return DEFAULT_TASKS
+    }
+    return []
+  }, [taskItems, tasksError])
 
   const filteredUpcomingTasks = useMemo(() => {
-    if (!selectedClient) return upcomingTasks
-    const matches = upcomingTasks.filter((task) => task.client === selectedClient.name)
-    return matches.length > 0 ? matches : upcomingTasks
-  }, [selectedClient])
+    if (resolvedTasks.length === 0) {
+      return resolvedTasks
+    }
+
+    if (!selectedClient?.name) {
+      return resolvedTasks.slice(0, 5)
+    }
+
+    const needle = selectedClient.name.toLowerCase()
+    const matches = resolvedTasks.filter((task) => task.clientName.toLowerCase().includes(needle))
+    const scoped = matches.length > 0 ? matches : resolvedTasks
+    return scoped.slice(0, 5)
+  }, [resolvedTasks, selectedClient?.name])
 
   return (
     <div className="space-y-6">
       {combinedErrors.length > 0 && (
         <FadeIn>
           <Alert variant="destructive">
-            <AlertTitle>Unable to refresh analytics</AlertTitle>
+            <AlertTitle>Unable to refresh dashboard data</AlertTitle>
             <AlertDescription>{combinedErrors.join(' ')}</AlertDescription>
           </Alert>
         </FadeIn>
@@ -436,11 +594,21 @@ export default function DashboardPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {filteredActivity.map((item) => (
-                    <FadeInItem key={item.id}>
-                      <ActivityItem item={item} />
-                    </FadeInItem>
-                  ))}
+                  {activityLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-3/5" />
+                      <Skeleton className="h-4 w-4/5" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                  ) : filteredActivity.length > 0 ? (
+                    filteredActivity.map((item) => (
+                      <FadeInItem key={item.id}>
+                        <ActivityItem item={item} />
+                      </FadeInItem>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No recent activity yet.</p>
+                  )}
                 </CardContent>
               </Card>
             </FadeInItem>
@@ -457,11 +625,21 @@ export default function DashboardPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {filteredUpcomingTasks.map((task) => (
-                    <FadeInItem key={task.id}>
-                      <TaskItem task={task} />
-                    </FadeInItem>
-                  ))}
+                  {tasksLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                    </div>
+                  ) : filteredUpcomingTasks.length > 0 ? (
+                    filteredUpcomingTasks.map((task) => (
+                      <FadeInItem key={task.id}>
+                        <TaskItem task={task} />
+                      </FadeInItem>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No open tasks on your radar.</p>
+                  )}
                 </CardContent>
               </Card>
             </FadeInItem>
@@ -500,23 +678,24 @@ function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
   )
 }
 
-function ActivityItem({ item }: { item: (typeof recentActivity)[number] }) {
+function ActivityItem({ item }: { item: ActivityFeedItem }) {
   const Icon = item.icon
   return (
     <div className="flex items-start space-x-3">
-      <div className={cn('flex h-8 w-8 items-center justify-center rounded-full bg-primary/10', item.color)}>
+      <div className={cn('flex h-8 w-8 items-center justify-center rounded-full bg-primary/10', item.accentClass)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{item.message}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{item.time}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{item.timestampLabel}</p>
       </div>
     </div>
   )
 }
 
-function TaskItem({ task }: { task: (typeof upcomingTasks)[number] }) {
-  const priorityColors: Record<string, string> = {
+function TaskItem({ task }: { task: DashboardTaskItem }) {
+  const priorityColors: Record<DashboardTaskItem['priority'], string> = {
+    urgent: 'bg-rose-100 text-rose-700',
     high: 'bg-red-100 text-red-700',
     medium: 'bg-yellow-100 text-yellow-700',
     low: 'bg-green-100 text-green-700',
@@ -527,15 +706,192 @@ function TaskItem({ task }: { task: (typeof upcomingTasks)[number] }) {
       <CardContent className="flex items-center justify-between p-4">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">{task.title}</p>
-          <p className="text-xs text-muted-foreground">{task.client}</p>
+          <p className="text-xs text-muted-foreground">{task.clientName}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className={cn('capitalize', priorityColors[task.priority])}>
+          <Badge className={cn('capitalize', priorityColors[task.priority] ?? 'bg-muted text-muted-foreground')}>
             {task.priority}
           </Badge>
-          <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+          <span className="text-xs text-muted-foreground">{task.dueLabel}</span>
         </div>
       </CardContent>
     </Card>
   )
+}
+
+const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+const DAY_IN_MS = 24 * 60 * 60 * 1000
+
+function mapActivityMessages(messages: CollaborationMessage[]): ActivityFeedItem[] {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return []
+  }
+
+  const relevantMessages = messages
+    .filter((message) => typeof message.content === 'string' && message.content.trim().length > 0)
+    .slice(-5)
+    .reverse()
+
+  return relevantMessages.map((message) => ({
+    id: message.id,
+    message: formatActivityMessage(message),
+    timestampLabel: formatRelativeTime(message.createdAt),
+    icon: Activity,
+    accentClass: getActivityAccent(message.channelType),
+  }))
+}
+
+function mapTasksForDashboard(tasks: TaskRecord[]): DashboardTaskItem[] {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return []
+  }
+
+  const withSortKey = tasks
+    .filter((task) => task.status !== 'completed')
+    .map((task) => {
+      const { label, timestamp } = deriveDueMetadata(task.dueDate)
+      const rawTitle = typeof task.title === 'string' ? task.title.trim() : ''
+      const rawClient = typeof task.client === 'string' ? task.client.trim() : ''
+      return {
+        id: task.id,
+        title: rawTitle.length > 0 ? rawTitle : 'Untitled task',
+        dueLabel: label,
+        priority: normalizeTaskPriority(task.priority),
+        clientName: rawClient.length > 0 ? rawClient : 'Internal',
+        sortValue: timestamp,
+      }
+    })
+
+  withSortKey.sort((a, b) => a.sortValue - b.sortValue)
+
+  return withSortKey.slice(0, 5).map(({ sortValue, ...task }) => task)
+}
+
+function formatActivityMessage(message: CollaborationMessage): string {
+  const sender = typeof message.senderName === 'string' ? message.senderName.trim() : ''
+  const normalized = truncateText(normalizeWhitespace(message.content))
+  return sender.length > 0 ? `${sender}: ${normalized}` : normalized
+}
+
+function getActivityAccent(channelType: CollaborationMessage['channelType']): string {
+  switch (channelType) {
+    case 'client':
+      return 'text-blue-600'
+    case 'project':
+      return 'text-purple-600'
+    default:
+      return 'text-primary'
+  }
+}
+
+function formatRelativeTime(input: string | null | undefined): string {
+  if (!input) {
+    return 'Moments ago'
+  }
+
+  const date = new Date(input)
+  if (Number.isNaN(date.getTime())) {
+    return input
+  }
+
+  const diffMs = date.getTime() - Date.now()
+  const diffSeconds = Math.round(diffMs / 1000)
+
+  if (Math.abs(diffSeconds) < 60) {
+    return RELATIVE_TIME_FORMATTER.format(diffSeconds, 'second')
+  }
+
+  const diffMinutes = Math.round(diffSeconds / 60)
+  if (Math.abs(diffMinutes) < 60) {
+    return RELATIVE_TIME_FORMATTER.format(diffMinutes, 'minute')
+  }
+
+  const diffHours = Math.round(diffMinutes / 60)
+  if (Math.abs(diffHours) < 24) {
+    return RELATIVE_TIME_FORMATTER.format(diffHours, 'hour')
+  }
+
+  const diffDays = Math.round(diffHours / 24)
+  if (Math.abs(diffDays) < 7) {
+    return RELATIVE_TIME_FORMATTER.format(diffDays, 'day')
+  }
+
+  const diffWeeks = Math.round(diffDays / 7)
+  if (Math.abs(diffWeeks) < 5) {
+    return RELATIVE_TIME_FORMATTER.format(diffWeeks, 'week')
+  }
+
+  const diffMonths = Math.round(diffDays / 30)
+  if (Math.abs(diffMonths) < 12) {
+    return RELATIVE_TIME_FORMATTER.format(diffMonths, 'month')
+  }
+
+  const diffYears = Math.round(diffDays / 365)
+  return RELATIVE_TIME_FORMATTER.format(diffYears, 'year')
+}
+
+function deriveDueMetadata(rawDue: string | null | undefined): { label: string; timestamp: number } {
+  if (!rawDue) {
+    return { label: 'No due date', timestamp: Number.MAX_SAFE_INTEGER }
+  }
+
+  const dueDate = new Date(rawDue)
+  if (Number.isNaN(dueDate.getTime())) {
+    return { label: rawDue, timestamp: Number.MAX_SAFE_INTEGER }
+  }
+
+  const dueStart = startOfDay(dueDate)
+  const todayStart = startOfDay(new Date())
+  const diffDays = Math.round((dueStart - todayStart) / DAY_IN_MS)
+
+  if (diffDays === 0) {
+    return { label: 'Today', timestamp: dueStart }
+  }
+
+  if (diffDays === 1) {
+    return { label: 'Tomorrow', timestamp: dueStart }
+  }
+
+  if (diffDays === -1) {
+    return { label: 'Yesterday', timestamp: dueStart }
+  }
+
+  if (diffDays < -1) {
+    const daysOverdue = Math.abs(diffDays)
+    const suffix = daysOverdue === 1 ? 'day overdue' : 'days overdue'
+    return { label: `${daysOverdue} ${suffix}`, timestamp: dueStart }
+  }
+
+  if (diffDays <= 7) {
+    return { label: `In ${diffDays} days`, timestamp: dueStart }
+  }
+
+  return {
+    label: dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    timestamp: dueStart,
+  }
+}
+
+function startOfDay(date: Date): number {
+  const copy = new Date(date)
+  copy.setHours(0, 0, 0, 0)
+  return copy.getTime()
+}
+
+function truncateText(value: string, maxLength = 140): string {
+  if (value.length <= maxLength) {
+    return value
+  }
+  return `${value.slice(0, maxLength - 3).trimEnd()}...`
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function normalizeTaskPriority(value: unknown): DashboardTaskItem['priority'] {
+  if (value === 'low' || value === 'medium' || value === 'high' || value === 'urgent') {
+    return value
+  }
+  return 'medium'
 }
