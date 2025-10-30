@@ -226,7 +226,7 @@ export async function POST(
 function buildProposalSummaryPrompt(formData: ReturnType<typeof mergeProposalForm>) {
   const { company, marketing, goals, scope, timelines, value } = formData
 
-  return `You are an expert marketing consultant creating a polished proposal summary.
+  return `You are an expert marketing consultant creating a presentation-ready proposal outline.
 
 Client Company:
 - Name: ${company.name || 'N/A'}
@@ -258,12 +258,21 @@ Proposal Value:
 - Engagement type: ${value.engagementType || 'Not specified'}
 - Additional notes: ${value.additionalNotes || 'None'}
 
-Create a concise, client-facing summary that includes:
-1. Opening paragraph summarising the client's situation and goals.
-2. Recommended approach highlighting services and strategic priorities.
-3. Next steps and timeline expectations.
+Structured Output Requirements:
+- Produce slide-by-slide markdown optimised for Gamma ingestion.
+- Each slide must begin with "Slide X: Title" followed by 3-5 bullet points using "- ".
+- Maintain a professional, confident, collaborative tone.
+- Call out missing or ambiguous inputs so the client knows what to clarify.
 
-Keep the tone professional, confident, and collaborative. Use markdown headings and bullet points for readability.`
+Mandatory Content Coverage:
+1. Executive context that frames the client's situation and priority goals.
+2. Comparison of client budget/metrics against industry-standard benchmarks for ${company.industry || 'their industry'}, highlighting gaps or advantages.
+3. Budget allocation guidance that states the recommended working budget, the portion earmarked for core execution, and 10-20% reserved for experimentation/A/B testing.
+4. Goal feasibility review that challenges or validates stated targets; if budget and expected revenue are misaligned, propose an ideal budget range and achievable revenue projection, or request additional data if none was provided.
+5. Agency value proposition outlining services the agency can deliver (requested and recommended add-ons) and why they matter.
+6. Next steps / call-to-action covering timeline expectations and stakeholder asks.
+
+If numerical inputs are unclear, make reasonable assumptions and note them explicitly.`
 }
 
 function buildGammaInstructionPrompt(formData: ReturnType<typeof mergeProposalForm>) {
@@ -279,11 +288,7 @@ Primary objectives: ${objectives}
 Timeline note: ${timelines.startTime || 'flexible start'}
 Engagement type: ${value.engagementType || 'not specified'}
 
-Write concise slide-by-slide guidance (Slide 1, Slide 2, etc.) capped at 8 slides. Focus on a strategic marketing proposal tailored to the client. Include:
-- Slide titles that feel executive-ready.
-- Bullet points per slide highlighting key talking points.
-- A professional, optimistic tone with clear next steps.
-- References to provided goals, challenges, and value expectations when relevant.
+Write concise slide-by-slide guidance (Slide 1, Slide 2, etc.) capped at 8 slides. Ensure coverage of industry benchmark comparisons, budget allocation with a 10-20% testing buffer, goal feasibility with suggested targets, agency service recommendations, and a closing CTA. Highlight where assumptions are made because data is missing.
 
 Output plain text only. Avoid markdown, numbering beyond "Slide X", and keep total length under 450 characters. End with a call-to-action slide.`
 }
@@ -301,6 +306,8 @@ function buildGammaInputText(formData: ReturnType<typeof mergeProposalForm>, sum
   sections.push(`Scope & Value:\n- Requested Services: ${scope.services.length ? scope.services.join(', ') : 'Not specified'}\n- Extra Services: ${scope.otherService || 'None'}\n- Proposal Value: ${value.proposalSize || 'Not specified'}\n- Engagement Type: ${value.engagementType || 'Not specified'}\n- Additional Notes: ${value.additionalNotes || 'None'}`)
 
   sections.push(`Timelines:\n- Desired Start: ${timelines.startTime || 'Flexible'}\n- Upcoming Events: ${timelines.upcomingEvents || 'None'}`)
+
+  sections.push(`Strategic Requirements:\n- Benchmark the client's budget and marketing performance against industry standards for ${company.industry || 'their sector'}.\n- Recommend an efficient budget split with 10-20% reserved for experimentation and A/B testing.\n- Validate whether stated goals and revenue expectations are achievable; suggest an ideal budget or revenue range when misaligned.\n- Highlight agency-deliverable services (requested and additional recommendations) mapped to the client's objectives.\n- Present insights so they translate cleanly into Gamma slide content.`)
 
   if (summary && summary.trim().length > 0) {
     sections.push(`Executive Summary:\n${summary.trim()}`)
