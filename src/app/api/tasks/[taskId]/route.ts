@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/types/tasks'
-import { coerceStringArray, mapTaskDoc, type StoredTask } from '../route'
+import { coerceStringArray, invalidateTasksCache, mapTaskDoc, type StoredTask } from '../route'
 
 const updateTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200).optional(),
@@ -68,6 +68,8 @@ export async function PATCH(
 
     await docRef.update(updates)
 
+    invalidateTasksCache(uid)
+
     const updatedDoc = await docRef.get()
     const task = mapTaskDoc(updatedDoc.id, updatedDoc.data() as StoredTask)
     return NextResponse.json(task)
@@ -111,6 +113,8 @@ export async function DELETE(
     }
 
     await docRef.delete()
+
+    invalidateTasksCache(uid)
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {

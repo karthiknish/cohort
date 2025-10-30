@@ -185,6 +185,7 @@
 3. **Pagination**: Add to tasks, metrics, and finance endpoints
 4. **Rate limiting**: Implement on API endpoints to prevent abuse
 5. **Structured logging**: Replace console.error with proper logging service
+6. **Caching strategy**: Design request-level caching (SWR cache policies, CDN headers for read-heavy endpoints, memoized server data) to reduce Firestore load
 
 ### Medium-term (Months 2-3)
 1. **CI/CD pipeline**: GitHub Actions with automated testing and deployment

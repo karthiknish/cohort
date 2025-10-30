@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
+import { buildCacheHeaders, serverCache } from '@/lib/cache'
 
 export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -109,8 +110,23 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const statusFilter = searchParams.get('status')
     const assigneeFilter = searchParams.get('assignee')
-    const queryFilter = searchParams.get('query')?.toLowerCase().trim()
+    const rawQuery = searchParams.get('query')
+    const queryFilter = rawQuery ? rawQuery.trim().toLowerCase() : null
     const clientIdFilter = searchParams.get('clientId')
+
+    const cacheKey = buildTasksCacheKey(uid, {
+      statusFilter,
+      assigneeFilter,
+      queryFilter,
+      clientIdFilter,
+    })
+
+    const cached = serverCache.get<TaskRecord[]>(cacheKey)
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
+      })
+    }
 
     const tasksSnapshot = await adminDb
       .collection('users')
@@ -145,7 +161,11 @@ export async function GET(request: NextRequest) {
         return true
       })
 
-    return NextResponse.json(tasks)
+    serverCache.set(cacheKey, tasks, TASKS_CACHE_TTL_MS)
+
+    return NextResponse.json(tasks, {
+      headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
+    })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
@@ -188,6 +208,8 @@ export async function POST(request: NextRequest) {
     const createdDoc = await docRef.get()
     const task = mapTaskDoc(createdDoc.id, createdDoc.data() as StoredTask)
 
+    invalidateTasksCache(uid)
+
     return NextResponse.json(task, { status: 201 })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
@@ -201,4 +223,30 @@ export async function POST(request: NextRequest) {
     console.error('[tasks] failed to create task', error)
     return NextResponse.json({ error: 'Failed to create task' }, { status: 500 })
   }
+}
+
+const TASKS_CACHE_TTL_MS = 60_000
+
+type TaskCacheKeyInput = {
+  statusFilter: string | null
+  assigneeFilter: string | null
+  queryFilter: string | null
+  clientIdFilter: string | null
+}
+
+function buildTasksCacheKey(userId: string, filters: TaskCacheKeyInput): string {
+  const parts = [
+    'tasks',
+    userId,
+    filters.clientIdFilter ?? '*',
+    filters.statusFilter ?? '*',
+    filters.assigneeFilter ?? '*',
+    filters.queryFilter ?? '*',
+  ]
+
+  return parts.map((part) => encodeURIComponent(part)).join('::')
+}
+
+export function invalidateTasksCache(userId: string): void {
+  serverCache.invalidatePrefix(`tasks::${encodeURIComponent(userId)}`)
 }
