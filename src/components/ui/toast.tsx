@@ -16,7 +16,7 @@ const ToastViewport = React.forwardRef<React.ElementRef<typeof ToastPrimitives.V
     <ToastPrimitives.Viewport
       ref={ref}
       className={cn(
-        'fixed inset-x-0 top-0 z-[100] flex max-h-screen w-full flex-col-reverse gap-2 p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col sm:p-6',
+        'fixed bottom-4 right-4 z-[100] flex w-full max-w-xs flex-col gap-2 p-0 sm:bottom-6 sm:right-6 sm:max-w-sm',
         className
       )}
       {...props}
@@ -26,7 +26,7 @@ const ToastViewport = React.forwardRef<React.ElementRef<typeof ToastPrimitives.V
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-full min-w-72 items-center justify-between space-x-4 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+  'group pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-md border bg-background p-3 pr-8 text-sm shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   {
     variants: {
       variant: {
@@ -69,7 +69,8 @@ const ToastClose = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Clos
   ({ className, ...props }, ref) => (
     <ToastPrimitives.Close
       ref={ref}
-      className={cn('absolute right-1 top-1 rounded-md p-1 text-foreground/60 transition hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring', className)}
+      className={cn('absolute right-2 top-2 rounded-md p-1 text-white/80 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2', className)}
+      aria-label="Dismiss notification"
       toast-close=""
       {...props}
     >

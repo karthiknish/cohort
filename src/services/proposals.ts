@@ -13,6 +13,8 @@ export interface ProposalDraft {
   createdAt: string | null
   updatedAt: string | null
   lastAutosaveAt: string | null
+  clientId: string | null
+  clientName: string | null
 }
 
 async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
@@ -29,10 +31,13 @@ async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {})
   })
 }
 
-export async function listProposals(params: { status?: ProposalStatus } = {}) {
+export async function listProposals(params: { status?: ProposalStatus; clientId?: string } = {}) {
   const search = new URLSearchParams()
   if (params.status) {
     search.set('status', params.status)
+  }
+  if (params.clientId) {
+    search.set('clientId', params.clientId)
   }
 
   const response = await authorizedFetch(`/api/proposals${search.toString() ? `?${search}` : ''}`, {

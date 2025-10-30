@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { authService } from '@/services/auth'
+import { useClientContext } from '@/contexts/client-context'
 
 interface MetricRecord {
   id: string
@@ -76,10 +77,17 @@ const fetcher = async (url: string, token: string) => {
   return response.json()
 }
 
-function useAnalyticsData(token: string | null, periodDays: number) {
+function useAnalyticsData(token: string | null, periodDays: number, clientId: string | null) {
   const shouldFetch = Boolean(token)
-  const metricsKey: [string, string] | null = shouldFetch && token ? ['/api/metrics', token] : null
-  const insightsKey: [string, string] | null = shouldFetch && token ? [`/api/analytics/insights?periodDays=${periodDays}`, token] : null
+  const metricsUrl = clientId ? `/api/metrics?clientId=${encodeURIComponent(clientId)}` : '/api/metrics'
+  const metricsKey: [string, string] | null = shouldFetch && token ? [metricsUrl, token] : null
+
+  const insightsParams = new URLSearchParams({ periodDays: String(periodDays) })
+  if (clientId) {
+    insightsParams.set('clientId', clientId)
+  }
+  const insightsUrl = `/api/analytics/insights?${insightsParams.toString()}`
+  const insightsKey: [string, string] | null = shouldFetch && token ? [insightsUrl, token] : null
 
   const {
     data,
@@ -132,6 +140,7 @@ function formatCurrency(value: number) {
 }
 
 export default function AnalyticsPage() {
+  const { selectedClientId } = useClientContext()
   const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
 
@@ -168,7 +177,7 @@ export default function AnalyticsPage() {
     insightsLoading,
     insightsRefreshing,
     mutateInsights,
-  } = useAnalyticsData(token, periodDays)
+  } = useAnalyticsData(token, periodDays, selectedClientId ?? null)
 
   const metrics = metricsData
   const referenceTimestamp = useMemo(() => {

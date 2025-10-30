@@ -6,8 +6,8 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #043E2A;
-  --primary-dark: #15803d;
+  --primary: #071740;
+  --primary-dark: #030d26;
   --primary-foreground: #f9fafb;
   --secondary: #1e293b;
   --secondary-foreground: #f9fafb;
@@ -19,7 +19,7 @@
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #15803d;
+  --ring: #071740;
   --radius: 0.625rem;
   --background: #f9fafb;
   --foreground: #0f172a;
@@ -30,7 +30,7 @@
   --chart-5: #0ea5e9;
   --sidebar: #1e293b;
   --sidebar-foreground: #f9fafb;
-  --sidebar-primary: #16a34a;
+  --sidebar-primary: #071740;
   --sidebar-primary-foreground: #f9fafb;
   --sidebar-accent: #facc15;
   --sidebar-accent-foreground: #0f172a;
@@ -59,6 +59,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
+  --font-heading: var(--font-anybody, var(--font-geist-sans));
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -81,6 +82,16 @@
 
 body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-anybody, var(--font-sans)), var(--font-sans), Arial, Helvetica, sans-serif;
+  font-weight: 600;
 }
 
 * {

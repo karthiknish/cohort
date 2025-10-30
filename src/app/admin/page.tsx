@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { Loader2, ShieldAlert, CheckCircle2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Loader2, ShieldAlert, CheckCircle2, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -15,8 +15,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
+import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
 interface ContactMessage {
   id: string
@@ -30,6 +33,16 @@ interface ContactMessage {
 
 const STATUS_OPTIONS: ContactMessage['status'][] = ['new', 'in_progress', 'resolved']
 
+type TeamMemberField = ClientTeamMember & { key: string }
+
+function createEmptyMemberField(): TeamMemberField {
+  return {
+    key: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+    name: '',
+    role: '',
+  }
+}
+
 export default function AdminPage() {
   const { user, getIdToken } = useAuth()
   const [messages, setMessages] = useState<ContactMessage[]>([])
@@ -39,7 +52,119 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [clients, setClients] = useState<ClientRecord[]>([])
+  const [clientsLoading, setClientsLoading] = useState(false)
+  const [clientsError, setClientsError] = useState<string | null>(null)
+  const [clientSaving, setClientSaving] = useState(false)
+  const [clientName, setClientName] = useState('')
+  const [clientAccountManager, setClientAccountManager] = useState('')
+  const [teamMemberFields, setTeamMemberFields] = useState<TeamMemberField[]>([createEmptyMemberField()])
   const { toast } = useToast()
+
+  const loadClients = useCallback(async () => {
+    if (!user?.id) {
+      setClients([])
+      return
+    }
+
+    setClientsLoading(true)
+    setClientsError(null)
+
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/clients', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'Failed to load clients')
+      }
+
+      const payload = (await response.json()) as { clients?: ClientRecord[] }
+      const list = Array.isArray(payload.clients) ? payload.clients : []
+      const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name))
+      setClients(sorted)
+    } catch (clientError: unknown) {
+      const message = extractErrorMessage(clientError, 'Unable to load clients')
+      setClientsError(message)
+      toast({ title: 'Client load failed', description: message, variant: 'destructive' })
+    } finally {
+      setClientsLoading(false)
+    }
+  }, [getIdToken, toast, user?.id])
+
+  const resetClientForm = () => {
+    setClientName('')
+    setClientAccountManager('')
+    setTeamMemberFields([createEmptyMemberField()])
+  }
+
+  const addTeamMemberField = () => {
+    setTeamMemberFields((prev) => [...prev, createEmptyMemberField()])
+  }
+
+  const updateTeamMemberField = (key: string, field: keyof ClientTeamMember, value: string) => {
+    setTeamMemberFields((prev) => prev.map((item) => (item.key === key ? { ...item, [field]: value } : item)))
+  }
+
+  const removeTeamMemberField = (key: string) => {
+    setTeamMemberFields((prev) => (prev.length <= 1 ? prev : prev.filter((item) => item.key !== key)))
+  }
+
+  const handleCreateClient = async () => {
+    const name = clientName.trim()
+    const accountManager = clientAccountManager.trim()
+
+    if (!name || !accountManager) {
+      toast({ title: 'Missing details', description: 'Client name and account manager are required.', variant: 'destructive' })
+      return
+    }
+
+    const teamMembers = teamMemberFields
+      .map((member) => ({
+        name: member.name.trim(),
+        role: member.role.trim(),
+      }))
+      .filter((member) => member.name.length > 0)
+      .map((member) => ({ ...member, role: member.role || 'Contributor' }))
+
+    setClientSaving(true)
+
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, accountManager, teamMembers }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(typeof payload.error === 'string' ? payload.error : 'Failed to create client')
+      }
+
+      const payload = (await response.json()) as { client: ClientRecord }
+      const created = payload.client
+      setClients((prev) => {
+        const next = [...prev, created]
+        return next.sort((a, b) => a.name.localeCompare(b.name))
+      })
+      toast({ title: 'Client created', description: `${created.name} is ready to use.` })
+      resetClientForm()
+    } catch (clientError: unknown) {
+      const message = extractErrorMessage(clientError, 'Unable to create client')
+      toast({ title: 'Client create failed', description: message, variant: 'destructive' })
+    } finally {
+      setClientSaving(false)
+    }
+  }
 
   const fetchMessages = async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
     if (!user?.id) return
@@ -95,6 +220,15 @@ export default function AdminPage() {
     void fetchMessages()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, statusFilter])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setClients([])
+      return
+    }
+
+    void loadClients()
+  }, [loadClients, user?.id])
 
   const summary = useMemo(() => {
     const totals = {
@@ -223,6 +357,160 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-lg">Client workspaces</CardTitle>
+              <CardDescription>Create new clients and assign their delivery team.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => void loadClients()} disabled={clientsLoading}>
+              {clientsLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Refreshing
+                </>
+              ) : (
+                'Refresh list'
+              )}
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <form
+              className="space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void handleCreateClient()
+              }}
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-client-name">Client name</Label>
+                  <Input
+                    id="admin-client-name"
+                    placeholder="e.g. Horizon Ventures"
+                    value={clientName}
+                    onChange={(event) => setClientName(event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-client-owner">Account manager</Label>
+                  <Input
+                    id="admin-client-owner"
+                    placeholder="Primary owner"
+                    value={clientAccountManager}
+                    onChange={(event) => setClientAccountManager(event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label className="text-sm font-medium">Team members</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addTeamMemberField} disabled={clientSaving}>
+                    <Plus className="mr-2 h-4 w-4" /> Add teammate
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {teamMemberFields.map((member, index) => (
+                    <div key={member.key} className="flex flex-col gap-2 rounded-md border border-muted/60 bg-muted/10 p-3 sm:flex-row sm:items-center">
+                      <div className="flex-1 space-y-2">
+                        <Label htmlFor={`team-member-name-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Name
+                        </Label>
+                        <Input
+                          id={`team-member-name-${member.key}`}
+                          placeholder={index === 0 ? 'Alex Chen' : 'Teammate name'}
+                          value={member.name}
+                          onChange={(event) => updateTeamMemberField(member.key, 'name', event.target.value)}
+                          disabled={clientSaving}
+                        />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Label htmlFor={`team-member-role-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Role
+                        </Label>
+                        <Input
+                          id={`team-member-role-${member.key}`}
+                          placeholder={index === 0 ? 'Paid Media Lead' : 'Role (optional)'}
+                          value={member.role}
+                          onChange={(event) => updateTeamMemberField(member.key, 'role', event.target.value)}
+                          disabled={clientSaving}
+                        />
+                      </div>
+                      <div className="flex items-center justify-end pt-2 sm:pt-6">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeTeamMemberField(member.key)}
+                          disabled={teamMemberFields.length <= 1 || clientSaving}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remove team member</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Include anyone collaborating with this client. Account managers are automatically added if missing.</p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" disabled={clientSaving}>
+                  {clientSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create client
+                </Button>
+              </div>
+            </form>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <UsersIcon className="h-4 w-4" />
+                <span>Existing client workspaces</span>
+                <Badge variant="secondary">{clients.length}</Badge>
+              </div>
+              {clientsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading clients…
+                </div>
+              ) : clientsError ? (
+                <p className="text-sm text-destructive">{clientsError}</p>
+              ) : clients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No clients yet. Add a workspace to get started.</p>
+              ) : (
+                <div className="space-y-3">
+                  {clients.map((client) => (
+                    <div key={client.id} className="rounded-md border border-muted/60 bg-muted/10 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{client.name}</p>
+                          <p className="text-xs text-muted-foreground">Managed by {client.accountManager}</p>
+                        </div>
+                        <Badge variant="outline">Team {client.teamMembers.length}</Badge>
+                      </div>
+                      {client.teamMembers.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {client.teamMembers.map((member) => (
+                            <span
+                              key={`${client.id}-${member.name}-${member.role}`}
+                              className="rounded-full border border-muted/60 bg-background px-3 py-1 text-xs text-muted-foreground"
+                            >
+                              <span className="font-medium text-foreground">{member.name}</span>
+                              {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="border-muted/60 bg-background">
           <CardHeader>

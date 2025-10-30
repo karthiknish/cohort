@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -189,6 +190,19 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleAdminToggle = (record: AdminUserRecord, makeAdmin: boolean) => {
+    if (makeAdmin && record.role === 'admin') {
+      return
+    }
+
+    if (!makeAdmin && record.role !== 'admin') {
+      return
+    }
+
+    const fallbackRole: AdminUserRecord['role'] = makeAdmin ? 'admin' : 'member'
+    void handleRoleChange(record.id, fallbackRole)
+  }
+
   const handleStatusAction = async (userRecord: AdminUserRecord) => {
     setSavingId(userRecord.id)
     setError(null)
@@ -348,6 +362,7 @@ export default function AdminUsersPage() {
                   <tr className="border-b border-muted/40">
                     <th className="w-64 py-2 pr-3 font-medium">User</th>
                     <th className="w-32 py-2 pr-3 font-medium">Role</th>
+                    <th className="w-24 py-2 pr-3 text-center font-medium">Admin</th>
                     <th className="w-32 py-2 pr-3 font-medium">Status</th>
                     <th className="w-40 py-2 pr-3 font-medium">Joined</th>
                     <th className="w-40 py-2 pr-3 font-medium">Last active</th>
@@ -357,7 +372,7 @@ export default function AdminUsersPage() {
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                      <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                         {loading
                           ? 'Loading users…'
                           : error
@@ -392,6 +407,14 @@ export default function AdminUsersPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                        </td>
+                        <td className="py-3 pr-3 text-center align-middle">
+                          <Checkbox
+                            checked={record.role === 'admin'}
+                            onChange={(event) => handleAdminToggle(record, event.target.checked)}
+                            disabled={savingId === record.id}
+                            aria-label={`Toggle admin role for ${record.name}`}
+                          />
                         </td>
                         <td className="py-3 pr-3 align-middle">
                           <Badge variant={statusToVariant(record.status)} className="capitalize">

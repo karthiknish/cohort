@@ -1,19 +1,18 @@
+
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import {
-  BarChart3,
-  TrendingUp,
-  Users,
-  DollarSign,
   Activity,
-  Clock,
+  BarChart3,
   CheckCircle,
-  AlertCircle,
-  Search,
-  Facebook,
-  Linkedin,
-  RefreshCw,
+  Clock,
+  CreditCard,
+  DollarSign,
+  Megaphone,
+  TrendingUp,
 } from 'lucide-react'
 
 import {
@@ -26,22 +25,11 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { useAuth } from '@/contexts/auth-context'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
-
-interface IntegrationStatusResponse {
-  statuses: Array<{
-    providerId: string
-    status: string
-    lastSyncedAt?: string | null
-    lastSyncRequestedAt?: string | null
-    message?: string | null
-    linkedAt?: string | null
-  }>
-}
+import { useClientContext } from '@/contexts/client-context'
+import { useAuth } from '@/contexts/auth-context'
+import type { FinanceSummaryResponse } from '@/types/finance'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 interface MetricRecord {
   id: string
@@ -52,68 +40,62 @@ interface MetricRecord {
   clicks: number
   conversions: number
   revenue?: number | null
-  createdAt?: string | null
 }
 
-async function fetchIntegrationStatuses(token: string, userId?: string | null): Promise<IntegrationStatusResponse> {
-  const url = userId ? `/api/integrations/status?userId=${encodeURIComponent(userId)}` : '/api/integrations/status'
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: 'no-store',
-  })
-  if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}))
-    throw new Error(errorPayload.error || 'Failed to load integration status')
-  }
-  return response.json()
+type SummaryStat = {
+  id: string
+  label: string
+  value: string
+  helper: string
+  icon: LucideIcon
+  emphasis?: 'positive' | 'negative' | 'neutral'
 }
 
-async function fetchMetrics(token: string, userId?: string | null): Promise<MetricRecord[]> {
-  const url = userId ? `/api/metrics?userId=${encodeURIComponent(userId)}` : '/api/metrics'
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: 'no-store',
-  })
-  if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}))
-    throw new Error(errorPayload.error || 'Failed to load ad metrics')
-  }
-  return response.json()
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+})
+
+function formatCurrency(value: number): string {
+  return currencyFormatter.format(Number.isFinite(value) ? value : 0)
 }
 
-const stats = [
-  {
-    name: 'Total Revenue',
-    value: '$45,231',
-    change: '+20.1%',
-    changeType: 'positive',
-    icon: DollarSign
-  },
-  {
-    name: 'Active Clients',
-    value: '24',
-    change: '+4',
-    changeType: 'positive',
-    icon: Users
-  },
-  {
-    name: 'Conversion Rate',
-    value: '3.24%',
-    change: '+0.8%',
-    changeType: 'positive',
-    icon: TrendingUp
-  },
-  {
-    name: 'ROAS',
-    value: '4.2x',
-    change: '-0.3x',
-    changeType: 'negative',
-    icon: BarChart3
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string') {
+    return error
   }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message
+    }
+  }
+
+  return fallback
+}
+
+const quickLinks = [
+  {
+    title: 'Manage ad integrations',
+    description: 'Connect platforms, refresh syncs, and review campaign metrics in the Ads hub.',
+    href: '/dashboard/ads',
+    icon: Megaphone,
+  },
+  {
+    title: 'Track cash flow',
+    description: 'Log operating costs and monitor profitability trends on the Finance tab.',
+    href: '/dashboard/finance',
+    icon: CreditCard,
+  },
+  {
+    title: 'Deep-dive analytics',
+    description: 'Use advanced breakdowns and visualizations to compare channel performance.',
+    href: '/dashboard/analytics',
+    icon: BarChart3,
+  },
 ]
 
 const recentActivity = [
@@ -123,15 +105,15 @@ const recentActivity = [
     message: 'New task assigned: "Q4 Campaign Review"',
     time: '2 minutes ago',
     icon: CheckCircle,
-    color: 'text-green-600'
+    color: 'text-green-600',
   },
   {
     id: 2,
     type: 'alert',
     message: 'Google Ads budget exceeded for Client ABC',
     time: '1 hour ago',
-    icon: AlertCircle,
-    color: 'text-red-600'
+    icon: Activity,
+    color: 'text-red-600',
   },
   {
     id: 3,
@@ -139,8 +121,8 @@ const recentActivity = [
     message: 'Meta campaign "Holiday Sale" reached 50% of budget',
     time: '3 hours ago',
     icon: Activity,
-    color: 'text-blue-600'
-  }
+    color: 'text-blue-600',
+  },
 ]
 
 const upcomingTasks = [
@@ -149,403 +131,268 @@ const upcomingTasks = [
     title: 'Review Q3 performance report',
     dueDate: 'Today',
     priority: 'high',
-    client: 'Tech Corp'
+    client: 'Tech Corp',
   },
   {
     id: 2,
     title: 'Create proposal for new client',
     dueDate: 'Tomorrow',
     priority: 'medium',
-    client: 'StartupXYZ'
+    client: 'StartupXYZ',
   },
   {
     id: 3,
     title: 'Optimize Google Ads campaigns',
     dueDate: 'This week',
     priority: 'low',
-    client: 'Retail Store'
-  }
+    client: 'Retail Store',
+  },
 ]
 
-function StatsCard({ stat }: { stat: typeof stats[0] }) {
-  const Icon = stat.icon
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="flex items-center justify-between p-6">
-        <div className="space-y-2">
-          <CardDescription className="text-xs font-medium uppercase text-muted-foreground">
-            {stat.name}
-          </CardDescription>
-          <p className="text-3xl font-bold tracking-tight">{stat.value}</p>
-          <Badge
-            variant={stat.changeType === 'positive' ? 'default' : 'destructive'}
-            className="rounded-full text-xs font-medium"
-          >
-            {stat.change}
-          </Badge>
-        </div>
-        <div className="rounded-full bg-primary/10 p-3">
-          <Icon className="h-6 w-6 text-primary" />
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ActivityItem({ item }: { item: typeof recentActivity[0] }) {
-  const Icon = item.icon
-  return (
-    <div className="flex items-start space-x-3">
-      <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 ${item.color}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground">{item.message}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{item.time}</p>
-      </div>
-    </div>
-  )
-}
-
-function TaskItem({ task }: { task: typeof upcomingTasks[0] }) {
-  const priorityColors: Record<string, string> = {
-    high: 'bg-red-100 text-red-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    low: 'bg-green-100 text-green-700',
-  }
-
-  return (
-    <Card className="border-muted bg-background">
-      <CardContent className="flex items-center justify-between p-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{task.title}</p>
-          <p className="text-xs text-muted-foreground">{task.client}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={cn('capitalize', priorityColors[task.priority])}>
-            {task.priority}
-          </Badge>
-          <span className="text-xs text-muted-foreground">{task.dueDate}</span>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function DashboardPage() {
-  const {
-    user,
-    connectGoogleAdsAccount,
-    connectLinkedInAdsAccount,
-    startMetaOauth,
-    getIdToken,
-  } = useAuth()
-  const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
-  const [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({})
-  const [connectedProviders, setConnectedProviders] = useState<Record<string, boolean>>({})
-  const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatusResponse | null>(null)
+  const { selectedClient, selectedClientId } = useClientContext()
+  const { user, getIdToken } = useAuth()
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
+  const [financeLoading, setFinanceLoading] = useState(false)
+  const [financeError, setFinanceError] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<MetricRecord[]>([])
   const [metricsLoading, setMetricsLoading] = useState(false)
-  const [metricError, setMetricError] = useState<string | null>(null)
-  const [refreshTick, setRefreshTick] = useState(0)
-  const hasMetricData = metrics.length > 0
+  const [metricsError, setMetricsError] = useState<string | null>(null)
 
   useEffect(() => {
+    let isCancelled = false
+
     if (!user?.id) {
-      setIntegrationStatuses(null)
+      setFinanceSummary(null)
       setMetrics([])
+      setFinanceError(null)
+      setMetricsError(null)
+      setFinanceLoading(false)
       setMetricsLoading(false)
-      return
-    }
-    let isSubscribed = true
-
-    const loadData = async () => {
-      if (isSubscribed) {
-        setMetricsLoading(true)
-        setMetricError(null)
+      return () => {
+        isCancelled = true
       }
+    }
 
+    const query = selectedClientId ? `?clientId=${encodeURIComponent(selectedClientId)}` : ''
+
+    const loadFinance = async () => {
+      setFinanceLoading(true)
+      setFinanceError(null)
       try {
         const token = await getIdToken()
-        const [statusResponse, metricResponse] = await Promise.all([
-          fetchIntegrationStatuses(token, user.id),
-          fetchMetrics(token, user.id),
-        ])
+        const response = await fetch(`/api/finance${query}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        })
 
-        if (isSubscribed) {
-          setIntegrationStatuses(statusResponse)
-          setMetrics(metricResponse)
+        if (!response.ok) {
+          let message = 'Failed to load finance data'
+          try {
+            const payload = (await response.json()) as { error?: unknown }
+            if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
+              message = payload.error
+            }
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(message)
         }
-      } catch (error: unknown) {
-        if (isSubscribed) {
-          setMetricError(getErrorMessage(error, 'Failed to load marketing data'))
+
+        const data = (await response.json()) as FinanceSummaryResponse
+        if (!isCancelled) {
+          setFinanceSummary(data)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setFinanceSummary(null)
+          setFinanceError(getErrorMessage(error, 'Unable to load finance data'))
         }
       } finally {
-        if (isSubscribed) setMetricsLoading(false)
+        if (!isCancelled) {
+          setFinanceLoading(false)
+        }
       }
     }
 
-    loadData()
+    const loadMetrics = async () => {
+      setMetricsLoading(true)
+      setMetricsError(null)
+      try {
+        const token = await getIdToken()
+        const response = await fetch(`/api/metrics${query}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          let message = 'Failed to load marketing data'
+          try {
+            const payload = (await response.json()) as { error?: unknown }
+            if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
+              message = payload.error
+            }
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(message)
+        }
+
+        const data = (await response.json()) as MetricRecord[]
+        if (!isCancelled) {
+          setMetrics(data)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setMetrics([])
+          setMetricsError(getErrorMessage(error, 'Unable to load marketing performance'))
+        }
+      } finally {
+        if (!isCancelled) {
+          setMetricsLoading(false)
+        }
+      }
+    }
+
+    void loadFinance()
+    void loadMetrics()
 
     return () => {
-      isSubscribed = false
+      isCancelled = true
     }
-  }, [user?.id, refreshTick, getIdToken])
+  }, [user?.id, selectedClientId, getIdToken])
 
-  useEffect(() => {
-    if (!integrationStatuses) return
-    const updatedConnected: Record<string, boolean> = {}
-    integrationStatuses.statuses.forEach((status) => {
-      updatedConnected[status.providerId] = status.status === 'success'
-    })
-    setConnectedProviders(updatedConnected)
-  }, [integrationStatuses])
+  const summaryStats = useMemo<SummaryStat[]>(() => {
+    const revenueRecords = financeSummary?.revenue ?? []
+    const invoices = financeSummary?.invoices ?? []
+    const costs = financeSummary?.costs ?? []
 
-  const providerSummaries = useMemo(() => {
-    const summary: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; revenue: number }> = {}
-    metrics.forEach((metric) => {
-      if (!summary[metric.providerId]) {
-        summary[metric.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
-      }
-      const providerSummary = summary[metric.providerId]
-      providerSummary.spend += metric.spend
-      providerSummary.impressions += metric.impressions
-      providerSummary.clicks += metric.clicks
-      providerSummary.conversions += metric.conversions
-      providerSummary.revenue += metric.revenue ?? 0
-    })
-    return summary
-  }, [metrics])
+    const totalRevenue = revenueRecords.reduce((sum, record) => sum + record.revenue, 0)
+    const totalOperatingExpenses = revenueRecords.reduce((sum, record) => sum + record.operatingExpenses, 0)
+    const totalCompanyCosts = costs.reduce((sum, cost) => sum + cost.amount, 0)
+    const totalAdSpend = metrics.reduce((sum, record) => sum + record.spend, 0)
+    const providerCount = metrics.length > 0 ? new Set(metrics.map((record) => record.providerId)).size : 0
+    const combinedExpenses = totalOperatingExpenses + totalCompanyCosts + totalAdSpend
+    const netMargin = totalRevenue - combinedExpenses
+    const roas = totalAdSpend > 0 && totalRevenue > 0 ? totalRevenue / totalAdSpend : null
 
-  const adPlatforms = [
-    {
-      id: 'google',
-      name: 'Google Ads',
-      description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
-      icon: Search,
-      connect: connectGoogleAdsAccount,
-    },
-    {
-      id: 'facebook',
-      name: 'Meta Ads Manager',
-      description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
-      icon: Facebook,
-      mode: 'oauth' as const,
-    },
-    {
-      id: 'linkedin',
-      name: 'LinkedIn Ads',
-      description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
-      icon: Linkedin,
-      connect: connectLinkedInAdsAccount,
-    },
-  ]
+    return [
+      {
+        id: 'total-revenue',
+        label: 'Total Revenue',
+        value: formatCurrency(totalRevenue),
+        helper: revenueRecords.length > 0 ? `${revenueRecords.length} periods tracked` : 'No revenue records yet',
+        icon: DollarSign,
+        emphasis: totalRevenue > 0 ? 'positive' : 'neutral',
+      },
+      {
+        id: 'ad-spend',
+        label: 'Ad Spend',
+        value: formatCurrency(totalAdSpend),
+        helper: providerCount > 0 ? `Across ${providerCount} platforms` : 'Connect ad integrations',
+        icon: Megaphone,
+        emphasis: 'neutral',
+      },
+      {
+        id: 'net-margin',
+        label: 'Net Margin',
+        value: formatCurrency(netMargin),
+        helper: 'After ad and operating costs',
+        icon: TrendingUp,
+        emphasis: netMargin > 0 ? 'positive' : netMargin < 0 ? 'negative' : 'neutral',
+      },
+      {
+        id: 'roas',
+        label: 'ROAS',
+        value: roas ? `${roas.toFixed(2)}x` : '—',
+        helper: roas ? 'Revenue divided by ad spend' : 'Need revenue and ad spend data',
+        icon: BarChart3,
+        emphasis: roas && roas < 1 ? 'negative' : roas && roas >= 1.5 ? 'positive' : 'neutral',
+      },
+    ]
+  }, [financeSummary, metrics])
 
-  const handleConnect = async (providerId: string, action: () => Promise<void>) => {
-    setConnectingProvider(providerId)
-    setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
-    try {
-      await action()
-      setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
-      setRefreshTick((tick) => tick + 1)
-    } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to connect. Please try again.')
-      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-    } finally {
-      setConnectingProvider(null)
-    }
-  }
+  const statsLoading = financeLoading || metricsLoading
+  const combinedErrors = useMemo(
+    () => [financeError, metricsError].filter((message): message is string => Boolean(message)),
+    [financeError, metricsError],
+  )
 
-  const handleManualRefresh = () => {
-    if (metricsLoading) return
-    setRefreshTick((tick) => tick + 1)
-  }
+  const filteredActivity = useMemo(() => {
+    if (!selectedClient) return recentActivity
+    const matches = recentActivity.filter((activity) => activity.message.includes(selectedClient.name))
+    return matches.length > 0 ? matches : recentActivity
+  }, [selectedClient])
 
-  const handleMetaOauthRedirect = async (providerId: string) => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    setConnectingProvider(providerId)
-    setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
-
-    try {
-      const redirectTarget = `${window.location.origin}/dashboard`
-      const { url } = await startMetaOauth(redirectTarget)
-      window.location.href = url
-    } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to start Meta OAuth. Please try again.')
-      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-      setConnectingProvider(null)
-    }
-  }
+  const filteredUpcomingTasks = useMemo(() => {
+    if (!selectedClient) return upcomingTasks
+    const matches = upcomingTasks.filter((task) => task.client === selectedClient.name)
+    return matches.length > 0 ? matches : upcomingTasks
+  }, [selectedClient])
 
   return (
     <div className="space-y-6">
+      {combinedErrors.length > 0 && (
+        <FadeIn>
+          <Alert variant="destructive">
+            <AlertTitle>Unable to refresh analytics</AlertTitle>
+            <AlertDescription>{combinedErrors.join(' ')}</AlertDescription>
+          </Alert>
+        </FadeIn>
+      )}
+
       <FadeIn>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Welcome back! Here&apos;s an overview of your agency performance.
+            Welcome back! Quickly scan your pipeline, team priorities, and account health from one view.
           </p>
         </div>
       </FadeIn>
 
-      {hasMetricData && (
-        <FadeInStagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <FadeInItem key={stat.name}>
-              <StatsCard stat={stat} />
-            </FadeInItem>
-          ))}
-        </FadeInStagger>
-      )}
-
-      <FadeIn>
-        <AdConnectionsCard
-          providers={adPlatforms}
-          connectedProviders={connectedProviders}
-          connectingProvider={connectingProvider}
-          connectionErrors={connectionErrors}
-          onConnect={handleConnect}
-          onOauthRedirect={handleMetaOauthRedirect}
-          onRefresh={handleManualRefresh}
-          refreshing={metricsLoading}
-        />
-      </FadeIn>
+      <FadeInStagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {summaryStats.map((stat) => (
+          <FadeInItem key={stat.id}>
+            <StatsCard stat={stat} loading={statsLoading} />
+          </FadeInItem>
+        ))}
+      </FadeInStagger>
 
       <FadeIn>
         <Card className="shadow-sm">
-        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="flex flex-col gap-1">
-            <CardTitle className="text-lg">Ad performance summary</CardTitle>
-            <CardDescription>Aggregated spend, clicks, and conversions over the last synced period.</CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={metricsLoading}
-            className="inline-flex items-center gap-2"
-          >
-            <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} /> Refresh metrics
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {metricsLoading ? (
-            <div className="grid gap-4 md:grid-cols-3">
-              {[...Array(3)].map((_, index) => (
-                <div key={index} className="h-28 w-full animate-pulse rounded-lg bg-muted" />
-              ))}
-            </div>
-          ) : metricError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load metrics</AlertTitle>
-              <AlertDescription>{metricError}</AlertDescription>
-            </Alert>
-          ) : metrics.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
-              <p>No synced performance data yet. Connect an ad platform and run a sync to populate these insights.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-              {Object.entries(providerSummaries).map(([providerId, summary]) => (
-                <Card key={providerId} className="border-muted/60 bg-background">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base capitalize">{providerId} overview</CardTitle>
-                    <CardDescription>Aggregated performance since last sync</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="text-2xl font-semibold">${summary.spend.toFixed(2)}</div>
-                    <div className="grid grid-cols-3 gap-3 text-xs text-muted-foreground">
-                      <div>
-                        <div className="font-medium text-foreground">Impressions</div>
-                        <div>{summary.impressions.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-foreground">Clicks</div>
-                        <div>{summary.clicks.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-foreground">Conversions</div>
-                        <div>{summary.conversions.toLocaleString()}</div>
-                      </div>
+          <CardHeader>
+            <CardTitle className="text-lg">Quick actions</CardTitle>
+            <CardDescription>Jump into the teams and workflows that need attention.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {quickLinks.map((link) => {
+              const Icon = link.icon
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="group flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-background p-4 transition hover:border-primary/80 hover:shadow-sm"
+                >
+                  <div className="space-y-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground group-hover:text-primary">{link.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-        </Card>
-      </FadeIn>
-
-      <FadeIn>
-        <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Latest synced rows</CardTitle>
-            <CardDescription>Recent normalized records across all connected ad platforms.</CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={metricsLoading}
-            className="inline-flex items-center gap-2"
-          >
-            <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} /> Refresh rows
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {metricsLoading ? (
-            <div className="space-y-2">
-              {[...Array(6)].map((_, index) => (
-                <div key={index} className="h-10 w-full animate-pulse rounded bg-muted" />
-              ))}
-            </div>
-          ) : metricError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Unable to load metrics</AlertTitle>
-              <AlertDescription>{metricError}</AlertDescription>
-            </Alert>
-          ) : metrics.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
-              <p>No data yet. Once a sync completes, your most recent rows will appear here.</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-72">
-              <table className="w-full table-fixed text-left text-sm">
-                <thead className="sticky top-0 bg-background">
-                  <tr className="border-b border-muted/60">
-                    <th className="py-2 pr-4 font-medium">Date</th>
-                    <th className="py-2 pr-4 font-medium">Provider</th>
-                    <th className="py-2 pr-4 font-medium">Spend</th>
-                    <th className="py-2 pr-4 font-medium">Impressions</th>
-                    <th className="py-2 pr-4 font-medium">Clicks</th>
-                    <th className="py-2 pr-4 font-medium">Conversions</th>
-                    <th className="py-2 font-medium">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics.map((metric) => (
-                    <tr key={metric.id} className="border-b border-muted/40">
-                      <td className="py-2 pr-4 whitespace-nowrap">{metric.date}</td>
-                      <td className="py-2 pr-4 capitalize">{metric.providerId}</td>
-                      <td className="py-2 pr-4">${metric.spend.toFixed(2)}</td>
-                      <td className="py-2 pr-4">{metric.impressions.toLocaleString()}</td>
-                      <td className="py-2 pr-4">{metric.clicks.toLocaleString()}</td>
-                      <td className="py-2 pr-4">{metric.conversions.toLocaleString()}</td>
-                      <td className="py-2">{metric.revenue != null ? `$${metric.revenue.toFixed(2)}` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </ScrollArea>
-          )}
-        </CardContent>
+                  </div>
+                  <span className="mt-4 inline-flex items-center text-xs font-medium text-primary">
+                    Go to {link.title.split(' ')[0]}
+                  </span>
+                </Link>
+              )
+            })}
+          </CardContent>
         </Card>
       </FadeIn>
 
@@ -556,7 +403,7 @@ export default function DashboardPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-lg">Performance Overview</CardTitle>
-                  <CardDescription>Key metrics from all active campaigns</CardDescription>
+                  <CardDescription>Key metrics from pipelines, tasks, and active campaigns.</CardDescription>
                 </div>
                 <Button variant="outline" size="sm">
                   View detailed report
@@ -564,9 +411,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-muted">
-                  <p className="text-sm text-muted-foreground">
-                    Analytics chart will be displayed here
-                  </p>
+                  <p className="text-sm text-muted-foreground">Analytics chart will be displayed here</p>
                 </div>
               </CardContent>
             </Card>
@@ -590,7 +435,7 @@ export default function DashboardPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {recentActivity.map((item) => (
+                  {filteredActivity.map((item) => (
                     <FadeInItem key={item.id}>
                       <ActivityItem item={item} />
                     </FadeInItem>
@@ -611,7 +456,7 @@ export default function DashboardPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {upcomingTasks.map((task) => (
+                  {filteredUpcomingTasks.map((task) => (
                     <FadeInItem key={task.id}>
                       <TaskItem task={task} />
                     </FadeInItem>
@@ -626,17 +471,72 @@ export default function DashboardPage() {
   )
 }
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
+function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
+  const Icon = stat.icon
+  const valueClasses = cn(
+    'text-3xl font-bold tracking-tight',
+    !loading && stat.emphasis === 'positive' && 'text-emerald-600',
+    !loading && stat.emphasis === 'negative' && 'text-red-600',
+  )
+
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="flex items-center justify-between p-6">
+        <div className="space-y-2">
+          <CardDescription className="text-xs font-medium uppercase text-muted-foreground">
+            {stat.label}
+          </CardDescription>
+          <p className={valueClasses}>
+            {loading ? <span className="block h-8 w-20 animate-pulse rounded bg-muted" /> : stat.value}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {loading ? <span className="block h-4 w-32 animate-pulse rounded bg-muted" /> : stat.helper}
+          </p>
+        </div>
+        <div className="rounded-full bg-primary/10 p-3">
+          <Icon className="h-6 w-6 text-primary" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActivityItem({ item }: { item: (typeof recentActivity)[number] }) {
+  const Icon = item.icon
+  return (
+    <div className="flex items-start space-x-3">
+      <div className={cn('flex h-8 w-8 items-center justify-center rounded-full bg-primary/10', item.color)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{item.message}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{item.time}</p>
+      </div>
+    </div>
+  )
+}
+
+function TaskItem({ task }: { task: (typeof upcomingTasks)[number] }) {
+  const priorityColors: Record<string, string> = {
+    high: 'bg-red-100 text-red-700',
+    medium: 'bg-yellow-100 text-yellow-700',
+    low: 'bg-green-100 text-green-700',
   }
 
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
-  return fallback
+  return (
+    <Card className="border-muted bg-background">
+      <CardContent className="flex items-center justify-between p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{task.title}</p>
+          <p className="text-xs text-muted-foreground">{task.client}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className={cn('capitalize', priorityColors[task.priority])}>
+            {task.priority}
+          </Badge>
+          <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

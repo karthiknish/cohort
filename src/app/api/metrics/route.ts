@@ -14,6 +14,7 @@ interface MetricRecord {
   conversions: number
   revenue?: number | null
   createdAt?: string | null
+  clientId?: string | null
 }
 
 function toISO(value: unknown): string | null {
@@ -53,6 +54,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
+    const clientIdFilter = request.nextUrl.searchParams.get('clientId')?.trim() ?? null
+
     const metricsQuery = adminDb
       .collection('users')
       .doc(userId)
@@ -73,8 +76,18 @@ export async function GET(request: NextRequest) {
         conversions: Number(data.conversions ?? 0),
         revenue: data.revenue !== undefined ? Number(data.revenue) : null,
         createdAt: toISO(data.createdAt ?? null),
+          clientId: typeof data.clientId === 'string' ? data.clientId : null,
       }
     })
+      .filter((record) => {
+        if (!clientIdFilter) {
+          return true
+        }
+        if (record.clientId) {
+          return record.clientId === clientIdFilter
+        }
+        return false
+      })
 
     return NextResponse.json(records)
   } catch (error: unknown) {

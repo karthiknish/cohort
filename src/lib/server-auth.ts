@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 export interface AuthResult {
   uid: string | null
   email: string | null
+  claims: Record<string, unknown>
   isCron: boolean
 }
 
@@ -15,7 +16,7 @@ class AuthenticationError extends Error {
   }
 }
 
-async function verifyIdToken(idToken: string): Promise<{ uid: string; email: string | null }> {
+async function verifyIdToken(idToken: string): Promise<{ uid: string; email: string | null; claims: Record<string, unknown> }> {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
   if (!apiKey) {
     throw new AuthenticationError('Firebase API key not configured', 500)
@@ -40,12 +41,24 @@ async function verifyIdToken(idToken: string): Promise<{ uid: string; email: str
   const user = users[0]
   const uid = user?.localId as string | undefined
   const email = typeof user?.email === 'string' ? user.email : null
+  let claims: Record<string, unknown> = {}
+
+  if (typeof user?.customAttributes === 'string' && user.customAttributes.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(user.customAttributes) as Record<string, unknown>
+      if (parsed && typeof parsed === 'object') {
+        claims = parsed
+      }
+    } catch (error) {
+      console.warn('[server-auth] failed to parse customAttributes', error)
+    }
+  }
 
   if (!uid) {
     throw new AuthenticationError('Unable to verify user identity', 401)
   }
 
-  return { uid, email }
+  return { uid, email, claims }
 }
 
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
@@ -53,7 +66,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   const cronKey = request.headers.get('x-cron-key')
 
   if (cronSecret && cronKey && cronKey === cronSecret) {
-    return { uid: null, email: null, isCron: true }
+    return { uid: null, email: null, claims: {}, isCron: true }
   }
 
   const authHeader = request.headers.get('authorization')
@@ -62,12 +75,17 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   }
 
   const token = authHeader.slice(7)
-  const { uid, email } = await verifyIdToken(token)
-  return { uid, email, isCron: false }
+  const { uid, email, claims } = await verifyIdToken(token)
+  return { uid, email, claims, isCron: false }
 }
 
 export function assertAdmin(auth: AuthResult) {
   if (auth.isCron) return
+
+  const role = auth.claims?.role
+  if (role === 'admin') {
+    return
+  }
 
   const admins = (process.env.ADMIN_EMAILS ?? '')
     .split(',')

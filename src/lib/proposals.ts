@@ -38,35 +38,87 @@ export const proposalFormSchema = z.object({
 
 export type ProposalFormData = z.infer<typeof proposalFormSchema>
 
-const proposalFormPartialSchema = z
-  .object({
-    company: proposalFormSchema.shape.company.partial().optional(),
-    marketing: proposalFormSchema.shape.marketing.partial().optional(),
-    goals: proposalFormSchema.shape.goals.partial().optional(),
-    scope: proposalFormSchema.shape.scope.partial().optional(),
-    timelines: proposalFormSchema.shape.timelines.partial().optional(),
-    value: proposalFormSchema.shape.value.partial().optional(),
-  })
-  .default({})
+const proposalFormInputSchema: z.ZodType<Partial<ProposalFormData>> = z
+  .object({})
+  .passthrough()
+  .transform((value) => value as Partial<ProposalFormData>)
+  .catch({})
+
+const DEFAULT_PROPOSAL_FORM: ProposalFormData = {
+  company: {
+    name: '',
+    website: '',
+    industry: '',
+    size: '',
+    locations: '',
+  },
+  marketing: {
+    budget: '',
+    platforms: [],
+    adAccounts: 'No',
+    socialHandles: {},
+  },
+  goals: {
+    objectives: [],
+    audience: '',
+    challenges: [],
+    customChallenge: '',
+  },
+  scope: {
+    services: [],
+    otherService: '',
+  },
+  timelines: {
+    startTime: '',
+    upcomingEvents: '',
+  },
+  value: {
+    proposalSize: '',
+    engagementType: '',
+    additionalNotes: '',
+  },
+}
 
 export const proposalDraftSchema = z.object({
-  formData: proposalFormPartialSchema.default({}),
+  formData: proposalFormInputSchema.optional().default({}),
   stepProgress: z.number().int().min(0).max(10).default(0),
   status: z.enum(['draft', 'in_progress', 'ready', 'sent']).default('draft'),
+  clientId: z.string().trim().min(1).max(120).optional(),
+  clientName: z.string().trim().min(1).max(200).optional(),
 })
 
 export type ProposalDraftInput = z.infer<typeof proposalDraftSchema>
 
 export const proposalDraftUpdateSchema = z.object({
-  formData: proposalFormPartialSchema.optional(),
+  formData: proposalFormInputSchema.optional(),
   stepProgress: z.number().int().min(0).max(10).optional(),
   status: z.enum(['draft', 'in_progress', 'ready', 'sent']).optional(),
+  clientId: z.string().trim().min(1).max(120).optional(),
+  clientName: z.string().trim().min(1).max(200).optional(),
 })
 
 export type ProposalDraftUpdateInput = z.infer<typeof proposalDraftUpdateSchema>
 
 export function createDefaultProposalForm(): ProposalFormData {
-  return proposalFormSchema.parse({})
+  return {
+    company: { ...DEFAULT_PROPOSAL_FORM.company },
+    marketing: {
+      ...DEFAULT_PROPOSAL_FORM.marketing,
+      platforms: [...DEFAULT_PROPOSAL_FORM.marketing.platforms],
+      socialHandles: { ...DEFAULT_PROPOSAL_FORM.marketing.socialHandles },
+    },
+    goals: {
+      ...DEFAULT_PROPOSAL_FORM.goals,
+      objectives: [...DEFAULT_PROPOSAL_FORM.goals.objectives],
+      challenges: [...DEFAULT_PROPOSAL_FORM.goals.challenges],
+    },
+    scope: {
+      ...DEFAULT_PROPOSAL_FORM.scope,
+      services: [...DEFAULT_PROPOSAL_FORM.scope.services],
+    },
+    timelines: { ...DEFAULT_PROPOSAL_FORM.timelines },
+    value: { ...DEFAULT_PROPOSAL_FORM.value },
+  }
 }
 
 export function mergeProposalForm(partial?: Partial<ProposalFormData> | null): ProposalFormData {
@@ -94,13 +146,15 @@ export function mergeProposalForm(partial?: Partial<ProposalFormData> | null): P
 
 export function buildProposalDocument(input: ProposalDraftInput, userId: string, timestampValue: unknown = serverTimestamp()) {
   const baseData = proposalDraftSchema.parse(input)
-  const mergedForm = mergeProposalForm(baseData.formData as Partial<ProposalFormData>)
+  const mergedForm = mergeProposalForm(baseData.formData)
 
   return {
     ownerId: userId,
     status: baseData.status,
     stepProgress: baseData.stepProgress,
     formData: mergedForm,
+    clientId: baseData.clientId ?? null,
+    clientName: baseData.clientName ?? null,
     aiInsights: null,
     pdfUrl: null,
     createdAt: timestampValue,
@@ -124,9 +178,7 @@ export function sanitizeProposalUpdate(data: ProposalDraftUpdateInput, timestamp
     updates.stepProgress = parsed.stepProgress
   }
 
-  if (parsed.formData) {
-    const current = proposalFormPartialSchema.parse(parsed.formData)
-
+  if (parsed.formData && typeof parsed.formData === 'object' && !Array.isArray(parsed.formData)) {
     const assignUpdates = (value: unknown, path: string) => {
       if (value === undefined) return
       updates[path] = value
@@ -150,10 +202,18 @@ export function sanitizeProposalUpdate(data: ProposalDraftUpdateInput, timestamp
       })
     }
 
-    Object.entries(current).forEach(([key, value]) => {
+    Object.entries(parsed.formData as Record<string, unknown>).forEach(([key, value]) => {
       const path = `formData.${key}`
       walk(value, path)
     })
+  }
+
+  if (typeof parsed.clientId === 'string') {
+    updates.clientId = parsed.clientId
+  }
+
+  if (typeof parsed.clientName === 'string') {
+    updates.clientName = parsed.clientName
   }
 
   return updates

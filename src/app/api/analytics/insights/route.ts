@@ -14,6 +14,7 @@ interface MetricRecord {
   conversions: number
   revenue?: number | null
   createdAt?: string | null
+  clientId?: string | null
 }
 
 interface ProviderSummary {
@@ -64,6 +65,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
+    const clientIdFilter = request.nextUrl.searchParams.get('clientId')?.trim() ?? null
     const periodParam = request.nextUrl.searchParams.get('periodDays')
     const periodDays = periodParam ? Math.max(Number(periodParam) || 30, 1) : 30
     const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
@@ -88,9 +90,19 @@ export async function GET(request: NextRequest) {
           conversions: Number(data.conversions ?? 0),
           revenue: data.revenue !== undefined ? Number(data.revenue) : null,
           createdAt: toISO(data.createdAt ?? null),
+          clientId: typeof data.clientId === 'string' ? data.clientId : null,
         }
       })
       .filter((metric) => {
+        if (clientIdFilter) {
+          if (metric.clientId) {
+            if (metric.clientId !== clientIdFilter) {
+              return false
+            }
+          } else {
+            return false
+          }
+        }
         if (!metric.date) return false
         const metricDate = new Date(metric.date).getTime()
         return Number.isFinite(metricDate) ? metricDate >= cutoff : true

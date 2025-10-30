@@ -5,9 +5,7 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
-import { buildProposalDocument, proposalDraftSchema, proposalDraftUpdateSchema, sanitizeProposalUpdate } from '@/lib/proposals'
-
-const createSchema = proposalDraftSchema
+import { mergeProposalForm, proposalDraftUpdateSchema, sanitizeProposalUpdate, type ProposalFormData } from '@/lib/proposals'
 
 const updateSchema = proposalDraftUpdateSchema
 
@@ -20,6 +18,34 @@ type ProposalSnapshot = {
   createdAt?: Timestamp | string | null
   updatedAt?: Timestamp | string | null
   lastAutosaveAt?: Timestamp | string | null
+  clientId?: string | null
+  clientName?: string | null
+}
+
+const normalizeFormData = (input: unknown): ProposalFormData => {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return mergeProposalForm()
+  }
+
+  const record = input as Record<string, unknown>
+  const partial: Partial<ProposalFormData> = {}
+
+  const assignSection = <K extends keyof ProposalFormData>(key: K) => {
+    const value = record[key]
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return
+    }
+    partial[key] = value as ProposalFormData[K]
+  }
+
+  assignSection('company')
+  assignSection('marketing')
+  assignSection('goals')
+  assignSection('scope')
+  assignSection('timelines')
+  assignSection('value')
+
+  return mergeProposalForm(partial)
 }
 
 export async function GET(request: NextRequest) {
@@ -31,11 +57,16 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url)
     const statusParam = url.searchParams.get('status')
+    const clientIdParam = url.searchParams.get('clientId')
     const proposalsRef = adminDb.collection('users').doc(auth.uid).collection('proposals')
     let proposalsQuery: Query<DocumentData> = proposalsRef
 
     if (statusParam) {
       proposalsQuery = proposalsQuery.where('status', '==', statusParam)
+    }
+
+    if (clientIdParam) {
+      proposalsQuery = proposalsQuery.where('clientId', '==', clientIdParam)
     }
 
     const snapshot = await proposalsQuery.get()
@@ -52,6 +83,8 @@ export async function GET(request: NextRequest) {
         createdAt: serializeTimestamp(data.createdAt),
         updatedAt: serializeTimestamp(data.updatedAt),
         lastAutosaveAt: serializeTimestamp(data.lastAutosaveAt),
+        clientId: typeof data.clientId === 'string' ? data.clientId : null,
+        clientName: typeof data.clientName === 'string' ? data.clientName : null,
       }
     })
 
@@ -72,22 +105,44 @@ export async function POST(request: NextRequest) {
       throw new AuthenticationError('Authentication required', 401)
     }
 
-    const body = (await request.json().catch(() => null)) as unknown
-    const parsed = createSchema.parse(body ?? {})
+    const rawBody = (await request.json().catch(() => null)) as Record<string, unknown> | null
+
+    const mergedFormData = normalizeFormData(rawBody?.formData)
+
+    const rawStep = typeof rawBody?.stepProgress === 'number' ? rawBody.stepProgress : 0
+    const stepProgress = Math.min(Math.max(Math.round(rawStep), 0), 10)
+
+    const rawStatus = typeof rawBody?.status === 'string' ? rawBody.status : 'draft'
+    const allowedStatuses = ['draft', 'in_progress', 'ready', 'sent'] as const
+    const status = allowedStatuses.includes(rawStatus as (typeof allowedStatuses)[number]) ? rawStatus : 'draft'
+
+    const clientId = typeof rawBody?.clientId === 'string' ? rawBody.clientId.trim() : null
+    const clientName = typeof rawBody?.clientName === 'string' ? rawBody.clientName.trim() : null
+
+    const timestamp = FieldValue.serverTimestamp()
 
     const docRef = await adminDb
       .collection('users')
       .doc(auth.uid)
       .collection('proposals')
-      .add(buildProposalDocument(parsed, auth.uid, FieldValue.serverTimestamp()))
+      .add({
+        ownerId: auth.uid,
+        status,
+        stepProgress,
+        formData: mergedFormData,
+        clientId: clientId && clientId.length > 0 ? clientId : null,
+        clientName: clientName && clientName.length > 0 ? clientName : null,
+        aiInsights: null,
+        pdfUrl: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        lastAutosaveAt: timestamp,
+      })
 
     return NextResponse.json({ id: docRef.id }, { status: 201 })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid payload', details: error.flatten() }, { status: 400 })
     }
     console.error('[api/proposals] POST failed', error)
     return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 })
@@ -122,6 +177,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     if (error instanceof z.ZodError) {
+      console.error('[api/proposals] update validation failed', error.flatten())
       return NextResponse.json({ error: 'Invalid payload', details: error.flatten() }, { status: 400 })
     }
     console.error('[api/proposals] PATCH failed', error)

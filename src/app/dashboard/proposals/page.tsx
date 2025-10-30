@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { createProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
+import { useClientContext } from '@/contexts/client-context'
 
 type ProposalStep = {
   id: string
@@ -132,6 +133,7 @@ export default function ProposalsPage() {
   const [draftId, setDraftId] = useState<string | null>(null)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [aiSummary, setAiSummary] = useState<string | null>(null)
@@ -141,6 +143,7 @@ export default function ProposalsPage() {
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wizardRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
+  const { selectedClient, selectedClientId } = useClientContext()
 
   const step = steps[currentStep]
   const isFirstStep = currentStep === 0
@@ -302,6 +305,8 @@ export default function ProposalsPage() {
     }
   }, [formState])
 
+  const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
+
   const mapAiSummary = useCallback((proposal: ProposalDraft | null | undefined) => {
     if (!proposal || !proposal.aiInsights) return null
     if (typeof proposal.aiInsights === 'string') return proposal.aiInsights
@@ -313,9 +318,15 @@ export default function ProposalsPage() {
   }, [])
 
   const refreshProposals = useCallback(async () => {
+    if (!selectedClientId) {
+      setProposals([])
+      setIsLoadingProposals(false)
+      return []
+    }
+
     setIsLoadingProposals(true)
     try {
-      const result = await listProposals()
+      const result = await listProposals({ clientId: selectedClientId })
       setProposals(result)
       return result
     } catch (err: unknown) {
@@ -325,7 +336,7 @@ export default function ProposalsPage() {
     } finally {
       setIsLoadingProposals(false)
     }
-  }, [toast])
+  }, [selectedClientId, toast])
 
   const submitProposal = async () => {
     if (!draftId) {
@@ -369,10 +380,27 @@ export default function ProposalsPage() {
   }
 
   useEffect(() => {
+    hydrationRef.current = false
+    let cancelled = false
+
     const bootstrapDraft = async () => {
       setIsBootstrapping(true)
       try {
+        if (!selectedClientId) {
+          setDraftId(null)
+          setFormState(initialFormState)
+          setCurrentStep(0)
+          setSubmitted(false)
+          setAiSummary(null)
+          setProposals([])
+          return
+        }
+
         const allProposals = await refreshProposals()
+        if (cancelled) {
+          return
+        }
+
         const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0]
 
         if (draft) {
@@ -382,30 +410,99 @@ export default function ProposalsPage() {
           setSubmitted(draft.status === 'ready')
           setAiSummary(mapAiSummary(draft))
         } else {
-          const id = await createProposalDraft({ formData: initialFormState, stepProgress: currentStep })
-          setDraftId(id)
-          await refreshProposals()
+          setDraftId(null)
+          setFormState(initialFormState)
+          setCurrentStep(0)
+          setSubmitted(false)
+          setAiSummary(null)
         }
       } catch (err: unknown) {
+        if (cancelled) {
+          return
+        }
         console.error('[ProposalWizard] bootstrap failed', err)
         toast({ title: 'Unable to start proposal wizard', description: getErrorMessage(err, 'Unable to start proposal wizard'), variant: 'destructive' })
       } finally {
-        hydrationRef.current = true
-        setIsBootstrapping(false)
+        if (!cancelled) {
+          hydrationRef.current = true
+          setIsBootstrapping(false)
+        }
       }
     }
 
     void bootstrapDraft()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [mapAiSummary, refreshProposals, selectedClientId, toast])
 
   useEffect(() => {
-    if (!draftId || !hydrationRef.current || submitted) {
+    if (!hydrationRef.current || submitted) {
       return
+    }
+
+    if (!selectedClientId) {
+      return
+    }
+
+    if (!draftId) {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current)
+        autosaveTimeoutRef.current = null
+      }
+
+      if (!hasPersistableData || isCreatingDraft) {
+        setAutosaveStatus((prev) => (prev === 'idle' ? prev : 'idle'))
+        return
+      }
+
+      let cancelled = false
+      setIsCreatingDraft(true)
+      setAutosaveStatus('saving')
+
+      void (async () => {
+        try {
+          const id = await createProposalDraft({
+            formData: formState,
+            stepProgress: currentStep,
+            clientId: selectedClientId,
+            clientName: selectedClient?.name ?? undefined,
+          })
+
+          if (cancelled) {
+            return
+          }
+
+          setDraftId(id)
+          setAutosaveStatus('saved')
+          await refreshProposals()
+        } catch (err: unknown) {
+          if (cancelled) {
+            return
+          }
+          console.error('[ProposalWizard] draft creation failed', err)
+          setAutosaveStatus('error')
+          toast({
+            title: 'Unable to start draft',
+            description: getErrorMessage(err, 'Failed to create proposal draft'),
+            variant: 'destructive',
+          })
+        } finally {
+          if (!cancelled) {
+            setIsCreatingDraft(false)
+          }
+        }
+      })()
+
+      return () => {
+        cancelled = true
+      }
     }
 
     if (autosaveTimeoutRef.current) {
       clearTimeout(autosaveTimeoutRef.current)
+      autosaveTimeoutRef.current = null
     }
 
     setAutosaveStatus('saving')
@@ -431,9 +528,10 @@ export default function ProposalsPage() {
     return () => {
       if (autosaveTimeoutRef.current) {
         clearTimeout(autosaveTimeoutRef.current)
+        autosaveTimeoutRef.current = null
       }
     }
-  }, [formState, currentStep, draftId, submitted, toast])
+  }, [formState, currentStep, draftId, submitted, toast, hasPersistableData, isCreatingDraft, refreshProposals, selectedClientId, selectedClient])
 
   const renderStepContent = () => {
     switch (step.id) {
@@ -1016,4 +1114,32 @@ export default function ProposalsPage() {
       </Card>
     </div>
   )
+}
+
+function hasCompletedAnyStepData(form: ProposalFormData): boolean {
+  if (form.company.name.trim() && form.company.industry.trim()) {
+    return true
+  }
+
+  if (form.marketing.budget.trim().length > 0) {
+    return true
+  }
+
+  if (form.goals.objectives.length > 0) {
+    return true
+  }
+
+  if (form.scope.services.length > 0) {
+    return true
+  }
+
+  if (form.timelines.startTime.trim().length > 0) {
+    return true
+  }
+
+  if (form.value.proposalSize.trim().length > 0 && form.value.engagementType.trim().length > 0) {
+    return true
+  }
+
+  return false
 }

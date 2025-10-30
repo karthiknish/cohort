@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import { Menu } from 'lucide-react'
 
@@ -50,8 +51,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-muted/50 bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/marketing" className="text-lg font-semibold text-primary">
-          Cohorts
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
+          <Image src="/cohorts-logo.png" alt="Cohorts" width={50} height={50} className="h-20 w-20" priority />
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
@@ -77,12 +78,9 @@ export function SiteHeader() {
             <SheetContent side="right" className="w-64 p-0">
               <SheetHeader className="border-b px-4 py-4">
                 <SheetTitle className="text-base font-semibold text-primary">
-                  <Link
-                    href="/marketing"
-                    className="transition hover:text-primary"
-                    onClick={() => setSheetOpen(false)}
-                  >
-                    Cohorts
+                  <Link href="/" className="flex items-center gap-2" onClick={() => setSheetOpen(false)}>
+                    <Image src="/cohorts-logo.png" alt="Cohorts" width={28} height={28} className="h-7 w-7" />
+                    <span className="leading-none">Cohorts</span>
                   </Link>
                 </SheetTitle>
               </SheetHeader>

@@ -18,6 +18,7 @@ import {
   LogOut,
   Bell,
   Menu,
+  Megaphone,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
+import { ClientWorkspaceSelector } from '@/components/client-workspace-selector'
 
 type NavItem = {
   name: string
@@ -43,7 +45,7 @@ type NavItem = {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Clients', href: '/dashboard/clients', icon: Users },
+  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },
   { name: 'Finance', href: '/dashboard/finance', icon: CreditCard },
   { name: 'Proposals', href: '/dashboard/proposals', icon: FileText },
@@ -97,11 +99,7 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
 export function Sidebar() {
   return (
     <aside className="hidden h-full w-64 flex-col border-r bg-background/60 p-4 lg:flex">
-      <div className="mb-6 flex items-center gap-2">
-        <div className="rounded-md bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
-          Cohorts
-        </div>
-      </div>
+      <div className="mb-6" />
       <NavigationList />
     </aside>
   )
@@ -117,7 +115,7 @@ export function Header() {
         .map((n) => n[0])
         .join('')
         .toUpperCase()
-    : 'CO'
+    : 'US'
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -133,7 +131,7 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[260px] p-0">
                 <SheetHeader className="border-b px-4 py-3">
-                  <SheetTitle className="text-base font-semibold">Cohorts</SheetTitle>
+                  <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
                 </SheetHeader>
                 <div className="p-4">
                   <NavigationList onNavigate={() => setOpen(false)} />
@@ -153,11 +151,12 @@ export function Header() {
             </Sheet>
           </div>
 
-          <div className="hidden text-sm font-semibold text-primary lg:block">Cohorts</div>
+          <div className="hidden text-sm font-semibold text-primary lg:block">Workspace</div>
         </div>
 
-        <div className="flex flex-1 items-center gap-3 lg:ml-8">
-          <div className="relative w-full max-w-md">
+        <div className="flex w-full flex-1 flex-col gap-3 lg:ml-8 lg:flex-row lg:items-center">
+          <ClientWorkspaceSelector className="w-full lg:w-[260px]" />
+          <div className="relative hidden w-full max-w-md sm:block">
             <Input
               type="search"
               placeholder="Search clients, tasks, or campaigns..."
@@ -188,15 +187,15 @@ export function Header() {
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <span className="hidden text-sm font-medium sm:inline">
-                  {user?.name ?? 'Cohorts User'}
+                  {user?.name ?? 'Account User'}
                 </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold">{user?.name ?? 'Cohorts User'}</span>
-                  <span className="text-xs text-muted-foreground">{user?.email ?? 'agency@cohorts.app'}</span>
+                  <span className="text-sm font-semibold">{user?.name ?? 'Account User'}</span>
+                  <span className="text-xs text-muted-foreground">{user?.email ?? 'user@example.com'}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
