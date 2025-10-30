@@ -16,6 +16,8 @@ interface AuthContextType {
   signUp: (data: SignUpData) => Promise<AuthUser>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  verifyPasswordResetCode: (oobCode: string) => Promise<string>
+  confirmPasswordReset: (oobCode: string, newPassword: string) => Promise<void>
   updateProfile: (data: Partial<AuthUser>) => Promise<AuthUser>
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
@@ -52,7 +54,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return unsubscribe
   }, [applyUser])
 
-  const signIn = async (email: string, password: string): Promise<AuthUser> => {
+  const signIn = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true)
     try {
       const authUser = await authService.signIn(email, password)
@@ -61,9 +63,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [applyUser])
 
-  const signUp = async (data: SignUpData): Promise<AuthUser> => {
+  const signUp = useCallback(async (data: SignUpData): Promise<AuthUser> => {
     setLoading(true)
     try {
       const authUser = await authService.signUp(data)
@@ -72,9 +74,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [applyUser])
 
-  const signInWithGoogle = async (): Promise<AuthUser> => {
+  const signInWithGoogle = useCallback(async (): Promise<AuthUser> => {
     setLoading(true)
     try {
       const authUser = await authService.signInWithGoogle()
@@ -83,9 +85,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [applyUser])
 
-  const signOut = async (): Promise<void> => {
+  const signOut = useCallback(async (): Promise<void> => {
     setLoading(true)
     try {
       await authService.signOut()
@@ -93,58 +95,88 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [applyUser])
 
-  const resetPassword = async (email: string): Promise<void> => {
-    return await authService.resetPassword(email)
-  }
+  const resetPassword = useCallback(async (email: string): Promise<void> => {
+    await authService.resetPassword(email)
+  }, [])
 
-  const updateProfile = async (data: Partial<AuthUser>): Promise<AuthUser> => {
+  const verifyPasswordResetCode = useCallback(async (oobCode: string): Promise<string> => {
+    return await authService.verifyPasswordResetCode(oobCode)
+  }, [])
+
+  const confirmPasswordReset = useCallback(async (oobCode: string, newPassword: string): Promise<void> => {
+    await authService.confirmPasswordReset(oobCode, newPassword)
+  }, [])
+
+  const updateProfile = useCallback(async (data: Partial<AuthUser>): Promise<AuthUser> => {
     const authUser = await authService.updateProfile(data)
     applyUser(authUser)
     return authUser
-  }
+  }, [applyUser])
 
-  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
-    return await authService.changePassword(currentPassword, newPassword)
-  }
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<void> => {
+    await authService.changePassword(currentPassword, newPassword)
+  }, [])
 
-  const connectGoogleAdsAccount = async () => {
+  const connectGoogleAdsAccount = useCallback(async () => {
     await authService.connectGoogleAdsAccount()
-  }
+  }, [])
 
-  const connectFacebookAdsAccount = async () => {
+  const connectFacebookAdsAccount = useCallback(async () => {
     await authService.connectFacebookAdsAccount()
-  }
+  }, [])
 
-  const connectLinkedInAdsAccount = async () => {
+  const connectLinkedInAdsAccount = useCallback(async () => {
     await authService.connectLinkedInAdsAccount()
-  }
+  }, [])
 
-  const startMetaOauth = async (redirect?: string) => {
+  const startMetaOauth = useCallback(async (redirect?: string) => {
     return await authService.startMetaOauth(redirect)
-  }
+  }, [])
 
-  const getIdToken = async () => {
+  const getIdToken = useCallback(async () => {
     return await authService.getIdToken()
-  }
+  }, [])
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    signIn,
-    signInWithGoogle,
-    connectGoogleAdsAccount,
-    connectFacebookAdsAccount,
-    connectLinkedInAdsAccount,
-    startMetaOauth,
-    getIdToken,
-    signUp,
-    signOut,
-    resetPassword,
-    updateProfile,
-    changePassword
-  }
+  const value = React.useMemo<AuthContextType>(
+    () => ({
+      user,
+      loading,
+      signIn,
+      signInWithGoogle,
+      connectGoogleAdsAccount,
+      connectFacebookAdsAccount,
+      connectLinkedInAdsAccount,
+      startMetaOauth,
+      getIdToken,
+      signUp,
+      signOut,
+      resetPassword,
+      verifyPasswordResetCode,
+      confirmPasswordReset,
+      updateProfile,
+      changePassword,
+    }),
+    [
+      user,
+      loading,
+      signIn,
+      signInWithGoogle,
+      connectGoogleAdsAccount,
+      connectFacebookAdsAccount,
+      connectLinkedInAdsAccount,
+      startMetaOauth,
+      getIdToken,
+      signUp,
+      signOut,
+      resetPassword,
+      verifyPasswordResetCode,
+      confirmPasswordReset,
+      updateProfile,
+      changePassword,
+    ]
+  )
 
   return (
     <AuthContext.Provider value={value}>

@@ -16,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
@@ -24,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useAuth } from '@/contexts/auth-context'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface IntegrationStatusResponse {
   statuses: Array<{
@@ -112,6 +112,7 @@ export default function AdsPage() {
   const [refreshTick, setRefreshTick] = useState(0)
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
   const hasMetricData = metrics.length > 0
+  const initialMetricsLoading = metricsLoading && !hasMetricData
 
   useEffect(() => {
     if (!user?.id) {
@@ -340,10 +341,10 @@ export default function AdsPage() {
             <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
           </CardHeader>
           <CardContent>
-            {metricsLoading && !hasMetricData ? (
+            {initialMetricsLoading ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[...Array(4)].map((_, index) => (
-                  <div key={index} className="h-24 w-full animate-pulse rounded-lg bg-muted" />
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-24 w-full rounded-lg" />
                 ))}
               </div>
             ) : !hasMetricData ? (
@@ -388,10 +389,10 @@ export default function AdsPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {metricsLoading && !hasMetricData ? (
+            {initialMetricsLoading ? (
               <div className="grid gap-4 md:grid-cols-3">
-                {[...Array(3)].map((_, index) => (
-                  <div key={index} className="h-28 w-full animate-pulse rounded-lg bg-muted" />
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Skeleton key={index} className="h-28 w-full rounded-lg" />
                 ))}
               </div>
             ) : metricError ? (
@@ -455,10 +456,10 @@ export default function AdsPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {metricsLoading && !hasMetricData ? (
+            {initialMetricsLoading ? (
               <div className="space-y-2">
-                {[...Array(6)].map((_, index) => (
-                  <div key={index} className="h-10 w-full animate-pulse rounded bg-muted" />
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-10 w-full rounded" />
                 ))}
               </div>
             ) : metricError ? (

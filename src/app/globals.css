@@ -111,3 +111,14 @@ h6 {
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  @keyframes skeleton-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}

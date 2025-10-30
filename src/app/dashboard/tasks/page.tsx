@@ -47,6 +47,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { TaskRecord, TaskPriority, TaskStatus } from '@/types/tasks'
 import { authService } from '@/services/auth'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type SummaryCardConfig = {
   status: TaskStatus
@@ -107,6 +108,7 @@ export default function TasksPage() {
   const [formState, setFormState] = useState<TaskFormState>(() => buildInitialFormState(selectedClient ?? undefined))
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const initialLoading = loading && tasks.length === 0
 
   const resetForm = useCallback(() => {
     setFormState(buildInitialFormState(selectedClient ?? undefined))
@@ -621,8 +623,25 @@ export default function TasksPage() {
 
           <ScrollArea className="max-h-[520px]">
             <div className="divide-y divide-muted/30">
-              {loading && (
-                <div className="px-6 py-12 text-center text-sm text-muted-foreground">Loading tasks…</div>
+              {initialLoading && (
+                <div className="space-y-6 px-6 py-6">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="space-y-3">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <div className="flex flex-wrap gap-3">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-12" />
+                        <Skeleton className="h-4 w-10" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
               {!loading && error && (
                 <div className="px-6 py-12 text-center text-sm text-destructive">{error}</div>

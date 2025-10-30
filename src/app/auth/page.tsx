@@ -203,6 +203,11 @@ export default function AuthPage() {
                   <Button type="submit" disabled={loading} className="w-full">
                     {loading ? 'Please wait…' : 'Sign In'}
                   </Button>
+                  <div className="text-center text-xs text-muted-foreground">
+                    <Link href="/auth/forgot" className="font-medium text-primary hover:underline">
+                      Forgot password?
+                    </Link>
+                  </div>
                 </FadeInStagger>
               </TabsContent>
 

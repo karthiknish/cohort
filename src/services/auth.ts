@@ -16,6 +16,9 @@ import {
   updateProfile,
   linkWithPopup,
   User as FirebaseUser,
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
 } from 'firebase/auth'
 
 export interface AuthUser {
@@ -424,11 +427,68 @@ export class AuthService {
 
   async resetPassword(email: string): Promise<void> {
     try {
-      // In a real implementation, you would use Firebase's sendPasswordResetEmail
-      console.log('Password reset email sent to:', email)
+      if (!email || !email.trim()) {
+        throw new Error('Enter the email associated with your account')
+      }
+
+      const normalizedEmail = email.trim().toLowerCase()
+      const actionCodeSettings = typeof window !== 'undefined'
+        ? { url: `${window.location.origin}/auth/reset` }
+        : undefined
+
+      await sendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings)
     } catch (error: unknown) {
       console.error('Password reset error:', error)
-      throw new Error('Failed to send password reset email')
+      if (isFirebaseError(error)) {
+        if (error.code === 'auth/invalid-email') {
+          throw new Error('Enter a valid email address to receive reset instructions')
+        }
+        if (error.code === 'auth/missing-email') {
+          throw new Error('Enter the email associated with your account')
+        }
+        if (error.code === 'auth/user-not-found') {
+          // Deliberately do not reveal whether the user exists.
+          return
+        }
+      }
+      throw new Error('Unable to send reset instructions right now. Please try again shortly.')
+    }
+  }
+
+  async verifyPasswordResetCode(oobCode: string): Promise<string> {
+    try {
+      return await verifyPasswordResetCode(auth, oobCode)
+    } catch (error: unknown) {
+      console.error('Password reset code verification error:', error)
+      if (isFirebaseError(error)) {
+        if (error.code === 'auth/expired-action-code') {
+          throw new Error('This reset link has expired. Please request a new one.')
+        }
+        if (error.code === 'auth/invalid-action-code') {
+          throw new Error('This reset link is invalid or has already been used.')
+        }
+      }
+      throw new Error('Unable to validate this reset link. Please request a new one.')
+    }
+  }
+
+  async confirmPasswordReset(oobCode: string, newPassword: string): Promise<void> {
+    try {
+      await confirmPasswordReset(auth, oobCode, newPassword)
+    } catch (error: unknown) {
+      console.error('Password reset confirmation error:', error)
+      if (isFirebaseError(error)) {
+        if (error.code === 'auth/weak-password') {
+          throw new Error('Choose a stronger password with at least 6 characters.')
+        }
+        if (error.code === 'auth/expired-action-code') {
+          throw new Error('This reset link has expired. Please request a new one.')
+        }
+        if (error.code === 'auth/invalid-action-code') {
+          throw new Error('This reset link is invalid or has already been used.')
+        }
+      }
+      throw new Error('Unable to update your password. Please try again.')
     }
   }
 

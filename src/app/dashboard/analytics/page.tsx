@@ -30,6 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { authService } from '@/services/auth'
 import { useClientContext } from '@/contexts/client-context'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface MetricRecord {
   id: string
@@ -180,6 +181,8 @@ export default function AnalyticsPage() {
   } = useAnalyticsData(token, periodDays, selectedClientId ?? null)
 
   const metrics = metricsData
+  const initialMetricsLoading = metricsLoading && metrics.length === 0
+  const initialInsightsLoading = insightsLoading && insights.length === 0
   const referenceTimestamp = useMemo(() => {
     return metrics.reduce((latest, metric) => {
       const timestamp = new Date(metric.date).getTime()
@@ -344,7 +347,11 @@ export default function AnalyticsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{formatCurrency(totals.spend)}</div>
+            {initialMetricsLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              <div className="text-2xl font-semibold">{formatCurrency(totals.spend)}</div>
+            )}
           </CardContent>
         </Card>
         <Card className="border-muted/60 bg-background">
@@ -353,7 +360,11 @@ export default function AnalyticsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{formatCurrency(totals.revenue)}</div>
+            {initialMetricsLoading ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              <div className="text-2xl font-semibold">{formatCurrency(totals.revenue)}</div>
+            )}
           </CardContent>
         </Card>
         <Card className="border-muted/60 bg-background">
@@ -362,7 +373,11 @@ export default function AnalyticsPage() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{averageRoaS.toFixed(2)}x</div>
+            {initialMetricsLoading ? (
+              <Skeleton className="h-7 w-20" />
+            ) : (
+              <div className="text-2xl font-semibold">{averageRoaS.toFixed(2)}x</div>
+            )}
           </CardContent>
         </Card>
         <Card className="border-muted/60 bg-background">
@@ -370,9 +385,18 @@ export default function AnalyticsPage() {
             <CardTitle className="text-sm font-medium">Conversion rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{conversionRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Avg CPC {formatCurrency(averageCpc)}</p>
+          <CardContent className="space-y-1">
+            {initialMetricsLoading ? (
+              <>
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-4 w-28" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-semibold">{conversionRate.toFixed(1)}%</div>
+                <div className="text-xs text-muted-foreground">Avg CPC {formatCurrency(averageCpc)}</div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -384,8 +408,8 @@ export default function AnalyticsPage() {
             <CardDescription>Daily totals for the selected period</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            {metricsLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
+              <Skeleton className="h-full w-full" />
             ) : chartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
             ) : (
@@ -410,8 +434,8 @@ export default function AnalyticsPage() {
             <CardDescription>Return on ad spend across the selected period</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            {metricsLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
+              <Skeleton className="h-full w-full" />
             ) : chartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
             ) : (
@@ -435,8 +459,8 @@ export default function AnalyticsPage() {
             <CardDescription>Spend share across connected platforms</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            {metricsLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            {initialMetricsLoading || (metricsLoading && platformBreakdown.length === 0) ? (
+              <Skeleton className="h-full w-full" />
             ) : platformBreakdown.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Connect a platform to see spend distribution.</div>
             ) : (
@@ -460,8 +484,8 @@ export default function AnalyticsPage() {
             <CardDescription>Breakdown of daily click volume</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            {metricsLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
+              <Skeleton className="h-full w-full" />
             ) : chartData.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data available.</div>
             ) : (
@@ -503,8 +527,15 @@ export default function AnalyticsPage() {
               <AlertDescription>{insightsError.message}</AlertDescription>
             </Alert>
           )}
-          {insightsLoading ? (
-            <p className="text-sm text-muted-foreground">Generating fresh insights…</p>
+          {initialInsightsLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="rounded-md border border-muted/60 bg-muted/10 p-4">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-3 h-14 w-full" />
+                </div>
+              ))}
+            </div>
           ) : insights.length === 0 ? (
             <p className="text-sm text-muted-foreground">Link a platform and run a sync to unlock insights.</p>
           ) : (
@@ -538,7 +569,26 @@ export default function AnalyticsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {creativeBreakdown.length === 0 ? (
+          {initialMetricsLoading || (metricsLoading && creativeBreakdown.length === 0) ? (
+            <div className="rounded border border-dashed border-muted/60 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="rounded border border-muted/40 p-4">
+                    <Skeleton className="h-4 w-56" />
+                    <div className="mt-3 grid grid-cols-4 gap-3">
+                      {Array.from({ length: 4 }).map((__, metricIdx) => (
+                        <Skeleton key={metricIdx} className="h-4 w-full" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : creativeBreakdown.length === 0 ? (
             <div className="rounded border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
               No creative-level data yet. Ensure Meta syncs are configured with creative insights.
             </div>

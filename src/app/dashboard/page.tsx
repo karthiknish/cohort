@@ -30,6 +30,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface MetricRecord {
   id: string
@@ -486,12 +487,10 @@ function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
           <CardDescription className="text-xs font-medium uppercase text-muted-foreground">
             {stat.label}
           </CardDescription>
-          <p className={valueClasses}>
-            {loading ? <span className="block h-8 w-20 animate-pulse rounded bg-muted" /> : stat.value}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {loading ? <span className="block h-4 w-32 animate-pulse rounded bg-muted" /> : stat.helper}
-          </p>
+          <div className={valueClasses}>{loading ? <Skeleton className="h-8 w-20" /> : stat.value}</div>
+          <div className="text-xs text-muted-foreground">
+            {loading ? <Skeleton className="h-4 w-32" /> : stat.helper}
+          </div>
         </div>
         <div className="rounded-full bg-primary/10 p-3">
           <Icon className="h-6 w-6 text-primary" />
