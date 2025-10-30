@@ -13,7 +13,6 @@ interface ProposalHistoryProps {
   proposals: ProposalDraft[]
   draftId: string | null
   isLoading: boolean
-  proposalPdfCache: Record<string, string>
   deletingProposalId: string | null
   mapAiSummary: (proposal: ProposalDraft | null | undefined) => string | null
   onRefresh: () => void
@@ -25,7 +24,6 @@ function ProposalHistoryComponent({
   proposals,
   draftId,
   isLoading,
-  proposalPdfCache,
   deletingProposalId,
   mapAiSummary,
   onRefresh,
@@ -54,7 +52,7 @@ function ProposalHistoryComponent({
             proposals.map((proposal) => {
               const isActiveDraft = proposal.id === draftId
               const summary = mapAiSummary(proposal)
-              const pdfUrl = proposal.pdfUrl ?? proposalPdfCache[proposal.id] ?? null
+              const presentationUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
               const displayName = proposal.clientName?.trim().length ? proposal.clientName : 'Unnamed company'
 
               return (
@@ -89,15 +87,15 @@ function ProposalHistoryComponent({
                             ? 'Continue editing'
                             : 'Resume editing'}
                       </Button>
-                      {pdfUrl ? (
+                      {presentationUrl ? (
                         <Button asChild size="sm" variant="ghost">
-                          <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                            Download PDF
+                          <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
+                            Download deck
                           </a>
                         </Button>
                       ) : (
                         <Button size="sm" variant="ghost" disabled>
-                          Download PDF
+                          Download deck
                         </Button>
                       )}
                       <Button

@@ -61,11 +61,6 @@ export function SiteHeader() {
               {link.name}
             </Link>
           ))}
-          {user?.role === 'admin' && (
-            <Link href="/admin" className="transition hover:text-primary">
-              Admin
-            </Link>
-          )}
         </nav>
 
         <div className="flex items-center gap-3">

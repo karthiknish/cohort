@@ -24,6 +24,7 @@ import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useAuth } from '@/contexts/auth-context'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AdsSkeleton } from '@/app/dashboard/ads/components/ads-skeleton'
 
 interface IntegrationStatusResponse {
   statuses: Array<{
@@ -295,6 +296,12 @@ export default function AdsPage() {
       }
       setConnectingProvider(null)
     }
+  }
+
+  const isInitialLoading = metricsLoading && metrics.length === 0 && !integrationStatuses
+
+  if (isInitialLoading) {
+    return <AdsSkeleton />
   }
 
   return (

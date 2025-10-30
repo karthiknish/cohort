@@ -167,7 +167,12 @@ This project now includes hardened Firestore and Storage rules for production de
 	FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 	```
 	Alternatively, set `FIREBASE_ADMIN_SERVICE_ACCOUNT_KEY` with the full JSON payload.
-3. Deploy security rules once credentials are configured:
+3. Enable Firebase Analytics by adding your GA4 measurement ID to `.env.local`:
+	```bash
+	NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+	```
+	Without this value, client-side analytics logging will be skipped gracefully.
+4. Deploy security rules once credentials are configured:
 	```bash
 	firebase deploy --only firestore:rules,firestore:indexes,storage:rules
 	```

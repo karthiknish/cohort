@@ -21,6 +21,13 @@ const deleteClientSchema = z.object({
   id: z.string().trim().min(1, 'Client id is required'),
 })
 
+const addTeamMemberSchema = z.object({
+  action: z.literal('addTeamMember'),
+  id: z.string().trim().min(1, 'Client id is required'),
+  name: z.string().trim().min(1, 'Team member name is required').max(120),
+  role: z.string().trim().max(120).optional(),
+})
+
 type StoredClient = {
   name?: unknown
   accountManager?: unknown
@@ -214,6 +221,56 @@ export async function POST(request: NextRequest) {
 
     console.error('[clients] POST failed', error)
     return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request)
+    if (!auth.uid) {
+      throw new AuthenticationError('Authentication required', 401)
+    }
+
+    assertAdmin(auth)
+
+    const json = (await request.json().catch(() => null)) ?? {}
+    const parsed = addTeamMemberSchema.safeParse(json)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid team member data', details: parsed.error.flatten() }, { status: 400 })
+    }
+
+    const { id, name, role } = parsed.data
+    const clientRef = adminDb.collection('users').doc(auth.uid).collection('clients').doc(id)
+    const snapshot = await clientRef.get()
+
+    if (!snapshot.exists) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    }
+
+    const existingMembers = coerceTeamMembers(snapshot.data()?.teamMembers)
+    const normalizedName = name.trim()
+    const normalizedRole = (role ?? '').trim() || 'Contributor'
+
+    if (existingMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())) {
+      return NextResponse.json({ error: 'Team member already exists for this client' }, { status: 409 })
+    }
+
+    const updatedMembers = [...existingMembers, { name: normalizedName, role: normalizedRole }]
+
+    await clientRef.update({
+      teamMembers: updatedMembers,
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+
+    return NextResponse.json({ teamMembers: updatedMembers })
+  } catch (error: unknown) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    console.error('[clients] PATCH failed', error)
+    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 })
   }
 }
 

@@ -1,11 +1,12 @@
 // Example of how to use Firebase in your application
-import { analytics, auth, db } from './firebase'
+import { auth, db } from './firebase'
 import { 
   GoogleAuthProvider, 
   signInWithPopup,
   signOut as firebaseSignOut
 } from 'firebase/auth'
 import { collection, addDoc, getDocs, type DocumentData } from 'firebase/firestore'
+import { logAnalyticsEvent } from './analytics'
 
 // Example authentication functions
 export const signInWithGoogle = async () => {
@@ -50,13 +51,11 @@ export const getDocuments = async <T extends DocumentData>(collectionName: strin
 }
 
 // Example Analytics usage
-export const logEvent = (eventName: string, parameters?: Record<string, unknown>) => {
-  if (analytics) {
-    // Note: You'll need to import logEvent from 'firebase/analytics'
-    // import { logEvent } from 'firebase/analytics'
-    // logEvent(analytics, eventName, parameters)
-    console.log('Analytics event:', eventName, parameters)
-  }
+export const logEvent = async (
+  eventName: string,
+  parameters?: Record<string, string | number | boolean | null | undefined>
+) => {
+  await logAnalyticsEvent(eventName, parameters)
 }
 
 // Firebase is now ready to use throughout your app!

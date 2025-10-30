@@ -11,12 +11,13 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { createProposalDraft, deleteProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft } from '@/services/proposals'
+import { createProposalDraft, deleteProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalGammaDeck } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { ProposalStepContent, type ProposalStepId } from './components/proposal-step-content'
 import { ProposalStepIndicator, type ProposalStep } from './components/proposal-step-indicator'
+import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
 import { ProposalHistory } from './components/proposal-history'
 import { ProposalDeleteDialog } from './components/proposal-delete-dialog'
 
@@ -112,9 +113,9 @@ export default function ProposalsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [gammaDeck, setGammaDeck] = useState<ProposalGammaDeck | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
-  const [proposalPdfCache, setProposalPdfCache] = useState<Record<string, string>>({})
   const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
   const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -195,11 +196,6 @@ export default function ProposalsPage() {
       await deleteProposalDraft(proposal.id)
 
       setProposals((prev) => prev.filter((candidate) => candidate.id !== proposal.id))
-      setProposalPdfCache((prev) => {
-        const next = { ...prev }
-        delete next[proposal.id]
-        return next
-      })
 
       if (draftId === proposal.id) {
         setDraftId(null)
@@ -207,6 +203,7 @@ export default function ProposalsPage() {
         setCurrentStep(0)
         setSubmitted(false)
         setAiSummary(null)
+        setGammaDeck(null)
       }
 
       toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
@@ -354,6 +351,7 @@ export default function ProposalsPage() {
     setCurrentStep(Math.min(proposal.stepProgress ?? 0, steps.length - 1))
     setSubmitted(proposal.status === 'ready')
     setAiSummary(mapAiSummary(proposal))
+    setGammaDeck(proposal.gammaDeck ? { ...proposal.gammaDeck, storageUrl: proposal.gammaDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
     wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [mapAiSummary])
 
@@ -376,16 +374,6 @@ export default function ProposalsPage() {
     try {
       const result = await listProposals({ clientId: selectedClientId })
       setProposals(result)
-      setProposalPdfCache((prev) => {
-        const next = { ...prev }
-        result.forEach((proposal) => {
-          const pdfUrl = proposal.pdfUrl
-          if (typeof pdfUrl === 'string') {
-            next[proposal.id] = pdfUrl
-          }
-        })
-        return next
-      })
       return result
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'Failed to load proposals')
@@ -396,29 +384,72 @@ export default function ProposalsPage() {
     }
   }, [selectedClientId, toast])
 
-  const submitProposal = async () => {
-    if (!draftId) {
+  const ensureDraftId = useCallback(async () => {
+    if (draftId) {
+      return draftId
+    }
+
+    if (!hasPersistableData) {
       toast({
         title: 'Draft not ready',
-        description: 'Please wait for autosave to finish before submitting.',
+        description: 'Fill in the proposal form before generating.',
         variant: 'destructive',
       })
-      return
+      return null
+    }
+
+    if (isCreatingDraft) {
+      toast({
+        title: 'Saving draft',
+        description: 'Please wait while we create the proposal draft.',
+      })
+      return null
     }
 
     try {
+      setIsCreatingDraft(true)
+      setAutosaveStatus('saving')
+      const newDraftId = await createProposalDraft({
+        formData: formState,
+        stepProgress: currentStep,
+        clientId: selectedClientId ?? undefined,
+        clientName: selectedClient?.name ?? undefined,
+      })
+      setDraftId(newDraftId)
+      setAutosaveStatus('saved')
+      await refreshProposals()
+      return newDraftId
+    } catch (error: unknown) {
+      setAutosaveStatus('error')
+      toast({
+        title: 'Unable to create draft',
+        description: getErrorMessage(error, 'Failed to create proposal draft'),
+        variant: 'destructive',
+      })
+      return null
+    } finally {
+      setIsCreatingDraft(false)
+    }
+  }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, refreshProposals, toast])
+
+  const submitProposal = async () => {
+    try {
       setIsSubmitting(true)
       clearErrors(stepErrorPaths.value)
-      const activeDraftId = draftId
-      const response = await submitProposalDraft(draftId, 'summary_and_pdf')
+      let activeDraftId = draftId
+      if (!activeDraftId) {
+        activeDraftId = await ensureDraftId()
+        if (!activeDraftId) {
+          setIsSubmitting(false)
+          return
+        }
+      }
+      const response = await submitProposalDraft(activeDraftId, 'summary')
       setAiSummary(response.aiInsights ?? null)
       const isReady = response.status === 'ready'
       setSubmitted(isReady)
-
-      const pdfUrl = response.pdfUrl
-      if (activeDraftId && typeof pdfUrl === 'string') {
-        setProposalPdfCache((prev) => ({ ...prev, [activeDraftId]: pdfUrl }))
-      }
+      setGammaDeck(response.gammaDeck ? { ...response.gammaDeck, storageUrl: response.pptUrl ?? response.gammaDeck.storageUrl ?? null } : null)
+      const storedPptUrl = response.pptUrl ?? response.gammaDeck?.storageUrl ?? null
 
       if (isReady) {
         setFormState(initialFormState)
@@ -426,10 +457,10 @@ export default function ProposalsPage() {
         setDraftId(null)
       }
 
-      if (response.pdfUrl) {
+      if (storedPptUrl) {
         toast({
-          title: 'PDF ready',
-          description: 'A downloadable proposal PDF has been generated.',
+          title: 'Presentation ready',
+          description: 'A downloadable proposal deck has been generated.',
         })
       }
 
@@ -450,6 +481,7 @@ export default function ProposalsPage() {
       console.error('[ProposalWizard] submit failed', err)
       const message = getErrorMessage(err, 'Failed to submit proposal')
       setSubmitted(false)
+      setGammaDeck(null)
       toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
@@ -469,6 +501,7 @@ export default function ProposalsPage() {
           setCurrentStep(0)
           setSubmitted(false)
           setAiSummary(null)
+          setGammaDeck(null)
           setProposals([])
           return
         }
@@ -486,12 +519,14 @@ export default function ProposalsPage() {
           setCurrentStep(Math.min(draft.stepProgress ?? 0, steps.length - 1))
           setSubmitted(draft.status === 'ready')
           setAiSummary(mapAiSummary(draft))
+          setGammaDeck(draft.gammaDeck ? { ...draft.gammaDeck, storageUrl: draft.gammaDeck.storageUrl ?? draft.pptUrl ?? null } : null)
         } else {
           setDraftId(null)
           setFormState(initialFormState)
           setCurrentStep(0)
           setSubmitted(false)
           setAiSummary(null)
+          setGammaDeck(null)
         }
       } catch (err: unknown) {
         if (cancelled) {
@@ -643,9 +678,7 @@ export default function ProposalsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {isBootstrapping ? (
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <p>Setting up your proposal workspace...</p>
-            </div>
+            <DashboardSkeleton showStepIndicator />
           ) : submitted ? (
             <div className="space-y-6">
               <div className="flex items-start gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
@@ -678,6 +711,53 @@ export default function ProposalsPage() {
                   </CardContent>
                 </Card>
               </div>
+              {gammaDeck ? (
+                <Card className="border-muted">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Gamma presentation</CardTitle>
+                    <CardDescription>AI-generated slides you can refine and export.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {gammaDeck.storageUrl ? (
+                        <Button asChild>
+                          <a href={gammaDeck.storageUrl} target="_blank" rel="noreferrer">
+                            Download deck
+                          </a>
+                        </Button>
+                      ) : gammaDeck.pptxUrl ? (
+                        <Button asChild>
+                          <a href={gammaDeck.pptxUrl} target="_blank" rel="noreferrer">
+                            Download from Gamma
+                          </a>
+                        </Button>
+                      ) : null}
+                      {gammaDeck.webUrl ? (
+                        <Button variant="outline" asChild>
+                          <a href={gammaDeck.webUrl} target="_blank" rel="noreferrer">
+                            Open in Gamma
+                          </a>
+                        </Button>
+                      ) : null}
+                      {gammaDeck.shareUrl && gammaDeck.shareUrl !== gammaDeck.webUrl ? (
+                        <Button variant="ghost" asChild>
+                          <a href={gammaDeck.shareUrl} target="_blank" rel="noreferrer">
+                            Share link
+                          </a>
+                        </Button>
+                      ) : null}
+                      <Badge variant="outline" className="uppercase tracking-wide">
+                        {gammaDeck.status}
+                      </Badge>
+                    </div>
+                    {gammaDeck.instructions ? (
+                      <p className="text-xs leading-relaxed">
+                        Instructions sent to Gamma: {gammaDeck.instructions}
+                      </p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ) : null}
               {aiSummary && (
                 <Card className="border-muted">
                   <CardHeader>
@@ -728,7 +808,6 @@ export default function ProposalsPage() {
         proposals={proposals}
         draftId={draftId}
         isLoading={isLoadingProposals}
-        proposalPdfCache={proposalPdfCache}
         deletingProposalId={deletingProposalId}
         mapAiSummary={mapAiSummary}
         onRefresh={() => void refreshProposals()}

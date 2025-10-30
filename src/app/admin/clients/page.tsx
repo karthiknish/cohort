@@ -50,6 +50,12 @@ export default function AdminClientsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null)
 
+  const [clientPendingMembers, setClientPendingMembers] = useState<ClientRecord | null>(null)
+  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false)
+  const [addingMember, setAddingMember] = useState(false)
+  const [memberName, setMemberName] = useState('')
+  const [memberRole, setMemberRole] = useState('')
+
   const [clientSaving, setClientSaving] = useState(false)
   const [clientName, setClientName] = useState('')
   const [clientAccountManager, setClientAccountManager] = useState('')
@@ -115,6 +121,74 @@ export default function AdminClientsPage() {
     setClientPendingDelete(client)
     setIsDeleteDialogOpen(true)
   }, [])
+
+  const requestAddTeamMember = useCallback((client: ClientRecord) => {
+    setClientPendingMembers(client)
+    setMemberName('')
+    setMemberRole('')
+    setIsTeamDialogOpen(true)
+  }, [])
+
+  const handleTeamDialogChange = useCallback((open: boolean) => {
+    setIsTeamDialogOpen(open)
+    if (!open) {
+      setClientPendingMembers(null)
+      setMemberName('')
+      setMemberRole('')
+      setAddingMember(false)
+    }
+  }, [])
+
+  const handleAddTeamMember = useCallback(async () => {
+    if (!clientPendingMembers) {
+      return
+    }
+
+    const name = memberName.trim()
+    if (!name) {
+      toast({ title: 'Name required', description: 'Enter a teammate name before adding.', variant: 'destructive' })
+      return
+    }
+
+    const role = memberRole.trim()
+
+    try {
+      setAddingMember(true)
+      const token = await getIdToken()
+      const response = await fetch('/api/clients', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'addTeamMember', id: clientPendingMembers.id, name, role }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { teamMembers?: ClientTeamMember[]; error?: string } | null
+
+      if (!response.ok || !payload || !Array.isArray(payload.teamMembers)) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to add teammate'
+        throw new Error(message)
+      }
+
+      setClients((prev) =>
+        prev.map((client) =>
+          client.id === clientPendingMembers.id ? { ...client, teamMembers: payload.teamMembers ?? [] } : client
+        )
+      )
+
+      toast({ title: 'Teammate added', description: `${name} joined ${clientPendingMembers.name}.` })
+      setMemberName('')
+      setMemberRole('')
+      setIsTeamDialogOpen(false)
+      setClientPendingMembers(null)
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, 'Unable to add teammate')
+      toast({ title: 'Add teammate failed', description: message, variant: 'destructive' })
+    } finally {
+      setAddingMember(false)
+    }
+  }, [clientPendingMembers, getIdToken, memberName, memberRole, toast])
 
   const handleDeleteClient = useCallback(async () => {
     if (!clientPendingDelete) {
@@ -421,6 +495,14 @@ export default function AdminClientsPage() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Team {client.teamMembers.length}</Badge>
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => requestAddTeamMember(client)}
+                            disabled={addingMember && clientPendingMembers?.id === client.id}
+                          >
+                            <Plus className="mr-2 h-4 w-4" /> Add teammate
+                          </Button>
+                          <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => requestDeleteClient(client)}
@@ -484,6 +566,48 @@ export default function AdminClientsPage() {
             >
               {deletingClientId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
               {deletingClientId ? 'Deleting…' : 'Delete client'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isTeamDialogOpen} onOpenChange={handleTeamDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add teammate</DialogTitle>
+            <DialogDescription>
+              Add a collaborator to {clientPendingMembers?.name ?? 'this client'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="team-member-name-input">Name</Label>
+              <Input
+                id="team-member-name-input"
+                placeholder="e.g. Priya Patel"
+                value={memberName}
+                onChange={(event) => setMemberName(event.target.value)}
+                disabled={addingMember}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="team-member-role-input">Role (optional)</Label>
+              <Input
+                id="team-member-role-input"
+                placeholder="e.g. Paid Media Lead"
+                value={memberRole}
+                onChange={(event) => setMemberRole(event.target.value)}
+                disabled={addingMember}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleTeamDialogChange(false)} disabled={addingMember}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleAddTeamMember()} disabled={addingMember}>
+              {addingMember && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add teammate
             </Button>
           </DialogFooter>
         </DialogContent>

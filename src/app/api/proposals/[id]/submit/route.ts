@@ -9,20 +9,52 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { geminiAI } from '@/services/gemini'
+import { gammaService } from '@/services/gamma'
+import type { GammaGenerationStatus } from '@/services/gamma'
 
-interface SubmitBody {
-  delivery?: 'summary' | 'summary_and_pdf'
+type GammaDeckPayload = {
+  generationId: string
+  status: string
+  instructions: string
+  webUrl: string | null
+  shareUrl: string | null
+  pptxUrl: string | null
+  pdfUrl: string | null
+  generatedFiles: Array<{ fileType: string; fileUrl: string }>
+  storageUrl: string | null
 }
 
-async function storeProposalPdf(userId: string, proposalId: string, pdfBuffer: Buffer) {
+async function downloadGammaPresentation(url: string): Promise<Buffer> {
+  const apiKey = process.env.GAMMA_API_KEY
+  if (!apiKey) {
+    throw new Error('GAMMA_API_KEY is not configured')
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      'X-API-KEY': apiKey,
+      accept: 'application/octet-stream',
+    },
+  })
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => '')
+    throw new Error(`Gamma file download failed (${response.status}): ${details || 'Unknown error'}`)
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
+async function storeProposalPresentation(userId: string, proposalId: string, pptBuffer: Buffer) {
   const bucket = adminStorage.bucket()
-  const filePath = `proposals/${userId}/${proposalId}.pdf`
+  const filePath = `proposals/${userId}/${proposalId}.pptx`
   const file = bucket.file(filePath)
   const downloadToken = randomUUID()
 
-  await file.save(pdfBuffer, {
+  await file.save(pptBuffer, {
     resumable: false,
-    contentType: 'application/pdf',
+    contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     metadata: {
       metadata: {
         firebaseStorageDownloadTokens: downloadToken,
@@ -50,8 +82,6 @@ export async function POST(
       throw new AuthenticationError('Authentication required', 401)
     }
 
-    const body = (await request.json().catch(() => ({}))) as SubmitBody
-    const deliveryMode = body.delivery ?? 'summary'
 
     const proposalRef = adminDb
       .collection('users')
@@ -66,6 +96,10 @@ export async function POST(
 
     const proposalData = proposalSnap.data() as Record<string, unknown>
     const ownerId = typeof proposalData.ownerId === 'string' ? proposalData.ownerId : null
+    const previousGammaDeck = (typeof proposalData.gammaDeck === 'object' && proposalData.gammaDeck !== null
+      ? (proposalData.gammaDeck as Partial<GammaDeckPayload>)
+      : null)
+    const previousPptUrl = typeof proposalData.pptUrl === 'string' ? proposalData.pptUrl : null
 
     if (ownerId && ownerId !== auth.uid) {
       return NextResponse.json({ error: 'Not authorized to submit this proposal' }, { status: 403 })
@@ -95,6 +129,44 @@ export async function POST(
       summary = null
     }
 
+    let gammaDeck: GammaDeckPayload | null = null
+    let storedPptUrl: string | null = null
+    if (process.env.GAMMA_API_KEY) {
+      try {
+        const gammaInputText = buildGammaInputText(formData, summary ?? undefined)
+        const instructionPrompt = buildGammaInstructionPrompt(formData)
+        const rawInstructions = await geminiAI.generateContent(instructionPrompt)
+        const instructions = truncateGammaInstructions(rawInstructions)
+
+        const deckResult = await gammaService.generatePresentation({
+          inputText: gammaInputText,
+          additionalInstructions: instructions,
+          format: 'presentation',
+          textMode: 'generate',
+          numCards: estimateGammaSlideCount(formData),
+          exportAs: 'pptx',
+        })
+
+        gammaDeck = mapGammaDeckPayload(deckResult, instructions)
+      } catch (gammaError) {
+        console.error('[ProposalSubmit] Gamma generation failed', gammaError)
+      }
+    }
+
+    if (gammaDeck?.pptxUrl) {
+      try {
+        const pptBuffer = await downloadGammaPresentation(gammaDeck.pptxUrl)
+        storedPptUrl = await storeProposalPresentation(auth.uid, proposalId, pptBuffer)
+        gammaDeck = { ...gammaDeck, storageUrl: storedPptUrl }
+      } catch (pptError) {
+        console.error('[ProposalSubmit] PPT storage failed', pptError)
+      }
+    }
+
+    if (gammaDeck && !gammaDeck.storageUrl && typeof previousGammaDeck?.storageUrl === 'string') {
+      gammaDeck = { ...gammaDeck, storageUrl: previousGammaDeck.storageUrl }
+    }
+
     const existingInsights = proposalData.aiInsights
     const aiInsights = summary
       ? {
@@ -110,19 +182,13 @@ export async function POST(
       status: nextStatus,
       aiInsights,
       updatedAt: FieldValue.serverTimestamp(),
+      pptUrl: storedPptUrl ?? previousPptUrl,
     }
 
-    let generatedPdfUrl: string | null = null
-
-    if (deliveryMode === 'summary_and_pdf') {
-      try {
-        const pdfBuffer = await generateProposalPdf(formData, summary ?? undefined)
-        const pdfDownloadUrl = await storeProposalPdf(auth.uid, proposalId, pdfBuffer)
-        generatedPdfUrl = pdfDownloadUrl
-        updates.pdfUrl = pdfDownloadUrl
-      } catch (pdfError) {
-        console.error('[ProposalSubmit] PDF generation failed', pdfError)
-        updates.pdfUrl = typeof proposalData.pdfUrl === 'string' ? proposalData.pdfUrl : null
+    if (gammaDeck) {
+      updates.gammaDeck = {
+        ...gammaDeck,
+        generatedAt: FieldValue.serverTimestamp(),
       }
     }
 
@@ -145,12 +211,8 @@ export async function POST(
       ok: true,
       status: nextStatus,
       aiInsights: summary,
-      pdfUrl:
-        deliveryMode === 'summary_and_pdf'
-          ? generatedPdfUrl ?? (typeof updates.pdfUrl === 'string' ? updates.pdfUrl : null)
-          : typeof proposalData.pdfUrl === 'string'
-            ? proposalData.pdfUrl
-            : null,
+      pptUrl: storedPptUrl ?? previousPptUrl,
+      gammaDeck,
     })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
@@ -159,110 +221,6 @@ export async function POST(
     console.error('[ProposalSubmit] POST failed', error)
     return NextResponse.json({ error: 'Failed to submit proposal' }, { status: 500 })
   }
-}
-
-async function generateProposalPdf(formData: ReturnType<typeof mergeProposalForm>, summary?: string | null) {
-  const { jsPDF } = await import('jspdf')
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-
-  const marginX = 40
-  const maxWidth = 515
-  let cursorY = 60
-
-  const addHeading = (text: string) => {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(16)
-    doc.text(text, marginX, cursorY)
-    cursorY += 24
-  }
-
-  const addSubheading = (text: string) => {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(13)
-    doc.text(text, marginX, cursorY)
-    cursorY += 18
-  }
-
-  const addParagraph = (text: string) => {
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(11)
-    const lines = doc.splitTextToSize(text, maxWidth)
-    lines.forEach((line: string) => {
-      if (cursorY > 780) {
-        doc.addPage()
-        cursorY = 60
-      }
-      doc.text(line, marginX, cursorY)
-      cursorY += 14
-    })
-    cursorY += 8
-  }
-
-  const addList = (items: string[]) => {
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(11)
-    items.forEach((item: string) => {
-      if (cursorY > 780) {
-        doc.addPage()
-        cursorY = 60
-      }
-      doc.text(`• ${item}`, marginX, cursorY)
-      cursorY += 14
-    })
-    cursorY += 6
-  }
-
-  addHeading('Cohorts Proposal Overview')
-  addParagraph(`Generated on ${new Date().toLocaleString()}`)
-
-  addSubheading('Executive Summary')
-  addParagraph(summary && summary.trim().length > 0 ? summary : 'Summary currently unavailable. Regenerate the proposal to include AI insights.')
-
-  const { company, marketing, goals, scope, timelines, value } = formData
-
-  addSubheading('Company Snapshot')
-  addParagraph(`Name: ${company.name || '—'}`)
-  addParagraph(`Industry: ${company.industry || '—'}`)
-  addParagraph(`Size: ${company.size || '—'}`)
-  addParagraph(`Website: ${company.website || '—'}`)
-  addParagraph(`Locations: ${company.locations || '—'}`)
-
-  addSubheading('Marketing & Advertising')
-  addParagraph(`Monthly Budget: ${marketing.budget || '—'}`)
-  addParagraph(`Active Platforms: ${marketing.platforms.length ? marketing.platforms.join(', ') : 'None provided'}`)
-  addParagraph(`Ad Accounts in Place: ${marketing.adAccounts}`)
-  if (Object.keys(marketing.socialHandles ?? {}).length) {
-    addParagraph('Social Handles:')
-    addList(Object.entries(marketing.socialHandles).map(([network, handle]) => `${network}: ${handle}`))
-  }
-
-  addSubheading('Business Goals & Challenges')
-  addParagraph(`Objectives: ${goals.objectives.length ? goals.objectives.join(', ') : 'Not specified'}`)
-  addParagraph(`Target Audience: ${goals.audience || 'Not specified'}`)
-  addParagraph(`Challenges: ${goals.challenges.length ? goals.challenges.join(', ') : 'Not specified'}`)
-  if (goals.customChallenge) {
-    addParagraph(`Additional Notes: ${goals.customChallenge}`)
-  }
-
-  addSubheading('Scope of Work')
-  addParagraph(`Requested Services: ${scope.services.length ? scope.services.join(', ') : 'Not specified'}`)
-  if (scope.otherService) {
-    addParagraph(`Additional Services: ${scope.otherService}`)
-  }
-
-  addSubheading('Timelines & Priorities')
-  addParagraph(`Start Time: ${timelines.startTime || 'Flexible'}`)
-  addParagraph(`Upcoming Events: ${timelines.upcomingEvents || 'None noted'}`)
-
-  addSubheading('Value & Engagement')
-  addParagraph(`Proposal Value: ${value.proposalSize || 'Not specified'}`)
-  addParagraph(`Engagement Type: ${value.engagementType || 'Not specified'}`)
-  if (value.additionalNotes) {
-    addParagraph(`Additional Notes: ${value.additionalNotes}`)
-  }
-
-  const arrayBuffer = doc.output('arraybuffer') as ArrayBuffer
-  return Buffer.from(arrayBuffer)
 }
 
 function buildProposalSummaryPrompt(formData: ReturnType<typeof mergeProposalForm>) {
@@ -306,4 +264,105 @@ Create a concise, client-facing summary that includes:
 3. Next steps and timeline expectations.
 
 Keep the tone professional, confident, and collaborative. Use markdown headings and bullet points for readability.`
+}
+
+function buildGammaInstructionPrompt(formData: ReturnType<typeof mergeProposalForm>) {
+  const { company, goals, scope, timelines, value } = formData
+  const services = scope.services.length ? scope.services.join(', ') : 'general marketing support'
+  const objectives = goals.objectives.length ? goals.objectives.join(', ') : 'brand growth and lead generation'
+
+  return `You are a senior presentation designer preparing instructions for Gamma, an AI slide generator.
+
+Client: ${company.name || 'Unnamed company'} (${company.industry || 'industry not specified'})
+Primary services: ${services}
+Primary objectives: ${objectives}
+Timeline note: ${timelines.startTime || 'flexible start'}
+Engagement type: ${value.engagementType || 'not specified'}
+
+Write concise slide-by-slide guidance (Slide 1, Slide 2, etc.) capped at 8 slides. Focus on a strategic marketing proposal tailored to the client. Include:
+- Slide titles that feel executive-ready.
+- Bullet points per slide highlighting key talking points.
+- A professional, optimistic tone with clear next steps.
+- References to provided goals, challenges, and value expectations when relevant.
+
+Output plain text only. Avoid markdown, numbering beyond "Slide X", and keep total length under 450 characters. End with a call-to-action slide.`
+}
+
+function buildGammaInputText(formData: ReturnType<typeof mergeProposalForm>, summary?: string) {
+  const { company, marketing, goals, scope, timelines, value } = formData
+  const sections: string[] = []
+
+  sections.push(`Company Overview:\n- Name: ${company.name || 'N/A'}\n- Industry: ${company.industry || 'N/A'}\n- Size: ${company.size || 'N/A'}\n- Locations: ${company.locations || 'N/A'}\n- Website: ${company.website || 'N/A'}`)
+
+  sections.push(`Marketing Snapshot:\n- Monthly Budget: ${marketing.budget || 'N/A'}\n- Platforms: ${marketing.platforms.length ? marketing.platforms.join(', ') : 'Not specified'}\n- Ad Accounts: ${marketing.adAccounts}\n- Social Handles: ${formatSocialHandles(marketing.socialHandles)}`)
+
+  sections.push(`Goals & Challenges:\n- Objectives: ${goals.objectives.length ? goals.objectives.join(', ') : 'Not specified'}\n- Target Audience: ${goals.audience || 'Not specified'}\n- Challenges: ${goals.challenges.length ? goals.challenges.join(', ') : 'Not specified'}\n- Additional Notes: ${goals.customChallenge || 'None'}`)
+
+  sections.push(`Scope & Value:\n- Requested Services: ${scope.services.length ? scope.services.join(', ') : 'Not specified'}\n- Extra Services: ${scope.otherService || 'None'}\n- Proposal Value: ${value.proposalSize || 'Not specified'}\n- Engagement Type: ${value.engagementType || 'Not specified'}\n- Additional Notes: ${value.additionalNotes || 'None'}`)
+
+  sections.push(`Timelines:\n- Desired Start: ${timelines.startTime || 'Flexible'}\n- Upcoming Events: ${timelines.upcomingEvents || 'None'}`)
+
+  if (summary && summary.trim().length > 0) {
+    sections.push(`Executive Summary:\n${summary.trim()}`)
+  }
+
+  return sections.join('\n\n')
+}
+
+function formatSocialHandles(handles: Record<string, string> | undefined): string {
+  if (!handles || typeof handles !== 'object') {
+    return 'Not provided'
+  }
+
+  const entries = Object.entries(handles).filter(([network, value]) => network && value)
+  if (!entries.length) {
+    return 'Not provided'
+  }
+
+  return entries.map(([network, value]) => `${network}: ${value}`).join(', ')
+}
+
+function truncateGammaInstructions(value: string, limit = 440): string {
+  if (!value) {
+    return ''
+  }
+
+  const sanitized = value.replace(/\r/g, '').trim()
+  if (sanitized.length <= limit) {
+    return sanitized
+  }
+
+  const truncated = sanitized.slice(0, limit)
+  return truncated.replace(/\s+\S*$/, '').trimEnd()
+}
+
+function estimateGammaSlideCount(formData: ReturnType<typeof mergeProposalForm>): number {
+  const base = 8
+  const serviceWeight = Math.min(formData.scope.services.length * 2, 8)
+  const challengeWeight = Math.min(formData.goals.challenges.length, 4)
+  const objectiveWeight = Math.min(formData.goals.objectives.length, 4)
+  const total = base + serviceWeight + Math.floor((challengeWeight + objectiveWeight) / 2)
+  return Math.max(6, Math.min(total, 20))
+}
+
+function mapGammaDeckPayload(result: GammaGenerationStatus, instructions: string): GammaDeckPayload {
+  const pptx = findGammaFile(result.generatedFiles, 'pptx')
+  const pdf = findGammaFile(result.generatedFiles, 'pdf')
+
+  return {
+    generationId: result.generationId,
+    status: result.status,
+    instructions,
+    webUrl: result.webAppUrl,
+    shareUrl: result.shareUrl,
+    pptxUrl: pptx ?? null,
+    pdfUrl: pdf ?? null,
+    generatedFiles: result.generatedFiles,
+    storageUrl: null,
+  }
+}
+
+function findGammaFile(files: Array<{ fileType: string; fileUrl: string }>, desiredType: string): string | undefined {
+  const match = files.find((file) => file.fileType.toLowerCase() === desiredType.toLowerCase())
+  return match?.fileUrl
 }

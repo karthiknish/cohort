@@ -31,11 +31,12 @@ const toastVariants = cva(
     variants: {
       variant: {
         default: 'border-border bg-background text-foreground',
+        success: 'border-emerald-500/40 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-900/40 dark:text-emerald-50',
         destructive: 'border-destructive/50 bg-destructive text-destructive-foreground',
       },
     },
     defaultVariants: {
-      variant: 'default',
+      variant: 'success',
     },
   }
 )
@@ -69,7 +70,7 @@ const ToastClose = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Clos
   ({ className, ...props }, ref) => (
     <ToastPrimitives.Close
       ref={ref}
-      className={cn('absolute right-2 top-2 rounded-md p-1 text-white/80 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2', className)}
+      className={cn('absolute right-2 top-2 rounded-md p-1 text-current opacity-70 transition hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2', className)}
       aria-label="Dismiss notification"
       toast-close=""
       {...props}

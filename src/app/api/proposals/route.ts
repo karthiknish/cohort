@@ -15,11 +15,13 @@ type ProposalSnapshot = {
   formData?: unknown
   aiInsights?: unknown
   pdfUrl?: string | null
+  pptUrl?: string | null
   createdAt?: Timestamp | string | null
   updatedAt?: Timestamp | string | null
   lastAutosaveAt?: Timestamp | string | null
   clientId?: string | null
   clientName?: string | null
+  gammaDeck?: unknown
 }
 
 const normalizeFormData = (input: unknown): ProposalFormData => {
@@ -80,11 +82,13 @@ export async function GET(request: NextRequest) {
         formData: data.formData ?? {},
         aiInsights: data.aiInsights ?? null,
         pdfUrl: data.pdfUrl ?? null,
+        pptUrl: data.pptUrl ?? null,
         createdAt: serializeTimestamp(data.createdAt),
         updatedAt: serializeTimestamp(data.updatedAt),
         lastAutosaveAt: serializeTimestamp(data.lastAutosaveAt),
         clientId: typeof data.clientId === 'string' ? data.clientId : null,
         clientName: typeof data.clientName === 'string' ? data.clientName : null,
+        gammaDeck: serializeGammaDeck(data.gammaDeck),
       }
     })
 
@@ -134,6 +138,7 @@ export async function POST(request: NextRequest) {
         clientName: clientName && clientName.length > 0 ? clientName : null,
         aiInsights: null,
         pdfUrl: null,
+        pptUrl: null,
         createdAt: timestamp,
         updatedAt: timestamp,
         lastAutosaveAt: timestamp,
@@ -243,6 +248,38 @@ function serializeTimestamp(value: TimestampLike): string | null {
   }
 
   return null
+}
+
+function serializeGammaDeck(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const generatedFiles = Array.isArray(record.generatedFiles)
+    ? (record.generatedFiles as Array<Record<string, unknown>>)
+        .map((item) => {
+          const fileType = typeof item.fileType === 'string' ? item.fileType : typeof item.type === 'string' ? item.type : null
+          const fileUrl = typeof item.fileUrl === 'string' ? item.fileUrl : typeof item.url === 'string' ? item.url : null
+          if (!fileType || !fileUrl) {
+            return null
+          }
+          return { fileType, fileUrl }
+        })
+        .filter((entry): entry is { fileType: string; fileUrl: string } => Boolean(entry))
+    : []
+
+  return {
+    generationId: typeof record.generationId === 'string' ? record.generationId : null,
+    status: typeof record.status === 'string' ? record.status : 'unknown',
+    instructions: typeof record.instructions === 'string' ? record.instructions : null,
+    webUrl: typeof record.webUrl === 'string' ? record.webUrl : null,
+    shareUrl: typeof record.shareUrl === 'string' ? record.shareUrl : null,
+    pptxUrl: typeof record.pptxUrl === 'string' ? record.pptxUrl : null,
+    pdfUrl: typeof record.pdfUrl === 'string' ? record.pdfUrl : null,
+    storageUrl: typeof record.storageUrl === 'string' ? record.storageUrl : null,
+    generatedFiles,
+  }
 }
 
 function extractProposalId(payload: unknown): string | null {

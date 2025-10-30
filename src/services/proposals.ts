@@ -3,18 +3,32 @@ import { authService } from '@/services/auth'
 
 export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'sent'
 
+export interface ProposalGammaDeck {
+  generationId: string | null
+  status: string
+  instructions: string | null
+  webUrl: string | null
+  shareUrl: string | null
+  pptxUrl: string | null
+  pdfUrl: string | null
+  generatedFiles: Array<{ fileType: string; fileUrl: string }>
+  storageUrl: string | null
+}
+
 export interface ProposalDraft {
   id: string
   status: ProposalStatus
   stepProgress: number
   formData: ProposalFormData
   aiInsights: unknown
-  pdfUrl: string | null
+  pdfUrl?: string | null
+  pptUrl?: string | null
   createdAt: string | null
   updatedAt: string | null
   lastAutosaveAt: string | null
   clientId: string | null
   clientName: string | null
+  gammaDeck?: ProposalGammaDeck | null
 }
 
 async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
@@ -96,7 +110,9 @@ export async function submitProposalDraft(id: string, delivery: 'summary' | 'sum
     ok: boolean
     status: ProposalStatus
     aiInsights: string | null
-    pdfUrl: string | null
+    pdfUrl?: string | null
+    pptUrl?: string | null
+    gammaDeck?: ProposalGammaDeck | null
   }>
 }
 

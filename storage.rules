@@ -17,6 +17,20 @@ service firebase.storage {
         && resource.metadata.firebaseStorageDownloadTokens == request.query.token;
     }
 
+    function isDeleteOperation() {
+      return request.resource == null;
+    }
+
+    function isAllowedProposalUpload(userId) {
+      return request.resource != null
+        && request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType in [
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'application/pdf'
+        ]
+        && request.resource.name.matches('^proposals/' + userId + '/[^/]+\\.(pptx|pdf)$');
+    }
+
     match /public/{allPaths=**} {
       allow read;
       allow write: if false;
@@ -28,7 +42,7 @@ service firebase.storage {
 
     match /proposals/{userId}/{allPaths=**} {
       allow read: if isOwner(userId) || hasValidDownloadToken();
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId) && (isDeleteOperation() || isAllowedProposalUpload(userId));
     }
 
     match /{allPaths=**} {

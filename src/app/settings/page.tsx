@@ -1,13 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Check, CreditCard } from 'lucide-react'
 
-import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/auth-context'
 
 interface PlanSummary {
   id: string
@@ -81,7 +84,8 @@ const subscriptionStatusStyles: Record<string, string> = {
 }
 
 export default function SettingsPage() {
-  const { user, getIdToken } = useAuth()
+  const { user, getIdToken, updateProfile } = useAuth()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [plans, setPlans] = useState<PlanSummary[]>([])
@@ -89,6 +93,10 @@ export default function SettingsPage() {
   const [invoices, setInvoices] = useState<InvoiceSummary[]>([])
   const [upcomingInvoice, setUpcomingInvoice] = useState<UpcomingInvoiceSummary | null>(null)
   const [actionState, setActionState] = useState<string | null>(null)
+  const [profileName, setProfileName] = useState(user?.name ?? '')
+  const [profilePhone, setProfilePhone] = useState(user?.phoneNumber ?? '')
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [savingProfile, setSavingProfile] = useState(false)
   const isMountedRef = useRef(true)
 
   useEffect(() => {
@@ -97,6 +105,59 @@ export default function SettingsPage() {
       isMountedRef.current = false
     }
   }, [])
+
+  useEffect(() => {
+    setProfileName(user?.name ?? '')
+    setProfilePhone(user?.phoneNumber ?? '')
+    setProfileError(null)
+  }, [user?.name, user?.phoneNumber])
+
+  const hasProfileChanges = useMemo(() => {
+    const originalName = user?.name ?? ''
+    const originalPhone = user?.phoneNumber ?? ''
+    return profileName.trim() !== originalName || profilePhone.trim() !== originalPhone
+  }, [profileName, profilePhone, user?.name, user?.phoneNumber])
+
+  const isProfileNameValid = profileName.trim().length >= 2
+  const canSaveProfile = Boolean(user) && hasProfileChanges && isProfileNameValid && !savingProfile
+
+  const handleProfileSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (!user) {
+        setProfileError('You must be signed in to update your profile.')
+        return
+      }
+
+      const nextName = profileName.trim()
+      const nextPhone = profilePhone.trim()
+
+      if (nextName.length < 2) {
+        setProfileError('Enter a name with at least two characters.')
+        return
+      }
+
+      setSavingProfile(true)
+      setProfileError(null)
+
+      try {
+        await updateProfile({
+          name: nextName,
+          phoneNumber: nextPhone.length ? nextPhone : null,
+        })
+        setProfileName(nextName)
+        setProfilePhone(nextPhone)
+        toast({ title: 'Profile updated', description: 'Your changes were saved.' })
+      } catch (submitError) {
+        const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
+        setProfileError(message)
+        toast({ title: 'Profile update failed', description: message, variant: 'destructive' })
+      } finally {
+        setSavingProfile(false)
+      }
+    },
+    [profileName, profilePhone, toast, updateProfile, user],
+  )
 
   const currentPlanId = subscription?.plan?.id ?? null
   const statusBadgeClass = subscription ? subscriptionStatusStyles[subscription.status] ?? 'bg-muted text-muted-foreground' : ''
@@ -311,11 +372,60 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">Billing &amp; Payments</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Account Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Manage your Cohorts subscription, invoices, and payment methods from one place.
+          Keep your profile details up to date and manage billing for your Cohorts workspace.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>Update the contact details that appear in proposals and client-facing emails.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleProfileSubmit} className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="profile-name">Display name</Label>
+                <Input
+                  id="profile-name"
+                  value={profileName}
+                  onChange={(event) => {
+                    setProfileName(event.target.value)
+                    setProfileError(null)
+                  }}
+                  placeholder="e.g. Jordan Michaels"
+                  autoComplete="name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-phone">Phone number</Label>
+                <Input
+                  id="profile-phone"
+                  value={profilePhone}
+                  onChange={(event) => {
+                    setProfilePhone(event.target.value)
+                    setProfileError(null)
+                  }}
+                  placeholder="Add a contact number"
+                  autoComplete="tel"
+                />
+              </div>
+            </div>
+            {profileError ? <p className="text-sm text-destructive">{profileError}</p> : null}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                We use this information across proposals, invoices, and automated notifications.
+              </p>
+              <Button type="submit" disabled={!canSaveProfile}>
+                {savingProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save changes
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

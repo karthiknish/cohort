@@ -157,6 +157,8 @@ export function buildProposalDocument(input: ProposalDraftInput, userId: string,
     clientName: baseData.clientName ?? null,
     aiInsights: null,
     pdfUrl: null,
+    pptUrl: null,
+    gammaDeck: null,
     createdAt: timestampValue,
     updatedAt: timestampValue,
     lastAutosaveAt: timestampValue,
@@ -228,9 +230,11 @@ interface FirestoreProposalDoc {
   formData?: Partial<ProposalFormData> | null
   aiInsights?: unknown
   pdfUrl?: string | null
+  pptUrl?: string | null
   createdAt?: TimestampLike
   updatedAt?: TimestampLike
   lastAutosaveAt?: TimestampLike
+  gammaDeck?: unknown
 }
 
 export function serializeProposalDoc(doc: FirestoreProposalDoc | null | undefined) {
@@ -243,9 +247,11 @@ export function serializeProposalDoc(doc: FirestoreProposalDoc | null | undefine
     formData,
     aiInsights: doc.aiInsights ?? null,
     pdfUrl: doc.pdfUrl ?? null,
+    pptUrl: doc.pptUrl ?? null,
     createdAt: serializeTimestamp(doc.createdAt),
     updatedAt: serializeTimestamp(doc.updatedAt),
     lastAutosaveAt: serializeTimestamp(doc.lastAutosaveAt),
+    gammaDeck: doc.gammaDeck ?? null,
   }
 }
 

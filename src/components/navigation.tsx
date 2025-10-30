@@ -19,6 +19,8 @@ import {
   Bell,
   Menu,
   Megaphone,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -53,7 +55,7 @@ const navigation: NavItem[] = [
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase },
 ]
 
-function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
+function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()
 
   return (
@@ -68,7 +70,8 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
                 asChild
                 variant={isActive ? 'default' : 'ghost'}
                 className={cn(
-                  'w-full justify-start gap-2 text-sm font-medium',
+                  'w-full gap-2 text-sm font-medium',
+                  collapsed ? 'justify-center px-0' : 'justify-start',
                   isActive
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'text-muted-foreground hover:text-foreground'
@@ -76,7 +79,7 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
               >
                 <Link href={item.href} onClick={onNavigate} className="flex w-full items-center gap-2">
                   <item.icon className="h-4 w-4" />
-                  <span>{item.name}</span>
+                  <span className={cn(collapsed && 'hidden')}>{item.name}</span>
                 </Link>
               </Button>
             )
@@ -85,10 +88,14 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
       </ScrollArea>
 
       <div className="space-y-2 border-t pt-4">
-        <Button asChild variant="ghost" className="justify-start gap-2 text-sm font-medium">
+        <Button
+          asChild
+          variant="ghost"
+          className={cn('gap-2 text-sm font-medium', collapsed ? 'justify-center px-0' : 'justify-start')}
+        >
           <Link href="/settings" onClick={onNavigate}>
             <Settings className="mr-2 h-4 w-4" />
-            Settings
+            <span className={cn(collapsed && 'hidden')}>Settings</span>
           </Link>
         </Button>
       </div>
@@ -97,10 +104,33 @@ function NavigationList({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false)
+
   return (
-    <aside className="hidden h-full w-64 flex-col border-r bg-background/60 p-4 lg:flex">
-      <div className="mb-6" />
-      <NavigationList />
+    <aside
+      className={cn(
+        'hidden h-full border-r bg-background/60 transition-all duration-200 lg:flex',
+        collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
+      )}
+    >
+      <button
+        type="button"
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={cn(
+          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition hover:border-primary/40 hover:text-primary',
+          collapsed && 'mt-2'
+        )}
+        onClick={() => setCollapsed((prev) => !prev)}
+      >
+        {collapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
+      </button>
+      <div className={cn('flex-1', collapsed ? 'w-full' : '')}>
+        <NavigationList collapsed={collapsed} />
+      </div>
     </aside>
   )
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 import './globals.css'
 
@@ -9,6 +10,7 @@ import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { Toaster } from '@/components/ui/toaster'
 import { MotionProvider } from '@/components/providers/motion-provider'
+import { AnalyticsProvider } from '@/components/providers/analytics-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -49,13 +51,17 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            <MotionProvider>
-              <div className="flex min-h-screen flex-col">
-                <SiteHeader />
-                <main className="flex-1">{children}</main>
-                <SiteFooter />
-              </div>
-            </MotionProvider>
+            <Suspense fallback={null}>
+              <AnalyticsProvider>
+                <MotionProvider>
+                  <div className="flex min-h-screen flex-col">
+                    <SiteHeader />
+                    <main className="flex-1">{children}</main>
+                    <SiteFooter />
+                  </div>
+                </MotionProvider>
+              </AnalyticsProvider>
+            </Suspense>
           </AuthProvider>
           <Toaster />
         </ThemeProvider>

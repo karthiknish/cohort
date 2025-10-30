@@ -1,5 +1,8 @@
 import { auth } from '@/lib/firebase'
-import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore-integrations'
+import {
+  enqueueSyncJob,
+  persistIntegrationTokens,
+} from '@/lib/firestore-integrations'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -9,6 +12,7 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   OAuthProvider,
+  OAuthCredential,
   updateProfile,
   linkWithPopup,
   User as FirebaseUser,
@@ -17,14 +21,26 @@ import {
   confirmPasswordReset,
 } from 'firebase/auth'
 
-import type { AuthRole, AuthStatus, AuthUser, SignUpData } from './types'
-import {
-  extractRefreshToken,
-  getBrowserCookie,
-  isFirebaseError,
-  normalizeRole,
-  normalizeStatus,
-} from './utils'
+export type AuthRole = 'admin' | 'team' | 'client'
+export type AuthStatus = 'active' | 'pending' | 'invited' | 'disabled' | 'suspended'
+
+export interface AuthUser {
+  id: string
+  email: string
+  name: string
+  phoneNumber: string | null
+  role: AuthRole
+  status: AuthStatus
+  agencyId: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SignUpData {
+  email: string
+  password: string
+  displayName?: string
+}
 
 export class AuthService {
   private static instance: AuthService
@@ -33,6 +49,7 @@ export class AuthService {
   private bootstrapPromises = new Map<string, Promise<void>>()
 
   private constructor() {
+    // Initialize Firebase auth state listener
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
@@ -72,13 +89,13 @@ export class AuthService {
       phoneNumber: firebaseUser.phoneNumber ?? null,
       role,
       status,
-      agencyId: 'default-agency',
+      agencyId: 'default-agency', // Would be fetched from database
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date()
     }
   }
 
-  private async resolveUserRole(firebaseUser: FirebaseUser): Promise<AuthRole> {
+  private async resolveUserRole(firebaseUser: FirebaseUser): Promise<AuthUser['role']> {
     try {
       const tokenResult = await firebaseUser.getIdTokenResult()
       const claimRole = tokenResult?.claims?.role
@@ -108,7 +125,7 @@ export class AuthService {
     return 'client'
   }
 
-  private async resolveUserStatus(firebaseUser: FirebaseUser): Promise<AuthStatus> {
+  private async resolveUserStatus(firebaseUser: FirebaseUser): Promise<AuthUser['status']> {
     try {
       const tokenResult = await firebaseUser.getIdTokenResult()
       const claimStatus = tokenResult?.claims?.status
@@ -419,9 +436,14 @@ export class AuthService {
   async signInWithGoogle(): Promise<AuthUser> {
     try {
       const provider = new GoogleAuthProvider()
+      // Configure provider with additional scopes if needed
       provider.addScope('email')
       provider.addScope('profile')
-      provider.setCustomParameters({ prompt: 'select_account' })
+      
+      // Set custom parameters for better user experience
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      })
 
       const userCredential = await signInWithPopup(auth, provider)
       await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
@@ -435,11 +457,9 @@ export class AuthService {
       }
       if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
         throw new Error('Sign-in popup was closed before completion')
-      }
-      if (isFirebaseError(error) && error.code === 'auth/popup-blocked') {
+      } else if (isFirebaseError(error) && error.code === 'auth/popup-blocked') {
         throw new Error('Sign-in popup was blocked by the browser. Please allow popups for this site.')
-      }
-      if (isFirebaseError(error) && error.code === 'auth/unauthorized-domain') {
+      } else if (isFirebaseError(error) && error.code === 'auth/unauthorized-domain') {
         throw new Error('This domain is not authorized for Google sign-in. Please contact support.')
       }
       if (error instanceof Error && error.message) {
@@ -451,24 +471,33 @@ export class AuthService {
 
   async signUp(data: SignUpData): Promise<AuthUser> {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
+      // Create Firebase user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        data.email, 
+        data.password
+      )
 
-      if (data.displayName && userCredential.user) {
-        try {
-          await updateProfile(userCredential.user, { displayName: data.displayName })
-        } catch (error) {
-          console.warn('Failed to set display name during sign up:', error)
-        }
+        if (data.displayName && userCredential.user) {
+          try {
+            await updateProfile(userCredential.user, { displayName: data.displayName })
+          } catch (error) {
+            console.warn('Failed to set display name during sign up:', error)
+          }
       }
 
+      // In a real implementation, you would also:
+      // 1. Create user document in Firestore
+      // 2. Create agency document
+      // 3. Set up initial agency settings
+      
       await this.ensureUserBootstrap(userCredential.user, data.displayName ?? userCredential.user.displayName ?? data.email)
       const authUser = await this.mapFirebaseUser(userCredential.user)
       return authUser
     } catch (error: unknown) {
       if (isFirebaseError(error) && error.code === 'auth/email-already-in-use') {
         throw new Error('Email already in use')
-      }
-      if (isFirebaseError(error) && error.code === 'auth/weak-password') {
+      } else if (isFirebaseError(error) && error.code === 'auth/weak-password') {
         throw new Error('Password is too weak')
       }
       if (error instanceof Error && error.message) {
@@ -493,7 +522,11 @@ export class AuthService {
 
   onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
     this.authStateListeners.push(callback)
+    
+    // Call callback immediately with current user
     callback(this.currentUser)
+    
+    // Return unsubscribe function
     return () => {
       const index = this.authStateListeners.indexOf(callback)
       if (index > -1) {
@@ -503,7 +536,7 @@ export class AuthService {
   }
 
   private notifyListeners(user: AuthUser | null): void {
-    this.authStateListeners.forEach((listener) => listener(user))
+    this.authStateListeners.forEach(listener => listener(user))
   }
 
   async resetPassword(email: string): Promise<void> {
@@ -528,6 +561,7 @@ export class AuthService {
           throw new Error('Enter the email associated with your account')
         }
         if (error.code === 'auth/user-not-found') {
+          // Deliberately do not reveal whether the user exists.
           return
         }
       }
@@ -578,12 +612,15 @@ export class AuthService {
     }
 
     try {
+      // In a real implementation, you would update the user document in Firestore
+      // and potentially update the Firebase user profile
+      
       this.currentUser = {
         ...this.currentUser,
         ...data,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       }
-
+      
       this.notifyListeners(this.currentUser)
       return this.currentUser
     } catch (error: unknown) {
@@ -602,6 +639,8 @@ export class AuthService {
     }
 
     try {
+      // In a real implementation, you would use Firebase's updatePassword
+      // after re-authenticating the user
       console.log('Password changed successfully')
     } catch (error: unknown) {
       console.error('Password change error:', error)
@@ -615,6 +654,10 @@ export class AuthService {
     }
 
     try {
+      // In a real implementation, you would:
+      // 1. Delete user document from Firestore
+      // 2. Delete associated data (clients, campaigns, etc.)
+      // 3. Delete Firebase user
       console.log('Account deleted successfully')
     } catch (error: unknown) {
       console.error('Account deletion error:', error)
@@ -623,4 +666,96 @@ export class AuthService {
   }
 }
 
+function isFirebaseError(error: unknown): error is { code: string } {
+  return typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+}
+
 export const authService = AuthService.getInstance()
+
+function normalizeRole(value: unknown): AuthRole {
+  switch (value) {
+    case 'admin':
+    case 'team':
+    case 'client':
+      return value
+    case 'manager':
+      return 'team'
+    case 'member':
+      return 'client'
+    default:
+      return 'client'
+  }
+}
+
+function normalizeStatus(value: unknown, fallback: AuthStatus = 'active'): AuthStatus {
+  switch (value) {
+    case 'active':
+    case 'pending':
+    case 'invited':
+    case 'disabled':
+    case 'suspended':
+      return value
+    case 'inactive':
+    case 'blocked':
+      return 'disabled'
+    default:
+      return fallback
+  }
+}
+
+function extractRefreshToken(
+  credential: OAuthCredential | null,
+  tokenResponse?: {
+    oauthRefreshToken?: string
+    refreshToken?: string
+  }
+): string | null {
+  if (credential && typeof credential === 'object' && 'refreshToken' in credential) {
+    const candidate = (credential as { refreshToken?: unknown }).refreshToken
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate
+    }
+  }
+
+  const oauthRefreshToken = tokenResponse?.oauthRefreshToken
+  if (typeof oauthRefreshToken === 'string' && oauthRefreshToken.length > 0) {
+    return oauthRefreshToken
+  }
+
+  const refreshToken = tokenResponse?.refreshToken
+  if (typeof refreshToken === 'string' && refreshToken.length > 0) {
+    return refreshToken
+  }
+
+  return null
+}
+
+function isRole(value: unknown): value is AuthUser['role'] {
+  return value === 'admin' || value === 'team' || value === 'client'
+}
+
+function isStatus(value: unknown): value is AuthUser['status'] {
+  return value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended'
+}
+
+function getBrowserCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') {
+    return undefined
+  }
+
+  const match = document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+
+  if (!match) {
+    return undefined
+  }
+
+  try {
+    return decodeURIComponent(match.split('=')[1] ?? '') || undefined
+  } catch (error) {
+    console.warn('Failed to decode cookie value', error)
+    return undefined
+  }
+}
