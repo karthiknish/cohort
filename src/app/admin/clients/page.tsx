@@ -17,6 +17,14 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
 interface TeamMemberField extends ClientTeamMember {
@@ -38,6 +46,9 @@ export default function AdminClientsPage() {
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [clientsLoading, setClientsLoading] = useState(false)
   const [clientsError, setClientsError] = useState<string | null>(null)
+  const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null)
 
   const [clientSaving, setClientSaving] = useState(false)
   const [clientName, setClientName] = useState('')
@@ -92,6 +103,53 @@ export default function AdminClientsPage() {
   }, [loadClients, user?.id])
 
   const existingTeamMembers = useMemo(() => clients.reduce((total, client) => total + client.teamMembers.length, 0), [clients])
+
+  const handleDeleteDialogChange = useCallback((open: boolean) => {
+    setIsDeleteDialogOpen(open)
+    if (!open) {
+      setClientPendingDelete(null)
+    }
+  }, [])
+
+  const requestDeleteClient = useCallback((client: ClientRecord) => {
+    setClientPendingDelete(client)
+    setIsDeleteDialogOpen(true)
+  }, [])
+
+  const handleDeleteClient = useCallback(async () => {
+    if (!clientPendingDelete) {
+      return
+    }
+
+    try {
+      setDeletingClientId(clientPendingDelete.id)
+      const token = await getIdToken()
+      const response = await fetch('/api/clients', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: clientPendingDelete.id }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to delete client'
+        throw new Error(message)
+      }
+
+      setClients((prev) => prev.filter((client) => client.id !== clientPendingDelete.id))
+      toast({ title: 'Client deleted', description: `${clientPendingDelete.name} has been removed.` })
+      setClientPendingDelete(null)
+      setIsDeleteDialogOpen(false)
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, 'Unable to delete client')
+      toast({ title: 'Client delete failed', description: message, variant: 'destructive' })
+    } finally {
+      setDeletingClientId(null)
+    }
+  }, [clientPendingDelete, getIdToken, toast])
 
   const resetClientForm = () => {
     setClientName('')
@@ -360,7 +418,25 @@ export default function AdminClientsPage() {
                           <p className="text-sm font-semibold text-foreground">{client.name}</p>
                           <p className="text-xs text-muted-foreground">Managed by {client.accountManager}</p>
                         </div>
-                        <Badge variant="outline">Team {client.teamMembers.length}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Team {client.teamMembers.length}</Badge>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => requestDeleteClient(client)}
+                            disabled={Boolean(deletingClientId) && deletingClientId !== client.id}
+                          >
+                            {deletingClientId === client.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       {client.teamMembers.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
@@ -383,6 +459,35 @@ export default function AdminClientsPage() {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete client workspace</DialogTitle>
+            <DialogDescription>
+              This action permanently removes {clientPendingDelete?.name ?? 'this client'} and its workspace configuration. You can recreate it later, but the team list will need to be re-entered.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleDeleteDialogChange(false)}
+              disabled={Boolean(deletingClientId)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleDeleteClient()}
+              disabled={Boolean(deletingClientId)}
+            >
+              {deletingClientId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {deletingClientId ? 'Deleting…' : 'Delete client'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

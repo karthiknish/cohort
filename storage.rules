@@ -5,17 +5,30 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasValidDownloadToken() {
+      return request.query.token != null
+        && resource != null
+        && resource.metadata != null
+        && resource.metadata.firebaseStorageDownloadTokens != null
+        && resource.metadata.firebaseStorageDownloadTokens == request.query.token;
+    }
+
     match /public/{allPaths=**} {
       allow read;
       allow write: if false;
     }
 
     match /users/{userId}/{allPaths=**} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
     match /proposals/{userId}/{allPaths=**} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isOwner(userId) || hasValidDownloadToken();
+      allow write: if isOwner(userId);
     }
 
     match /{allPaths=**} {

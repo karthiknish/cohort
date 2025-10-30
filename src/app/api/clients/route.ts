@@ -17,6 +17,10 @@ const createClientSchema = z.object({
   teamMembers: z.array(teamMemberSchema).optional().default([]),
 })
 
+const deleteClientSchema = z.object({
+  id: z.string().trim().min(1, 'Client id is required'),
+})
+
 type StoredClient = {
   name?: unknown
   accountManager?: unknown
@@ -210,5 +214,41 @@ export async function POST(request: NextRequest) {
 
     console.error('[clients] POST failed', error)
     return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request)
+    if (!auth.uid) {
+      throw new AuthenticationError('Authentication required', 401)
+    }
+
+    assertAdmin(auth)
+
+    const json = (await request.json().catch(() => null)) ?? {}
+    const payload = deleteClientSchema.parse(json)
+
+    const docRef = adminDb.collection('users').doc(auth.uid).collection('clients').doc(payload.id)
+    const snapshot = await docRef.get()
+
+    if (!snapshot.exists) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    }
+
+    await docRef.delete()
+
+    return NextResponse.json({ ok: true })
+  } catch (error: unknown) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid client delete payload', details: error.flatten() }, { status: 400 })
+    }
+
+    console.error('[clients] DELETE failed', error)
+    return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 })
   }
 }
