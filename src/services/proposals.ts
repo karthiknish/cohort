@@ -129,3 +129,20 @@ export async function deleteProposalDraft(id: string) {
 
   return true
 }
+
+export async function prepareProposalDeck(id: string) {
+  const response = await authorizedFetch(`/api/proposals/${id}/deck`, {
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.error || 'Failed to prepare proposal deck')
+  }
+
+  return response.json() as Promise<{
+    ok: boolean
+    storageUrl: string | null
+    gammaDeck?: ProposalGammaDeck | null
+  }>
+}

@@ -9,15 +9,57 @@ import { cn } from '@/lib/utils'
 
 import type { ProposalDraft } from '@/services/proposals'
 
+function extractAiSummary(insights: unknown, depth = 0): string | null {
+  if (!insights || depth > 4) {
+    return null
+  }
+  if (typeof insights === 'string') {
+    const trimmed = insights.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+  if (typeof insights !== 'object') {
+    return null
+  }
+  if (Array.isArray(insights)) {
+    for (const entry of insights) {
+      const match = extractAiSummary(entry, depth + 1)
+      if (match) {
+        return match
+      }
+    }
+    return null
+  }
+  const record = insights as Record<string, unknown>
+  const preferredKeys = ['summary', 'proposalSummary', 'executiveSummary', 'overview']
+  for (const key of preferredKeys) {
+    const value = record[key]
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed.length > 0) {
+        return trimmed
+      }
+    }
+  }
+  for (const value of Object.values(record)) {
+    const match = extractAiSummary(value, depth + 1)
+    if (match) {
+      return match
+    }
+  }
+  return null
+}
+
 interface ProposalHistoryProps {
   proposals: ProposalDraft[]
   draftId: string | null
   isLoading: boolean
   deletingProposalId: string | null
-  mapAiSummary: (proposal: ProposalDraft | null | undefined) => string | null
   onRefresh: () => void
   onResume: (proposal: ProposalDraft) => void
   onRequestDelete: (proposal: ProposalDraft) => void
+  isGenerating: boolean
+  downloadingDeckId: string | null
+  onDownloadDeck: (proposal: ProposalDraft) => void
 }
 
 function ProposalHistoryComponent({
@@ -25,10 +67,12 @@ function ProposalHistoryComponent({
   draftId,
   isLoading,
   deletingProposalId,
-  mapAiSummary,
   onRefresh,
   onResume,
   onRequestDelete,
+  isGenerating,
+  downloadingDeckId,
+  onDownloadDeck,
 }: ProposalHistoryProps) {
   return (
     <Card className="border-muted/60 bg-background">
@@ -51,9 +95,20 @@ function ProposalHistoryComponent({
           ) : (
             proposals.map((proposal) => {
               const isActiveDraft = proposal.id === draftId
-              const summary = mapAiSummary(proposal)
               const presentationUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
+              const summaryText = extractAiSummary(proposal.aiInsights)
               const displayName = proposal.clientName?.trim().length ? proposal.clientName : 'Unnamed company'
+              const isGenerationInFlight = (isGenerating && isActiveDraft) || proposal.status === 'in_progress'
+              const resumeLabel = proposal.status === 'ready'
+                ? 'View proposal'
+                : isGenerationInFlight
+                  ? 'Generating…'
+                  : isActiveDraft
+                    ? 'Continue editing'
+                    : 'Resume editing'
+              const resumeDisabled = proposal.status !== 'ready' && isGenerationInFlight
+              const deckRequestable = !presentationUrl && Boolean(summaryText)
+              const isDeckPreparing = downloadingDeckId === proposal.id
 
               return (
                 <div
@@ -80,12 +135,9 @@ function ProposalHistoryComponent({
                         size="sm"
                         variant="outline"
                         onClick={() => onResume(proposal)}
+                        disabled={resumeDisabled}
                       >
-                        {proposal.status === 'ready'
-                          ? 'View summary'
-                          : isActiveDraft
-                            ? 'Continue editing'
-                            : 'Resume editing'}
+                        {resumeLabel}
                       </Button>
                       {presentationUrl ? (
                         <Button asChild size="sm" variant="ghost">
@@ -93,9 +145,18 @@ function ProposalHistoryComponent({
                             Download deck
                           </a>
                         </Button>
+                      ) : deckRequestable ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onDownloadDeck(proposal)}
+                          disabled={isDeckPreparing}
+                        >
+                          {isDeckPreparing ? 'Preparing…' : 'Download deck'}
+                        </Button>
                       ) : (
                         <Button size="sm" variant="ghost" disabled>
-                          Download deck
+                          Deck unavailable
                         </Button>
                       )}
                       <Button
@@ -108,12 +169,6 @@ function ProposalHistoryComponent({
                       </Button>
                     </div>
                   </div>
-                  {summary && (
-                    <div className="mt-3 rounded-md bg-muted/70 p-3 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">AI summary preview</p>
-                      <p className="mt-1 line-clamp-2">{summary}</p>
-                    </div>
-                  )}
                 </div>
               )
             })

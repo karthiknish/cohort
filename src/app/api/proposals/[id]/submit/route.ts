@@ -1,70 +1,23 @@
-import { Buffer } from 'node:buffer'
-import { randomUUID } from 'node:crypto'
-
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 
-import { adminDb, adminStorage } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { geminiAI } from '@/services/gemini'
 import { gammaService } from '@/services/gamma'
 import type { GammaGenerationStatus } from '@/services/gamma'
-
-type GammaDeckPayload = {
-  generationId: string
-  status: string
-  instructions: string
-  webUrl: string | null
-  shareUrl: string | null
-  pptxUrl: string | null
-  pdfUrl: string | null
-  generatedFiles: Array<{ fileType: string; fileUrl: string }>
-  storageUrl: string | null
-}
-
-async function downloadGammaPresentation(url: string): Promise<Buffer> {
-  const apiKey = process.env.GAMMA_API_KEY
-  if (!apiKey) {
-    throw new Error('GAMMA_API_KEY is not configured')
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      'X-API-KEY': apiKey,
-      accept: 'application/octet-stream',
-    },
-  })
-
-  if (!response.ok) {
-    const details = await response.text().catch(() => '')
-    throw new Error(`Gamma file download failed (${response.status}): ${details || 'Unknown error'}`)
-  }
-
-  const arrayBuffer = await response.arrayBuffer()
-  return Buffer.from(arrayBuffer)
-}
-
-async function storeProposalPresentation(userId: string, proposalId: string, pptBuffer: Buffer) {
-  const bucket = adminStorage.bucket()
-  const filePath = `proposals/${userId}/${proposalId}.pptx`
-  const file = bucket.file(filePath)
-  const downloadToken = randomUUID()
-
-  await file.save(pptBuffer, {
-    resumable: false,
-    contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    metadata: {
-      metadata: {
-        firebaseStorageDownloadTokens: downloadToken,
-      },
-    },
-  })
-
-  const encodedPath = encodeURIComponent(filePath)
-  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`
-}
+import {
+  buildGammaInputText,
+  buildGammaInstructionPrompt,
+  downloadGammaPresentation,
+  estimateGammaSlideCount,
+  GammaDeckPayload,
+  mapGammaDeckPayload,
+  storeGammaPresentation,
+  truncateGammaInstructions,
+} from '@/app/api/proposals/utils/gamma'
 
 export async function POST(
   request: NextRequest,
@@ -156,10 +109,11 @@ export async function POST(
     if (gammaDeck?.pptxUrl) {
       try {
         const pptBuffer = await downloadGammaPresentation(gammaDeck.pptxUrl)
-        storedPptUrl = await storeProposalPresentation(auth.uid, proposalId, pptBuffer)
+        storedPptUrl = await storeGammaPresentation(auth.uid, proposalId, pptBuffer)
         gammaDeck = { ...gammaDeck, storageUrl: storedPptUrl }
       } catch (pptError) {
         console.error('[ProposalSubmit] PPT storage failed', pptError)
+        return NextResponse.json({ error: 'Failed to save Gamma deck to storage' }, { status: 502 })
       }
     }
 
@@ -275,101 +229,3 @@ Mandatory Content Coverage:
 If numerical inputs are unclear, make reasonable assumptions and note them explicitly.`
 }
 
-function buildGammaInstructionPrompt(formData: ReturnType<typeof mergeProposalForm>) {
-  const { company, goals, scope, timelines, value } = formData
-  const services = scope.services.length ? scope.services.join(', ') : 'general marketing support'
-  const objectives = goals.objectives.length ? goals.objectives.join(', ') : 'brand growth and lead generation'
-
-  return `You are a senior presentation designer preparing instructions for Gamma, an AI slide generator.
-
-Client: ${company.name || 'Unnamed company'} (${company.industry || 'industry not specified'})
-Primary services: ${services}
-Primary objectives: ${objectives}
-Timeline note: ${timelines.startTime || 'flexible start'}
-Engagement type: ${value.engagementType || 'not specified'}
-
-Write concise slide-by-slide guidance (Slide 1, Slide 2, etc.) capped at 8 slides. Ensure coverage of industry benchmark comparisons, budget allocation with a 10-20% testing buffer, goal feasibility with suggested targets, agency service recommendations, and a closing CTA. Highlight where assumptions are made because data is missing.
-
-Output plain text only. Avoid markdown, numbering beyond "Slide X", and keep total length under 450 characters. End with a call-to-action slide.`
-}
-
-function buildGammaInputText(formData: ReturnType<typeof mergeProposalForm>, summary?: string) {
-  const { company, marketing, goals, scope, timelines, value } = formData
-  const sections: string[] = []
-
-  sections.push(`Company Overview:\n- Name: ${company.name || 'N/A'}\n- Industry: ${company.industry || 'N/A'}\n- Size: ${company.size || 'N/A'}\n- Locations: ${company.locations || 'N/A'}\n- Website: ${company.website || 'N/A'}`)
-
-  sections.push(`Marketing Snapshot:\n- Monthly Budget: ${marketing.budget || 'N/A'}\n- Platforms: ${marketing.platforms.length ? marketing.platforms.join(', ') : 'Not specified'}\n- Ad Accounts: ${marketing.adAccounts}\n- Social Handles: ${formatSocialHandles(marketing.socialHandles)}`)
-
-  sections.push(`Goals & Challenges:\n- Objectives: ${goals.objectives.length ? goals.objectives.join(', ') : 'Not specified'}\n- Target Audience: ${goals.audience || 'Not specified'}\n- Challenges: ${goals.challenges.length ? goals.challenges.join(', ') : 'Not specified'}\n- Additional Notes: ${goals.customChallenge || 'None'}`)
-
-  sections.push(`Scope & Value:\n- Requested Services: ${scope.services.length ? scope.services.join(', ') : 'Not specified'}\n- Extra Services: ${scope.otherService || 'None'}\n- Proposal Value: ${value.proposalSize || 'Not specified'}\n- Engagement Type: ${value.engagementType || 'Not specified'}\n- Additional Notes: ${value.additionalNotes || 'None'}`)
-
-  sections.push(`Timelines:\n- Desired Start: ${timelines.startTime || 'Flexible'}\n- Upcoming Events: ${timelines.upcomingEvents || 'None'}`)
-
-  sections.push(`Strategic Requirements:\n- Benchmark the client's budget and marketing performance against industry standards for ${company.industry || 'their sector'}.\n- Recommend an efficient budget split with 10-20% reserved for experimentation and A/B testing.\n- Validate whether stated goals and revenue expectations are achievable; suggest an ideal budget or revenue range when misaligned.\n- Highlight agency-deliverable services (requested and additional recommendations) mapped to the client's objectives.\n- Present insights so they translate cleanly into Gamma slide content.`)
-
-  if (summary && summary.trim().length > 0) {
-    sections.push(`Executive Summary:\n${summary.trim()}`)
-  }
-
-  return sections.join('\n\n')
-}
-
-function formatSocialHandles(handles: Record<string, string> | undefined): string {
-  if (!handles || typeof handles !== 'object') {
-    return 'Not provided'
-  }
-
-  const entries = Object.entries(handles).filter(([network, value]) => network && value)
-  if (!entries.length) {
-    return 'Not provided'
-  }
-
-  return entries.map(([network, value]) => `${network}: ${value}`).join(', ')
-}
-
-function truncateGammaInstructions(value: string, limit = 440): string {
-  if (!value) {
-    return ''
-  }
-
-  const sanitized = value.replace(/\r/g, '').trim()
-  if (sanitized.length <= limit) {
-    return sanitized
-  }
-
-  const truncated = sanitized.slice(0, limit)
-  return truncated.replace(/\s+\S*$/, '').trimEnd()
-}
-
-function estimateGammaSlideCount(formData: ReturnType<typeof mergeProposalForm>): number {
-  const base = 8
-  const serviceWeight = Math.min(formData.scope.services.length * 2, 8)
-  const challengeWeight = Math.min(formData.goals.challenges.length, 4)
-  const objectiveWeight = Math.min(formData.goals.objectives.length, 4)
-  const total = base + serviceWeight + Math.floor((challengeWeight + objectiveWeight) / 2)
-  return Math.max(6, Math.min(total, 20))
-}
-
-function mapGammaDeckPayload(result: GammaGenerationStatus, instructions: string): GammaDeckPayload {
-  const pptx = findGammaFile(result.generatedFiles, 'pptx')
-  const pdf = findGammaFile(result.generatedFiles, 'pdf')
-
-  return {
-    generationId: result.generationId,
-    status: result.status,
-    instructions,
-    webUrl: result.webAppUrl,
-    shareUrl: result.shareUrl,
-    pptxUrl: pptx ?? null,
-    pdfUrl: pdf ?? null,
-    generatedFiles: result.generatedFiles,
-    storageUrl: null,
-  }
-}
-
-function findGammaFile(files: Array<{ fileType: string; fileUrl: string }>, desiredType: string): string | undefined {
-  const match = files.find((file) => file.fileType.toLowerCase() === desiredType.toLowerCase())
-  return match?.fileUrl
-}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, ClipboardList, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList, Loader2, Sparkles } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -11,82 +11,30 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { createProposalDraft, deleteProposalDraft, listProposals, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalGammaDeck } from '@/services/proposals'
+import { createProposalDraft, deleteProposalDraft, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalGammaDeck } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { ProposalStepContent, type ProposalStepId } from './components/proposal-step-content'
-import { ProposalStepIndicator, type ProposalStep } from './components/proposal-step-indicator'
+import { ProposalStepIndicator } from './components/proposal-step-indicator'
 import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
 import { ProposalHistory } from './components/proposal-history'
 import { ProposalDeleteDialog } from './components/proposal-delete-dialog'
+import {
+  proposalSteps,
+  createInitialProposalFormState,
+  stepErrorPaths,
+  validateProposalStep,
+  collectStepValidationErrors,
+  hasCompletedAnyStepData,
+} from './utils/form-steps'
 
-const steps: ProposalStep[] = [
-  {
-    id: 'company',
-    title: 'Company Information',
-    description: 'Tell us who you are and where you operate.',
-  },
-  {
-    id: 'marketing',
-    title: 'Marketing & Advertising',
-    description: 'Share how you currently market and advertise.',
-  },
-  {
-    id: 'goals',
-    title: 'Business Goals',
-    description: 'Help us understand what success looks like.',
-  },
-  {
-    id: 'scope',
-    title: 'Scope of Work',
-    description: 'Choose the services you need support with.',
-  },
-  {
-    id: 'timelines',
-    title: 'Timelines & Priorities',
-    description: 'Let us know when you want to get started.',
-  },
-  {
-    id: 'value',
-    title: 'Proposal Value',
-    description: 'Set expectations around budget and engagement.',
-  },
-]
-
-const initialFormState: ProposalFormData = {
-  company: {
-    name: '',
-    website: '',
-    industry: '',
-    size: '',
-    locations: '',
-  },
-  marketing: {
-    budget: '',
-    platforms: [] as string[],
-    adAccounts: 'No',
-    socialHandles: {} as Record<string, string>,
-  },
-  goals: {
-    objectives: [] as string[],
-    audience: '',
-    challenges: [] as string[],
-    customChallenge: '',
-  },
-  scope: {
-    services: [] as string[],
-    otherService: '',
-  },
-  timelines: {
-    startTime: '',
-    upcomingEvents: '',
-  },
-  value: {
-    proposalSize: '',
-    engagementType: '',
-    additionalNotes: '',
-  },
+type SubmissionSnapshot = {
+  draftId: string
+  form: ProposalFormData
+  step: number
+  clientId: string | null
+  clientName: string | null
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -104,7 +52,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 export default function ProposalsPage() {
   const [currentStep, setCurrentStep] = useState(0)
-  const [formState, setFormState] = useState(initialFormState)
+  const [formState, setFormState] = useState<ProposalFormData>(() => createInitialProposalFormState())
   const [submitted, setSubmitted] = useState(false)
   const [draftId, setDraftId] = useState<string | null>(null)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
@@ -112,19 +60,21 @@ export default function ProposalsPage() {
   const [isCreatingDraft, setIsCreatingDraft] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [gammaDeck, setGammaDeck] = useState<ProposalGammaDeck | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
+  const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null)
   const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [lastSubmissionSnapshot, setLastSubmissionSnapshot] = useState<SubmissionSnapshot | null>(null)
   const hydrationRef = useRef(false)
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wizardRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
   const { selectedClient, selectedClientId } = useClientContext()
 
+  const steps = proposalSteps
   const step = steps[currentStep]
   const isFirstStep = currentStep === 0
   const isLastStep = currentStep === steps.length - 1
@@ -199,11 +149,11 @@ export default function ProposalsPage() {
 
       if (draftId === proposal.id) {
         setDraftId(null)
-        setFormState(initialFormState)
+        setFormState(createInitialProposalFormState())
         setCurrentStep(0)
         setSubmitted(false)
-        setAiSummary(null)
         setGammaDeck(null)
+        setLastSubmissionSnapshot(null)
       }
 
       toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
@@ -229,25 +179,6 @@ export default function ProposalsPage() {
     }
   }, [])
 
-  const validateStep = () => {
-    switch (step.id) {
-      case 'company':
-        return formState.company.name.trim().length > 0 && formState.company.industry.trim().length > 0
-      case 'marketing':
-        return formState.marketing.budget.trim().length > 0
-      case 'goals':
-        return formState.goals.objectives.length > 0
-      case 'scope':
-        return formState.scope.services.length > 0
-      case 'timelines':
-        return formState.timelines.startTime.trim().length > 0
-      case 'value':
-        return formState.value.proposalSize.trim().length > 0 && formState.value.engagementType.trim().length > 0
-      default:
-        return true
-    }
-  }
-
   const clearErrors = (paths: string | string[]) => {
     const keys = Array.isArray(paths) ? paths : [paths]
     setValidationErrors((prev) => {
@@ -259,65 +190,11 @@ export default function ProposalsPage() {
     })
   }
 
-  const collectStepErrors = (stepId: ProposalStep['id']) => {
-    const errors: Record<string, string> = {}
-    switch (stepId) {
-      case 'company':
-        if (!formState.company.name.trim()) {
-          errors['company.name'] = 'Company name is required.'
-        }
-        if (!formState.company.industry.trim()) {
-          errors['company.industry'] = 'Industry is required.'
-        }
-        break
-      case 'marketing':
-        if (!formState.marketing.budget.trim()) {
-          errors['marketing.budget'] = 'Please provide your monthly marketing budget.'
-        }
-        break
-      case 'goals':
-        if (formState.goals.objectives.length === 0) {
-          errors['goals.objectives'] = 'Select at least one primary goal.'
-        }
-        break
-      case 'scope':
-        if (formState.scope.services.length === 0) {
-          errors['scope.services'] = 'Select at least one service.'
-        }
-        break
-      case 'timelines':
-        if (!formState.timelines.startTime.trim()) {
-          errors['timelines.startTime'] = 'Choose a preferred start timeline.'
-        }
-        break
-      case 'value':
-        if (!formState.value.proposalSize.trim()) {
-          errors['value.proposalSize'] = 'Select an expected proposal value.'
-        }
-        if (!formState.value.engagementType.trim()) {
-          errors['value.engagementType'] = 'Select an engagement preference.'
-        }
-        break
-      default:
-        break
-    }
-    return errors
-  }
-
-  const stepErrorPaths: Record<ProposalStep['id'], string[]> = {
-    company: ['company.name', 'company.industry'],
-    marketing: ['marketing.budget'],
-    goals: ['goals.objectives'],
-    scope: ['scope.services'],
-    timelines: ['timelines.startTime'],
-    value: ['value.proposalSize', 'value.engagementType'],
-  }
-
   const handleNext = () => {
-    if (!validateStep()) {
+    if (!validateProposalStep(step.id, formState)) {
       const message = 'Please complete the required fields before continuing.'
       toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
-      const stepErrors = collectStepErrors(step.id)
+      const stepErrors = collectStepValidationErrors(step.id, formState)
       setValidationErrors((prev) => ({ ...prev, ...stepErrors }))
       return
     }
@@ -335,31 +212,38 @@ export default function ProposalsPage() {
     }
   }
 
-  const mapAiSummary = useCallback((proposal: ProposalDraft | null | undefined) => {
-    if (!proposal || !proposal.aiInsights) return null
-    if (typeof proposal.aiInsights === 'string') return proposal.aiInsights
-    if (typeof proposal.aiInsights === 'object' && 'content' in proposal.aiInsights) {
-      const maybeContent = (proposal.aiInsights as { content?: string }).content
-      return maybeContent ?? null
+  const handleResumeProposal = useCallback((proposal: ProposalDraft) => {
+    const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)
+    const targetStep = Math.min(proposal.stepProgress ?? 0, steps.length - 1)
+
+    setDraftId(proposal.id)
+    setFormState(mergedForm)
+    setCurrentStep(targetStep)
+    setSubmitted(proposal.status === 'ready')
+    setGammaDeck(proposal.gammaDeck ? { ...proposal.gammaDeck, storageUrl: proposal.gammaDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
+
+    if (proposal.status === 'ready') {
+      setLastSubmissionSnapshot({
+        draftId: proposal.id,
+        form: structuredClone(mergedForm) as ProposalFormData,
+        step: targetStep,
+        clientId: proposal.clientId ?? null,
+        clientName: proposal.clientName ?? null,
+      })
+    } else {
+      setLastSubmissionSnapshot(null)
     }
-    return null
+
+    wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
-  const handleResumeProposal = useCallback((proposal: ProposalDraft) => {
-    setDraftId(proposal.id)
-    setFormState(mergeProposalForm(proposal.formData as Partial<ProposalFormData>))
-    setCurrentStep(Math.min(proposal.stepProgress ?? 0, steps.length - 1))
-    setSubmitted(proposal.status === 'ready')
-    setAiSummary(mapAiSummary(proposal))
-    setGammaDeck(proposal.gammaDeck ? { ...proposal.gammaDeck, storageUrl: proposal.gammaDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
-    wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [mapAiSummary])
-
   const summary = useMemo(() => {
-    return {
-      ...formState,
+    if (submitted && lastSubmissionSnapshot) {
+      return structuredClone(lastSubmissionSnapshot.form) as ProposalFormData
     }
-  }, [formState])
+
+    return structuredClone(formState) as ProposalFormData
+  }, [formState, lastSubmissionSnapshot, submitted])
 
   const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
 
@@ -383,6 +267,123 @@ export default function ProposalsPage() {
       setIsLoadingProposals(false)
     }
   }, [selectedClientId, toast])
+
+  const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
+    const localDeckUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
+
+    if (localDeckUrl && typeof window !== 'undefined') {
+      window.open(localDeckUrl, '_blank', 'noopener')
+      return
+    }
+
+    if (downloadingDeckId) {
+      toast({
+        title: 'Deck already preparing',
+        description: 'Please wait for the current deck request to finish.',
+      })
+      return
+    }
+
+    try {
+      setDownloadingDeckId(proposal.id)
+      const result = await prepareProposalDeck(proposal.id)
+      const deckUrl = result.storageUrl
+        ?? result.gammaDeck?.storageUrl
+        ?? result.gammaDeck?.pptxUrl
+        ?? result.gammaDeck?.shareUrl
+        ?? null
+
+      if (deckUrl && typeof window !== 'undefined') {
+        window.open(deckUrl, '_blank', 'noopener')
+      }
+
+      if (deckUrl) {
+        setProposals((prev) =>
+          prev.map((item) => {
+            if (item.id !== proposal.id) {
+              return item
+            }
+            const nextGammaDeck = result.gammaDeck
+              ? { ...result.gammaDeck, storageUrl: deckUrl }
+              : item.gammaDeck
+                ? { ...item.gammaDeck, storageUrl: deckUrl }
+                : null
+            return {
+              ...item,
+              pptUrl: deckUrl,
+              gammaDeck: nextGammaDeck,
+            }
+          })
+        )
+      }
+
+      const refreshed = await refreshProposals()
+      if (proposal.id === draftId && Array.isArray(refreshed)) {
+        const latest = refreshed.find((candidate) => candidate.id === proposal.id)
+        if (latest) {
+          setGammaDeck(
+            latest.gammaDeck
+              ? { ...latest.gammaDeck, storageUrl: latest.pptUrl ?? latest.gammaDeck?.storageUrl ?? null }
+              : null
+          )
+        }
+      }
+
+      toast({
+        title: deckUrl ? 'Deck ready' : 'Deck requested',
+        description: deckUrl
+          ? 'Opening the Gamma deck now.'
+          : 'Gamma is preparing the deck. Refresh in a bit to download.',
+      })
+    } catch (error: unknown) {
+      console.error('[ProposalWizard] prepare deck failed', error)
+      const message = getErrorMessage(error, 'Failed to prepare Gamma deck')
+      toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })
+    } finally {
+      setDownloadingDeckId(null)
+    }
+  }, [downloadingDeckId, draftId, refreshProposals, toast])
+
+  const handleContinueEditingFromSnapshot = useCallback(async () => {
+    if (!lastSubmissionSnapshot) {
+      return
+    }
+
+    if (lastSubmissionSnapshot.clientId && lastSubmissionSnapshot.clientId !== selectedClientId) {
+      toast({
+        title: 'Switch back to original client',
+        description: 'Return to the client associated with this proposal to continue editing.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const restoredForm = structuredClone(lastSubmissionSnapshot.form) as ProposalFormData
+    const restoredStep = Math.min(lastSubmissionSnapshot.step, steps.length - 1)
+
+    setFormState(restoredForm)
+    setCurrentStep(restoredStep)
+    setSubmitted(false)
+    setGammaDeck(null)
+    setDraftId(lastSubmissionSnapshot.draftId)
+    setLastSubmissionSnapshot(null)
+    setAutosaveStatus('idle')
+
+    try {
+      await updateProposalDraft(lastSubmissionSnapshot.draftId, {
+        formData: restoredForm,
+        stepProgress: restoredStep,
+        status: 'draft',
+      })
+      await refreshProposals()
+      toast({ title: 'Editing restored', description: 'Your previous responses have been reloaded.' })
+      wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } catch (error: unknown) {
+      console.error('[ProposalWizard] resume snapshot failed', error)
+      const message = getErrorMessage(error, 'Failed to reopen proposal for editing')
+      toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
+    }
+  }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, toast])
 
   const ensureDraftId = useCallback(async () => {
     if (draftId) {
@@ -444,15 +445,52 @@ export default function ProposalsPage() {
           return
         }
       }
+
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current)
+        autosaveTimeoutRef.current = null
+      }
+
+      try {
+        setAutosaveStatus('saving')
+        await updateProposalDraft(activeDraftId, {
+          formData: formState,
+          stepProgress: currentStep,
+        })
+        setAutosaveStatus('saved')
+      } catch (updateError: unknown) {
+        console.error('[ProposalWizard] submit sync failed', updateError)
+        setAutosaveStatus('error')
+        toast({
+          title: 'Unable to save proposal',
+          description: getErrorMessage(updateError, 'Failed to sync latest changes before generation'),
+          variant: 'destructive',
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      setLastSubmissionSnapshot(null)
+
       const response = await submitProposalDraft(activeDraftId, 'summary')
-      setAiSummary(response.aiInsights ?? null)
       const isReady = response.status === 'ready'
       setSubmitted(isReady)
       setGammaDeck(response.gammaDeck ? { ...response.gammaDeck, storageUrl: response.pptUrl ?? response.gammaDeck.storageUrl ?? null } : null)
       const storedPptUrl = response.pptUrl ?? response.gammaDeck?.storageUrl ?? null
 
       if (isReady) {
-        setFormState(initialFormState)
+        const formSnapshot = structuredClone(formState) as ProposalFormData
+        setLastSubmissionSnapshot({
+          draftId: activeDraftId,
+          form: formSnapshot,
+          step: currentStep,
+          clientId: selectedClientId ?? null,
+          clientName: selectedClient?.name ?? null,
+        })
+      }
+
+      if (isReady) {
+        setFormState(createInitialProposalFormState())
         setCurrentStep(0)
         setDraftId(null)
       }
@@ -466,13 +504,13 @@ export default function ProposalsPage() {
 
       if (!isReady) {
         toast({
-          title: 'Summary pending',
-          description: 'We could not generate an AI summary yet. Please try again in a few minutes.',
+          title: 'AI plan pending',
+          description: 'We could not finish the AI proposal yet. Please try again in a few minutes.',
         })
       } else {
         toast({
           title: 'Proposal ready',
-          description: 'Your AI summary is ready for review.',
+          description: 'Your AI-generated recommendations are ready for review.',
         })
       }
 
@@ -482,6 +520,7 @@ export default function ProposalsPage() {
       const message = getErrorMessage(err, 'Failed to submit proposal')
       setSubmitted(false)
       setGammaDeck(null)
+      setLastSubmissionSnapshot(null)
       toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
@@ -497,12 +536,12 @@ export default function ProposalsPage() {
       try {
         if (!selectedClientId) {
           setDraftId(null)
-          setFormState(initialFormState)
+          setFormState(createInitialProposalFormState())
           setCurrentStep(0)
           setSubmitted(false)
-          setAiSummary(null)
           setGammaDeck(null)
           setProposals([])
+          setLastSubmissionSnapshot(null)
           return
         }
 
@@ -518,15 +557,15 @@ export default function ProposalsPage() {
           setFormState(mergeProposalForm(draft.formData as Partial<ProposalFormData>))
           setCurrentStep(Math.min(draft.stepProgress ?? 0, steps.length - 1))
           setSubmitted(draft.status === 'ready')
-          setAiSummary(mapAiSummary(draft))
           setGammaDeck(draft.gammaDeck ? { ...draft.gammaDeck, storageUrl: draft.gammaDeck.storageUrl ?? draft.pptUrl ?? null } : null)
+          setLastSubmissionSnapshot(null)
         } else {
           setDraftId(null)
-          setFormState(initialFormState)
+          setFormState(createInitialProposalFormState())
           setCurrentStep(0)
           setSubmitted(false)
-          setAiSummary(null)
           setGammaDeck(null)
+          setLastSubmissionSnapshot(null)
         }
       } catch (err: unknown) {
         if (cancelled) {
@@ -547,7 +586,7 @@ export default function ProposalsPage() {
     return () => {
       cancelled = true
     }
-  }, [mapAiSummary, refreshProposals, selectedClientId, toast])
+  }, [refreshProposals, selectedClientId, toast])
 
   useEffect(() => {
     if (!hydrationRef.current || submitted) {
@@ -658,7 +697,7 @@ export default function ProposalsPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div ref={wizardRef} className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -681,12 +720,19 @@ export default function ProposalsPage() {
             <DashboardSkeleton showStepIndicator />
           ) : submitted ? (
             <div className="space-y-6">
-              <div className="flex items-start gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
-                <Sparkles className="mt-1 h-4 w-4" />
-                <div className="space-y-1">
-                  <p className="font-semibold">Proposal ready</p>
-                  <p className="text-primary/80">Your proposal draft is ready for review. Share with your team or export it for the client.</p>
+              <div className="flex flex-col gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-primary md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="mt-1 h-4 w-4" />
+                  <div className="space-y-1">
+                    <p className="font-semibold">Proposal ready</p>
+                    <p className="text-primary/80">Your proposal draft is ready for review. Share with your team or export it for the client.</p>
+                  </div>
                 </div>
+                {lastSubmissionSnapshot && !isSubmitting && lastSubmissionSnapshot.draftId && lastSubmissionSnapshot.clientId === (selectedClientId ?? null) ? (
+                  <Button variant="outline" onClick={handleContinueEditingFromSnapshot}>
+                    Continue editing
+                  </Button>
+                ) : null}
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
@@ -758,19 +804,6 @@ export default function ProposalsPage() {
                   </CardContent>
                 </Card>
               ) : null}
-              {aiSummary && (
-                <Card className="border-muted">
-                  <CardHeader>
-                    <CardTitle className="text-base">AI generated summary</CardTitle>
-                    <CardDescription>Ready-to-send executive overview.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none whitespace-pre-wrap text-muted-foreground">
-                      {aiSummary}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           ) : (
             <>
@@ -809,10 +842,12 @@ export default function ProposalsPage() {
         draftId={draftId}
         isLoading={isLoadingProposals}
         deletingProposalId={deletingProposalId}
-        mapAiSummary={mapAiSummary}
         onRefresh={() => void refreshProposals()}
         onResume={handleResumeProposal}
         onRequestDelete={requestDeleteProposal}
+        isGenerating={isSubmitting}
+        downloadingDeckId={downloadingDeckId}
+        onDownloadDeck={handleDownloadDeck}
       />
       <ProposalDeleteDialog
         open={isDeleteDialogOpen}
@@ -825,34 +860,20 @@ export default function ProposalsPage() {
           }
         }}
       />
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm" role="status" aria-live="polite">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div>
+              <p className="text-lg font-semibold text-foreground">Generating your proposal…</p>
+              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                We&apos;re calling Gemini for the summary and Gamma for the deck. This can take up to a minute.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function hasCompletedAnyStepData(form: ProposalFormData): boolean {
-  if (form.company.name.trim() && form.company.industry.trim()) {
-    return true
-  }
-
-  if (form.marketing.budget.trim().length > 0) {
-    return true
-  }
-
-  if (form.goals.objectives.length > 0) {
-    return true
-  }
-
-  if (form.scope.services.length > 0) {
-    return true
-  }
-
-  if (form.timelines.startTime.trim().length > 0) {
-    return true
-  }
-
-  if (form.value.proposalSize.trim().length > 0 && form.value.engagementType.trim().length > 0) {
-    return true
-  }
-
-  return false
-}
