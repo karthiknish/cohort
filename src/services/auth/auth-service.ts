@@ -28,12 +28,17 @@ import {
 
 export class AuthService {
   private static instance: AuthService
+  private static readonly TOKEN_EXPIRATION_BUFFER_MS = 60 * 1000
+  private static readonly TOKEN_DEFAULT_TTL_MS = 55 * 60 * 1000
   private currentUser: AuthUser | null = null
   private authStateListeners: Array<(user: AuthUser | null) => void> = []
   private bootstrapPromises = new Map<string, Promise<void>>()
+  private idTokenCache: { token: string; expiresAt: number } | null = null
+  private idTokenRefreshPromise: Promise<string> | null = null
 
   private constructor() {
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      this.clearIdTokenCache()
       if (firebaseUser) {
         try {
           await this.ensureUserBootstrap(firebaseUser, firebaseUser.displayName)
@@ -129,6 +134,31 @@ export class AuthService {
     return 'pending'
   }
 
+  private clearIdTokenCache(): void {
+    this.idTokenCache = null
+    this.idTokenRefreshPromise = null
+  }
+
+  private cacheIdToken(token: string, expirationTime?: string | null): void {
+    const parsedExpiration = expirationTime ? Date.parse(expirationTime) : Number.NaN
+    const fallbackExpiration = Date.now() + AuthService.TOKEN_DEFAULT_TTL_MS
+    const expiresAt = Number.isFinite(parsedExpiration) ? parsedExpiration : fallbackExpiration
+    this.idTokenCache = { token, expiresAt }
+  }
+
+  private async fetchAndCacheIdToken(firebaseUser: FirebaseUser, forceRefresh: boolean): Promise<string> {
+    const result = await firebaseUser.getIdTokenResult(forceRefresh)
+    if (!result?.token) {
+      throw new Error('Failed to resolve authentication token')
+    }
+
+    if (auth.currentUser && auth.currentUser.uid === firebaseUser.uid) {
+      this.cacheIdToken(result.token, result.expirationTime)
+    }
+
+    return result.token
+  }
+
   private ensureUserBootstrap(firebaseUser: FirebaseUser, name?: string | null): Promise<void> {
     const uid = firebaseUser.uid
     if (!uid) {
@@ -143,7 +173,7 @@ export class AuthService {
     const payloadName = typeof name === 'string' && name.trim().length > 0 ? name.trim() : undefined
 
     const promise = (async () => {
-      const idToken = await firebaseUser.getIdToken()
+      const idToken = await this.fetchAndCacheIdToken(firebaseUser, false)
       const response = await fetch('/api/auth/bootstrap', {
         method: 'POST',
         headers: {
@@ -166,7 +196,7 @@ export class AuthService {
       }
 
       if (payload.claimsUpdated) {
-        await firebaseUser.getIdToken(true)
+        await this.fetchAndCacheIdToken(firebaseUser, true)
       }
     })()
       .finally(() => {
@@ -308,9 +338,37 @@ export class AuthService {
     }
   }
 
-  async getIdToken(): Promise<string> {
+  async getIdToken(forceRefresh = false): Promise<string> {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
-    return currentUser.getIdToken()
+    const now = Date.now()
+    const buffer = AuthService.TOKEN_EXPIRATION_BUFFER_MS
+
+    if (!forceRefresh && this.idTokenCache && this.idTokenCache.expiresAt - buffer > now) {
+      return this.idTokenCache.token
+    }
+
+    if (this.idTokenRefreshPromise) {
+      return this.idTokenRefreshPromise
+    }
+
+    const shouldForceRefresh =
+      forceRefresh ||
+      !this.idTokenCache ||
+      this.idTokenCache.expiresAt - buffer <= now
+
+    const refreshPromise = (async () => {
+      try {
+        return await this.fetchAndCacheIdToken(currentUser, shouldForceRefresh)
+      } catch (error) {
+        this.clearIdTokenCache()
+        throw error
+      } finally {
+        this.idTokenRefreshPromise = null
+      }
+    })()
+
+    this.idTokenRefreshPromise = refreshPromise
+    return refreshPromise
   }
 
   async startMetaOauth(redirect?: string): Promise<{ url: string }> {
@@ -481,6 +539,7 @@ export class AuthService {
   async signOut(): Promise<void> {
     try {
       await firebaseSignOut(auth)
+      this.clearIdTokenCache()
     } catch (error: unknown) {
       console.error('Sign out error:', error)
       throw new Error('Failed to sign out')
@@ -615,9 +674,29 @@ export class AuthService {
     }
 
     try {
-      console.log('Account deleted successfully')
+      const token = await this.getIdToken(true)
+      const response = await fetch('/api/auth/delete', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        const message = payload?.error ?? 'Failed to delete account'
+        throw new Error(message)
+      }
+
+      await firebaseSignOut(auth)
+      this.clearIdTokenCache()
+      this.currentUser = null
+      this.notifyListeners(null)
     } catch (error: unknown) {
       console.error('Account deletion error:', error)
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
+      }
       throw new Error('Failed to delete account')
     }
   }

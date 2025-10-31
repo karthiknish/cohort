@@ -20,6 +20,7 @@ interface AuthContextType {
   confirmPasswordReset: (oobCode: string, newPassword: string) => Promise<void>
   updateProfile: (data: Partial<AuthUser>) => Promise<AuthUser>
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  deleteAccount: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -119,6 +120,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.changePassword(currentPassword, newPassword)
   }, [])
 
+  const deleteAccount = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    try {
+      await authService.deleteAccount()
+      applyUser(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [applyUser])
+
   const connectGoogleAdsAccount = useCallback(async () => {
     await authService.connectGoogleAdsAccount()
   }, [])
@@ -157,6 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       confirmPasswordReset,
       updateProfile,
       changePassword,
+      deleteAccount,
     }),
     [
       user,
@@ -175,6 +187,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       confirmPasswordReset,
       updateProfile,
       changePassword,
+      deleteAccount,
     ]
   )
 

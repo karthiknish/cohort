@@ -6,6 +6,13 @@ interface LinkedInAdsOptions {
   timeframeDays: number
 }
 
+export type LinkedInAdAccount = {
+  id: string
+  name: string
+  status?: string
+  currency?: string
+}
+
 type LinkedInAnalyticsRow = {
   timeRange?: {
     start?: string
@@ -109,4 +116,63 @@ export async function fetchLinkedInAdsMetrics(options: LinkedInAdsOptions): Prom
   })
 
   return metrics
+}
+
+export async function fetchLinkedInAdAccounts(options: { accessToken: string; statusFilter?: string[] }): Promise<LinkedInAdAccount[]> {
+  const { accessToken, statusFilter = ['ACTIVE', 'DRAFT', 'PAUSED'] } = options
+
+  if (!accessToken) {
+    throw new Error('Missing LinkedIn access token')
+  }
+
+  const params = new URLSearchParams({
+    q: 'search',
+    count: '50',
+  })
+
+  statusFilter.forEach((status, index) => {
+    params.set(`search.accountStatuses[${index}]`, status)
+  })
+
+  const response = await fetch(`https://api.linkedin.com/v2/adAccountsV2?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+    },
+  })
+
+  if (!response.ok) {
+    const errorPayload = await response.text().catch(() => '')
+    throw new Error(`LinkedIn ad accounts request failed (${response.status}): ${errorPayload}`)
+  }
+
+  const payload = (await response.json()) as {
+    elements?: Array<{
+      id?: string
+      name?: string
+      status?: string
+      currency?: string
+    }>
+  }
+
+  const accounts = Array.isArray(payload?.elements) ? payload.elements : []
+
+  const normalized: LinkedInAdAccount[] = []
+
+  accounts.forEach((account) => {
+    const id = typeof account?.id === 'string' ? account.id.replace('urn:li:sponsoredAccount:', '') : null
+    if (!id) {
+      return
+    }
+
+    normalized.push({
+      id,
+      name: typeof account?.name === 'string' && account.name.length > 0 ? account.name : `LinkedIn account ${id}`,
+      status: typeof account?.status === 'string' ? account.status : undefined,
+      currency: typeof account?.currency === 'string' ? account.currency : undefined,
+    })
+  })
+
+  return normalized
 }

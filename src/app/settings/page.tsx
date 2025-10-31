@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Check, CreditCard } from 'lucide-react'
 
@@ -14,6 +15,16 @@ import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
 
 interface PlanSummary {
   id: string
@@ -93,9 +104,10 @@ const subscriptionStatusStyles: Record<string, string> = {
 }
 
 export default function SettingsPage() {
-  const { user, getIdToken, updateProfile } = useAuth()
+  const { user, getIdToken, updateProfile, deleteAccount } = useAuth()
   const { toast } = useToast()
   const { selectedClient } = useClientContext()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [plans, setPlans] = useState<PlanSummary[]>([])
@@ -112,6 +124,10 @@ export default function SettingsPage() {
   const [whatsappTasksEnabled, setWhatsappTasksEnabled] = useState(false)
   const [whatsappCollaborationEnabled, setWhatsappCollaborationEnabled] = useState(false)
   const [savingPreferences, setSavingPreferences] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null)
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false)
   const isMountedRef = useRef(true)
   const isAdmin = user?.role === 'admin'
 
@@ -167,6 +183,14 @@ export default function SettingsPage() {
     setProfilePhone(user?.phoneNumber ?? '')
     setProfileError(null)
   }, [user?.name, user?.phoneNumber])
+
+  useEffect(() => {
+    if (!deleteDialogOpen) {
+      setDeleteConfirm('')
+      setDeleteAccountError(null)
+      setDeleteAccountLoading(false)
+    }
+  }, [deleteDialogOpen])
 
   const fetchNotificationPreferences = useCallback(async () => {
     if (!user) {
@@ -554,6 +578,34 @@ export default function SettingsPage() {
       setActionState(null)
     }
   }, [getIdToken, user])
+
+  const handleAccountDeletion = useCallback(async () => {
+    if (!user) {
+      setDeleteAccountError('You must be signed in to delete your account.')
+      return
+    }
+
+    if (deleteConfirm.trim().toLowerCase() !== 'delete') {
+      setDeleteAccountError('Type DELETE to confirm this action.')
+      return
+    }
+
+    setDeleteAccountLoading(true)
+    setDeleteAccountError(null)
+
+    try {
+      await deleteAccount()
+      toast({ title: 'Account deleted', description: 'Your account and associated data have been removed.' })
+      setDeleteDialogOpen(false)
+      router.push('/auth')
+    } catch (accountError) {
+      const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
+      setDeleteAccountError(message)
+      toast({ title: 'Account deletion failed', description: message, variant: 'destructive' })
+    } finally {
+      setDeleteAccountLoading(false)
+    }
+  }, [deleteAccount, deleteConfirm, router, toast, user])
 
   const loadingView = (
     <div className="flex min-h-[320px] items-center justify-center">
@@ -971,6 +1023,64 @@ export default function SettingsPage() {
           ) : null}
         </>
       ) : null}
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <Card className="border border-destructive/40">
+          <CardHeader>
+            <CardTitle>Delete account</CardTitle>
+            <CardDescription>Remove your account and associated marketing data. This action cannot be undone.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Deleting your account will revoke access across all connected workspaces, stop integrations, and permanently erase stored reports. Export any information you need before proceeding.
+            </p>
+          </CardContent>
+          <CardFooter className="flex justify-end">
+            <DialogTrigger asChild>
+              <Button variant="destructive">Delete account</Button>
+            </DialogTrigger>
+          </CardFooter>
+        </Card>
+
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm account deletion</DialogTitle>
+            <DialogDescription>
+              This will permanently remove your account, integrations, and stored analytics. Type <span className="font-semibold">DELETE</span> to confirm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Input
+              value={deleteConfirm}
+              onChange={(event) => {
+                setDeleteConfirm(event.target.value)
+                setDeleteAccountError(null)
+              }}
+              placeholder="Type DELETE to confirm"
+              autoFocus
+            />
+            {deleteAccountError ? <p className="text-sm text-destructive">{deleteAccountError}</p> : null}
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={deleteAccountLoading}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleAccountDeletion()}
+              disabled={deleteConfirm.trim().toLowerCase() !== 'delete' || deleteAccountLoading}
+            >
+              {deleteAccountLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

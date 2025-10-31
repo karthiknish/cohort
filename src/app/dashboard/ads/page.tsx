@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
   Facebook,
@@ -114,6 +114,40 @@ export default function AdsPage() {
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
   const hasMetricData = metrics.length > 0
   const initialMetricsLoading = metricsLoading && !hasMetricData
+
+  const initializeGoogleIntegration = useCallback(async () => {
+    const token = await getIdToken()
+    const response = await fetch('/api/integrations/google/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error((payload as { error?: string }).error ?? 'Failed to initialize Google Ads')
+    }
+
+    return response.json()
+  }, [getIdToken])
+
+  const initializeLinkedInIntegration = useCallback(async () => {
+    const token = await getIdToken()
+    const response = await fetch('/api/integrations/linkedin/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error((payload as { error?: string }).error ?? 'Failed to initialize LinkedIn Ads')
+    }
+
+    return response.json()
+  }, [getIdToken])
 
   useEffect(() => {
     if (!user?.id) {
@@ -258,11 +292,17 @@ export default function AdsPage() {
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
       await action()
+      if (providerId === 'google') {
+        await initializeGoogleIntegration()
+      } else if (providerId === 'linkedin') {
+        await initializeLinkedInIntegration()
+      }
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       setRefreshTick((tick) => tick + 1)
     } catch (error: unknown) {
       const message = getErrorMessage(error, 'Unable to connect. Please try again.')
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
+      setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
     } finally {
       setConnectingProvider(null)
     }

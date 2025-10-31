@@ -76,10 +76,12 @@ export async function POST(request: NextRequest) {
           integration.accountId,
           'Google Ads accountId must be stored on the integration'
         )
-        const loginCustomerId = ensureString(
-          integration.loginCustomerId,
-          'Google Ads loginCustomerId must be stored on the integration'
-        )
+        const loginCustomerId = typeof integration.loginCustomerId === 'string' && integration.loginCustomerId.length > 0
+          ? integration.loginCustomerId
+          : null
+        const managerCustomerId = typeof integration.managerCustomerId === 'string' && integration.managerCustomerId.length > 0
+          ? integration.managerCustomerId
+          : null
 
         let googleAccessToken = integration.accessToken
         if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
           developerToken: integration.developerToken,
           customerId: accountId,
           loginCustomerId,
-          managerCustomerId: integration.managerCustomerId ?? null,
+          managerCustomerId,
           timeframeDays: job.timeframeDays,
           refreshAccessToken: async () => {
             const refreshed = await refreshGoogleAccessToken({ userId: targetUserId })
