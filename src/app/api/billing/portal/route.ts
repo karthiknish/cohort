@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
+import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { ensureStripeCustomer } from '@/lib/billing'
 import { getStripeClient } from '@/lib/stripe'
+import { resolveWorkspaceContext } from '@/lib/workspace'
+
+const portalSchema = z.object({
+  clientId: z.string().trim().min(1).optional().nullable(),
+  returnUrl: z.string().trim().optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,19 +21,60 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = getStripeClient()
-    const body = (await request.json().catch(() => null)) as { returnUrl?: string } | null
+    const rawBody = await request.json().catch(() => ({}))
+    const parsed = portalSchema.safeParse(rawBody)
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid portal request' }, { status: 400 })
+    }
+
+    const { clientId, returnUrl: requestedReturnUrl } = parsed.data
+    const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const returnPath = typeof requestedReturnUrl === 'string' && requestedReturnUrl.trim().length > 0
+      ? requestedReturnUrl.trim()
+      : clientId
+        ? '/dashboard/finance/payments'
+        : '/settings'
+
+    if (clientId) {
+      const workspace = await resolveWorkspaceContext(auth)
+      const clientRef = workspace.clientsCollection.doc(clientId)
+      const clientSnapshot = await clientRef.get()
+
+      if (!clientSnapshot.exists) {
+        return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+      }
+
+      const clientData = clientSnapshot.data() as { stripeCustomerId?: unknown }
+      const stripeCustomerId =
+        typeof clientData?.stripeCustomerId === 'string' && clientData.stripeCustomerId.trim().length > 0
+          ? clientData.stripeCustomerId.trim()
+          : null
+
+      if (!stripeCustomerId) {
+        return NextResponse.json({ error: 'This client does not have a Stripe customer profile yet' }, { status: 400 })
+      }
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: stripeCustomerId,
+        return_url: buildReturnUrl(origin, returnPath),
+      })
+
+      if (!portalSession?.url) {
+        throw new Error('Stripe did not return a portal URL')
+      }
+
+      return NextResponse.json({ url: portalSession.url, sessionId: portalSession.id })
+    }
 
     const { customerId, userRef } = await ensureStripeCustomer({
       uid: auth.uid,
       email: auth.email,
     })
 
-    const origin = request.headers.get('origin') ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-    const returnUrl = buildReturnUrl(origin, typeof body?.returnUrl === 'string' ? body.returnUrl : '/settings')
-
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: returnUrl,
+      return_url: buildReturnUrl(origin, returnPath),
     })
 
     await userRef.set(

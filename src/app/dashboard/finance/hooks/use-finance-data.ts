@@ -11,11 +11,14 @@ import {
   createFinanceCost,
   deleteFinanceCost,
   fetchFinanceSummary,
+  issueInvoiceRefund,
+  sendInvoiceReminder,
 } from '@/services/finance'
 import type {
   FinanceCostEntry,
   FinanceInvoice,
   FinanceInvoiceStatus,
+  FinancePaymentSummary,
   FinanceRevenueRecord,
 } from '@/types/finance'
 
@@ -25,6 +28,19 @@ const INITIAL_COST_FORM: CostFormState = {
   category: '',
   amount: '',
   cadence: 'monthly',
+}
+
+const EMPTY_PAYMENT_SUMMARY: FinancePaymentSummary = {
+  totalInvoiced: 0,
+  totalPaid: 0,
+  totalOutstanding: 0,
+  overdueCount: 0,
+  paidCount: 0,
+  openCount: 0,
+  refundTotal: 0,
+  nextDueAt: null,
+  lastPaymentAt: null,
+  currency: 'usd',
 }
 
 export type CostFormState = {
@@ -49,6 +65,7 @@ type FinanceHookReturn = {
     cards: StatCard[]
     totalOutstanding: number
   }
+  paymentSummary: FinancePaymentSummary
   chartData: Array<{
     label: string
     period: string
@@ -74,6 +91,10 @@ type FinanceHookReturn = {
   hasAttemptedLoad: boolean
   loadError: string | null
   refresh: () => Promise<void>
+  sendingInvoiceId: string | null
+  refundingInvoiceId: string | null
+  sendInvoiceReminder: (invoiceId: string) => Promise<void>
+  issueInvoiceRefund: (invoiceId: string) => Promise<void>
 }
 
 export function useFinanceData(): FinanceHookReturn {
@@ -85,12 +106,15 @@ export function useFinanceData(): FinanceHookReturn {
   const [revenueRecords, setRevenueRecords] = useState<FinanceRevenueRecord[]>([])
   const [invoices, setInvoices] = useState<FinanceInvoice[]>([])
   const [companyCosts, setCompanyCosts] = useState<FinanceCostEntry[]>([])
+  const [paymentSummary, setPaymentSummary] = useState<FinancePaymentSummary>(EMPTY_PAYMENT_SUMMARY)
   const [newCost, setNewCost] = useState<CostFormState>(INITIAL_COST_FORM)
   const [isLoading, setIsLoading] = useState(false)
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isSubmittingCost, setIsSubmittingCost] = useState(false)
   const [removingCostId, setRemovingCostId] = useState<string | null>(null)
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null)
+  const [refundingInvoiceId, setRefundingInvoiceId] = useState<string | null>(null)
 
   const clientNameLookup = useMemo(() => new Map(clients.map((client) => [client.id, client.name])), [clients])
 
@@ -102,12 +126,14 @@ export function useFinanceData(): FinanceHookReturn {
       setRevenueRecords(summary.revenue)
       setInvoices(summary.invoices)
       setCompanyCosts(summary.costs)
+      setPaymentSummary(summary.payments ?? EMPTY_PAYMENT_SUMMARY)
     } catch (error: unknown) {
       const message = extractErrorMessage(error, 'Failed to load finance data')
       setLoadError(message)
       setRevenueRecords([])
       setInvoices([])
       setCompanyCosts([])
+      setPaymentSummary(EMPTY_PAYMENT_SUMMARY)
       if (!options?.quiet) {
         toast({ title: 'Unable to load finance data', description: message, variant: 'destructive' })
       }
@@ -165,28 +191,25 @@ export function useFinanceData(): FinanceHookReturn {
     () => monthlyCostTotal * (revenueRecords.length || 1),
     [monthlyCostTotal, revenueRecords.length]
   )
-  const netProfit = totalRevenue - totalExpenses
-
-  const totalOutstanding = useMemo(
-    () =>
-      invoices
-        .filter((inv) => inv.status === 'sent' || inv.status === 'overdue')
-        .reduce((sum, inv) => sum + inv.amount, 0),
-    [invoices]
-  )
+  const collectedTotal = paymentSummary.totalPaid
+  const totalOutstanding = paymentSummary.totalOutstanding
+  const netProfit = collectedTotal - totalExpenses
 
   const statCards: StatCard[] = useMemo(
     () => [
       {
-        name: 'Total Revenue',
-        value: formatCurrency(totalRevenue),
-        helper: `${selectedPeriod.toUpperCase()} lookback`,
+        name: 'Total Collected',
+        value: formatCurrency(collectedTotal),
+        helper:
+          paymentSummary.refundTotal > 0
+            ? `Net of ${formatCurrency(paymentSummary.refundTotal)} refunds`
+            : `${selectedPeriod.toUpperCase()} lookback`,
         icon: DollarSign,
       },
       {
-        name: 'Total Expenses',
-        value: formatCurrency(totalExpenses),
-        helper: `Includes ${formatCurrency(totalCompanyCosts)} company costs`,
+        name: 'Outstanding',
+        value: formatCurrency(totalOutstanding),
+        helper: `${paymentSummary.openCount} open · ${paymentSummary.overdueCount} overdue`,
         icon: CreditCard,
       },
       {
@@ -202,7 +225,17 @@ export function useFinanceData(): FinanceHookReturn {
         icon: TrendingUp,
       },
     ],
-    [monthlyCostTotal, netProfit, selectedPeriod, totalCompanyCosts, totalExpenses, totalRevenue]
+    [
+      collectedTotal,
+      netProfit,
+      paymentSummary.openCount,
+      paymentSummary.overdueCount,
+      paymentSummary.refundTotal,
+      selectedPeriod,
+      totalCompanyCosts,
+      monthlyCostTotal,
+      totalOutstanding,
+    ]
   )
 
   const revenueByClient = useMemo(() => {
@@ -248,7 +281,16 @@ export function useFinanceData(): FinanceHookReturn {
   const upcomingPayments = useMemo(
     () =>
       invoices
-        .filter((inv) => inv.status === 'sent' || inv.status === 'overdue')
+        .filter((inv) => {
+          const outstanding =
+            typeof inv.amountRemaining === 'number'
+              ? inv.amountRemaining
+              : typeof inv.amountPaid === 'number'
+                ? Math.max(inv.amount - inv.amountPaid, 0)
+                : inv.amount
+
+          return (inv.status === 'sent' || inv.status === 'overdue') && outstanding > 0.01
+        })
         .sort((a, b) => {
           const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY
           const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY
@@ -323,6 +365,54 @@ export function useFinanceData(): FinanceHookReturn {
     [toast]
   )
 
+  const handleSendInvoiceReminder = useCallback(async (invoiceId: string) => {
+    if (!invoiceId) {
+      return
+    }
+
+    try {
+      setSendingInvoiceId(invoiceId)
+      await sendInvoiceReminder(invoiceId)
+      toast({
+        title: 'Reminder sent',
+        description: 'Stripe will email this invoice again shortly.',
+      })
+      await loadFinanceSummary({ quiet: true })
+    } catch (error: unknown) {
+      toast({
+        title: 'Reminder failed',
+        description: extractErrorMessage(error, 'Unable to send invoice reminder'),
+        variant: 'destructive',
+      })
+    } finally {
+      setSendingInvoiceId(null)
+    }
+  }, [loadFinanceSummary, toast])
+
+  const handleIssueInvoiceRefund = useCallback(async (invoiceId: string) => {
+    if (!invoiceId) {
+      return
+    }
+
+    try {
+      setRefundingInvoiceId(invoiceId)
+      const result = await issueInvoiceRefund(invoiceId)
+      toast({
+        title: 'Refund initiated',
+        description: `Stripe refund ${result.refundId} created for ${formatCurrency(result.amount)}`,
+      })
+      await loadFinanceSummary({ quiet: true })
+    } catch (error: unknown) {
+      toast({
+        title: 'Refund failed',
+        description: extractErrorMessage(error, 'Unable to issue refund'),
+        variant: 'destructive',
+      })
+    } finally {
+      setRefundingInvoiceId(null)
+    }
+  }, [loadFinanceSummary, toast])
+
   const costsWithMonthly = useMemo(
     () =>
       companyCosts.map((cost) => ({
@@ -341,6 +431,7 @@ export function useFinanceData(): FinanceHookReturn {
       cards: statCards,
       totalOutstanding,
     },
+    paymentSummary,
     chartData,
     filteredInvoices,
     invoices,
@@ -358,6 +449,10 @@ export function useFinanceData(): FinanceHookReturn {
     hasAttemptedLoad,
     loadError,
     refresh: () => loadFinanceSummary(),
+    sendingInvoiceId,
+    refundingInvoiceId,
+    sendInvoiceReminder: handleSendInvoiceReminder,
+    issueInvoiceRefund: handleIssueInvoiceRefund,
   }
 }
 

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -74,6 +75,12 @@ interface BillingStatusResponse {
   upcomingInvoice: UpcomingInvoiceSummary | null
 }
 
+interface NotificationPreferencesResponse {
+  whatsappTasks: boolean
+  whatsappCollaboration: boolean
+  phoneNumber: string | null
+}
+
 const subscriptionStatusStyles: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700',
   trialing: 'bg-blue-100 text-blue-700',
@@ -100,6 +107,11 @@ export default function SettingsPage() {
   const [profilePhone, setProfilePhone] = useState(user?.phoneNumber ?? '')
   const [profileError, setProfileError] = useState<string | null>(null)
   const [savingProfile, setSavingProfile] = useState(false)
+  const [notificationsLoading, setNotificationsLoading] = useState(true)
+  const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [whatsappTasksEnabled, setWhatsappTasksEnabled] = useState(false)
+  const [whatsappCollaborationEnabled, setWhatsappCollaborationEnabled] = useState(false)
+  const [savingPreferences, setSavingPreferences] = useState(false)
   const isMountedRef = useRef(true)
   const isAdmin = user?.role === 'admin'
 
@@ -156,6 +168,74 @@ export default function SettingsPage() {
     setProfileError(null)
   }, [user?.name, user?.phoneNumber])
 
+  const fetchNotificationPreferences = useCallback(async () => {
+    if (!user) {
+      if (isMountedRef.current) {
+        setNotificationsLoading(false)
+        setWhatsappTasksEnabled(false)
+        setWhatsappCollaborationEnabled(false)
+        setNotificationError(null)
+      }
+      return
+    }
+
+    if (isMountedRef.current) {
+      setNotificationsLoading(true)
+      setNotificationError(null)
+    }
+
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/settings/notifications', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null
+
+      if (!response.ok || !payload) {
+        const message = payload && typeof payload.error === 'string' ? payload.error : 'Unable to load notification preferences'
+        throw new Error(message)
+      }
+
+      const preferences: NotificationPreferencesResponse = {
+        whatsappTasks: Boolean(payload.whatsappTasks),
+        whatsappCollaboration: Boolean(payload.whatsappCollaboration),
+        phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
+      }
+
+      if (isMountedRef.current) {
+        setWhatsappTasksEnabled(preferences.whatsappTasks)
+        setWhatsappCollaborationEnabled(preferences.whatsappCollaboration)
+        setNotificationError(null)
+        setNotificationsLoading(false)
+
+        if ((!user.phoneNumber || user.phoneNumber.length === 0) && preferences.phoneNumber) {
+          setProfilePhone(preferences.phoneNumber)
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load notification preferences'
+      console.error('[settings/notifications] load failed', error)
+      if (isMountedRef.current) {
+        setNotificationError(message)
+        setNotificationsLoading(false)
+      }
+    }
+  }, [getIdToken, user])
+
+  useEffect(() => {
+    void fetchNotificationPreferences()
+  }, [fetchNotificationPreferences])
+
+  useEffect(() => {
+    if (profilePhone.trim().length >= 6) {
+      setNotificationError(null)
+    }
+  }, [profilePhone])
+
   const hasProfileChanges = useMemo(() => {
     const originalName = user?.name ?? ''
     const originalPhone = user?.phoneNumber ?? ''
@@ -164,6 +244,129 @@ export default function SettingsPage() {
 
   const isProfileNameValid = profileName.trim().length >= 2
   const canSaveProfile = Boolean(user) && hasProfileChanges && isProfileNameValid && !savingProfile
+
+  const saveNotificationPreferences = useCallback(
+    async (
+      input: { tasks: boolean; collaboration: boolean },
+      options: { silent?: boolean } = {}
+    ): Promise<NotificationPreferencesResponse | null> => {
+      if (!user) {
+        return null
+      }
+
+      const trimmedPhone = profilePhone.trim()
+      const requiresPhone = input.tasks || input.collaboration
+
+      if (requiresPhone && trimmedPhone.length < 6) {
+        const message = 'Add a valid phone number before enabling WhatsApp notifications.'
+        if (!options.silent) {
+          toast({ title: 'Phone number required', description: message, variant: 'destructive' })
+        }
+        if (isMountedRef.current) {
+          setNotificationError(message)
+        }
+        return null
+      }
+
+      if (isMountedRef.current) {
+        setSavingPreferences(true)
+        setNotificationError(null)
+      }
+
+      try {
+        const token = await getIdToken()
+        const response = await fetch('/api/settings/notifications', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            whatsappTasks: input.tasks,
+            whatsappCollaboration: input.collaboration,
+            phoneNumber: trimmedPhone.length ? trimmedPhone : null,
+          }),
+        })
+
+        const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null
+
+        if (!response.ok || !payload) {
+          const message = payload && typeof payload.error === 'string' ? payload.error : 'Failed to update notification preferences'
+          throw new Error(message)
+        }
+
+        const preferences: NotificationPreferencesResponse = {
+          whatsappTasks: Boolean(payload.whatsappTasks),
+          whatsappCollaboration: Boolean(payload.whatsappCollaboration),
+          phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
+        }
+
+        if (isMountedRef.current) {
+          setWhatsappTasksEnabled(preferences.whatsappTasks)
+          setWhatsappCollaborationEnabled(preferences.whatsappCollaboration)
+          if (preferences.phoneNumber && preferences.phoneNumber !== profilePhone) {
+            setProfilePhone(preferences.phoneNumber)
+          }
+        }
+
+        if (!options.silent) {
+          toast({ title: 'Notification preferences updated', description: 'WhatsApp alerts have been updated.' })
+        }
+
+        return preferences
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update notification preferences'
+        console.error('[settings/notifications] update failed', error)
+        if (isMountedRef.current) {
+          setNotificationError(message)
+        }
+        if (!options.silent) {
+          toast({ title: 'Notification update failed', description: message, variant: 'destructive' })
+        }
+        return null
+      } finally {
+        if (isMountedRef.current) {
+          setSavingPreferences(false)
+        }
+      }
+    },
+    [getIdToken, profilePhone, toast, user]
+  )
+
+  const handlePreferenceToggle = useCallback(
+    async (type: 'tasks' | 'collaboration', checked: boolean) => {
+      if (notificationsLoading || savingPreferences) {
+        return
+      }
+
+      const current = {
+        tasks: whatsappTasksEnabled,
+        collaboration: whatsappCollaborationEnabled,
+      }
+
+      const next = {
+        tasks: type === 'tasks' ? checked : current.tasks,
+        collaboration: type === 'collaboration' ? checked : current.collaboration,
+      }
+
+      if (next.tasks === current.tasks && next.collaboration === current.collaboration) {
+        return
+      }
+
+      if (isMountedRef.current) {
+        setWhatsappTasksEnabled(next.tasks)
+        setWhatsappCollaborationEnabled(next.collaboration)
+      }
+
+      const result = await saveNotificationPreferences(next)
+
+      if (!result && isMountedRef.current) {
+        setWhatsappTasksEnabled(current.tasks)
+        setWhatsappCollaborationEnabled(current.collaboration)
+      }
+    },
+    [notificationsLoading, saveNotificationPreferences, savingPreferences, whatsappCollaborationEnabled, whatsappTasksEnabled]
+  )
 
   const handleProfileSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -192,6 +395,13 @@ export default function SettingsPage() {
         setProfileName(nextName)
         setProfilePhone(nextPhone)
         toast({ title: 'Profile updated', description: 'Your changes were saved.' })
+
+        if (whatsappTasksEnabled || whatsappCollaborationEnabled) {
+          void saveNotificationPreferences(
+            { tasks: whatsappTasksEnabled, collaboration: whatsappCollaborationEnabled },
+            { silent: true }
+          )
+        }
       } catch (submitError) {
         const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
         setProfileError(message)
@@ -200,7 +410,7 @@ export default function SettingsPage() {
         setSavingProfile(false)
       }
     },
-    [profileName, profilePhone, toast, updateProfile, user],
+    [profileName, profilePhone, saveNotificationPreferences, toast, updateProfile, user, whatsappCollaborationEnabled, whatsappTasksEnabled],
   )
 
   const currentPlanId = subscription?.plan?.id ?? null
@@ -477,6 +687,56 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Notification preferences</CardTitle>
+          <CardDescription>Control WhatsApp alerts for tasks and collaboration updates.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {notificationsLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading notification preferences...
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Task updates</p>
+                  <p className="text-sm text-muted-foreground">Send WhatsApp alerts when new tasks are created.</p>
+                </div>
+                <Checkbox
+                  checked={whatsappTasksEnabled}
+                  onChange={(event) => {
+                    void handlePreferenceToggle('tasks', event.target.checked)
+                  }}
+                  disabled={notificationsLoading || savingPreferences}
+                  aria-label="Toggle WhatsApp alerts for new tasks"
+                />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Collaboration activity</p>
+                  <p className="text-sm text-muted-foreground">Receive WhatsApp notifications for new collaboration messages.</p>
+                </div>
+                <Checkbox
+                  checked={whatsappCollaborationEnabled}
+                  onChange={(event) => {
+                    void handlePreferenceToggle('collaboration', event.target.checked)
+                  }}
+                  disabled={notificationsLoading || savingPreferences}
+                  aria-label="Toggle WhatsApp alerts for collaboration messages"
+                />
+              </div>
+            </div>
+          )}
+          {notificationError ? <p className="text-sm text-destructive">{notificationError}</p> : null}
+          {!notificationsLoading && profilePhone.trim().length < 6 ? (
+            <p className="text-xs text-muted-foreground">Add a phone number above to enable WhatsApp notifications.</p>
+          ) : null}
         </CardContent>
       </Card>
 

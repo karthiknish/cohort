@@ -1,5 +1,7 @@
 'use client'
 
+import { useCallback } from 'react'
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { useFinanceData } from '../hooks/use-finance-data'
@@ -10,8 +12,14 @@ import { FinanceChartsSection } from './finance-charts-section'
 import { FinanceInvoiceTable } from './finance-invoice-table'
 import { FinanceRevenueSidebar } from './finance-revenue-sidebar'
 import { FinanceDashboardSkeleton } from './finance-dashboard-skeleton'
+import { useAuth } from '@/contexts/auth-context'
+import type { FinanceInvoice } from '@/types/finance'
+import { formatCurrency } from '../utils'
 
 export function FinanceDashboard() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+
   const {
     selectedPeriod,
     setSelectedPeriod,
@@ -34,7 +42,41 @@ export function FinanceDashboard() {
     refresh,
     loadError,
     revenueByClient,
+    sendingInvoiceId,
+    refundingInvoiceId,
+    sendInvoiceReminder,
+    issueInvoiceRefund,
   } = useFinanceData()
+
+  const handleSendReminder = useCallback(
+    (invoice: FinanceInvoice) => {
+      void sendInvoiceReminder(invoice.id)
+    },
+    [sendInvoiceReminder]
+  )
+
+  const handleIssueRefund = useCallback(
+    (invoice: FinanceInvoice) => {
+      const availableRefund = typeof invoice.amountPaid === 'number'
+        ? invoice.amountPaid - (invoice.amountRefunded ?? 0)
+        : invoice.amount
+
+      if (availableRefund <= 0) {
+        return
+      }
+
+      const confirmation = window.confirm(
+        `Issue a refund of ${formatCurrency(Math.max(availableRefund, 0))} for invoice ${invoice.number ?? invoice.id}?`
+      )
+
+      if (!confirmation) {
+        return
+      }
+
+      void issueInvoiceRefund(invoice.id)
+    },
+    [issueInvoiceRefund]
+  )
 
   const isInitialLoading = !hasAttemptedLoad && isLoading
   const isRefreshing = hasAttemptedLoad && isLoading
@@ -56,6 +98,7 @@ export function FinanceDashboard() {
         onSelectPeriod={setSelectedPeriod}
         onRefresh={refresh}
         refreshing={isRefreshing}
+        paymentsHref="/dashboard/finance/payments"
       />
       <FinanceStatsGrid stats={stats} />
       <FinanceCostsCard
@@ -73,6 +116,10 @@ export function FinanceDashboard() {
         invoices={filteredInvoices}
         selectedStatus={invoiceStatusFilter}
         onSelectStatus={setInvoiceStatusFilter}
+        onSendReminder={isAdmin ? handleSendReminder : undefined}
+        onIssueRefund={isAdmin ? handleIssueRefund : undefined}
+        sendingInvoiceId={sendingInvoiceId}
+        refundingInvoiceId={refundingInvoiceId}
       />
       <FinanceRevenueSidebar
         revenue={revenueByClient}

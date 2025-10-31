@@ -33,27 +33,16 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
+import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 
-interface AdminUserRecord {
-  id: string
-  name: string
-  email: string
-  role: 'admin' | 'team' | 'client'
-  status: UserStatus
-  agencyId: string | null
-  createdAt: string | null
-  updatedAt?: string | null
-  lastLoginAt: string | null
-}
+type UserStatus = AdminUserStatus
 
-type UserStatus = 'active' | 'invited' | 'pending' | 'disabled' | 'suspended'
+type StatusFilter = 'all' | AdminUserStatus
 
-type StatusFilter = 'all' | UserStatus
+type RoleFilter = 'all' | AdminUserRole
 
-type RoleFilter = 'all' | AdminUserRecord['role']
-
-const ROLE_OPTIONS: AdminUserRecord['role'][] = ['admin', 'team', 'client']
-const STATUS_OPTIONS: StatusFilter[] = ['all', 'active', 'invited', 'pending', 'disabled', 'suspended']
+const ROLE_OPTIONS = ADMIN_USER_ROLES
+const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
 
 export default function AdminTeamPage() {
   const { user, getIdToken } = useAuth()

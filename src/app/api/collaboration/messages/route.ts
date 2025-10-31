@@ -9,6 +9,7 @@ import type {
   CollaborationMessage,
 } from '@/types/collaboration'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
+import { notifyCollaborationMessageWhatsApp } from '@/lib/notifications'
 
 const channelTypeSchema = z.enum(['client', 'team', 'project'])
 
@@ -222,6 +223,16 @@ export async function POST(request: NextRequest) {
 
     const createdDoc = await docRef.get()
     const message = mapMessageDoc(createdDoc.id, createdDoc.data() as StoredMessage)
+
+    const actorName = typeof auth.claims?.name === 'string'
+      ? (auth.claims.name as string)
+      : auth.email
+
+    try {
+      await notifyCollaborationMessageWhatsApp({ workspaceId: workspace.workspaceId, message, actorName })
+    } catch (notificationError) {
+      console.error('[collaboration/messages] whatsapp notification failed', notificationError)
+    }
 
     return NextResponse.json({ message }, { status: 201 })
   } catch (error: unknown) {

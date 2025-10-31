@@ -64,7 +64,15 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
                     Due {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'TBC'}
                   </p>
                 </div>
-                <p className="text-sm font-semibold text-foreground">{formatCurrency(invoice.amount)}</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {formatCurrency(
+                    typeof invoice.amountRemaining === 'number'
+                      ? invoice.amountRemaining
+                      : typeof invoice.amountPaid === 'number'
+                        ? Math.max(invoice.amount - invoice.amountPaid, 0)
+                        : invoice.amount
+                  )}
+                </p>
               </div>
             ))
           )}

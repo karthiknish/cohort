@@ -16,6 +16,7 @@ export type ClientRecord = {
   lastInvoiceIssuedAt?: string | null
   lastInvoiceNumber?: string | null
   lastInvoiceUrl?: string | null
+  lastInvoicePaidAt?: string | null
   createdAt?: string | null
   updatedAt?: string | null
 }

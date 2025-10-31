@@ -6,6 +6,7 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
 import { buildCacheHeaders, serverCache } from '@/lib/cache'
 import { resolveWorkspaceContext } from '@/lib/workspace'
+import { notifyTaskCreatedWhatsApp } from '@/lib/notifications'
 
 export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -211,6 +212,16 @@ export async function POST(request: NextRequest) {
     const task = mapTaskDoc(createdDoc.id, createdDoc.data() as StoredTask)
 
     invalidateTasksCache(workspace.workspaceId)
+
+    const actorName = typeof auth.claims?.name === 'string'
+      ? (auth.claims.name as string)
+      : auth.email
+
+    try {
+      await notifyTaskCreatedWhatsApp({ workspaceId: workspace.workspaceId, task, actorName })
+    } catch (notificationError) {
+      console.error('[tasks] whatsapp notification failed', notificationError)
+    }
 
     return NextResponse.json(task, { status: 201 })
   } catch (error: unknown) {

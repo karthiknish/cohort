@@ -1,6 +1,8 @@
 'use client'
 
-import { Plus, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+
+import { CreditCard, Plus, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -24,6 +26,7 @@ interface FinanceHeaderProps {
   onRefresh: () => Promise<void> | void
   refreshing: boolean
   onCreateInvoice?: () => void
+  paymentsHref?: string
 }
 
 export function FinanceHeader({
@@ -32,6 +35,7 @@ export function FinanceHeader({
   onRefresh,
   refreshing,
   onCreateInvoice,
+  paymentsHref,
 }: FinanceHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -63,6 +67,14 @@ export function FinanceHeader({
             )}
             Refresh data
           </Button>
+          {paymentsHref && (
+            <Button asChild variant="outline">
+              <Link href={paymentsHref} className="inline-flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Payments
+              </Link>
+            </Button>
+          )}
           <Button onClick={onCreateInvoice} disabled={!onCreateInvoice}>
             <Plus className="mr-2 h-4 w-4" /> Create invoice
           </Button>

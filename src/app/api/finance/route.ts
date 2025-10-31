@@ -5,6 +5,7 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import type {
   FinanceCostEntry,
   FinanceInvoice,
+  FinancePaymentSummary,
   FinanceRevenueRecord,
   FinanceSummaryResponse,
 } from '@/types/finance'
@@ -20,6 +21,7 @@ type StoredFinanceRevenue = {
   label?: unknown
   revenue?: unknown
   operatingExpenses?: unknown
+  currency?: unknown
   createdAt?: unknown
   updatedAt?: unknown
 }
@@ -29,9 +31,19 @@ type StoredFinanceInvoice = {
   clientName?: unknown
   amount?: unknown
   status?: unknown
+  stripeStatus?: unknown
   issuedDate?: unknown
   dueDate?: unknown
   description?: unknown
+  hostedInvoiceUrl?: unknown
+  number?: unknown
+  amountPaid?: unknown
+  amountRemaining?: unknown
+  amountRefunded?: unknown
+  currency?: unknown
+  paidDate?: unknown
+  paymentIntentId?: unknown
+  collectionMethod?: unknown
   createdAt?: unknown
   updatedAt?: unknown
 }
@@ -90,23 +102,129 @@ function mapRevenueDoc(docId: string, data: StoredFinanceRevenue): FinanceRevenu
     label: typeof data.label === 'string' ? data.label : null,
     revenue: coerceNumber(data.revenue),
     operatingExpenses: coerceNumber(data.operatingExpenses),
+    currency: typeof data.currency === 'string' ? data.currency : null,
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
   }
 }
 
 function mapInvoiceDoc(docId: string, data: StoredFinanceInvoice): FinanceInvoice {
+  const amount = coerceNumber(data.amount)
+  const amountPaid = coerceNullableNumber(data.amountPaid)
+  const amountRefunded = coerceNullableNumber(data.amountRefunded)
+  const amountRemaining = coerceNullableNumber(data.amountRemaining)
   return {
     id: docId,
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     clientName: typeof data.clientName === 'string' && data.clientName.trim().length > 0 ? data.clientName : 'Unknown client',
-    amount: coerceNumber(data.amount),
+    amount,
     status: (typeof data.status === 'string' ? data.status : 'draft') as FinanceInvoice['status'],
+    stripeStatus: typeof data.stripeStatus === 'string' ? data.stripeStatus : null,
     issuedDate: toISO(data.issuedDate),
     dueDate: toISO(data.dueDate),
+    paidDate: toISO(data.paidDate),
+    amountPaid: amountPaid,
+    amountRemaining: amountRemaining !== null ? amountRemaining : amountPaid !== null ? Math.max(amount - amountPaid, 0) : null,
+    amountRefunded: amountRefunded,
+    currency: typeof data.currency === 'string' ? data.currency : null,
     description: typeof data.description === 'string' ? data.description : null,
+    hostedInvoiceUrl: typeof data.hostedInvoiceUrl === 'string' ? data.hostedInvoiceUrl : null,
+    number: typeof data.number === 'string' ? data.number : null,
+    paymentIntentId: typeof data.paymentIntentId === 'string' ? data.paymentIntentId : null,
+    collectionMethod: typeof data.collectionMethod === 'string' ? data.collectionMethod : null,
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
+  }
+}
+
+function coerceNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}
+
+function computePaymentSummary(invoices: FinanceInvoice[]): FinancePaymentSummary {
+  let totalInvoiced = 0
+  let totalPaid = 0
+  let totalOutstanding = 0
+  let refundTotal = 0
+  let overdueCount = 0
+  let paidCount = 0
+  let openCount = 0
+  let nextDueAt: string | null = null
+  let lastPaymentAt: string | null = null
+  let currency = 'usd'
+
+  invoices.forEach((invoice) => {
+    totalInvoiced += invoice.amount
+
+    if (invoice.currency) {
+      currency = invoice.currency
+    }
+
+    if (invoice.status === 'paid') {
+      paidCount += 1
+    } else if (invoice.status === 'overdue') {
+      overdueCount += 1
+      openCount += 1
+    } else if (invoice.status === 'sent') {
+      openCount += 1
+    }
+
+    if (typeof invoice.amountPaid === 'number') {
+      totalPaid += invoice.amountPaid
+    }
+
+    if (typeof invoice.amountRefunded === 'number') {
+      refundTotal += invoice.amountRefunded
+    }
+
+    const outstanding =
+      typeof invoice.amountRemaining === 'number'
+        ? invoice.amountRemaining
+        : typeof invoice.amountPaid === 'number'
+          ? Math.max(invoice.amount - invoice.amountPaid, 0)
+          : invoice.status === 'paid'
+            ? 0
+            : invoice.amount
+
+    if (outstanding > 0) {
+      totalOutstanding += outstanding
+      if (invoice.dueDate) {
+        const dueMillis = new Date(invoice.dueDate).getTime()
+        if (!Number.isNaN(dueMillis)) {
+          if (nextDueAt === null || dueMillis < new Date(nextDueAt).getTime()) {
+            nextDueAt = new Date(dueMillis).toISOString()
+          }
+        }
+      }
+    }
+
+    if (invoice.paidDate) {
+      if (!lastPaymentAt || new Date(invoice.paidDate).getTime() > new Date(lastPaymentAt).getTime()) {
+        lastPaymentAt = new Date(invoice.paidDate).toISOString()
+      }
+    }
+  })
+
+  return {
+    totalInvoiced,
+    totalPaid: Math.max(totalPaid - refundTotal, 0),
+    totalOutstanding,
+    overdueCount,
+    paidCount,
+    openCount,
+    refundTotal,
+    nextDueAt,
+    lastPaymentAt,
+    currency,
   }
 }
 
@@ -161,10 +279,13 @@ export async function GET(request: NextRequest) {
       .map((doc) => mapCostDoc(doc.id, doc.data() as StoredFinanceCost))
       .filter((cost) => !clientId || cost.clientId === clientId || cost.clientId === null)
 
+    const payments = computePaymentSummary(invoices)
+
     const payload: FinanceSummaryResponse = {
       revenue,
       invoices,
       costs,
+      payments,
     }
 
     return NextResponse.json(payload)

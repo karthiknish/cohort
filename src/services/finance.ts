@@ -94,3 +94,53 @@ export async function deleteFinanceCost(costId: string): Promise<void> {
     method: 'DELETE',
   })
 }
+
+export async function createBillingPortalSession(clientId: string | null): Promise<{ url: string }> {
+  const payload = await authorizedFetch('/api/billing/portal', {
+    method: 'POST',
+    body: JSON.stringify({ clientId }),
+  })
+
+  if (!payload || typeof payload !== 'object' || !('url' in payload) || typeof (payload as { url?: unknown }).url !== 'string') {
+    throw new Error('Failed to create billing portal session')
+  }
+
+  return { url: (payload as { url: string }).url }
+}
+
+export async function sendInvoiceReminder(invoiceId: string): Promise<void> {
+  if (!invoiceId) {
+    throw new Error('Invoice id is required')
+  }
+
+  await authorizedFetch(`/api/finance/invoices/${encodeURIComponent(invoiceId)}/remind`, {
+    method: 'POST',
+  })
+}
+
+export async function issueInvoiceRefund(invoiceId: string, amount?: number): Promise<{ refundId: string; amount: number }> {
+  if (!invoiceId) {
+    throw new Error('Invoice id is required')
+  }
+
+  const body: Record<string, unknown> = {}
+  if (typeof amount === 'number' && Number.isFinite(amount) && amount > 0) {
+    body.amount = amount
+  }
+
+  const payload = await authorizedFetch(`/api/finance/invoices/${encodeURIComponent(invoiceId)}/refund`, {
+    method: 'POST',
+    body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
+  })
+
+  if (!payload || typeof payload !== 'object' || !('refund' in payload)) {
+    throw new Error('Failed to process refund')
+  }
+
+  const refund = (payload as { refund: { id: string; amount: number } }).refund
+  if (!refund || typeof refund.id !== 'string') {
+    throw new Error('Invalid refund response')
+  }
+
+  return { refundId: refund.id, amount: refund.amount }
+}

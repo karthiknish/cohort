@@ -34,6 +34,12 @@ export interface AuthUser {
   agencyId: string
   createdAt: Date
   updatedAt: Date
+  notificationPreferences?: {
+    whatsapp?: {
+      tasks?: boolean
+      collaboration?: boolean
+    }
+  }
 }
 
 export interface SignUpData {
@@ -91,7 +97,13 @@ export class AuthService {
       status,
       agencyId: 'default-agency', // Would be fetched from database
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      notificationPreferences: {
+        whatsapp: {
+          tasks: false,
+          collaboration: false,
+        },
+      },
     }
   }
 

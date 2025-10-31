@@ -19,6 +19,13 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -70,6 +77,7 @@ export default function AdminClientsPage() {
   const [invoiceEmail, setInvoiceEmail] = useState('')
   const [creatingInvoice, setCreatingInvoice] = useState(false)
   const [invoiceError, setInvoiceError] = useState<string | null>(null)
+  const [selectedInvoiceClientId, setSelectedInvoiceClientId] = useState<string | undefined>(undefined)
 
   const loadClients = useCallback(async () => {
     if (!user?.id) {
@@ -117,6 +125,20 @@ export default function AdminClientsPage() {
 
     void loadClients()
   }, [loadClients, user?.id])
+
+  useEffect(() => {
+    if (clients.length === 0) {
+      setSelectedInvoiceClientId(undefined)
+      return
+    }
+
+    setSelectedInvoiceClientId((current) => {
+      if (current && clients.some((client) => client.id === current)) {
+        return current
+      }
+      return clients[0]?.id
+    })
+  }, [clients])
 
   const existingTeamMembers = useMemo(() => clients.reduce((total, client) => total + client.teamMembers.length, 0), [clients])
 
@@ -541,6 +563,70 @@ export default function AdminClientsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-muted/60 bg-background">
+          <CardHeader>
+            <CardTitle className="text-lg">Raise invoice</CardTitle>
+            <CardDescription>Send a Stripe invoice to any client workspace.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-invoice-client">Client workspace</Label>
+              <Select
+                value={selectedInvoiceClientId ?? undefined}
+                onValueChange={(value) => setSelectedInvoiceClientId(value)}
+                disabled={clients.length === 0 || clientsLoading || creatingInvoice}
+              >
+                <SelectTrigger id="admin-invoice-client">
+                  <SelectValue placeholder={clientsLoading ? 'Loading clients…' : 'Select client'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Opens the invoice composer to choose amount, due date, and billing email.
+              </p>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!selectedInvoiceClientId) {
+                    toast({
+                      title: 'Select a client',
+                      description: 'Pick the workspace you want to invoice first.',
+                      variant: 'destructive',
+                    })
+                    return
+                  }
+                  const client = clients.find((record) => record.id === selectedInvoiceClientId)
+                  if (!client) {
+                    toast({
+                      title: 'Client unavailable',
+                      description: 'Refresh the list and try again.',
+                      variant: 'destructive',
+                    })
+                    return
+                  }
+                  requestInvoiceForClient(client)
+                }}
+                disabled={!selectedInvoiceClientId || creatingInvoice || clients.length === 0}
+                className="inline-flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Start invoice
+              </Button>
+            </div>
+            {clients.length === 0 && !clientsLoading ? (
+              <p className="text-sm text-muted-foreground">Add a client workspace before raising invoices.</p>
+            ) : null}
+          </CardContent>
+        </Card>
 
         <Card className="border-muted/60 bg-background">
           <CardHeader>
