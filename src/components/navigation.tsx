@@ -16,7 +16,6 @@ import {
   Home,
   Briefcase,
   LogOut,
-  Bell,
   Menu,
   Megaphone,
   ChevronLeft,
@@ -37,6 +36,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { ClientWorkspaceSelector } from '@/components/client-workspace-selector'
+import { NotificationsDropdown } from '@/components/notifications-dropdown'
 
 type NavItem = {
   name: string
@@ -205,10 +205,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">View notifications</span>
-          </Button>
+          <NotificationsDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

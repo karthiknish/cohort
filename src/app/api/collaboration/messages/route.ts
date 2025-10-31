@@ -9,7 +9,7 @@ import type {
   CollaborationMessage,
 } from '@/types/collaboration'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
-import { notifyCollaborationMessageWhatsApp } from '@/lib/notifications'
+import { notifyCollaborationMessageWhatsApp, recordCollaborationNotification } from '@/lib/notifications'
 
 const channelTypeSchema = z.enum(['client', 'team', 'project'])
 
@@ -232,6 +232,17 @@ export async function POST(request: NextRequest) {
       await notifyCollaborationMessageWhatsApp({ workspaceId: workspace.workspaceId, message, actorName })
     } catch (notificationError) {
       console.error('[collaboration/messages] whatsapp notification failed', notificationError)
+    }
+
+    try {
+      await recordCollaborationNotification({
+        workspaceId: workspace.workspaceId,
+        message,
+        actorId: uid,
+        actorName,
+      })
+    } catch (notificationError) {
+      console.error('[collaboration/messages] workspace notification failed', notificationError)
     }
 
     return NextResponse.json({ message }, { status: 201 })
