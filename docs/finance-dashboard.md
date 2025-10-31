@@ -106,6 +106,7 @@ All API failures propagate descriptive `error` strings to aid toast messaging.
 - Export tooling: `FinanceInvoiceTable` exposes an "Export CSV" button. Implement a handler leveraging `filteredInvoices` to generate actual CSV downloads.
 - Permissions: Costs currently limited to admins. If contributors need access, adjust the `assertAdmin` guard and update storage rules.
 - Client level dashboards: `useClientContext` already scopes data; add UI affordances (e.g., dropdown or breadcrumbs) to surface this filter above the finance dashboard.
+- Invoice lifecycle: `POST /api/billing/webhook` processes Stripe invoice events (`invoice.finalized`, `invoice.paid`, `invoice.payment_failed`, `invoice.voided`) and keeps `financeInvoices` plus client aggregates fresh. If webhooks are unavailable, fall back to a scheduled polling job (e.g., Cloud Scheduler calling a cron endpoint) that walks `stripe.invoices.list` for recent activity and applies the same updates.
 
 ## Testing considerations
 - Mock `authService.getIdToken()` when unit testing the finance service to avoid real Firebase calls.

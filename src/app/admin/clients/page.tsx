@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
+import { FileText, Loader2, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -60,6 +61,15 @@ export default function AdminClientsPage() {
   const [clientName, setClientName] = useState('')
   const [clientAccountManager, setClientAccountManager] = useState('')
   const [teamMemberFields, setTeamMemberFields] = useState<TeamMemberField[]>([createEmptyMemberField()])
+
+  const [clientPendingInvoice, setClientPendingInvoice] = useState<ClientRecord | null>(null)
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
+  const [invoiceAmount, setInvoiceAmount] = useState('')
+  const [invoiceDescription, setInvoiceDescription] = useState('')
+  const [invoiceDueDate, setInvoiceDueDate] = useState('')
+  const [invoiceEmail, setInvoiceEmail] = useState('')
+  const [creatingInvoice, setCreatingInvoice] = useState(false)
+  const [invoiceError, setInvoiceError] = useState<string | null>(null)
 
   const loadClients = useCallback(async () => {
     if (!user?.id) {
@@ -129,6 +139,16 @@ export default function AdminClientsPage() {
     setIsTeamDialogOpen(true)
   }, [])
 
+  const requestInvoiceForClient = useCallback((client: ClientRecord) => {
+    setClientPendingInvoice(client)
+    setInvoiceAmount('')
+    setInvoiceDescription('')
+    setInvoiceDueDate('')
+    setInvoiceEmail(client.billingEmail ?? '')
+    setInvoiceError(null)
+    setIsInvoiceDialogOpen(true)
+  }, [])
+
   const handleTeamDialogChange = useCallback((open: boolean) => {
     setIsTeamDialogOpen(open)
     if (!open) {
@@ -138,6 +158,21 @@ export default function AdminClientsPage() {
       setAddingMember(false)
     }
   }, [])
+
+  const handleInvoiceDialogChange = useCallback((open: boolean) => {
+    if (!open && creatingInvoice) {
+      return
+    }
+    setIsInvoiceDialogOpen(open)
+    if (!open) {
+      setClientPendingInvoice(null)
+      setInvoiceAmount('')
+      setInvoiceDescription('')
+      setInvoiceDueDate('')
+      setInvoiceEmail('')
+      setInvoiceError(null)
+    }
+  }, [creatingInvoice])
 
   const handleAddTeamMember = useCallback(async () => {
     if (!clientPendingMembers) {
@@ -189,6 +224,146 @@ export default function AdminClientsPage() {
       setAddingMember(false)
     }
   }, [clientPendingMembers, getIdToken, memberName, memberRole, toast])
+
+  const handleCreateInvoice = useCallback(async () => {
+    if (!clientPendingInvoice) {
+      return
+    }
+
+    const amountValue = Number(invoiceAmount)
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      setInvoiceError('Enter a positive amount to invoice.')
+      return
+    }
+
+    const normalizedEmail = invoiceEmail.trim().toLowerCase()
+    if (!normalizedEmail) {
+      setInvoiceError('Add a billing email before sending the invoice.')
+      return
+    }
+
+    let dueDateIso: string | undefined
+    if (invoiceDueDate.trim().length > 0) {
+      const dueDate = new Date(invoiceDueDate)
+      if (Number.isNaN(dueDate.getTime())) {
+        setInvoiceError('Provide a valid due date.')
+        return
+      }
+      dueDateIso = dueDate.toISOString()
+    }
+
+    setCreatingInvoice(true)
+    setInvoiceError(null)
+
+    try {
+      const token = await getIdToken()
+      const response = await fetch(`/api/clients/${encodeURIComponent(clientPendingInvoice.id)}/invoice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: amountValue,
+          description: invoiceDescription.trim().length > 0 ? invoiceDescription.trim() : undefined,
+          dueDate: dueDateIso,
+          email: normalizedEmail,
+        }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as {
+        invoice?: {
+          id: string
+          number: string | null
+          status: string | null
+          currency: string | null
+          amountDue: number | null
+          dueDate: string | null
+          hostedInvoiceUrl: string | null
+          issuedAt: string | null
+        }
+        client?: {
+          billingEmail?: string | null
+          stripeCustomerId?: string | null
+          lastInvoiceStatus?: string | null
+          lastInvoiceAmount?: number | null
+          lastInvoiceCurrency?: string | null
+          lastInvoiceIssuedAt?: string | null
+          lastInvoiceNumber?: string | null
+          lastInvoiceUrl?: string | null
+        }
+        error?: string
+      } | null
+
+      if (!response.ok || !payload || !payload.invoice) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to raise invoice'
+        throw new Error(message)
+      }
+
+      const { invoice, client } = payload
+
+      setClients((prev) =>
+        prev.map((record) => {
+          if (record.id !== clientPendingInvoice.id) {
+            return record
+          }
+
+          const amountFromPayload =
+            typeof client?.lastInvoiceAmount === 'number'
+              ? client.lastInvoiceAmount
+              : typeof invoice.amountDue === 'number'
+                ? invoice.amountDue / 100
+                : amountValue
+
+          const issuedAtFromPayload = client?.lastInvoiceIssuedAt ?? invoice.issuedAt ?? record.lastInvoiceIssuedAt ?? new Date().toISOString()
+
+          return {
+            ...record,
+            billingEmail: client?.billingEmail ?? normalizedEmail,
+            stripeCustomerId: client?.stripeCustomerId ?? record.stripeCustomerId ?? null,
+            lastInvoiceStatus: client?.lastInvoiceStatus ?? invoice.status ?? record.lastInvoiceStatus ?? null,
+            lastInvoiceAmount: amountFromPayload,
+            lastInvoiceCurrency: client?.lastInvoiceCurrency ?? invoice.currency ?? record.lastInvoiceCurrency ?? 'usd',
+            lastInvoiceIssuedAt: issuedAtFromPayload,
+            lastInvoiceNumber: client?.lastInvoiceNumber ?? invoice.number ?? record.lastInvoiceNumber ?? null,
+            lastInvoiceUrl: client?.lastInvoiceUrl ?? invoice.hostedInvoiceUrl ?? record.lastInvoiceUrl ?? null,
+          }
+        })
+      )
+
+      const invoiceLabel = invoice.number ?? invoice.id
+      toast({
+        title: 'Invoice sent',
+        description: `Invoice ${invoiceLabel} emailed to ${normalizedEmail}.`,
+      })
+
+      if (invoice.hostedInvoiceUrl) {
+        try {
+          window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
+        } catch (openError) {
+          console.warn('[AdminClients] Failed to open invoice preview', openError)
+        }
+      }
+
+      handleInvoiceDialogChange(false)
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, 'Unable to send invoice')
+      setInvoiceError(message)
+      toast({ title: 'Invoice error', description: message, variant: 'destructive' })
+    } finally {
+      setCreatingInvoice(false)
+    }
+  }, [
+    clientPendingInvoice,
+    getIdToken,
+    handleInvoiceDialogChange,
+    invoiceAmount,
+    invoiceDescription,
+    invoiceDueDate,
+    invoiceEmail,
+    setClients,
+    toast,
+  ])
 
   const handleDeleteClient = useCallback(async () => {
     if (!clientPendingDelete) {
@@ -495,6 +670,14 @@ export default function AdminClientsPage() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Team {client.teamMembers.length}</Badge>
                           <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => requestInvoiceForClient(client)}
+                            disabled={creatingInvoice}
+                          >
+                            <FileText className="mr-2 h-4 w-4" /> Invoice
+                          </Button>
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => requestAddTeamMember(client)}
@@ -531,6 +714,46 @@ export default function AdminClientsPage() {
                               {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
                             </span>
                           ))}
+                        </div>
+                      )}
+                      {(client.lastInvoiceStatus || typeof client.lastInvoiceAmount === 'number' || client.lastInvoiceIssuedAt || client.lastInvoiceNumber) && (
+                        <div className="mt-4 rounded-md border border-muted/50 bg-background/80 p-3 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2 text-foreground">
+                            <span className="font-semibold">Latest invoice</span>
+                            {client.lastInvoiceStatus ? (
+                              <Badge variant="outline" className="capitalize">
+                                {client.lastInvoiceStatus.replace(/_/g, ' ')}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          {typeof client.lastInvoiceAmount === 'number' ? (
+                            <p className="mt-1 text-foreground">
+                              {new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: client.lastInvoiceCurrency?.toUpperCase() ?? 'USD',
+                              }).format(client.lastInvoiceAmount)}
+                              {client.lastInvoiceNumber ? ` • ${client.lastInvoiceNumber}` : ''}
+                            </p>
+                          ) : (
+                            <p className="mt-1">No invoices issued yet.</p>
+                          )}
+                          {client.lastInvoiceIssuedAt ? (
+                            <p className="mt-1">
+                              Sent {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(client.lastInvoiceIssuedAt))}
+                            </p>
+                          ) : null}
+                          {client.lastInvoiceUrl ? (
+                            <p className="mt-1">
+                              <a
+                                href={client.lastInvoiceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary underline"
+                              >
+                                View hosted invoice
+                              </a>
+                            </p>
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -608,6 +831,111 @@ export default function AdminClientsPage() {
             <Button type="button" onClick={() => void handleAddTeamMember()} disabled={addingMember}>
               {addingMember && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add teammate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={handleInvoiceDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send invoice</DialogTitle>
+            <DialogDescription>
+              Email a Stripe invoice to {clientPendingInvoice?.name ?? 'this client'} and track the payment in their workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="invoice-amount-input">Amount (USD)</Label>
+              <Input
+                id="invoice-amount-input"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="5000"
+                value={invoiceAmount}
+                onChange={(event) => setInvoiceAmount(event.target.value)}
+                disabled={creatingInvoice}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoice-description-input">Line item description</Label>
+              <Textarea
+                id="invoice-description-input"
+                placeholder="Describe the scope or milestone you are invoicing for"
+                value={invoiceDescription}
+                onChange={(event) => setInvoiceDescription(event.target.value)}
+                disabled={creatingInvoice}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="invoice-due-date-input">Due date (optional)</Label>
+                <Input
+                  id="invoice-due-date-input"
+                  type="date"
+                  value={invoiceDueDate}
+                  onChange={(event) => setInvoiceDueDate(event.target.value)}
+                  disabled={creatingInvoice}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-email-input">Billing email</Label>
+                <Input
+                  id="invoice-email-input"
+                  type="email"
+                  placeholder="billing@clientco.com"
+                  value={invoiceEmail}
+                  onChange={(event) => setInvoiceEmail(event.target.value)}
+                  disabled={creatingInvoice}
+                />
+              </div>
+            </div>
+            {(clientPendingInvoice?.lastInvoiceStatus || typeof clientPendingInvoice?.lastInvoiceAmount === 'number' || clientPendingInvoice?.lastInvoiceNumber) && (
+              <div className="rounded-md border border-muted/50 bg-muted/10 p-3 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-foreground">
+                  <p className="font-medium">Latest invoice</p>
+                  {clientPendingInvoice?.lastInvoiceStatus ? (
+                    <Badge variant="outline" className="capitalize">
+                      {clientPendingInvoice.lastInvoiceStatus.replace(/_/g, ' ')}
+                    </Badge>
+                  ) : null}
+                </div>
+                {clientPendingInvoice?.lastInvoiceNumber ? (
+                  <p className="mt-1 text-foreground">Invoice {clientPendingInvoice.lastInvoiceNumber}</p>
+                ) : null}
+                {typeof clientPendingInvoice?.lastInvoiceAmount === 'number' ? (
+                  <p className="mt-1">
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: clientPendingInvoice.lastInvoiceCurrency?.toUpperCase() ?? 'USD',
+                    }).format(clientPendingInvoice.lastInvoiceAmount)}
+                  </p>
+                ) : (
+                  <p className="mt-1">No invoice amount recorded.</p>
+                )}
+                {clientPendingInvoice?.lastInvoiceIssuedAt ? (
+                  <p className="mt-1">
+                    Sent on {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(clientPendingInvoice.lastInvoiceIssuedAt))}
+                  </p>
+                ) : null}
+                {clientPendingInvoice?.lastInvoiceUrl ? (
+                  <p className="mt-1">
+                    <a href={clientPendingInvoice.lastInvoiceUrl} target="_blank" rel="noreferrer" className="text-primary underline">
+                      View last invoice
+                    </a>
+                  </p>
+                ) : null}
+              </div>
+            )}
+            {invoiceError && <p className="text-sm text-destructive">{invoiceError}</p>}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleInvoiceDialogChange(false)} disabled={creatingInvoice}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void handleCreateInvoice()} disabled={creatingInvoice}>
+              {creatingInvoice && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Send invoice
             </Button>
           </DialogFooter>
         </DialogContent>

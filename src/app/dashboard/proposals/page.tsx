@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, ClipboardList, Loader2, Sparkles } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, Loader2, Sparkles } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -37,6 +37,31 @@ type SubmissionSnapshot = {
   clientName: string | null
 }
 
+type DeckProgressStage = 'initializing' | 'polling' | 'launching' | 'queued' | 'error'
+
+const deckStageMessages: Record<DeckProgressStage, { title: string; description: string }> = {
+  initializing: {
+    title: 'Starting deck request...',
+    description: 'Connecting to Gamma and packaging your proposal details.',
+  },
+  polling: {
+    title: 'Generating slides & saving...',
+    description: 'Gamma is exporting the PPT while we get ready to store it securely in Firebase.',
+  },
+  launching: {
+    title: 'Deck ready',
+    description: 'We saved a copy to Firebase and are opening it for you now.',
+  },
+  queued: {
+    title: 'Still processing',
+    description: "Gamma hasn't finished the PPT yet. We'll save it automatically as soon as it lands.",
+  },
+  error: {
+    title: 'Deck preparation failed',
+    description: 'We could not finish the export. Please retry or regenerate the proposal.',
+  },
+}
+
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'string') {
     return error
@@ -50,6 +75,18 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+function parseAiSuggestionList(value: string | null): string[] {
+  if (!value) {
+    return []
+  }
+
+  return value
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/^\s*(?:[-•*]|\d+[\.\)])\s*/, '').trim())
+    .filter((line) => line.length > 0)
+    .slice(0, 6)
+}
+
 export default function ProposalsPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [formState, setFormState] = useState<ProposalFormData>(() => createInitialProposalFormState())
@@ -61,16 +98,21 @@ export default function ProposalsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [gammaDeck, setGammaDeck] = useState<ProposalGammaDeck | null>(null)
+  const [aiSuggestions, setAiSuggestions] = useState<string | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
   const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null)
+  const [deckProgressStage, setDeckProgressStage] = useState<DeckProgressStage | null>(null)
   const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [lastSubmissionSnapshot, setLastSubmissionSnapshot] = useState<SubmissionSnapshot | null>(null)
   const hydrationRef = useRef(false)
+  const draftIdRef = useRef<string | null>(draftId)
+  const submittedRef = useRef(submitted)
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wizardRef = useRef<HTMLDivElement | null>(null)
+  const pendingDeckWindowRef = useRef<Window | null>(null)
   const { toast } = useToast()
   const { selectedClient, selectedClientId } = useClientContext()
 
@@ -153,6 +195,7 @@ export default function ProposalsPage() {
         setCurrentStep(0)
         setSubmitted(false)
         setGammaDeck(null)
+        setAiSuggestions(null)
         setLastSubmissionSnapshot(null)
       }
 
@@ -221,6 +264,7 @@ export default function ProposalsPage() {
     setCurrentStep(targetStep)
     setSubmitted(proposal.status === 'ready')
     setGammaDeck(proposal.gammaDeck ? { ...proposal.gammaDeck, storageUrl: proposal.gammaDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
+    setAiSuggestions(proposal.aiSuggestions ?? null)
 
     if (proposal.status === 'ready') {
       setLastSubmissionSnapshot({
@@ -237,6 +281,14 @@ export default function ProposalsPage() {
     wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
+  useEffect(() => {
+    draftIdRef.current = draftId
+  }, [draftId])
+
+  useEffect(() => {
+    submittedRef.current = submitted
+  }, [submitted])
+
   const summary = useMemo(() => {
     if (submitted && lastSubmissionSnapshot) {
       return structuredClone(lastSubmissionSnapshot.form) as ProposalFormData
@@ -245,12 +297,15 @@ export default function ProposalsPage() {
     return structuredClone(formState) as ProposalFormData
   }, [formState, lastSubmissionSnapshot, submitted])
 
+  const suggestionItems = useMemo(() => parseAiSuggestionList(aiSuggestions), [aiSuggestions])
+
   const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
 
   const refreshProposals = useCallback(async () => {
     if (!selectedClientId) {
       setProposals([])
       setIsLoadingProposals(false)
+      setAiSuggestions(null)
       return []
     }
 
@@ -258,6 +313,17 @@ export default function ProposalsPage() {
     try {
       const result = await listProposals({ clientId: selectedClientId })
       setProposals(result)
+
+      const activeId = draftIdRef.current
+      if (activeId) {
+        const active = result.find((proposal) => proposal.id === activeId)
+        if (active) {
+          setAiSuggestions(active.aiSuggestions ?? null)
+        }
+      } else if (!submittedRef.current) {
+        setAiSuggestions(null)
+      }
+
       return result
     } catch (err: unknown) {
       const message = getErrorMessage(err, 'Failed to load proposals')
@@ -268,15 +334,46 @@ export default function ProposalsPage() {
     }
   }, [selectedClientId, toast])
 
-  const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
-    const localDeckUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
+  const openDeckUrl = useCallback((url: string, pendingWindow?: Window | null) => {
+    if (typeof window === 'undefined') {
+      return
+    }
 
-    if (localDeckUrl && typeof window !== 'undefined') {
-      window.open(localDeckUrl, '_blank', 'noopener')
+    if (pendingWindow && !pendingWindow.closed) {
+      pendingWindow.location.href = url
+      return
+    }
+
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.target = '_blank'
+    anchor.rel = 'noopener'
+    anchor.style.display = 'none'
+
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  }, [])
+
+  const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
+    console.log('[ProposalDownload] Starting download for proposal:', proposal.id)
+    
+    const localDeckUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
+    console.log('[ProposalDownload] URL priority check:', {
+      pptUrl: proposal.pptUrl,
+      storageUrl: proposal.gammaDeck?.storageUrl,
+      pptxUrl: proposal.gammaDeck?.pptxUrl,
+      selectedUrl: localDeckUrl
+    })
+
+    if (localDeckUrl) {
+      console.log('[ProposalDownload] Using existing URL:', localDeckUrl)
+      openDeckUrl(localDeckUrl)
       return
     }
 
     if (downloadingDeckId) {
+      console.log('[ProposalDownload] Download already in progress for:', downloadingDeckId)
       toast({
         title: 'Deck already preparing',
         description: 'Please wait for the current deck request to finish.',
@@ -284,20 +381,66 @@ export default function ProposalsPage() {
       return
     }
 
+    setDeckProgressStage('initializing')
+
+    if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
+      pendingDeckWindowRef.current.close()
+    }
+    pendingDeckWindowRef.current = null
+
     try {
+      console.log('[ProposalDownload] Starting deck preparation for proposal:', proposal.id)
+      if (typeof window !== 'undefined') {
+        const popup = window.open('about:blank', '_blank')
+        if (popup) {
+          pendingDeckWindowRef.current = popup
+          try {
+            popup.document.open()
+            popup.document.write(`<!doctype html><title>Preparing presentation...</title><style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; background: #0f172a; color: white; }
+              .container { text-align: center; max-width: 360px; padding: 24px; }
+              .spinner { width: 48px; height: 48px; border-radius: 9999px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+              @keyframes spin { to { transform: rotate(360deg); } }
+            </style><body><div class="container"><div class="spinner" aria-hidden="true"></div><h1 style="font-size: 20px; margin-bottom: 12px;">Preparing your deck...</h1><p style="font-size: 14px; line-height: 1.5; opacity: 0.85;">We're generating your presentation with Gamma and saving a copy to your workspace. Keep this tab open &mdash; the download launches automatically once it's ready.</p></div></body>`)
+            popup.document.close()
+          } catch (popupError) {
+            console.warn('[ProposalDownload] Unable to render popup content', popupError)
+          }
+        }
+      }
+      setDeckProgressStage('polling')
       setDownloadingDeckId(proposal.id)
       const result = await prepareProposalDeck(proposal.id)
+      console.log('[ProposalDownload] Deck preparation result:', {
+        storageUrl: result.storageUrl,
+        gammaDeckStorageUrl: result.gammaDeck?.storageUrl,
+        gammaDeckPptxUrl: result.gammaDeck?.pptxUrl,
+        gammaDeckShareUrl: result.gammaDeck?.shareUrl
+      })
+      
       const deckUrl = result.storageUrl
         ?? result.gammaDeck?.storageUrl
         ?? result.gammaDeck?.pptxUrl
         ?? result.gammaDeck?.shareUrl
         ?? null
 
-      if (deckUrl && typeof window !== 'undefined') {
-        window.open(deckUrl, '_blank', 'noopener')
+      console.log('[ProposalDownload] Final selected deck URL:', deckUrl)
+
+      if (deckUrl) {
+        setDeckProgressStage('launching')
+        console.log('[ProposalDownload] Opening deck URL:', deckUrl)
+        openDeckUrl(deckUrl, pendingDeckWindowRef.current ?? undefined)
+        pendingDeckWindowRef.current = null
+      } else {
+        setDeckProgressStage('queued')
+        if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
+          pendingDeckWindowRef.current.close()
+        }
+        pendingDeckWindowRef.current = null
       }
 
       if (deckUrl) {
+        console.log('[ProposalDownload] Updating proposal state with deck URL:', deckUrl)
         setProposals((prev) =>
           prev.map((item) => {
             if (item.id !== proposal.id) {
@@ -317,32 +460,42 @@ export default function ProposalsPage() {
         )
       }
 
+      console.log('[ProposalDownload] Refreshing proposals list')
       const refreshed = await refreshProposals()
       if (proposal.id === draftId && Array.isArray(refreshed)) {
         const latest = refreshed.find((candidate) => candidate.id === proposal.id)
         if (latest) {
+          console.log('[ProposalDownload] Updating gamma deck for active draft')
           setGammaDeck(
             latest.gammaDeck
               ? { ...latest.gammaDeck, storageUrl: latest.pptUrl ?? latest.gammaDeck?.storageUrl ?? null }
               : null
           )
+          setAiSuggestions(latest.aiSuggestions ?? null)
         }
       }
 
       toast({
-        title: deckUrl ? 'Deck ready' : 'Deck requested',
+        title: deckUrl ? 'Deck ready' : 'Deck still generating',
         description: deckUrl
-          ? 'Opening the Gamma deck now.'
-          : 'Gamma is preparing the deck. Refresh in a bit to download.',
+          ? 'We saved the PPT in Firebase storage and opened it in a new tab.'
+          : 'Gamma is still exporting the PPT. We will save it automatically once it finishes.',
       })
     } catch (error: unknown) {
-      console.error('[ProposalWizard] prepare deck failed', error)
-      const message = getErrorMessage(error, 'Failed to prepare Gamma deck')
+      setDeckProgressStage('error')
+      console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
+      const message = getErrorMessage(error, 'Failed to prepare the presentation deck')
       toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })
+      if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
+        pendingDeckWindowRef.current.close()
+      }
+      pendingDeckWindowRef.current = null
     } finally {
+      console.log('[ProposalDownload] Clearing downloading state for proposal:', proposal.id)
       setDownloadingDeckId(null)
+      setDeckProgressStage(null)
     }
-  }, [downloadingDeckId, draftId, refreshProposals, toast])
+  }, [downloadingDeckId, draftId, openDeckUrl, refreshProposals, toast])
 
   const handleContinueEditingFromSnapshot = useCallback(async () => {
     if (!lastSubmissionSnapshot) {
@@ -365,6 +518,7 @@ export default function ProposalsPage() {
     setCurrentStep(restoredStep)
     setSubmitted(false)
     setGammaDeck(null)
+    setAiSuggestions(null)
     setDraftId(lastSubmissionSnapshot.draftId)
     setLastSubmissionSnapshot(null)
     setAutosaveStatus('idle')
@@ -437,6 +591,7 @@ export default function ProposalsPage() {
     try {
       setIsSubmitting(true)
       clearErrors(stepErrorPaths.value)
+      setAiSuggestions(null)
       let activeDraftId = draftId
       if (!activeDraftId) {
         activeDraftId = await ensureDraftId()
@@ -476,6 +631,7 @@ export default function ProposalsPage() {
       const isReady = response.status === 'ready'
       setSubmitted(isReady)
       setGammaDeck(response.gammaDeck ? { ...response.gammaDeck, storageUrl: response.pptUrl ?? response.gammaDeck.storageUrl ?? null } : null)
+      setAiSuggestions(response.aiSuggestions ?? null)
       const storedPptUrl = response.pptUrl ?? response.gammaDeck?.storageUrl ?? null
 
       if (isReady) {
@@ -498,7 +654,7 @@ export default function ProposalsPage() {
       if (storedPptUrl) {
         toast({
           title: 'Presentation ready',
-          description: 'A downloadable proposal deck has been generated.',
+          description: 'We saved the presentation in Firebase storage for instant download.',
         })
       }
 
@@ -520,6 +676,7 @@ export default function ProposalsPage() {
       const message = getErrorMessage(err, 'Failed to submit proposal')
       setSubmitted(false)
       setGammaDeck(null)
+      setAiSuggestions(null)
       setLastSubmissionSnapshot(null)
       toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
     } finally {
@@ -540,6 +697,7 @@ export default function ProposalsPage() {
           setCurrentStep(0)
           setSubmitted(false)
           setGammaDeck(null)
+          setAiSuggestions(null)
           setProposals([])
           setLastSubmissionSnapshot(null)
           return
@@ -558,6 +716,7 @@ export default function ProposalsPage() {
           setCurrentStep(Math.min(draft.stepProgress ?? 0, steps.length - 1))
           setSubmitted(draft.status === 'ready')
           setGammaDeck(draft.gammaDeck ? { ...draft.gammaDeck, storageUrl: draft.gammaDeck.storageUrl ?? draft.pptUrl ?? null } : null)
+          setAiSuggestions(draft.aiSuggestions ?? null)
           setLastSubmissionSnapshot(null)
         } else {
           setDraftId(null)
@@ -565,6 +724,7 @@ export default function ProposalsPage() {
           setCurrentStep(0)
           setSubmitted(false)
           setGammaDeck(null)
+          setAiSuggestions(null)
           setLastSubmissionSnapshot(null)
         }
       } catch (err: unknown) {
@@ -696,6 +856,9 @@ export default function ProposalsPage() {
     />
   )
 
+  const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
+  const activeDeckCopy = deckStageMessages[activeDeckStage]
+
   return (
     <div ref={wizardRef} className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -748,27 +911,37 @@ export default function ProposalsPage() {
                 </Card>
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Next steps</CardTitle>
-                    <CardDescription>Use these actions to finalize the proposal.</CardDescription>
+                    <CardTitle className="text-base">Gemini suggestions</CardTitle>
+                    <CardDescription>Actionable follow-ups tailored to this client.</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex flex-wrap gap-3">
-                    <Button>Export summary</Button>
-                    <Button variant="outline">Share with client</Button>
+                  <CardContent className="text-sm text-muted-foreground">
+                    {suggestionItems.length ? (
+                      <ul className="space-y-2 pl-5">
+                        {suggestionItems.map((item, index) => (
+                          <li key={index} className="list-disc marker:text-primary">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground/80">
+                        Gemini didn&apos;t provide suggestions this time. Re-run the proposal to try again.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
               {gammaDeck ? (
                 <Card className="border-muted">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Gamma presentation</CardTitle>
-                    <CardDescription>AI-generated slides you can refine and export.</CardDescription>
+                    <CardTitle className="text-base">Presentation deck</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-muted-foreground">
                     <div className="flex flex-wrap items-center gap-3">
                       {gammaDeck.storageUrl ? (
                         <Button asChild>
                           <a href={gammaDeck.storageUrl} target="_blank" rel="noreferrer">
-                            Download deck
+                            Export PPT
                           </a>
                         </Button>
                       ) : gammaDeck.pptxUrl ? (
@@ -781,7 +954,7 @@ export default function ProposalsPage() {
                       {gammaDeck.webUrl ? (
                         <Button variant="outline" asChild>
                           <a href={gammaDeck.webUrl} target="_blank" rel="noreferrer">
-                            Open in Gamma
+                            Open online
                           </a>
                         </Button>
                       ) : null}
@@ -798,7 +971,7 @@ export default function ProposalsPage() {
                     </div>
                     {gammaDeck.instructions ? (
                       <p className="text-xs leading-relaxed">
-                        Instructions sent to Gamma: {gammaDeck.instructions}
+                        Slide guidance: {gammaDeck.instructions}
                       </p>
                     ) : null}
                   </CardContent>
@@ -867,8 +1040,25 @@ export default function ProposalsPage() {
             <div>
               <p className="text-lg font-semibold text-foreground">Generating your proposal…</p>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                We&apos;re calling Gemini for the summary and Gamma for the deck. This can take up to a minute.
+                We&apos;re compiling the summary and building the deck. This can take up to a minute.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {downloadingDeckId && !isSubmitting && (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm" role="status" aria-live="polite">
+          <div className="flex flex-col items-center gap-3 text-center">
+            {activeDeckStage === 'launching' ? (
+              <Sparkles className="h-10 w-10 text-primary" />
+            ) : activeDeckStage === 'error' ? (
+              <AlertTriangle className="h-10 w-10 text-destructive" />
+            ) : (
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            )}
+            <div>
+              <p className="text-lg font-semibold text-foreground">{activeDeckCopy.title}</p>
+              <p className="mt-1 max-w-sm text-sm text-muted-foreground">{activeDeckCopy.description}</p>
             </div>
           </div>
         </div>
@@ -876,4 +1066,3 @@ export default function ProposalsPage() {
     </div>
   )
 }
-

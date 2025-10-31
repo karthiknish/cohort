@@ -21,6 +21,7 @@ export interface ProposalDraft {
   stepProgress: number
   formData: ProposalFormData
   aiInsights: unknown
+  aiSuggestions: string | null
   pdfUrl?: string | null
   pptUrl?: string | null
   createdAt: string | null
@@ -63,7 +64,7 @@ export async function listProposals(params: { status?: ProposalStatus; clientId?
   }
 
   const payload = await response.json()
-  return payload.proposals as ProposalDraft[]
+  return (payload.proposals as ProposalDraft[]).map(resolveProposalDeck)
 }
 
 export async function createProposalDraft(body: Partial<ProposalDraft> = {}) {
@@ -106,14 +107,17 @@ export async function submitProposalDraft(id: string, delivery: 'summary' | 'sum
     throw new Error(payload.error || 'Failed to submit proposal draft')
   }
 
-  return response.json() as Promise<{
+  const payload = await response.json() as {
     ok: boolean
     status: ProposalStatus
     aiInsights: string | null
     pdfUrl?: string | null
     pptUrl?: string | null
     gammaDeck?: ProposalGammaDeck | null
-  }>
+    aiSuggestions?: string | null
+  }
+
+  return resolveProposalDeck(payload)
 }
 
 export async function deleteProposalDraft(id: string) {
@@ -140,9 +144,38 @@ export async function prepareProposalDeck(id: string) {
     throw new Error(payload.error || 'Failed to prepare proposal deck')
   }
 
-  return response.json() as Promise<{
+  const payload = await response.json() as {
     ok: boolean
     storageUrl: string | null
     gammaDeck?: ProposalGammaDeck | null
-  }>
+    aiSuggestions?: string | null
+  }
+
+  return resolveProposalDeck(payload)
+}
+
+function resolveProposalDeck<T extends { pptUrl?: string | null; gammaDeck?: ProposalGammaDeck | null; aiSuggestions?: string | null }>(payload: T): T {
+  const gammaDeck = payload.gammaDeck
+  if (!gammaDeck) {
+    const fallbackUrl = payload.pptUrl ?? null
+    if (fallbackUrl && payload.pptUrl !== fallbackUrl) {
+      return { ...payload, pptUrl: fallbackUrl, aiSuggestions: payload.aiSuggestions ?? null }
+    }
+    return { ...payload, aiSuggestions: payload.aiSuggestions ?? null }
+  }
+
+  const resolvedStorage = gammaDeck.storageUrl ?? payload.pptUrl ?? null
+  if (!resolvedStorage || (gammaDeck.storageUrl === resolvedStorage && payload.pptUrl === resolvedStorage)) {
+    return { ...payload, aiSuggestions: payload.aiSuggestions ?? null }
+  }
+
+  return {
+    ...payload,
+    pptUrl: payload.pptUrl ?? resolvedStorage,
+    gammaDeck: {
+      ...gammaDeck,
+      storageUrl: resolvedStorage,
+    },
+    aiSuggestions: payload.aiSuggestions ?? null,
+  }
 }

@@ -6,17 +6,12 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { geminiAI } from '@/services/gemini'
-import { gammaService } from '@/services/gamma'
-import type { GammaGenerationStatus } from '@/services/gamma'
 import {
-  buildGammaInputText,
-  buildGammaInstructionPrompt,
-  downloadGammaPresentation,
-  estimateGammaSlideCount,
-  GammaDeckPayload,
-  mapGammaDeckPayload,
-  storeGammaPresentation,
-  truncateGammaInstructions,
+  ensureProposalGammaDeck,
+  generateProposalSuggestions,
+  parseGammaDeckPayload,
+  type GammaDeckPayload,
+  type GammaDeckProcessResult,
 } from '@/app/api/proposals/utils/gamma'
 
 export async function POST(
@@ -49,9 +44,7 @@ export async function POST(
 
     const proposalData = proposalSnap.data() as Record<string, unknown>
     const ownerId = typeof proposalData.ownerId === 'string' ? proposalData.ownerId : null
-    const previousGammaDeck = (typeof proposalData.gammaDeck === 'object' && proposalData.gammaDeck !== null
-      ? (proposalData.gammaDeck as Partial<GammaDeckPayload>)
-      : null)
+    const previousGammaDeck = parseGammaDeckPayload(proposalData.gammaDeck)
     const previousPptUrl = typeof proposalData.pptUrl === 'string' ? proposalData.pptUrl : null
 
     if (ownerId && ownerId !== auth.uid) {
@@ -73,53 +66,51 @@ export async function POST(
     const summaryPrompt = buildProposalSummaryPrompt(formData)
 
     let summary: string | null = null
+    let suggestions: string | null = null
     let generationError: unknown = null
     try {
       summary = await geminiAI.generateContent(summaryPrompt)
+      suggestions = await generateProposalSuggestions(formData, summary, '[ProposalSubmit]')
     } catch (err) {
       console.error('[ProposalSubmit] AI generation failed', err)
       generationError = err ?? new Error('Failed to generate proposal summary')
       summary = null
+      if (!suggestions) {
+        try {
+          suggestions = await generateProposalSuggestions(formData, null, '[ProposalSubmit]')
+        } catch (suggestionError) {
+          console.error('[ProposalSubmit] Gemini suggestions fallback failed', suggestionError)
+        }
+      }
     }
 
-    let gammaDeck: GammaDeckPayload | null = null
-    let storedPptUrl: string | null = null
+    let gammaDeckResult: GammaDeckProcessResult | null = null
     if (process.env.GAMMA_API_KEY) {
       try {
-        const gammaInputText = buildGammaInputText(formData, summary ?? undefined)
-        const instructionPrompt = buildGammaInstructionPrompt(formData)
-        const rawInstructions = await geminiAI.generateContent(instructionPrompt)
-        const instructions = truncateGammaInstructions(rawInstructions)
-
-        const deckResult = await gammaService.generatePresentation({
-          inputText: gammaInputText,
-          additionalInstructions: instructions,
-          format: 'presentation',
-          textMode: 'generate',
-          numCards: estimateGammaSlideCount(formData),
-          exportAs: 'pptx',
+        gammaDeckResult = await ensureProposalGammaDeck({
+          userId: auth.uid,
+          proposalId,
+          formData,
+          summary,
+          existingDeck: previousGammaDeck ?? undefined,
+          existingStorageUrl: previousPptUrl ?? previousGammaDeck?.storageUrl ?? null,
+          logContext: '[ProposalSubmit]',
         })
-
-        gammaDeck = mapGammaDeckPayload(deckResult, instructions)
       } catch (gammaError) {
-        console.error('[ProposalSubmit] Gamma generation failed', gammaError)
+        console.error('[ProposalSubmit] Gamma deck pipeline failed', gammaError)
+        return NextResponse.json({ error: 'Failed to prepare Gamma deck' }, { status: 502 })
       }
     }
 
-    if (gammaDeck?.pptxUrl) {
-      try {
-        const pptBuffer = await downloadGammaPresentation(gammaDeck.pptxUrl)
-        storedPptUrl = await storeGammaPresentation(auth.uid, proposalId, pptBuffer)
-        gammaDeck = { ...gammaDeck, storageUrl: storedPptUrl }
-      } catch (pptError) {
-        console.error('[ProposalSubmit] PPT storage failed', pptError)
-        return NextResponse.json({ error: 'Failed to save Gamma deck to storage' }, { status: 502 })
-      }
-    }
+    const gammaDeck: GammaDeckPayload | null = gammaDeckResult?.gammaDeck
+      ?? (previousGammaDeck
+        ? { ...previousGammaDeck, storageUrl: previousGammaDeck.storageUrl ?? previousPptUrl ?? null }
+        : null)
 
-    if (gammaDeck && !gammaDeck.storageUrl && typeof previousGammaDeck?.storageUrl === 'string') {
-      gammaDeck = { ...gammaDeck, storageUrl: previousGammaDeck.storageUrl }
-    }
+    const storedPptUrl: string | null = gammaDeckResult?.storageUrl
+      ?? previousPptUrl
+      ?? previousGammaDeck?.storageUrl
+      ?? null
 
     const existingInsights = proposalData.aiInsights
     const aiInsights = summary
@@ -146,6 +137,8 @@ export async function POST(
       }
     }
 
+    updates.aiSuggestions = suggestions ?? null
+
     await proposalRef.update(updates)
 
     if (generationError) {
@@ -167,6 +160,7 @@ export async function POST(
       aiInsights: summary,
       pptUrl: storedPptUrl ?? previousPptUrl,
       gammaDeck,
+      aiSuggestions: suggestions,
     })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
@@ -228,4 +222,3 @@ Mandatory Content Coverage:
 
 If numerical inputs are unclear, make reasonable assumptions and note them explicitly.`
 }
-

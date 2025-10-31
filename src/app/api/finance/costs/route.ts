@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
 import type { FinanceCostEntry } from '@/types/finance'
+import { resolveWorkspaceContext } from '@/lib/workspace'
 
 type StoredFinanceCost = {
   clientId?: unknown
@@ -97,9 +97,8 @@ export async function POST(request: NextRequest) {
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = createCostSchema.parse(json)
 
-    const userRef = adminDb.collection('users').doc(auth.uid)
-    const costsRef = userRef.collection('financeCosts')
-    const docRef = costsRef.doc()
+    const workspace = await resolveWorkspaceContext(auth)
+    const docRef = workspace.financeCostsCollection.doc()
     const timestamp = FieldValue.serverTimestamp()
 
     await docRef.set({
@@ -107,6 +106,8 @@ export async function POST(request: NextRequest) {
       amount: payload.amount,
       cadence: payload.cadence,
       clientId: payload.clientId ?? null,
+      workspaceId: workspace.workspaceId,
+      createdBy: auth.uid,
       createdAt: timestamp,
       updatedAt: timestamp,
     })
@@ -143,7 +144,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Cost id is required' }, { status: 400 })
     }
 
-    const docRef = adminDb.collection('users').doc(auth.uid).collection('financeCosts').doc(id)
+    const workspace = await resolveWorkspaceContext(auth)
+    const docRef = workspace.financeCostsCollection.doc(id)
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {

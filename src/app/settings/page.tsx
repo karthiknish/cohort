@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Loader2, Check, CreditCard } from 'lucide-react'
 
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
 
 interface PlanSummary {
   id: string
@@ -86,6 +88,7 @@ const subscriptionStatusStyles: Record<string, string> = {
 export default function SettingsPage() {
   const { user, getIdToken, updateProfile } = useAuth()
   const { toast } = useToast()
+  const { selectedClient } = useClientContext()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [plans, setPlans] = useState<PlanSummary[]>([])
@@ -98,6 +101,47 @@ export default function SettingsPage() {
   const [profileError, setProfileError] = useState<string | null>(null)
   const [savingProfile, setSavingProfile] = useState(false)
   const isMountedRef = useRef(true)
+  const isAdmin = user?.role === 'admin'
+
+  const outstandingInvoiceStatus = selectedClient?.lastInvoiceStatus ?? null
+  const outstandingInvoiceAmount = typeof selectedClient?.lastInvoiceAmount === 'number' ? selectedClient.lastInvoiceAmount : null
+  const outstandingInvoiceCurrency = selectedClient?.lastInvoiceCurrency ?? 'usd'
+  const outstandingInvoiceNumber = selectedClient?.lastInvoiceNumber ?? null
+  const outstandingInvoiceUrl = selectedClient?.lastInvoiceUrl ?? null
+  const outstandingInvoiceIssuedAt = selectedClient?.lastInvoiceIssuedAt ?? null
+  const outstandingInvoiceEmail = selectedClient?.billingEmail ?? null
+
+  const invoiceStatusIsOutstanding = outstandingInvoiceStatus === 'open' || outstandingInvoiceStatus === 'uncollectible'
+  const hasClientInvoice = outstandingInvoiceAmount !== null || outstandingInvoiceStatus !== null || outstandingInvoiceNumber !== null
+
+  const formattedInvoiceIssuedAtRaw = outstandingInvoiceIssuedAt ? formatDate(outstandingInvoiceIssuedAt) : null
+  const formattedInvoiceIssuedAt = formattedInvoiceIssuedAtRaw && formattedInvoiceIssuedAtRaw !== 'Date unavailable' ? formattedInvoiceIssuedAtRaw : null
+
+  const invoiceBadgeVariant: 'default' | 'secondary' | 'destructive' | 'outline' = invoiceStatusIsOutstanding
+    ? 'destructive'
+    : outstandingInvoiceStatus === 'paid'
+      ? 'secondary'
+      : 'outline'
+
+  const invoiceHeaderLabel = invoiceStatusIsOutstanding ? 'Outstanding balance' : 'Latest invoice'
+  const invoiceStatusLabel = outstandingInvoiceStatus ? outstandingInvoiceStatus.replace(/_/g, ' ') : null
+  const invoiceContainerClass = cn(
+    'rounded-lg border p-4 transition-colors',
+    invoiceStatusIsOutstanding ? 'border-destructive/40 bg-destructive/10 text-destructive-foreground' : 'border-muted/60 bg-muted/20 text-foreground'
+  )
+
+  let displayInvoiceAmount: string | null = null
+  if (outstandingInvoiceAmount !== null) {
+    try {
+      displayInvoiceAmount = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: (outstandingInvoiceCurrency || 'usd').toUpperCase(),
+        minimumFractionDigits: 2,
+      }).format(outstandingInvoiceAmount)
+    } catch {
+      displayInvoiceAmount = `$${outstandingInvoiceAmount.toFixed(2)}`
+    }
+  }
 
   useEffect(() => {
     isMountedRef.current = true
@@ -171,13 +215,22 @@ export default function SettingsPage() {
   }, [invoices])
 
   const refreshBilling = useCallback(async () => {
-    if (!user) {
-      setLoading(false)
+    if (!user || user.role === 'admin') {
+      if (isMountedRef.current) {
+        setPlans([])
+        setSubscription(null)
+        setInvoices([])
+        setUpcomingInvoice(null)
+        setError(null)
+        setLoading(false)
+      }
       return
     }
 
-    setLoading(true)
-    setError(null)
+    if (isMountedRef.current) {
+      setLoading(true)
+      setError(null)
+    }
 
     try {
       const token = await getIdToken()
@@ -202,8 +255,8 @@ export default function SettingsPage() {
         setUpcomingInvoice(payload.upcomingInvoice ?? null)
       }
     } catch (fetchError) {
+      console.error('[settings/billing] Failed to fetch billing overview', fetchError)
       if (isMountedRef.current) {
-        console.error('[settings/billing] Failed to fetch billing overview', fetchError)
         setError(fetchError instanceof Error ? fetchError.message : 'Failed to load billing data')
       }
     } finally {
@@ -427,156 +480,236 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Subscription overview</CardTitle>
-          <CardDescription>Track your current plan, renewal date, and upcoming invoices.</CardDescription>
-        </CardHeader>
-        <CardContent>{loading ? loadingView : subscriptionView}</CardContent>
-      </Card>
-
-      <section>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Choose your plan</h2>
+      {isAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Client invoicing</CardTitle>
+            <CardDescription>Send Stripe invoices and review payment status from the admin clients workspace.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Upgrade anytime. Changes take effect immediately and prorate automatically.
+              Head to the admin clients dashboard whenever you need to raise a new invoice or confirm a payment.
             </p>
-          </div>
-        </div>
-
-        {loading && !plans.length ? (
-          loadingView
-        ) : plans.length ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {plans.map((plan) => {
-              const isCurrentPlan = currentPlanId === plan.id
-              const disabled = actionState !== null || isCurrentPlan || plan.unitAmount === null || !plan.currency
-
-              return (
-                <Card key={plan.id} className={cn('flex flex-col justify-between border border-border/60', isCurrentPlan ? 'ring-2 ring-primary/60' : '')}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-base font-semibold text-foreground">
-                          {plan.name}
-                        </CardTitle>
-                        <CardDescription className="mt-1 text-sm text-muted-foreground">
-                          {plan.description}
-                        </CardDescription>
-                      </div>
-                      {plan.badge ? (
-                        <Badge variant="secondary" className="uppercase tracking-wide">
-                          {plan.badge}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <div className="mt-4">
-                      <span className="text-2xl font-semibold text-foreground">
-                        {formatCurrency(plan.unitAmount, plan.currency)}
-                      </span>
-                      {plan.interval ? (
-                        <span className="ml-1 text-sm text-muted-foreground">/ {plan.interval}</span>
-                      ) : null}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-foreground">
-                          <Check className="h-3.5 w-3.5 text-primary" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter>
-                    <Button
-                      className="w-full"
-                      variant={isCurrentPlan ? 'secondary' : 'default'}
-                      disabled={disabled}
-                      onClick={() => void handleCheckout(plan.id)}
-                    >
-                      {isCurrentPlan ? 'Current plan' : 'Choose plan'}
-                      {actionState === `checkout:${plan.id}` ? (
-                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground">
-            No billing plans are currently configured. Add Stripe price IDs to enable plan selection.
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Invoice history</h2>
-          <p className="text-sm text-muted-foreground">Download receipts for bookkeeping or click through to Stripe-hosted invoices.</p>
-        </div>
-
-        {loading && !sortedInvoices.length ? (
-          loadingView
-        ) : sortedInvoices.length ? (
-          <div className="divide-y divide-border/60 rounded-lg border border-border/60">
-            {sortedInvoices.map((invoice) => (
-              <div key={invoice.id} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-foreground">
-                      {invoice.number ?? invoice.id}
-                    </span>
-                    {invoice.status ? (
-                      <Badge variant="outline" className="capitalize">
-                        {invoice.status.replace(/_/g, ' ')}
+            <Button asChild>
+              <Link href="/admin/clients">Open admin clients</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Client billing</CardTitle>
+            <CardDescription>
+              {selectedClient ? `Latest invoice for ${selectedClient.name}.` : 'Select a client workspace to view outstanding balances.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedClient ? (
+              hasClientInvoice ? (
+                <div className={invoiceContainerClass}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">{invoiceHeaderLabel}</span>
+                    {invoiceStatusLabel ? (
+                      <Badge variant={invoiceBadgeVariant} className="capitalize">
+                        {invoiceStatusLabel}
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {invoice.createdAt ? formatDate(invoice.createdAt) : 'Date unavailable'}
-                  </p>
+                  {displayInvoiceAmount ? (
+                    <p className="mt-2 text-xl font-semibold">{displayInvoiceAmount}</p>
+                  ) : (
+                    <p className="mt-2 text-sm">No amount on record for the latest invoice.</p>
+                  )}
+                  {outstandingInvoiceNumber ? (
+                    <p className="mt-2 text-xs text-muted-foreground">Invoice {outstandingInvoiceNumber}</p>
+                  ) : null}
+                  {formattedInvoiceIssuedAt ? (
+                    <p className="text-xs text-muted-foreground">Sent {formattedInvoiceIssuedAt}</p>
+                  ) : null}
+                  {outstandingInvoiceEmail ? (
+                    <p className="text-xs text-muted-foreground">Delivered to {outstandingInvoiceEmail}</p>
+                  ) : null}
+                  {outstandingInvoiceUrl ? (
+                    <Button asChild size="sm" variant="outline" className="mt-3 w-fit">
+                      <a href={outstandingInvoiceUrl} target="_blank" rel="noreferrer">
+                        View invoice
+                      </a>
+                    </Button>
+                  ) : null}
+                  {invoiceStatusIsOutstanding ? (
+                    <p className="mt-3 text-xs font-medium">
+                      Please settle this balance to keep services running smoothly.
+                    </p>
+                  ) : null}
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No invoices have been issued for this client yet. New invoices will appear here as soon as they are sent.
+                </p>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Select a client workspace from the sidebar to view invoice details and payment status.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-                <div className="flex flex-col gap-2 text-sm text-foreground md:flex-row md:items-center md:gap-4">
-                  <span className="font-medium">
-                    {formatCurrency(invoice.total || invoice.amountPaid, invoice.currency)}
-                  </span>
-                  <div className="flex gap-2">
-                    {invoice.hostedInvoiceUrl ? (
-                      <Button variant="outline" asChild size="sm">
-                        <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">
-                          View invoice
-                        </a>
-                      </Button>
-                    ) : null}
-                    {invoice.invoicePdf ? (
-                      <Button variant="ghost" asChild size="sm">
-                        <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">
-                          Download PDF
-                        </a>
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
+      {!isAdmin ? (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Subscription overview</CardTitle>
+              <CardDescription>Track your current plan, renewal date, and upcoming invoices.</CardDescription>
+            </CardHeader>
+            <CardContent>{loading ? loadingView : subscriptionView}</CardContent>
+          </Card>
+
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Choose your plan</h2>
+                <p className="text-sm text-muted-foreground">
+                  Upgrade anytime. Changes take effect immediately and prorate automatically.
+                </p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground">
-            No invoices to show yet. Once you subscribe you will see receipts and payment history here.
-          </div>
-        )}
-      </section>
+            </div>
 
-      {error ? (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          {error}
-        </div>
+            {loading && !plans.length ? (
+              loadingView
+            ) : plans.length ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {plans.map((plan) => {
+                  const isCurrentPlan = currentPlanId === plan.id
+                  const disabled = actionState !== null || isCurrentPlan || plan.unitAmount === null || !plan.currency
+
+                  return (
+                    <Card key={plan.id} className={cn('flex flex-col justify-between border border-border/60', isCurrentPlan ? 'ring-2 ring-primary/60' : '')}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <CardTitle className="text-base font-semibold text-foreground">
+                              {plan.name}
+                            </CardTitle>
+                            <CardDescription className="mt-1 text-sm text-muted-foreground">
+                              {plan.description}
+                            </CardDescription>
+                          </div>
+                          {plan.badge ? (
+                            <Badge variant="secondary" className="uppercase tracking-wide">
+                              {plan.badge}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <div className="mt-4">
+                          <span className="text-2xl font-semibold text-foreground">
+                            {formatCurrency(plan.unitAmount, plan.currency)}
+                          </span>
+                          {plan.interval ? (
+                            <span className="ml-1 text-sm text-muted-foreground">/ {plan.interval}</span>
+                          ) : null}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-1">
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          {plan.features.map((feature) => (
+                            <li key={feature} className="flex items-center gap-2 text-foreground">
+                              <Check className="h-3.5 w-3.5 text-primary" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                      <CardFooter>
+                        <Button
+                          className="w-full"
+                          variant={isCurrentPlan ? 'secondary' : 'default'}
+                          disabled={disabled}
+                          onClick={() => void handleCheckout(plan.id)}
+                        >
+                          {isCurrentPlan ? 'Current plan' : 'Choose plan'}
+                          {actionState === `checkout:${plan.id}` ? (
+                            <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground">
+                No billing plans are currently configured. Add Stripe price IDs to enable plan selection.
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Invoice history</h2>
+              <p className="text-sm text-muted-foreground">Download receipts for bookkeeping or click through to Stripe-hosted invoices.</p>
+            </div>
+
+            {loading && !sortedInvoices.length ? (
+              loadingView
+            ) : sortedInvoices.length ? (
+              <div className="divide-y divide-border/60 rounded-lg border border-border/60">
+                {sortedInvoices.map((invoice) => (
+                  <div key={invoice.id} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-foreground">
+                          {invoice.number ?? invoice.id}
+                        </span>
+                        {invoice.status ? (
+                          <Badge variant="outline" className="capitalize">
+                            {invoice.status.replace(/_/g, ' ')}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {invoice.createdAt ? formatDate(invoice.createdAt) : 'Date unavailable'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-2 text-sm text-foreground md:flex-row md:items-center md:gap-4">
+                      <span className="font-medium">
+                        {formatCurrency(invoice.total || invoice.amountPaid, invoice.currency)}
+                      </span>
+                      <div className="flex gap-2">
+                        {invoice.hostedInvoiceUrl ? (
+                          <Button variant="outline" asChild size="sm">
+                            <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">
+                              View invoice
+                            </a>
+                          </Button>
+                        ) : null}
+                        {invoice.invoicePdf ? (
+                          <Button variant="ghost" asChild size="sm">
+                            <a href={invoice.invoicePdf} target="_blank" rel="noreferrer">
+                              Download PDF
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/60 bg-muted/30 p-6 text-sm text-muted-foreground">
+                No invoices to show yet. Once you subscribe you will see receipts and payment history here.
+              </div>
+            )}
+          </section>
+
+          {error ? (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+        </>
       ) : null}
     </div>
   )

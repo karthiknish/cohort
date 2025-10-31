@@ -2,6 +2,8 @@
 
 import { memo } from 'react'
 
+import { Loader2 } from 'lucide-react'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -96,7 +98,8 @@ function ProposalHistoryComponent({
             proposals.map((proposal) => {
               const isActiveDraft = proposal.id === draftId
               const presentationUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
-              const summaryText = extractAiSummary(proposal.aiInsights)
+              const suggestionText = (typeof proposal.aiSuggestions === 'string' ? proposal.aiSuggestions.trim() : '')
+                || extractAiSummary(proposal.aiInsights)
               const displayName = proposal.clientName?.trim().length ? proposal.clientName : 'Unnamed company'
               const isGenerationInFlight = (isGenerating && isActiveDraft) || proposal.status === 'in_progress'
               const resumeLabel = proposal.status === 'ready'
@@ -107,7 +110,7 @@ function ProposalHistoryComponent({
                     ? 'Continue editing'
                     : 'Resume editing'
               const resumeDisabled = proposal.status !== 'ready' && isGenerationInFlight
-              const deckRequestable = !presentationUrl && Boolean(summaryText)
+              const deckRequestable = !presentationUrl && Boolean(suggestionText)
               const isDeckPreparing = downloadingDeckId === proposal.id
 
               return (
@@ -142,7 +145,7 @@ function ProposalHistoryComponent({
                       {presentationUrl ? (
                         <Button asChild size="sm" variant="ghost">
                           <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
-                            Download deck
+                            Export PPT
                           </a>
                         </Button>
                       ) : deckRequestable ? (
@@ -152,7 +155,14 @@ function ProposalHistoryComponent({
                           onClick={() => onDownloadDeck(proposal)}
                           disabled={isDeckPreparing}
                         >
-                          {isDeckPreparing ? 'Preparing…' : 'Download deck'}
+                          {isDeckPreparing ? (
+                            <span className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Preparing...
+                            </span>
+                          ) : (
+                            'Prepare PPT'
+                          )}
                         </Button>
                       ) : (
                         <Button size="sm" variant="ghost" disabled>

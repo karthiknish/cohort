@@ -46,7 +46,43 @@ export interface GammaGenerationOptions {
 
 const DEFAULT_OPTIONS: Required<Pick<GammaGenerationOptions, 'pollIntervalMs' | 'timeoutMs'>> = {
   pollIntervalMs: 5000,
-  timeoutMs: 60000,
+  timeoutMs: 180000,
+}
+
+const FAILURE_STATUSES = new Set(['failed', 'error', 'cancelled', 'canceled', 'timeout'])
+const SUCCESS_STATUSES = new Set(['completed', 'succeeded', 'ready', 'finished'])
+
+function normalizeExportFormats(exportAs: GammaGenerationRequest['exportAs']): string[] {
+  if (!exportAs) {
+    return []
+  }
+
+  const entries = Array.isArray(exportAs) ? exportAs : [exportAs]
+  return entries.map((entry) => entry.toLowerCase())
+}
+
+function normalizeGammaFileType(fileType: string): string {
+  const value = fileType.toLowerCase()
+  if (value.includes('ppt')) {
+    return 'pptx'
+  }
+  if (value.includes('pdf')) {
+    return 'pdf'
+  }
+  return value
+}
+
+function hasAllRequiredExports(files: GammaGeneratedFile[], required: Set<string>): boolean {
+  if (!files.length) {
+    return required.size === 0
+  }
+
+  if (required.size === 0) {
+    return true
+  }
+
+  const available = new Set(files.map((file) => normalizeGammaFileType(file.fileType)))
+  return [...required].every((entry) => available.has(normalizeGammaFileType(entry)))
 }
 
 export class GammaService {
@@ -196,13 +232,18 @@ export class GammaService {
 
   async generatePresentation(request: GammaGenerationRequest, options: GammaGenerationOptions = {}): Promise<GammaGenerationStatus> {
     const { poll = true, pollIntervalMs, timeoutMs } = { ...DEFAULT_OPTIONS, ...options }
+    console.log('[GammaService] Starting presentation generation with options:', { poll, pollIntervalMs, timeoutMs })
+    
     const creation = await this.createGeneration({
       ...request,
       format: request.format ?? 'presentation',
       textMode: request.textMode ?? 'generate',
     })
 
+    console.log('[GammaService] Created generation with ID:', creation.generationId)
+
     if (!poll) {
+      console.log('[GammaService] Polling disabled, returning pending status')
       return {
         generationId: creation.generationId,
         status: 'pending',
@@ -216,17 +257,46 @@ export class GammaService {
     const startedAt = Date.now()
     const pollDelay = pollIntervalMs ?? DEFAULT_OPTIONS.pollIntervalMs
     const pollTimeout = timeoutMs ?? DEFAULT_OPTIONS.timeoutMs
+    const requiredExports = new Set(normalizeExportFormats(request.exportAs))
+    let pollCount = 0
 
     while (true) {
+      pollCount++
+      console.log(`[GammaService] Poll attempt ${pollCount} for generation ${creation.generationId}`)
+
       const result = await this.getGeneration(creation.generationId)
-      if (result.status && result.status.toLowerCase() !== 'pending' && result.status.toLowerCase() !== 'processing') {
+      const normalizedStatus = typeof result.status === 'string' ? result.status.toLowerCase() : 'unknown'
+      const elapsed = Date.now() - startedAt
+      const hasRequiredFiles = hasAllRequiredExports(result.generatedFiles, requiredExports)
+
+      console.log(`[GammaService] Poll ${pollCount} result:`, {
+        status: result.status,
+        hasFiles: result.generatedFiles.length > 0,
+        hasRequiredFiles,
+        fileCount: result.generatedFiles.length,
+        elapsed
+      })
+
+      if (hasRequiredFiles) {
+        console.log(`[GammaService] Required exports ready after ${pollCount} polls, ${elapsed}ms`)
         return result
       }
 
-      if (Date.now() - startedAt > pollTimeout) {
+      if (normalizedStatus !== 'pending' && normalizedStatus !== 'processing' && SUCCESS_STATUSES.has(normalizedStatus)) {
+        console.log('[GammaService] Status indicates completion but required exports missing; continuing to poll')
+      }
+
+      if (normalizedStatus && FAILURE_STATUSES.has(normalizedStatus)) {
+        console.warn('[GammaService] Generation reached terminal failure state; returning latest result')
         return result
       }
 
+      if (elapsed > pollTimeout) {
+        console.log(`[GammaService] Generation timeout after ${pollCount} polls, ${elapsed}ms`)
+        return result
+      }
+
+      console.log(`[GammaService] Waiting ${pollDelay}ms before next poll`)
       await wait(pollDelay)
     }
   }

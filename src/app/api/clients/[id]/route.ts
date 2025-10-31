@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { resolveWorkspaceContext } from '@/lib/workspace'
 
 export async function DELETE(
   request: NextRequest,
@@ -22,7 +22,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Client id is required' }, { status: 400 })
     }
 
-    const docRef = adminDb.collection('users').doc(auth.uid).collection('clients').doc(clientId)
+    const workspace = await resolveWorkspaceContext(auth)
+    const docRef = workspace.clientsCollection.doc(clientId)
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {

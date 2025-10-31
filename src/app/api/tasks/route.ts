@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
 import { buildCacheHeaders, serverCache } from '@/lib/cache'
+import { resolveWorkspaceContext } from '@/lib/workspace'
 
 export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -107,6 +107,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    const workspace = await resolveWorkspaceContext(auth)
+
     const searchParams = request.nextUrl.searchParams
     const statusFilter = searchParams.get('status')
     const assigneeFilter = searchParams.get('assignee')
@@ -114,7 +116,7 @@ export async function GET(request: NextRequest) {
     const queryFilter = rawQuery ? rawQuery.trim().toLowerCase() : null
     const clientIdFilter = searchParams.get('clientId')
 
-    const cacheKey = buildTasksCacheKey(uid, {
+    const cacheKey = buildTasksCacheKey(workspace.workspaceId, {
       statusFilter,
       assigneeFilter,
       queryFilter,
@@ -128,10 +130,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const tasksSnapshot = await adminDb
-      .collection('users')
-      .doc(uid)
-      .collection('tasks')
+    const tasksSnapshot = await workspace.tasksCollection
       .orderBy('createdAt', 'desc')
       .limit(200)
       .get()
@@ -184,14 +183,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    const workspace = await resolveWorkspaceContext(auth)
+
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = baseTaskSchema.parse(json) satisfies CreateTaskInput
 
     const normalizedAssignedTo = payload.assignedTo.map((name) => name.trim()).filter((name) => name.length > 0)
     const normalizedTags = payload.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0)
 
-    const tasksCollection = adminDb.collection('users').doc(uid).collection('tasks')
-    const docRef = await tasksCollection.add({
+    const docRef = await workspace.tasksCollection.add({
       title: payload.title,
       description: payload.description ?? null,
       status: payload.status,
@@ -201,6 +201,8 @@ export async function POST(request: NextRequest) {
       clientId: payload.clientId ?? null,
       dueDate: payload.dueDate ? Timestamp.fromDate(new Date(payload.dueDate)) : null,
       tags: normalizedTags,
+      workspaceId: workspace.workspaceId,
+      createdBy: uid,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     })
@@ -208,7 +210,7 @@ export async function POST(request: NextRequest) {
     const createdDoc = await docRef.get()
     const task = mapTaskDoc(createdDoc.id, createdDoc.data() as StoredTask)
 
-    invalidateTasksCache(uid)
+    invalidateTasksCache(workspace.workspaceId)
 
     return NextResponse.json(task, { status: 201 })
   } catch (error: unknown) {
@@ -234,10 +236,10 @@ type TaskCacheKeyInput = {
   clientIdFilter: string | null
 }
 
-function buildTasksCacheKey(userId: string, filters: TaskCacheKeyInput): string {
+function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInput): string {
   const parts = [
     'tasks',
-    userId,
+    workspaceId,
     filters.clientIdFilter ?? '*',
     filters.statusFilter ?? '*',
     filters.assigneeFilter ?? '*',
@@ -247,6 +249,6 @@ function buildTasksCacheKey(userId: string, filters: TaskCacheKeyInput): string 
   return parts.map((part) => encodeURIComponent(part)).join('::')
 }
 
-export function invalidateTasksCache(userId: string): void {
-  serverCache.invalidatePrefix(`tasks::${encodeURIComponent(userId)}`)
+export function invalidateTasksCache(workspaceId: string): void {
+  serverCache.invalidatePrefix(`tasks::${encodeURIComponent(workspaceId)}`)
 }

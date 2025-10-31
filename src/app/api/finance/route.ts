@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import type {
   FinanceCostEntry,
@@ -9,6 +8,7 @@ import type {
   FinanceRevenueRecord,
   FinanceSummaryResponse,
 } from '@/types/finance'
+import { resolveWorkspaceContext } from '@/lib/workspace'
 
 const MAX_REVENUE_DOCS = 36
 const MAX_INVOICES = 200
@@ -126,29 +126,24 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
 export async function GET(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request)
-    const uid = auth.uid
-
-    if (!uid) {
+    if (!auth.uid) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const clientId = request.nextUrl.searchParams.get('clientId') ?? null
 
-    const userRef = adminDb.collection('users').doc(uid)
+    const workspace = await resolveWorkspaceContext(auth)
 
     const [revenueSnapshot, invoiceSnapshot, costSnapshot] = await Promise.all([
-      userRef
-        .collection('financeRevenue')
+      workspace.financeRevenueCollection
         .orderBy('period', 'asc')
         .limit(MAX_REVENUE_DOCS)
         .get(),
-      userRef
-        .collection('financeInvoices')
+      workspace.financeInvoicesCollection
         .orderBy('issuedDate', 'desc')
         .limit(MAX_INVOICES)
         .get(),
-      userRef
-        .collection('financeCosts')
+      workspace.financeCostsCollection
         .orderBy('createdAt', 'desc')
         .limit(MAX_COSTS)
         .get(),

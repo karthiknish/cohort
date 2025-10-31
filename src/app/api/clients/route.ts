@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
 const teamMemberSchema = z.object({
@@ -15,6 +16,7 @@ const createClientSchema = z.object({
   name: z.string().trim().min(1, 'Client name is required').max(200),
   accountManager: z.string().trim().min(1, 'Account manager is required').max(120),
   teamMembers: z.array(teamMemberSchema).optional().default([]),
+  billingEmail: z.string().trim().email().optional(),
 })
 
 const deleteClientSchema = z.object({
@@ -32,6 +34,14 @@ type StoredClient = {
   name?: unknown
   accountManager?: unknown
   teamMembers?: unknown
+  billingEmail?: unknown
+  stripeCustomerId?: unknown
+  lastInvoiceStatus?: unknown
+  lastInvoiceAmount?: unknown
+  lastInvoiceCurrency?: unknown
+  lastInvoiceIssuedAt?: unknown
+  lastInvoiceNumber?: unknown
+  lastInvoiceUrl?: unknown
   createdAt?: unknown
   updatedAt?: unknown
 }
@@ -51,13 +61,16 @@ function slugify(value: string): string {
   return base
 }
 
-async function generateClientId(userId: string, name: string): Promise<string> {
+async function generateClientId(
+  clientsCollection: FirebaseFirestore.CollectionReference,
+  name: string
+): Promise<string> {
   const baseId = slugify(name)
   let candidateId = baseId
   let attempt = 1
 
   while (attempt <= 20) {
-    const docRef = adminDb.collection('users').doc(userId).collection('clients').doc(candidateId)
+    const docRef = clientsCollection.doc(candidateId)
     const snapshot = await docRef.get()
     if (!snapshot.exists) {
       return candidateId
@@ -96,6 +109,19 @@ function coerceTeamMembers(value: unknown): ClientTeamMember[] {
     .filter(Boolean) as ClientTeamMember[]
 }
 
+function coerceNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}
+
 type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
 
 function toISO(value: TimestampLike): string | null {
@@ -127,12 +153,28 @@ function mapClientDoc(docId: string, data: StoredClient): ClientRecord {
   const name = typeof data.name === 'string' ? data.name : 'Untitled client'
   const accountManager = typeof data.accountManager === 'string' ? data.accountManager : 'Unassigned'
   const teamMembers = coerceTeamMembers(data.teamMembers)
+  const billingEmail = typeof data.billingEmail === 'string' ? data.billingEmail : null
+  const stripeCustomerId = typeof data.stripeCustomerId === 'string' ? data.stripeCustomerId : null
+  const lastInvoiceStatus = typeof data.lastInvoiceStatus === 'string' ? data.lastInvoiceStatus : null
+  const lastInvoiceAmount = coerceNumber(data.lastInvoiceAmount)
+  const lastInvoiceCurrency = typeof data.lastInvoiceCurrency === 'string' ? data.lastInvoiceCurrency : null
+  const lastInvoiceIssuedAt = toISO(data.lastInvoiceIssuedAt as TimestampLike)
+  const lastInvoiceNumber = typeof data.lastInvoiceNumber === 'string' ? data.lastInvoiceNumber : null
+  const lastInvoiceUrl = typeof data.lastInvoiceUrl === 'string' ? data.lastInvoiceUrl : null
 
   return {
     id: docId,
     name,
     accountManager,
     teamMembers,
+    billingEmail,
+    stripeCustomerId,
+    lastInvoiceStatus,
+    lastInvoiceAmount,
+    lastInvoiceCurrency,
+    lastInvoiceIssuedAt,
+    lastInvoiceNumber,
+    lastInvoiceUrl,
     createdAt: toISO(data.createdAt as TimestampLike),
     updatedAt: toISO(data.updatedAt as TimestampLike),
   }
@@ -145,11 +187,8 @@ export async function GET(request: NextRequest) {
       throw new AuthenticationError('Authentication required', 401)
     }
 
-    const snapshot = await adminDb
-      .collection('users')
-      .doc(auth.uid)
-      .collection('clients')
-      .get()
+    const workspace = await resolveWorkspaceContext(auth)
+    const snapshot = await workspace.clientsCollection.get()
 
     const clients = snapshot.docs
       .map((doc) => mapClientDoc(doc.id, doc.data() as StoredClient))
@@ -189,19 +228,28 @@ export async function POST(request: NextRequest) {
       resolvedTeam.unshift({ name: payload.accountManager, role: 'Account Manager' })
     }
 
-    const clientId = await generateClientId(auth.uid, payload.name)
+    const billingEmail = payload.billingEmail?.trim().toLowerCase() ?? null
+
+    const workspace = await resolveWorkspaceContext(auth)
+    const clientId = await generateClientId(workspace.clientsCollection, payload.name)
     const timestamp = FieldValue.serverTimestamp()
 
-    const docRef = adminDb
-      .collection('users')
-      .doc(auth.uid)
-      .collection('clients')
-      .doc(clientId)
+    const docRef = workspace.clientsCollection.doc(clientId)
 
     await docRef.set({
       name: payload.name,
       accountManager: payload.accountManager,
       teamMembers: resolvedTeam,
+      billingEmail,
+      stripeCustomerId: null,
+      lastInvoiceStatus: null,
+      lastInvoiceAmount: null,
+      lastInvoiceCurrency: null,
+      lastInvoiceIssuedAt: null,
+      lastInvoiceNumber: null,
+      lastInvoiceUrl: null,
+      workspaceId: workspace.workspaceId,
+      createdBy: auth.uid,
       createdAt: timestamp,
       updatedAt: timestamp,
     })
@@ -240,8 +288,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid team member data', details: parsed.error.flatten() }, { status: 400 })
     }
 
+    const workspace = await resolveWorkspaceContext(auth)
     const { id, name, role } = parsed.data
-    const clientRef = adminDb.collection('users').doc(auth.uid).collection('clients').doc(id)
+    const clientRef = workspace.clientsCollection.doc(id)
     const snapshot = await clientRef.get()
 
     if (!snapshot.exists) {
@@ -286,7 +335,8 @@ export async function DELETE(request: NextRequest) {
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = deleteClientSchema.parse(json)
 
-    const docRef = adminDb.collection('users').doc(auth.uid).collection('clients').doc(payload.id)
+    const workspace = await resolveWorkspaceContext(auth)
+    const docRef = workspace.clientsCollection.doc(payload.id)
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {

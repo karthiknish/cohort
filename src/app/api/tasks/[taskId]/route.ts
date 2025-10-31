@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/types/tasks'
 import { coerceStringArray, invalidateTasksCache, mapTaskDoc, type StoredTask } from '../route'
+import { resolveWorkspaceContext } from '@/lib/workspace'
 
 const updateTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200).optional(),
@@ -53,8 +53,8 @@ export async function PATCH(
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = updateTaskSchema.parse(json)
 
-    const tasksCollection = adminDb.collection('users').doc(uid).collection('tasks')
-    const docRef = tasksCollection.doc(taskId)
+    const workspace = await resolveWorkspaceContext(auth)
+    const docRef = workspace.tasksCollection.doc(taskId)
 
     const existingDoc = await docRef.get()
     if (!existingDoc.exists) {
@@ -66,9 +66,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid updates supplied' }, { status: 400 })
     }
 
+    updates.updatedBy = uid
+
     await docRef.update(updates)
 
-    invalidateTasksCache(uid)
+    invalidateTasksCache(workspace.workspaceId)
 
     const updatedDoc = await docRef.get()
     const task = mapTaskDoc(updatedDoc.id, updatedDoc.data() as StoredTask)
@@ -105,8 +107,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const tasksCollection = adminDb.collection('users').doc(uid).collection('tasks')
-    const docRef = tasksCollection.doc(taskId)
+    const workspace = await resolveWorkspaceContext(auth)
+    const docRef = workspace.tasksCollection.doc(taskId)
     const existingDoc = await docRef.get()
     if (!existingDoc.exists) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
@@ -114,7 +116,7 @@ export async function DELETE(
 
     await docRef.delete()
 
-    invalidateTasksCache(uid)
+    invalidateTasksCache(workspace.workspaceId)
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {

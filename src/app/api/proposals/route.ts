@@ -14,6 +14,7 @@ type ProposalSnapshot = {
   stepProgress?: number
   formData?: unknown
   aiInsights?: unknown
+  aiSuggestions?: unknown
   pdfUrl?: string | null
   pptUrl?: string | null
   createdAt?: Timestamp | string | null
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
         stepProgress: typeof data.stepProgress === 'number' ? data.stepProgress : 0,
         formData: data.formData ?? {},
         aiInsights: data.aiInsights ?? null,
+        aiSuggestions: typeof data.aiSuggestions === 'string' ? data.aiSuggestions : null,
         pdfUrl: data.pdfUrl ?? null,
         pptUrl: data.pptUrl ?? null,
         createdAt: serializeTimestamp(data.createdAt),
@@ -137,6 +139,7 @@ export async function POST(request: NextRequest) {
         clientId: clientId && clientId.length > 0 ? clientId : null,
         clientName: clientName && clientName.length > 0 ? clientName : null,
         aiInsights: null,
+        aiSuggestions: null,
         pdfUrl: null,
         pptUrl: null,
         createdAt: timestamp,

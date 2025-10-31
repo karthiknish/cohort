@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import type {
   CollaborationAttachment,
   CollaborationChannelType,
   CollaborationMessage,
 } from '@/types/collaboration'
+import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 
 const channelTypeSchema = z.enum(['client', 'team', 'project'])
 
@@ -132,8 +132,8 @@ function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage
   }
 }
 
-async function ensureClientOwnership(uid: string, clientId: string) {
-  const clientDoc = await adminDb.collection('users').doc(uid).collection('clients').doc(clientId).get()
+async function ensureClientOwnership(workspace: WorkspaceContext, clientId: string) {
+  const clientDoc = await workspace.clientsCollection.doc(clientId).get()
   if (!clientDoc.exists) {
     throw new AuthenticationError('Client not found or access denied', 403)
   }
@@ -142,11 +142,11 @@ async function ensureClientOwnership(uid: string, clientId: string) {
 export async function GET(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request)
-    const uid = auth.uid
-
-    if (!uid) {
+    if (!auth.uid) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    const workspace = await resolveWorkspaceContext(auth)
 
     const searchParams = request.nextUrl.searchParams
     const channelTypeParam = searchParams.get('channelType') ?? 'team'
@@ -163,14 +163,10 @@ export async function GET(request: NextRequest) {
       if (!clientId) {
         return NextResponse.json({ error: 'clientId is required for client channels' }, { status: 400 })
       }
-      await ensureClientOwnership(uid, clientId)
+      await ensureClientOwnership(workspace, clientId)
     }
 
-    let query = adminDb
-      .collection('users')
-      .doc(uid)
-      .collection('collaborationMessages')
-      .where('channelType', '==', channelType)
+    let query = workspace.collaborationCollection.where('channelType', '==', channelType)
 
     if (channelType === 'client' && clientId) {
       query = query.where('clientId', '==', clientId)
@@ -200,30 +196,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    const workspace = await resolveWorkspaceContext(auth)
+
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = createMessageSchema.parse(json)
 
     if (payload.channelType === 'client' && payload.clientId) {
-      await ensureClientOwnership(uid, payload.clientId)
+      await ensureClientOwnership(workspace, payload.clientId)
     }
 
     const timestamp = Timestamp.now()
 
-    const docRef = await adminDb
-      .collection('users')
-      .doc(uid)
-      .collection('collaborationMessages')
-      .add({
-        channelType: payload.channelType,
-        clientId: payload.channelType === 'client' ? payload.clientId ?? null : null,
-        senderId: uid,
-        senderName: payload.senderName,
-        senderRole: payload.senderRole ?? null,
-        content: payload.content,
-        attachments: payload.attachments ?? [],
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      })
+    const docRef = await workspace.collaborationCollection.add({
+      channelType: payload.channelType,
+      clientId: payload.channelType === 'client' ? payload.clientId ?? null : null,
+      senderId: uid,
+      senderName: payload.senderName,
+      senderRole: payload.senderRole ?? null,
+      content: payload.content,
+      attachments: payload.attachments ?? [],
+      workspaceId: workspace.workspaceId,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    })
 
     const createdDoc = await docRef.get()
     const message = mapMessageDoc(createdDoc.id, createdDoc.data() as StoredMessage)
