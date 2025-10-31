@@ -37,6 +37,10 @@ interface FinanceCostsCardProps {
   onRemoveCost: (id: string) => void
   submitting: boolean
   removingCostId?: string | null
+  onLoadMore?: () => void
+  hasMore?: boolean
+  loadingMore?: boolean
+  currency?: string
 }
 
 export function FinanceCostsCard({
@@ -48,7 +52,13 @@ export function FinanceCostsCard({
   onRemoveCost,
   submitting,
   removingCostId,
+  onLoadMore,
+  hasMore,
+  loadingMore,
+  currency,
 }: FinanceCostsCardProps) {
+  const resolvedCurrency = currency ?? 'USD'
+
   return (
     <Card className="border-muted/60 bg-background">
       <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -59,7 +69,7 @@ export function FinanceCostsCard({
           </CardDescription>
         </div>
         <Badge variant="secondary" className="w-fit bg-primary/10 text-xs font-medium uppercase tracking-wide text-primary">
-          {formatCurrency(Math.round(monthlyCostTotal))} per month
+          {formatCurrency(Math.round(monthlyCostTotal), resolvedCurrency)} per month
         </Badge>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -131,12 +141,12 @@ export function FinanceCostsCard({
                 <div>
                   <p className="text-sm font-semibold text-foreground">{cost.category}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatCadence(cost.cadence)} · {formatCurrency(Math.round(cost.amount))}
+                    {formatCadence(cost.cadence)} · {formatCurrency(Math.round(cost.amount), cost.currency ?? resolvedCurrency)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    {formatCurrency(Math.round(cost.monthlyValue))} / mo
+                    {formatCurrency(Math.round(cost.monthlyValue), cost.currency ?? resolvedCurrency)} / mo
                   </Badge>
                   <Button
                     type="button"
@@ -157,6 +167,24 @@ export function FinanceCostsCard({
               </div>
             ))
           )}
+          {hasMore ? (
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void onLoadMore?.()}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <span className="inline-flex items-center gap-2 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading more
+                  </span>
+                ) : (
+                  'Load more costs'
+                )}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>

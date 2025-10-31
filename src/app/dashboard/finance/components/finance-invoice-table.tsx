@@ -1,6 +1,6 @@
 'use client'
 
-import { BellRing, Calendar, Download, Eye, RotateCcw } from 'lucide-react'
+import { BellRing, Calendar, Download, Eye, Loader2, RotateCcw } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,6 +38,9 @@ interface FinanceInvoiceTableProps {
   onIssueRefund?: (invoice: FinanceInvoice) => void
   sendingInvoiceId?: string | null
   refundingInvoiceId?: string | null
+  onLoadMore?: () => void
+  hasMore?: boolean
+  loadingMore?: boolean
 }
 
 export function FinanceInvoiceTable({
@@ -48,6 +51,9 @@ export function FinanceInvoiceTable({
   onIssueRefund,
   sendingInvoiceId,
   refundingInvoiceId,
+  onLoadMore,
+  hasMore,
+  loadingMore,
 }: FinanceInvoiceTableProps) {
   return (
     <Card className="border-muted/60 bg-background">
@@ -119,20 +125,20 @@ export function FinanceInvoiceTable({
                         </span>
                       )}
                       {typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0 ? (
-                        <span>Paid {formatCurrency(invoice.amountPaid)}</span>
+                        <span>Paid {formatCurrency(invoice.amountPaid, invoice.currency ?? 'USD')}</span>
                       ) : null}
                       {typeof invoice.amountRemaining === 'number' && invoice.amountRemaining > 0 ? (
-                        <span>Outstanding {formatCurrency(invoice.amountRemaining)}</span>
+                        <span>Outstanding {formatCurrency(invoice.amountRemaining, invoice.currency ?? 'USD')}</span>
                       ) : null}
                       {typeof invoice.amountRefunded === 'number' && invoice.amountRefunded > 0 ? (
-                        <span>Refunded {formatCurrency(invoice.amountRefunded)}</span>
+                        <span>Refunded {formatCurrency(invoice.amountRefunded, invoice.currency ?? 'USD')}</span>
                       ) : null}
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-4 md:justify-end">
                     <div className="text-right">
                       <p className="text-base font-semibold text-foreground">
-                        {formatCurrency(invoice.amount)}
+                        {formatCurrency(invoice.amount, invoice.currency ?? 'USD')}
                       </p>
                       {invoice.status === 'overdue' && (
                         <span className="text-xs font-medium text-red-600">Overdue</span>
@@ -196,6 +202,24 @@ export function FinanceInvoiceTable({
             </div>
           )}
         </ScrollArea>
+        {hasMore ? (
+          <div className="border-t border-muted/30 px-6 py-3 text-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void onLoadMore?.()}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading more
+                </span>
+              ) : (
+                'Load more invoices'
+              )}
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

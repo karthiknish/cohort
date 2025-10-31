@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
@@ -116,54 +116,86 @@ export async function GET(request: NextRequest) {
     const rawQuery = searchParams.get('query')
     const queryFilter = rawQuery ? rawQuery.trim().toLowerCase() : null
     const clientIdFilter = searchParams.get('clientId')
+    const pageSizeParam = searchParams.get('pageSize')
+    const afterParam = searchParams.get('after')
+
+    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), 100)
 
     const cacheKey = buildTasksCacheKey(workspace.workspaceId, {
       statusFilter,
       assigneeFilter,
       queryFilter,
       clientIdFilter,
+      pageSize,
+      after: afterParam,
     })
 
-    const cached = serverCache.get<TaskRecord[]>(cacheKey)
+    const cached = serverCache.get<TaskListResponse>(cacheKey)
     if (cached) {
       return NextResponse.json(cached, {
         headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
       })
     }
 
-    const tasksSnapshot = await workspace.tasksCollection
+    let query = workspace.tasksCollection
       .orderBy('createdAt', 'desc')
-      .limit(200)
-      .get()
+      .orderBy(FieldPath.documentId(), 'desc')
+      .limit(pageSize + 1)
 
-    const tasks = tasksSnapshot.docs
-      .map((doc) => mapTaskDoc(doc.id, doc.data() as StoredTask))
-      .filter((task) => {
-        if (clientIdFilter && task.clientId !== clientIdFilter) {
+    if (afterParam) {
+      const [timestamp, docId] = afterParam.split('|')
+      if (timestamp && docId) {
+        const afterDate = new Date(timestamp)
+        if (!Number.isNaN(afterDate.getTime())) {
+          query = query.startAfter(Timestamp.fromDate(afterDate), docId)
+        }
+      }
+    }
+
+    const snapshot = await query.get()
+    const docs = snapshot.docs
+
+    const mapped = docs.map((doc) => mapTaskDoc(doc.id, doc.data() as StoredTask))
+    const filtered = mapped.filter((task) => {
+      if (clientIdFilter && task.clientId !== clientIdFilter) {
+        return false
+      }
+      if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) {
+        return false
+      }
+      if (assigneeFilter && assigneeFilter !== 'all') {
+        const normalizedAssignee = assigneeFilter.toLowerCase()
+        const matchesAssignee = task.assignedTo.some((member) => member.toLowerCase().includes(normalizedAssignee))
+        if (!matchesAssignee) {
           return false
         }
-        if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) {
+      }
+      if (queryFilter && queryFilter.length > 0) {
+        const haystack = `${task.title} ${task.description ?? ''}`.toLowerCase()
+        if (!haystack.includes(queryFilter)) {
           return false
         }
-        if (assigneeFilter && assigneeFilter !== 'all') {
-          const normalizedAssignee = assigneeFilter.toLowerCase()
-          const matchesAssignee = task.assignedTo.some((member) => member.toLowerCase().includes(normalizedAssignee))
-          if (!matchesAssignee) {
-            return false
-          }
-        }
-        if (queryFilter && queryFilter.length > 0) {
-          const haystack = `${task.title} ${task.description ?? ''}`.toLowerCase()
-          if (!haystack.includes(queryFilter)) {
-            return false
-          }
-        }
-        return true
-      })
+      }
+      return true
+    })
 
-    serverCache.set(cacheKey, tasks, TASKS_CACHE_TTL_MS)
+    const tasks = filtered.slice(0, pageSize)
+    const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
+    const nextCursor = nextCursorDoc
+      ? (() => {
+          const createdAt = toISO(nextCursorDoc.get('createdAt'))
+          return createdAt ? `${createdAt}|${nextCursorDoc.id}` : null
+        })()
+      : null
 
-    return NextResponse.json(tasks, {
+    const payload: TaskListResponse = {
+      tasks,
+      nextCursor,
+    }
+
+    serverCache.set(cacheKey, payload, TASKS_CACHE_TTL_MS)
+
+    return NextResponse.json(payload, {
       headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
     })
   } catch (error: unknown) {
@@ -251,14 +283,21 @@ export async function POST(request: NextRequest) {
 
 const TASKS_CACHE_TTL_MS = 60_000
 
-type TaskCacheKeyInput = {
+export type TaskCacheKeyInput = {
   statusFilter: string | null
   assigneeFilter: string | null
   queryFilter: string | null
   clientIdFilter: string | null
+  pageSize: number
+  after: string | null
 }
 
-function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInput): string {
+type TaskListResponse = {
+  tasks: TaskRecord[]
+  nextCursor: string | null
+}
+
+export function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInput): string {
   const parts = [
     'tasks',
     workspaceId,
@@ -266,6 +305,8 @@ function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInput): st
     filters.statusFilter ?? '*',
     filters.assigneeFilter ?? '*',
     filters.queryFilter ?? '*',
+    `${filters.pageSize}`,
+    filters.after ?? '*',
   ]
 
   return parts.map((part) => encodeURIComponent(part)).join('::')

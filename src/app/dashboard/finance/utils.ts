@@ -1,12 +1,40 @@
-import type { FinanceCostEntry } from '@/types/finance'
+import type { FinanceCostEntry, FinanceCurrencyTotals } from '@/types/finance'
 
-export const formatCurrency = (value: number, options: Intl.NumberFormatOptions = {}) =>
+export const formatCurrency = (
+  value: number,
+  currency = 'USD',
+  options: Intl.NumberFormatOptions = {},
+) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     maximumFractionDigits: 0,
     ...options,
   }).format(value)
+
+type CurrencyTotalKey = Exclude<keyof FinanceCurrencyTotals, 'currency'>
+
+export const formatCurrencyDistribution = (
+  totals: FinanceCurrencyTotals[] | undefined,
+  key: CurrencyTotalKey,
+  fallbackCurrency = 'USD',
+) => {
+  if (!totals || totals.length === 0) {
+    return formatCurrency(0, fallbackCurrency)
+  }
+
+  return totals
+    .filter((entry) => Number.isFinite(entry[key]))
+    .map((entry) => formatCurrency(Number(entry[key]), entry.currency))
+    .join(' · ')
+}
+
+export const getPrimaryCurrencyTotals = (totals: FinanceCurrencyTotals[] | undefined): FinanceCurrencyTotals | null => {
+  if (!totals || totals.length === 0) {
+    return null
+  }
+  return totals[0]
+}
 
 export const normalizeMonthly = (amount: number, cadence: FinanceCostEntry['cadence']): number => {
   if (cadence === 'monthly') return amount

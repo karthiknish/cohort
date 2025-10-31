@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Facebook,
   Linkedin,
+  Music,
   RefreshCw,
   Search,
 } from 'lucide-react'
@@ -49,6 +50,13 @@ interface MetricRecord {
   createdAt?: string | null
 }
 
+interface MetricsResponse {
+  metrics: MetricRecord[]
+  nextCursor: string | null
+}
+
+const METRICS_PAGE_SIZE = 100
+
 type ProviderSummary = {
   spend: number
   impressions: number
@@ -80,19 +88,44 @@ async function fetchIntegrationStatuses(token: string, userId?: string | null): 
   return response.json()
 }
 
-async function fetchMetrics(token: string, userId?: string | null): Promise<MetricRecord[]> {
-  const url = userId ? `/api/metrics?userId=${encodeURIComponent(userId)}` : '/api/metrics'
+async function fetchMetrics(
+  token: string,
+  options: { userId?: string | null; cursor?: string | null; pageSize?: number } = {},
+): Promise<MetricsResponse> {
+  const params = new URLSearchParams()
+  if (options.userId) {
+    params.set('userId', options.userId)
+  }
+  if (typeof options.pageSize === 'number') {
+    params.set('pageSize', String(options.pageSize))
+  }
+  if (options.cursor) {
+    params.set('after', options.cursor)
+  }
+
+  const queryString = params.toString()
+  const url = queryString.length > 0 ? `/api/metrics?${queryString}` : '/api/metrics'
+
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
     cache: 'no-store',
   })
-  if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}))
-    throw new Error(errorPayload.error || 'Failed to load ad metrics')
+
+  const payload = (await response.json().catch(() => null)) as
+    | { metrics?: MetricRecord[]; nextCursor?: string | null; error?: string }
+    | null
+
+  if (!response.ok || !payload || !Array.isArray(payload.metrics)) {
+    const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load ad metrics'
+    throw new Error(message)
   }
-  return response.json()
+
+  return {
+    metrics: payload.metrics,
+    nextCursor: typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null,
+  }
 }
 
 export default function AdsPage() {
@@ -101,6 +134,7 @@ export default function AdsPage() {
     connectGoogleAdsAccount,
     connectLinkedInAdsAccount,
     startMetaOauth,
+    startTikTokOauth,
     getIdToken,
   } = useAuth()
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
@@ -110,6 +144,9 @@ export default function AdsPage() {
   const [metrics, setMetrics] = useState<MetricRecord[]>([])
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricError, setMetricError] = useState<string | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
   const hasMetricData = metrics.length > 0
@@ -154,6 +191,8 @@ export default function AdsPage() {
       setIntegrationStatuses(null)
       setMetrics([])
       setMetricsLoading(false)
+      setNextCursor(null)
+      setLoadMoreError(null)
       return
     }
 
@@ -163,22 +202,28 @@ export default function AdsPage() {
       if (isSubscribed) {
         setMetricsLoading(true)
         setMetricError(null)
+        setLoadMoreError(null)
+        setNextCursor(null)
       }
 
       try {
         const token = await getIdToken()
         const [statusResponse, metricResponse] = await Promise.all([
           fetchIntegrationStatuses(token, user.id),
-          fetchMetrics(token, user.id),
+          fetchMetrics(token, { userId: user.id, pageSize: METRICS_PAGE_SIZE }),
         ])
 
         if (isSubscribed) {
           setIntegrationStatuses(statusResponse)
-          setMetrics(metricResponse)
+          setMetrics(metricResponse.metrics)
+          setNextCursor(metricResponse.nextCursor)
+          setLoadMoreError(null)
         }
       } catch (error: unknown) {
         if (isSubscribed) {
           setMetricError(getErrorMessage(error, 'Failed to load marketing data'))
+          setNextCursor(null)
+          setMetrics([])
         }
       } finally {
         if (isSubscribed) setMetricsLoading(false)
@@ -285,6 +330,13 @@ export default function AdsPage() {
       icon: Linkedin,
       connect: connectLinkedInAdsAccount,
     },
+    {
+      id: 'tiktok',
+      name: 'TikTok Ads',
+      description: 'Bring in spend, engagement, and conversion insights from TikTok campaign flights.',
+      icon: Music,
+      mode: 'oauth' as const,
+    },
   ]
 
   const handleConnect = async (providerId: string, action: () => Promise<void>) => {
@@ -310,30 +362,83 @@ export default function AdsPage() {
 
   const handleManualRefresh = () => {
     if (metricsLoading) return
+    setMetrics([])
+    setNextCursor(null)
+    setLoadMoreError(null)
+    setMetricError(null)
     setRefreshTick((tick) => tick + 1)
   }
 
-  const handleMetaOauthRedirect = async (providerId: string) => {
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore || metricsLoading || !user?.id) {
+      return
+    }
+
+    setLoadingMore(true)
+    setLoadMoreError(null)
+
+    try {
+      const token = await getIdToken()
+      const response = await fetchMetrics(token, {
+        userId: user.id,
+        cursor: nextCursor,
+        pageSize: METRICS_PAGE_SIZE,
+      })
+
+      setMetrics((prev) => [...prev, ...response.metrics])
+      setNextCursor(response.nextCursor)
+    } catch (error: unknown) {
+      setLoadMoreError(getErrorMessage(error, 'Failed to load additional rows'))
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [getIdToken, loadingMore, metricsLoading, nextCursor, user?.id])
+
+  const handleOauthRedirect = async (providerId: string) => {
     if (typeof window === 'undefined') {
       return
     }
 
-    setMetaSetupMessage(null)
+    if (providerId === 'facebook') {
+      setMetaSetupMessage(null)
+    }
+
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
 
     try {
       const redirectTarget = `${window.location.origin}/dashboard/ads`
-      const { url } = await startMetaOauth(redirectTarget)
-      window.location.href = url
+
+      if (providerId === 'facebook') {
+        const { url } = await startMetaOauth(redirectTarget)
+        window.location.href = url
+        return
+      }
+
+      if (providerId === 'tiktok') {
+        const { url } = await startTikTokOauth(redirectTarget)
+        window.location.href = url
+        return
+      }
+
+      throw new Error('This provider does not support OAuth yet. Contact support for assistance.')
     } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to start Meta OAuth. Please try again.')
+      const message = getErrorMessage(
+        error,
+        providerId === 'facebook'
+          ? 'Unable to start Meta OAuth. Please try again.'
+          : providerId === 'tiktok'
+            ? 'Unable to start TikTok OAuth. Please try again.'
+            : 'Unable to start OAuth. Please try again.',
+      )
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-      if (message.toLowerCase().includes('meta business login is not configured')) {
+
+      if (providerId === 'facebook' && message.toLowerCase().includes('meta business login is not configured')) {
         setMetaSetupMessage(
           'Meta business login is not configured. Add META_APP_ID, META_BUSINESS_CONFIG_ID, and META_OAUTH_REDIRECT_URI environment variables before trying again.',
         )
       }
+    } finally {
       setConnectingProvider(null)
     }
   }
@@ -375,7 +480,7 @@ export default function AdsPage() {
           connectingProvider={connectingProvider}
           connectionErrors={connectionErrors}
           onConnect={handleConnect}
-          onOauthRedirect={handleMetaOauthRedirect}
+          onOauthRedirect={handleOauthRedirect}
           onRefresh={handleManualRefresh}
           refreshing={metricsLoading}
         />
@@ -456,7 +561,7 @@ export default function AdsPage() {
                 {Object.entries(providerSummaries).map(([providerId, summary]) => (
                   <Card key={providerId} className="border-muted/60 bg-background">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base capitalize">{providerId} overview</CardTitle>
+                      <CardTitle className="text-base">{formatProviderName(providerId)} overview</CardTitle>
                       <CardDescription>Aggregated performance since last sync</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -536,7 +641,7 @@ export default function AdsPage() {
                     {metrics.map((metric) => (
                       <tr key={metric.id} className="border-b border-muted/40">
                         <td className="whitespace-nowrap py-2 pr-4">{metric.date}</td>
-                        <td className="py-2 pr-4 capitalize">{metric.providerId}</td>
+                        <td className="py-2 pr-4">{formatProviderName(metric.providerId)}</td>
                         <td className="py-2 pr-4">{formatCurrency(metric.spend)}</td>
                         <td className="py-2 pr-4">{metric.impressions.toLocaleString()}</td>
                         <td className="py-2 pr-4">{metric.clicks.toLocaleString()}</td>
@@ -547,6 +652,24 @@ export default function AdsPage() {
                   </tbody>
                 </table>
               </ScrollArea>
+            )}
+            {nextCursor && metrics.length > 0 && (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                {loadMoreError && <p className="text-xs text-destructive">{loadMoreError}</p>}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    void handleLoadMore()
+                  }}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2"
+                >
+                  <RefreshCw className={cn('h-4 w-4', loadingMore && 'animate-spin')} />
+                  {loadingMore ? 'Loading rows…' : 'Load more rows'}
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -568,6 +691,26 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback
+}
+
+function formatProviderName(providerId: string): string {
+  const mapping: Record<string, string> = {
+    google: 'Google Ads',
+    facebook: 'Meta Ads Manager',
+    meta: 'Meta Ads Manager',
+    linkedin: 'LinkedIn Ads',
+    tiktok: 'TikTok Ads',
+  }
+
+  if (mapping[providerId]) {
+    return mapping[providerId]
+  }
+
+  if (providerId.length === 0) {
+    return 'Unknown Provider'
+  }
+
+  return providerId.charAt(0).toUpperCase() + providerId.slice(1)
 }
 
 function formatCurrency(amount: number): string {

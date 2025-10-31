@@ -69,6 +69,49 @@ users/{userId}/adMetrics/{periodId}/{providerDocId}
 - For production, prefer moving sensitive credentials to Cloud Secret Manager and keep Firestore documents as references.
 - Ensure Next.js API routes that manipulate tokens validate the caller is authenticated and matches the `userId`.
 
+## Ingestion Requirements & Assumptions
+
+- **Supported sources**: Google Ads, Meta Ads Manager, LinkedIn Ads (expandable via `providerId`). Each source must supply spend, impressions, clicks, conversions, and creative metadata. Optional revenue is accepted when providers surface ROAS data.
+- **Sync cadence**: Nightly incremental syncs (UTC) with optional manual triggers. Initial backfill spans 90 days to populate historical dashboards.
+- **Attribution window**: Default 7-day click / 1-day view. Providers that expose alternative windows should persist raw values inside `rawPayloadRef` for downstream reconciliation.
+- **Firestore contract**:
+  - `adIntegrations` documents capture OAuth scopes, last sync timestamps, and human-readable status messaging.
+  - `syncJobs` documents act as durable queues and must be updated atomically when workers claim jobs.
+  - `adMetrics` collections store daily aggregates; document IDs should follow `YYYY-MM-DD_providerId` to simplify pagination and incremental reads.
+- **Error handling**: Workers append diagnostic context to `lastSyncMessage` and set `status: 'error'` while leaving the job in place for manual retry.
+- **Rate limits**: Assume 10 QPS per provider credential; workers maintain exponential backoff starting at 1s doubling to 64s with jitter.
+
+### Normalized payload shape
+
+```json
+{
+  "providerId": "google",
+  "date": "2025-10-31",
+  "currencyCode": "USD",
+  "spend": 1234.56,
+  "impressions": 98765,
+  "clicks": 4321,
+  "conversions": 210,
+  "revenue": 3456.78,
+  "creatives": [
+    { "id": "123", "name": "Holiday Promo", "type": "video", "url": "https://example.com" }
+  ],
+  "campaign": {
+    "id": "456",
+    "name": "Q4 Awareness",
+    "objective": "BRAND_AWARENESS"
+  },
+  "rawPayloadRef": "users/abc/integrationPayloads/2025-10-31-google.json"
+}
+```
+
+### Validation checklist
+
+- [ ] Provider connector returns data matching the normalized payload.
+- [ ] Firestore rules allow workers to read/write `syncJobs` and `adMetrics` for the scoped agency.
+- [ ] Dashboard queries (`/api/metrics`, `/api/analytics/insights`) tolerate empty days and sparse creative arrays.
+- [ ] Integration errors are surfaced via `lastSyncStatus` and `lastSyncMessage` for the UI banner.
+
 ## Next Steps
 
 - Implement cron-driven Cloud Function (e.g., `processSyncJobs`) to iterate over users and run outstanding jobs.

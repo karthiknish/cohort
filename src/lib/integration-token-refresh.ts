@@ -8,6 +8,7 @@ interface RefreshParams {
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v18.0/oauth/access_token'
+const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
 
 function computeExpiry(expiresInSeconds?: number): Date | null {
   if (!expiresInSeconds || !Number.isFinite(expiresInSeconds)) {
@@ -178,6 +179,82 @@ export async function refreshMetaAccessToken({ userId }: RefreshParams): Promise
   return tokenPayload.access_token
 }
 
+export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
+  const integration = await getAdIntegration({ userId, providerId: 'tiktok' })
+
+  if (!integration?.refreshToken) {
+    throw new IntegrationTokenError('No TikTok refresh token available', 'tiktok', userId)
+  }
+
+  const clientKey = process.env.TIKTOK_CLIENT_KEY
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET
+
+  if (!clientKey || !clientSecret) {
+    throw new IntegrationTokenError('TikTok client credentials are not configured', 'tiktok', userId)
+  }
+
+  const response = await fetch(TIKTOK_REFRESH_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      app_id: clientKey,
+      secret: clientSecret,
+      refresh_token: integration.refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  })
+
+  if (!response.ok) {
+    const errorPayload = await response.text()
+    throw new IntegrationTokenError(
+      `Failed to refresh TikTok access token (${response.status}): ${errorPayload}`,
+      'tiktok',
+      userId,
+    )
+  }
+
+  const payload = (await response.json()) as {
+    code?: number
+    message?: string
+    data?: {
+      access_token?: string
+      expires_in?: number
+      refresh_token?: string
+      refresh_token_expires_in?: number
+    }
+  }
+
+  if (payload.code && payload.code !== 0) {
+    throw new IntegrationTokenError(
+      payload.message || `TikTok refresh token response returned code ${payload.code}`,
+      'tiktok',
+      userId,
+    )
+  }
+
+  const data = payload.data ?? {}
+
+  if (!data.access_token) {
+    throw new IntegrationTokenError('TikTok refresh response missing access_token', 'tiktok', userId)
+  }
+
+  const accessTokenExpiresAt = computeExpiry(data.expires_in)
+  const refreshTokenExpiresAt = computeExpiry(data.refresh_token_expires_in)
+
+  await updateIntegrationCredentials({
+    userId,
+    providerId: 'tiktok',
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? undefined,
+    accessTokenExpiresAt: accessTokenExpiresAt ?? undefined,
+    refreshTokenExpiresAt: refreshTokenExpiresAt ?? undefined,
+  })
+
+  return data.access_token
+}
+
 export async function ensureGoogleAccessToken({ userId }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'google' })
   if (!integration?.accessToken) {
@@ -199,6 +276,20 @@ export async function ensureMetaAccessToken({ userId }: RefreshParams): Promise<
 
   if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
     return refreshMetaAccessToken({ userId })
+  }
+
+  return integration.accessToken
+}
+
+export async function ensureTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
+  const integration = await getAdIntegration({ userId, providerId: 'tiktok' })
+
+  if (!integration?.accessToken) {
+    throw new IntegrationTokenError('TikTok integration missing access token', 'tiktok', userId)
+  }
+
+  if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
+    return refreshTikTokAccessToken({ userId })
   }
 
   return integration.accessToken

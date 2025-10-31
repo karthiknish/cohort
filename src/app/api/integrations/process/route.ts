@@ -12,12 +12,14 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
+import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import { NormalizedMetric, SyncJob } from '@/types/integrations'
 import {
   IntegrationTokenError,
   isTokenExpiringSoon,
   refreshGoogleAccessToken,
   refreshMetaAccessToken,
+  refreshTikTokAccessToken,
 } from '@/lib/integration-token-refresh'
 
 function ensureString(value: unknown, message: string): string {
@@ -130,6 +132,30 @@ export async function POST(request: NextRequest) {
           accountId,
           timeframeDays: job.timeframeDays,
         })
+        break
+      }
+      case 'tiktok': {
+        const advertiserId = ensureString(
+          integration.accountId,
+          'TikTok Ads advertiserId must be stored on the integration',
+        )
+
+        let tiktokAccessToken = integration.accessToken
+        if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
+          tiktokAccessToken = await refreshTikTokAccessToken({ userId: targetUserId })
+        }
+
+        metrics = await fetchTikTokAdsMetrics({
+          accessToken: tiktokAccessToken,
+          advertiserId,
+          timeframeDays: job.timeframeDays,
+          refreshAccessToken: async () => {
+            const refreshed = await refreshTikTokAccessToken({ userId: targetUserId })
+            tiktokAccessToken = refreshed
+            return refreshed
+          },
+        })
+
         break
       }
       default: {

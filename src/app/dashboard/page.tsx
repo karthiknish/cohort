@@ -270,9 +270,10 @@ export default function DashboardPage() {
           throw new Error(message)
         }
 
-        const data = (await response.json()) as MetricRecord[]
+        const data = (await response.json()) as { metrics?: MetricRecord[] }
         if (!isCancelled) {
-          setMetrics(data)
+          const entries = Array.isArray(data?.metrics) ? data.metrics : []
+          setMetrics(entries)
         }
       } catch (error) {
         if (!isCancelled) {
@@ -311,9 +312,10 @@ export default function DashboardPage() {
           throw new Error(message)
         }
 
-        const data = (await response.json()) as TaskRecord[]
+        const data = (await response.json()) as { tasks?: TaskRecord[] }
         if (!isCancelled) {
-          setTaskItems(mapTasksForDashboard(data))
+          const entries = Array.isArray(data?.tasks) ? data.tasks : []
+          setTaskItems(mapTasksForDashboard(entries))
         }
       } catch (error) {
         if (!isCancelled) {

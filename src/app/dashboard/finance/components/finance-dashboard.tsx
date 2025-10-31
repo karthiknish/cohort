@@ -46,6 +46,12 @@ export function FinanceDashboard() {
     refundingInvoiceId,
     sendInvoiceReminder,
     issueInvoiceRefund,
+    hasMoreInvoices,
+    hasMoreCosts,
+    loadMoreInvoices,
+    loadMoreCosts,
+    loadingMoreInvoices,
+    loadingMoreCosts,
   } = useFinanceData()
 
   const handleSendReminder = useCallback(
@@ -66,7 +72,7 @@ export function FinanceDashboard() {
       }
 
       const confirmation = window.confirm(
-        `Issue a refund of ${formatCurrency(Math.max(availableRefund, 0))} for invoice ${invoice.number ?? invoice.id}?`
+        `Issue a refund of ${formatCurrency(Math.max(availableRefund, 0), invoice.currency ?? stats.primaryCurrency)} for invoice ${invoice.number ?? invoice.id}?`
       )
 
       if (!confirmation) {
@@ -75,7 +81,7 @@ export function FinanceDashboard() {
 
       void issueInvoiceRefund(invoice.id)
     },
-    [issueInvoiceRefund]
+    [issueInvoiceRefund, stats.primaryCurrency]
   )
 
   const isInitialLoading = !hasAttemptedLoad && isLoading
@@ -110,8 +116,12 @@ export function FinanceDashboard() {
         onRemoveCost={handleRemoveCost}
         submitting={isSubmittingCost}
         removingCostId={removingCostId}
+        onLoadMore={loadMoreCosts}
+        hasMore={hasMoreCosts}
+        loadingMore={loadingMoreCosts}
+        currency={stats.primaryCurrency}
       />
-      <FinanceChartsSection data={chartData} />
+      <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
       <FinanceInvoiceTable
         invoices={filteredInvoices}
         selectedStatus={invoiceStatusFilter}
@@ -120,11 +130,16 @@ export function FinanceDashboard() {
         onIssueRefund={isAdmin ? handleIssueRefund : undefined}
         sendingInvoiceId={sendingInvoiceId}
         refundingInvoiceId={refundingInvoiceId}
+        onLoadMore={loadMoreInvoices}
+        hasMore={hasMoreInvoices}
+        loadingMore={loadingMoreInvoices}
       />
       <FinanceRevenueSidebar
         revenue={revenueByClient}
         upcomingPayments={upcomingPayments}
         totalOutstanding={stats.totalOutstanding}
+        currencyTotals={stats.currencyTotals}
+        primaryCurrency={stats.primaryCurrency}
       />
     </div>
   )

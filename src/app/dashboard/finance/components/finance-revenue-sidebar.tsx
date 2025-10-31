@@ -7,16 +7,21 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { formatCurrency } from '../utils'
-import type { FinanceInvoice } from '@/types/finance'
+import { formatCurrency, formatCurrencyDistribution } from '../utils'
+import type { FinanceInvoice, FinancePaymentSummary } from '@/types/finance'
 
 interface FinanceRevenueSidebarProps {
   revenue: Array<{ name: string; revenue: number; percentage: number }>
   upcomingPayments: FinanceInvoice[]
   totalOutstanding: number
+  currencyTotals: FinancePaymentSummary['totals']
+  primaryCurrency: string
 }
 
-export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstanding }: FinanceRevenueSidebarProps) {
+export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstanding, currencyTotals, primaryCurrency }: FinanceRevenueSidebarProps) {
+  const outstandingDisplay = formatCurrencyDistribution(currencyTotals, 'totalOutstanding', primaryCurrency)
+  const hasOutstanding = totalOutstanding > 0 || currencyTotals.some((entry) => entry.totalOutstanding > 0)
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card className="border-muted/60 bg-background">
@@ -35,7 +40,7 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
                   <span className="text-sm font-medium text-foreground">{entry.name}</span>
                 </div>
                 <div className="text-right text-sm text-muted-foreground">
-                  <p className="font-semibold text-foreground">{formatCurrency(entry.revenue)}</p>
+                  <p className="font-semibold text-foreground">{formatCurrency(entry.revenue, primaryCurrency)}</p>
                   <p>{entry.percentage}% of total</p>
                 </div>
               </div>
@@ -70,15 +75,16 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
                       ? invoice.amountRemaining
                       : typeof invoice.amountPaid === 'number'
                         ? Math.max(invoice.amount - invoice.amountPaid, 0)
-                        : invoice.amount
+                        : invoice.amount,
+                    invoice.currency ?? primaryCurrency
                   )}
                 </p>
               </div>
             ))
           )}
-          {totalOutstanding > 0 && (
+          {hasOutstanding && (
             <p className="text-xs text-muted-foreground">
-              Outstanding balance: {formatCurrency(totalOutstanding)}
+              Outstanding balance: {outstandingDisplay}
             </p>
           )}
         </CardContent>

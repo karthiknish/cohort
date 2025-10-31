@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import type {
@@ -53,6 +53,7 @@ type StoredFinanceCost = {
   category?: unknown
   amount?: unknown
   cadence?: unknown
+  currency?: unknown
   createdAt?: unknown
   updatedAt?: unknown
 }
@@ -151,23 +152,36 @@ function coerceNullableNumber(value: unknown): number | null {
 }
 
 function computePaymentSummary(invoices: FinanceInvoice[]): FinancePaymentSummary {
-  let totalInvoiced = 0
-  let totalPaid = 0
-  let totalOutstanding = 0
-  let refundTotal = 0
+  type CurrencyAccumulator = {
+    currency: string
+    totalInvoiced: number
+    paidGross: number
+    refundTotal: number
+    totalOutstanding: number
+  }
+
+  const currencyMap = new Map<string, CurrencyAccumulator>()
   let overdueCount = 0
   let paidCount = 0
   let openCount = 0
   let nextDueAt: string | null = null
   let lastPaymentAt: string | null = null
-  let currency = 'usd'
 
   invoices.forEach((invoice) => {
-    totalInvoiced += invoice.amount
-
-    if (invoice.currency) {
-      currency = invoice.currency
+    const normalizedCurrency = (invoice.currency ?? 'USD').toUpperCase()
+    let accumulator = currencyMap.get(normalizedCurrency)
+    if (!accumulator) {
+      accumulator = {
+        currency: normalizedCurrency,
+        totalInvoiced: 0,
+        paidGross: 0,
+        refundTotal: 0,
+        totalOutstanding: 0,
+      }
+      currencyMap.set(normalizedCurrency, accumulator)
     }
+
+    accumulator.totalInvoiced += invoice.amount
 
     if (invoice.status === 'paid') {
       paidCount += 1
@@ -179,11 +193,11 @@ function computePaymentSummary(invoices: FinanceInvoice[]): FinancePaymentSummar
     }
 
     if (typeof invoice.amountPaid === 'number') {
-      totalPaid += invoice.amountPaid
+      accumulator.paidGross += invoice.amountPaid
     }
 
     if (typeof invoice.amountRefunded === 'number') {
-      refundTotal += invoice.amountRefunded
+      accumulator.refundTotal += invoice.amountRefunded
     }
 
     const outstanding =
@@ -196,7 +210,7 @@ function computePaymentSummary(invoices: FinanceInvoice[]): FinancePaymentSummar
             : invoice.amount
 
     if (outstanding > 0) {
-      totalOutstanding += outstanding
+      accumulator.totalOutstanding += outstanding
       if (invoice.dueDate) {
         const dueMillis = new Date(invoice.dueDate).getTime()
         if (!Number.isNaN(dueMillis)) {
@@ -214,17 +228,21 @@ function computePaymentSummary(invoices: FinanceInvoice[]): FinancePaymentSummar
     }
   })
 
+  const totals = Array.from(currencyMap.values()).map((entry) => ({
+    currency: entry.currency,
+    totalInvoiced: entry.totalInvoiced,
+    totalOutstanding: entry.totalOutstanding,
+    refundTotal: entry.refundTotal,
+    totalPaid: Math.max(entry.paidGross - entry.refundTotal, 0),
+  }))
+
   return {
-    totalInvoiced,
-    totalPaid: Math.max(totalPaid - refundTotal, 0),
-    totalOutstanding,
+    totals,
     overdueCount,
     paidCount,
     openCount,
-    refundTotal,
     nextDueAt,
     lastPaymentAt,
-    currency,
   }
 }
 
@@ -236,6 +254,7 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
     category: typeof data.category === 'string' ? data.category : 'Uncategorized',
     amount: coerceNumber(data.amount),
     cadence: cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
+    currency: typeof data.currency === 'string' ? data.currency : null,
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
   }
@@ -248,44 +267,99 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const clientId = request.nextUrl.searchParams.get('clientId') ?? null
+    const searchParams = request.nextUrl.searchParams
+    const clientId = searchParams.get('clientId') ?? null
+    const invoiceAfterParam = searchParams.get('invoiceAfter')
+    const costAfterParam = searchParams.get('costAfter')
+    const invoicePageSizeParam = searchParams.get('invoicePageSize')
+    const costPageSizeParam = searchParams.get('costPageSize')
+
+    const invoicePageSize = Math.min(Math.max(Number(invoicePageSizeParam) || MAX_INVOICES, 1), MAX_INVOICES)
+    const costPageSize = Math.min(Math.max(Number(costPageSizeParam) || MAX_COSTS, 1), MAX_COSTS)
 
     const workspace = await resolveWorkspaceContext(auth)
 
+    let revenueQuery = workspace.financeRevenueCollection
+      .orderBy('period', 'asc')
+      .limit(MAX_REVENUE_DOCS)
+
+    let invoiceQuery = workspace.financeInvoicesCollection
+      .orderBy('createdAt', 'desc')
+      .orderBy(FieldPath.documentId(), 'desc')
+      .limit(invoicePageSize + 1)
+
+    if (invoiceAfterParam) {
+      const [timestamp, docId] = invoiceAfterParam.split('|')
+      if (timestamp && docId) {
+        const afterDate = new Date(timestamp)
+        if (!Number.isNaN(afterDate.getTime())) {
+          invoiceQuery = invoiceQuery.startAfter(Timestamp.fromDate(afterDate), docId)
+        }
+      }
+    }
+
+    let costQuery = workspace.financeCostsCollection
+      .orderBy('createdAt', 'desc')
+      .orderBy(FieldPath.documentId(), 'desc')
+      .limit(costPageSize + 1)
+
+    if (costAfterParam) {
+      const [timestamp, docId] = costAfterParam.split('|')
+      if (timestamp && docId) {
+        const afterDate = new Date(timestamp)
+        if (!Number.isNaN(afterDate.getTime())) {
+          costQuery = costQuery.startAfter(Timestamp.fromDate(afterDate), docId)
+        }
+      }
+    }
+
     const [revenueSnapshot, invoiceSnapshot, costSnapshot] = await Promise.all([
-      workspace.financeRevenueCollection
-        .orderBy('period', 'asc')
-        .limit(MAX_REVENUE_DOCS)
-        .get(),
-      workspace.financeInvoicesCollection
-        .orderBy('issuedDate', 'desc')
-        .limit(MAX_INVOICES)
-        .get(),
-      workspace.financeCostsCollection
-        .orderBy('createdAt', 'desc')
-        .limit(MAX_COSTS)
-        .get(),
+      revenueQuery.get(),
+      invoiceQuery.get(),
+      costQuery.get(),
     ])
 
     const revenue = revenueSnapshot.docs
       .map((doc) => mapRevenueDoc(doc.id, doc.data() as StoredFinanceRevenue))
       .filter((entry) => !clientId || entry.clientId === clientId)
 
-    const invoices = invoiceSnapshot.docs
+    const invoiceDocs = invoiceSnapshot.docs
+    const invoices = invoiceDocs
+      .slice(0, invoicePageSize)
       .map((doc) => mapInvoiceDoc(doc.id, doc.data() as StoredFinanceInvoice))
       .filter((invoice) => !clientId || invoice.clientId === clientId)
 
-    const costs = costSnapshot.docs
+    const costDocs = costSnapshot.docs
+    const costs = costDocs
+      .slice(0, costPageSize)
       .map((doc) => mapCostDoc(doc.id, doc.data() as StoredFinanceCost))
       .filter((cost) => !clientId || cost.clientId === clientId || cost.clientId === null)
 
     const payments = computePaymentSummary(invoices)
+
+    const invoiceNextCursorDoc = invoiceDocs.length > invoicePageSize ? invoiceDocs[invoicePageSize] : null
+    const invoiceNextCursor = invoiceNextCursorDoc
+      ? (() => {
+          const createdAt = toISO(invoiceNextCursorDoc.get('createdAt'))
+          return createdAt ? `${createdAt}|${invoiceNextCursorDoc.id}` : null
+        })()
+      : null
+
+    const costNextCursorDoc = costDocs.length > costPageSize ? costDocs[costPageSize] : null
+    const costNextCursor = costNextCursorDoc
+      ? (() => {
+          const createdAt = toISO(costNextCursorDoc.get('createdAt'))
+          return createdAt ? `${createdAt}|${costNextCursorDoc.id}` : null
+        })()
+      : null
 
     const payload: FinanceSummaryResponse = {
       revenue,
       invoices,
       costs,
       payments,
+      invoiceNextCursor,
+      costNextCursor,
     }
 
     return NextResponse.json(payload)

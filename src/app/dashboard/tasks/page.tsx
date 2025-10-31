@@ -10,6 +10,7 @@ import {
   CheckCircle,
   AlertCircle,
   MoreHorizontal,
+  Loader2,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -68,6 +69,11 @@ type TaskFormState = {
   tags: string
 }
 
+type TaskListResponse = {
+  tasks?: TaskRecord[]
+  nextCursor?: string | null
+}
+
 const statusColors: Record<TaskStatus, string> = {
   todo: 'bg-muted text-muted-foreground',
   'in-progress': 'bg-blue-100 text-blue-800',
@@ -99,7 +105,9 @@ export default function TasksPage() {
   const { selectedClient, selectedClientId } = useClientContext()
   const { toast } = useToast()
   const [tasks, setTasks] = useState<TaskRecord[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<'all' | TaskStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -147,12 +155,14 @@ export default function TasksPage() {
 
     if (!user?.id) {
       setTasks([])
+      setNextCursor(null)
       setLoading(false)
       return
     }
 
     if (!selectedClientId) {
       setTasks([])
+      setNextCursor(null)
       setLoading(false)
       return
     }
@@ -162,6 +172,7 @@ export default function TasksPage() {
     const loadTasks = async () => {
       setLoading(true)
       setError(null)
+      setNextCursor(null)
       try {
         const token = await authService.getIdToken()
         const search = new URLSearchParams()
@@ -183,15 +194,18 @@ export default function TasksPage() {
           throw new Error(message)
         }
 
-        const data = (await response.json()) as TaskRecord[]
+        const data = (await response.json()) as TaskListResponse
         if (!cancelled) {
-          setTasks(Array.isArray(data) ? data : [])
+          const entries = Array.isArray(data?.tasks) ? data.tasks : []
+          setTasks(entries)
+          setNextCursor(typeof data?.nextCursor === 'string' && data.nextCursor.length > 0 ? data.nextCursor : null)
         }
       } catch (fetchError: unknown) {
         console.error('Failed to fetch tasks', fetchError)
         if (!cancelled) {
           setError(fetchError instanceof Error ? fetchError.message : 'Unexpected error loading tasks')
           setTasks([])
+          setNextCursor(null)
         }
       } finally {
         if (!cancelled) {
@@ -206,6 +220,49 @@ export default function TasksPage() {
       cancelled = true
     }
   }, [authLoading, selectedClientId, user?.id])
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !nextCursor) {
+      return
+    }
+
+    setLoadingMore(true)
+    try {
+      const token = await authService.getIdToken()
+      const params = new URLSearchParams()
+      if (selectedClientId) {
+        params.set('clientId', selectedClientId)
+      }
+      params.set('after', nextCursor)
+      const url = `/api/tasks?${params.toString()}`
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        const message = payload?.error ?? 'Unable to load additional tasks'
+        throw new Error(message)
+      }
+
+      const data = (await response.json()) as TaskListResponse
+      const entries = Array.isArray(data?.tasks) ? data.tasks : []
+      setTasks((prev) => [...prev, ...entries])
+      setNextCursor(typeof data?.nextCursor === 'string' && data.nextCursor.length > 0 ? data.nextCursor : null)
+    } catch (error) {
+      console.error('Failed to load additional tasks', error)
+      toast({
+        title: 'Task pagination error',
+        description: error instanceof Error ? error.message : 'Unable to load more tasks',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [loadingMore, nextCursor, selectedClientId, toast])
 
   const tasksForClient = useMemo(() => {
     if (!selectedClientId && !selectedClient) {
@@ -696,6 +753,20 @@ export default function TasksPage() {
                     </div>
                   </div>
                 ))}
+              {!loading && !error && filteredTasks.length > 0 && nextCursor && (
+                <div className="px-6 py-4 text-center">
+                  <Button variant="outline" onClick={handleLoadMore} disabled={loadingMore}>
+                    {loadingMore ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading…
+                      </span>
+                    ) : (
+                      'Load more tasks'
+                    )}
+                  </Button>
+                </div>
+              )}
               {!loading && !error && filteredTasks.length === 0 && (
                 <div className="px-6 py-12 text-center text-sm text-muted-foreground">
                   No tasks match the current filters.

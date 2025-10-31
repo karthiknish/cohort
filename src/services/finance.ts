@@ -7,6 +7,10 @@ import type {
 
 type FetchFinanceSummaryOptions = {
   clientId?: string | null
+  invoiceAfter?: string | null
+  costAfter?: string | null
+  invoicePageSize?: number
+  costPageSize?: number
 }
 
 type CreateFinanceCostInput = {
@@ -56,6 +60,18 @@ export async function fetchFinanceSummary(options: FetchFinanceSummaryOptions = 
   const search = new URLSearchParams()
   if (options.clientId) {
     search.set('clientId', options.clientId)
+  }
+  if (options.invoiceAfter) {
+    search.set('invoiceAfter', options.invoiceAfter)
+  }
+  if (options.costAfter) {
+    search.set('costAfter', options.costAfter)
+  }
+  if (typeof options.invoicePageSize === 'number') {
+    search.set('invoicePageSize', String(options.invoicePageSize))
+  }
+  if (typeof options.costPageSize === 'number') {
+    search.set('costPageSize', String(options.costPageSize))
   }
 
   const url = search.size > 0 ? `/api/finance?${search.toString()}` : '/api/finance'

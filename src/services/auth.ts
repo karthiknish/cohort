@@ -420,6 +420,26 @@ export class AuthService {
     return (await response.json()) as { url: string }
   }
 
+  async startTikTokOauth(redirect?: string): Promise<{ url: string }> {
+    const idToken = await this.getIdToken()
+    const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
+    const response = await fetch(`/api/integrations/tiktok/oauth/url${search}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string }
+      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to start TikTok OAuth'
+      throw new Error(message)
+    }
+
+    return (await response.json()) as { url: string }
+  }
+
   async signInWithFacebook(): Promise<AuthUser> {
     try {
       const provider = new FacebookAuthProvider()

@@ -35,9 +35,12 @@ interface ChartDatum {
 
 interface FinanceChartsSectionProps {
   data: ChartDatum[]
+  currency?: string
 }
 
-export function FinanceChartsSection({ data }: FinanceChartsSectionProps) {
+export function FinanceChartsSection({ data, currency }: FinanceChartsSectionProps) {
+  const resolvedCurrency = currency ?? 'USD'
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card className="border-muted/60 bg-background">
@@ -51,7 +54,7 @@ export function FinanceChartsSection({ data }: FinanceChartsSectionProps) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value), resolvedCurrency)} />
               <Legend />
               <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
               <Line type="monotone" dataKey="totalExpenses" stroke="#ef4444" strokeWidth={2} name="Total expenses" />
@@ -72,7 +75,7 @@ export function FinanceChartsSection({ data }: FinanceChartsSectionProps) {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value), resolvedCurrency)} />
               <Legend />
               <Bar dataKey="operatingExpenses" stackId="expenses" fill="#6366f1" name="Campaign spend" />
               <Bar dataKey="companyCosts" stackId="expenses" fill="#f59e0b" name="Company costs" />

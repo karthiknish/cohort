@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
@@ -44,8 +44,6 @@ const createMessageSchema = z
     }
   })
 
-const MAX_MESSAGES = 200
-
 type StoredMessage = {
   channelType?: unknown
   clientId?: unknown
@@ -54,6 +52,10 @@ type StoredMessage = {
   senderRole?: unknown
   content?: unknown
   createdAt?: unknown
+  updatedAt?: unknown
+  deletedAt?: unknown
+  deletedBy?: unknown
+  deleted?: unknown
   attachments?: unknown
 }
 
@@ -120,6 +122,15 @@ function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage
         .filter((item): item is CollaborationAttachment => Boolean(item))
     : undefined
 
+  const deletedAt = toISO(data.deletedAt)
+  const deletedBy = typeof data.deletedBy === 'string' ? data.deletedBy : null
+  const isDeleted = Boolean(deletedAt) || data.deleted === true
+  const updatedAt = toISO(data.updatedAt)
+  const createdAt = toISO(data.createdAt)
+
+  const content = typeof data.content === 'string' ? data.content : ''
+  const resolvedContent = isDeleted ? '' : content
+
   return {
     id: docId,
     channelType,
@@ -127,8 +138,13 @@ function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage
     senderId: typeof data.senderId === 'string' ? data.senderId : null,
     senderName: typeof data.senderName === 'string' ? data.senderName : 'Unknown teammate',
     senderRole: typeof data.senderRole === 'string' ? data.senderRole : null,
-    content: typeof data.content === 'string' ? data.content : '',
-    createdAt: toISO(data.createdAt),
+    content: resolvedContent,
+    createdAt,
+    updatedAt,
+    isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
+    deletedAt,
+    deletedBy,
+    isDeleted,
     attachments,
   }
 }
@@ -152,6 +168,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const channelTypeParam = searchParams.get('channelType') ?? 'team'
     const parseChannel = channelTypeSchema.safeParse(channelTypeParam)
+    const pageSizeParam = searchParams.get('pageSize')
+    const cursorParam = searchParams.get('cursor')
 
     if (!parseChannel.success) {
       return NextResponse.json({ error: 'Invalid channel type' }, { status: 400 })
@@ -159,6 +177,7 @@ export async function GET(request: NextRequest) {
 
     const channelType = parseChannel.data
     const clientId = searchParams.get('clientId') ?? undefined
+    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
 
     if (channelType === 'client') {
       if (!clientId) {
@@ -172,12 +191,31 @@ export async function GET(request: NextRequest) {
     if (channelType === 'client' && clientId) {
       query = query.where('clientId', '==', clientId)
     }
+    query = query.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 
-    const snapshot = await query.orderBy('createdAt', 'asc').limit(MAX_MESSAGES).get()
+    if (cursorParam) {
+      const [cursorTime, cursorId] = cursorParam.split('|')
+      if (cursorTime && cursorId) {
+        const cursorDate = new Date(cursorTime)
+        if (!Number.isNaN(cursorDate.getTime())) {
+          query = query.startAfter(Timestamp.fromDate(cursorDate), cursorId)
+        }
+      }
+    }
 
-    const messages = snapshot.docs.map((doc) => mapMessageDoc(doc.id, doc.data() as StoredMessage))
+    const snapshot = await query.limit(pageSize + 1).get()
 
-    return NextResponse.json({ messages })
+    const docs = snapshot.docs
+    const messages = docs.slice(0, pageSize).map((doc) => mapMessageDoc(doc.id, doc.data() as StoredMessage))
+    const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
+    const nextCursor = nextCursorDoc
+      ? (() => {
+          const rawCreated = toISO(nextCursorDoc.get('createdAt'))
+          return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
+        })()
+      : null
+
+    return NextResponse.json({ messages, nextCursor })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })

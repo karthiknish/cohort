@@ -6,6 +6,7 @@ export type FinanceCostEntry = {
   amount: number
   cadence: FinanceCostCadence
   clientId: string | null
+  currency?: string | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -47,22 +48,28 @@ export type FinanceRevenueRecord = {
   updatedAt?: string | null
 }
 
+export type FinanceCurrencyTotals = {
+  currency: string
+  totalInvoiced: number
+  totalPaid: number
+  totalOutstanding: number
+  refundTotal: number
+}
+
 export type FinanceSummaryResponse = {
   revenue: FinanceRevenueRecord[]
   invoices: FinanceInvoice[]
   costs: FinanceCostEntry[]
   payments: FinancePaymentSummary
+  invoiceNextCursor?: string | null
+  costNextCursor?: string | null
 }
 
 export type FinancePaymentSummary = {
-  totalInvoiced: number
-  totalPaid: number
-  totalOutstanding: number
+  totals: FinanceCurrencyTotals[]
   overdueCount: number
   paidCount: number
   openCount: number
-  refundTotal: number
   nextDueAt: string | null
   lastPaymentAt: string | null
-  currency: string
 }

@@ -80,6 +80,10 @@ export function useCollaborationData() {
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [messagesByChannel, setMessagesByChannel] = useState<Record<string, CollaborationMessage[]>>({})
+  const [nextCursorByChannel, setNextCursorByChannel] = useState<Record<string, string | null>>({})
+  const [messageUpdatingId, setMessageUpdatingId] = useState<string | null>(null)
+  const [messageDeletingId, setMessageDeletingId] = useState<string | null>(null)
+  const [loadingMoreChannelId, setLoadingMoreChannelId] = useState<string | null>(null)
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
@@ -121,6 +125,8 @@ export function useCollaborationData() {
 
   const channelMessages = selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []
   const isCurrentChannelLoading = selectedChannel ? loadingChannelId === selectedChannel.id : false
+  const loadingMore = selectedChannel ? loadingMoreChannelId === selectedChannel.id : false
+  const canLoadMore = selectedChannel ? Boolean(nextCursorByChannel[selectedChannel.id]) : false
   const isBootstrapping = clientsLoading && channels.length === 0
 
   useEffect(() => {
@@ -173,7 +179,7 @@ export function useCollaborationData() {
 
   const sharedFiles = useMemo(() => {
     const attachmentGroups = channelMessages
-      .filter((message) => Array.isArray(message.attachments) && message.attachments.length > 0)
+      .filter((message) => !message.isDeleted && Array.isArray(message.attachments) && message.attachments.length > 0)
       .map((message) => message.attachments ?? [])
     return collectSharedFiles(attachmentGroups)
   }, [channelMessages])
@@ -217,6 +223,26 @@ export function useCollaborationData() {
     return promise
   }, [getIdToken, user])
 
+  const mutateChannelMessages = useCallback(
+    (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => {
+      setMessagesByChannel((prev) => {
+        const existing = prev[channelId]
+        if (!existing) {
+          return prev
+        }
+        const updated = updater(existing)
+        if (updated === existing) {
+          return prev
+        }
+        return {
+          ...prev,
+          [channelId]: updated,
+        }
+      })
+    },
+    []
+  )
+
   const fetchMessages = useCallback(
     async (channel: Channel) => {
       setMessagesError(null)
@@ -229,6 +255,7 @@ export function useCollaborationData() {
         if (channel.type === 'client' && channel.clientId) {
           params.set('clientId', channel.clientId)
         }
+        params.set('pageSize', '100')
 
         const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
           headers: {
@@ -243,12 +270,16 @@ export function useCollaborationData() {
           throw new Error(message)
         }
 
-        const payload = (await response.json()) as { messages?: CollaborationMessage[] }
-        const list = Array.isArray(payload.messages) ? payload.messages : []
+        const payload = (await response.json()) as { messages?: CollaborationMessage[]; nextCursor?: string | null }
+        const list = Array.isArray(payload.messages) ? payload.messages.slice().reverse() : []
 
         setMessagesByChannel((prev) => ({
           ...prev,
           [channel.id]: list,
+        }))
+        setNextCursorByChannel((prev) => ({
+          ...prev,
+          [channel.id]: payload.nextCursor ?? null,
         }))
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to load messages'
@@ -295,6 +326,10 @@ export function useCollaborationData() {
         setMessagesByChannel((prev) => ({
           ...prev,
           [channelId]: next,
+        }))
+        setNextCursorByChannel((prev) => ({
+          ...prev,
+          [channelId]: prev[channelId] ?? null,
         }))
         setLoadingChannelId((current) => (current === channelId ? null : current))
         setMessagesError(null)
@@ -432,7 +467,183 @@ export function useCollaborationData() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [channelMessages.length, selectedChannel?.id])
 
+  const handleEditMessage = useCallback(
+    async (channelId: string, messageId: string, nextContent: string) => {
+      const trimmedContent = nextContent.trim()
+      if (!trimmedContent) {
+        toast({ title: 'Message required', description: 'Enter a message before saving.', variant: 'destructive' })
+        return
+      }
+
+      if (!channels.some((channel) => channel.id === channelId)) {
+        toast({ title: 'Channel unavailable', description: 'Refresh and try editing again.', variant: 'destructive' })
+        return
+      }
+
+      setMessageUpdatingId(messageId)
+
+      try {
+        const token = await ensureSessionToken()
+        const response = await fetch(`/api/collaboration/messages/${encodeURIComponent(messageId)}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content: trimmedContent }),
+        })
+
+        const payload = (await response.json().catch(() => null)) as
+          | { message?: CollaborationMessage; error?: string }
+          | null
+
+        if (!response.ok || !payload?.message) {
+          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to update message'
+          throw new Error(message)
+        }
+
+        const updatedMessage = payload.message
+
+        mutateChannelMessages(channelId, (messages) => {
+          const index = messages.findIndex((entry) => entry.id === messageId)
+          if (index === -1) {
+            return messages
+          }
+          const next = [...messages]
+          next[index] = {
+            ...messages[index],
+            ...updatedMessage,
+          }
+          return next
+        })
+
+        toast({ title: 'Message updated', description: 'Your edit is live for the team.' })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to update message'
+        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+      } finally {
+        setMessageUpdatingId((current) => (current === messageId ? null : current))
+      }
+    },
+    [channels, ensureSessionToken, mutateChannelMessages, toast]
+  )
+
+  const handleDeleteMessage = useCallback(
+    async (channelId: string, messageId: string) => {
+      if (!channels.some((channel) => channel.id === channelId)) {
+        toast({ title: 'Channel unavailable', description: 'Refresh and try deleting again.', variant: 'destructive' })
+        return
+      }
+
+      setMessageDeletingId(messageId)
+
+      try {
+        const token = await ensureSessionToken()
+        const response = await fetch(`/api/collaboration/messages/${encodeURIComponent(messageId)}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        const payload = (await response.json().catch(() => null)) as
+          | { message?: CollaborationMessage; error?: string }
+          | null
+
+        if (!response.ok || !payload?.message) {
+          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to delete message'
+          throw new Error(message)
+        }
+
+        const deletedMessage = payload.message
+
+        mutateChannelMessages(channelId, (messages) => {
+          const index = messages.findIndex((entry) => entry.id === messageId)
+          if (index === -1) {
+            return messages
+          }
+          const next = [...messages]
+          next[index] = {
+            ...messages[index],
+            ...deletedMessage,
+            attachments: [],
+          }
+          return next
+        })
+
+        toast({ title: 'Message removed', description: 'The message is no longer visible to teammates.' })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to delete message'
+        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+      } finally {
+        setMessageDeletingId((current) => (current === messageId ? null : current))
+      }
+    },
+    [channels, ensureSessionToken, mutateChannelMessages, toast]
+  )
+
   const isSendDisabled = sending || !selectedChannel || messageInput.trim().length === 0
+
+  const handleLoadMore = useCallback(
+    async (channelId: string) => {
+      const cursor = nextCursorByChannel[channelId]
+      if (!cursor) {
+        return
+      }
+
+      const channel = channels.find((entry) => entry.id === channelId)
+      if (!channel) {
+        toast({ title: 'Channel unavailable', description: 'Refresh and try again.', variant: 'destructive' })
+        return
+      }
+
+      setLoadingMoreChannelId(channelId)
+
+      try {
+        const token = await ensureSessionToken()
+        const params = new URLSearchParams()
+        params.set('channelType', channel.type)
+        if (channel.type === 'client' && channel.clientId) {
+          params.set('clientId', channel.clientId)
+        }
+        params.set('pageSize', '100')
+        params.set('cursor', cursor)
+
+        const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        })
+
+        const payload = (await response.json().catch(() => null)) as
+          | { messages?: CollaborationMessage[]; nextCursor?: string | null; error?: string }
+          | null
+
+        if (!response.ok || !payload) {
+          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to load more messages'
+          throw new Error(message)
+        }
+
+        const additional = Array.isArray(payload.messages) ? payload.messages.slice().reverse() : []
+
+        if (additional.length > 0) {
+          mutateChannelMessages(channelId, (messages) => [...additional, ...messages])
+        }
+
+        setNextCursorByChannel((prev) => ({
+          ...prev,
+          [channelId]: payload.nextCursor ?? null,
+        }))
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to load more messages'
+        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+      } finally {
+        setLoadingMoreChannelId((current) => (current === channelId ? null : current))
+      }
+    },
+    [channels, ensureSessionToken, mutateChannelMessages, nextCursorByChannel, toast]
+  )
 
   return {
     channels,
@@ -458,6 +669,15 @@ export function useCollaborationData() {
     sending,
     isSendDisabled,
     messagesEndRef,
+    handleEditMessage,
+    handleDeleteMessage,
+    messageUpdatingId,
+    messageDeletingId,
+    handleLoadMore,
+    canLoadMore,
+    loadingMore,
+    currentUserId: user?.id ?? null,
+    currentUserRole: user?.role ?? null,
   }
 }
 
@@ -499,16 +719,29 @@ function mapRealtimeMessage(doc: QueryDocumentSnapshot<DocumentData>): Collabora
         .filter((entry): entry is CollaborationAttachment => Boolean(entry))
     : undefined
 
+  const deletedAt = convertToIso(data?.deletedAt)
+  const deletedBy = typeof data?.deletedBy === 'string' ? data.deletedBy : null
+  const isDeleted = Boolean(deletedAt) || data?.deleted === true
+  const updatedAt = convertToIso(data?.updatedAt)
+  const createdAt = convertToIso(data?.createdAt)
+  const content = typeof data?.content === 'string' ? data.content : ''
+  const resolvedContent = isDeleted ? '' : content
+
   return {
     id: doc.id,
     channelType,
     clientId: typeof data?.clientId === 'string' ? data.clientId : null,
-    content: typeof data?.content === 'string' ? data.content : '',
+    content: resolvedContent,
     senderId: typeof data?.senderId === 'string' ? data.senderId : null,
     senderName:
       typeof data?.senderName === 'string' && data.senderName.trim().length > 0 ? data.senderName : 'Teammate',
     senderRole: typeof data?.senderRole === 'string' ? data.senderRole : null,
-    createdAt: convertToIso(data?.createdAt),
+    createdAt,
+    updatedAt,
+    isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
+    deletedAt,
+    deletedBy,
+    isDeleted,
     attachments,
   }
 }

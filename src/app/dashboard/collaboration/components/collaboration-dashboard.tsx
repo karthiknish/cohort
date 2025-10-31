@@ -37,6 +37,15 @@ export function CollaborationDashboard() {
     sending,
     isSendDisabled,
     messagesEndRef,
+    handleEditMessage,
+    handleDeleteMessage,
+    messageUpdatingId,
+    messageDeletingId,
+    handleLoadMore,
+    canLoadMore,
+    loadingMore,
+    currentUserId,
+    currentUserRole,
   } = useCollaborationData()
 
   if (isBootstrapping) {
@@ -87,6 +96,9 @@ export function CollaborationDashboard() {
             channelParticipants={channelParticipants}
             messagesError={messagesError}
             isLoading={isCurrentChannelLoading}
+            onLoadMore={selectedChannel ? () => { void handleLoadMore(selectedChannel.id) } : undefined}
+            canLoadMore={canLoadMore}
+            loadingMore={loadingMore}
             senderSelection={senderSelection}
             onSenderSelectionChange={setSenderSelection}
             messageInput={messageInput}
@@ -94,7 +106,19 @@ export function CollaborationDashboard() {
             onSendMessage={() => void handleSendMessage()}
             sending={sending}
             isSendDisabled={isSendDisabled}
+            onEditMessage={(messageId, nextContent) => {
+              if (!selectedChannel) return
+              void handleEditMessage(selectedChannel.id, messageId, nextContent)
+            }}
+            onDeleteMessage={(messageId) => {
+              if (!selectedChannel) return
+              void handleDeleteMessage(selectedChannel.id, messageId)
+            }}
+            messageUpdatingId={messageUpdatingId}
+            messageDeletingId={messageDeletingId}
             messagesEndRef={messagesEndRef}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
           />
 
           <Separator orientation="vertical" className="hidden h-[640px] lg:block" />

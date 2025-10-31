@@ -15,6 +15,7 @@
 - ✅ **AI Suggestions**: Gemini now generates actionable recommendations alongside proposal summaries.
 - ✅ **Loading Screens**: Full-screen overlays with progress indicators for proposal generation and deck preparation.
 - ✅ **Workspace Notifications**: Task creation and collaboration messages now emit workspace notifications targeting admins, team members, and the relevant client channel.
+- ✅ **Cursor Pagination & Tests**: `/api/tasks`, `/api/metrics`, and `/api/finance` now expose cursor-based pagination with UI load-more controls and Vitest coverage in `tests/pagination.test.ts`.
 - ✅ **Deck Preparation Optimization**: Avoids redundant Gamma calls by reusing existing stored decks.
 - ✅ **Improved UI/UX**: Better loading states, accessibility improvements, and popup windows for deck downloads.
 - ✅ **Real-time Collaboration**: Added Firestore listeners for collaboration messages
@@ -47,7 +48,7 @@
 | Module | Completeness | Key Features | API Endpoints | Gaps |
 | --- | --- | --- | --- | --- |
 | **Analytics** | 75% | Metrics dashboard, Gemini insights, Recharts visualizations, client filtering | `/api/metrics`, `/api/analytics/insights` | No background sync jobs, limited platform support, missing TikTok integration |
-| **Tasks** | 85% | Full CRUD operations, client assignment, priority/status tracking, workspace notifications | `/api/tasks`, `/api/tasks/[taskId]` | No pagination, no bulk operations, limited task dependencies |
+| **Tasks** | 88% | Full CRUD operations, client assignment, priority/status tracking, workspace notifications | `/api/tasks`, `/api/tasks/[taskId]` | No bulk operations, limited task dependencies |
 | **Finance** | 95% | Revenue tracking, cost management, invoice operations, advanced analytics, Stripe integration | `/api/finance`, `/api/finance/costs`, `/api/billing/*` | Limited export functionality, basic reporting |
 | **Proposals** | 98% | Multi-step wizard, AI-powered content, Gamma PPT generation, history view, loading screens, guaranteed storage | `/api/proposals`, `/api/proposals/[id]/submit`, `/api/proposals/[id]/deck` | No proposal templates, limited customization, no versioning |
 | **Collaboration** | 95% | Real-time messaging, multi-channel support, team integration, file attachments, workspace notifications | `/api/collaboration/messages` + Firestore listeners | Notification center UI pending, basic visual polish |
@@ -172,6 +173,7 @@
 ## Risks & Gaps
 - **AI/External dependency resilience**: Gamma/Gemini failures degrade gracefully but there is no retry/backoff or user re-queue mechanism.
 - **Data freshness**: Analytics relies on external sync jobs not present in repo; without them dashboards will stay empty.
+- **Data & Performance**: Analytics sync jobs still unimplemented, no background workers manage ingestion, and Firestore composite indexes must be deployed and verified; cursor-based pagination now live across tasks, metrics, and finance but requires index rollout and load testing.
 - **Auth token reuse**: Collaboration cookie cache stores raw Firebase token client-side; ensure token TTL respected and refresh triggered before expiry.
 - **Production Monitoring**: No structured logging, error tracking, or performance monitoring for production deployment.
 - **Testing Coverage**: No automated tests; critical for production stability and regression prevention.
@@ -201,7 +203,7 @@
 4. **Deploy Firestore indexes** for query performance optimization
 5. **Add basic health check** endpoint for monitoring
 
-### Short-term (Month 1)
+### Short-term (Month 1)    
 1. **Testing foundation**: Introduce Vitest for unit tests and Playwright for E2E tests
 2. **Background jobs**: Implement cron worker for ad metrics ingestion
 3. **Pagination**: Add to tasks, metrics, and finance endpoints
@@ -215,6 +217,21 @@
 3. **Performance optimization**: Implement proper caching strategies
 4. **Security hardening**: Migrate to Admin SDK token verification
 5. **Feature parity**: Complete real-time chat or update marketing materials
+
+## Data & Performance Remediation Plan
+
+1. **Ingestion requirements mapping**
+	- Inventory analytics data sources (Google Ads, Meta Ads Manager, LinkedIn Ads) against dashboard usage.
+	- Confirm Firestore schemas (`adIntegrations`, `syncJobs`, `adMetrics`) satisfy normalized payload contract defined in `docs/integrations.md`.
+	- Draft and circulate payload contracts with provider-specific extensions; capture assumptions inside `docs/integrations.md`.
+2. **Background worker rollout**
+	- Select runtime (Cloud Functions, Cloud Run Jobs, or App Router cron) and scaffold worker harness with retry/backoff helpers.
+	- Implement job claim/release semantics for `syncJobs` and persist structured logs for monitoring.
+	- Schedule nightly sync via `gcloud scheduler` or `firebase-tools` cron targets, passing `x-cron-key` for auth.
+3. **API pagination & batching**
+	- ✅ Extend `/api/tasks`, `/api/metrics`, and `/api/finance` with cursor-based pagination plus batch size guards.
+	- ✅ Update corresponding frontend hooks/services to request cursors and append results without breaking existing UX.
+	- ✅ Add regression tests that exercise boundary conditions (empty page, duplicate cursors, large dataset) before deployment.
 
 ### Long-term (Months 3-6)
 1. **Advanced analytics**: Custom dashboards, reporting, export functionality

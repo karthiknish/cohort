@@ -12,6 +12,7 @@ interface AuthContextType {
   connectFacebookAdsAccount: () => Promise<void>
   connectLinkedInAdsAccount: () => Promise<void>
   startMetaOauth: (redirect?: string) => Promise<{ url: string }>
+  startTikTokOauth: (redirect?: string) => Promise<{ url: string }>
   getIdToken: () => Promise<string>
   signUp: (data: SignUpData) => Promise<AuthUser>
   signOut: () => Promise<void>
@@ -146,6 +147,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await authService.startMetaOauth(redirect)
   }, [])
 
+  const startTikTokOauth = useCallback(async (redirect?: string) => {
+    return await authService.startTikTokOauth(redirect)
+  }, [])
+
   const getIdToken = useCallback(async () => {
     return await authService.getIdToken()
   }, [])
@@ -160,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
       startMetaOauth,
+      startTikTokOauth,
       getIdToken,
       signUp,
       signOut,
@@ -179,6 +185,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
       startMetaOauth,
+      startTikTokOauth,
       getIdToken,
       signUp,
       signOut,

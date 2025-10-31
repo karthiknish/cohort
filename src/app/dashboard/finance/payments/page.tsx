@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { createBillingPortalSession } from '@/services/finance'
-import { formatCurrency } from '@/app/dashboard/finance/utils'
+import { formatCurrency, formatCurrencyDistribution, getPrimaryCurrencyTotals } from '@/app/dashboard/finance/utils'
 import { useFinanceData } from '@/app/dashboard/finance/hooks/use-finance-data'
 import { FinanceInvoiceTable } from '@/app/dashboard/finance/components/finance-invoice-table'
 import { FinanceDashboardSkeleton } from '@/app/dashboard/finance/components/finance-dashboard-skeleton'
@@ -67,8 +67,21 @@ export default function FinancePaymentsPage() {
     }
   }, [selectedClientId, toast])
 
-  const outstandingDisplay = formatCurrency(paymentSummary.totalOutstanding)
-  const collectedDisplay = formatCurrency(paymentSummary.totalPaid)
+  const primaryCurrencyTotals = useMemo(
+    () =>
+      getPrimaryCurrencyTotals(paymentSummary.totals) ?? {
+        currency: 'USD',
+        totalInvoiced: 0,
+        totalPaid: 0,
+        totalOutstanding: 0,
+        refundTotal: 0,
+      },
+    [paymentSummary.totals]
+  )
+
+  const primaryCurrency = primaryCurrencyTotals.currency
+  const outstandingDisplay = formatCurrencyDistribution(paymentSummary.totals, 'totalOutstanding', primaryCurrency)
+  const collectedDisplay = formatCurrencyDistribution(paymentSummary.totals, 'totalPaid', primaryCurrency)
   const nextDueDisplay = useMemo(() => {
     if (paymentSummary.nextDueAt) {
       return new Date(paymentSummary.nextDueAt).toLocaleDateString()
@@ -191,7 +204,7 @@ export default function FinancePaymentsPage() {
                           Due {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'TBC'}
                         </p>
                       </div>
-                      <p className="text-sm font-semibold text-foreground">{formatCurrency(outstanding)}</p>
+                      <p className="text-sm font-semibold text-foreground">{formatCurrency(outstanding, invoice.currency ?? primaryCurrency)}</p>
                     </div>
                   )
                 })}

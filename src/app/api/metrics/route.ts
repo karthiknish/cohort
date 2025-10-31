@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
@@ -16,6 +16,14 @@ interface MetricRecord {
   createdAt?: string | null
   clientId?: string | null
 }
+
+interface MetricListResponse {
+  metrics: MetricRecord[]
+  nextCursor: string | null
+}
+
+const PAGE_SIZE_DEFAULT = 100
+const PAGE_SIZE_MAX = 500
 
 function toISO(value: unknown): string | null {
   if (!value) return null
@@ -54,17 +62,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
-    const clientIdFilter = request.nextUrl.searchParams.get('clientId')?.trim() ?? null
+    const searchParams = request.nextUrl.searchParams
+    const clientIdFilter = searchParams.get('clientId')?.trim() ?? null
+    const pageSizeParam = searchParams.get('pageSize')
+    const afterParam = searchParams.get('after')
 
-    const metricsQuery = adminDb
+    const pageSize = Math.min(Math.max(Number(pageSizeParam) || PAGE_SIZE_DEFAULT, 1), PAGE_SIZE_MAX)
+
+    const baseCollection = adminDb
       .collection('users')
       .doc(userId)
       .collection('adMetrics')
-      .orderBy('createdAt', 'desc')
-      .limit(100)
-    const snapshot = await metricsQuery.get()
 
-    const records: MetricRecord[] = snapshot.docs.map((docSnap) => {
+    let query = baseCollection.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
+
+    if (clientIdFilter) {
+      query = baseCollection
+        .where('clientId', '==', clientIdFilter)
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+    }
+
+    query = query.limit(pageSize + 1)
+
+    if (afterParam) {
+      const [timestamp, docId] = afterParam.split('|')
+      if (timestamp && docId) {
+        const afterDate = new Date(timestamp)
+        if (!Number.isNaN(afterDate.getTime())) {
+          query = query.startAfter(Timestamp.fromDate(afterDate), docId)
+        }
+      }
+    }
+
+    const snapshot = await query.get()
+    const docs = snapshot.docs
+
+    const mapped = docs.slice(0, pageSize).map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>
       return {
         id: docSnap.id,
@@ -76,20 +110,24 @@ export async function GET(request: NextRequest) {
         conversions: Number(data.conversions ?? 0),
         revenue: data.revenue !== undefined ? Number(data.revenue) : null,
         createdAt: toISO(data.createdAt ?? null),
-          clientId: typeof data.clientId === 'string' ? data.clientId : null,
+        clientId: typeof data.clientId === 'string' ? data.clientId : null,
       }
     })
-      .filter((record) => {
-        if (!clientIdFilter) {
-          return true
-        }
-        if (record.clientId) {
-          return record.clientId === clientIdFilter
-        }
-        return false
-      })
+    const metrics = mapped
+    const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
+    const nextCursor = nextCursorDoc
+      ? (() => {
+          const createdAt = toISO(nextCursorDoc.get('createdAt'))
+          return createdAt ? `${createdAt}|${nextCursorDoc.id}` : null
+        })()
+      : null
 
-    return NextResponse.json(records)
+    const payload: MetricListResponse = {
+      metrics,
+      nextCursor,
+    }
+
+    return NextResponse.json(payload)
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
       return NextResponse.json({ error: error.message }, { status: error.status })

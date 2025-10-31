@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   LineChart,
   Line,
@@ -23,6 +23,7 @@ import {
   Users,
   Target,
   RefreshCw,
+  Loader2,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { authService } from '@/services/auth'
 import { useClientContext } from '@/contexts/client-context'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/components/ui/use-toast'
 
 interface MetricRecord {
   id: string
@@ -52,6 +54,11 @@ interface MetricRecord {
     conversions?: number
     revenue?: number
   }>
+}
+
+interface MetricsResponse {
+  metrics?: MetricRecord[]
+  nextCursor?: string | null
 }
 
 interface ProviderInsight {
@@ -83,6 +90,10 @@ function useAnalyticsData(token: string | null, periodDays: number, clientId: st
   const metricsUrl = clientId ? `/api/metrics?clientId=${encodeURIComponent(clientId)}` : '/api/metrics'
   const metricsKey: [string, string] | null = shouldFetch && token ? [metricsUrl, token] : null
 
+  const [metricsList, setMetricsList] = useState<MetricRecord[]>([])
+  const [metricsCursor, setMetricsCursor] = useState<string | null>(null)
+  const [metricsLoadingMore, setMetricsLoadingMore] = useState(false)
+
   const insightsParams = new URLSearchParams({ periodDays: String(periodDays) })
   if (clientId) {
     insightsParams.set('clientId', clientId)
@@ -109,8 +120,58 @@ function useAnalyticsData(token: string | null, periodDays: number, clientId: st
     ([url, jwt]) => fetcher(url, jwt)
   )
 
+  useEffect(() => {
+    setMetricsList([])
+    setMetricsCursor(null)
+  }, [metricsUrl])
+
+  useEffect(() => {
+    if (!data) {
+      return
+    }
+
+    const payload = data as MetricsResponse
+    const entries = Array.isArray(payload.metrics) ? payload.metrics : []
+    setMetricsList(entries)
+    setMetricsCursor(typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null)
+  }, [data])
+
+  const loadMoreMetrics = useCallback(async () => {
+    if (!token || !metricsCursor) {
+      return
+    }
+
+    setMetricsLoadingMore(true)
+    try {
+      const separator = metricsUrl.includes('?') ? '&' : '?'
+      const url = `${metricsUrl}${separator}after=${encodeURIComponent(metricsCursor)}`
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        const message = payload?.error ?? 'Unable to load additional metrics'
+        throw new Error(message)
+      }
+
+      const payload = (await response.json()) as MetricsResponse
+      const entries = Array.isArray(payload.metrics) ? payload.metrics : []
+      if (entries.length > 0) {
+        setMetricsList((prev) => [...prev, ...entries])
+      }
+      setMetricsCursor(typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null)
+    } finally {
+      setMetricsLoadingMore(false)
+    }
+  }, [metricsCursor, metricsUrl, token])
+
   return {
-    metricsData: (data as MetricRecord[]) ?? [],
+    metricsData: metricsList,
+    metricsNextCursor: metricsCursor,
+    metricsLoadingMore,
+    loadMoreMetrics,
     metricsError: error as Error | undefined,
     metricsLoading: isLoading,
     metricsRefreshing: isValidating,
@@ -142,6 +203,7 @@ function formatCurrency(value: number) {
 
 export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
+  const { toast } = useToast()
   const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
 
@@ -169,6 +231,9 @@ export default function AnalyticsPage() {
 
   const {
     metricsData,
+    metricsNextCursor,
+    metricsLoadingMore,
+    loadMoreMetrics,
     metricsError,
     metricsLoading,
     metricsRefreshing,
@@ -181,6 +246,18 @@ export default function AnalyticsPage() {
   } = useAnalyticsData(token, periodDays, selectedClientId ?? null)
 
   const metrics = metricsData
+  const handleLoadMoreMetrics = useCallback(async () => {
+    if (!metricsNextCursor) {
+      return
+    }
+
+    try {
+      await loadMoreMetrics()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load additional metrics'
+      toast({ title: 'Metrics pagination error', description: message, variant: 'destructive' })
+    }
+  }, [loadMoreMetrics, metricsNextCursor, toast])
   const initialMetricsLoading = metricsLoading && metrics.length === 0
   const initialInsightsLoading = insightsLoading && insights.length === 0
   const referenceTimestamp = useMemo(() => {
@@ -329,15 +406,34 @@ export default function AnalyticsPage() {
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-muted-foreground">Performance summary</h2>
-        <button
-          type="button"
-          onClick={() => mutateMetrics()}
-          disabled={metricsLoading || metricsRefreshing}
-          className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${metricsRefreshing ? 'animate-spin' : ''}`} />
-          Refresh metrics
-        </button>
+        <div className="flex items-center gap-2">
+          {metricsNextCursor && (
+            <button
+              type="button"
+              onClick={handleLoadMoreMetrics}
+              disabled={metricsLoadingMore}
+              className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+            >
+              {metricsLoadingMore ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Loading more
+                </>
+              ) : (
+                'Load older data'
+              )}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => mutateMetrics()}
+            disabled={metricsLoading || metricsRefreshing}
+            className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+            Refresh metrics
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

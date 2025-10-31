@@ -16,5 +16,10 @@ export type CollaborationMessage = {
   senderName: string
   senderRole?: string | null
   createdAt: string | null
+  updatedAt: string | null
+  isEdited: boolean
+  deletedAt: string | null
+  deletedBy: string | null
+  isDeleted: boolean
   attachments?: CollaborationAttachment[]
 }
