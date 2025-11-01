@@ -215,7 +215,17 @@ export async function getAdIntegration(options: {
     lastSyncStatus: (data.lastSyncStatus as AdIntegration['lastSyncStatus']) ?? 'never',
     lastSyncMessage: (data.lastSyncMessage as string | undefined) ?? null,
     lastSyncedAt: (data.lastSyncedAt as Timestamp | null | undefined) ?? null,
+    lastSyncRequestedAt: (data.lastSyncRequestedAt as Timestamp | null | undefined) ?? null,
     linkedAt: (data.linkedAt as Timestamp | null | undefined) ?? null,
+    autoSyncEnabled: typeof data.autoSyncEnabled === 'boolean' ? data.autoSyncEnabled : null,
+    syncFrequencyMinutes:
+      typeof data.syncFrequencyMinutes === 'number' && Number.isFinite(data.syncFrequencyMinutes)
+        ? data.syncFrequencyMinutes
+        : null,
+    scheduledTimeframeDays:
+      typeof data.scheduledTimeframeDays === 'number' && Number.isFinite(data.scheduledTimeframeDays)
+        ? data.scheduledTimeframeDays
+        : null,
   }
 }
 
@@ -305,6 +315,79 @@ export async function updateIntegrationStatus(options: {
       lastSyncMessage: message,
       lastSyncedAt: status === 'success' ? serverTimestamp() : null,
     })
+}
+
+export async function hasPendingSyncJob(options: {
+  userId: string
+  providerId: string
+}): Promise<boolean> {
+  const { userId, providerId } = options
+
+  const jobsRef = adminDb.collection('users').doc(userId).collection('syncJobs')
+  const snapshot = await jobsRef
+    .where('providerId', '==', providerId)
+    .where('status', 'in', ['queued', 'running'])
+    .limit(1)
+    .get()
+
+  return !snapshot.empty
+}
+
+export async function markIntegrationSyncRequested(options: {
+  userId: string
+  providerId: string
+  status?: 'pending' | 'never' | 'error' | 'success'
+}): Promise<void> {
+  const { userId, providerId, status = 'pending' } = options
+
+  await adminDb
+    .collection('users')
+    .doc(userId)
+    .collection('adIntegrations')
+    .doc(providerId)
+    .set(
+      {
+        lastSyncStatus: status,
+        lastSyncMessage: null,
+        lastSyncRequestedAt: serverTimestamp(),
+      },
+      { merge: true }
+    )
+}
+
+type IntegrationPreferenceOptions = {
+  userId: string
+  providerId: string
+  autoSyncEnabled?: boolean | null
+  syncFrequencyMinutes?: number | null
+  scheduledTimeframeDays?: number | null
+}
+
+export async function updateIntegrationPreferences(options: IntegrationPreferenceOptions): Promise<void> {
+  const { userId, providerId } = options
+
+  const payload: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+  }
+
+  if (Object.prototype.hasOwnProperty.call(options, 'autoSyncEnabled')) {
+    payload.autoSyncEnabled = options.autoSyncEnabled ?? null
+  }
+
+  if (Object.prototype.hasOwnProperty.call(options, 'syncFrequencyMinutes')) {
+    payload.syncFrequencyMinutes = options.syncFrequencyMinutes ?? null
+  }
+
+  if (Object.prototype.hasOwnProperty.call(options, 'scheduledTimeframeDays')) {
+    payload.scheduledTimeframeDays = options.scheduledTimeframeDays ?? null
+  }
+
+  await adminDb
+    .collection('users')
+    .doc(userId)
+    .collection('adIntegrations')
+    .doc(providerId)
+    .set(payload, { merge: true })
 }
 
 export async function writeMetricsBatch(options: {

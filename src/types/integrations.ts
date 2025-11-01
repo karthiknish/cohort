@@ -31,10 +31,14 @@ export interface AdIntegration {
   lastSyncStatus?: 'never' | 'pending' | 'success' | 'error'
   lastSyncMessage?: string | null
   lastSyncedAt?: AnyFirestoreTimestamp | null
+  lastSyncRequestedAt?: AnyFirestoreTimestamp | null
   linkedAt?: AnyFirestoreTimestamp | null
   managerCustomerId?: string | null
   accessTokenExpiresAt?: AnyFirestoreTimestamp | null
   refreshTokenExpiresAt?: AnyFirestoreTimestamp | null
+  autoSyncEnabled?: boolean | null
+  syncFrequencyMinutes?: number | null
+  scheduledTimeframeDays?: number | null
 }
 
 export interface NormalizedMetric {

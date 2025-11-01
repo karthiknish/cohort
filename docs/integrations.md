@@ -13,10 +13,16 @@ This document outlines how Cohorts links paid media accounts, ingests campaign d
   >
   > When enabling the Meta Ads integration, set the authorized redirect URI inside Meta Business settings to `https://<your-domain>/api/integrations/meta/oauth/callback` (use `http://localhost:3000/api/integrations/meta/oauth/callback` during local development) and mirror that value in the `META_OAUTH_REDIRECT_URI` environment variable.
 
-2. **Job processing (server)**
-   - Server-side jobs (Cloud Functions or Next.js API routes run on the App Router) poll for queued records in `users/{userId}/syncJobs` with `status === 'queued'` and claim them atomically.
-   - Each job exchanges stored access tokens for provider-specific API clients, requests spend/conversions/creative assets, normalizes the payload, and persists metrics in `users/{userId}/adMetrics/{yyyy-mm-dd}/{providerId}` documents.
-   - After completion, the job document is updated with `status`, `processedAt`, and error details if any, while the integration doc receives `lastSyncedAt`, `lastSyncStatus`, and an optional `lastSyncMessage`.
+2. **Automated scheduling (server)**
+  - `/api/integrations/schedule` queues sync jobs for a single user or the entire tenant when invoked with the `x-cron-key` header (`INTEGRATIONS_CRON_SECRET`).
+  - Scheduling respects per-integration preferences stored on `adIntegrations` (`autoSyncEnabled`, `syncFrequencyMinutes`, `scheduledTimeframeDays`) and skips providers that synced recently or already have queued jobs.
+  - Force scheduling is available for on-demand backfills by passing `{"force": true}` in the request body; admin users can call this endpoint directly from the dashboard tooling.
+  - Ads Hub features **Automation controls** so admins can toggle auto-sync and adjust cadence/lookback values per provider without touching Firestore directly.
+
+3. **Job processing (server)**
+  - Server-side jobs (Cloud Functions or App Router API routes) poll for queued records in `users/{userId}/syncJobs` with `status === 'queued'` and claim them atomically.
+  - Each job exchanges stored access tokens for provider-specific API clients, requests spend/conversions/creative assets, normalizes the payload, and persists metrics in `users/{userId}/adMetrics/{yyyy-mm-dd}/{providerId}` documents.
+  - After completion, the job document is updated with `status`, `processedAt`, and error details if any, while the integration doc receives `lastSyncedAt`, `lastSyncStatus`, `lastSyncMessage`, and `lastSyncRequestedAt`.
 
 3. **Dashboard status (client)**
    - The dashboard calls `/api/integrations/status?userId=<uid>` to read the latest metadata from `adIntegrations` and drive the UI badges.
@@ -34,6 +40,9 @@ users/{userId}/adIntegrations/{providerId}
   lastSyncedAt: Timestamp | null
   lastSyncRequestedAt: Timestamp | null
   lastSyncMessage: string | null
+  autoSyncEnabled: boolean | null
+  syncFrequencyMinutes: number | null
+  scheduledTimeframeDays: number | null
 
 users/{userId}/syncJobs/{jobId}
   providerId: 'google' | 'facebook' | 'linkedin'
@@ -114,7 +123,7 @@ users/{userId}/adMetrics/{periodId}/{providerDocId}
 
 ## Next Steps
 
-- Implement cron-driven Cloud Function (e.g., `processSyncJobs`) to iterate over users and run outstanding jobs.
+- Evaluate adaptive scheduling heuristics that respond to spend or recent failures.
 - Persist provider insights inside BigQuery or Postgres if advanced querying is required beyond Firestore aggregation.
 - Emit analytics/logging events for monitoring sync health and alerting.
 
@@ -122,5 +131,9 @@ users/{userId}/adMetrics/{periodId}/{providerDocId}
 
 - All integration APIs (`/api/integrations/status`, `/api/metrics`, `/api/integrations/process`) require an authenticated Firebase ID token via the `Authorization: Bearer <token>` header.
 - Automation or cron jobs can use the `INTEGRATIONS_CRON_SECRET` environment variable and send it via `x-cron-key` header to bypass user tokens. Cron requests **must** specify `userId` explicitly.
-- Recommended schedule: run `/api/integrations/process` every 5 minutes per agency tenant until the queue is empty. Each call processes a single job; scale horizontally by dispatching multiple concurrent workers if necessary.
-- Ensure SyncJobs are re-enqueued periodically for incremental updates (e.g., nightly) to keep metrics fresh.
+- Cron setup:
+  - **Queue jobs**: call `POST /api/integrations/schedule` with header `x-cron-key: ${INTEGRATIONS_CRON_SECRET}` every 6 hours (or desired cadence). Use `{ "allUsers": true }` to fan out across tenants.
+  - **Process jobs**: call `POST /api/integrations/process` with the same header every 5 minutes in parallel workers (each invocation processes the next available job).
+- Ensure SyncJobs are re-enqueued periodically (the scheduler handles this automatically based on `syncFrequencyMinutes`) to keep metrics fresh.
+- Optional: configure `SCHEDULER_ALERT_WEBHOOK_URL` and (if needed) `SCHEDULER_ALERT_FAILURE_THRESHOLD` to receive webhook alerts when cron/worker runs fail repeatedly or observe stuck queues.
+  - API calls provide an optional per-run override (`failureThresholdOverride`) so high-volume providers can relax or tighten alerting as traffic scales.

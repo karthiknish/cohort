@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Inbox, Megaphone, ShieldCheck, Users } from 'lucide-react'
+import { ArrowRight, Activity, Inbox, Megaphone, ShieldCheck, Users } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -42,6 +42,13 @@ const adminSections: AdminSection[] = [
     href: '/admin/leads',
     icon: Megaphone,
     cta: 'Review leads',
+  },
+  {
+    title: 'Scheduler',
+    description: 'Inspect cron and worker runs, queue health, and alert history.',
+    href: '/admin/scheduler',
+    icon: Activity,
+    cta: 'Open scheduler view',
   },
 ]
 

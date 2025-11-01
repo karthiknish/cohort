@@ -17,33 +17,28 @@ The Cohorts platform demonstrates **strong feature completeness** across core bu
 ## Critical Gaps (High Priority)
 
 ### 1. **Background Sync Jobs / Automated Data Ingestion**
-**Status**: ❌ **NOT IMPLEMENTED**  
-**Impact**: HIGH - Core analytics functionality depends on this  
-**Priority**: P0 (Critical)
+**Status**: ✅ **IMPLEMENTED**  
+**Impact**: HIGH - Core analytics functionality now automated  
+**Priority**: — (Complete)
 
 **Current State**:
-- Integration status endpoint exists (`/api/integrations/status`)
-- Sync job processing endpoint exists (`/api/integrations/process`)
-- Service wrappers exist for Google Ads, Meta Ads, LinkedIn Ads
-- **No automated cron jobs** to trigger sync jobs
+- `/api/integrations/schedule` queues sync jobs for individual users or all tenants and respects per-integration frequency controls.
+- `/api/integrations/process` ingests the next queued job; cron workers can invoke this repeatedly to drain the queue.
+- `lib/integration-auto-sync.ts` centralizes scheduling logic (frequency, duplicate protection, forced backfills).
+- Admin-only access is enforced for manual triggers while cron requests authenticate via `INTEGRATIONS_CRON_SECRET`.
 
-**Gap Details**:
-- No Cloud Functions, Cloud Run Jobs, or Next.js cron routes
-- No scheduled sync jobs (nightly incremental, initial backfill)
-- Dashboard analytics will remain empty without manual triggers
-- No job queue monitoring or retry mechanisms
+**Recent Enhancements**:
+- Ads Hub exposes automation controls so admins can toggle `autoSyncEnabled`, adjust `syncFrequencyMinutes`, and review last sync timestamps without manual Firestore edits.
+- Scheduler runs now emit telemetry (`admin/scheduler/events`) and optional webhook alerts (`SCHEDULER_ALERT_WEBHOOK_URL`) when queues stall or failures spike.
 
 **Documentation Reference**:
-- `docs/integrations.md` outlines expected sync architecture
-- `docs/project-audit.md` identifies this as critical gap
+- `docs/integrations.md` (updated) documents the new scheduling workflow and cron setup.
+- `docs/project-audit.md` should be refreshed to reflect the completed automation.
 
-**Recommendation**:
-1. Implement Cloud Functions or Next.js API route with cron handler
-2. Schedule nightly incremental syncs (1-day lookback)
-3. Support initial 90-day backfill on account linking
-4. Add job monitoring dashboard and alerting
-
-**Estimated Effort**: 2-3 weeks
+**Suggested Follow-Up**:
+1. Visualize scheduler telemetry inside the admin dashboard for trend analysis.
+2. Tune alert thresholds per provider or workspace to reduce noise.
+3. Consider adaptive scheduling windows based on spend volume or error rate.
 
 ---
 

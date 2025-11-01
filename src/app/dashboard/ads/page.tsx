@@ -5,10 +5,12 @@ import {
   AlertCircle,
   Facebook,
   Linkedin,
+  Loader2,
   Music,
   RefreshCw,
   Search,
 } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 
 import {
   Card,
@@ -26,6 +28,16 @@ import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useAuth } from '@/contexts/auth-context'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdsSkeleton } from '@/app/dashboard/ads/components/ads-skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/use-toast'
 
 interface IntegrationStatusResponse {
   statuses: Array<{
@@ -35,6 +47,9 @@ interface IntegrationStatusResponse {
     lastSyncRequestedAt?: string | null
     message?: string | null
     linkedAt?: string | null
+    autoSyncEnabled?: boolean | null
+    syncFrequencyMinutes?: number | null
+    scheduledTimeframeDays?: number | null
   }>
 }
 
@@ -72,6 +87,32 @@ type Totals = {
   conversions: number
   revenue: number
 }
+
+type ProviderAutomationFormState = {
+  autoSyncEnabled: boolean
+  syncFrequencyMinutes: number
+  scheduledTimeframeDays: number
+}
+
+const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60
+const DEFAULT_TIMEFRAME_DAYS = 7
+
+const FREQUENCY_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: 'Every 1 hour', value: 60 },
+  { label: 'Every 3 hours', value: 180 },
+  { label: 'Every 6 hours', value: 360 },
+  { label: 'Every 12 hours', value: 720 },
+  { label: 'Once per day', value: 1440 },
+]
+
+const TIMEFRAME_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: 'Past day', value: 1 },
+  { label: 'Past 3 days', value: 3 },
+  { label: 'Past week', value: 7 },
+  { label: 'Past 14 days', value: 14 },
+  { label: 'Past 30 days', value: 30 },
+  { label: 'Past 90 days', value: 90 },
+]
 
 async function fetchIntegrationStatuses(token: string, userId?: string | null): Promise<IntegrationStatusResponse> {
   const url = userId ? `/api/integrations/status?userId=${encodeURIComponent(userId)}` : '/api/integrations/status'
@@ -128,6 +169,22 @@ async function fetchMetrics(
   }
 }
 
+function normalizeFrequency(value?: number | null): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const clamped = Math.min(Math.max(Math.round(value), FREQUENCY_OPTIONS[0].value), FREQUENCY_OPTIONS.at(-1)?.value ?? 1440)
+    return clamped
+  }
+  return DEFAULT_SYNC_FREQUENCY_MINUTES
+}
+
+function normalizeTimeframe(value?: number | null): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const clamped = Math.min(Math.max(Math.round(value), TIMEFRAME_OPTIONS[0].value), TIMEFRAME_OPTIONS.at(-1)?.value ?? DEFAULT_TIMEFRAME_DAYS)
+    return clamped
+  }
+  return DEFAULT_TIMEFRAME_DAYS
+}
+
 export default function AdsPage() {
   const {
     user,
@@ -137,6 +194,7 @@ export default function AdsPage() {
     startTikTokOauth,
     getIdToken,
   } = useAuth()
+  const { toast } = useToast()
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
   const [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({})
   const [connectedProviders, setConnectedProviders] = useState<Record<string, boolean>>({})
@@ -149,6 +207,9 @@ export default function AdsPage() {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
+  const [automationDraft, setAutomationDraft] = useState<Record<string, ProviderAutomationFormState>>({})
+  const [savingSettings, setSavingSettings] = useState<Record<string, boolean>>({})
+  const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
   const hasMetricData = metrics.length > 0
   const initialMetricsLoading = metricsLoading && !hasMetricData
 
@@ -185,6 +246,103 @@ export default function AdsPage() {
 
     return response.json()
   }, [getIdToken])
+
+  const updateAutomationDraft = useCallback(
+    (providerId: string, updates: Partial<ProviderAutomationFormState>) => {
+      setAutomationDraft((prev) => {
+        const current = prev[providerId] ?? {
+          autoSyncEnabled: true,
+          syncFrequencyMinutes: DEFAULT_SYNC_FREQUENCY_MINUTES,
+          scheduledTimeframeDays: DEFAULT_TIMEFRAME_DAYS,
+        }
+
+        return {
+          ...prev,
+          [providerId]: {
+            ...current,
+            ...updates,
+          },
+        }
+      })
+
+      setSettingsErrors((prev) => {
+        if (!prev[providerId]) {
+          return prev
+        }
+        const next = { ...prev }
+        delete next[providerId]
+        return next
+      })
+    },
+    [setSettingsErrors]
+  )
+
+  const handleSaveAutomation = useCallback(
+    async (providerId: string) => {
+      const draft = automationDraft[providerId]
+      if (!draft) {
+        toast({
+          variant: 'destructive',
+          title: 'No settings to save',
+          description: 'Connect an integration before adjusting automation.',
+        })
+        return
+      }
+
+      if (!user?.id) {
+        toast({
+          variant: 'destructive',
+          title: 'Unable to save',
+          description: 'Sign in again to update automation preferences.',
+        })
+        return
+      }
+
+      setSavingSettings((prev) => ({ ...prev, [providerId]: true }))
+      setSettingsErrors((prev) => ({ ...prev, [providerId]: '' }))
+
+      try {
+        const token = await getIdToken()
+        const response = await fetch('/api/integrations/settings', {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            providerId,
+            autoSyncEnabled: draft.autoSyncEnabled,
+            syncFrequencyMinutes: draft.syncFrequencyMinutes,
+            scheduledTimeframeDays: draft.scheduledTimeframeDays,
+          }),
+        })
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}))
+          const message = typeof payload.error === 'string' ? payload.error : 'Failed to update automation settings'
+          throw new Error(message)
+        }
+
+        toast({
+          title: 'Automation updated',
+          description: `${formatProviderName(providerId)} preferences saved.`,
+        })
+
+        setRefreshTick((tick) => tick + 1)
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, 'Unable to update automation settings')
+        setSettingsErrors((prev) => ({ ...prev, [providerId]: message }))
+        toast({
+          variant: 'destructive',
+          title: 'Save failed',
+          description: message,
+        })
+      } finally {
+        setSavingSettings((prev) => ({ ...prev, [providerId]: false }))
+      }
+    },
+    [automationDraft, getIdToken, toast, user?.id]
+  )
 
   useEffect(() => {
     if (!user?.id) {
@@ -245,6 +403,26 @@ export default function AdsPage() {
     })
     setConnectedProviders(updatedConnected)
   }, [integrationStatuses])
+
+  useEffect(() => {
+    if (!integrationStatuses || integrationStatuses.statuses.length === 0) {
+      setAutomationDraft({})
+      return
+    }
+
+    const nextDraft: Record<string, ProviderAutomationFormState> = {}
+    integrationStatuses.statuses.forEach((status) => {
+      nextDraft[status.providerId] = {
+        autoSyncEnabled: status.autoSyncEnabled !== false,
+        syncFrequencyMinutes: normalizeFrequency(status.syncFrequencyMinutes ?? null),
+        scheduledTimeframeDays: normalizeTimeframe(status.scheduledTimeframeDays ?? null),
+      }
+    })
+
+    setAutomationDraft(nextDraft)
+  }, [integrationStatuses])
+
+  const automationStatuses = integrationStatuses?.statuses ?? []
 
   const providerSummaries = useMemo(() => {
     const summary: Record<string, ProviderSummary> = {}
@@ -489,6 +667,122 @@ export default function AdsPage() {
       <FadeIn>
         <Card className="shadow-sm">
           <CardHeader className="flex flex-col gap-1">
+            <CardTitle className="text-lg">Automation controls</CardTitle>
+            <CardDescription>Toggle automatic syncs and adjust frequency for each connected provider.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {automationStatuses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
+                <p>Connect an ad platform to configure auto-sync preferences.</p>
+              </div>
+            ) : (
+              automationStatuses.map((status) => {
+                const draft =
+                  automationDraft[status.providerId] ?? {
+                    autoSyncEnabled: true,
+                    syncFrequencyMinutes: DEFAULT_SYNC_FREQUENCY_MINUTES,
+                    scheduledTimeframeDays: DEFAULT_TIMEFRAME_DAYS,
+                  }
+                const saving = savingSettings[status.providerId] ?? false
+                const errorMessage = settingsErrors[status.providerId]
+
+                return (
+                  <div key={status.providerId} className="space-y-4 rounded-lg border border-muted/60 p-4">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">{formatProviderName(status.providerId)}</p>
+                          <Badge variant={getStatusBadgeVariant(status.status)}>{getStatusLabel(status.status)}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Last sync: {formatRelativeTimestamp(status.lastSyncedAt)} · Last request: {formatRelativeTimestamp(status.lastSyncRequestedAt)}
+                        </p>
+                        {status.message ? (
+                          <p className="text-xs text-muted-foreground">Last message: {status.message}</p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-end">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Checkbox
+                          checked={draft.autoSyncEnabled}
+                          onChange={(event) => updateAutomationDraft(status.providerId, { autoSyncEnabled: event.target.checked })}
+                          disabled={saving}
+                        />
+                        Enable automatic sync
+                      </label>
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">Frequency</span>
+                        <Select
+                          value={String(draft.syncFrequencyMinutes)}
+                          onValueChange={(value) => updateAutomationDraft(status.providerId, { syncFrequencyMinutes: Number(value) })}
+                          disabled={saving}
+                        >
+                          <SelectTrigger disabled={saving}>
+                            <SelectValue placeholder="Select cadence" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FREQUENCY_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={String(option.value)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">Lookback window</span>
+                        <Select
+                          value={String(draft.scheduledTimeframeDays)}
+                          onValueChange={(value) => updateAutomationDraft(status.providerId, { scheduledTimeframeDays: Number(value) })}
+                          disabled={saving}
+                        >
+                          <SelectTrigger disabled={saving}>
+                            <SelectValue placeholder="Select window" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIMEFRAME_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={String(option.value)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      {errorMessage ? (
+                        <p className="text-xs text-destructive">{errorMessage}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Changes affect future scheduled syncs for this provider.</p>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="inline-flex items-center gap-2"
+                        onClick={() => {
+                          void handleSaveAutomation(status.providerId)
+                        }}
+                        disabled={saving}
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        {saving ? 'Saving…' : 'Save automation'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+      </FadeIn>
+
+      <FadeIn>
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-col gap-1">
             <CardTitle className="text-lg">Cross-channel overview</CardTitle>
             <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
           </CardHeader>
@@ -691,6 +985,45 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback
+}
+
+function formatRelativeTimestamp(iso?: string | null): string {
+  if (!iso) {
+    return 'Never synced'
+  }
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Unknown'
+  }
+  return `${formatDistanceToNow(parsed, { addSuffix: true })}`
+}
+
+function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+  switch (status) {
+    case 'success':
+      return 'default'
+    case 'pending':
+      return 'secondary'
+    case 'error':
+      return 'destructive'
+    default:
+      return 'outline'
+  }
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'success':
+      return 'Healthy'
+    case 'pending':
+      return 'In progress'
+    case 'error':
+      return 'Failed'
+    case 'never':
+      return 'Not run yet'
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1)
+  }
 }
 
 function formatProviderName(providerId: string): string {
