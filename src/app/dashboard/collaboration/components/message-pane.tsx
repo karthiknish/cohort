@@ -31,7 +31,15 @@ import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationMessage } from '@/types/collaboration'
 
 import type { Channel } from '../types'
-import { CHANNEL_TYPE_COLORS, formatTimestamp, getInitials } from '../utils'
+import {
+  CHANNEL_TYPE_COLORS,
+  extractUrlsFromContent,
+  formatTimestamp,
+  getInitials,
+  isLikelyImageUrl,
+} from '../utils'
+import { LinkPreviewCard } from './link-preview-card'
+import { MessageContent } from './message-content'
 
 const MAX_PREVIEW_LENGTH = 80
 
@@ -212,6 +220,7 @@ export function CollaborationMessagePane({
 
             const isDeleting = messageDeletingId === message.id
             const isUpdating = messageUpdatingId === message.id
+            const linkPreviews = extractUrlsFromContent(message.content).filter((url) => !isLikelyImageUrl(url))
 
             return (
               <div key={message.id} className="flex items-start gap-3">
@@ -306,32 +315,67 @@ export function CollaborationMessagePane({
                   ) : message.isDeleted ? (
                     <p className="text-sm italic text-muted-foreground">Message removed</p>
                   ) : (
-                    <p className="whitespace-pre-line text-sm text-foreground">{message.content}</p>
+                    <MessageContent content={message.content ?? ''} />
                   )}
                   {Array.isArray(message.attachments) && message.attachments.length > 0 && !message.isDeleted && (
-                    <div className="space-y-2">
-                      {message.attachments.map((attachment) => (
-                        <Card key={`${attachment.url}-${attachment.name}`} className="border-muted/60 bg-muted/20">
-                          <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
-                            <div className="flex items-center gap-2 truncate">
-                              {attachment.type?.toLowerCase() === 'image' ? (
-                                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                              ) : (
+                    <div className="space-y-3">
+                      {message.attachments.map((attachment) => {
+                        const key = `${attachment.url}-${attachment.name}`
+                        const isImageAttachment = Boolean(attachment.url && isLikelyImageUrl(attachment.url))
+
+                        if (isImageAttachment) {
+                          return (
+                            <figure key={key} className="max-w-xl overflow-hidden rounded-md border border-muted/60 bg-muted/10">
+                              <img
+                                src={attachment.url}
+                                alt={attachment.name}
+                                className="max-h-96 w-full object-contain"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                              <figcaption className="flex items-center justify-between gap-3 border-t border-muted/40 p-3 text-xs text-muted-foreground">
+                                <div className="flex flex-1 items-center gap-2 truncate">
+                                  <ImageIcon className="h-4 w-4" />
+                                  <span className="truncate">{attachment.name}</span>
+                                  {attachment.size ? <span className="whitespace-nowrap">{attachment.size}</span> : null}
+                                </div>
+                                <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                                  <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                    <Download className="mr-1 h-3.5 w-3.5" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </figcaption>
+                            </figure>
+                          )
+                        }
+
+                        return (
+                          <Card key={key} className="border-muted/60 bg-muted/20">
+                            <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
+                              <div className="flex items-center gap-2 truncate">
                                 <FileText className="h-4 w-4 text-muted-foreground" />
-                              )}
-                              <span className="truncate">{attachment.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              {attachment.size && <span>{attachment.size}</span>}
-                              <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                                <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4" />
-                                  <span className="sr-only">Download {attachment.name}</span>
-                                </a>
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
+                                <span className="truncate">{attachment.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                {attachment.size && <span>{attachment.size}</span>}
+                                <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                                  <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4" />
+                                    <span className="sr-only">Download {attachment.name}</span>
+                                  </a>
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {!message.isDeleted && linkPreviews.length > 0 && (
+                    <div className="space-y-3">
+                      {linkPreviews.map((url) => (
+                        <LinkPreviewCard key={`${message.id}-${url}`} url={url} />
                       ))}
                     </div>
                   )}

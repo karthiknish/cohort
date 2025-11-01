@@ -1,4 +1,4 @@
-import { SchedulerEventsTable } from './components/scheduler-events-table'
+import { SchedulerEventsView } from './components/scheduler-events-view'
 
 export const metadata = {
   title: 'Scheduler Activity · Admin',
@@ -14,7 +14,7 @@ export default function SchedulerActivityPage() {
           Monitor cron and background worker executions, inspect queue health, and review recent failures.
         </p>
       </div>
-      <SchedulerEventsTable />
+      <SchedulerEventsView />
     </div>
   )
 }

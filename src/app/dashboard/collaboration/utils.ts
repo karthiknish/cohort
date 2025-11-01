@@ -113,3 +113,34 @@ export function collectSharedFiles(messages: CollaborationAttachment[][]): Colla
   })
   return Array.from(map.values())
 }
+
+const URL_REGEX = /https?:\/\/(?:www\.)?[\w\-._~:/?#\[\]@!$&'()*+,;=%]+/gi
+const IMAGE_EXTENSION_REGEX = /\.(?:png|jpe?g|gif|webp|svg|avif)$/i
+
+export function extractUrlsFromContent(text: string | null | undefined): string[] {
+  if (!text) return []
+  const matches = text.match(URL_REGEX)
+  if (!matches) return []
+  const unique = new Set<string>()
+  matches.forEach((raw) => {
+    try {
+      const normalized = new URL(raw).toString()
+      unique.add(normalized)
+    } catch {
+      /* noop */
+    }
+  })
+  return Array.from(unique)
+}
+
+export function isLikelyImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return false
+    }
+    return IMAGE_EXTENSION_REGEX.test(parsed.pathname)
+  } catch {
+    return false
+  }
+}

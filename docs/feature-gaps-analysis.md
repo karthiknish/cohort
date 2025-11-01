@@ -251,13 +251,17 @@ README.md line 8: "Real-time data sync from Google Ads, Meta Ads, TikTok Ads, Li
 - Rich text formatting
 - Message search within channels
 - @mentions functionality
+- In-line image previews when links or uploads are shared
+- Lightweight code block formatting for technical teams
+- Smart link unfurling for shared URLs
 
 **Recommendation**:
 1. Add message edit/delete with audit trail
 2. Implement reactions/emojis
 3. Add thread/reply functionality
-4. Add markdown support
+4. Add markdown support with code block and inline formatting controls
 5. Implement @mention notifications
+6. Provide inline previews for images and common rich link targets (Google Docs, Figma, Loom)
 
 **Estimated Effort**: 2-3 weeks
 
