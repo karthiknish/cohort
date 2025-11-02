@@ -62,6 +62,8 @@ function mapNotification(doc: FirebaseFirestore.QueryDocumentSnapshot, userId: s
   if (typeof resourceRaw.type === 'string' && typeof resourceRaw.id === 'string') {
     if (resourceRaw.type === 'collaboration') {
       resource = { type: 'collaboration', id: resourceRaw.id }
+    } else if (resourceRaw.type === 'proposal') {
+      resource = { type: 'proposal', id: resourceRaw.id }
     } else {
       resource = { type: 'task', id: resourceRaw.id }
     }
@@ -69,7 +71,7 @@ function mapNotification(doc: FirebaseFirestore.QueryDocumentSnapshot, userId: s
 
   return {
     id: doc.id,
-    kind: typeof data.kind === 'string' && (data.kind === 'task.created' || data.kind === 'collaboration.message')
+    kind: typeof data.kind === 'string' && (data.kind === 'task.created' || data.kind === 'collaboration.message' || data.kind === 'proposal.deck.ready')
       ? (data.kind as WorkspaceNotificationKind)
       : 'task.created',
     title: typeof data.title === 'string' ? data.title : 'Notification',

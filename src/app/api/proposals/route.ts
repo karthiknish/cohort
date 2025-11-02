@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
-import type { Query, DocumentData } from 'firebase-admin/firestore'
+import type { Query, DocumentData, DocumentSnapshot } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
@@ -51,6 +51,23 @@ const normalizeFormData = (input: unknown): ProposalFormData => {
   return mergeProposalForm(partial)
 }
 
+type SerializedProposal = {
+  id: string
+  status: string
+  stepProgress: number
+  formData: ProposalFormData
+  aiInsights: unknown
+  aiSuggestions: string | null
+  pdfUrl: string | null
+  pptUrl: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  lastAutosaveAt: string | null
+  clientId: string | null
+  clientName: string | null
+  gammaDeck: ReturnType<typeof serializeGammaDeck>
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request)
@@ -59,9 +76,21 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url)
+    const idParam = url.searchParams.get('id')
     const statusParam = url.searchParams.get('status')
     const clientIdParam = url.searchParams.get('clientId')
     const proposalsRef = adminDb.collection('users').doc(auth.uid).collection('proposals')
+
+    if (idParam) {
+      const docSnap = await proposalsRef.doc(idParam).get()
+      if (!docSnap.exists) {
+        return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+      }
+
+      const proposal = mapProposalSnapshot(docSnap)
+      return NextResponse.json({ proposal })
+    }
+
     let proposalsQuery: Query<DocumentData> = proposalsRef
 
     if (statusParam) {
@@ -73,26 +102,7 @@ export async function GET(request: NextRequest) {
     }
 
     const snapshot = await proposalsQuery.get()
-    const results = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data() as ProposalSnapshot
-
-      return {
-        id: docSnap.id,
-        status: data.status ?? 'draft',
-        stepProgress: typeof data.stepProgress === 'number' ? data.stepProgress : 0,
-        formData: data.formData ?? {},
-        aiInsights: data.aiInsights ?? null,
-        aiSuggestions: typeof data.aiSuggestions === 'string' ? data.aiSuggestions : null,
-        pdfUrl: data.pdfUrl ?? null,
-        pptUrl: data.pptUrl ?? null,
-        createdAt: serializeTimestamp(data.createdAt),
-        updatedAt: serializeTimestamp(data.updatedAt),
-        lastAutosaveAt: serializeTimestamp(data.lastAutosaveAt),
-        clientId: typeof data.clientId === 'string' ? data.clientId : null,
-        clientName: typeof data.clientName === 'string' ? data.clientName : null,
-        gammaDeck: serializeGammaDeck(data.gammaDeck),
-      }
-    })
+    const results = snapshot.docs.map((docSnap) => mapProposalSnapshot(docSnap))
 
     return NextResponse.json({ proposals: results })
   } catch (error: unknown) {
@@ -251,6 +261,27 @@ function serializeTimestamp(value: TimestampLike): string | null {
   }
 
   return null
+}
+
+function mapProposalSnapshot(docSnap: DocumentSnapshot<DocumentData>): SerializedProposal {
+  const data = docSnap.data() as ProposalSnapshot
+
+  return {
+    id: docSnap.id,
+    status: data.status ?? 'draft',
+    stepProgress: typeof data.stepProgress === 'number' ? data.stepProgress : 0,
+    formData: normalizeFormData(data.formData),
+    aiInsights: data.aiInsights ?? null,
+    aiSuggestions: typeof data.aiSuggestions === 'string' ? data.aiSuggestions : null,
+    pdfUrl: data.pdfUrl ?? null,
+    pptUrl: data.pptUrl ?? null,
+    createdAt: serializeTimestamp(data.createdAt),
+    updatedAt: serializeTimestamp(data.updatedAt),
+    lastAutosaveAt: serializeTimestamp(data.lastAutosaveAt),
+    clientId: typeof data.clientId === 'string' ? data.clientId : null,
+    clientName: typeof data.clientName === 'string' ? data.clientName : null,
+    gammaDeck: serializeGammaDeck(data.gammaDeck),
+  }
 }
 
 function serializeGammaDeck(value: unknown) {

@@ -38,6 +38,25 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "channelType", "order": "ASCENDING" },
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "collaborationMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "channelType", "order": "ASCENDING" },
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "collaborationMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "channelType", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
@@ -46,8 +65,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "recipients.roles", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "DESCENDING" }
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -56,8 +74,7 @@
       "fields": [
         { "fieldPath": "recipients.roles", "arrayConfig": "CONTAINS" },
         { "fieldPath": "recipients.clientId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "DESCENDING" }
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
@@ -65,8 +82,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "recipients.clientId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "DESCENDING" }
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

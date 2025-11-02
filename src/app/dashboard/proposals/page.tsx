@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, Loader2, Sparkles } from 'lucide-react'
 import {
   Card,
@@ -15,7 +16,7 @@ import { createProposalDraft, deleteProposalDraft, listProposals, prepareProposa
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
-import { ProposalStepContent, type ProposalStepId } from './components/proposal-step-content'
+import { ProposalStepContent } from './components/proposal-step-content'
 import { ProposalStepIndicator } from './components/proposal-step-indicator'
 import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
 import { ProposalHistory } from './components/proposal-history'
@@ -42,11 +43,11 @@ type DeckProgressStage = 'initializing' | 'polling' | 'launching' | 'queued' | '
 const deckStageMessages: Record<DeckProgressStage, { title: string; description: string }> = {
   initializing: {
     title: 'Starting deck request...',
-    description: 'Connecting to Gamma and packaging your proposal details.',
+    description: 'Collecting your proposal details and preparing the presentation export.',
   },
   polling: {
     title: 'Generating slides & saving...',
-    description: 'Gamma is exporting the PPT while we get ready to store it securely in Firebase.',
+    description: 'We are exporting the PPT and saving a copy for you in Firebase.',
   },
   launching: {
     title: 'Deck ready',
@@ -54,7 +55,7 @@ const deckStageMessages: Record<DeckProgressStage, { title: string; description:
   },
   queued: {
     title: 'Still processing',
-    description: "Gamma hasn't finished the PPT yet. We'll save it automatically as soon as it lands.",
+    description: "The presentation export is still processing. We'll save it automatically as soon as it lands.",
   },
   error: {
     title: 'Deck preparation failed',
@@ -110,7 +111,6 @@ export default function ProposalsPage() {
   const hydrationRef = useRef(false)
   const draftIdRef = useRef<string | null>(draftId)
   const submittedRef = useRef(submitted)
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wizardRef = useRef<HTMLDivElement | null>(null)
   const pendingDeckWindowRef = useRef<Window | null>(null)
   const { toast } = useToast()
@@ -279,7 +279,7 @@ export default function ProposalsPage() {
     }
 
     wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+  }, [steps])
 
   useEffect(() => {
     draftIdRef.current = draftId
@@ -300,6 +300,9 @@ export default function ProposalsPage() {
   const suggestionItems = useMemo(() => parseAiSuggestionList(aiSuggestions), [aiSuggestions])
 
   const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
+
+  const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId
+  const deckDownloadUrl = gammaDeck?.storageUrl ?? gammaDeck?.pptxUrl ?? null
 
   const refreshProposals = useCallback(async () => {
     if (!selectedClientId) {
@@ -356,7 +359,6 @@ export default function ProposalsPage() {
   }, [])
 
   const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
-    console.log('[ProposalDownload] Starting download for proposal:', proposal.id)
     
     const localDeckUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
     console.log('[ProposalDownload] URL priority check:', {
@@ -401,7 +403,7 @@ export default function ProposalsPage() {
               .container { text-align: center; max-width: 360px; padding: 24px; }
               .spinner { width: 48px; height: 48px; border-radius: 9999px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; animation: spin 1s linear infinite; margin: 0 auto 16px; }
               @keyframes spin { to { transform: rotate(360deg); } }
-            </style><body><div class="container"><div class="spinner" aria-hidden="true"></div><h1 style="font-size: 20px; margin-bottom: 12px;">Preparing your deck...</h1><p style="font-size: 14px; line-height: 1.5; opacity: 0.85;">We're generating your presentation with Gamma and saving a copy to your workspace. Keep this tab open &mdash; the download launches automatically once it's ready.</p></div></body>`)
+            </style><body><div class="container"><div class="spinner" aria-hidden="true"></div><h1 style="font-size: 20px; margin-bottom: 12px;">Preparing your deck...</h1><p style="font-size: 14px; line-height: 1.5; opacity: 0.85;">We're generating your presentation and saving a copy to your workspace. Keep this tab open &mdash; the download launches automatically once it's ready.</p></div></body>`)
             popup.document.close()
           } catch (popupError) {
             console.warn('[ProposalDownload] Unable to render popup content', popupError)
@@ -479,7 +481,7 @@ export default function ProposalsPage() {
         title: deckUrl ? 'Deck ready' : 'Deck still generating',
         description: deckUrl
           ? 'We saved the PPT in Firebase storage and opened it in a new tab.'
-          : 'Gamma is still exporting the PPT. We will save it automatically once it finishes.',
+          : 'The presentation export is still processing. We will save it automatically once it finishes.',
       })
     } catch (error: unknown) {
       setDeckProgressStage('error')
@@ -537,7 +539,7 @@ export default function ProposalsPage() {
       const message = getErrorMessage(error, 'Failed to reopen proposal for editing')
       toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
     }
-  }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, toast])
+  }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast])
 
   const ensureDraftId = useCallback(async () => {
     if (draftId) {
@@ -555,8 +557,8 @@ export default function ProposalsPage() {
 
     if (isCreatingDraft) {
       toast({
-        title: 'Saving draft',
-        description: 'Please wait while we create the proposal draft.',
+        title: 'Preparing proposal',
+        description: 'Please wait while we prepare your proposal for generation.',
       })
       return null
     }
@@ -587,6 +589,65 @@ export default function ProposalsPage() {
     }
   }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, refreshProposals, toast])
 
+  const handleCreateNewProposal = useCallback(async () => {
+    if (!selectedClientId) {
+      toast({
+        title: 'Select a client',
+        description: 'Choose a client from the sidebar before starting a proposal.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (isCreatingDraft) {
+      toast({
+        title: 'Preparing proposal',
+        description: 'Please wait for the current draft to finish initializing.',
+      })
+      return
+    }
+
+    try {
+      setIsCreatingDraft(true)
+      setAutosaveStatus('saving')
+      const initialForm = createInitialProposalFormState()
+      const newDraftId = await createProposalDraft({
+        formData: initialForm,
+        stepProgress: 0,
+        status: 'draft',
+        clientId: selectedClientId ?? undefined,
+        clientName: selectedClient?.name ?? undefined,
+      })
+
+      setDraftId(newDraftId)
+      setFormState(initialForm)
+      setCurrentStep(0)
+      setSubmitted(false)
+      setGammaDeck(null)
+      setAiSuggestions(null)
+      setLastSubmissionSnapshot(null)
+      setAutosaveStatus('saved')
+
+      await refreshProposals()
+
+      toast({
+        title: 'New proposal started',
+        description: selectedClient?.name
+          ? `Working on a fresh plan for ${selectedClient.name}.`
+          : 'You can begin filling out the proposal steps.',
+      })
+    } catch (error: unknown) {
+      setAutosaveStatus('error')
+      toast({
+        title: 'Unable to create draft',
+        description: getErrorMessage(error, 'Failed to create proposal draft'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCreatingDraft(false)
+    }
+  }, [isCreatingDraft, refreshProposals, selectedClient, selectedClientId, toast])
+
   const submitProposal = async () => {
     try {
       setIsSubmitting(true)
@@ -599,11 +660,6 @@ export default function ProposalsPage() {
           setIsSubmitting(false)
           return
         }
-      }
-
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current)
-        autosaveTimeoutRef.current = null
       }
 
       try {
@@ -649,12 +705,18 @@ export default function ProposalsPage() {
         setFormState(createInitialProposalFormState())
         setCurrentStep(0)
         setDraftId(null)
+        setAutosaveStatus('idle')
       }
 
       if (storedPptUrl) {
         toast({
           title: 'Presentation ready',
           description: 'We saved the presentation in Firebase storage for instant download.',
+        })
+      } else {
+        toast({
+          title: 'Presentation queued',
+          description: 'We are generating the Gamma deck in the background. Check back in a few moments.',
         })
       }
 
@@ -746,7 +808,7 @@ export default function ProposalsPage() {
     return () => {
       cancelled = true
     }
-  }, [refreshProposals, selectedClientId, toast])
+  }, [refreshProposals, selectedClientId, steps, toast])
 
   useEffect(() => {
     if (!hydrationRef.current || submitted) {
@@ -757,92 +819,10 @@ export default function ProposalsPage() {
       return
     }
 
-    if (!draftId) {
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current)
-        autosaveTimeoutRef.current = null
-      }
-
-      if (!hasPersistableData || isCreatingDraft) {
-        setAutosaveStatus((prev) => (prev === 'idle' ? prev : 'idle'))
-        return
-      }
-
-      let cancelled = false
-      setIsCreatingDraft(true)
-      setAutosaveStatus('saving')
-
-      void (async () => {
-        try {
-          const id = await createProposalDraft({
-            formData: formState,
-            stepProgress: currentStep,
-            clientId: selectedClientId,
-            clientName: selectedClient?.name ?? undefined,
-          })
-
-          if (cancelled) {
-            return
-          }
-
-          setDraftId(id)
-          setAutosaveStatus('saved')
-          await refreshProposals()
-        } catch (err: unknown) {
-          if (cancelled) {
-            return
-          }
-          console.error('[ProposalWizard] draft creation failed', err)
-          setAutosaveStatus('error')
-          toast({
-            title: 'Unable to start draft',
-            description: getErrorMessage(err, 'Failed to create proposal draft'),
-            variant: 'destructive',
-          })
-        } finally {
-          if (!cancelled) {
-            setIsCreatingDraft(false)
-          }
-        }
-      })()
-
-      return () => {
-        cancelled = true
-      }
+    if (!draftId && !hasPersistableData) {
+      setAutosaveStatus('idle')
     }
-
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current)
-      autosaveTimeoutRef.current = null
-    }
-
-    setAutosaveStatus('saving')
-
-    autosaveTimeoutRef.current = setTimeout(async () => {
-      try {
-        await updateProposalDraft(draftId, {
-          formData: formState,
-          stepProgress: currentStep,
-        })
-        setAutosaveStatus('saved')
-      } catch (err: unknown) {
-        console.error('[ProposalWizard] autosave failed', err)
-        setAutosaveStatus('error')
-        toast({
-          title: 'Autosave failed',
-          description: getErrorMessage(err, 'Failed to autosave proposal'),
-          variant: 'destructive',
-        })
-      }
-    }, 1500)
-
-    return () => {
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current)
-        autosaveTimeoutRef.current = null
-      }
-    }
-  }, [formState, currentStep, draftId, submitted, toast, hasPersistableData, isCreatingDraft, refreshProposals, selectedClientId, selectedClient])
+  }, [draftId, submitted, selectedClientId, hasPersistableData])
 
   const renderStepContent = () => (
     <ProposalStepContent
@@ -938,16 +918,23 @@ export default function ProposalsPage() {
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-muted-foreground">
                     <div className="flex flex-wrap items-center gap-3">
+                      {deckDownloadUrl && activeProposalIdForDeck ? (
+                        <Button variant="secondary" asChild>
+                          <Link href={`/dashboard/proposals/${activeProposalIdForDeck}/deck`}>
+                            View PPT
+                          </Link>
+                        </Button>
+                      ) : null}
                       {gammaDeck.storageUrl ? (
                         <Button asChild>
                           <a href={gammaDeck.storageUrl} target="_blank" rel="noreferrer">
-                            Export PPT
+                            Download PPT
                           </a>
                         </Button>
                       ) : gammaDeck.pptxUrl ? (
                         <Button asChild>
                           <a href={gammaDeck.pptxUrl} target="_blank" rel="noreferrer">
-                            Download from Gamma
+                            Download PPT
                           </a>
                         </Button>
                       ) : null}
@@ -983,10 +970,10 @@ export default function ProposalsPage() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Draft ID: {draftId ?? 'pending...'}</span>
                 <span>
-                  {autosaveStatus === 'saving' && 'Saving...'}
-                  {autosaveStatus === 'saved' && 'All changes saved'}
-                  {autosaveStatus === 'idle' && 'Idle'}
-                  {autosaveStatus === 'error' && 'Retrying save'}
+                  {autosaveStatus === 'saving' && 'Preparing proposal...'}
+                  {autosaveStatus === 'saved' && 'Proposal saved'}
+                  {autosaveStatus === 'idle' && 'Awaiting generation'}
+                  {autosaveStatus === 'error' && 'Sync failed, retrying...'}
                 </span>
               </div>
               {renderStepContent()}
@@ -1021,6 +1008,9 @@ export default function ProposalsPage() {
         isGenerating={isSubmitting}
         downloadingDeckId={downloadingDeckId}
         onDownloadDeck={handleDownloadDeck}
+        onCreateNew={handleCreateNewProposal}
+        canCreate={Boolean(selectedClientId)}
+        isCreating={isCreatingDraft}
       />
       <ProposalDeleteDialog
         open={isDeleteDialogOpen}

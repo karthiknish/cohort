@@ -11,6 +11,7 @@ export type CollaborationMessage = {
   id: string
   channelType: CollaborationChannelType
   clientId: string | null
+  projectId: string | null
   content: string
   senderId: string | null
   senderName: string

@@ -1,4 +1,3 @@
-// @ts-ignore -- vitest types resolve after dependency install
 import { describe, expect, it } from 'vitest'
 
 import { buildTasksCacheKey } from '@/app/api/tasks/route'
@@ -12,6 +11,7 @@ describe('pagination helpers', () => {
       assigneeFilter: null,
       queryFilter: null,
       clientIdFilter: null,
+      projectIdFilter: null,
       pageSize: 50,
       after: null,
     }

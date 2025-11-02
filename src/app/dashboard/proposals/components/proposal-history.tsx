@@ -2,6 +2,8 @@
 
 import { memo } from 'react'
 
+import Link from 'next/link'
+
 import { Loader2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -62,6 +64,9 @@ interface ProposalHistoryProps {
   isGenerating: boolean
   downloadingDeckId: string | null
   onDownloadDeck: (proposal: ProposalDraft) => void
+  onCreateNew: () => void
+  canCreate: boolean
+  isCreating: boolean
 }
 
 function ProposalHistoryComponent({
@@ -75,6 +80,9 @@ function ProposalHistoryComponent({
   isGenerating,
   downloadingDeckId,
   onDownloadDeck,
+  onCreateNew,
+  canCreate,
+  isCreating,
 }: ProposalHistoryProps) {
   return (
     <Card className="border-muted/60 bg-background">
@@ -85,9 +93,25 @@ function ProposalHistoryComponent({
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{isLoading ? 'Refreshing proposals…' : `${proposals.length} total proposals`}</span>
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={onCreateNew}
+              disabled={!canCreate || isCreating || isGenerating}
+            >
+              {isCreating ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating…
+                </span>
+              ) : (
+                'New proposal'
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+              Refresh
+            </Button>
+          </div>
         </div>
         <div className="space-y-3">
           {proposals.length === 0 && !isLoading ? (
@@ -143,11 +167,18 @@ function ProposalHistoryComponent({
                         {resumeLabel}
                       </Button>
                       {presentationUrl ? (
-                        <Button asChild size="sm" variant="ghost">
-                          <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
-                            Export PPT
-                          </a>
-                        </Button>
+                        <>
+                          <Button asChild size="sm" variant="secondary">
+                            <Link href={`/dashboard/proposals/${proposal.id}/deck`}>
+                              View PPT
+                            </Link>
+                          </Button>
+                          <Button asChild size="sm" variant="ghost">
+                            <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
+                              Download PPT
+                            </a>
+                          </Button>
+                        </>
                       ) : deckRequestable ? (
                         <Button
                           size="sm"

@@ -46,7 +46,7 @@ export interface GammaGenerationOptions {
 
 const DEFAULT_OPTIONS: Required<Pick<GammaGenerationOptions, 'pollIntervalMs' | 'timeoutMs'>> = {
   pollIntervalMs: 5000,
-  timeoutMs: 180000,
+  timeoutMs: 300000, // 5 minutes to allow for export processing
 }
 
 const FAILURE_STATUSES = new Set(['failed', 'error', 'cancelled', 'canceled', 'timeout'])
@@ -217,8 +217,15 @@ export class GammaService {
           .filter((value): value is GammaGeneratedFile => Boolean(value))
       : []
 
-    const webAppUrl = typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.webUrl === 'string' ? payload.webUrl : null
-    const shareUrl = typeof payload.shareUrl === 'string' ? payload.shareUrl : typeof payload.webAppUrl === 'string' ? payload.webAppUrl : null
+    // Handle legacy exportUrl field (single export URL returned as string instead of array)
+    if (generatedFiles.length === 0 && typeof payload.exportUrl === 'string' && payload.exportUrl) {
+      const exportUrl = payload.exportUrl
+      const fileType = exportUrl.includes('.pptx') ? 'pptx' : exportUrl.includes('.pdf') ? 'pdf' : 'unknown'
+      generatedFiles.push({ fileType, fileUrl: exportUrl })
+    }
+
+    const webAppUrl = typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.webUrl === 'string' ? payload.webUrl : typeof payload.gammaUrl === 'string' ? payload.gammaUrl : null
+    const shareUrl = typeof payload.shareUrl === 'string' ? payload.shareUrl : typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.gammaUrl === 'string' ? payload.gammaUrl : null
 
     return {
       generationId,
@@ -232,7 +239,12 @@ export class GammaService {
 
   async generatePresentation(request: GammaGenerationRequest, options: GammaGenerationOptions = {}): Promise<GammaGenerationStatus> {
     const { poll = true, pollIntervalMs, timeoutMs } = { ...DEFAULT_OPTIONS, ...options }
-    console.log('[GammaService] Starting presentation generation with options:', { poll, pollIntervalMs, timeoutMs })
+    console.log('[GammaService] Starting presentation generation with options:', {
+      poll,
+      pollIntervalMs,
+      timeoutMs,
+      request,
+    })
     
     const creation = await this.createGeneration({
       ...request,
@@ -241,6 +253,12 @@ export class GammaService {
     })
 
     console.log('[GammaService] Created generation with ID:', creation.generationId)
+
+    if (Array.isArray(request.exportAs)) {
+      console.log('[GammaService] Requested export formats:', request.exportAs)
+    } else if (request.exportAs) {
+      console.log('[GammaService] Requested export format:', request.exportAs)
+    }
 
     if (!poll) {
       console.log('[GammaService] Polling disabled, returning pending status')
@@ -274,25 +292,40 @@ export class GammaService {
         hasFiles: result.generatedFiles.length > 0,
         hasRequiredFiles,
         fileCount: result.generatedFiles.length,
-        elapsed
+        fileTypes: result.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+        elapsed,
       })
 
       if (hasRequiredFiles) {
-        console.log(`[GammaService] Required exports ready after ${pollCount} polls, ${elapsed}ms`)
+        console.log(`[GammaService] Required exports ready after ${pollCount} polls, ${elapsed}ms`, {
+          generationId: creation.generationId,
+          fileCount: result.generatedFiles.length,
+        })
         return result
-      }
-
-      if (normalizedStatus !== 'pending' && normalizedStatus !== 'processing' && SUCCESS_STATUSES.has(normalizedStatus)) {
-        console.log('[GammaService] Status indicates completion but required exports missing; continuing to poll')
       }
 
       if (normalizedStatus && FAILURE_STATUSES.has(normalizedStatus)) {
-        console.warn('[GammaService] Generation reached terminal failure state; returning latest result')
+        console.warn('[GammaService] Generation reached terminal failure state; returning latest result', {
+          generationId: creation.generationId,
+          status: result.status,
+          fileTypes: result.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+          elapsed,
+        })
         return result
       }
 
+      // If generation is marked as completed but exports aren't ready yet, give it more time
+      if (SUCCESS_STATUSES.has(normalizedStatus)) {
+        console.log(`[GammaService] Generation completed (${normalizedStatus}) but exports not ready yet, continuing to poll...`)
+        // Continue polling for exports even after completion status
+      }
+
       if (elapsed > pollTimeout) {
-        console.log(`[GammaService] Generation timeout after ${pollCount} polls, ${elapsed}ms`)
+        console.log(`[GammaService] Generation timeout after ${pollCount} polls, ${elapsed}ms`, {
+          generationId: creation.generationId,
+          lastStatus: result.status,
+          fileTypes: result.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+        })
         return result
       }
 

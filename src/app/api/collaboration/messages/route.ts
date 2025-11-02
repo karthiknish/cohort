@@ -29,6 +29,12 @@ const createMessageSchema = z
       .min(1)
       .max(120)
       .optional(),
+    projectId: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .optional(),
     senderName: z.string().trim().min(1).max(120),
     senderRole: z.string().trim().max(120).optional(),
     content: z.string().trim().min(1).max(2000),
@@ -42,11 +48,28 @@ const createMessageSchema = z
         path: ['clientId'],
       })
     }
+
+    if (value.channelType === 'project') {
+      if (!value.projectId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'projectId is required for project channels',
+          path: ['projectId'],
+        })
+      }
+    } else if (value.projectId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'projectId is only allowed for project channels',
+        path: ['projectId'],
+      })
+    }
   })
 
-type StoredMessage = {
+export type StoredMessage = {
   channelType?: unknown
   clientId?: unknown
+  projectId?: unknown
   senderId?: unknown
   senderName?: unknown
   senderRole?: unknown
@@ -113,7 +136,7 @@ function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
   }
 }
 
-function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage {
+export function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage {
   const channelType = (typeof data.channelType === 'string' ? data.channelType : 'team') as CollaborationChannelType
 
   const attachments = Array.isArray(data.attachments)
@@ -135,6 +158,7 @@ function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage
     id: docId,
     channelType,
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
+    projectId: typeof data.projectId === 'string' ? data.projectId : null,
     senderId: typeof data.senderId === 'string' ? data.senderId : null,
     senderName: typeof data.senderName === 'string' ? data.senderName : 'Unknown teammate',
     senderRole: typeof data.senderRole === 'string' ? data.senderRole : null,
@@ -153,6 +177,13 @@ async function ensureClientOwnership(workspace: WorkspaceContext, clientId: stri
   const clientDoc = await workspace.clientsCollection.doc(clientId).get()
   if (!clientDoc.exists) {
     throw new AuthenticationError('Client not found or access denied', 403)
+  }
+}
+
+async function ensureProjectOwnership(workspace: WorkspaceContext, projectId: string) {
+  const projectDoc = await workspace.projectsCollection.doc(projectId).get()
+  if (!projectDoc.exists) {
+    throw new AuthenticationError('Project not found or access denied', 403)
   }
 }
 
@@ -177,6 +208,7 @@ export async function GET(request: NextRequest) {
 
     const channelType = parseChannel.data
     const clientId = searchParams.get('clientId') ?? undefined
+    const projectId = searchParams.get('projectId') ?? undefined
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
 
     if (channelType === 'client') {
@@ -184,12 +216,23 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'clientId is required for client channels' }, { status: 400 })
       }
       await ensureClientOwnership(workspace, clientId)
+    } else if (channelType === 'project') {
+      if (!projectId) {
+        return NextResponse.json({ error: 'projectId is required for project channels' }, { status: 400 })
+      }
+      await ensureProjectOwnership(workspace, projectId)
+    } else if (projectId) {
+      return NextResponse.json({ error: 'projectId is only valid for project channels' }, { status: 400 })
     }
 
     let query = workspace.collaborationCollection.where('channelType', '==', channelType)
 
     if (channelType === 'client' && clientId) {
       query = query.where('clientId', '==', clientId)
+    }
+
+    if (channelType === 'project' && projectId) {
+      query = query.where('projectId', '==', projectId)
     }
     query = query.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 
@@ -240,15 +283,30 @@ export async function POST(request: NextRequest) {
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = createMessageSchema.parse(json)
 
-    if (payload.channelType === 'client' && payload.clientId) {
-      await ensureClientOwnership(workspace, payload.clientId)
+    let resolvedClientId: string | null = null
+    let resolvedProjectId: string | null = null
+
+    if (payload.channelType === 'client') {
+      if (payload.clientId) {
+        await ensureClientOwnership(workspace, payload.clientId)
+        resolvedClientId = payload.clientId
+      }
+    } else if (payload.channelType === 'project' && payload.projectId) {
+      await ensureProjectOwnership(workspace, payload.projectId)
+      const projectDoc = await workspace.projectsCollection.doc(payload.projectId).get()
+      const projectData = projectDoc.data() as Record<string, unknown> | undefined
+      resolvedProjectId = projectDoc.id
+      if (projectData && typeof projectData.clientId === 'string') {
+        resolvedClientId = projectData.clientId
+      }
     }
 
     const timestamp = Timestamp.now()
 
     const docRef = await workspace.collaborationCollection.add({
       channelType: payload.channelType,
-      clientId: payload.channelType === 'client' ? payload.clientId ?? null : null,
+      clientId: resolvedClientId,
+      projectId: resolvedProjectId,
       senderId: uid,
       senderName: payload.senderName,
       senderRole: payload.senderRole ?? null,

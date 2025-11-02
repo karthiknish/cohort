@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, type DocumentReference } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { mergeProposalForm } from '@/lib/proposals'
+import { recordProposalDeckReadyNotification } from '@/lib/notifications'
+import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import type { ProposalFormData } from '@/lib/proposals'
 import { geminiAI } from '@/services/gemini'
 import {
@@ -51,6 +53,14 @@ export async function POST(
       return NextResponse.json({ error: 'Not authorized to submit this proposal' }, { status: 403 })
     }
 
+    const clientIdRaw = typeof proposalData.clientId === 'string' ? proposalData.clientId.trim() : ''
+    const clientId = clientIdRaw.length > 0 ? clientIdRaw : null
+    const clientName = typeof proposalData.clientName === 'string' && proposalData.clientName.trim().length > 0
+      ? proposalData.clientName.trim()
+      : null
+
+    const workspaceId = await resolveWorkspaceIdForUser(auth.uid)
+
     const formDataRaw = proposalData.formData
     const formData = mergeProposalForm(
       formDataRaw && typeof formDataRaw === 'object'
@@ -84,33 +94,30 @@ export async function POST(
       }
     }
 
-    let gammaDeckResult: GammaDeckProcessResult | null = null
-    if (process.env.GAMMA_API_KEY) {
-      try {
-        gammaDeckResult = await ensureProposalGammaDeck({
-          userId: auth.uid,
-          proposalId,
-          formData,
-          summary,
-          existingDeck: previousGammaDeck ?? undefined,
-          existingStorageUrl: previousPptUrl ?? previousGammaDeck?.storageUrl ?? null,
-          logContext: '[ProposalSubmit]',
-        })
-      } catch (gammaError) {
-        console.error('[ProposalSubmit] Gamma deck pipeline failed', gammaError)
-        return NextResponse.json({ error: 'Failed to prepare Gamma deck' }, { status: 502 })
-      }
-    }
+    const gammaDeck: GammaDeckPayload | null = previousGammaDeck
+      ? { ...previousGammaDeck, storageUrl: previousGammaDeck.storageUrl ?? previousPptUrl ?? null }
+      : null
 
-    const gammaDeck: GammaDeckPayload | null = gammaDeckResult?.gammaDeck
-      ?? (previousGammaDeck
-        ? { ...previousGammaDeck, storageUrl: previousGammaDeck.storageUrl ?? previousPptUrl ?? null }
-        : null)
-
-    const storedPptUrl: string | null = gammaDeckResult?.storageUrl
-      ?? previousPptUrl
+    const storedPptUrl: string | null = previousPptUrl
       ?? previousGammaDeck?.storageUrl
       ?? null
+
+    if (process.env.GAMMA_API_KEY) {
+      queueGammaDeckGeneration({
+        userId: auth.uid,
+        proposalId,
+        formData,
+        summary,
+        proposalRef,
+        previousGammaDeck,
+        previousPptUrl,
+        workspaceId,
+        clientId,
+        clientName,
+      }).catch((error) => {
+        console.error('[ProposalSubmit] Gamma deck async pipeline failed', error)
+      })
+    }
 
     const existingInsights = proposalData.aiInsights
     const aiInsights = summary
@@ -168,6 +175,85 @@ export async function POST(
     }
     console.error('[ProposalSubmit] POST failed', error)
     return NextResponse.json({ error: 'Failed to submit proposal' }, { status: 500 })
+  }
+}
+
+async function queueGammaDeckGeneration(args: {
+  userId: string
+  proposalId: string
+  formData: ReturnType<typeof mergeProposalForm>
+  summary: string | null
+  proposalRef: DocumentReference
+  previousGammaDeck: GammaDeckPayload | null
+  previousPptUrl: string | null
+  workspaceId: string
+  clientId: string | null
+  clientName: string | null
+}) {
+  const {
+    userId,
+    proposalId,
+    formData,
+    summary,
+    proposalRef,
+    previousGammaDeck,
+    previousPptUrl,
+    workspaceId,
+    clientId,
+    clientName,
+  } = args
+
+  try {
+    const gammaDeckResult: GammaDeckProcessResult = await ensureProposalGammaDeck({
+      userId,
+      proposalId,
+      formData,
+      summary,
+      existingDeck: previousGammaDeck ?? undefined,
+      existingStorageUrl: previousPptUrl ?? previousGammaDeck?.storageUrl ?? null,
+      logContext: '[ProposalSubmit-Async]',
+    })
+
+    if (gammaDeckResult.reused && !gammaDeckResult.storageUrl && !gammaDeckResult.gammaDeck) {
+      return
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+    }
+
+    if (gammaDeckResult.storageUrl) {
+      updates.pptUrl = gammaDeckResult.storageUrl
+    }
+
+    if (gammaDeckResult.gammaDeck) {
+      updates.gammaDeck = {
+        ...gammaDeckResult.gammaDeck,
+        generatedAt: FieldValue.serverTimestamp(),
+      }
+    }
+
+    await proposalRef.update(updates)
+
+    if (!gammaDeckResult.reused && gammaDeckResult.storageUrl) {
+      const proposalTitle = formData.company.name && formData.company.name.trim().length > 0
+        ? formData.company.name.trim()
+        : clientName
+      try {
+        await recordProposalDeckReadyNotification({
+          workspaceId,
+          proposalId,
+          proposalTitle: proposalTitle ?? null,
+          clientId,
+          clientName,
+          storageUrl: gammaDeckResult.storageUrl,
+        })
+      } catch (notificationError) {
+        console.error('[ProposalSubmit] Notification dispatch failed', notificationError)
+      }
+    }
+  } catch (error) {
+    console.error('[ProposalSubmit] Deferred Gamma deck generation failed', error)
   }
 }
 

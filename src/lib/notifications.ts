@@ -3,6 +3,11 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase-admin'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
+import type {
+  WorkspaceNotificationKind,
+  WorkspaceNotificationRole,
+  WorkspaceNotificationResource,
+} from '@/types/notifications'
 
 interface ContactPayload {
   name: string
@@ -55,19 +60,12 @@ export async function notifyContactSlack(payload: ContactPayload) {
 
 type WhatsAppNotificationKind = 'task-created' | 'collaboration-message'
 
-type WorkspaceNotificationRole = 'admin' | 'team' | 'client'
-type WorkspaceNotificationKind = 'task.created' | 'collaboration.message'
-
 type WorkspaceNotificationRecipients = {
   roles: WorkspaceNotificationRole[]
   clientIds?: string[]
   clientId?: string | null
   userIds?: string[]
 }
-
-type WorkspaceNotificationResource =
-  | { type: 'task'; id: string }
-  | { type: 'collaboration'; id: string }
 
 type WorkspaceNotificationInput = {
   workspaceId: string
@@ -246,7 +244,9 @@ function formatCollaborationNotification(message: CollaborationMessage, actorNam
         ? `Client channel (${message.clientId})`
         : 'Client channel'
       : message.channelType === 'project'
-        ? 'Project channel'
+        ? message.projectId
+          ? `Project channel (${message.projectId})`
+          : 'Project channel'
         : 'Team channel'
 
   const segments = [
@@ -403,7 +403,8 @@ export async function recordCollaborationNotification(options: {
   }
 
   const isClientChannel = message.channelType === 'client'
-  const clientId = isClientChannel && typeof message.clientId === 'string' && message.clientId.trim().length > 0
+  const isProjectChannel = message.channelType === 'project'
+  const clientId = (isClientChannel || isProjectChannel) && typeof message.clientId === 'string' && message.clientId.trim().length > 0
     ? message.clientId.trim()
     : null
 
@@ -422,7 +423,11 @@ export async function recordCollaborationNotification(options: {
   await createWorkspaceNotification({
     workspaceId,
     kind: 'collaboration.message',
-    title: isClientChannel ? 'Client channel update' : 'New collaboration message',
+    title: isClientChannel
+      ? 'Client channel update'
+      : isProjectChannel
+        ? 'Project channel update'
+        : 'New collaboration message',
     body: preview,
     actor: {
       id: options.actorId ?? message.senderId ?? null,
@@ -441,6 +446,68 @@ export async function recordCollaborationNotification(options: {
         type: attachment.type ?? null,
         size: attachment.size ?? null,
       })) ?? [],
+      projectId: isProjectChannel && typeof message.projectId === 'string' ? message.projectId : null,
+    },
+  })
+}
+
+export async function recordProposalDeckReadyNotification(options: {
+  workspaceId: string
+  proposalId: string
+  proposalTitle?: string | null
+  clientId?: string | null
+  clientName?: string | null
+  storageUrl?: string | null
+}) {
+  const { workspaceId, proposalId } = options
+  if (!workspaceId || !proposalId) {
+    return
+  }
+
+  const proposalTitle = typeof options.proposalTitle === 'string' && options.proposalTitle.trim().length > 0
+    ? options.proposalTitle.trim()
+    : null
+  const clientName = typeof options.clientName === 'string' && options.clientName.trim().length > 0
+    ? options.clientName.trim()
+    : null
+  const clientId = typeof options.clientId === 'string' && options.clientId.trim().length > 0
+    ? options.clientId.trim()
+    : null
+
+  const title = proposalTitle ? `Presentation ready: ${proposalTitle}` : 'Presentation ready'
+
+  const details: string[] = []
+  if (clientName) {
+    details.push(`Client: ${clientName}`)
+  }
+  details.push('Your Gamma presentation is ready to download.')
+  if (options.storageUrl) {
+    details.push('Stored in Firebase Storage for quick access.')
+  }
+
+  const recipients: WorkspaceNotificationRecipients = {
+    roles: clientId ? ['admin', 'team', 'client'] : ['admin', 'team'],
+    clientIds: clientId ? [clientId] : undefined,
+    clientId: clientId ?? undefined,
+  }
+
+  await createWorkspaceNotification({
+    workspaceId,
+    kind: 'proposal.deck.ready',
+    title,
+    body: details.join(' · '),
+    actor: {
+      id: null,
+      name: null,
+    },
+    resource: { type: 'proposal', id: proposalId },
+    recipients,
+    metadata: {
+      proposalId,
+      proposalTitle: proposalTitle ?? null,
+      clientId: clientId ?? null,
+      clientName: clientName ?? null,
+      storageUrl: options.storageUrl ?? null,
     },
   })
 }

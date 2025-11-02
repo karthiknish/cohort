@@ -37,7 +37,10 @@ export interface EnsureProposalGammaDeckArgs {
   logContext?: string
 }
 
-const FALLBACK_GAMMA_INSTRUCTIONS = `Slide 1: Executive Summary\nSlide 2: Objectives & KPIs\nSlide 3: Strategy Overview\nSlide 4: Budget Allocation (include 10-20% testing buffer)\nSlide 5: Execution Roadmap\nSlide 6: Optimization & Testing\nSlide 7: Next Steps & Call-to-Action`
+const FALLBACK_GAMMA_INSTRUCTIONS = `Slide 1: Executive Summary\nSlide 2: Objectives & KPIs\nSlide 3: Strategy Overview\nSlide 4: Budget Allocation (distribute 100% across channels and note any testing allowance)\nSlide 5: Execution Roadmap\nSlide 6: Optimization & Testing\nSlide 7: Next Steps & Call-to-Action`
+
+const DEFAULT_GAMMA_THEME = 'Oasis'
+const DEFAULT_IMAGE_SOURCE = 'unsplash'
 
 export async function downloadGammaPresentation(url: string, retries = 3, backoffMs = 2000): Promise<Buffer> {
   console.log('[GammaUtils] Starting download from Gamma URL:', url)
@@ -284,6 +287,11 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
         instructions: resolvedInstructions,
         storageUrl: storedUrl,
       }
+      console.log(`${logContext} Stored PPT from existing Gamma deck`, {
+        proposalId,
+        generationId: existingDeck.generationId,
+        storageUrl: storedUrl.substring(0, 96),
+      })
       return {
         gammaDeck: deckWithStorage,
         storageUrl: storedUrl,
@@ -309,6 +317,16 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     textMode: 'generate',
     numCards: estimateGammaSlideCount(formData),
     exportAs: 'pptx',
+    themeName: DEFAULT_GAMMA_THEME,
+    cardOptions: {
+      dimensions: '16x9',
+    },
+    imageOptions: {
+      source: DEFAULT_IMAGE_SOURCE,
+    },
+  }, {
+    timeoutMs: 360000, // 6 minutes for complex presentations
+    pollIntervalMs: 8000, // Slightly longer intervals for export processing
   })
 
   const gammaDeck = mapGammaDeckPayload(deckResult, resolvedInstructions)
@@ -318,8 +336,22 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
       proposalId,
       generationId: gammaDeck.generationId,
       status: gammaDeck.status,
+      generatedFiles: gammaDeck.generatedFiles,
+      availableFileTypes: gammaDeck.generatedFiles.map(f => f.fileType),
     })
-    throw new Error('Gamma deck generation completed without a PPT export')
+    
+    // Try to poll a few more times specifically for PPTX export
+    const retryResult = await retryForPptxExport(gammaDeck.generationId, logContext)
+    if (retryResult?.pptxUrl) {
+      Object.assign(gammaDeck, retryResult)
+      console.log(`${logContext} PPT export became available during retry`, {
+        proposalId,
+        generationId: gammaDeck.generationId,
+        fileTypes: retryResult.generatedFiles?.map((file) => normalizeGammaFileType(file.fileType)),
+      })
+    } else {
+      throw new Error(`Gamma deck generation completed without a PPT export. Status: ${gammaDeck.status}, Available files: ${gammaDeck.generatedFiles.map(f => f.fileType).join(', ')}`)
+    }
   }
 
   console.log(`${logContext} Downloading newly generated Gamma PPT`, {
@@ -327,7 +359,12 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     generationId: gammaDeck.generationId,
     pptxUrl: gammaDeck.pptxUrl,
   })
-  const pptBuffer = await downloadGammaPresentation(gammaDeck.pptxUrl)
+  const pptSource = gammaDeck.pptxUrl
+  if (!pptSource) {
+    throw new Error(`${logContext} Gamma deck is missing a PPT URL after validation`)
+  }
+
+  const pptBuffer = await downloadGammaPresentation(pptSource)
 
   console.log(`${logContext} Storing Gamma PPT to Firebase Storage`, {
     proposalId,
@@ -419,7 +456,7 @@ Primary objectives: ${objectives}
 Timeline note: ${timelines.startTime || 'flexible start'}
 Engagement type: ${value.engagementType || 'not specified'}
 
-Write concise slide-by-slide guidance (Slide 1, Slide 2, etc.) capped at 8 slides. Ensure coverage of industry benchmark comparisons, budget allocation with a 10-20% testing buffer, goal feasibility with suggested targets, agency service recommendations, and a closing CTA. Highlight where assumptions are made because data is missing.
+Write concise slide-by-slide guidance (Slide 1, Slide 2, etc.) capped at 8 slides. Ensure coverage of industry benchmark comparisons, budget allocation that totals 100% (call out any testing allowance inside the 100%), goal feasibility with suggested targets, agency service recommendations, and a closing CTA. Highlight where assumptions are made because data is missing.
 
 Output plain text only. Avoid markdown, numbering beyond "Slide X", and keep total length under 450 characters. End with a call-to-action slide.`
 }
@@ -480,6 +517,41 @@ export function parseGammaDeckPayload(input: unknown): GammaDeckPayload | null {
     generatedFiles,
     storageUrl: typeof record.storageUrl === 'string' ? record.storageUrl : null,
   }
+}
+
+async function retryForPptxExport(generationId: string, logContext: string, maxRetries = 5): Promise<Partial<GammaDeckPayload> | null> {
+  console.log(`${logContext} Retrying for PPTX export availability...`)
+  
+  for (let i = 0; i < maxRetries; i++) {
+    await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds between retries
+    
+    try {
+      const status = await gammaService.getGeneration(generationId)
+      const pptxUrl = findGammaFile(status.generatedFiles, 'pptx')
+      
+      console.log(`${logContext} Retry ${i + 1}/${maxRetries} - PPTX available: ${!!pptxUrl}`, {
+        generationId,
+        status: status.status,
+        fileTypes: status.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+      })
+      
+      if (pptxUrl) {
+        return {
+          pptxUrl,
+          generatedFiles: status.generatedFiles,
+          status: status.status
+        }
+      }
+    } catch (error) {
+      console.warn(`${logContext} Retry ${i + 1} failed:`, error)
+    }
+  }
+  console.warn(`${logContext} PPTX export still unavailable after retries`, {
+    generationId,
+    maxRetries,
+  })
+  
+  return null
 }
 
 function formatSocialHandles(handles: Record<string, string> | undefined): string {

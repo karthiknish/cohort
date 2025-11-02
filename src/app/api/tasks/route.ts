@@ -16,6 +16,7 @@ export const baseTaskSchema = z.object({
   assignedTo: z.array(z.string().trim().min(1).max(120)).default([]),
   client: z.string().trim().max(200).optional(),
   clientId: z.string().trim().max(120).optional(),
+  projectId: z.string().trim().max(120).optional(),
   dueDate: z
     .string()
     .trim()
@@ -38,6 +39,8 @@ export type StoredTask = {
   assignedTo?: unknown
   client?: unknown
   clientId?: unknown
+  projectId?: unknown
+  projectName?: unknown
   dueDate?: unknown
   tags?: unknown
   createdAt?: unknown
@@ -92,6 +95,8 @@ export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
     assignedTo: coerceStringArray(data.assignedTo),
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     client: typeof data.client === 'string' ? data.client : null,
+    projectId: typeof data.projectId === 'string' ? data.projectId : null,
+    projectName: typeof data.projectName === 'string' ? data.projectName : null,
     dueDate: toISO(data.dueDate),
     tags: coerceStringArray(data.tags),
     createdAt: toISO(data.createdAt),
@@ -116,6 +121,7 @@ export async function GET(request: NextRequest) {
     const rawQuery = searchParams.get('query')
     const queryFilter = rawQuery ? rawQuery.trim().toLowerCase() : null
     const clientIdFilter = searchParams.get('clientId')
+    const projectIdFilter = searchParams.get('projectId')
     const pageSizeParam = searchParams.get('pageSize')
     const afterParam = searchParams.get('after')
 
@@ -126,6 +132,7 @@ export async function GET(request: NextRequest) {
       assigneeFilter,
       queryFilter,
       clientIdFilter,
+      projectIdFilter,
       pageSize,
       after: afterParam,
     })
@@ -170,6 +177,10 @@ export async function GET(request: NextRequest) {
           return false
         }
       }
+      if (projectIdFilter && task.projectId !== projectIdFilter) {
+        return false
+      }
+
       if (queryFilter && queryFilter.length > 0) {
         const haystack = `${task.title} ${task.description ?? ''}`.toLowerCase()
         if (!haystack.includes(queryFilter)) {
@@ -224,6 +235,29 @@ export async function POST(request: NextRequest) {
     const normalizedAssignedTo = payload.assignedTo.map((name) => name.trim()).filter((name) => name.length > 0)
     const normalizedTags = payload.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0)
 
+    let projectId: string | null = null
+    let projectName: string | null = null
+
+    if (payload.projectId) {
+      const projectDoc = await workspace.projectsCollection.doc(payload.projectId).get()
+      if (!projectDoc.exists) {
+        return NextResponse.json({ error: 'Project not found for this workspace' }, { status: 404 })
+      }
+
+      projectId = projectDoc.id
+      const projectData = projectDoc.data() as Record<string, unknown>
+      projectName = typeof projectData.name === 'string' ? projectData.name : null
+
+      if (!payload.clientId && typeof projectData.clientId === 'string') {
+        // inherit client context from project when not explicitly provided
+        payload.clientId = projectData.clientId
+      }
+
+      if (!payload.client && typeof projectData.clientName === 'string') {
+        payload.client = projectData.clientName
+      }
+    }
+
     const docRef = await workspace.tasksCollection.add({
       title: payload.title,
       description: payload.description ?? null,
@@ -232,6 +266,8 @@ export async function POST(request: NextRequest) {
       assignedTo: normalizedAssignedTo,
       client: payload.client ?? null,
       clientId: payload.clientId ?? null,
+      projectId,
+      projectName,
       dueDate: payload.dueDate ? Timestamp.fromDate(new Date(payload.dueDate)) : null,
       tags: normalizedTags,
       workspaceId: workspace.workspaceId,
@@ -288,6 +324,7 @@ export type TaskCacheKeyInput = {
   assigneeFilter: string | null
   queryFilter: string | null
   clientIdFilter: string | null
+  projectIdFilter: string | null
   pageSize: number
   after: string | null
 }
@@ -302,6 +339,7 @@ export function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInp
     'tasks',
     workspaceId,
     filters.clientIdFilter ?? '*',
+    filters.projectIdFilter ?? '*',
     filters.statusFilter ?? '*',
     filters.assigneeFilter ?? '*',
     filters.queryFilter ?? '*',

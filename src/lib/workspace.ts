@@ -13,6 +13,7 @@ export type WorkspaceContext = {
   financeInvoicesCollection: FirebaseFirestore.CollectionReference
   financeRevenueCollection: FirebaseFirestore.CollectionReference
   financeCostsCollection: FirebaseFirestore.CollectionReference
+  projectsCollection: FirebaseFirestore.CollectionReference
 }
 
 function normalizeCandidate(value: unknown): string | null {
@@ -72,6 +73,7 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
   const financeInvoicesCollection = workspaceRef.collection('financeInvoices')
   const financeRevenueCollection = workspaceRef.collection('financeRevenue')
   const financeCostsCollection = workspaceRef.collection('financeCosts')
+  const projectsCollection = workspaceRef.collection('projects')
 
   return {
     workspaceId,
@@ -82,5 +84,18 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
     financeInvoicesCollection,
     financeRevenueCollection,
     financeCostsCollection,
+    projectsCollection,
   }
+}
+
+export async function resolveWorkspaceIdForUser(userId: string): Promise<string> {
+  if (!userId) {
+    throw new Error('User id is required to resolve workspace id')
+  }
+
+  const userRef = adminDb.collection('users').doc(userId)
+  const snapshot = await userRef.get()
+  const data = (snapshot.data() ?? {}) as Record<string, unknown>
+  const storedAgency = normalizeCandidate(data.agencyId)
+  return storedAgency ?? userId
 }

@@ -1,119 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
-import type {
-  CollaborationAttachment,
-  CollaborationChannelType,
-  CollaborationMessage,
-} from '@/types/collaboration'
-
-type StoredMessage = {
-  channelType?: unknown
-  clientId?: unknown
-  senderId?: unknown
-  senderName?: unknown
-  senderRole?: unknown
-  content?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-  deletedAt?: unknown
-  deletedBy?: unknown
-  deleted?: unknown
-  attachments?: unknown
-}
-
-type StoredAttachment = {
-  name?: unknown
-  url?: unknown
-  type?: unknown
-  size?: unknown
-}
-
-function toISO(value: unknown): string | null {
-  if (!value && value !== 0) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-
-  return null
-}
-
-function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
-  if (!input || typeof input !== 'object') {
-    return null
-  }
-
-  const data = input as StoredAttachment
-  const name = typeof data.name === 'string' ? data.name : null
-  const url = typeof data.url === 'string' ? data.url : null
-
-  if (!name || !url) {
-    return null
-  }
-
-  return {
-    name,
-    url,
-    type: typeof data.type === 'string' ? data.type : null,
-    size: typeof data.size === 'string' ? data.size : null,
-  }
-}
-
-function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage {
-  const channelType = (typeof data.channelType === 'string' ? data.channelType : 'team') as CollaborationChannelType
-
-  const attachments = Array.isArray(data.attachments)
-    ? data.attachments
-        .map((item) => sanitizeAttachment(item))
-        .filter((item): item is CollaborationAttachment => Boolean(item))
-    : undefined
-
-  const deletedAt = toISO(data.deletedAt)
-  const deletedBy = typeof data.deletedBy === 'string' ? data.deletedBy : null
-  const isDeleted = Boolean(deletedAt) || data.deleted === true
-  const updatedAt = toISO(data.updatedAt)
-  const createdAt = toISO(data.createdAt)
-
-  const content = typeof data.content === 'string' ? data.content : ''
-  const resolvedContent = isDeleted ? '' : content
-
-  return {
-    id: docId,
-    channelType,
-    clientId: typeof data.clientId === 'string' ? data.clientId : null,
-    senderId: typeof data.senderId === 'string' ? data.senderId : null,
-    senderName: typeof data.senderName === 'string' ? data.senderName : 'Unknown teammate',
-    senderRole: typeof data.senderRole === 'string' ? data.senderRole : null,
-    content: resolvedContent,
-    createdAt,
-    updatedAt,
-    isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
-    deletedAt,
-    deletedBy,
-    isDeleted,
-    attachments,
-  }
-}
+import { mapMessageDoc, type StoredMessage } from '@/app/api/collaboration/messages/route'
 
 const updateSchema = z.object({
   content: z.string().trim().min(1, 'Message content cannot be empty').max(2000),
@@ -162,7 +53,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const trimmedContent = payload.content.trim()
     const currentContent = typeof data.content === 'string' ? data.content : ''
     if (trimmedContent === currentContent.trim()) {
-      return NextResponse.json({ ok: true, message: { id: messageId, content: currentContent } })
+      const message = mapMessageDoc(snapshot.id, data as StoredMessage)
+      return NextResponse.json({ ok: true, message })
     }
 
     await messageRef.update({

@@ -13,6 +13,8 @@ export type TaskRecord = {
   assignedTo: string[]
   clientId?: string | null
   client?: string | null
+  projectId?: string | null
+  projectName?: string | null
   dueDate?: string | null
   tags: string[]
   createdAt?: string | null

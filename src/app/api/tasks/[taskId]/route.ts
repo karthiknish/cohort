@@ -15,6 +15,16 @@ const updateTaskSchema = z.object({
   assignedTo: z.array(z.string().trim().min(1).max(120)).optional(),
   client: z.string().trim().max(200).nullable().optional(),
   clientId: z.string().trim().max(120).nullable().optional(),
+  projectId: z
+    .union([
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(120),
+      z.literal(null),
+    ])
+    .optional(),
   dueDate: z
     .union([
       z
@@ -64,6 +74,28 @@ export async function PATCH(
     const updates = buildTaskUpdate(payload)
     if (!updates) {
       return NextResponse.json({ error: 'No valid updates supplied' }, { status: 400 })
+    }
+
+    if (payload.projectId !== undefined) {
+      if (payload.projectId === null) {
+        updates.projectId = null
+        updates.projectName = null
+      } else {
+        const projectDoc = await workspace.projectsCollection.doc(payload.projectId).get()
+        if (!projectDoc.exists) {
+          return NextResponse.json({ error: 'Project not found for this workspace' }, { status: 404 })
+        }
+        const data = projectDoc.data() as Record<string, unknown>
+        updates.projectId = projectDoc.id
+        updates.projectName = typeof data.name === 'string' ? data.name : null
+
+        if (updates.clientId === undefined && !payload.clientId && typeof data.clientId === 'string') {
+          updates.clientId = data.clientId
+        }
+        if (updates.client === undefined && !payload.client && typeof data.clientName === 'string') {
+          updates.client = data.clientName
+        }
+      }
     }
 
     updates.updatedBy = uid

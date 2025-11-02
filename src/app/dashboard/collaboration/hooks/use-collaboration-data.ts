@@ -731,6 +731,7 @@ function mapRealtimeMessage(doc: QueryDocumentSnapshot<DocumentData>): Collabora
     id: doc.id,
     channelType,
     clientId: typeof data?.clientId === 'string' ? data.clientId : null,
+    projectId: typeof data?.projectId === 'string' ? data.projectId : null,
     content: resolvedContent,
     senderId: typeof data?.senderId === 'string' ? data.senderId : null,
     senderName:

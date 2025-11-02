@@ -67,6 +67,27 @@ export async function listProposals(params: { status?: ProposalStatus; clientId?
   return (payload.proposals as ProposalDraft[]).map(resolveProposalDeck)
 }
 
+export async function getProposalById(id: string) {
+  const response = await authorizedFetch(`/api/proposals?id=${encodeURIComponent(id)}`, {
+    cache: 'no-store',
+  })
+
+  const payload = await response.json().catch(() => ({})) as {
+    proposal?: ProposalDraft
+    error?: string
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Failed to load proposal')
+  }
+
+  if (!payload.proposal) {
+    throw new Error('Proposal not found')
+  }
+
+  return resolveProposalDeck(payload.proposal)
+}
+
 export async function createProposalDraft(body: Partial<ProposalDraft> = {}) {
   const response = await authorizedFetch('/api/proposals', {
     method: 'POST',

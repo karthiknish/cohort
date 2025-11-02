@@ -3,12 +3,13 @@ import { FieldValue } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { mergeProposalForm } from '@/lib/proposals'
+import { recordProposalDeckReadyNotification } from '@/lib/notifications'
+import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import type { ProposalFormData } from '@/lib/proposals'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import {
   ensureProposalGammaDeck,
   parseGammaDeckPayload,
-  type GammaDeckProcessResult,
 } from '@/app/api/proposals/utils/gamma'
 
 export async function POST(
@@ -45,6 +46,14 @@ export async function POST(
       return NextResponse.json({ error: 'Not authorized to prepare this deck' }, { status: 403 })
     }
 
+    const clientIdRaw = typeof proposalData.clientId === 'string' ? proposalData.clientId.trim() : ''
+    const clientId = clientIdRaw.length > 0 ? clientIdRaw : null
+    const clientName = typeof proposalData.clientName === 'string' && proposalData.clientName.trim().length > 0
+      ? proposalData.clientName.trim()
+      : null
+
+    const workspaceId = await resolveWorkspaceIdForUser(auth.uid)
+
     const existingGammaDeck = parseGammaDeckPayload(proposalData.gammaDeck)
     const storedPptUrl = typeof proposalData.pptUrl === 'string' ? proposalData.pptUrl : null
     const existingStorageUrl = storedPptUrl ?? existingGammaDeck?.storageUrl ?? null
@@ -78,8 +87,11 @@ export async function POST(
         ? (formDataRaw as Partial<ProposalFormData>)
         : null
     )
+    const proposalTitle = formData.company.name && formData.company.name.trim().length > 0
+      ? formData.company.name.trim()
+      : clientName
 
-    const deckResult: GammaDeckProcessResult = await ensureProposalGammaDeck({
+    void ensureProposalGammaDeck({
       userId: auth.uid,
       proposalId,
       formData,
@@ -87,44 +99,51 @@ export async function POST(
       existingDeck: existingGammaDeck,
       existingStorageUrl,
       logContext: '[ProposalDeck]'
-    })
-
-    if (deckResult.reused) {
-      console.log('[ProposalDeck] Reused existing Gamma deck storage for proposal:', proposalId)
-      return NextResponse.json({
-        ok: true,
-        storageUrl: deckResult.storageUrl,
-        gammaDeck: deckResult.gammaDeck,
-      })
-    }
-
-    const updates: Record<string, unknown> = {
-      updatedAt: FieldValue.serverTimestamp(),
-    }
-
-    if (deckResult.storageUrl) {
-      updates.pptUrl = deckResult.storageUrl
-    }
-
-    if (deckResult.gammaDeck) {
-      updates.gammaDeck = {
-        ...deckResult.gammaDeck,
-        generatedAt: FieldValue.serverTimestamp(),
+    }).then(async (deckResult) => {
+      if (deckResult.reused && !deckResult.storageUrl && !deckResult.gammaDeck) {
+        return
       }
-    }
 
-    console.log('[ProposalDeck] Persisting newly generated Gamma deck', {
-      proposalId,
-      hasStorageUrl: Boolean(deckResult.storageUrl),
-      hasGammaDeck: Boolean(deckResult.gammaDeck),
+      const updates: Record<string, unknown> = {
+        updatedAt: FieldValue.serverTimestamp(),
+      }
+
+      if (deckResult.storageUrl) {
+        updates.pptUrl = deckResult.storageUrl
+      }
+
+      if (deckResult.gammaDeck) {
+        updates.gammaDeck = {
+          ...deckResult.gammaDeck,
+          generatedAt: FieldValue.serverTimestamp(),
+        }
+      }
+
+      await proposalRef.update(updates)
+
+      if (!deckResult.reused && deckResult.storageUrl) {
+        try {
+          await recordProposalDeckReadyNotification({
+            workspaceId,
+            proposalId,
+            proposalTitle: proposalTitle ?? null,
+            clientId,
+            clientName,
+            storageUrl: deckResult.storageUrl,
+          })
+        } catch (notificationError) {
+          console.error('[ProposalDeck] Notification dispatch failed', notificationError)
+        }
+      }
+    }).catch((error) => {
+      console.error('[ProposalDeck] Deferred Gamma deck generation failed', error)
     })
-
-    await proposalRef.update(updates)
 
     return NextResponse.json({
       ok: true,
-      storageUrl: deckResult.storageUrl,
-      gammaDeck: deckResult.gammaDeck,
+      storageUrl: existingStorageUrl,
+      gammaDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
+      queued: true,
     })
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {
