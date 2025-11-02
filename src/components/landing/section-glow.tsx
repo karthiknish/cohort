@@ -72,14 +72,14 @@ const variantShapes: Record<GlowVariant, GlowShape[]> = {
   contact: [
     {
       size: 320,
-      className: 'bg-gradient-to-br from-primary/25 via-fuchsia-400/20 to-transparent blur-3xl',
+      className: 'bg-gradient-to-br from-primary/25 via-primary/10 to-transparent blur-3xl',
       initial: { x: -140, y: 20, scale: 0.85, opacity: 0.4 },
       animate: { x: -110, y: -10, scale: 1, opacity: 0.55 },
       duration: 18,
     },
     {
       size: 240,
-      className: 'bg-gradient-to-br from-amber-400/20 via-primary/10 to-transparent blur-2xl',
+      className: 'bg-gradient-to-br from-primary/15 via-sky-300/20 to-transparent blur-2xl',
       initial: { x: 130, y: 180, scale: 0.8, opacity: 0.3 },
       animate: { x: 100, y: 150, scale: 0.92, opacity: 0.45 },
       duration: 16,

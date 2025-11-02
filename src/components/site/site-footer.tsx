@@ -1,5 +1,5 @@
 import Link from 'next/link'
-
+import Image from 'next/image'
 import { Separator } from '@/components/ui/separator'
 
 const footerLinks = [
@@ -29,9 +29,9 @@ export function SiteFooter() {
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2">
           <div className="space-y-3">
-            <Link href="/marketing" className="text-lg font-semibold text-primary">
-              Cohorts
-            </Link>
+            <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
+          <Image src="/logo_new.svg" alt="Cohorts" width={50} height={50} className="h-20 w-20" priority />
+        </Link>
             <p className="text-sm text-muted-foreground">
               The unified command center for high-performing marketing agencies. Streamline campaigns, track revenue,
               and keep clients delighted.

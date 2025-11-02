@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,12 @@ export function SiteHeader() {
   const { user, loading, signOut } = useAuth()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const pathname = usePathname()
+  const isHome = pathname === '/'
+
+  const marketingLinksDisplay = isHome
+    ? marketingLinks
+    : marketingLinks.filter((link) => !['Home', 'Features', 'Integrations'].includes(link.name))
 
   const sessionLinks: SessionLink[] = user
     ? [
@@ -34,7 +41,7 @@ export function SiteHeader() {
       ]
     : [{ name: 'Sign in', href: '/auth' }]
 
-  const mobileLinks = [...marketingLinks, ...sessionLinks]
+  const mobileLinks = [...marketingLinksDisplay, ...sessionLinks]
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -56,7 +63,7 @@ export function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
-          {marketingLinks.map((link) => (
+          {marketingLinksDisplay.map((link) => (
             <Link key={link.name} href={link.href} className="transition hover:text-primary">
               {link.name}
             </Link>
@@ -73,9 +80,8 @@ export function SiteHeader() {
             <SheetContent side="right" className="w-64 p-0">
               <SheetHeader className="border-b px-4 py-4">
                 <SheetTitle className="text-base font-semibold text-primary">
-                  <Link href="/" className="flex items-center gap-2" onClick={() => setSheetOpen(false)}>
-                    <Image src="/cohorts-logo.png" alt="Cohorts" width={28} height={28} className="h-7 w-7" />
-                    <span className="leading-none">Cohorts</span>
+                  <Link href="/" className="flex items-center" onClick={() => setSheetOpen(false)}>
+                    <Image src="/cohorts-logo.png" alt="Cohorts" width={44} height={44} className="h-11 w-11" />
                   </Link>
                 </SheetTitle>
               </SheetHeader>
