@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import {
   BarChart3,
-  Users,
   CheckSquare,
   CreditCard,
   FileText,
@@ -63,7 +62,10 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
       <ScrollArea className="flex-1">
         <div className="space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+            const isDashboardRoot = item.href === '/dashboard'
+            const isActive = isDashboardRoot
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`)
             return (
               <Button
                 key={item.name}
