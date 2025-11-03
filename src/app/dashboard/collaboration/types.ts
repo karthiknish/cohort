@@ -6,5 +6,6 @@ export type Channel = {
   name: string
   type: CollaborationChannelType
   clientId: string | null
+  projectId: string | null
   teamMembers: ClientTeamMember[]
 }

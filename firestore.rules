@@ -43,6 +43,10 @@ service cloud.firestore {
         allow create, update, delete: if isSelf(userId) || isAdmin();
       }
 
+      match /collaborationTyping/{typingId} {
+        allow read, write: if isSelf(userId) || isAdmin();
+      }
+
       match /clients/{clientId} {
         allow read: if isSelf(userId) || isAdmin();
         allow create, update, delete: if isAdmin();

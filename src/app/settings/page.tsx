@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, Check, CreditCard } from 'lucide-react'
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Loader2, Check, CreditCard, ImagePlus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -25,6 +26,8 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog'
+import { storage } from '@/lib/firebase'
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 
 interface PlanSummary {
   id: string
@@ -129,7 +132,12 @@ export default function SettingsPage() {
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null)
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false)
   const isMountedRef = useRef(true)
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
+  const tempAvatarUrlRef = useRef<string | null>(null)
   const isAdmin = user?.role === 'admin'
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL ?? null)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
 
   const outstandingInvoiceStatus = selectedClient?.lastInvoiceStatus ?? null
   const outstandingInvoiceAmount = typeof selectedClient?.lastInvoiceAmount === 'number' ? selectedClient.lastInvoiceAmount : null
@@ -179,10 +187,23 @@ export default function SettingsPage() {
   }, [])
 
   useEffect(() => {
+    return () => {
+      if (tempAvatarUrlRef.current) {
+        URL.revokeObjectURL(tempAvatarUrlRef.current)
+        tempAvatarUrlRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     setProfileName(user?.name ?? '')
     setProfilePhone(user?.phoneNumber ?? '')
     setProfileError(null)
   }, [user?.name, user?.phoneNumber])
+
+  useEffect(() => {
+    setAvatarPreview(user?.photoURL ?? null)
+  }, [user?.photoURL])
 
   useEffect(() => {
     if (!deleteDialogOpen) {
@@ -265,6 +286,18 @@ export default function SettingsPage() {
     const originalPhone = user?.phoneNumber ?? ''
     return profileName.trim() !== originalName || profilePhone.trim() !== originalPhone
   }, [profileName, profilePhone, user?.name, user?.phoneNumber])
+
+  const avatarInitials = useMemo(() => {
+    const source = profileName.trim() || user?.name?.trim() || user?.email?.trim() || 'C'
+    const parts = source.split(/\s+/).filter(Boolean)
+    if (parts.length === 0) {
+      return 'C'
+    }
+    const first = parts[0]?.[0] ?? ''
+    const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : ''
+    const value = `${first}${last}`.toUpperCase()
+    return value || 'C'
+  }, [profileName, user?.email, user?.name])
 
   const isProfileNameValid = profileName.trim().length >= 2
   const canSaveProfile = Boolean(user) && hasProfileChanges && isProfileNameValid && !savingProfile
@@ -436,6 +469,103 @@ export default function SettingsPage() {
     },
     [profileName, profilePhone, saveNotificationPreferences, toast, updateProfile, user, whatsappCollaborationEnabled, whatsappTasksEnabled],
   )
+
+  const handleAvatarButtonClick = useCallback(() => {
+    setAvatarError(null)
+    avatarInputRef.current?.click()
+  }, [])
+
+  const handleAvatarFileChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) {
+        return
+      }
+
+      if (!user) {
+        setAvatarError('You must be signed in to update your avatar.')
+        event.target.value = ''
+        return
+      }
+
+      if (!file.type.startsWith('image/')) {
+        setAvatarError('Select an image file (PNG, JPG, or WebP).')
+        event.target.value = ''
+        return
+      }
+
+      const maxFileSize = 5 * 1024 * 1024
+      if (file.size > maxFileSize) {
+        setAvatarError('Choose an image under 5MB.')
+        event.target.value = ''
+        return
+      }
+
+      const previousUrl = avatarPreview
+      setAvatarUploading(true)
+      setAvatarError(null)
+
+      if (tempAvatarUrlRef.current) {
+        URL.revokeObjectURL(tempAvatarUrlRef.current)
+        tempAvatarUrlRef.current = null
+      }
+
+      const objectUrl = URL.createObjectURL(file)
+      tempAvatarUrlRef.current = objectUrl
+      setAvatarPreview(objectUrl)
+
+      try {
+        const storageKey = `users/${user.id}/avatar/${Date.now()}-${file.name}`
+        const fileRef = ref(storage, storageKey)
+        await uploadBytes(fileRef, file, { contentType: file.type })
+        const downloadUrl = await getDownloadURL(fileRef)
+
+        await updateProfile({ photoURL: downloadUrl })
+        setAvatarPreview(downloadUrl)
+        toast({ title: 'Profile photo updated', description: 'Your avatar has been saved.' })
+      } catch (uploadError) {
+        console.error('[settings/profile] avatar upload failed', uploadError)
+        setAvatarError('Failed to upload image. Try again.')
+        setAvatarPreview(previousUrl ?? null)
+        toast({ title: 'Upload failed', description: 'Unable to update your profile photo right now.', variant: 'destructive' })
+      } finally {
+        setAvatarUploading(false)
+        if (tempAvatarUrlRef.current) {
+          URL.revokeObjectURL(tempAvatarUrlRef.current)
+          tempAvatarUrlRef.current = null
+        }
+        event.target.value = ''
+      }
+    },
+    [avatarPreview, toast, updateProfile, user],
+  )
+
+  const handleAvatarRemove = useCallback(async () => {
+    if (!user) {
+      setAvatarError('You must be signed in to update your avatar.')
+      return
+    }
+
+    setAvatarUploading(true)
+    setAvatarError(null)
+
+    if (tempAvatarUrlRef.current) {
+      URL.revokeObjectURL(tempAvatarUrlRef.current)
+      tempAvatarUrlRef.current = null
+    }
+
+    try {
+      await updateProfile({ photoURL: null })
+      setAvatarPreview(null)
+      toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
+    } catch (removeError) {
+      console.error('[settings/profile] avatar remove failed', removeError)
+      setAvatarError('Failed to remove profile photo. Try again.')
+      toast({ title: 'Remove failed', description: 'Unable to remove your photo right now.', variant: 'destructive' })
+    } finally {
+      setAvatarUploading(false)
+    }
+  }, [toast, updateProfile, user])
 
   const currentPlanId = subscription?.plan?.id ?? null
   const statusBadgeClass = subscription ? subscriptionStatusStyles[subscription.status] ?? 'bg-muted text-muted-foreground' : ''
@@ -700,6 +830,58 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileSubmit} className="space-y-6">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              className="hidden"
+              onChange={(event) => {
+                void handleAvatarFileChange(event)
+              }}
+            />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <Avatar className="h-16 w-16">
+                {avatarPreview ? (
+                  <AvatarImage src={avatarPreview} alt="Profile photo" />
+                ) : (
+                  <AvatarFallback>{avatarInitials}</AvatarFallback>
+                )}
+              </Avatar>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAvatarButtonClick}
+                    disabled={avatarUploading}
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImagePlus className="mr-2 h-4 w-4" />
+                    )}
+                    {avatarUploading ? 'Uploading...' : avatarPreview ? 'Change photo' : 'Upload photo'}
+                  </Button>
+                  {avatarPreview ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        void handleAvatarRemove()
+                      }}
+                      disabled={avatarUploading}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use a square image (PNG, JPG, or WebP) under 5MB.
+                </p>
+                {avatarError ? <p className="text-xs text-destructive">{avatarError}</p> : null}
+              </div>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="profile-name">Display name</Label>

@@ -7,11 +7,14 @@ import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { cn } from "@/lib/utils"
+import type { CollaborationMention } from "@/types/collaboration"
 
 import { isLikelyImageUrl } from "../utils"
+import { MENTION_PROTOCOL } from "../utils/mentions"
 
 interface MessageContentProps {
   content: string
+  mentions?: CollaborationMention[]
 }
 
 const BASE_LINK_REL = "noreferrer noopener"
@@ -45,6 +48,13 @@ const markdownComponents: Components = {
   },
   a: ({ href, children }: AnchorProps) => {
     if (!href) return <span>{children}</span>
+    if (href.startsWith(MENTION_PROTOCOL)) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
+          {children}
+        </span>
+      )
+    }
     if (isLikelyImageUrl(href)) {
       return (
         <img
@@ -87,22 +97,46 @@ const markdownComponents: Components = {
   td: ({ children }) => <td className="px-3 py-2 align-top text-foreground">{children}</td>,
 }
 
-function RawMessageContent({ content }: MessageContentProps) {
+function RawMessageContent({ content, mentions }: MessageContentProps) {
   const markdown = useMemo(() => content?.trim() ?? "", [content])
+  const mentionBadges = useMemo(() => {
+    if (!Array.isArray(mentions)) {
+      return []
+    }
+
+    return mentions
+      .filter((item) => item && typeof item.name === "string" && item.name.trim().length > 0)
+      .map((item) => ({
+        key: item.slug ?? item.name,
+        name: item.name.trim(),
+        role: item.role ?? null,
+      }))
+  }, [mentions])
 
   if (!markdown) {
     return null
   }
 
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={markdownComponents}
-      className="space-y-2"
-      skipHtml
-    >
-      {markdown}
-    </ReactMarkdown>
+    <div className="space-y-2">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} className="space-y-2" skipHtml>
+        {markdown}
+      </ReactMarkdown>
+      {mentionBadges.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Mentions:</span>
+          {mentionBadges.map((mention) => (
+            <span
+              key={mention.key}
+              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+            >
+              @{mention.name}
+              {mention.role ? <span className="text-[10px] uppercase text-muted-foreground">{mention.role}</span> : null}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

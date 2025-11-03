@@ -1,10 +1,24 @@
 export type CollaborationChannelType = 'client' | 'team' | 'project'
 
+export type CollaborationMessageFormat = 'markdown' | 'plaintext'
+
+export type CollaborationMention = {
+  slug: string
+  name: string
+  role?: string | null
+}
+
 export type CollaborationAttachment = {
   name: string
   url: string
   type?: string | null
   size?: string | null
+}
+
+export type CollaborationReaction = {
+  emoji: string
+  count: number
+  userIds: string[]
 }
 
 export type CollaborationMessage = {
@@ -23,4 +37,11 @@ export type CollaborationMessage = {
   deletedBy: string | null
   isDeleted: boolean
   attachments?: CollaborationAttachment[]
+  format?: CollaborationMessageFormat | null
+  mentions?: CollaborationMention[]
+  reactions?: CollaborationReaction[]
+  parentMessageId?: string | null
+  threadRootId?: string | null
+  threadReplyCount?: number
+  threadLastReplyAt?: string | null
 }

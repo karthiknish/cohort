@@ -14,7 +14,7 @@ service firebase.storage {
         && resource != null
         && resource.metadata != null
         && resource.metadata.firebaseStorageDownloadTokens != null
-        && resource.metadata.firebaseStorageDownloadTokens == request.query.token;
+        && resource.metadata.firebaseStorageDownloadTokens.matches('(^|,)' + request.query.token + '(,|$)');
     }
 
     function isDeleteOperation() {
@@ -31,9 +31,55 @@ service firebase.storage {
         && request.resource.name.matches('^proposals/' + userId + '/[^/]+\\.(pptx|pdf)$');
     }
 
+    function isAllowedAvatarUpload(userId) {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType in [
+          'image/png',
+          'image/jpeg',
+          'image/jpg',
+          'image/webp'
+        ]
+        && request.resource.name.matches('^users/' + userId + '/avatar/[^/]+\\.(png|jpe?g|webp)$');
+    }
+
+    function isAllowedCollaborationUpload(userId) {
+      return request.resource != null
+        && request.resource.size <= 15 * 1024 * 1024
+        && request.resource.contentType in [
+          'image/png',
+          'image/jpeg',
+          'image/jpg',
+          'image/webp',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/plain',
+          'text/csv',
+          'text/markdown',
+          'application/zip',
+          'application/x-zip-compressed'
+        ]
+        && request.resource.name.matches('^users/' + userId + '/collaboration/[^/]+\\.(png|jpe?g|webp|pdf|docx?|pptx?|xlsx?|csv|txt|zip|md)$');
+    }
+
     match /public/{allPaths=**} {
       allow read;
       allow write: if false;
+    }
+
+    match /users/{userId}/avatar/{imagePath=**} {
+      allow read: if isOwner(userId) || hasValidDownloadToken();
+      allow write: if isOwner(userId) && (isDeleteOperation() || isAllowedAvatarUpload(userId));
+    }
+
+    match /users/{userId}/collaboration/{filePath=**} {
+      allow read: if isOwner(userId) || hasValidDownloadToken();
+      allow write: if isOwner(userId) && (isDeleteOperation() || isAllowedCollaborationUpload(userId));
     }
 
     match /users/{userId}/{allPaths=**} {

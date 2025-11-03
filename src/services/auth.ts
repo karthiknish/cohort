@@ -13,7 +13,7 @@ import {
   FacebookAuthProvider,
   OAuthProvider,
   OAuthCredential,
-  updateProfile,
+  updateProfile as updateFirebaseProfile,
   linkWithPopup,
   User as FirebaseUser,
   sendPasswordResetEmail,
@@ -29,6 +29,7 @@ export interface AuthUser {
   email: string
   name: string
   phoneNumber: string | null
+  photoURL: string | null
   role: AuthRole
   status: AuthStatus
   agencyId: string
@@ -98,6 +99,7 @@ export class AuthService {
       email: firebaseUser.email!,
       name: firebaseUser.displayName || 'User',
       phoneNumber: firebaseUser.phoneNumber ?? null,
+      photoURL: firebaseUser.photoURL ?? null,
       role,
       status,
       agencyId: 'default-agency', // Would be fetched from database
@@ -570,7 +572,7 @@ export class AuthService {
 
         if (data.displayName && userCredential.user) {
           try {
-            await updateProfile(userCredential.user, { displayName: data.displayName })
+            await updateFirebaseProfile(userCredential.user, { displayName: data.displayName })
           } catch (error) {
             console.warn('Failed to set display name during sign up:', error)
           }
@@ -703,15 +705,37 @@ export class AuthService {
     }
 
     try {
-      // In a real implementation, you would update the user document in Firestore
-      // and potentially update the Firebase user profile
-      
+      const firebaseUser = auth.currentUser
+      if (!firebaseUser) {
+        throw new Error('No authenticated user')
+      }
+
+      const profileUpdates: { displayName?: string | null; photoURL?: string | null } = {}
+      let resolvedName: string | undefined
+      if (typeof data.name === 'string') {
+        resolvedName = data.name.trim()
+        if (resolvedName.length > 0 && resolvedName !== firebaseUser.displayName) {
+          profileUpdates.displayName = resolvedName
+        }
+      }
+
+      const hasPhotoUpdate = Object.prototype.hasOwnProperty.call(data, 'photoURL')
+      if (hasPhotoUpdate) {
+        profileUpdates.photoURL = data.photoURL ?? null
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        await updateFirebaseProfile(firebaseUser, profileUpdates)
+      }
+
       this.currentUser = {
         ...this.currentUser,
         ...data,
-        updatedAt: new Date()
+        name: typeof resolvedName === 'string' && resolvedName.length > 0 ? resolvedName : this.currentUser.name,
+        photoURL: hasPhotoUpdate ? data.photoURL ?? null : this.currentUser.photoURL,
+        updatedAt: new Date(),
       }
-      
+
       this.notifyListeners(this.currentUser)
       return this.currentUser
     } catch (error: unknown) {

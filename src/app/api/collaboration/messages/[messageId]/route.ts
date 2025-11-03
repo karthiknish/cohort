@@ -4,10 +4,17 @@ import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
-import { mapMessageDoc, type StoredMessage } from '@/app/api/collaboration/messages/route'
+import {
+  mapMessageDoc,
+  mentionSchema,
+  messageFormatSchema,
+  type StoredMessage,
+} from '@/app/api/collaboration/messages/route'
 
 const updateSchema = z.object({
   content: z.string().trim().min(1, 'Message content cannot be empty').max(2000),
+  format: messageFormatSchema.optional(),
+  mentions: z.array(mentionSchema).max(20).optional(),
 })
 
 type RouteContext = { params: Promise<{ messageId: string }> }
@@ -52,15 +59,29 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const trimmedContent = payload.content.trim()
     const currentContent = typeof data.content === 'string' ? data.content : ''
-    if (trimmedContent === currentContent.trim()) {
+    if (
+      trimmedContent === currentContent.trim() &&
+      payload.format === undefined &&
+      payload.mentions === undefined
+    ) {
       const message = mapMessageDoc(snapshot.id, data as StoredMessage)
       return NextResponse.json({ ok: true, message })
     }
 
-    await messageRef.update({
+    const updatePayload: Record<string, unknown> = {
       content: trimmedContent,
       updatedAt: FieldValue.serverTimestamp(),
-    })
+    }
+
+    if (payload.format !== undefined) {
+      updatePayload.format = payload.format
+    }
+
+    if (payload.mentions !== undefined) {
+      updatePayload.mentions = payload.mentions
+    }
+
+    await messageRef.update(updatePayload)
 
     const updatedSnapshot = await messageRef.get()
     const message = mapMessageDoc(updatedSnapshot.id, updatedSnapshot.data() as StoredMessage)

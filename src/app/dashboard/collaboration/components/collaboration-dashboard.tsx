@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { MessageSquare, Users } from 'lucide-react'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -22,6 +23,7 @@ export function CollaborationDashboard() {
     selectChannel,
     channelSummaries,
     channelMessages,
+    visibleMessages,
     isCurrentChannelLoading,
     isBootstrapping,
     messagesError,
@@ -33,12 +35,22 @@ export function CollaborationDashboard() {
     setSenderSelection,
     messageInput,
     setMessageInput,
+    messageSearchQuery,
+    setMessageSearchQuery,
+    pendingAttachments,
+    handleAddAttachments,
+    handleRemoveAttachment,
+    uploading,
+    typingParticipants,
+    handleComposerFocus,
+    handleComposerBlur,
     handleSendMessage,
     sending,
     isSendDisabled,
     messagesEndRef,
     handleEditMessage,
     handleDeleteMessage,
+    handleToggleReaction,
     messageUpdatingId,
     messageDeletingId,
     handleLoadMore,
@@ -46,7 +58,19 @@ export function CollaborationDashboard() {
     loadingMore,
     currentUserId,
     currentUserRole,
+    threadMessagesByRootId,
+    threadNextCursorByRootId,
+    threadLoadingByRootId,
+    threadErrorsByRootId,
+    loadThreadReplies,
+    loadMoreThreadReplies,
+    clearThreadReplies,
+    reactionPendingByMessage,
   } = useCollaborationData()
+
+  useEffect(() => {
+    clearThreadReplies()
+  }, [clearThreadReplies, selectedChannel?.id])
 
   if (isBootstrapping) {
     return <CollaborationSkeleton />
@@ -93,6 +117,7 @@ export function CollaborationDashboard() {
           <CollaborationMessagePane
             channel={selectedChannel}
             channelMessages={channelMessages}
+            visibleMessages={visibleMessages}
             channelParticipants={channelParticipants}
             messagesError={messagesError}
             isLoading={isCurrentChannelLoading}
@@ -103,9 +128,18 @@ export function CollaborationDashboard() {
             onSenderSelectionChange={setSenderSelection}
             messageInput={messageInput}
             onMessageInputChange={setMessageInput}
+            messageSearchQuery={messageSearchQuery}
+            onMessageSearchChange={setMessageSearchQuery}
             onSendMessage={() => void handleSendMessage()}
             sending={sending}
             isSendDisabled={isSendDisabled}
+            pendingAttachments={pendingAttachments}
+            onAddAttachments={handleAddAttachments}
+            onRemoveAttachment={handleRemoveAttachment}
+            uploading={uploading}
+            typingParticipants={typingParticipants}
+            onComposerFocus={handleComposerFocus}
+            onComposerBlur={handleComposerBlur}
             onEditMessage={(messageId, nextContent) => {
               if (!selectedChannel) return
               void handleEditMessage(selectedChannel.id, messageId, nextContent)
@@ -114,11 +148,27 @@ export function CollaborationDashboard() {
               if (!selectedChannel) return
               void handleDeleteMessage(selectedChannel.id, messageId)
             }}
+            onToggleReaction={(messageId, emoji) => {
+              if (!selectedChannel) return
+              void handleToggleReaction(selectedChannel.id, messageId, emoji)
+            }}
             messageUpdatingId={messageUpdatingId}
             messageDeletingId={messageDeletingId}
             messagesEndRef={messagesEndRef}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
+            threadMessagesByRootId={threadMessagesByRootId}
+            threadNextCursorByRootId={threadNextCursorByRootId}
+            threadLoadingByRootId={threadLoadingByRootId}
+            threadErrorsByRootId={threadErrorsByRootId}
+            onLoadThreadReplies={(threadRootId) => {
+              void loadThreadReplies(threadRootId)
+            }}
+            onLoadMoreThreadReplies={(threadRootId) => {
+              void loadMoreThreadReplies(threadRootId)
+            }}
+            onClearThreadReplies={clearThreadReplies}
+            reactionPendingByMessage={reactionPendingByMessage}
           />
 
           <Separator orientation="vertical" className="hidden h-[640px] lg:block" />

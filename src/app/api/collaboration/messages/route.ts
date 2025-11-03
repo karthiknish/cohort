@@ -1,23 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldPath, Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import type {
   CollaborationAttachment,
   CollaborationChannelType,
+  CollaborationMention,
   CollaborationMessage,
+  CollaborationMessageFormat,
+  CollaborationReaction,
 } from '@/types/collaboration'
+import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { notifyCollaborationMessageWhatsApp, recordCollaborationNotification } from '@/lib/notifications'
 
-const channelTypeSchema = z.enum(['client', 'team', 'project'])
+export const channelTypeSchema = z.enum(['client', 'team', 'project'])
+export const messageFormatSchema = z.enum(['markdown', 'plaintext'])
 
 const attachmentSchema = z.object({
   name: z.string().trim().min(1).max(200),
   url: z.string().trim().url(),
   type: z.string().trim().max(60).optional(),
   size: z.string().trim().max(40).optional(),
+})
+
+export const mentionSchema = z.object({
+  slug: z.string().trim().min(1).max(160),
+  name: z.string().trim().min(1).max(160),
+  role: z
+    .string()
+    .trim()
+    .max(120)
+    .nullable()
+    .optional(),
 })
 
 const createMessageSchema = z
@@ -39,8 +55,20 @@ const createMessageSchema = z
     senderRole: z.string().trim().max(120).optional(),
     content: z.string().trim().min(1).max(2000),
     attachments: z.array(attachmentSchema).max(5).optional(),
+    format: messageFormatSchema.optional(),
+    mentions: z.array(mentionSchema).max(20).optional(),
+    parentMessageId: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .optional(),
   })
   .superRefine((value, ctx) => {
+    if (value.parentMessageId) {
+      return
+    }
+
     if (value.channelType === 'client' && !value.clientId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -80,6 +108,14 @@ export type StoredMessage = {
   deletedBy?: unknown
   deleted?: unknown
   attachments?: unknown
+  format?: unknown
+  mentions?: unknown
+  reactions?: unknown
+  parentMessageId?: unknown
+  threadRootId?: unknown
+  isThreadRoot?: unknown
+  threadReplyCount?: unknown
+  threadLastReplyAt?: unknown
 }
 
 type StoredAttachment = {
@@ -87,6 +123,18 @@ type StoredAttachment = {
   url?: unknown
   type?: unknown
   size?: unknown
+}
+
+type StoredMention = {
+  slug?: unknown
+  name?: unknown
+  role?: unknown
+}
+
+type StoredReaction = {
+  emoji?: unknown
+  count?: unknown
+  userIds?: unknown
 }
 
 function toISO(value: unknown): string | null {
@@ -136,6 +184,56 @@ function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
   }
 }
 
+function sanitizeMention(input: unknown): CollaborationMention | null {
+  if (!input || typeof input !== 'object') {
+    return null
+  }
+
+  const data = input as StoredMention
+  const slug = typeof data.slug === 'string' ? data.slug.trim() : null
+  const name = typeof data.name === 'string' ? data.name.trim() : null
+
+  if (!slug || !name) {
+    return null
+  }
+
+  return {
+    slug,
+    name,
+    role: typeof data.role === 'string' ? data.role : null,
+  }
+}
+
+function parseMessageFormat(value: unknown): CollaborationMessageFormat {
+  if (value === 'plaintext' || value === 'markdown') {
+    return value
+  }
+  return 'markdown'
+}
+
+export function sanitizeReaction(input: unknown): CollaborationReaction | null {
+  if (!input || typeof input !== 'object') {
+    return null
+  }
+
+  const data = input as StoredReaction
+  const emoji = typeof data.emoji === 'string' ? data.emoji : null
+  const count = typeof data.count === 'number' ? data.count : Array.isArray(data.userIds) ? data.userIds.length : null
+  const userIds = Array.isArray(data.userIds)
+    ? data.userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    : []
+
+  if (!emoji || !COLLABORATION_REACTION_SET.has(emoji) || count === null) {
+    return null
+  }
+
+  return {
+    emoji,
+    count: count >= 0 ? count : 0,
+    userIds,
+  }
+}
+
 export function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage {
   const channelType = (typeof data.channelType === 'string' ? data.channelType : 'team') as CollaborationChannelType
 
@@ -150,9 +248,15 @@ export function mapMessageDoc(docId: string, data: StoredMessage): Collaboration
   const isDeleted = Boolean(deletedAt) || data.deleted === true
   const updatedAt = toISO(data.updatedAt)
   const createdAt = toISO(data.createdAt)
+  const threadLastReplyAt = toISO(data.threadLastReplyAt)
 
   const content = typeof data.content === 'string' ? data.content : ''
   const resolvedContent = isDeleted ? '' : content
+
+  const parentMessageId = typeof data.parentMessageId === 'string' ? data.parentMessageId : null
+  const threadRootId = typeof data.threadRootId === 'string' ? data.threadRootId : null
+  const threadReplyCountRaw = typeof data.threadReplyCount === 'number' ? data.threadReplyCount : null
+  const threadReplyCount = threadReplyCountRaw !== null ? Math.max(0, Math.trunc(threadReplyCountRaw)) : undefined
 
   return {
     id: docId,
@@ -170,6 +274,21 @@ export function mapMessageDoc(docId: string, data: StoredMessage): Collaboration
     deletedBy,
     isDeleted,
     attachments,
+    format: parseMessageFormat(data.format),
+    mentions: Array.isArray(data.mentions)
+      ? data.mentions
+          .map((entry) => sanitizeMention(entry))
+          .filter((entry): entry is CollaborationMention => Boolean(entry))
+      : undefined,
+    reactions: Array.isArray(data.reactions)
+      ? data.reactions
+          .map((entry) => sanitizeReaction(entry))
+          .filter((entry): entry is CollaborationReaction => Boolean(entry))
+      : undefined,
+    parentMessageId,
+    threadRootId,
+    threadReplyCount,
+    threadLastReplyAt,
   }
 }
 
@@ -197,10 +316,49 @@ export async function GET(request: NextRequest) {
     const workspace = await resolveWorkspaceContext(auth)
 
     const searchParams = request.nextUrl.searchParams
-    const channelTypeParam = searchParams.get('channelType') ?? 'team'
-    const parseChannel = channelTypeSchema.safeParse(channelTypeParam)
     const pageSizeParam = searchParams.get('pageSize')
     const cursorParam = searchParams.get('cursor')
+    const threadRootIdRaw = searchParams.get('threadRootId')
+    const threadRootId = threadRootIdRaw?.trim()
+    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
+
+    if (threadRootIdRaw !== null) {
+      if (!threadRootId) {
+        return NextResponse.json({ error: 'threadRootId must be provided' }, { status: 400 })
+      }
+
+      let threadQuery = workspace.collaborationCollection
+        .where('threadRootId', '==', threadRootId)
+        .where('isThreadRoot', '==', false)
+        .orderBy('createdAt', 'asc')
+        .orderBy(FieldPath.documentId(), 'asc')
+
+      if (cursorParam) {
+        const [cursorTime, cursorId] = cursorParam.split('|')
+        if (cursorTime && cursorId) {
+          const cursorDate = new Date(cursorTime)
+          if (!Number.isNaN(cursorDate.getTime())) {
+            threadQuery = threadQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
+          }
+        }
+      }
+
+      const threadSnapshot = await threadQuery.limit(pageSize + 1).get()
+      const docs = threadSnapshot.docs
+      const messages = docs.slice(0, pageSize).map((doc) => mapMessageDoc(doc.id, doc.data() as StoredMessage))
+      const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
+      const nextCursor = nextCursorDoc
+        ? (() => {
+            const rawCreated = toISO(nextCursorDoc.get('createdAt'))
+            return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
+          })()
+        : null
+
+      return NextResponse.json({ messages, nextCursor })
+    }
+
+    const channelTypeParam = searchParams.get('channelType') ?? 'team'
+    const parseChannel = channelTypeSchema.safeParse(channelTypeParam)
 
     if (!parseChannel.success) {
       return NextResponse.json({ error: 'Invalid channel type' }, { status: 400 })
@@ -209,7 +367,6 @@ export async function GET(request: NextRequest) {
     const channelType = parseChannel.data
     const clientId = searchParams.get('clientId') ?? undefined
     const projectId = searchParams.get('projectId') ?? undefined
-    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
 
     if (channelType === 'client') {
       if (!clientId) {
@@ -312,6 +469,9 @@ export async function POST(request: NextRequest) {
       senderRole: payload.senderRole ?? null,
       content: payload.content,
       attachments: payload.attachments ?? [],
+      format: payload.format ?? 'markdown',
+      mentions: payload.mentions ?? [],
+      reactions: [],
       workspaceId: workspace.workspaceId,
       createdAt: timestamp,
       updatedAt: timestamp,
