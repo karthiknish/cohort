@@ -1,5 +1,6 @@
 'use client'
 
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   Plus,
@@ -11,6 +12,7 @@ import {
   AlertCircle,
   MoreHorizontal,
   Loader2,
+  X,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -74,6 +76,11 @@ type TaskListResponse = {
   nextCursor?: string | null
 }
 
+type ProjectFilter = {
+  id: string | null
+  name: string | null
+}
+
 const statusColors: Record<TaskStatus, string> = {
   todo: 'bg-muted text-muted-foreground',
   'in-progress': 'bg-blue-100 text-blue-800',
@@ -101,9 +108,16 @@ const buildInitialFormState = (client?: { id: string | null; name: string | null
 })
 
 export default function TasksPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
   const { toast } = useToast()
+  const [projectFilter, setProjectFilter] = useState<ProjectFilter>(() => ({
+    id: searchParams.get('projectId'),
+    name: searchParams.get('projectName'),
+  }))
   const [tasks, setTasks] = useState<TaskRecord[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -122,6 +136,21 @@ export default function TasksPage() {
     setFormState(buildInitialFormState(selectedClient ?? undefined))
     setCreateError(null)
   }, [selectedClient])
+
+  useEffect(() => {
+    const id = searchParams.get('projectId')
+    const name = searchParams.get('projectName')
+    setProjectFilter((prev) => (prev.id === id && prev.name === name ? prev : { id, name }))
+  }, [searchParams])
+
+  const clearProjectFilter = useCallback(() => {
+    setProjectFilter({ id: null, name: null })
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('projectId')
+    params.delete('projectName')
+    const next = params.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams])
 
   const handleCreateOpenChange = useCallback(
     (open: boolean) => {
@@ -290,8 +319,27 @@ export default function TasksPage() {
     })
   }, [tasks, selectedClientId, selectedClient])
 
-  const filteredTasks = useMemo(() => {
+  const projectScopedTasks = useMemo(() => {
+    if (!projectFilter.id && !projectFilter.name) {
+      return tasksForClient
+    }
+
+    const targetId = projectFilter.id
+    const targetName = projectFilter.name?.toLowerCase() ?? null
+
     return tasksForClient.filter((task) => {
+      if (targetId && task.projectId === targetId) {
+        return true
+      }
+      if (targetName && task.projectName && task.projectName.toLowerCase() === targetName) {
+        return true
+      }
+      return false
+    })
+  }, [projectFilter.id, projectFilter.name, tasksForClient])
+
+  const filteredTasks = useMemo(() => {
+    return projectScopedTasks.filter((task) => {
       const matchesStatus = selectedStatus === 'all' || task.status === selectedStatus
       const title = task.title.toLowerCase()
       const description = (task.description ?? '').toLowerCase()
@@ -303,7 +351,7 @@ export default function TasksPage() {
 
       return matchesStatus && matchesSearch && matchesAssignee
     })
-  }, [tasksForClient, selectedStatus, searchQuery, selectedAssignee])
+  }, [projectScopedTasks, selectedStatus, searchQuery, selectedAssignee])
 
   const taskCounts = useMemo(() => {
     const counts: Record<TaskStatus, number> = {
@@ -313,16 +361,16 @@ export default function TasksPage() {
       completed: 0,
     }
 
-    tasksForClient.forEach((task) => {
+    projectScopedTasks.forEach((task) => {
       counts[task.status] = (counts[task.status] ?? 0) + 1
     })
 
     return counts
-  }, [tasksForClient])
+  }, [projectScopedTasks])
 
   const assigneeOptions = useMemo(() => {
     const options = new Set<string>()
-    tasksForClient.forEach((task) => {
+    projectScopedTasks.forEach((task) => {
       task.assignedTo.forEach((member) => {
         if (member && member.trim().length > 0) {
           options.add(member)
@@ -330,7 +378,7 @@ export default function TasksPage() {
       })
     })
     return Array.from(options).sort((a, b) => a.localeCompare(b))
-  }, [tasksForClient])
+  }, [projectScopedTasks])
 
   useEffect(() => {
     if (selectedAssignee !== 'all' && !assigneeOptions.includes(selectedAssignee)) {
@@ -677,6 +725,24 @@ export default function TasksPage() {
               </Select>
             </div>
           </div>
+
+          {(projectFilter.id || projectFilter.name) && (
+            <div className="mx-4 mb-3 mt-2 flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs text-primary">
+              <span className="font-medium">
+                Showing tasks for {projectFilter.name ?? 'selected project'}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-primary hover:text-primary"
+                onClick={clearProjectFilter}
+              >
+                <X className="h-3.5 w-3.5" />
+                <span className="sr-only">Clear project filter</span>
+              </Button>
+            </div>
+          )}
 
           <ScrollArea className="max-h-[520px]">
             <div className="divide-y divide-muted/30">

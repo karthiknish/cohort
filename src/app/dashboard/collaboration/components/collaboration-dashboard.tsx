@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MessageSquare, Users } from 'lucide-react'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -14,6 +15,7 @@ import { useCollaborationData } from '../hooks/use-collaboration-data'
 import { CollaborationSkeleton } from './collaboration-skeleton'
 
 export function CollaborationDashboard() {
+  const searchParams = useSearchParams()
   const {
     channels,
     filteredChannels,
@@ -68,9 +70,39 @@ export function CollaborationDashboard() {
     reactionPendingByMessage,
   } = useCollaborationData()
 
+  const requestedProjectId = searchParams.get('projectId')
+  const requestedProjectName = searchParams.get('projectName')
+  const projectParamHandledRef = useRef<string | null>(null)
+
   useEffect(() => {
     clearThreadReplies()
   }, [clearThreadReplies, selectedChannel?.id])
+
+  useEffect(() => {
+    if (!requestedProjectId) {
+      projectParamHandledRef.current = null
+      return
+    }
+
+    const alreadyApplied = projectParamHandledRef.current === requestedProjectId
+    if (alreadyApplied && selectedChannel?.projectId === requestedProjectId) {
+      return
+    }
+
+    const normalizedName = requestedProjectName?.toLowerCase() ?? null
+    const targetChannel =
+      channels.find((channel) => channel.type === 'project' && channel.projectId === requestedProjectId) ??
+      (normalizedName
+        ? channels.find(
+            (channel) => channel.type === 'project' && channel.name.toLowerCase() === normalizedName
+          )
+        : undefined)
+
+    if (targetChannel && targetChannel.id !== selectedChannel?.id) {
+      selectChannel(targetChannel.id)
+      projectParamHandledRef.current = requestedProjectId
+    }
+  }, [channels, requestedProjectId, requestedProjectName, selectChannel, selectedChannel?.id, selectedChannel?.projectId])
 
   if (isBootstrapping) {
     return <CollaborationSkeleton />

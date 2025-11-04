@@ -12,6 +12,7 @@ import {
   CreditCard,
   DollarSign,
   Megaphone,
+  Sparkles,
   TrendingUp,
 } from 'lucide-react'
 
@@ -116,6 +117,21 @@ const quickLinks = [
     icon: BarChart3,
   },
 ]
+
+const onboardingSteps = [
+  {
+    title: 'Pick a client',
+    description: 'Use the client switcher to focus this dashboard on one relationship at a time.',
+  },
+  {
+    title: 'Log revenue & costs',
+    description: 'Add invoicing data so cash flow and margin stats stay up to date.',
+  },
+  {
+    title: 'Connect ad platforms',
+    description: 'Head to the Ads hub to sync Google, Meta, LinkedIn, or TikTok campaigns.',
+  },
+] as const
 
 const DEFAULT_ACTIVITY: ActivityFeedItem[] = [
   {
@@ -409,7 +425,12 @@ export default function DashboardPage() {
         id: 'total-revenue',
         label: 'Total Revenue',
         value: formatCurrency(totalRevenue),
-        helper: revenueRecords.length > 0 ? `${revenueRecords.length} periods tracked` : 'No revenue records yet',
+        helper:
+          revenueRecords.length > 0
+            ? revenueRecords.length === 1
+              ? 'Based on the latest billing period'
+              : `Based on ${revenueRecords.length} billing periods`
+            : 'Add revenue records to track income',
         icon: DollarSign,
         emphasis: totalRevenue > 0 ? 'positive' : 'neutral',
       },
@@ -417,7 +438,7 @@ export default function DashboardPage() {
         id: 'ad-spend',
         label: 'Ad Spend',
         value: formatCurrency(totalAdSpend),
-        helper: providerCount > 0 ? `Across ${providerCount} platforms` : 'Connect ad integrations',
+        helper: providerCount > 0 ? `Data from ${providerCount} ad platforms` : 'Connect ad accounts to see spend',
         icon: Megaphone,
         emphasis: 'neutral',
       },
@@ -425,7 +446,7 @@ export default function DashboardPage() {
         id: 'net-margin',
         label: 'Net Margin',
         value: formatCurrency(netMargin),
-        helper: 'After ad and operating costs',
+        helper: 'Money left after marketing and operating costs',
         icon: TrendingUp,
         emphasis: netMargin > 0 ? 'positive' : netMargin < 0 ? 'negative' : 'neutral',
       },
@@ -433,7 +454,7 @@ export default function DashboardPage() {
         id: 'roas',
         label: 'ROAS',
         value: roas ? `${roas.toFixed(2)}x` : '—',
-        helper: roas ? 'Revenue divided by ad spend' : 'Need revenue and ad spend data',
+        helper: roas ? 'Shows revenue versus ad spend' : 'Need revenue and ad spend data',
         icon: BarChart3,
         emphasis: roas && roas < 1 ? 'negative' : roas && roas >= 1.5 ? 'positive' : 'neutral',
       },
@@ -441,8 +462,13 @@ export default function DashboardPage() {
   }, [financeSummary, metrics])
 
   const statsLoading = financeLoading || metricsLoading
-  const combinedErrors = useMemo(
-    () => [financeError, metricsError, tasksError, activityError].filter((message): message is string => Boolean(message)),
+  const errorStates = useMemo(
+    () => [
+      financeError && { id: 'finance', title: 'Finance data unavailable', message: financeError },
+      metricsError && { id: 'metrics', title: 'Ad metrics unavailable', message: metricsError },
+      tasksError && { id: 'tasks', title: 'Tasks unavailable', message: tasksError },
+      activityError && { id: 'activity', title: 'Activity feed unavailable', message: activityError },
+    ].filter((entry): entry is { id: string; title: string; message: string } => Boolean(entry)),
     [financeError, metricsError, tasksError, activityError],
   )
 
@@ -495,16 +521,18 @@ export default function DashboardPage() {
     return scoped.slice(0, 5)
   }, [resolvedTasks, selectedClient?.name])
 
+  const showOnboarding = !statsLoading && !selectedClientId && metrics.length === 0 && !financeSummary
+
   return (
     <div className="space-y-6">
-      {combinedErrors.length > 0 && (
-        <FadeIn>
+      {errorStates.map((error) => (
+        <FadeIn key={error.id}>
           <Alert variant="destructive">
-            <AlertTitle>Unable to refresh dashboard data</AlertTitle>
-            <AlertDescription>{combinedErrors.join(' ')}</AlertDescription>
+            <AlertTitle>{error.title}</AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         </FadeIn>
-      )}
+      ))}
 
       <FadeIn>
         <div>
@@ -514,6 +542,36 @@ export default function DashboardPage() {
           </p>
         </div>
       </FadeIn>
+
+      {showOnboarding && (
+        <FadeIn>
+          <Card className="border-muted/70 bg-background shadow-sm">
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <div>
+                  <CardTitle className="text-base">Get the most from Cohorts</CardTitle>
+                  <CardDescription>Follow these quick steps to personalise this dashboard for your agency.</CardDescription>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/docs/background-sync-setup">View setup guide</Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-3">
+              {onboardingSteps.map((step, index) => (
+                <div key={step.title} className="space-y-2 rounded-lg border border-muted/60 p-4">
+                  <Badge variant="secondary">Step {index + 1}</Badge>
+                  <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
 
       <FadeInStagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {summaryStats.map((stat) => (
@@ -566,13 +624,18 @@ export default function DashboardPage() {
                   <CardTitle className="text-lg">Performance Overview</CardTitle>
                   <CardDescription>Key metrics from pipelines, tasks, and active campaigns.</CardDescription>
                 </div>
-                <Button variant="outline" size="sm">
-                  View detailed report
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/dashboard/analytics">Open analytics workspace</Link>
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-muted">
-                  <p className="text-sm text-muted-foreground">Analytics chart will be displayed here</p>
+                <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted/70 p-10 text-center">
+                  <p className="max-w-md text-sm text-muted-foreground">
+                    Charts appear once analytics data is connected. Until then, you can explore channel-level insights in the analytics workspace.
+                  </p>
+                  <Button asChild size="sm">
+                    <Link href="/dashboard/analytics">Review analytics</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -591,8 +654,8 @@ export default function DashboardPage() {
                       <CardDescription>Latest updates from your teams</CardDescription>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-xs">
-                    View all
+                  <Button asChild variant="ghost" size="sm" className="text-xs">
+                    <Link href="/dashboard/collaboration">View all</Link>
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -609,7 +672,12 @@ export default function DashboardPage() {
                       </FadeInItem>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No recent activity yet.</p>
+                    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
+                      <p>No recent activity yet. Start a thread to capture updates in one place.</p>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href="/dashboard/collaboration">Create a post</Link>
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -622,8 +690,8 @@ export default function DashboardPage() {
                     <CardTitle className="text-base">Upcoming Tasks</CardTitle>
                     <CardDescription>Important actions scheduled this week</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-xs">
-                    Manage tasks
+                  <Button asChild variant="ghost" size="sm" className="text-xs">
+                    <Link href="/dashboard/tasks">Manage tasks</Link>
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -640,7 +708,12 @@ export default function DashboardPage() {
                       </FadeInItem>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">No open tasks on your radar.</p>
+                    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
+                      <p>No open tasks on your radar. Add an item to keep your team aligned.</p>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href="/dashboard/tasks/new">Create a task</Link>
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>

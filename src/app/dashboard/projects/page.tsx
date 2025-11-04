@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Briefcase, Calendar, ListChecks, Loader2, MessageSquare, RefreshCw, Search, Tag, Users } from 'lucide-react'
 
@@ -254,6 +255,13 @@ export default function ProjectsPage() {
 }
 
 function ProjectRow({ project }: { project: ProjectRecord }) {
+  const tasksQuery = new URLSearchParams({
+    projectId: project.id,
+    projectName: project.name,
+  })
+  const tasksHref = `/dashboard/tasks?${tasksQuery.toString()}`
+  const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
+
   return (
     <div className="rounded-md border border-muted/40 bg-background p-4 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:justify-between">
@@ -297,10 +305,24 @@ function ProjectRow({ project }: { project: ProjectRecord }) {
             </div>
           )}
         </div>
-        <div className="flex items-start text-xs text-muted-foreground">
+        <div className="flex flex-col items-end gap-3 text-xs text-muted-foreground">
           <div className="text-right">
             <p>Created {formatDate(project.createdAt)}</p>
             <p>Updated {formatDate(project.updatedAt)}</p>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button asChild size="sm" variant="outline" className="gap-2">
+              <Link href={tasksHref} prefetch>
+                <ListChecks className="h-4 w-4" />
+                View tasks
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="gap-2">
+              <Link href={collaborationHref} prefetch>
+                <MessageSquare className="h-4 w-4" />
+                Open discussion
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

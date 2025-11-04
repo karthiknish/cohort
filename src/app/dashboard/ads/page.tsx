@@ -1,6 +1,9 @@
+
 "use client"
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import {
   AlertCircle,
   Facebook,
@@ -9,6 +12,7 @@ import {
   Music,
   RefreshCw,
   Search,
+  Sparkles,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -38,6 +42,21 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
+
+const ADS_WORKFLOW_STEPS = [
+  {
+    title: 'Connect your ad accounts',
+    description: 'Hook up Google, Meta, LinkedIn, or TikTok so Cohorts can pull spend and performance data.',
+  },
+  {
+    title: 'Enable auto-sync',
+    description: 'Turn on automatic syncs to keep campaign metrics and reports fresh without manual exports.',
+  },
+  {
+    title: 'Review cross-channel insights',
+    description: 'Use the overview cards and tables below to compare performance and spot optimisation wins.',
+  },
+] as const
 
 interface IntegrationStatusResponse {
   statuses: Array<{
@@ -113,6 +132,20 @@ const TIMEFRAME_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Past 30 days', value: 30 },
   { label: 'Past 90 days', value: 90 },
 ]
+
+const PROVIDER_ICON_MAP: Record<string, LucideIcon> = {
+  google: Search,
+  facebook: Facebook,
+  meta: Facebook,
+  linkedin: Linkedin,
+  tiktok: Music,
+}
+
+const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+})
 
 async function fetchIntegrationStatuses(token: string, userId?: string | null): Promise<IntegrationStatusResponse> {
   const url = userId ? `/api/integrations/status?userId=${encodeURIComponent(userId)}` : '/api/integrations/status'
@@ -210,6 +243,7 @@ export default function AdsPage() {
   const [automationDraft, setAutomationDraft] = useState<Record<string, ProviderAutomationFormState>>({})
   const [savingSettings, setSavingSettings] = useState<Record<string, boolean>>({})
   const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
+  const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
   const hasMetricData = metrics.length > 0
   const initialMetricsLoading = metricsLoading && !hasMetricData
 
@@ -344,6 +378,13 @@ export default function AdsPage() {
     [automationDraft, getIdToken, toast, user?.id]
   )
 
+  const toggleAdvanced = useCallback((providerId: string) => {
+    setExpandedProviders((previous) => ({
+      ...previous,
+      [providerId]: !previous[providerId],
+    }))
+  }, [])
+
   useEffect(() => {
     if (!user?.id) {
       setIntegrationStatuses(null)
@@ -463,25 +504,25 @@ export default function AdsPage() {
         id: 'spend',
         label: 'Total Spend',
         value: formatCurrency(totals.spend),
-        helper: hasMetricData ? 'Across all synced platforms' : 'Connect a platform to populate',
+        helper: hasMetricData ? 'All connected platforms combined' : 'Connect a platform to populate',
       },
       {
         id: 'impressions',
         label: 'Impressions',
         value: totals.impressions > 0 ? totals.impressions.toLocaleString() : '—',
-        helper: hasMetricData ? 'Combined delivery volume' : 'Awaiting sync',
+        helper: hasMetricData ? 'Total times ads were served' : 'Awaiting your first sync',
       },
       {
         id: 'avg-cpc',
         label: 'Avg CPC',
         value: totals.clicks > 0 ? formatCurrency(averageCpc) : '—',
-        helper: 'Spend divided by clicks',
+        helper: totals.clicks > 0 ? 'What each click cost on average' : 'Need click data to calculate',
       },
       {
         id: 'roas',
         label: 'ROAS',
         value: roas > 0 ? `${roas.toFixed(2)}x` : '—',
-        helper: 'Attributed revenue vs spend',
+        helper: roas > 0 ? 'Revenue ÷ spend (higher is better)' : 'Needs revenue and spend data',
       },
     ]
   }, [totals, hasMetricData])
@@ -627,6 +668,11 @@ export default function AdsPage() {
     return <AdsSkeleton />
   }
 
+  const showWorkflow =
+    !integrationStatuses ||
+    integrationStatuses.statuses.length === 0 ||
+    integrationStatuses.statuses.every((status) => status.status !== 'success')
+
   return (
     <div className="space-y-6">
       <FadeIn>
@@ -637,6 +683,36 @@ export default function AdsPage() {
           </p>
         </div>
       </FadeIn>
+
+      {showWorkflow && (
+        <FadeIn>
+          <Card className="border-muted/70 bg-background shadow-sm">
+            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <div>
+                  <CardTitle className="text-base">Get your ads connected in minutes</CardTitle>
+                  <CardDescription>Follow these steps to start pulling media performance into Cohorts.</CardDescription>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/docs/integrations">View integration checklist</Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-3">
+              {ADS_WORKFLOW_STEPS.map((step, index) => (
+                <div key={step.title} className="space-y-2 rounded-lg border border-muted/60 p-4">
+                  <Badge variant="secondary">Step {index + 1}</Badge>
+                  <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
 
       {metaSetupMessage && (
         <FadeIn>
@@ -652,16 +728,18 @@ export default function AdsPage() {
       )}
 
       <FadeIn>
-        <AdConnectionsCard
-          providers={adPlatforms}
-          connectedProviders={connectedProviders}
+        <div id="connect-ad-platforms">
+          <AdConnectionsCard
+            providers={adPlatforms}
+            connectedProviders={connectedProviders}
           connectingProvider={connectingProvider}
           connectionErrors={connectionErrors}
           onConnect={handleConnect}
           onOauthRedirect={handleOauthRedirect}
           onRefresh={handleManualRefresh}
           refreshing={metricsLoading}
-        />
+          />
+        </div>
       </FadeIn>
 
       <FadeIn>
@@ -685,15 +763,22 @@ export default function AdsPage() {
                   }
                 const saving = savingSettings[status.providerId] ?? false
                 const errorMessage = settingsErrors[status.providerId]
+                const isExpanded = expandedProviders[status.providerId] ?? false
+                const frequencyLabel = describeFrequency(draft.syncFrequencyMinutes)
+                const timeframeLabel = describeTimeframe(draft.scheduledTimeframeDays)
+                const autoSyncSummary = draft.autoSyncEnabled
+                  ? `Auto-sync is on. Cohorts refresh ${frequencyLabel.toLowerCase()} covering the ${timeframeLabel.toLowerCase()}.`
+                  : 'Auto-sync is off. Turn it on to keep metrics current automatically.'
 
                 return (
                   <div key={status.providerId} className="space-y-4 rounded-lg border border-muted/60 p-4">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <div className="space-y-1">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-foreground">{formatProviderName(status.providerId)}</p>
                           <Badge variant={getStatusBadgeVariant(status.status)}>{getStatusLabel(status.status)}</Badge>
                         </div>
+                        <p className="text-xs text-muted-foreground">{autoSyncSummary}</p>
                         <p className="text-xs text-muted-foreground">
                           Last sync: {formatRelativeTimestamp(status.lastSyncedAt)} · Last request: {formatRelativeTimestamp(status.lastSyncRequestedAt)}
                         </p>
@@ -701,62 +786,77 @@ export default function AdsPage() {
                           <p className="text-xs text-muted-foreground">Last message: {status.message}</p>
                         ) : null}
                       </div>
+                      <div className="flex items-center gap-2 self-start md:self-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => toggleAdvanced(status.providerId)}
+                          disabled={saving}
+                        >
+                          {isExpanded ? 'Hide advanced' : 'Adjust cadence'}
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-end">
-                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <Checkbox
-                          checked={draft.autoSyncEnabled}
-                          onChange={(event) => updateAutomationDraft(status.providerId, { autoSyncEnabled: event.target.checked })}
-                          disabled={saving}
-                        />
-                        Enable automatic sync
-                      </label>
-                      <div className="space-y-1">
-                        <span className="text-xs font-medium text-muted-foreground">Frequency</span>
-                        <Select
-                          value={String(draft.syncFrequencyMinutes)}
-                          onValueChange={(value) => updateAutomationDraft(status.providerId, { syncFrequencyMinutes: Number(value) })}
-                          disabled={saving}
-                        >
-                          <SelectTrigger disabled={saving}>
-                            <SelectValue placeholder="Select cadence" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FREQUENCY_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={String(option.value)}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Checkbox
+                        checked={draft.autoSyncEnabled}
+                        onChange={(event) => updateAutomationDraft(status.providerId, { autoSyncEnabled: event.target.checked })}
+                        disabled={saving}
+                      />
+                      Enable automatic sync
+                    </label>
+
+                    {isExpanded && (
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Cadence</span>
+                          <Select
+                            value={String(draft.syncFrequencyMinutes)}
+                            onValueChange={(value) => updateAutomationDraft(status.providerId, { syncFrequencyMinutes: Number(value) })}
+                            disabled={saving}
+                          >
+                            <SelectTrigger disabled={saving}>
+                              <SelectValue placeholder="Select cadence" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {FREQUENCY_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={String(option.value)}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Data window</span>
+                          <Select
+                            value={String(draft.scheduledTimeframeDays)}
+                            onValueChange={(value) => updateAutomationDraft(status.providerId, { scheduledTimeframeDays: Number(value) })}
+                            disabled={saving}
+                          >
+                            <SelectTrigger disabled={saving}>
+                              <SelectValue placeholder="Select window" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIMEFRAME_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={String(option.value)}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <span className="text-xs font-medium text-muted-foreground">Lookback window</span>
-                        <Select
-                          value={String(draft.scheduledTimeframeDays)}
-                          onValueChange={(value) => updateAutomationDraft(status.providerId, { scheduledTimeframeDays: Number(value) })}
-                          disabled={saving}
-                        >
-                          <SelectTrigger disabled={saving}>
-                            <SelectValue placeholder="Select window" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIMEFRAME_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={String(option.value)}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    )}
 
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       {errorMessage ? (
                         <p className="text-xs text-destructive">{errorMessage}</p>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Changes affect future scheduled syncs for this provider.</p>
+                        <p className="text-xs text-muted-foreground">Changes apply to future scheduled syncs for this provider.</p>
                       )}
                       <Button
                         type="button"
@@ -794,8 +894,11 @@ export default function AdsPage() {
                 ))}
               </div>
             ) : !hasMetricData ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 p-10 text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
                 <p>Connect an ad platform and run a sync to view aggregate performance.</p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="#connect-ad-platforms">Connect an account</Link>
+                </Button>
               </div>
             ) : (
               <FadeInStagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -847,8 +950,11 @@ export default function AdsPage() {
                 <AlertDescription>{metricError}</AlertDescription>
               </Alert>
             ) : metrics.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
                 <p>No synced performance data yet. Connect an ad platform and run a sync to populate these insights.</p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="#connect-ad-platforms">Run first sync</Link>
+                </Button>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-3">
@@ -914,8 +1020,11 @@ export default function AdsPage() {
                 <AlertDescription>{metricError}</AlertDescription>
               </Alert>
             ) : metrics.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
                 <p>No data yet. Once a sync completes, your most recent rows will appear here.</p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="#connect-ad-platforms">Start a sync</Link>
+                </Button>
               </div>
             ) : (
               <ScrollArea className="h-72">
@@ -932,17 +1041,25 @@ export default function AdsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {metrics.map((metric) => (
-                      <tr key={metric.id} className="border-b border-muted/40">
-                        <td className="whitespace-nowrap py-2 pr-4">{metric.date}</td>
-                        <td className="py-2 pr-4">{formatProviderName(metric.providerId)}</td>
-                        <td className="py-2 pr-4">{formatCurrency(metric.spend)}</td>
-                        <td className="py-2 pr-4">{metric.impressions.toLocaleString()}</td>
-                        <td className="py-2 pr-4">{metric.clicks.toLocaleString()}</td>
-                        <td className="py-2 pr-4">{metric.conversions.toLocaleString()}</td>
-                        <td className="py-2">{metric.revenue != null ? formatCurrency(metric.revenue) : '—'}</td>
-                      </tr>
-                    ))}
+                    {metrics.map((metric) => {
+                      const ProviderIcon = PROVIDER_ICON_MAP[metric.providerId]
+                      return (
+                        <tr key={metric.id} className="border-b border-muted/40">
+                          <td className="whitespace-nowrap py-2 pr-4">{formatDisplayDate(metric.date)}</td>
+                          <td className="py-2 pr-4">
+                            <div className="flex items-center gap-2">
+                              {ProviderIcon ? <ProviderIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> : null}
+                              <span>{formatProviderName(metric.providerId)}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 pr-4">{formatCurrency(metric.spend)}</td>
+                          <td className="py-2 pr-4">{metric.impressions.toLocaleString()}</td>
+                          <td className="py-2 pr-4">{metric.clicks.toLocaleString()}</td>
+                          <td className="py-2 pr-4">{metric.conversions.toLocaleString()}</td>
+                          <td className="py-2">{metric.revenue != null ? formatCurrency(metric.revenue) : '—'}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </ScrollArea>
@@ -1044,6 +1161,50 @@ function formatProviderName(providerId: string): string {
   }
 
   return providerId.charAt(0).toUpperCase() + providerId.slice(1)
+}
+
+function describeFrequency(minutes: number): string {
+  const match = FREQUENCY_OPTIONS.find((option) => option.value === minutes)
+  if (match) {
+    return match.label
+  }
+
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440
+    return days === 1 ? 'Once per day' : `Every ${days} days`
+  }
+
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60
+    return hours === 1 ? 'Every hour' : `Every ${hours} hours`
+  }
+
+  return `Every ${minutes} minutes`
+}
+
+function describeTimeframe(days: number): string {
+  const match = TIMEFRAME_OPTIONS.find((option) => option.value === days)
+  if (match) {
+    return match.label.replace('Past', 'Last')
+  }
+
+  if (days === 1) {
+    return 'Last day'
+  }
+
+  if (days === 7) {
+    return 'Last 7 days'
+  }
+
+  return `Last ${days} days`
+}
+
+function formatDisplayDate(value: string): string {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return DISPLAY_DATE_FORMATTER.format(parsed)
 }
 
 function formatCurrency(amount: number): string {
