@@ -826,31 +826,33 @@ export function CollaborationMessagePane({
             </div>
           )}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <RichComposer
-              value={messageInput}
-              onChange={onMessageInputChange}
-              onSend={onSendMessage}
-              disabled={!channel || sending}
-              onFocus={onComposerFocus}
-              onBlur={onComposerBlur}
-              onDrop={handleComposerDrop}
-              onDragOver={handleComposerDragOver}
-              participants={channelParticipants}
-            />
-            <div className="flex items-center gap-2 sm:flex-col sm:items-stretch">
+          <div className="space-y-3">
+            <div className="w-full">
+              <RichComposer
+                value={messageInput}
+                onChange={onMessageInputChange}
+                onSend={onSendMessage}
+                disabled={!channel || sending}
+                onFocus={onComposerFocus}
+                onBlur={onComposerBlur}
+                onDrop={handleComposerDrop}
+                onDragOver={handleComposerDragOver}
+                participants={channelParticipants}
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!channel || sending}
-                className="sm:w-full"
+                className="inline-flex items-center gap-2"
               >
-                <Paperclip className="mr-2 h-4 w-4" />
+                <Paperclip className="h-4 w-4" />
                 Attach
               </Button>
-              <Button onClick={onSendMessage} disabled={isSendDisabled} className="sm:w-full">
-                {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              <Button onClick={onSendMessage} disabled={isSendDisabled} className="inline-flex items-center gap-2">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Send
               </Button>
             </div>

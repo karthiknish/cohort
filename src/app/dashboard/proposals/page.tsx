@@ -1,17 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
-import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, Loader2, Sparkles } from 'lucide-react'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { createProposalDraft, deleteProposalDraft, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalGammaDeck } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
@@ -21,6 +15,10 @@ import { ProposalStepIndicator } from './components/proposal-step-indicator'
 import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
 import { ProposalHistory } from './components/proposal-history'
 import { ProposalDeleteDialog } from './components/proposal-delete-dialog'
+import { ProposalWizardHeader } from './components/proposal-wizard-header'
+import { ProposalSubmittedPanel } from './components/proposal-submitted-panel'
+import { ProposalDraftPanel } from './components/proposal-draft-panel'
+import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
 import {
   proposalSteps,
   createInitialProposalFormState,
@@ -38,31 +36,6 @@ type SubmissionSnapshot = {
   clientName: string | null
 }
 
-type DeckProgressStage = 'initializing' | 'polling' | 'launching' | 'queued' | 'error'
-
-const deckStageMessages: Record<DeckProgressStage, { title: string; description: string }> = {
-  initializing: {
-    title: 'Starting deck request...',
-    description: 'Collecting your proposal details and preparing the presentation export.',
-  },
-  polling: {
-    title: 'Generating slides & saving...',
-    description: 'We are exporting the PPT and saving a copy for you in Firebase.',
-  },
-  launching: {
-    title: 'Deck ready',
-    description: 'We saved a copy to Firebase and are opening it for you now.',
-  },
-  queued: {
-    title: 'Still processing',
-    description: "The presentation export is still processing. We'll save it automatically as soon as it lands.",
-  },
-  error: {
-    title: 'Deck preparation failed',
-    description: 'We could not finish the export. Please retry or regenerate the proposal.',
-  },
-}
-
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'string') {
     return error
@@ -74,18 +47,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
     }
   }
   return fallback
-}
-
-function parseAiSuggestionList(value: string | null): string[] {
-  if (!value) {
-    return []
-  }
-
-  return value
-    .split(/\r?\n+/)
-    .map((line) => line.replace(/^\s*(?:[-•*]|\d+[\.\)])\s*/, '').trim())
-    .filter((line) => line.length > 0)
-    .slice(0, 6)
 }
 
 export default function ProposalsPage() {
@@ -297,12 +258,17 @@ export default function ProposalsPage() {
     return structuredClone(formState) as ProposalFormData
   }, [formState, lastSubmissionSnapshot, submitted])
 
-  const suggestionItems = useMemo(() => parseAiSuggestionList(aiSuggestions), [aiSuggestions])
-
   const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
 
   const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId
   const deckDownloadUrl = gammaDeck?.storageUrl ?? gammaDeck?.pptxUrl ?? null
+  const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
+  const canResumeSubmission = Boolean(
+    lastSubmissionSnapshot &&
+    !isSubmitting &&
+    lastSubmissionSnapshot.draftId &&
+    lastSubmissionSnapshot.clientId === (selectedClientId ?? null)
+  )
 
   const refreshProposals = useCallback(async () => {
     if (!selectedClientId) {
@@ -836,23 +802,9 @@ export default function ProposalsPage() {
     />
   )
 
-  const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
-  const activeDeckCopy = deckStageMessages[activeDeckStage]
-
   return (
     <div ref={wizardRef} className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <ClipboardList className="h-4 w-4" />
-            Proposal Generator
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Build a tailored proposal in minutes</h1>
-          <p className="text-muted-foreground">
-            Answer a few questions and we&apos;ll assemble a polished, client-ready proposal packed with data and next steps.
-          </p>
-        </div>
-      </div>
+      <ProposalWizardHeader />
 
       <Card className="border-muted/60 bg-background">
         <CardHeader>
@@ -862,137 +814,28 @@ export default function ProposalsPage() {
           {isBootstrapping ? (
             <DashboardSkeleton showStepIndicator />
           ) : submitted ? (
-            <div className="space-y-6">
-              <div className="flex flex-col gap-3 rounded-md border border-primary/40 bg-primary/10 p-4 text-sm text-primary md:flex-row md:items-center md:justify-between">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="mt-1 h-4 w-4" />
-                  <div className="space-y-1">
-                    <p className="font-semibold">Proposal ready</p>
-                    <p className="text-primary/80">Your proposal draft is ready for review. Share with your team or export it for the client.</p>
-                  </div>
-                </div>
-                {lastSubmissionSnapshot && !isSubmitting && lastSubmissionSnapshot.draftId && lastSubmissionSnapshot.clientId === (selectedClientId ?? null) ? (
-                  <Button variant="outline" onClick={handleContinueEditingFromSnapshot}>
-                    Continue editing
-                  </Button>
-                ) : null}
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Client snapshot</CardTitle>
-                    <CardDescription>Key context for the engagement.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground space-y-2">
-                    <p><strong>Company:</strong> {summary.company.name || '—'} ({summary.company.industry || '—'})</p>
-                    <p><strong>Budget:</strong> {summary.marketing.budget || '—'}</p>
-                    <p><strong>Goals:</strong> {summary.goals.objectives.join(', ') || '—'}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Gemini suggestions</CardTitle>
-                    <CardDescription>Actionable follow-ups tailored to this client.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground">
-                    {suggestionItems.length ? (
-                      <ul className="space-y-2 pl-5">
-                        {suggestionItems.map((item, index) => (
-                          <li key={index} className="list-disc marker:text-primary">
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground/80">
-                        Gemini didn&apos;t provide suggestions this time. Re-run the proposal to try again.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-              {gammaDeck ? (
-                <Card className="border-muted">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Presentation deck</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {deckDownloadUrl && activeProposalIdForDeck ? (
-                        <Button variant="secondary" asChild>
-                          <Link href={`/dashboard/proposals/${activeProposalIdForDeck}/deck`}>
-                            View PPT
-                          </Link>
-                        </Button>
-                      ) : null}
-                      {gammaDeck.storageUrl ? (
-                        <Button asChild>
-                          <a href={gammaDeck.storageUrl} target="_blank" rel="noreferrer">
-                            Download PPT
-                          </a>
-                        </Button>
-                      ) : gammaDeck.pptxUrl ? (
-                        <Button asChild>
-                          <a href={gammaDeck.pptxUrl} target="_blank" rel="noreferrer">
-                            Download PPT
-                          </a>
-                        </Button>
-                      ) : null}
-                      {gammaDeck.webUrl ? (
-                        <Button variant="outline" asChild>
-                          <a href={gammaDeck.webUrl} target="_blank" rel="noreferrer">
-                            Open online
-                          </a>
-                        </Button>
-                      ) : null}
-                      {gammaDeck.shareUrl && gammaDeck.shareUrl !== gammaDeck.webUrl ? (
-                        <Button variant="ghost" asChild>
-                          <a href={gammaDeck.shareUrl} target="_blank" rel="noreferrer">
-                            Share link
-                          </a>
-                        </Button>
-                      ) : null}
-                      <Badge variant="outline" className="uppercase tracking-wide">
-                        {gammaDeck.status}
-                      </Badge>
-                    </div>
-                    {gammaDeck.instructions ? (
-                      <p className="text-xs leading-relaxed">
-                        Slide guidance: {gammaDeck.instructions}
-                      </p>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ) : null}
-            </div>
+            <ProposalSubmittedPanel
+              summary={summary}
+              gammaDeck={gammaDeck}
+              deckDownloadUrl={deckDownloadUrl}
+              activeProposalIdForDeck={activeProposalIdForDeck}
+              canResumeSubmission={canResumeSubmission}
+              onResumeSubmission={handleContinueEditingFromSnapshot}
+              isSubmitting={isSubmitting}
+            />
           ) : (
-            <>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Draft ID: {draftId ?? 'pending...'}</span>
-                <span>
-                  {autosaveStatus === 'saving' && 'Preparing proposal...'}
-                  {autosaveStatus === 'saved' && 'Proposal saved'}
-                  {autosaveStatus === 'idle' && 'Awaiting generation'}
-                  {autosaveStatus === 'error' && 'Sync failed, retrying...'}
-                </span>
-              </div>
-              {renderStepContent()}
-              <div className="flex items-center justify-between pt-4">
-                <Button variant="outline" onClick={handleBack} disabled={isFirstStep}>
-                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-                </Button>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">Step {currentStep + 1} of {steps.length}</Badge>
-                  <Button onClick={handleNext} disabled={isSubmitting}>
-                    {isLastStep ? 'Generate proposal' : (
-                      <span className="flex items-center">
-                        {isSubmitting ? 'Submitting…' : 'Next'}{!isSubmitting && <ChevronRight className="ml-2 h-4 w-4" />}
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </>
+            <ProposalDraftPanel
+              draftId={draftId}
+              autosaveStatus={autosaveStatus}
+              stepContent={renderStepContent()}
+              onBack={handleBack}
+              onNext={handleNext}
+              isFirstStep={isFirstStep}
+              isLastStep={isLastStep}
+              currentStep={currentStep}
+              totalSteps={steps.length}
+              isSubmitting={isSubmitting}
+            />
           )}
         </CardContent>
       </Card>
@@ -1023,36 +866,8 @@ export default function ProposalsPage() {
           }
         }}
       />
-      {isSubmitting && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm" role="status" aria-live="polite">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <div>
-              <p className="text-lg font-semibold text-foreground">Generating your proposal…</p>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                We&apos;re compiling the summary and building the deck. This can take up to a minute.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      {downloadingDeckId && !isSubmitting && (
-        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm" role="status" aria-live="polite">
-          <div className="flex flex-col items-center gap-3 text-center">
-            {activeDeckStage === 'launching' ? (
-              <Sparkles className="h-10 w-10 text-primary" />
-            ) : activeDeckStage === 'error' ? (
-              <AlertTriangle className="h-10 w-10 text-destructive" />
-            ) : (
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            )}
-            <div>
-              <p className="text-lg font-semibold text-foreground">{activeDeckCopy.title}</p>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">{activeDeckCopy.description}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProposalGenerationOverlay isSubmitting={isSubmitting} />
+      <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
     </div>
   )
 }

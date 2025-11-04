@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldPath, Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, Timestamp, type Query, type QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
@@ -124,24 +124,39 @@ export async function GET(request: NextRequest) {
     const clientIdParam = searchParams.get('clientId')
     const queryParam = searchParams.get('query')?.trim().toLowerCase() ?? null
 
-    let query = workspace.projectsCollection.orderBy('updatedAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
+    let baseQuery = workspace.projectsCollection as Query
 
     if (statusParam) {
       const parseStatus = projectStatusSchema.safeParse(statusParam)
       if (!parseStatus.success) {
         return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 })
       }
-      query = query.where('status', '==', parseStatus.data)
+      baseQuery = baseQuery.where('status', '==', parseStatus.data)
     }
 
     if (clientIdParam) {
-      query = query.where('clientId', '==', clientIdParam)
+      baseQuery = baseQuery.where('clientId', '==', clientIdParam)
     }
 
-    const snapshot = await query.limit(MAX_PROJECTS).get()
+    const orderedQuery = baseQuery.orderBy('updatedAt', 'desc').orderBy(FieldPath.documentId(), 'desc').limit(MAX_PROJECTS)
+
+    let docs: QueryDocumentSnapshot[]
+
+    try {
+      const snapshot = await orderedQuery.get()
+      docs = snapshot.docs
+    } catch (queryError) {
+      if (!isMissingIndexError(queryError)) {
+        throw queryError
+      }
+
+      const fallbackSnapshot = await baseQuery.limit(MAX_PROJECTS).get()
+      docs = fallbackSnapshot.docs.sort((a, b) => compareByUpdatedAtDesc(a, b))
+    }
+
     const mapped: ProjectRecord[] = []
 
-    for (const doc of snapshot.docs) {
+    for (const doc of docs) {
       const record = await buildProjectSummary(workspace, doc.id, doc.data() as Record<string, unknown>)
       mapped.push(record)
     }
@@ -162,6 +177,50 @@ export async function GET(request: NextRequest) {
     console.error('[projects] GET failed', error)
     return NextResponse.json({ error: 'Failed to load projects' }, { status: 500 })
   }
+}
+
+function isMissingIndexError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const code = (error as { code?: number | string }).code
+  const message = (error as { message?: string }).message ?? ''
+
+  if (code === 9 || code === 'FAILED_PRECONDITION') {
+    return true
+  }
+
+  return message.toLowerCase().includes('requires an index')
+}
+
+function compareByUpdatedAtDesc(a: QueryDocumentSnapshot, b: QueryDocumentSnapshot): number {
+  const aDate = parseDateFromDoc(a)
+  const bDate = parseDateFromDoc(b)
+
+  if (aDate && bDate) {
+    return bDate.getTime() - aDate.getTime()
+  }
+
+  if (aDate) {
+    return -1
+  }
+  if (bDate) {
+    return 1
+  }
+
+  return b.id.localeCompare(a.id)
+}
+
+function parseDateFromDoc(doc: QueryDocumentSnapshot): Date | null {
+  const candidate = doc.get('updatedAt') ?? doc.get('createdAt') ?? null
+  const iso = toISO(candidate)
+  if (!iso) {
+    return null
+  }
+
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 export async function POST(request: NextRequest) {
