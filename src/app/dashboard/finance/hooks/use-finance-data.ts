@@ -327,7 +327,8 @@ export function useFinanceData(): FinanceHookReturn {
   const collectedTotal = primaryCurrencyTotals.totalPaid
   const totalOutstanding = primaryCurrencyTotals.totalOutstanding
   const refundTotal = primaryCurrencyTotals.refundTotal
-  const netProfit = collectedTotal - totalExpenses
+  const netProfit = collectedTotal - totalExpenses // For display (actual cash received)
+  const netProfitForMargin = totalRevenue - totalExpenses // For margin calculation (based on revenue)
   const collectedDisplay = formatCurrencyDistribution(paymentSummary.totals, 'totalPaid', primaryCurrencyTotals.currency)
   const outstandingDisplay = formatCurrencyDistribution(
     paymentSummary.totals,
@@ -335,6 +336,12 @@ export function useFinanceData(): FinanceHookReturn {
     primaryCurrencyTotals.currency,
   )
   const refundDisplay = formatCurrencyDistribution(paymentSummary.totals, 'refundTotal', primaryCurrencyTotals.currency)
+
+  // Calculate profit margin percentage
+  const profitMarginPercentage = totalRevenue > 0 ? Math.round((netProfitForMargin / totalRevenue) * 100) : 0
+
+  // Calculate period-over-period growth (would need historical data for real implementation)
+  // For now, we'll remove the growth indicator to avoid showing misleading data
 
   const statCards: StatCard[] = useMemo(
     () => [
@@ -366,10 +373,10 @@ export function useFinanceData(): FinanceHookReturn {
         name: 'Net Profit',
         value: formatCurrency(netProfit, primaryCurrencyTotals.currency),
         helper: hasMultipleCurrencies
-          ? `Primary currency (${primaryCurrencyTotals.currency})`
+          ? `Primary currency (${primaryCurrencyTotals.currency}) · ${profitMarginPercentage}% margin`
           : netProfit >= 0
-            ? 'Positive margin'
-            : 'Review costs',
+            ? `Positive margin · ${profitMarginPercentage}% profit`
+            : `Review costs · ${profitMarginPercentage}% margin`,
         icon: TrendingUp,
       },
     ],
@@ -386,6 +393,7 @@ export function useFinanceData(): FinanceHookReturn {
       primaryCurrencyTotals.currency,
       outstandingDisplay,
       collectedDisplay,
+      profitMarginPercentage,
       refundTotal,
       paymentSummary.totals.length,
     ]

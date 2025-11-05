@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-import { CreditCard, Plus, RefreshCw } from 'lucide-react'
+import { CreditCard, Plus, RefreshCw, Download } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -27,6 +27,7 @@ interface FinanceHeaderProps {
   refreshing: boolean
   onCreateInvoice?: () => void
   paymentsHref?: string
+  onExportData?: () => void
 }
 
 export function FinanceHeader({
@@ -36,6 +37,7 @@ export function FinanceHeader({
   refreshing,
   onCreateInvoice,
   paymentsHref,
+  onExportData,
 }: FinanceHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -67,6 +69,12 @@ export function FinanceHeader({
             )}
             Refresh data
           </Button>
+          {onExportData && (
+            <Button variant="outline" onClick={() => void onExportData()}>
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          )}
           {paymentsHref && (
             <Button asChild variant="outline">
               <Link href={paymentsHref} className="inline-flex items-center gap-2">

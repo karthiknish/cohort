@@ -4,6 +4,8 @@ import { useCallback } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
+import { useToast } from '@/components/ui/use-toast'
+
 import { useFinanceData } from '../hooks/use-finance-data'
 import { FinanceHeader } from './finance-header'
 import { FinanceStatsGrid } from './finance-stats-grid'
@@ -18,6 +20,7 @@ import { formatCurrency } from '../utils'
 
 export function FinanceDashboard() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const isAdmin = user?.role === 'admin'
 
   const {
@@ -84,6 +87,79 @@ export function FinanceDashboard() {
     [issueInvoiceRefund, stats.primaryCurrency]
   )
 
+  const handleExportData = useCallback(() => {
+    try {
+      // Validate data exists before export
+      if (!filteredInvoices || !costs) {
+        toast({
+          title: 'Export failed',
+          description: 'No data available for export',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Create CSV content for invoices
+      const csvHeaders = ['Invoice ID', 'Client', 'Amount', 'Status', 'Issue Date', 'Due Date', 'Paid Date', 'Currency']
+      const csvRows = filteredInvoices.map(invoice => [
+        invoice.id || '',
+        invoice.clientName || 'Unknown',
+        invoice.amount?.toString() || '0',
+        invoice.status || 'unknown',
+        invoice.issuedDate || '',
+        invoice.dueDate || '',
+        invoice.paidDate || '',
+        invoice.currency || 'USD'
+      ])
+
+      // Add costs section
+      csvRows.push(['', '', '', '', '', '', '', ''])
+      csvRows.push(['COSTS', '', '', '', '', '', '', ''])
+      csvRows.push(['Cost ID', 'Category', 'Amount', 'Cadence', 'Currency', '', '', ''])
+      costs.forEach(cost => {
+        csvRows.push([
+          cost.id || '',
+          cost.category || 'Unknown',
+          cost.amount?.toString() || '0',
+          cost.cadence || 'monthly',
+          cost.currency || 'USD',
+          '', '', ''
+        ])
+      })
+
+      // Convert to CSV string
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `finance-export-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url) // Clean up
+
+      // Success feedback
+      toast({
+        title: 'Export successful',
+        description: `Downloaded ${filteredInvoices.length} invoices and ${costs.length} costs`,
+      })
+    } catch (error) {
+      console.error('Failed to export finance data:', error)
+      toast({
+        title: 'Export failed',
+        description: 'Unable to generate CSV file',
+        variant: 'destructive',
+      })
+    }
+  }, [filteredInvoices, costs, toast])
+
   const isInitialLoading = !hasAttemptedLoad && isLoading
   const isRefreshing = hasAttemptedLoad && isLoading
 
@@ -105,6 +181,7 @@ export function FinanceDashboard() {
         onRefresh={refresh}
         refreshing={isRefreshing}
         paymentsHref="/dashboard/finance/payments"
+        onExportData={handleExportData}
       />
       <FinanceStatsGrid stats={stats} />
       <FinanceCostsCard
