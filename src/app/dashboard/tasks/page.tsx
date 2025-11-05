@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   Plus,
@@ -48,8 +49,10 @@ import {
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { useNavigationContext } from '@/contexts/navigation-context'
 import { TaskRecord, TaskPriority, TaskStatus } from '@/types/tasks'
 import { authService } from '@/services/auth'
+import { isFeatureEnabled } from '@/lib/features'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type SummaryCardConfig = {
@@ -113,6 +116,7 @@ export default function TasksPage() {
   const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
+  const { navigationState, setProjectContext } = useNavigationContext()
   const { toast } = useToast()
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>(() => ({
     id: searchParams.get('projectId'),
@@ -141,7 +145,12 @@ export default function TasksPage() {
     const id = searchParams.get('projectId')
     const name = searchParams.get('projectName')
     setProjectFilter((prev) => (prev.id === id && prev.name === name ? prev : { id, name }))
-  }, [searchParams])
+    
+    // Update navigation context when project filter changes
+    if (isFeatureEnabled('BIDIRECTIONAL_NAV') && id && name) {
+      setProjectContext(id, name)
+    }
+  }, [searchParams, setProjectContext])
 
   const clearProjectFilter = useCallback(() => {
     setProjectFilter({ id: null, name: null })
@@ -731,16 +740,25 @@ export default function TasksPage() {
               <span className="font-medium">
                 Showing tasks for {projectFilter.name ?? 'selected project'}
               </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-primary hover:text-primary"
-                onClick={clearProjectFilter}
-              >
-                <X className="h-3.5 w-3.5" />
-                <span className="sr-only">Clear project filter</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                {isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && (
+                  <Button asChild variant="outline" size="sm" className="h-6 text-xs">
+                    <Link href={`/dashboard/projects?projectId=${projectFilter.id}&projectName=${encodeURIComponent(projectFilter.name || '')}`}>
+                      View Project
+                    </Link>
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-primary hover:text-primary"
+                  onClick={clearProjectFilter}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span className="sr-only">Clear project filter</span>
+                </Button>
+              </div>
             </div>
           )}
 

@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Suspense } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Activity,
@@ -34,6 +34,7 @@ import type { TaskRecord } from '@/types/tasks'
 import type { CollaborationMessage } from '@/types/collaboration'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ActivityWidget } from '@/components/activity/activity-widget'
 
 interface MetricRecord {
   id: string
@@ -643,44 +644,9 @@ export default function DashboardPage() {
 
           <div className="space-y-6">
             <FadeInItem>
-              <Card className="shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                      <Clock className="h-4 w-4 text-primary" />
-                    </span>
-                    <div>
-                      <CardTitle className="text-base">Recent Activity</CardTitle>
-                      <CardDescription>Latest updates from your teams</CardDescription>
-                    </div>
-                  </div>
-                  <Button asChild variant="ghost" size="sm" className="text-xs">
-                    <Link href="/dashboard/collaboration">View all</Link>
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {activityLoading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-4 w-3/5" />
-                      <Skeleton className="h-4 w-4/5" />
-                      <Skeleton className="h-4 w-2/3" />
-                    </div>
-                  ) : filteredActivity.length > 0 ? (
-                    filteredActivity.map((item) => (
-                      <FadeInItem key={item.id}>
-                        <ActivityItem item={item} />
-                      </FadeInItem>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
-                      <p>No recent activity yet. Start a thread to capture updates in one place.</p>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href="/dashboard/collaboration">Create a post</Link>
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                <ActivityWidget />
+              </Suspense>
             </FadeInItem>
 
             <FadeInItem>

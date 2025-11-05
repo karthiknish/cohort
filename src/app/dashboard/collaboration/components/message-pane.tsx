@@ -42,6 +42,8 @@ import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
 
 import type { Channel } from '../types'
 import type { PendingAttachment } from '../hooks/use-collaboration-data'
+import { TaskCreationModal } from '@/components/tasks/task-creation-modal'
+import type { TaskRecord } from '@/types/tasks'
 import {
   CHANNEL_TYPE_COLORS,
   extractUrlsFromContent,
@@ -146,6 +148,9 @@ export function CollaborationMessagePane({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({})
+  const [confirmingDeleteMessageId, setConfirmingDeleteMessageId] = useState<string | null>(null)
+  const [taskCreationModalOpen, setTaskCreationModalOpen] = useState(false)
+  const [selectedMessageForTask, setSelectedMessageForTask] = useState<CollaborationMessage | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const editingPreview = useMemo(() => {
@@ -209,7 +214,17 @@ export function CollaborationMessagePane({
     if (editingMessageId === messageId) {
       handleCancelEdit()
     }
-    onDeleteMessage(messageId)
+    setConfirmingDeleteMessageId(messageId)
+  }
+
+  const handleCreateTaskFromMessage = (message: CollaborationMessage) => {
+    setSelectedMessageForTask(message)
+    setTaskCreationModalOpen(true)
+  }
+
+  const handleTaskCreated = (task: TaskRecord) => {
+    console.log('Task created from message:', task)
+    // TODO: You could add a success notification or update UI
   }
 
   const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -405,6 +420,15 @@ export function CollaborationMessagePane({
                     disabled={isUpdating || isDeleting}
                   >
                     Edit message
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault()
+                      handleCreateTaskFromMessage(message)
+                    }}
+                    disabled={isUpdating || isDeleting}
+                  >
+                    Create task from message
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={(event) => {
@@ -869,6 +893,19 @@ export function CollaborationMessagePane({
           {typingIndicator && <div className="text-xs text-muted-foreground">{typingIndicator}</div>}
         </div>
       </div>
+
+      {/* Task Creation Modal */}
+      <TaskCreationModal
+        isOpen={taskCreationModalOpen}
+        onClose={() => setTaskCreationModalOpen(false)}
+        initialData={{
+          title: selectedMessageForTask ? `Task from: ${selectedMessageForTask.content?.slice(0, 50)}...` : '',
+          description: selectedMessageForTask?.content || '',
+          projectId: channel?.id || '',
+          projectName: channel?.name || '',
+        }}
+        onTaskCreated={handleTaskCreated}
+      />
     </div>
   )
 }

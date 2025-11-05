@@ -1,21 +1,26 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { MessageSquare, Users } from 'lucide-react'
+import { useEffect, useRef, useCallback } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { MessageSquare, Users, Briefcase, X } from 'lucide-react'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 
 import { CollaborationChannelList } from './channel-list'
 import { CollaborationMessagePane } from './message-pane'
 import { CollaborationSidebar } from './sidebar'
 import { useCollaborationData } from '../hooks/use-collaboration-data'
 import { CollaborationSkeleton } from './collaboration-skeleton'
+import { isFeatureEnabled } from '@/lib/features'
 
 export function CollaborationDashboard() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const {
     channels,
     filteredChannels,
@@ -104,6 +109,14 @@ export function CollaborationDashboard() {
     }
   }, [channels, requestedProjectId, requestedProjectName, selectChannel, selectedChannel?.id, selectedChannel?.projectId])
 
+  const clearProjectFilter = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('projectId')
+    params.delete('projectName')
+    const next = params.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams])
+
   if (isBootstrapping) {
     return <CollaborationSkeleton />
   }
@@ -118,6 +131,31 @@ export function CollaborationDashboard() {
           </p>
         </div>
       </div>
+
+      {isFeatureEnabled('BIDIRECTIONAL_NAV') && (requestedProjectId || requestedProjectName) && (
+        <div className="mx-4 mb-3 flex items-center justify-between rounded-md border border-muted/40 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium">
+            Viewing collaboration for project: {requestedProjectName || 'Selected Project'}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="h-6 text-xs">
+              <Link href={`/dashboard/projects?projectId=${requestedProjectId}&projectName=${encodeURIComponent(requestedProjectName || '')}`}>
+                View Project
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 hover:text-foreground"
+              onClick={clearProjectFilter}
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="sr-only">Clear project filter</span>
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card className="border-muted/60 bg-background">
         <CardHeader className="border-b border-muted/40 pb-4">
