@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
-import { AlertTriangle, Briefcase, Calendar, CheckSquare, CreditCard, FileText, Mail, RefreshCcw, Users as UsersIcon, UserPlus, Settings } from 'lucide-react'
+import { AlertTriangle, Briefcase, Calendar, CheckSquare, CreditCard, FileText, Mail, RefreshCcw, Users as UsersIcon, UserPlus, Settings, Download } from 'lucide-react'
 
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
+import { formatCurrency, exportToCsv } from '@/lib/utils'
 import {
   Card,
   CardContent,
@@ -75,6 +76,22 @@ function ClientsDashboardContent() {
 
   const clientIndex = clients.findIndex((record) => record.id === selectedClient.id)
 
+  const handleExport = () => {
+    if (!selectedClient) return
+    
+    const data = [{
+      Name: selectedClient.name,
+      'Account Manager': selectedClient.accountManager || 'Unassigned',
+      'Billing Email': selectedClient.billingEmail || 'Not provided',
+      'Team Size': teamMembers.length,
+      'Last Invoice Status': lastInvoiceStatus || 'None',
+      'Last Invoice Amount': selectedClient.lastInvoiceAmount ? formatCurrency(selectedClient.lastInvoiceAmount, selectedClient.lastInvoiceCurrency || 'USD') : '—',
+      'Last Invoice Date': selectedClient.lastInvoiceIssuedAt ? formatDate(selectedClient.lastInvoiceIssuedAt) : '—'
+    }]
+
+    exportToCsv(data, `client-${selectedClient.name.toLowerCase().replace(/\s+/g, '-')}-overview.csv`)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -88,6 +105,14 @@ function ClientsDashboardContent() {
               <Settings className="mr-2 h-4 w-4" />
               Manage settings
             </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExport}
+            className="inline-flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" /> Export
           </Button>
           <Button
             type="button"
@@ -269,7 +294,7 @@ function ClientsDashboardContent() {
                   <div className="flex items-center justify-between">
                     <span>Amount</span>
                     <span className="font-medium text-foreground">
-                      {formatCurrency(invoiceSummary.amount, invoiceSummary.currency)}
+                      {invoiceSummary.amount !== null ? formatCurrency(invoiceSummary.amount, invoiceSummary.currency) : '—'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -317,22 +342,6 @@ function ClientsDashboardContent() {
       </div>
     </div>
   )
-}
-
-function formatCurrency(amount: number | null, currency: string | null): string {
-  if (amount === null || amount === undefined) {
-    return '—'
-  }
-
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: (currency ?? 'usd').toUpperCase(),
-      minimumFractionDigits: 2,
-    }).format(amount)
-  } catch {
-    return `$${amount.toFixed(2)}`
-  }
 }
 
 function formatDate(value: string | null): string {

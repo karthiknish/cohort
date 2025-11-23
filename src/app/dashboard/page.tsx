@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
@@ -88,36 +88,6 @@ type ComparisonInsight = {
   body: string
   tone: 'positive' | 'warning' | 'neutral'
   icon: LucideIcon
-}
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-})
-
-function formatCurrency(value: number): string {
-  return currencyFormatter.format(Number.isFinite(value) ? value : 0)
-}
-
-const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
-
-function formatCurrencyWithCode(value: number, currency = 'USD'): string {
-  if (!currencyFormatterCache.has(currency)) {
-    currencyFormatterCache.set(
-      currency,
-      new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }),
-    )
-  }
-  const formatter = currencyFormatterCache.get(currency) ?? currencyFormatter
-  const safeValue = Number.isFinite(value) ? value : 0
-  return formatter.format(safeValue)
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -613,7 +583,7 @@ export default function DashboardPage() {
         id: 'spend-leader',
         title: 'Highest ad investment',
         highlight: spendLeader.clientName,
-        body: `${formatCurrencyWithCode(spendLeader.totalAdSpend, spendLeader.currency)} spent`,
+        body: `${formatCurrency(spendLeader.totalAdSpend, spendLeader.currency)} spent`,
         tone: 'neutral',
         icon: ArrowUpRight,
       })
@@ -798,19 +768,19 @@ export default function DashboardPage() {
                 <>
                   <ComparisonSummaryTile
                     label="Combined revenue"
-                    value={comparisonAggregate.currency ? formatCurrencyWithCode(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
+                    value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
                     helper={comparisonAggregate.mixedCurrencies
                       ? 'Totals unavailable for mixed currencies'
                       : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
                   />
                   <ComparisonSummaryTile
                     label="Ad spend"
-                    value={comparisonAggregate.currency ? formatCurrencyWithCode(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
+                    value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
                     helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
                   />
                   <ComparisonSummaryTile
                     label="Outstanding"
-                    value={comparisonAggregate.currency ? formatCurrencyWithCode(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
+                    value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
                     helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
                   />
                   <ComparisonSummaryTile
@@ -1132,7 +1102,7 @@ function formatCpa(value: number | null, currency = 'USD'): string {
   if (value === null || !Number.isFinite(value)) {
     return '—'
   }
-  return formatCurrencyWithCode(value, currency)
+  return formatCurrency(value, currency)
 }
 
 function ComparisonTable({ rows, loading, hasSelection }: { rows: ClientComparisonSummary[]; loading: boolean; hasSelection: boolean }) {
@@ -1174,8 +1144,8 @@ function ComparisonTable({ rows, loading, hasSelection }: { rows: ClientComparis
                 <p className="text-sm font-semibold text-foreground">{row.clientName}</p>
                 <p className="text-xs text-muted-foreground">{row.periodDays}-day window</p>
               </td>
-              <td className="py-3 font-medium text-foreground">{formatCurrencyWithCode(row.totalRevenue, row.currency)}</td>
-              <td className="py-3">{formatCurrencyWithCode(row.totalAdSpend, row.currency)}</td>
+              <td className="py-3 font-medium text-foreground">{formatCurrency(row.totalRevenue, row.currency)}</td>
+              <td className="py-3">{formatCurrency(row.totalAdSpend, row.currency)}</td>
               <td className="py-3">
                 <span className={cn(
                   'rounded-md px-2 py-1 text-xs font-semibold',
@@ -1189,7 +1159,7 @@ function ComparisonTable({ rows, loading, hasSelection }: { rows: ClientComparis
                 </span>
               </td>
               <td className="py-3">{formatCpa(row.cpa, row.currency)}</td>
-              <td className="py-3">{formatCurrencyWithCode(row.outstanding, row.currency)}</td>
+              <td className="py-3">{formatCurrency(row.outstanding, row.currency)}</td>
             </tr>
           ))}
         </tbody>

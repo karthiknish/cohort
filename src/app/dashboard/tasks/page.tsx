@@ -16,6 +16,7 @@ import {
   X,
   LayoutGrid,
   List,
+  Download,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -62,6 +63,7 @@ import { TaskRecord, TaskPriority, TaskStatus } from '@/types/tasks'
 import { authService } from '@/services/auth'
 import { isFeatureEnabled } from '@/lib/features'
 import { Skeleton } from '@/components/ui/skeleton'
+import { exportToCsv } from '@/lib/utils'
 
 type SummaryCardConfig = {
   status: TaskStatus
@@ -443,6 +445,23 @@ export default function TasksPage() {
     setSelectedAssignee(value)
   }
 
+  const handleExport = () => {
+    if (filteredTasks.length === 0) return
+
+    const data = filteredTasks.map(task => ({
+      Title: task.title,
+      Status: task.status,
+      Priority: task.priority,
+      Client: task.client || 'Internal',
+      'Assigned To': task.assignedTo.join(', '),
+      'Due Date': task.dueDate ? formatDate(task.dueDate) : 'No due date',
+      Tags: task.tags.join(', '),
+      Description: task.description || ''
+    }))
+
+    exportToCsv(data, `tasks-export-${new Date().toISOString().split('T')[0]}.csv`)
+  }
+
   const handleCreateTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -795,6 +814,16 @@ export default function TasksPage() {
             <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleExport}
+              disabled={filteredTasks.length === 0}
+              title="Export to CSV"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
             <div className="flex items-center rounded-md border bg-background p-1">
               <Button
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}

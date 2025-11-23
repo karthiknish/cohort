@@ -1016,7 +1016,7 @@ export function useCollaborationData() {
     return Promise.all(uploadPromises)
   }, [user?.id])
 
-  const handleSendMessage = useCallback(async () => {
+  const handleSendMessage = useCallback(async (options?: { parentMessageId?: string }) => {
     if (!selectedChannel) return
     const content = messageInput.trim()
     if (!content && pendingAttachments.length === 0) return
@@ -1069,6 +1069,7 @@ export function useCollaborationData() {
           attachments: attachments.length > 0 ? attachments : undefined,
           format: 'markdown',
           mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
+          parentMessageId: options?.parentMessageId,
         }),
       })
 
@@ -1092,20 +1093,36 @@ export function useCollaborationData() {
         reactions: created.reactions ?? [],
       }
 
-      setMessagesByChannel((prev) => {
-        const previous = prev[selectedChannel.id] ?? []
-        return {
-          ...prev,
-          [selectedChannel.id]: [...previous, messageRecord],
-        }
-      })
+      // If it's a reply, we might want to update the thread view if it's open
+      if (options?.parentMessageId) {
+        const rootId = created.threadRootId ?? options.parentMessageId
+        setThreadMessagesByRootId((prev) => {
+          const existing = prev[rootId]
+          if (!existing) return prev
+          return {
+            ...prev,
+            [rootId]: [...existing, messageRecord],
+          }
+        })
+        
+        // Also update the root message's reply count in the main list if possible
+        // (This happens via realtime subscription usually, but optimistic update is good)
+      } else {
+        setMessagesByChannel((prev) => {
+          const previous = prev[selectedChannel.id] ?? []
+          return {
+            ...prev,
+            [selectedChannel.id]: [...previous, messageRecord],
+          }
+        })
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        }, 50)
+      }
+
       setMessageInputState('')
       setPendingAttachments([])
       stopTyping()
-
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 50)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to send message'
       toast({ title: 'Collaboration error', description: message, variant: 'destructive' })

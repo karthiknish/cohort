@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import {
@@ -795,7 +795,7 @@ export default function SettingsPage() {
         <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 p-4">
           <p className="text-sm font-medium text-foreground">Upcoming invoice</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatCurrency(upcomingInvoice.amountDue, upcomingInvoice.currency)} scheduled for {formatDate(upcomingInvoice.nextPaymentAttempt ?? upcomingInvoice.dueDate)}
+            {formatCurrency(upcomingInvoice.amountDue, upcomingInvoice.currency ?? undefined)} scheduled for {formatDate(upcomingInvoice.nextPaymentAttempt ?? upcomingInvoice.dueDate)}
           </p>
         </div>
       ) : null}
@@ -1114,7 +1114,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="mt-4">
                               <span className="text-2xl font-semibold text-foreground">
-                                {formatCurrency(plan.unitAmount, plan.currency)}
+                                {plan.unitAmount !== null ? formatCurrency(plan.unitAmount, plan.currency ?? undefined) : '—'}
                               </span>
                               {plan.interval ? (
                                 <span className="ml-1 text-sm text-muted-foreground">/ {plan.interval}</span>
@@ -1185,7 +1185,7 @@ export default function SettingsPage() {
 
                         <div className="flex flex-col gap-2 text-sm text-foreground md:flex-row md:items-center md:gap-4">
                           <span className="font-medium">
-                            {formatCurrency(invoice.total || invoice.amountPaid, invoice.currency)}
+                            {formatCurrency(invoice.total || invoice.amountPaid, invoice.currency ?? undefined)}
                           </span>
                           <div className="flex gap-2">
                             {invoice.hostedInvoiceUrl ? (
@@ -1283,20 +1283,6 @@ export default function SettingsPage() {
       </Dialog>
     </div>
   )
-}
-
-function formatCurrency(amountInMinorUnits: number | null | undefined, currency: string | null): string {
-  if (!currency || amountInMinorUnits === null || amountInMinorUnits === undefined) {
-    return 'Configure pricing'
-  }
-
-  const formatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    minimumFractionDigits: 2,
-  })
-
-  return formatter.format(amountInMinorUnits / 100)
 }
 
 function formatDate(value: string | null | undefined): string {

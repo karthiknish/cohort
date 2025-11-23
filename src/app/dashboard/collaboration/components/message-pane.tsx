@@ -77,7 +77,7 @@ export interface CollaborationMessagePaneProps {
   onMessageInputChange: (value: string) => void
   messageSearchQuery: string
   onMessageSearchChange: (value: string) => void
-  onSendMessage: () => void
+  onSendMessage: (options?: { parentMessageId?: string }) => void
   sending: boolean
   isSendDisabled: boolean
   pendingAttachments: PendingAttachment[]
@@ -150,6 +150,7 @@ export function CollaborationMessagePane({
 }: CollaborationMessagePaneProps) {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null)
   const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({})
   const [confirmingDeleteMessageId, setConfirmingDeleteMessageId] = useState<string | null>(null)
   const [taskCreationModalOpen, setTaskCreationModalOpen] = useState(false)
@@ -201,6 +202,15 @@ export function CollaborationMessagePane({
     }
     setEditingMessageId(message.id)
     setEditingValue(message.content ?? '')
+  }
+
+  const handleReply = (message: CollaborationMessage) => {
+    setReplyingToMessage(message)
+    // Ideally focus the composer here, but we might need a ref to the RichComposer or just let the user click
+  }
+
+  const handleCancelReply = () => {
+    setReplyingToMessage(null)
   }
 
   const handleCancelEdit = () => {
@@ -310,6 +320,41 @@ export function CollaborationMessagePane({
       return
     }
     void onLoadThreadReplies(normalizedId)
+  }
+
+  const handleExportChannel = () => {
+    if (!channel || channelMessages.length === 0) return
+
+    const headers = ['Date', 'Sender', 'Role', 'Content', 'Attachments', 'Reactions', 'Thread Replies']
+    const rows = channelMessages.map((msg) => {
+      const date = msg.createdAt ? new Date(msg.createdAt).toLocaleString() : ''
+      const sender = msg.senderName
+      const role = msg.senderRole || ''
+      const content = (msg.content || '').replace(/"/g, '""')
+      const attachments = (msg.attachments || []).map((a) => a.url).join('; ')
+      const reactions = (msg.reactions || []).map((r) => `${r.emoji}(${r.count})`).join(' ')
+      const replies = msg.threadReplyCount || 0
+
+      return [
+        `"${date}"`,
+        `"${sender}"`,
+        `"${role}"`,
+        `"${content}"`,
+        `"${attachments}"`,
+        `"${reactions}"`,
+        `"${replies}"`,
+      ].join(',')
+    })
+
+    const csvContent = [headers.join(','), ...rows].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${channel.name.replace(/[^a-z0-9]/gi, '_')}_export.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const handleLoadMoreThread = (threadRootId: string) => {
@@ -441,6 +486,15 @@ export function CollaborationMessagePane({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44 text-sm">
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault()
+                      handleReply(message)
+                    }}
+                    disabled={isUpdating || isDeleting}
+                  >
+                    Reply in thread
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={(event) => {
                       event.preventDefault()
@@ -754,6 +808,10 @@ export function CollaborationMessagePane({
             {channelParticipants.map((member) => member.name).join(', ')}
           </CardDescription>
         </div>
+        <Button variant="outline" size="sm" onClick={handleExportChannel} disabled={channelMessages.length === 0}>
+          <Download className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
       </div>
       <div className="border-b border-muted/40 px-4 py-3">
         <div className="relative">
@@ -914,10 +972,26 @@ export function CollaborationMessagePane({
 
           <div className="space-y-3">
             <div className="w-full">
+              {replyingToMessage && (
+                <div className="flex items-center justify-between rounded-t-md border-x border-t border-muted/40 bg-muted/10 px-3 py-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>
+                      Replying to <strong>{replyingToMessage.senderName}</strong>
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleCancelReply}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
               <RichComposer
                 value={messageInput}
                 onChange={onMessageInputChange}
-                onSend={onSendMessage}
+                onSend={() => {
+                  onSendMessage({ parentMessageId: replyingToMessage?.id })
+                  setReplyingToMessage(null)
+                }}
                 disabled={!channel || sending}
                 onFocus={onComposerFocus}
                 onBlur={onComposerBlur}
@@ -937,7 +1011,14 @@ export function CollaborationMessagePane({
                 <Paperclip className="h-4 w-4" />
                 Attach
               </Button>
-              <Button onClick={onSendMessage} disabled={isSendDisabled} className="inline-flex items-center gap-2">
+              <Button
+                onClick={() => {
+                  onSendMessage({ parentMessageId: replyingToMessage?.id })
+                  setReplyingToMessage(null)
+                }}
+                disabled={isSendDisabled}
+                className="inline-flex items-center gap-2"
+              >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Send
               </Button>

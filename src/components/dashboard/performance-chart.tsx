@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  Legend,
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,6 +27,29 @@ interface MetricRecord {
 interface PerformanceChartProps {
   metrics: MetricRecord[]
   loading: boolean
+}
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border border-border bg-background p-3 shadow-md">
+        <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
+        {payload.map((entry: any) => (
+          <div key={entry.name} className="flex items-center gap-2 text-sm">
+            <div 
+              className="h-2 w-2 rounded-full" 
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="font-medium text-foreground">
+              ${entry.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return null
 }
 
 export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
@@ -130,10 +154,8 @@ export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
               tick={{ fontSize: 12, fill: '#6b7280' }} 
               tickFormatter={(value) => `$${value}`}
             />
-            <Tooltip 
-              contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}
-              formatter={(value: number) => [`$${value.toLocaleString()}`, undefined]}
-            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
             <Area 
               type="monotone" 
               dataKey="revenue" 
@@ -142,6 +164,7 @@ export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
               fillOpacity={1} 
               fill="url(#colorRevenue)" 
               name="Revenue"
+              activeDot={{ r: 6, strokeWidth: 0 }}
             />
             <Area 
               type="monotone" 
@@ -151,6 +174,7 @@ export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
               fillOpacity={1} 
               fill="url(#colorSpend)" 
               name="Ad Spend"
+              activeDot={{ r: 6, strokeWidth: 0 }}
             />
           </AreaChart>
         </ResponsiveContainer>

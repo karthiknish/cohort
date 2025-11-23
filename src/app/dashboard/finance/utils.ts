@@ -1,16 +1,7 @@
 import type { FinanceCostEntry, FinanceCurrencyTotals } from '@/types/finance'
+import { formatCurrency } from '@/lib/utils'
 
-export const formatCurrency = (
-  value: number,
-  currency = 'USD',
-  options: Intl.NumberFormatOptions = {},
-) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-    ...options,
-  }).format(value)
+export { formatCurrency }
 
 type CurrencyTotalKey = Exclude<keyof FinanceCurrencyTotals, 'currency'>
 

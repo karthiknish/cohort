@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
@@ -1491,13 +1491,4 @@ function formatDisplayDate(value: string): string {
     return value
   }
   return DISPLAY_DATE_FORMATTER.format(parsed)
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: amount >= 1000 ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(amount)
 }

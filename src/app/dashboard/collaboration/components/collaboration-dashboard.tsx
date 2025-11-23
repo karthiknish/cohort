@@ -200,7 +200,7 @@ export function CollaborationDashboard() {
             onMessageInputChange={setMessageInput}
             messageSearchQuery={messageSearchQuery}
             onMessageSearchChange={setMessageSearchQuery}
-            onSendMessage={() => void handleSendMessage()}
+            onSendMessage={(options) => void handleSendMessage(options)}
             sending={sending}
             isSendDisabled={isSendDisabled}
             pendingAttachments={pendingAttachments}

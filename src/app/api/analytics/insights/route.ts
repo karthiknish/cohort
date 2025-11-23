@@ -4,6 +4,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase-admin'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { geminiAI } from '@/services/gemini'
+import { formatCurrency } from '@/lib/utils'
 
 interface MetricRecord {
   providerId: string
@@ -214,28 +215,19 @@ Keep it under 120 words.`
 }
 
 function buildComparisonPrompt(google: ProviderSummary, meta: ProviderSummary) {
-  return `You are a senior marketing strategist. Compare Google Ads and Meta Ads performance for the selected period.
+  return `You are an expert marketing analyst. Compare the performance of Google Ads and Meta (Facebook) Ads based on the following data.
 
-Google Metrics:
+Google Ads:
 - Spend: ${google.totalSpend.toFixed(2)}
 - Revenue: ${google.totalRevenue.toFixed(2)}
 - ROAS: ${google.averageRoaS.toFixed(2)}
-- Clicks: ${google.totalClicks}
-- Conversions: ${google.totalConversions}
+- CPC: ${google.averageCpc.toFixed(2)}
 
-Meta Metrics:
+Meta Ads:
 - Spend: ${meta.totalSpend.toFixed(2)}
 - Revenue: ${meta.totalRevenue.toFixed(2)}
 - ROAS: ${meta.averageRoaS.toFixed(2)}
-- Clicks: ${meta.totalClicks}
-- Conversions: ${meta.totalConversions}
+- CPC: ${meta.averageCpc.toFixed(2)}
 
-Deliver a short insight (under 120 words) that covers:
-1. Which platform is currently outperforming and why.
-2. Key risks or inefficiencies worth addressing.
-3. A concrete recommendation for budget reallocation or testing across the two platforms.`
-}
-
-function formatCurrency(value: number) {
-  return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+Provide a concise comparison highlighting which platform is performing better and why. Suggest where to allocate more budget. Keep it under 120 words.`
 }

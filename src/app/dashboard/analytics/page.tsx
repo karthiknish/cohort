@@ -33,6 +33,7 @@ import { authService } from '@/services/auth'
 import { useClientContext } from '@/contexts/client-context'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/use-toast'
+import { formatCurrency } from '@/lib/utils'
 
 interface MetricRecord {
   id: string
@@ -197,8 +198,29 @@ const PLATFORM_OPTIONS = [
   { value: 'linkedin', label: 'LinkedIn Ads' },
 ]
 
-function formatCurrency(value: number) {
-  return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border border-border bg-background p-3 shadow-md">
+        <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
+        {payload.map((entry: any) => (
+          <div key={entry.name} className="flex items-center gap-2 text-sm">
+            <div 
+              className="h-2 w-2 rounded-full" 
+              style={{ backgroundColor: entry.color || entry.fill }}
+            />
+            <span className="text-muted-foreground">{entry.name}:</span>
+            <span className="font-medium text-foreground">
+              {entry.name === 'ROAS' ? `${Number(entry.value).toFixed(2)}x` : 
+               entry.name === 'Clicks' || entry.name === 'Conversions' ? Number(entry.value).toLocaleString() :
+               formatCurrency(entry.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return null
 }
 
 export default function AnalyticsPage() {
@@ -514,7 +536,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
                   <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
                   <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} name="Spend" />
@@ -540,7 +562,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
                   <Bar dataKey="roas" fill="#6366f1" name="ROAS" />
                 </BarChart>
@@ -590,7 +612,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
                   <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} name="Clicks" />
                 </LineChart>

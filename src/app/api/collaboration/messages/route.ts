@@ -460,6 +460,27 @@ export async function POST(request: NextRequest) {
 
     const timestamp = Timestamp.now()
 
+    let parentMessageId = payload.parentMessageId ?? null
+    let threadRootId: string | null = null
+    let isThreadRoot = true
+
+    if (parentMessageId) {
+      const parentDoc = await workspace.collaborationCollection.doc(parentMessageId).get()
+      if (!parentDoc.exists) {
+        return NextResponse.json({ error: 'Parent message not found' }, { status: 404 })
+      }
+      const parentData = parentDoc.data() as StoredMessage
+      
+      // If the parent is already a reply (has a threadRootId), use that root.
+      // Otherwise, the parent itself is the root.
+      if (typeof parentData.threadRootId === 'string' && parentData.threadRootId) {
+        threadRootId = parentData.threadRootId
+      } else {
+        threadRootId = parentMessageId
+      }
+      isThreadRoot = false
+    }
+
     const docRef = await workspace.collaborationCollection.add({
       channelType: payload.channelType,
       clientId: resolvedClientId,
@@ -475,7 +496,23 @@ export async function POST(request: NextRequest) {
       workspaceId: workspace.workspaceId,
       createdAt: timestamp,
       updatedAt: timestamp,
+      parentMessageId,
+      threadRootId,
+      isThreadRoot,
+      threadReplyCount: 0,
+      threadLastReplyAt: null,
     })
+
+    if (!isThreadRoot && threadRootId) {
+      try {
+        await workspace.collaborationCollection.doc(threadRootId).update({
+          threadReplyCount: FieldValue.increment(1),
+          threadLastReplyAt: timestamp,
+        })
+      } catch (updateError) {
+        console.error('[collaboration/messages] failed to update thread root stats', updateError)
+      }
+    }
 
     const createdDoc = await docRef.get()
     const message = mapMessageDoc(createdDoc.id, createdDoc.data() as StoredMessage)
