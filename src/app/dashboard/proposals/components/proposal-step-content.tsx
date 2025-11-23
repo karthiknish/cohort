@@ -59,9 +59,9 @@ function ProposalStepContentComponent({
   switch (stepId) {
     case 'company':
       return (
-        <div className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
+        <div className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
               <Label htmlFor="companyName">Company Name</Label>
               <Input
                 id="companyName"
@@ -73,7 +73,7 @@ function ProposalStepContentComponent({
                 <p className="mt-1 text-xs text-destructive">{validationErrors['company.name']}</p>
               )}
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="website">Website URL</Label>
               <Input
                 id="website"
@@ -85,8 +85,8 @@ function ProposalStepContentComponent({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
               <Label htmlFor="industry">Industry / Sector</Label>
               <Input
                 id="industry"
@@ -98,7 +98,7 @@ function ProposalStepContentComponent({
                 <p className="mt-1 text-xs text-destructive">{validationErrors['company.industry']}</p>
               )}
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="companySize">Company Size</Label>
               <Input
                 id="companySize"
@@ -109,7 +109,7 @@ function ProposalStepContentComponent({
             </div>
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="locations">Locations</Label>
             <Textarea
               id="locations"
@@ -123,9 +123,9 @@ function ProposalStepContentComponent({
 
     case 'marketing':
       return (
-        <div className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
+        <div className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
               <Label htmlFor="budget">Monthly marketing budget</Label>
               <Input
                 id="budget"
@@ -137,7 +137,7 @@ function ProposalStepContentComponent({
                 <p className="mt-1 text-xs text-destructive">{validationErrors['marketing.budget']}</p>
               )}
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="adAccounts">Existing ad accounts?</Label>
               <Select
                 value={formState.marketing.adAccounts}
@@ -154,35 +154,41 @@ function ProposalStepContentComponent({
             </div>
           </div>
 
-          <div>
-            <Label>Current advertising platforms</Label>
-            <p className="mt-1 text-xs text-muted-foreground">Select all that apply.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {marketingPlatforms.map((platform) => (
-                <label
-                  key={platform}
-                  className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2"
-                >
-                  <Checkbox
-                    checked={formState.marketing.platforms.includes(platform)}
-                    onChange={() => onToggleArrayValue(['marketing', 'platforms'], platform)}
-                  />
-                  <span className="text-sm">{platform}</span>
-                </label>
-              ))}
+          <div className="space-y-3">
+            <Label className="text-base">Current advertising platforms</Label>
+            <p className="text-sm text-muted-foreground">Select all that apply.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {marketingPlatforms.map((platform) => {
+                const isSelected = formState.marketing.platforms.includes(platform)
+                return (
+                  <label
+                    key={platform}
+                    className={`flex cursor-pointer items-center space-x-3 rounded-lg border p-3 transition-all hover:bg-accent ${
+                      isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-muted'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleArrayValue(['marketing', 'platforms'], platform)}
+                    />
+                    <span className="text-sm font-medium">{platform}</span>
+                  </label>
+                )
+              })}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label>Social handles</Label>
-            <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-4">
+            <Label className="text-base">Social handles</Label>
+            <div className="grid gap-4 md:grid-cols-2">
               {socialHandles.map((handle) => (
-                <div key={handle}>
+                <div key={handle} className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">{handle}</Label>
                   <Input
                     placeholder={`https://.../${handle.toLowerCase().split(' ')[0]}`}
                     value={formState.marketing.socialHandles[handle] ?? ''}
                     onChange={(event) => onChangeSocialHandle(handle, event.target.value)}
+                    className="h-9"
                   />
                 </div>
               ))}
@@ -193,33 +199,42 @@ function ProposalStepContentComponent({
 
     case 'goals':
       return (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
-            <Label>Primary goals</Label>
-            <p className="mt-1 text-sm text-muted-foreground">Select all that apply.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {goalOptions.map((goal) => (
-                <label
-                  key={goal}
-                  className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2"
-                >
-                  <Checkbox
-                    checked={formState.goals.objectives.includes(goal)}
-                    onChange={() => onToggleArrayValue(['goals', 'objectives'], goal)}
-                  />
-                  <span className="text-sm">{goal}</span>
-                </label>
-              ))}
+            <Label className="text-base">Primary goals</Label>
+            <p className="mt-1 text-sm text-muted-foreground">Select all that apply to help us tailor the strategy.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {goalOptions.map((goal) => {
+                const isSelected = formState.goals.objectives.includes(goal)
+                return (
+                  <label
+                    key={goal}
+                    className={`flex cursor-pointer items-start space-x-3 rounded-lg border p-4 transition-all hover:bg-accent ${
+                      isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-muted'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleArrayValue(['goals', 'objectives'], goal)}
+                      className="mt-0.5"
+                    />
+                    <div className="space-y-1">
+                      <span className="font-medium leading-none">{goal}</span>
+                    </div>
+                  </label>
+                )
+              })}
             </div>
             {validationErrors['goals.objectives'] && (
               <p className="mt-2 text-xs text-destructive">{validationErrors['goals.objectives']}</p>
             )}
           </div>
 
-          <div>
-            <Label htmlFor="audience">Target audience</Label>
+          <div className="space-y-2">
+            <Label htmlFor="audience" className="text-base">Target audience</Label>
             <Textarea
               id="audience"
+              className="min-h-[100px]"
               placeholder="Describe the demographics, regions, or personas you want to reach."
               value={formState.goals.audience}
               onChange={(event) => onUpdateField(['goals', 'audience'], event.target.value)}
@@ -227,21 +242,27 @@ function ProposalStepContentComponent({
           </div>
 
           <div>
-            <Label>Current challenges</Label>
+            <Label className="text-base">Current challenges</Label>
             <p className="mt-1 text-sm text-muted-foreground">Select the obstacles you are facing.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {challenges.map((challenge) => (
-                <label
-                  key={challenge}
-                  className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2"
-                >
-                  <Checkbox
-                    checked={formState.goals.challenges.includes(challenge)}
-                    onChange={() => onToggleArrayValue(['goals', 'challenges'], challenge)}
-                  />
-                  <span className="text-sm">{challenge}</span>
-                </label>
-              ))}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {challenges.map((challenge) => {
+                const isSelected = formState.goals.challenges.includes(challenge)
+                return (
+                  <label
+                    key={challenge}
+                    className={`flex cursor-pointer items-start space-x-3 rounded-lg border p-4 transition-all hover:bg-accent ${
+                      isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-muted'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleArrayValue(['goals', 'challenges'], challenge)}
+                      className="mt-0.5"
+                    />
+                    <span className="font-medium leading-none">{challenge}</span>
+                  </label>
+                )
+              })}
             </div>
             {formState.goals.challenges.includes('Other') && (
               <Input
@@ -257,30 +278,36 @@ function ProposalStepContentComponent({
 
     case 'scope':
       return (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
-            <Label>Services required</Label>
+            <Label className="text-base">Services required</Label>
             <p className="mt-1 text-sm text-muted-foreground">Pick the specific areas where you need support.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {scopeOptions.map((service) => (
-                <label
-                  key={service}
-                  className="flex items-center space-x-2 rounded-md border border-muted bg-background px-3 py-2"
-                >
-                  <Checkbox
-                    checked={formState.scope.services.includes(service)}
-                    onChange={() => onToggleArrayValue(['scope', 'services'], service)}
-                  />
-                  <span className="text-sm">{service}</span>
-                </label>
-              ))}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {scopeOptions.map((service) => {
+                const isSelected = formState.scope.services.includes(service)
+                return (
+                  <label
+                    key={service}
+                    className={`flex cursor-pointer items-start space-x-3 rounded-lg border p-4 transition-all hover:bg-accent ${
+                      isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-muted'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleArrayValue(['scope', 'services'], service)}
+                      className="mt-0.5"
+                    />
+                    <span className="font-medium leading-none">{service}</span>
+                  </label>
+                )
+              })}
             </div>
             {validationErrors['scope.services'] && (
               <p className="mt-2 text-xs text-destructive">{validationErrors['scope.services']}</p>
             )}
           </div>
           {formState.scope.services.includes('Other') && (
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="otherService">Other services</Label>
               <Input
                 id="otherService"
@@ -295,10 +322,10 @@ function ProposalStepContentComponent({
 
     case 'timelines':
       return (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
-            <Label>Preferred start timeline</Label>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <Label className="text-base">Preferred start timeline</Label>
+            <div className="mt-4 flex flex-wrap gap-3">
               {startTimelineOptions.map((option) => {
                 const isActive = formState.timelines.startTime === option
                 return (
@@ -307,6 +334,7 @@ function ProposalStepContentComponent({
                     type="button"
                     variant={isActive ? 'default' : 'outline'}
                     onClick={() => onUpdateField(['timelines', 'startTime'], option)}
+                    className={`h-auto px-6 py-3 text-sm ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                   >
                     {option}
                   </Button>
@@ -318,10 +346,11 @@ function ProposalStepContentComponent({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="upcomingEvents">Upcoming campaigns or events</Label>
+          <div className="space-y-2">
+            <Label htmlFor="upcomingEvents" className="text-base">Upcoming campaigns or events</Label>
             <Textarea
               id="upcomingEvents"
+              className="min-h-[120px]"
               placeholder="Share launches, seasonality, or milestones we should plan for."
               value={formState.timelines.upcomingEvents}
               onChange={(event) => onUpdateField(['timelines', 'upcomingEvents'], event.target.value)}
@@ -332,10 +361,10 @@ function ProposalStepContentComponent({
 
     case 'value':
       return (
-        <div className="space-y-6">
-          <div>
-            <Label>Expected proposal value</Label>
-            <div className="mt-3 flex flex-wrap gap-2">
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <Label className="text-base">Expected proposal value</Label>
+            <div className="flex flex-wrap gap-3">
               {proposalValueOptions.map((option) => {
                 const isActive = formState.value.proposalSize === option
                 return (
@@ -344,6 +373,7 @@ function ProposalStepContentComponent({
                     type="button"
                     variant={isActive ? 'default' : 'outline'}
                     onClick={() => onUpdateField(['value', 'proposalSize'], option)}
+                    className={`h-auto px-6 py-3 ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                   >
                     {option}
                   </Button>
@@ -355,9 +385,9 @@ function ProposalStepContentComponent({
             )}
           </div>
 
-          <div>
-            <Label>Engagement preference</Label>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <div className="space-y-4">
+            <Label className="text-base">Engagement preference</Label>
+            <div className="flex flex-wrap gap-3">
               {engagementOptions.map((option) => {
                 const isActive = formState.value.engagementType === option
                 return (
@@ -366,6 +396,7 @@ function ProposalStepContentComponent({
                     type="button"
                     variant={isActive ? 'default' : 'outline'}
                     onClick={() => onUpdateField(['value', 'engagementType'], option)}
+                    className={`h-auto px-6 py-3 ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                   >
                     {option}
                   </Button>
@@ -377,57 +408,48 @@ function ProposalStepContentComponent({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="additionalNotes">Additional notes</Label>
+          <div className="space-y-2">
+            <Label htmlFor="additionalNotes" className="text-base">Additional notes</Label>
             <Textarea
               id="additionalNotes"
+              className="min-h-[100px]"
               placeholder="Anything else we should know before drafting your proposal?"
               value={formState.value.additionalNotes}
               onChange={(event) => onUpdateField(['value', 'additionalNotes'], event.target.value)}
             />
           </div>
 
-          <Card className="border-dashed border-muted-foreground/40">
+          <Card className="border-dashed border-primary/20 bg-primary/5">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-base">Proposal summary</CardTitle>
+              <CardTitle className="text-lg">Proposal summary</CardTitle>
               <CardDescription>Review the information before submitting.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div>
+            <CardContent className="grid gap-6 text-sm sm:grid-cols-2">
+              <div className="space-y-1">
                 <h4 className="font-semibold text-foreground">Company</h4>
                 <p className="text-muted-foreground">
-                  {summary.company.name || '—'} · {summary.company.industry || '—'} · {summary.company.size || 'Size not provided'}
+                  {summary.company.name || '—'} · {summary.company.industry || '—'}
                 </p>
-                <p className="text-muted-foreground">Website: {summary.company.website || '—'}</p>
+                <p className="text-muted-foreground text-xs">{summary.company.website}</p>
               </div>
-              <div>
+              <div className="space-y-1">
                 <h4 className="font-semibold text-foreground">Marketing</h4>
                 <p className="text-muted-foreground">Budget: {summary.marketing.budget || '—'}</p>
                 <p className="text-muted-foreground">
-                  Platforms: {summary.marketing.platforms.length ? summary.marketing.platforms.join(', ') : 'None selected'}
-                </p>
-                <p className="text-muted-foreground">Ad accounts: {summary.marketing.adAccounts}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground">Goals & Challenges</h4>
-                <p className="text-muted-foreground">
-                  Goals: {summary.goals.objectives.length ? summary.goals.objectives.join(', ') : 'Not specified'}
-                </p>
-                <p className="text-muted-foreground">
-                  Challenges: {summary.goals.challenges.length ? summary.goals.challenges.join(', ') : 'Not specified'}
+                  {summary.marketing.platforms.length ? summary.marketing.platforms.join(', ') : 'No platforms'}
                 </p>
               </div>
-              <div>
-                <h4 className="font-semibold text-foreground">Scope & Timeline</h4>
+              <div className="space-y-1">
+                <h4 className="font-semibold text-foreground">Goals</h4>
                 <p className="text-muted-foreground">
-                  Services: {summary.scope.services.length ? summary.scope.services.join(', ') : 'Not selected'}
+                  {summary.goals.objectives.length ? summary.goals.objectives.join(', ') : 'Not specified'}
                 </p>
-                <p className="text-muted-foreground">Start: {summary.timelines.startTime || 'No preference'}</p>
               </div>
-              <div>
-                <h4 className="font-semibold text-foreground">Value & Engagement</h4>
-                <p className="text-muted-foreground">Expected value: {summary.value.proposalSize || 'Not specified'}</p>
-                <p className="text-muted-foreground">Engagement: {summary.value.engagementType || 'Not specified'}</p>
+              <div className="space-y-1">
+                <h4 className="font-semibold text-foreground">Scope</h4>
+                <p className="text-muted-foreground">
+                  {summary.scope.services.length ? summary.scope.services.join(', ') : 'Not selected'}
+                </p>
               </div>
             </CardContent>
           </Card>
