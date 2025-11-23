@@ -538,8 +538,8 @@ export default function AnalyticsPage() {
                   <YAxis />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue" />
-                  <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} name="Spend" />
+                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} activeDot={{ r: 6 }} name="Revenue" />
+                  <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 6 }} name="Spend" />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -614,7 +614,7 @@ export default function AnalyticsPage() {
                   <YAxis />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend />
-                  <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} name="Clicks" />
+                  <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} activeDot={{ r: 6 }} name="Clicks" />
                 </LineChart>
               </ResponsiveContainer>
             )}
