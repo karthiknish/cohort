@@ -83,8 +83,8 @@ export default function AuthPage() {
 
   if (!loading && user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-12">
-        <div className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-xs text-zinc-600 shadow-sm">
+      <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+        <div className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-sm">
           Redirecting to your dashboard…
         </div>
       </div>
@@ -164,16 +164,16 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50">
+    <div className="flex min-h-screen flex-col bg-background">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-12 md:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-16 lg:py-20">
-        <FadeIn as="section" className="w-full max-w-2xl space-y-8 text-zinc-900">
+        <FadeIn as="section" className="w-full max-w-2xl space-y-8 text-foreground">
        
 
           <div className="space-y-4">
-            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               Run every client engagement from a single modern workspace.
             </h1>
-            <p className="max-w-xl text-base text-zinc-600">
+            <p className="max-w-xl text-base text-muted-foreground">
               Streamline onboarding, proposals, performance snapshots, and feedback loops with a platform designed
               for agencies that need to move fast.
             </p>
@@ -184,14 +184,14 @@ export default function AuthPage() {
               <FadeInItem
                 key={item.title}
                 as="div"
-                className="flex gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-left shadow-sm"
+                className="flex gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm"
               >
                 <div className="mt-1 text-emerald-500">
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-zinc-900">{item.title}</p>
-                  <p className="text-xs text-zinc-600">{item.description}</p>
+                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
                 </div>
               </FadeInItem>
             ))}
@@ -201,8 +201,8 @@ export default function AuthPage() {
         <FadeIn as="section" className="w-full lg:max-w-xl">
           <div className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-3xl font-semibold text-zinc-900">Welcome back</h2>
-              <p className="text-sm text-zinc-600">
+              <h2 className="text-3xl font-semibold text-foreground">Welcome back</h2>
+              <p className="text-sm text-muted-foreground">
                 {activeTab === "signup"
                   ? "Create an account to launch proposals, automate reporting, and collaborate with your clients."
                   : "Sign in to access live insights across campaigns, proposals, and collaboration threads."}
@@ -210,16 +210,16 @@ export default function AuthPage() {
             </div>
 
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 rounded-lg border border-zinc-200 bg-white p-1 shadow-sm">
+              <TabsList className="grid w-full grid-cols-2 rounded-lg border border-border bg-card p-1 shadow-sm">
                 <TabsTrigger
                   value="signin"
-                  className="flex items-center justify-center rounded-md border border-transparent text-sm font-medium text-zinc-600 transition data-[state=active]:border-zinc-900 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm"
+                  className="flex items-center justify-center rounded-md border border-transparent text-sm font-medium text-muted-foreground transition data-[state=active]:border-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                 >
                   Sign in
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="flex items-center justify-center rounded-md border border-transparent text-sm font-medium text-zinc-600 transition data-[state=active]:border-zinc-900 data-[state=active]:bg-white data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm"
+                  className="flex items-center justify-center rounded-md border border-transparent text-sm font-medium text-muted-foreground transition data-[state=active]:border-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                 >
                   Sign up
                 </TabsTrigger>
@@ -228,11 +228,11 @@ export default function AuthPage() {
               <TabsContent value="signin">
                 <FadeInStagger as="form" className="space-y-5" onSubmit={handleSubmit("signin")}>
                   <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signInEmail" className="text-zinc-700">
+                    <Label htmlFor="signInEmail" className="text-foreground">
                       Email address
                     </Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
                         <Mail className="h-4 w-4" />
                       </span>
                       <Input
@@ -244,17 +244,17 @@ export default function AuthPage() {
                         value={signInData.email}
                         onChange={handleSignInChange}
                         placeholder="you@example.com"
-                        className="border-zinc-300 bg-white pl-9 text-zinc-900 placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-primary"
+                        className="border-input bg-card pl-9 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                       />
                     </div>
                   </FadeInItem>
 
                   <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signInPassword" className="text-zinc-700">
+                    <Label htmlFor="signInPassword" className="text-foreground">
                       Password
                     </Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
                         <Lock className="h-4 w-4" />
                       </span>
                       <Input
@@ -266,24 +266,24 @@ export default function AuthPage() {
                         value={signInData.password}
                         onChange={handleSignInChange}
                         placeholder="••••••••"
-                        className="border-zinc-300 bg-white pl-9 pr-10 text-zinc-900 placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-primary"
+                        className="border-input bg-card pl-9 pr-10 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setShowPassword((previous) => !previous)}
-                        className="absolute inset-y-0 right-1 text-zinc-500 hover:text-zinc-800"
+                        className="absolute inset-y-0 right-1 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </FadeInItem>
 
-                  <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800" disabled={loading} type="submit">
+                  <Button className="w-full" disabled={loading} type="submit">
                     {loading ? "Please wait…" : "Sign In"}
                   </Button>
-                  <div className="text-center text-xs text-zinc-500">
+                  <div className="text-center text-xs text-muted-foreground">
                     <Link href="/auth/forgot" className="font-medium text-primary hover:underline">
                       Forgot password?
                     </Link>
@@ -294,7 +294,7 @@ export default function AuthPage() {
               <TabsContent value="signup">
                 <FadeInStagger as="form" className="space-y-5" onSubmit={handleSubmit("signup")}>
                   <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="displayName" className="text-zinc-700">
+                    <Label htmlFor="displayName" className="text-foreground">
                       Full name (optional)
                     </Label>
                     <Input
@@ -304,16 +304,16 @@ export default function AuthPage() {
                       value={signUpData.displayName}
                       onChange={handleSignUpChange}
                       placeholder="Jane Smith"
-                      className="border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-primary"
+                      className="border-input bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                     />
                   </FadeInItem>
 
                   <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signUpEmail" className="text-zinc-700">
+                    <Label htmlFor="signUpEmail" className="text-foreground">
                       Email address
                     </Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
                         <Mail className="h-4 w-4" />
                       </span>
                       <Input
@@ -325,17 +325,17 @@ export default function AuthPage() {
                         value={signUpData.email}
                         onChange={handleSignUpChange}
                         placeholder="you@example.com"
-                        className="border-zinc-300 bg-white pl-9 text-zinc-900 placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-primary"
+                        className="border-input bg-card pl-9 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                       />
                     </div>
                   </FadeInItem>
 
                   <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signUpPassword" className="text-zinc-700">
+                    <Label htmlFor="signUpPassword" className="text-foreground">
                       Password
                     </Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
                         <Lock className="h-4 w-4" />
                       </span>
                       <Input
@@ -347,14 +347,14 @@ export default function AuthPage() {
                         value={signUpData.password}
                         onChange={handleSignUpChange}
                         placeholder="Create a strong password"
-                        className="border-zinc-300 bg-white pl-9 pr-10 text-zinc-900 placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-primary"
+                        className="border-input bg-card pl-9 pr-10 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setShowPassword((previous) => !previous)}
-                        className="absolute inset-y-0 right-1 text-zinc-500 hover:text-zinc-800"
+                        className="absolute inset-y-0 right-1 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -362,7 +362,7 @@ export default function AuthPage() {
                   </FadeInItem>
 
                   <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-zinc-700">
+                    <Label htmlFor="confirmPassword" className="text-foreground">
                       Confirm password
                     </Label>
                     <Input
@@ -374,11 +374,11 @@ export default function AuthPage() {
                       value={signUpData.confirmPassword}
                       onChange={handleSignUpChange}
                       placeholder="Re-enter your password"
-                      className="border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-500 focus-visible:border-primary focus-visible:ring-primary"
+                      className="border-input bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
                     />
                   </FadeInItem>
 
-                  <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800" disabled={loading} type="submit">
+                  <Button className="w-full" disabled={loading} type="submit">
                     {loading ? "Please wait…" : "Create Account"}
                   </Button>
                 </FadeInStagger>
@@ -387,9 +387,9 @@ export default function AuthPage() {
 
             <FadeInStagger className="space-y-4">
               <FadeInItem as="div" className="relative flex items-center gap-3">
-                <Separator className="flex-1 border-zinc-200" />
-                <span className="text-xs uppercase tracking-wider text-zinc-500">Or continue with</span>
-                <Separator className="flex-1 border-zinc-200" />
+                <Separator className="flex-1 border-border" />
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Or continue with</span>
+                <Separator className="flex-1 border-border" />
               </FadeInItem>
 
               <FadeInItem>
@@ -398,7 +398,7 @@ export default function AuthPage() {
                   variant="outline"
                   disabled={loading}
                   onClick={handleGoogleSignIn}
-                  className="w-full border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                  className="w-full border-input bg-card text-foreground hover:bg-muted"
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -411,13 +411,13 @@ export default function AuthPage() {
               </FadeInItem>
 
               <FadeInItem>
-                <p className="text-center text-xs text-zinc-500">
+                <p className="text-center text-xs text-muted-foreground">
                   You can link your advertising accounts separately from the dashboard once you are signed in.
                 </p>
               </FadeInItem>
             </FadeInStagger>
 
-            <p className="text-center text-xs text-zinc-500">
+            <p className="text-center text-xs text-muted-foreground">
               By continuing, you agree to our{" "}
               <Link href="/terms" className="font-medium text-primary hover:underline">
                 Terms of Service

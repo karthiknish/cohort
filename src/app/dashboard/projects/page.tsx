@@ -6,6 +6,7 @@ import { Briefcase, Calendar, LayoutGrid, List, ListChecks, Loader2, MessageSqua
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { useToast } from '@/components/ui/use-toast'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +49,7 @@ const STATUS_CLASSES: Record<ProjectStatus, string> = {
 export default function ProjectsPage() {
   const { user, getIdToken } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
+  const { toast } = useToast()
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchInput, setSearchInput] = useState('')
@@ -106,12 +108,18 @@ export default function ProjectsPage() {
       setProjects(Array.isArray(data.projects) ? data.projects : [])
     } catch (fetchError: unknown) {
       console.error('Failed to fetch projects', fetchError)
+      const message = getErrorMessage(fetchError, 'Unable to load projects')
       setProjects([])
-      setError(getErrorMessage(fetchError, 'Unable to load projects'))
+      setError(message)
+      toast({
+        title: 'Error loading projects',
+        description: message,
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
-  }, [debouncedQuery, getIdToken, selectedClientId, statusFilter, user?.id])
+  }, [debouncedQuery, getIdToken, selectedClientId, statusFilter, user?.id, toast])
 
   useEffect(() => {
     void loadProjects()
@@ -166,7 +174,14 @@ export default function ProjectsPage() {
             type="button"
             variant="outline"
             onClick={() => {
-              void loadProjects()
+              void loadProjects().then(() => {
+                if (!error) {
+                  toast({
+                    title: 'Projects refreshed',
+                    description: 'The project list has been updated.',
+                  })
+                }
+              })
             }}
             className="inline-flex items-center gap-2"
             disabled={loading}
@@ -299,7 +314,13 @@ function ProjectCard({ project }: { project: ProjectRecord }) {
           </Badge>
         </div>
         {project.clientName && (
-          <p className="text-xs font-medium text-muted-foreground">{project.clientName}</p>
+          project.clientId ? (
+            <Link href={`/dashboard/clients?clientId=${project.clientId}`} className="hover:underline">
+              <p className="text-xs font-medium text-muted-foreground">{project.clientName}</p>
+            </Link>
+          ) : (
+            <p className="text-xs font-medium text-muted-foreground">{project.clientName}</p>
+          )
         )}
         {project.description && (
           <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{project.description}</p>
@@ -365,9 +386,17 @@ function ProjectRow({ project }: { project: ProjectRecord }) {
               {formatStatusLabel(project.status)}
             </Badge>
             {project.clientName ? (
-              <Badge variant="outline" className="border-dashed">
-                {project.clientName}
-              </Badge>
+              project.clientId ? (
+                <Link href={`/dashboard/clients?clientId=${project.clientId}`}>
+                  <Badge variant="outline" className="border-dashed hover:bg-muted cursor-pointer">
+                    {project.clientName}
+                  </Badge>
+                </Link>
+              ) : (
+                <Badge variant="outline" className="border-dashed">
+                  {project.clientName}
+                </Badge>
+              )
             ) : null}
           </div>
           {project.description && (

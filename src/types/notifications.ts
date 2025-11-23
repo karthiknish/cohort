@@ -2,6 +2,8 @@ export type WorkspaceNotificationRole = 'admin' | 'team' | 'client'
 
 export type WorkspaceNotificationKind =
   | 'task.created'
+  | 'task.updated'
+  | 'project.created'
   | 'collaboration.message'
   | 'proposal.deck.ready'
   | 'invoice.sent'
@@ -9,6 +11,7 @@ export type WorkspaceNotificationKind =
 
 export type WorkspaceNotificationResource =
   | { type: 'task'; id: string }
+  | { type: 'project'; id: string }
   | { type: 'collaboration'; id: string }
   | { type: 'proposal'; id: string }
   | { type: 'invoice'; id: string }

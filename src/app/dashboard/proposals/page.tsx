@@ -1,5 +1,6 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -52,6 +53,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function ProposalsPage() {
+  const searchParams = useSearchParams()
   const [currentStep, setCurrentStep] = useState(0)
   const [formState, setFormState] = useState<ProposalFormData>(() => createInitialProposalFormState())
   const [submitted, setSubmitted] = useState(false)
@@ -77,7 +79,14 @@ export default function ProposalsPage() {
   const wizardRef = useRef<HTMLDivElement | null>(null)
   const pendingDeckWindowRef = useRef<Window | null>(null)
   const { toast } = useToast()
-  const { selectedClient, selectedClientId } = useClientContext()
+  const { selectedClient, selectedClientId, selectClient } = useClientContext()
+
+  useEffect(() => {
+    const clientIdParam = searchParams.get('clientId')
+    if (clientIdParam && clientIdParam !== selectedClientId) {
+      selectClient(clientIdParam)
+    }
+  }, [searchParams, selectedClientId, selectClient])
 
   const steps = proposalSteps
   const step = steps[currentStep]

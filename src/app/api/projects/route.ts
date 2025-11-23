@@ -6,6 +6,7 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { mapProjectDoc, projectStatusSchema, coerceStringArray, toISO } from '@/lib/projects'
 import type { ProjectRecord } from '@/types/projects'
+import { recordProjectCreatedNotification } from '@/lib/notifications'
 
 const MAX_PROJECTS = 100
 
@@ -232,7 +233,13 @@ export async function POST(request: NextRequest) {
 
     const workspace = await resolveWorkspaceContext(auth)
 
-    const json = (await request.json().catch(() => null)) ?? {}
+    let json
+    try {
+      json = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const payload = createProjectSchema.parse(json) satisfies CreateProjectInput
 
     const now = Timestamp.now()
@@ -260,6 +267,13 @@ export async function POST(request: NextRequest) {
 
     const createdDoc = await docRef.get()
     const project = await buildProjectSummary(workspace, createdDoc.id, createdDoc.data() as Record<string, unknown>)
+
+    await recordProjectCreatedNotification({
+      workspaceId: workspace.workspaceId,
+      project,
+      actorId: auth.uid,
+      actorName: auth.name,
+    })
 
     return NextResponse.json({ project }, { status: 201 })
   } catch (error) {

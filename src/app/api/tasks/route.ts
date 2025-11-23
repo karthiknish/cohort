@@ -229,7 +229,13 @@ export async function POST(request: NextRequest) {
 
     const workspace = await resolveWorkspaceContext(auth)
 
-    const json = (await request.json().catch(() => null)) ?? {}
+    let json
+    try {
+      json = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const payload = baseTaskSchema.parse(json) satisfies CreateTaskInput
 
     const normalizedAssignedTo = payload.assignedTo.map((name) => name.trim()).filter((name) => name.length > 0)

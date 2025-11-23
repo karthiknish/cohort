@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, RefObject } from 'react'
+import Link from 'next/link'
 import {
   Download,
   FileText,
@@ -741,6 +742,13 @@ export function CollaborationMessagePane({
             <Badge variant="outline" className={CHANNEL_TYPE_COLORS[channel.type]}>
               {channel.type}
             </Badge>
+            {channel.clientId && (
+              <Link href={`/dashboard/clients?clientId=${channel.clientId}`}>
+                <Badge variant="outline" className="border-dashed hover:bg-muted cursor-pointer">
+                  Client Workspace
+                </Badge>
+              </Link>
+            )}
           </div>
           <CardDescription className="mt-1">
             {channelParticipants.map((member) => member.name).join(', ')}

@@ -251,9 +251,15 @@ export default function TasksPage() {
       } catch (fetchError: unknown) {
         console.error('Failed to fetch tasks', fetchError)
         if (!cancelled) {
-          setError(fetchError instanceof Error ? fetchError.message : 'Unexpected error loading tasks')
+          const message = fetchError instanceof Error ? fetchError.message : 'Unexpected error loading tasks'
+          setError(message)
           setTasks([])
           setNextCursor(null)
+          toast({
+            title: 'Error loading tasks',
+            description: message,
+            variant: 'destructive',
+          })
         }
       } finally {
         if (!cancelled) {
@@ -549,9 +555,17 @@ export default function TasksPage() {
               {task.priority}
             </Badge>
             {task.client && (
-              <Badge variant="outline" className="border-dashed">
-                {task.client}
-              </Badge>
+              task.clientId ? (
+                <Link href={`/dashboard/clients?clientId=${task.clientId}`}>
+                  <Badge variant="outline" className="border-dashed hover:bg-muted cursor-pointer">
+                    {task.client}
+                  </Badge>
+                </Link>
+              ) : (
+                <Badge variant="outline" className="border-dashed">
+                  {task.client}
+                </Badge>
+              )
             )}
           </div>
 
@@ -938,9 +952,17 @@ export default function TasksPage() {
                                 <Calendar className="h-3.5 w-3.5" />
                                 {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
                               </span>
-                              <Badge variant="outline" className="border border-dashed">
-                                {task.client ?? 'Internal'}
-                              </Badge>
+                              {task.clientId ? (
+                                <Link href={`/dashboard/clients?clientId=${task.clientId}`}>
+                                  <Badge variant="outline" className="border border-dashed hover:bg-muted cursor-pointer">
+                                    {task.client ?? 'Internal'}
+                                  </Badge>
+                                </Link>
+                              ) : (
+                                <Badge variant="outline" className="border border-dashed">
+                                  {task.client ?? 'Internal'}
+                                </Badge>
+                              )}
                             </div>
                             {task.tags.length > 0 && (
                               <div className="flex flex-wrap items-center gap-2">

@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
-import { AlertTriangle, Calendar, CreditCard, Mail, RefreshCcw, Users as UsersIcon, UserPlus, Settings } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useMemo } from 'react'
+import { AlertTriangle, Briefcase, Calendar, CheckSquare, CreditCard, FileText, Mail, RefreshCcw, Users as UsersIcon, UserPlus, Settings } from 'lucide-react'
 
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
+import { useToast } from '@/components/ui/use-toast'
 import {
   Card,
   CardContent,
@@ -27,7 +29,16 @@ export default function ClientsDashboardPage() {
 }
 
 function ClientsDashboardContent() {
-  const { selectedClient, refreshClients, clients } = useClientContext()
+  const searchParams = useSearchParams()
+  const { selectedClient, refreshClients, clients, selectClient, selectedClientId } = useClientContext()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const clientIdParam = searchParams.get('clientId')
+    if (clientIdParam && clientIdParam !== selectedClientId) {
+      selectClient(clientIdParam)
+    }
+  }, [searchParams, selectedClientId, selectClient])
 
   const teamMembers = selectedClient?.teamMembers ?? []
   const lastInvoiceStatus = selectedClient?.lastInvoiceStatus ?? null
@@ -81,8 +92,20 @@ function ClientsDashboardContent() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
-              void refreshClients()
+            onClick={async () => {
+              try {
+                await refreshClients()
+                toast({
+                  title: 'Clients refreshed',
+                  description: 'Client data has been updated.',
+                })
+              } catch (error) {
+                toast({
+                  title: 'Refresh failed',
+                  description: 'Unable to update client data.',
+                  variant: 'destructive',
+                })
+              }
             }}
             className="inline-flex items-center gap-2"
           >
@@ -143,6 +166,42 @@ function ClientsDashboardContent() {
             <div className="text-lg font-semibold">{clientIndex >= 0 ? `Client ${clientIndex + 1} of ${clients.length}` : '—'}</div>
             <p className="text-xs text-muted-foreground">Based on alphabetical ordering</p>
           </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-muted/60 bg-background transition-colors hover:bg-muted/50">
+          <Link href={`/dashboard/projects?clientId=${selectedClient.id}`} className="block h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Projects</CardTitle>
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Manage active projects and timelines</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-muted/60 bg-background transition-colors hover:bg-muted/50">
+          <Link href={`/dashboard/tasks?clientId=${selectedClient.id}`} className="block h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tasks</CardTitle>
+              <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Track open tasks and deliverables</p>
+            </CardContent>
+          </Link>
+        </Card>
+        <Card className="border-muted/60 bg-background transition-colors hover:bg-muted/50">
+          <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`} className="block h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Proposals</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Review and manage client proposals</p>
+            </CardContent>
+          </Link>
         </Card>
       </div>
 

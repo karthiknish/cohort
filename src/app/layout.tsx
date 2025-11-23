@@ -44,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
           geistSans.variable,

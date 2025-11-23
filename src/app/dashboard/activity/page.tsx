@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns'
 import { 
   Clock, 
@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useRealtimeActivity } from '@/app/dashboard/activity/hooks/use-realtime-activity'
 import { useClientContext } from '@/contexts/client-context'
+import { useToast } from '@/components/ui/use-toast'
 import type { Activity, ActivityType } from '@/types/activity'
 
 const ACTIVITY_ICONS = {
@@ -45,6 +46,7 @@ const ACTIVITY_LABELS: Record<ActivityType, string> = {
 
 export default function ActivityPage() {
   const { selectedClient } = useClientContext()
+  const { toast } = useToast()
   const { activities, loading, error, retry } = useRealtimeActivity(50)
   
   const [searchQuery, setSearchQuery] = useState('')
@@ -80,6 +82,24 @@ export default function ActivityPage() {
     return groups
   }, [filteredActivities])
 
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Activity sync failed',
+        description: error,
+        variant: 'destructive',
+      })
+    }
+  }, [error, toast])
+
+  const handleRetry = () => {
+    toast({
+      title: 'Refreshing activity',
+      description: 'Syncing latest updates...',
+    })
+    retry()
+  }
+
   const groupKeys = Object.keys(groupedActivities).sort((a, b) => {
     if (a === 'Today') return -1
     if (b === 'Today') return 1
@@ -114,7 +134,7 @@ export default function ActivityPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={retry} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={handleRetry} disabled={loading}>
             <Clock className="mr-2 h-4 w-4" />
             Refresh
           </Button>

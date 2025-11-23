@@ -214,7 +214,13 @@ export async function POST(request: NextRequest) {
 
     assertAdmin(auth)
 
-    const json = (await request.json().catch(() => null)) ?? {}
+    let json
+    try {
+      json = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const payload = createClientSchema.parse(json)
 
     const resolvedTeam = payload.teamMembers
@@ -281,7 +287,13 @@ export async function PATCH(request: NextRequest) {
 
     assertAdmin(auth)
 
-    const json = (await request.json().catch(() => null)) ?? {}
+    let json
+    try {
+      json = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const parsed = addTeamMemberSchema.safeParse(json)
 
     if (!parsed.success) {
@@ -332,7 +344,13 @@ export async function DELETE(request: NextRequest) {
 
     assertAdmin(auth)
 
-    const json = (await request.json().catch(() => null)) ?? {}
+    let json
+    try {
+      json = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
     const payload = deleteClientSchema.parse(json)
 
     const workspace = await resolveWorkspaceContext(auth)

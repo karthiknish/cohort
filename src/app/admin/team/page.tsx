@@ -10,6 +10,7 @@ import {
   UserCheck,
   UserMinus,
   Users as UsersIcon,
+  UserPlus,
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -31,6 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
@@ -56,6 +67,11 @@ export default function AdminTeamPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const { toast } = useToast()
+
+  // Invite dialog state
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
 
   const fetchUsers = useCallback(
     async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
@@ -229,6 +245,19 @@ export default function AdminTeamPage() {
     }
   }
 
+  const handleInviteUser = async () => {
+    if (!inviteEmail) return
+    
+    // Mock invite functionality - in a real app this would call an API
+    toast({
+      title: 'Invitation sent',
+      description: `Invitation sent to ${inviteEmail} as ${inviteRole}.`,
+    })
+    setInviteOpen(false)
+    setInviteEmail('')
+    setInviteRole('team')
+  }
+
   const handleRefresh = () => {
     if (loading) return
     setStatusFilter('all')
@@ -272,6 +301,49 @@ export default function AdminTeamPage() {
             <Button type="button" variant="outline" onClick={handleRefresh} disabled={loading} className="inline-flex items-center gap-2">
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
             </Button>
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <UserPlus className="h-4 w-4" /> Invite User
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Invite new user</DialogTitle>
+                  <DialogDescription>
+                    Send an invitation email to add a new member to your organization.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input
+                      id="email"
+                      placeholder="colleague@company.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AdminUserRole)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="team">Team Member</SelectItem>
+                        <SelectItem value="client">Client</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
+                  <Button onClick={handleInviteUser} disabled={!inviteEmail}>Send Invitation</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 

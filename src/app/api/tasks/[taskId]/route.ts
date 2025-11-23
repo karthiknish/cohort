@@ -6,6 +6,7 @@ import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/types/tasks'
 import { coerceStringArray, invalidateTasksCache, mapTaskDoc, type StoredTask } from '../route'
 import { resolveWorkspaceContext } from '@/lib/workspace'
+import { recordTaskUpdatedNotification } from '@/lib/notifications'
 
 const updateTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200).optional(),
@@ -106,6 +107,40 @@ export async function PATCH(
 
     const updatedDoc = await docRef.get()
     const task = mapTaskDoc(updatedDoc.id, updatedDoc.data() as StoredTask)
+
+    // Calculate changes for notification
+    const oldData = existingDoc.data() as StoredTask
+    const newData = updatedDoc.data() as StoredTask
+    const changes: string[] = []
+
+    if (newData.status && oldData.status !== newData.status) {
+      changes.push(`Status: ${oldData.status} → ${newData.status}`)
+    }
+
+    if (newData.priority && oldData.priority !== newData.priority) {
+      changes.push(`Priority: ${oldData.priority} → ${newData.priority}`)
+    }
+
+    // Check for assignment changes
+    const oldAssigned = Array.isArray(oldData.assignedTo) ? oldData.assignedTo.sort().join(',') : ''
+    const newAssigned = Array.isArray(newData.assignedTo) ? newData.assignedTo.sort().join(',') : ''
+    if (oldAssigned !== newAssigned) {
+      const assignedList = Array.isArray(newData.assignedTo) && newData.assignedTo.length > 0 
+        ? newData.assignedTo.join(', ') 
+        : 'Unassigned'
+      changes.push(`Assigned to: ${assignedList}`)
+    }
+
+    if (changes.length > 0) {
+      await recordTaskUpdatedNotification({
+        workspaceId: workspace.workspaceId,
+        task,
+        changes,
+        actorId: auth.uid,
+        actorName: auth.name,
+      })
+    }
+
     return NextResponse.json(task)
   } catch (error: unknown) {
     if (error instanceof AuthenticationError) {

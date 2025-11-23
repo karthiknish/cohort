@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 export interface AuthResult {
   uid: string | null
   email: string | null
+  name: string | null
   claims: Record<string, unknown>
   isCron: boolean
 }
@@ -16,7 +17,7 @@ class AuthenticationError extends Error {
   }
 }
 
-async function verifyIdToken(idToken: string): Promise<{ uid: string; email: string | null; claims: Record<string, unknown> }> {
+async function verifyIdToken(idToken: string): Promise<{ uid: string; email: string | null; name: string | null; claims: Record<string, unknown> }> {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
   if (!apiKey) {
     throw new AuthenticationError('Firebase API key not configured', 500)
@@ -41,6 +42,7 @@ async function verifyIdToken(idToken: string): Promise<{ uid: string; email: str
   const user = users[0]
   const uid = user?.localId as string | undefined
   const email = typeof user?.email === 'string' ? user.email : null
+  const name = typeof user?.displayName === 'string' ? user.displayName : null
   let claims: Record<string, unknown> = {}
 
   if (typeof user?.customAttributes === 'string' && user.customAttributes.trim().length > 0) {
@@ -58,7 +60,7 @@ async function verifyIdToken(idToken: string): Promise<{ uid: string; email: str
     throw new AuthenticationError('Unable to verify user identity', 401)
   }
 
-  return { uid, email, claims }
+  return { uid, email, name, claims }
 }
 
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
@@ -66,7 +68,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   const cronKey = request.headers.get('x-cron-key')
 
   if (cronSecret && cronKey && cronKey === cronSecret) {
-    return { uid: null, email: null, claims: {}, isCron: true }
+    return { uid: null, email: null, name: 'System Cron', claims: {}, isCron: true }
   }
 
   const authHeader = request.headers.get('authorization')
@@ -75,8 +77,8 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   }
 
   const token = authHeader.slice(7)
-  const { uid, email, claims } = await verifyIdToken(token)
-  return { uid, email, claims, isCron: false }
+  const { uid, email, name, claims } = await verifyIdToken(token)
+  return { uid, email, name, claims, isCron: false }
 }
 
 export function assertAdmin(auth: AuthResult) {

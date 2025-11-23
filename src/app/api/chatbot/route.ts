@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { chatbotService } from '@/services/chatbot'
 import { ChatbotGenerateRequest } from '@/types/chatbot'
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await authenticateRequest(request)
+    if (!auth.uid) {
+      throw new AuthenticationError('Authentication required', 401)
+    }
+
     const body = (await request.json()) as ChatbotGenerateRequest | null
 
     if (!body || typeof body.message !== 'string' || !body.message.trim()) {
@@ -18,6 +24,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[api/chatbot] error', error)
     const message = error instanceof Error ? error.message : 'Failed to contact Cohorts AI assistant.'
     return NextResponse.json({ error: message }, { status: 500 })

@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase-admin'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
+import type { ProjectRecord } from '@/types/projects'
 import type {
   WorkspaceNotificationKind,
   WorkspaceNotificationRole,
@@ -652,6 +653,101 @@ export async function recordInvoicePaidNotification(options: {
       invoiceNumber,
       clientId,
       clientName,
+    },
+  })
+}
+
+export async function recordTaskUpdatedNotification(options: {
+  workspaceId: string
+  task: TaskRecord
+  changes: string[]
+  actorId?: string | null
+  actorName?: string | null
+}) {
+  const { workspaceId, task, changes } = options
+  if (!workspaceId || !task?.id || changes.length === 0) {
+    return
+  }
+
+  const clientId = typeof task.clientId === 'string' && task.clientId.trim().length > 0 ? task.clientId.trim() : null
+  const baseRoles: WorkspaceNotificationRole[] = ['admin', 'team']
+  const recipients: WorkspaceNotificationRecipients = {
+    roles: clientId ? uniqueRoles([...baseRoles, 'client']) : baseRoles,
+    clientIds: clientId ? [clientId] : undefined,
+    clientId,
+  }
+
+  const body = changes.join(' · ')
+
+  await createWorkspaceNotification({
+    workspaceId,
+    kind: 'task.updated',
+    title: `Task updated: ${task.title}`,
+    body,
+    actor: {
+      id: options.actorId ?? null,
+      name: options.actorName ?? null,
+    },
+    resource: { type: 'task', id: task.id },
+    recipients,
+    metadata: {
+      status: task.status,
+      priority: task.priority,
+      clientId,
+      clientName: task.client ?? null,
+      changes,
+    },
+  })
+}
+
+export async function recordProjectCreatedNotification(options: {
+  workspaceId: string
+  project: ProjectRecord
+  actorId?: string | null
+  actorName?: string | null
+}) {
+  const { workspaceId, project } = options
+  if (!workspaceId || !project?.id) {
+    return
+  }
+
+  const clientId = typeof project.clientId === 'string' && project.clientId.trim().length > 0 ? project.clientId.trim() : null
+  const baseRoles: WorkspaceNotificationRole[] = ['admin', 'team']
+  const recipients: WorkspaceNotificationRecipients = {
+    roles: clientId ? uniqueRoles([...baseRoles, 'client']) : baseRoles,
+    clientIds: clientId ? [clientId] : undefined,
+    clientId,
+  }
+
+  const segments = [
+    `Status: ${project.status}`,
+  ]
+
+  if (project.startDate) {
+    const startDate = new Date(project.startDate)
+    const formattedStart = Number.isNaN(startDate.getTime()) ? project.startDate : startDate.toLocaleDateString()
+    segments.push(`Start: ${formattedStart}`)
+  }
+
+  if (project.clientName) {
+    segments.push(`Client: ${project.clientName}`)
+  }
+
+  await createWorkspaceNotification({
+    workspaceId,
+    kind: 'project.created',
+    title: `New project: ${project.name}`,
+    body: segments.join(' · '),
+    actor: {
+      id: options.actorId ?? null,
+      name: options.actorName ?? null,
+    },
+    resource: { type: 'project', id: project.id },
+    recipients,
+    metadata: {
+      status: project.status,
+      clientId,
+      clientName: project.clientName ?? null,
     },
   })
 }

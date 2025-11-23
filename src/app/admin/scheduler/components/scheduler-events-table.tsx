@@ -1,12 +1,14 @@
 "use client"
 
 import { Loader2, RefreshCw } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/use-toast'
 
 import { SchedulerEvent, SchedulerEventsState } from './use-scheduler-events'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -80,6 +82,7 @@ type SchedulerEventsTableProps = {
 }
 
 export function SchedulerEventsTable({ state }: SchedulerEventsTableProps) {
+  const { toast } = useToast()
   const {
     events,
     hasEvents,
@@ -94,6 +97,16 @@ export function SchedulerEventsTable({ state }: SchedulerEventsTableProps) {
     uniqueSeverities,
     uniqueSources,
   } = state
+
+  useEffect(() => {
+    if (errorMessage) {
+      toast({
+        title: 'Scheduler error',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+    }
+  }, [errorMessage, toast])
 
   return (
     <Card className="shadow-sm">
@@ -136,7 +149,10 @@ export function SchedulerEventsTable({ state }: SchedulerEventsTableProps) {
                 ))}
               </SelectContent>
             </Select>
-            <Button type="button" size="sm" variant="outline" onClick={refresh} disabled={isRefreshing}>
+            <Button type="button" size="sm" variant="outline" onClick={() => {
+              toast({ title: 'Refreshing events', description: 'Checking for new scheduler activity...' })
+              refresh()
+            }} disabled={isRefreshing}>
               <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
               <span className="ml-2">Refresh</span>
             </Button>
