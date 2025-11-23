@@ -1,6 +1,7 @@
 'use client'
 
-import { BellRing, Calendar, Download, Eye, Loader2, RotateCcw } from 'lucide-react'
+import { useState } from 'react'
+import { BellRing, Calendar, Download, Eye, Loader2, RotateCcw, Search } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -55,6 +57,19 @@ export function FinanceInvoiceTable({
   hasMore,
   loadingMore,
 }: FinanceInvoiceTableProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      invoice.clientName?.toLowerCase().includes(query) ||
+      invoice.number?.toLowerCase().includes(query) ||
+      invoice.id.toLowerCase().includes(query) ||
+      invoice.description?.toLowerCase().includes(query)
+    )
+  })
+
   return (
     <Card className="border-muted/60 bg-background">
       <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -63,6 +78,15 @@ export function FinanceInvoiceTable({
           <CardDescription>Filter, download, and monitor the latest billing activity.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
           <Select value={selectedStatus} onValueChange={onSelectStatus}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Filter status" />
@@ -75,20 +99,17 @@ export function FinanceInvoiceTable({
               <SelectItem value="overdue">Overdue</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
         </div>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="max-h-[420px]">
-          {invoices.length === 0 ? (
+          {filteredInvoices.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-muted-foreground">
               No invoices found for the selected filters.
             </div>
           ) : (
             <div className="divide-y divide-muted/30">
-              {invoices.map((invoice) => (
+              {filteredInvoices.map((invoice) => (
                 <div
                   key={invoice.id}
                   className="flex flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between"

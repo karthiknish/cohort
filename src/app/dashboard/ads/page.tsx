@@ -1,4 +1,3 @@
-
 "use client"
 
 import Link from 'next/link'
@@ -6,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   AlertCircle,
+  Download,
   Facebook,
   Linkedin,
   Loader2,
@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
+import { PerformanceChart } from '@/components/dashboard/performance-chart'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useAuth } from '@/contexts/auth-context'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -66,6 +67,7 @@ interface IntegrationStatusResponse {
     lastSyncRequestedAt?: string | null
     message?: string | null
     linkedAt?: string | null
+    accountId?: string | null
     autoSyncEnabled?: boolean | null
     syncFrequencyMinutes?: number | null
     scheduledTimeframeDays?: number | null
@@ -225,6 +227,7 @@ export default function AdsPage() {
     connectLinkedInAdsAccount,
     startMetaOauth,
     startTikTokOauth,
+    disconnectProvider,
     getIdToken,
   } = useAuth()
   const { toast } = useToast()
@@ -244,6 +247,10 @@ export default function AdsPage() {
   const [savingSettings, setSavingSettings] = useState<Record<string, boolean>>({})
   const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
+  const [initializingMeta, setInitializingMeta] = useState(false)
+  const [syncingProvider, setSyncingProvider] = useState<string | null>(null)
+  const [viewTimeframe, setViewTimeframe] = useState(30)
+
   const hasMetricData = metrics.length > 0
   const initialMetricsLoading = metricsLoading && !hasMetricData
 
@@ -280,6 +287,42 @@ export default function AdsPage() {
 
     return response.json()
   }, [getIdToken])
+
+  const initializeMetaIntegration = useCallback(async () => {
+    setMetaSetupMessage(null)
+    setInitializingMeta(true)
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/integrations/meta/initialize', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
+
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to finish Meta Ads setup'
+        throw new Error(message)
+      }
+      toast({
+        title: 'Meta Ads connected',
+        description: payload?.accountName ? `Using ${payload.accountName} for syncs.` : 'Default ad account linked successfully.',
+      })
+      setRefreshTick((tick) => tick + 1)
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Unable to complete Meta setup')
+      setMetaSetupMessage(message)
+      toast({
+        variant: 'destructive',
+        title: 'Meta setup failed',
+        description: message,
+      })
+    } finally {
+      setInitializingMeta(false)
+    }
+  }, [getIdToken, toast])
 
   const updateAutomationDraft = useCallback(
     (providerId: string, updates: Partial<ProviderAutomationFormState>) => {
@@ -446,6 +489,14 @@ export default function AdsPage() {
   }, [integrationStatuses])
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+    const hasMetaCookie = document.cookie.split(';').some((cookie) => cookie.trim().startsWith('meta_oauth_success='))
+    if (!hasMetaCookie) return
+    document.cookie = 'meta_oauth_success=; Path=/; Max-Age=0; SameSite=Lax'
+    void initializeMetaIntegration()
+  }, [initializeMetaIntegration])
+
+  useEffect(() => {
     if (!integrationStatuses || integrationStatuses.statuses.length === 0) {
       setAutomationDraft({})
       return
@@ -463,11 +514,50 @@ export default function AdsPage() {
     setAutomationDraft(nextDraft)
   }, [integrationStatuses])
 
-  const automationStatuses = integrationStatuses?.statuses ?? []
+  const automationStatuses = useMemo(
+    () => integrationStatuses?.statuses ?? [],
+    [integrationStatuses]
+  )
+  const metaStatus = useMemo(
+    () => automationStatuses.find((status) => status.providerId === 'facebook'),
+    [automationStatuses]
+  )
+  const metaNeedsAccountSelection = Boolean(metaStatus?.linkedAt && !metaStatus.accountId)
+
+  const processedMetrics = useMemo(() => {
+    // 1. Deduplicate: Keep latest createdAt for each (providerId, date)
+    const uniqueMap = new Map<string, MetricRecord>()
+    metrics.forEach((m) => {
+      const key = `${m.providerId}|${m.date}`
+      const existing = uniqueMap.get(key)
+      // If no existing record, or if current record is newer (based on createdAt string comparison which works for ISO)
+      if (!existing || (m.createdAt && existing.createdAt && m.createdAt > existing.createdAt)) {
+        uniqueMap.set(key, m)
+      } else if (!existing.createdAt && m.createdAt) {
+         // Prefer record with createdAt
+         uniqueMap.set(key, m)
+      } else if (!existing && !m.createdAt) {
+        uniqueMap.set(key, m)
+      }
+    })
+
+    const uniqueMetrics = Array.from(uniqueMap.values())
+
+    // 2. Filter by date
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - viewTimeframe)
+    // Set to start of day to be inclusive
+    cutoff.setHours(0, 0, 0, 0)
+
+    return uniqueMetrics.filter((m) => {
+      const d = new Date(m.date)
+      return !Number.isNaN(d.getTime()) && d >= cutoff
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [metrics, viewTimeframe])
 
   const providerSummaries = useMemo(() => {
     const summary: Record<string, ProviderSummary> = {}
-    metrics.forEach((metric) => {
+    processedMetrics.forEach((metric) => {
       if (!summary[metric.providerId]) {
         summary[metric.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
       }
@@ -479,10 +569,10 @@ export default function AdsPage() {
       providerSummary.revenue += metric.revenue ?? 0
     })
     return summary
-  }, [metrics])
+  }, [processedMetrics])
 
   const totals: Totals = useMemo(() => {
-    return metrics.reduce(
+    return processedMetrics.reduce(
       (acc, metric) => {
         acc.spend += metric.spend
         acc.impressions += metric.impressions
@@ -493,7 +583,7 @@ export default function AdsPage() {
       },
       { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 } satisfies Totals,
     )
-  }, [metrics])
+  }, [processedMetrics])
 
   const summaryCards = useMemo(() => {
     const averageCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
@@ -588,6 +678,76 @@ export default function AdsPage() {
     setRefreshTick((tick) => tick + 1)
   }
 
+  const runManualSync = useCallback(
+    async (providerId: string) => {
+      if (!user?.id) {
+        toast({
+          variant: 'destructive',
+          title: 'Unable to sync',
+          description: 'Sign in again to run a sync.',
+        })
+        return
+      }
+
+      setSyncingProvider(providerId)
+      try {
+        const token = await getIdToken()
+        const scheduleResponse = await fetch('/api/integrations/manual-sync', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ providerId, force: true }),
+        })
+
+        const schedulePayload = (await scheduleResponse.json().catch(() => ({}))) as { scheduled?: boolean; message?: string }
+        if (!scheduleResponse.ok) {
+          const message = typeof schedulePayload?.message === 'string' ? schedulePayload.message : 'Failed to queue sync job'
+          throw new Error(message)
+        }
+
+        if (!schedulePayload?.scheduled) {
+          toast({
+            title: 'Nothing to sync right now',
+            description: schedulePayload?.message ?? 'A sync is already running for this provider.',
+          })
+          return
+        }
+
+        const processResponse = await fetch('/api/integrations/process', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!processResponse.ok && processResponse.status !== 204) {
+          const payload = await processResponse.json().catch(() => ({}))
+          const message = typeof (payload as { error?: string }).error === 'string' ? (payload as { error?: string }).error : 'Sync processor failed'
+          throw new Error(message)
+        }
+
+        toast({
+          title: 'Sync complete',
+          description: `${formatProviderName(providerId)} metrics refreshed.`,
+        })
+        setRefreshTick((tick) => tick + 1)
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, 'Unable to run sync job')
+        toast({
+          variant: 'destructive',
+          title: 'Sync failed',
+          description: message,
+        })
+      } finally {
+        setSyncingProvider(null)
+      }
+    },
+    [getIdToken, toast, user?.id]
+  )
+
   const handleLoadMore = useCallback(async () => {
     if (!nextCursor || loadingMore || metricsLoading || !user?.id) {
       return
@@ -662,6 +822,35 @@ export default function AdsPage() {
     }
   }
 
+  const handleDisconnect = async (providerId: string) => {
+    if (!confirm(`Are you sure you want to disconnect ${formatProviderName(providerId)}? This will stop all future syncs.`)) {
+      return
+    }
+
+    setConnectingProvider(providerId)
+    setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
+
+    try {
+      await disconnectProvider(providerId)
+      setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
+      toast({
+        title: 'Disconnected',
+        description: `${formatProviderName(providerId)} has been disconnected.`,
+      })
+      setRefreshTick((tick) => tick + 1)
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Unable to disconnect. Please try again.')
+      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
+      toast({
+        variant: 'destructive',
+        title: 'Disconnect failed',
+        description: message,
+      })
+    } finally {
+      setConnectingProvider(null)
+    }
+  }
+
   const isInitialLoading = metricsLoading && metrics.length === 0 && !integrationStatuses
 
   if (isInitialLoading) {
@@ -672,6 +861,29 @@ export default function AdsPage() {
     !integrationStatuses ||
     integrationStatuses.statuses.length === 0 ||
     integrationStatuses.statuses.every((status) => status.status !== 'success')
+
+  const handleExport = () => {
+    const headers = ['Date', 'Provider', 'Spend', 'Impressions', 'Clicks', 'Conversions', 'Revenue']
+    const rows = processedMetrics.map((m) => [
+      m.date,
+      formatProviderName(m.providerId),
+      m.spend.toFixed(2),
+      m.impressions,
+      m.clicks,
+      m.conversions,
+      (m.revenue || 0).toFixed(2),
+    ])
+
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ads-metrics-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="space-y-6">
@@ -727,17 +939,36 @@ export default function AdsPage() {
         </FadeIn>
       )}
 
+      {metaNeedsAccountSelection && (
+        <FadeIn>
+          <Alert className="border-primary/40 bg-primary/5">
+            <AlertTitle className="flex items-center justify-between gap-3 text-sm font-semibold">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-primary" /> Meta account selection pending
+              </span>
+              <Button size="sm" onClick={() => { void initializeMetaIntegration() }} disabled={initializingMeta}>
+                {initializingMeta ? 'Finishing…' : 'Finish setup'}
+              </Button>
+            </AlertTitle>
+            <AlertDescription className="mt-2 text-xs text-muted-foreground">
+              Choose a default Meta ad account so Cohorts knows which campaigns to sync.
+            </AlertDescription>
+          </Alert>
+        </FadeIn>
+      )}
+
       <FadeIn>
         <div id="connect-ad-platforms">
           <AdConnectionsCard
             providers={adPlatforms}
             connectedProviders={connectedProviders}
-          connectingProvider={connectingProvider}
-          connectionErrors={connectionErrors}
-          onConnect={handleConnect}
-          onOauthRedirect={handleOauthRedirect}
-          onRefresh={handleManualRefresh}
-          refreshing={metricsLoading}
+            connectingProvider={connectingProvider}
+            connectionErrors={connectionErrors}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            onOauthRedirect={handleOauthRedirect}
+            onRefresh={handleManualRefresh}
+            refreshing={metricsLoading}
           />
         </div>
       </FadeIn>
@@ -858,19 +1089,33 @@ export default function AdsPage() {
                       ) : (
                         <p className="text-xs text-muted-foreground">Changes apply to future scheduled syncs for this provider.</p>
                       )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="inline-flex items-center gap-2"
-                        onClick={() => {
-                          void handleSaveAutomation(status.providerId)
-                        }}
-                        disabled={saving}
-                      >
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                        {saving ? 'Saving…' : 'Save automation'}
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="inline-flex items-center gap-2"
+                          onClick={() => {
+                            void handleSaveAutomation(status.providerId)
+                          }}
+                          disabled={saving}
+                        >
+                          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          {saving ? 'Saving…' : 'Save automation'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="inline-flex items-center gap-2"
+                          onClick={() => {
+                            void runManualSync(status.providerId)
+                          }}
+                          disabled={syncingProvider === status.providerId}
+                        >
+                          <RefreshCw className={cn('h-4 w-4', syncingProvider === status.providerId && 'animate-spin')} />
+                          {syncingProvider === status.providerId ? 'Syncing…' : 'Run sync now'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )
@@ -883,10 +1128,33 @@ export default function AdsPage() {
       <FadeIn>
         <Card className="shadow-sm">
           <CardHeader className="flex flex-col gap-1">
-            <CardTitle className="text-lg">Cross-channel overview</CardTitle>
-            <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-lg">Cross-channel overview</CardTitle>
+                <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={String(viewTimeframe)}
+                  onValueChange={(val) => setViewTimeframe(Number(val))}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Select range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="14">Last 14 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={handleExport} disabled={!hasMetricData} title="Export CSV">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             {initialMetricsLoading ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -901,19 +1169,25 @@ export default function AdsPage() {
                 </Button>
               </div>
             ) : (
-              <FadeInStagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {summaryCards.map((card) => (
-                  <FadeInItem key={card.id}>
-                    <Card className="border-muted/70 bg-background shadow-sm">
-                      <CardContent className="space-y-2 p-5">
-                        <p className="text-xs font-medium uppercase text-muted-foreground">{card.label}</p>
-                        <p className="text-2xl font-semibold text-foreground">{card.value}</p>
-                        <p className="text-xs text-muted-foreground">{card.helper}</p>
-                      </CardContent>
-                    </Card>
-                  </FadeInItem>
-                ))}
-              </FadeInStagger>
+              <>
+                <FadeInStagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  {summaryCards.map((card) => (
+                    <FadeInItem key={card.id}>
+                      <Card className="border-muted/70 bg-background shadow-sm">
+                        <CardContent className="space-y-2 p-5">
+                          <p className="text-xs font-medium uppercase text-muted-foreground">{card.label}</p>
+                          <p className="text-2xl font-semibold text-foreground">{card.value}</p>
+                          <p className="text-xs text-muted-foreground">{card.helper}</p>
+                        </CardContent>
+                      </Card>
+                    </FadeInItem>
+                  ))}
+                </FadeInStagger>
+                
+                <div className="h-[350px] w-full">
+                   <PerformanceChart metrics={processedMetrics} loading={metricsLoading} />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -926,16 +1200,28 @@ export default function AdsPage() {
               <CardTitle className="text-lg">Ad performance summary</CardTitle>
               <CardDescription>Aggregated spend, clicks, and conversions over the last synced period.</CardDescription>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleManualRefresh}
-              disabled={metricsLoading}
-              className="inline-flex items-center gap-2"
-            >
-              <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} /> Refresh metrics
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleManualRefresh}
+                disabled={metricsLoading}
+                className="inline-flex items-center gap-2"
+              >
+                <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} /> Refresh metrics
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="inline-flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {initialMetricsLoading ? (
@@ -1041,7 +1327,7 @@ export default function AdsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {metrics.map((metric) => {
+                    {processedMetrics.map((metric) => {
                       const ProviderIcon = PROVIDER_ICON_MAP[metric.providerId]
                       return (
                         <tr key={metric.id} className="border-b border-muted/40">

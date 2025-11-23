@@ -1,4 +1,9 @@
 import { CampaignMetrics } from '@/types'
+import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
+import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
+import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
+import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
+import { NormalizedMetric } from '@/types/integrations'
 
 export type PlatformCredentials = Record<string, string>
 
@@ -12,43 +17,84 @@ export interface CampaignOverview {
 export interface AdPlatform {
   name: string
   authenticate: (credentials: PlatformCredentials) => Promise<boolean>
-  getCampaigns: (accountId: string) => Promise<CampaignOverview[]>
-  getMetrics: (campaignId: string, dateRange: { start: Date; end: Date }) => Promise<CampaignMetrics[]>
+  getCampaigns: (accountId: string, credentials?: PlatformCredentials) => Promise<CampaignOverview[]>
+  getMetrics: (campaignId: string, dateRange: { start: Date; end: Date }, credentials?: PlatformCredentials) => Promise<CampaignMetrics[]>
+}
+
+function mapToCampaignMetrics(metric: NormalizedMetric): CampaignMetrics {
+  const spend = metric.spend || 0
+  const clicks = metric.clicks || 0
+  const impressions = metric.impressions || 0
+  const conversions = metric.conversions || 0
+  const revenue = metric.revenue || 0
+
+  return {
+    campaignId: metric.campaignId || 'unknown',
+    platform: metric.providerId,
+    date: new Date(metric.date),
+    budget: 0, // Not available in NormalizedMetric
+    spend,
+    clicks,
+    impressions,
+    conversions,
+    ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+    cpc: clicks > 0 ? spend / clicks : 0,
+    cpm: impressions > 0 ? (spend / impressions) * 1000 : 0,
+    conversionRate: clicks > 0 ? (conversions / clicks) * 100 : 0,
+    cpl: conversions > 0 ? spend / conversions : 0,
+    revenue,
+    roas: spend > 0 ? revenue / spend : 0,
+  }
 }
 
 export class GoogleAdsService implements AdPlatform {
   name = 'Google Ads'
 
   async authenticate(credentials: PlatformCredentials) {
-    try {
-      // Implementation for Google Ads OAuth
-      // This would use the Google Ads API client library
-      console.log('Authenticating with Google Ads...', credentials)
-      return true
-    } catch (error) {
-      console.error('Google Ads authentication failed:', error)
-      return false
-    }
+    return !!credentials.accessToken
   }
 
-  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
+  async getCampaigns(accountId: string, credentials?: PlatformCredentials): Promise<CampaignOverview[]> {
+    if (!credentials?.accessToken) return []
     try {
-      // Implementation to fetch Google Ads campaigns
-      // This would use the Google Ads API
-      console.log('Fetching Google Ads campaigns for account:', accountId)
-      return []
+      // Fetch metrics for last 30 days to discover campaigns
+      const metrics = await fetchGoogleAdsMetrics({
+        accessToken: credentials.accessToken,
+        developerToken: credentials.developerToken,
+        customerId: accountId,
+        timeframeDays: 30,
+      })
+      
+      const campaigns = new Map<string, CampaignOverview>()
+      metrics.forEach(m => {
+        if (m.campaignId && !campaigns.has(m.campaignId)) {
+          campaigns.set(m.campaignId, {
+            id: m.campaignId,
+            name: m.campaignName
+          })
+        }
+      })
+      return Array.from(campaigns.values())
     } catch (error) {
       console.error('Failed to fetch Google Ads campaigns:', error)
       return []
     }
   }
 
-  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }) {
+  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }, credentials?: PlatformCredentials) {
+    if (!credentials?.accessToken) return []
     try {
-      // Implementation to fetch Google Ads metrics
-      // This would query the Google Ads API for performance data
-      console.log('Fetching Google Ads metrics for campaign:', campaignId, dateRange)
-      return []
+      const days = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24))
+      const metrics = await fetchGoogleAdsMetrics({
+        accessToken: credentials.accessToken,
+        developerToken: credentials.developerToken,
+        customerId: credentials.accountId || '', // Assuming accountId is passed in credentials or we need to change interface
+        timeframeDays: days,
+      })
+      
+      return metrics
+        .filter(m => m.campaignId === campaignId)
+        .map(mapToCampaignMetrics)
     } catch (error) {
       console.error('Failed to fetch Google Ads metrics:', error)
       return []
@@ -60,32 +106,47 @@ export class MetaAdsService implements AdPlatform {
   name = 'Meta Ads'
 
   async authenticate(credentials: PlatformCredentials) {
-    try {
-      // Implementation for Meta Ads OAuth
-      console.log('Authenticating with Meta Ads...', credentials)
-      return true
-    } catch (error) {
-      console.error('Meta Ads authentication failed:', error)
-      return false
-    }
+    return !!credentials.accessToken
   }
 
-  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
+  async getCampaigns(accountId: string, credentials?: PlatformCredentials): Promise<CampaignOverview[]> {
+    if (!credentials?.accessToken) return []
     try {
-      // Implementation to fetch Meta Ads campaigns
-      console.log('Fetching Meta Ads campaigns for account:', accountId)
-      return []
+      const metrics = await fetchMetaAdsMetrics({
+        accessToken: credentials.accessToken,
+        adAccountId: accountId,
+        timeframeDays: 30,
+      })
+      
+      const campaigns = new Map<string, CampaignOverview>()
+      metrics.forEach(m => {
+        if (m.campaignId && !campaigns.has(m.campaignId)) {
+          campaigns.set(m.campaignId, {
+            id: m.campaignId,
+            name: m.campaignName
+          })
+        }
+      })
+      return Array.from(campaigns.values())
     } catch (error) {
       console.error('Failed to fetch Meta Ads campaigns:', error)
       return []
     }
   }
 
-  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }) {
+  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }, credentials?: PlatformCredentials) {
+    if (!credentials?.accessToken || !credentials?.accountId) return []
     try {
-      // Implementation to fetch Meta Ads metrics
-      console.log('Fetching Meta Ads metrics for campaign:', campaignId, dateRange)
-      return []
+      const days = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24))
+      const metrics = await fetchMetaAdsMetrics({
+        accessToken: credentials.accessToken,
+        adAccountId: credentials.accountId,
+        timeframeDays: days,
+      })
+      
+      return metrics
+        .filter(m => m.campaignId === campaignId)
+        .map(mapToCampaignMetrics)
     } catch (error) {
       console.error('Failed to fetch Meta Ads metrics:', error)
       return []
@@ -97,32 +158,47 @@ export class TikTokAdsService implements AdPlatform {
   name = 'TikTok Ads'
 
   async authenticate(credentials: PlatformCredentials) {
-    try {
-      // Implementation for TikTok Ads OAuth
-      console.log('Authenticating with TikTok Ads...', credentials)
-      return true
-    } catch (error) {
-      console.error('TikTok Ads authentication failed:', error)
-      return false
-    }
+    return !!credentials.accessToken
   }
 
-  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
+  async getCampaigns(accountId: string, credentials?: PlatformCredentials): Promise<CampaignOverview[]> {
+    if (!credentials?.accessToken) return []
     try {
-      // Implementation to fetch TikTok Ads campaigns
-      console.log('Fetching TikTok Ads campaigns for account:', accountId)
-      return []
+      const metrics = await fetchTikTokAdsMetrics({
+        accessToken: credentials.accessToken,
+        advertiserId: accountId,
+        timeframeDays: 30,
+      })
+      
+      const campaigns = new Map<string, CampaignOverview>()
+      metrics.forEach(m => {
+        if (m.campaignId && !campaigns.has(m.campaignId)) {
+          campaigns.set(m.campaignId, {
+            id: m.campaignId,
+            name: m.campaignName
+          })
+        }
+      })
+      return Array.from(campaigns.values())
     } catch (error) {
       console.error('Failed to fetch TikTok Ads campaigns:', error)
       return []
     }
   }
 
-  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }) {
+  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }, credentials?: PlatformCredentials) {
+    if (!credentials?.accessToken || !credentials?.accountId) return []
     try {
-      // Implementation to fetch TikTok Ads metrics
-      console.log('Fetching TikTok Ads metrics for campaign:', campaignId, dateRange)
-      return []
+      const days = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24))
+      const metrics = await fetchTikTokAdsMetrics({
+        accessToken: credentials.accessToken,
+        advertiserId: credentials.accountId,
+        timeframeDays: days,
+      })
+      
+      return metrics
+        .filter(m => m.campaignId === campaignId)
+        .map(mapToCampaignMetrics)
     } catch (error) {
       console.error('Failed to fetch TikTok Ads metrics:', error)
       return []
@@ -134,32 +210,49 @@ export class LinkedInAdsService implements AdPlatform {
   name = 'LinkedIn Ads'
 
   async authenticate(credentials: PlatformCredentials) {
-    try {
-      // Implementation for LinkedIn Ads OAuth
-      console.log('Authenticating with LinkedIn Ads...', credentials)
-      return true
-    } catch (error) {
-      console.error('LinkedIn Ads authentication failed:', error)
-      return false
-    }
+    return !!credentials.accessToken
   }
 
-  async getCampaigns(accountId: string): Promise<CampaignOverview[]> {
+  async getCampaigns(accountId: string, credentials?: PlatformCredentials): Promise<CampaignOverview[]> {
+    if (!credentials?.accessToken) return []
     try {
-      // Implementation to fetch LinkedIn Ads campaigns
-      console.log('Fetching LinkedIn Ads campaigns for account:', accountId)
-      return []
+      const metrics = await fetchLinkedInAdsMetrics({
+        accessToken: credentials.accessToken,
+        accountId: accountId,
+        timeframeDays: 30,
+      })
+      
+      // LinkedIn metrics might not always have campaign breakdown depending on the API call
+      // But NormalizedMetric has campaignId field
+      const campaigns = new Map<string, CampaignOverview>()
+      metrics.forEach(m => {
+        if (m.campaignId && !campaigns.has(m.campaignId)) {
+          campaigns.set(m.campaignId, {
+            id: m.campaignId,
+            name: m.campaignName
+          })
+        }
+      })
+      return Array.from(campaigns.values())
     } catch (error) {
       console.error('Failed to fetch LinkedIn Ads campaigns:', error)
       return []
     }
   }
 
-  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }) {
+  async getMetrics(campaignId: string, dateRange: { start: Date; end: Date }, credentials?: PlatformCredentials) {
+    if (!credentials?.accessToken || !credentials?.accountId) return []
     try {
-      // Implementation to fetch LinkedIn Ads metrics
-      console.log('Fetching LinkedIn Ads metrics for campaign:', campaignId, dateRange)
-      return []
+      const days = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24))
+      const metrics = await fetchLinkedInAdsMetrics({
+        accessToken: credentials.accessToken,
+        accountId: credentials.accountId,
+        timeframeDays: days,
+      })
+      
+      return metrics
+        .filter(m => m.campaignId === campaignId)
+        .map(mapToCampaignMetrics)
     } catch (error) {
       console.error('Failed to fetch LinkedIn Ads metrics:', error)
       return []
@@ -182,7 +275,7 @@ export class AdsManager {
   }
 
   async getAllMetrics(
-    connectedAccounts: Array<{ platform: string; accountId: string }>,
+    connectedAccounts: Array<{ platform: string; accountId: string; credentials?: PlatformCredentials }>,
     dateRange: { start: Date; end: Date }
   ): Promise<CampaignMetrics[]> {
     const allMetrics: CampaignMetrics[] = []
@@ -192,10 +285,16 @@ export class AdsManager {
       if (!platform) continue
 
       try {
-        const campaigns = await platform.getCampaigns(account.accountId)
+        // We need to fetch campaigns first to get IDs, or we can modify getMetrics to fetch all if no campaignId is provided
+        // But getMetrics signature requires campaignId.
+        // Let's assume we want all metrics for the account.
+        // The underlying fetch...Metrics functions return all metrics for the account.
+        // So we can expose a new method or reuse getMetrics with a dummy ID or modify the interface.
+        // For now, let's iterate campaigns.
+        const campaigns = await platform.getCampaigns(account.accountId, account.credentials)
         
         for (const campaign of campaigns) {
-          const metrics = await platform.getMetrics(campaign.id, dateRange)
+          const metrics = await platform.getMetrics(campaign.id, dateRange, account.credentials)
           allMetrics.push(...metrics)
         }
       } catch (error) {

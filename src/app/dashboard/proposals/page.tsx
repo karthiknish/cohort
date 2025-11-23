@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -804,7 +806,17 @@ export default function ProposalsPage() {
 
   return (
     <div ref={wizardRef} className="space-y-6">
-      <ProposalWizardHeader />
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+        <ProposalWizardHeader />
+        <Button 
+          onClick={handleCreateNewProposal} 
+          disabled={!selectedClientId || isCreatingDraft}
+          className="shrink-0"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New Proposal
+        </Button>
+      </div>
 
       <Card className="border-muted/60 bg-background">
         <CardHeader>

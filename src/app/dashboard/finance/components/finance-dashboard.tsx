@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { useToast } from '@/components/ui/use-toast'
 
@@ -184,40 +185,63 @@ export function FinanceDashboard() {
         onExportData={handleExportData}
       />
       <FinanceStatsGrid stats={stats} />
-      <FinanceCostsCard
-        costs={costs}
-        monthlyCostTotal={monthlyCostTotal}
-        newCost={newCost}
-        onChangeNewCost={setNewCost}
-        onAddCost={handleAddCost}
-        onRemoveCost={handleRemoveCost}
-        submitting={isSubmittingCost}
-        removingCostId={removingCostId}
-        onLoadMore={loadMoreCosts}
-        hasMore={hasMoreCosts}
-        loadingMore={loadingMoreCosts}
-        currency={stats.primaryCurrency}
-      />
-      <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
-      <FinanceInvoiceTable
-        invoices={filteredInvoices}
-        selectedStatus={invoiceStatusFilter}
-        onSelectStatus={setInvoiceStatusFilter}
-        onSendReminder={isAdmin ? handleSendReminder : undefined}
-        onIssueRefund={isAdmin ? handleIssueRefund : undefined}
-        sendingInvoiceId={sendingInvoiceId}
-        refundingInvoiceId={refundingInvoiceId}
-        onLoadMore={loadMoreInvoices}
-        hasMore={hasMoreInvoices}
-        loadingMore={loadingMoreInvoices}
-      />
-      <FinanceRevenueSidebar
-        revenue={revenueByClient}
-        upcomingPayments={upcomingPayments}
-        totalOutstanding={stats.totalOutstanding}
-        currencyTotals={stats.currencyTotals}
-        primaryCurrency={stats.primaryCurrency}
-      />
+
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="costs">Costs</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <div className="col-span-4">
+              <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
+            </div>
+            <div className="col-span-3">
+              <FinanceRevenueSidebar
+                revenue={revenueByClient}
+                upcomingPayments={upcomingPayments}
+                totalOutstanding={stats.totalOutstanding}
+                currencyTotals={stats.currencyTotals}
+                primaryCurrency={stats.primaryCurrency}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="invoices" className="space-y-4">
+          <FinanceInvoiceTable
+            invoices={filteredInvoices}
+            selectedStatus={invoiceStatusFilter}
+            onSelectStatus={setInvoiceStatusFilter}
+            onSendReminder={isAdmin ? handleSendReminder : undefined}
+            onIssueRefund={isAdmin ? handleIssueRefund : undefined}
+            sendingInvoiceId={sendingInvoiceId}
+            refundingInvoiceId={refundingInvoiceId}
+            onLoadMore={loadMoreInvoices}
+            hasMore={hasMoreInvoices}
+            loadingMore={loadingMoreInvoices}
+          />
+        </TabsContent>
+
+        <TabsContent value="costs" className="space-y-4">
+          <FinanceCostsCard
+            costs={costs}
+            monthlyCostTotal={monthlyCostTotal}
+            newCost={newCost}
+            onChangeNewCost={setNewCost}
+            onAddCost={handleAddCost}
+            onRemoveCost={handleRemoveCost}
+            submitting={isSubmittingCost}
+            removingCostId={removingCostId}
+            onLoadMore={loadMoreCosts}
+            hasMore={hasMoreCosts}
+            loadingMore={loadingMoreCosts}
+            currency={stats.primaryCurrency}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

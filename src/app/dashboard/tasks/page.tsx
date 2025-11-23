@@ -14,6 +14,8 @@ import {
   MoreHorizontal,
   Loader2,
   X,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -36,6 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 import {
   Sheet,
   SheetClose,
@@ -130,6 +138,8 @@ export default function TasksPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | TaskStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAssignee, setSelectedAssignee] = useState('all')
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [activeTab, setActiveTab] = useState('all-tasks')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formState, setFormState] = useState<TaskFormState>(() => buildInitialFormState(selectedClient ?? undefined))
   const [creating, setCreating] = useState(false)
@@ -354,13 +364,27 @@ export default function TasksPage() {
       const description = (task.description ?? '').toLowerCase()
       const query = searchQuery.toLowerCase()
       const matchesSearch = title.includes(query) || description.includes(query)
-      const matchesAssignee =
-        selectedAssignee === 'all' ||
-        task.assignedTo.some((assignee) => assignee.toLowerCase().includes(selectedAssignee.toLowerCase()))
+      
+      let matchesAssignee = true
+      if (activeTab === 'my-tasks') {
+        // If "My Tasks" tab is active, filter by current user
+        // We assume user.name or user.email might be in assignedTo
+        // This is a loose check since assignedTo is just strings
+        if (user?.name) {
+           matchesAssignee = task.assignedTo.some(a => a.toLowerCase() === user.name?.toLowerCase())
+        } else {
+           matchesAssignee = false
+        }
+      } else {
+        // Otherwise use the dropdown filter
+        matchesAssignee =
+          selectedAssignee === 'all' ||
+          task.assignedTo.some((assignee) => assignee.toLowerCase().includes(selectedAssignee.toLowerCase()))
+      }
 
       return matchesStatus && matchesSearch && matchesAssignee
     })
-  }, [projectScopedTasks, selectedStatus, searchQuery, selectedAssignee])
+  }, [projectScopedTasks, selectedStatus, searchQuery, selectedAssignee, activeTab, user?.name])
 
   const taskCounts = useMemo(() => {
     const counts: Record<TaskStatus, number> = {
@@ -507,6 +531,68 @@ export default function TasksPage() {
     } finally {
       setCreating(false)
     }
+  }
+
+  function TaskCard({ task }: { task: TaskRecord }) {
+    return (
+      <div className="flex flex-col justify-between rounded-md border border-muted/40 bg-background p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-foreground line-clamp-2">{task.title}</h3>
+            <Badge variant="secondary" className={statusColors[task.status]}>
+              {task.status}
+            </Badge>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className={priorityColors[task.priority]}>
+              {task.priority}
+            </Badge>
+            {task.client && (
+              <Badge variant="outline" className="border-dashed">
+                {task.client}
+              </Badge>
+            )}
+          </div>
+
+          {task.description && (
+            <p className="text-sm text-muted-foreground line-clamp-3 min-h-[3rem]">{task.description}</p>
+          )}
+          
+          <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground pt-2">
+            <div className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" />
+              <span className="truncate">
+                {task.assignedTo.length > 0 ? task.assignedTo.join(', ') : 'Unassigned'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}</span>
+            </div>
+          </div>
+
+          {task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {task.tags.slice(0, 3).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-muted text-muted-foreground">
+                  #{tag}
+                </Badge>
+              ))}
+              {task.tags.length > 3 && (
+                <span className="text-[10px] text-muted-foreground">+{task.tags.length - 3}</span>
+              )}
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-4 flex items-center justify-end pt-3 border-t border-muted/40">
+          <Button variant="ghost" size="sm" className="h-8 text-xs">
+            View Details
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -688,178 +774,217 @@ export default function TasksPage() {
         ))}
       </div>
 
-      <Card className="border-muted/60 bg-background">
-        <CardHeader className="border-b border-muted/40 pb-4">
-          <CardTitle>All tasks</CardTitle>
-          <CardDescription>Search, filter, and monitor active work across the agency.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="flex flex-col gap-3 border-b border-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="w-full sm:max-w-sm">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tasks…"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={selectedStatus} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="todo">To do</SelectItem>
-                  <SelectItem value="in-progress">In progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={selectedAssignee} onValueChange={handleAssigneeChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All assignees</SelectItem>
-                  {assigneeOptions.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <Tabs defaultValue="all-tasks" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <TabsList>
+            <TabsTrigger value="all-tasks">All Tasks</TabsTrigger>
+            <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md border bg-background p-1">
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
             </div>
           </div>
+        </div>
 
-          {(projectFilter.id || projectFilter.name) && (
-            <div className="mx-4 mb-3 mt-2 flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs text-primary">
-              <span className="font-medium">
-                Showing tasks for {projectFilter.name ?? 'selected project'}
-              </span>
-              <div className="flex items-center gap-2">
-                {isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && (
-                  <Button asChild variant="outline" size="sm" className="h-6 text-xs">
-                    <Link href={`/dashboard/projects?projectId=${projectFilter.id}&projectName=${encodeURIComponent(projectFilter.name || '')}`}>
-                      View Project
-                    </Link>
-                  </Button>
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="border-b border-muted/40 pb-4">
+            <CardTitle>{activeTab === 'my-tasks' ? 'My Assignments' : 'All Tasks'}</CardTitle>
+            <CardDescription>
+              {activeTab === 'my-tasks' 
+                ? 'Tasks assigned specifically to you.' 
+                : 'Search, filter, and monitor active work across the agency.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="flex flex-col gap-3 border-b border-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="w-full sm:max-w-sm">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search tasks…"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="todo">To do</SelectItem>
+                    <SelectItem value="in-progress">In progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {activeTab === 'all-tasks' && (
+                  <Select value={selectedAssignee} onValueChange={handleAssigneeChange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Assignee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All assignees</SelectItem>
+                      {assigneeOptions.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-primary hover:text-primary"
-                  onClick={clearProjectFilter}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  <span className="sr-only">Clear project filter</span>
-                </Button>
               </div>
             </div>
-          )}
 
-          <ScrollArea className="max-h-[520px]">
-            <div className="divide-y divide-muted/30">
-              {initialLoading && (
-                <div className="space-y-6 px-6 py-6">
-                  {Array.from({ length: 4 }).map((_, idx) => (
-                    <div key={idx} className="space-y-3">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-full" />
-                      <div className="flex flex-wrap gap-3">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-4 w-20" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-12" />
-                        <Skeleton className="h-4 w-10" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!loading && error && (
-                <div className="px-6 py-12 text-center text-sm text-destructive">{error}</div>
-              )}
-              {!loading && !error &&
-                filteredTasks.map((task) => (
-                  <div key={task.id} className="px-6 py-4 transition hover:bg-muted/40">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground truncate max-w-[260px] sm:max-w-[360px]">
-                            {task.title}
-                          </p>
-                          <Badge variant="secondary" className={statusColors[task.status]}>
-                            {task.status}
-                          </Badge>
-                          <Badge variant="outline" className={priorityColors[task.priority]}>
-                            {task.priority}
-                          </Badge>
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground">{task.description}</p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                          <span className="inline-flex items-center gap-1">
-                            <User className="h-3.5 w-3.5" />
-                            {task.assignedTo.length > 0 ? task.assignedTo.join(', ') : 'Unassigned'}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
-                          </span>
-                          <Badge variant="outline" className="border border-dashed">
-                            {task.client ?? 'Internal'}
-                          </Badge>
-                        </div>
-                        {task.tags.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-2">
-                            {task.tags.map((tag) => (
-                              <Badge key={tag} variant="secondary" className="bg-muted text-muted-foreground">
-                                #{tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-end">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Task actions">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              {!loading && !error && filteredTasks.length > 0 && nextCursor && (
-                <div className="px-6 py-4 text-center">
-                  <Button variant="outline" onClick={handleLoadMore} disabled={loadingMore}>
-                    {loadingMore ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading…
-                      </span>
-                    ) : (
-                      'Load more tasks'
-                    )}
+            {(projectFilter.id || projectFilter.name) && (
+              <div className="mx-4 mb-3 mt-2 flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs text-primary">
+                <span className="font-medium">
+                  Showing tasks for {projectFilter.name ?? 'selected project'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && (
+                    <Button asChild variant="outline" size="sm" className="h-6 text-xs">
+                      <Link href={`/dashboard/projects?projectId=${projectFilter.id}&projectName=${encodeURIComponent(projectFilter.name || '')}`}>
+                        View Project
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-primary hover:text-primary"
+                    onClick={clearProjectFilter}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span className="sr-only">Clear project filter</span>
                   </Button>
                 </div>
-              )}
-              {!loading && !error && filteredTasks.length === 0 && (
-                <div className="px-6 py-12 text-center text-sm text-muted-foreground">
-                  No tasks match the current filters.
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+              </div>
+            )}
+
+            <ScrollArea className="max-h-[520px]">
+              <div className={viewMode === 'grid' ? "grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3" : "divide-y divide-muted/30"}>
+                {initialLoading && (
+                  <div className={viewMode === 'grid' ? "col-span-full space-y-6 px-6 py-6" : "space-y-6 px-6 py-6"}>
+                    {Array.from({ length: 4 }).map((_, idx) => (
+                      <div key={idx} className="space-y-3">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <div className="flex flex-wrap gap-3">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-28" />
+                          <Skeleton className="h-4 w-20" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-12" />
+                          <Skeleton className="h-4 w-10" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!loading && error && (
+                  <div className={viewMode === 'grid' ? "col-span-full px-6 py-12 text-center text-sm text-destructive" : "px-6 py-12 text-center text-sm text-destructive"}>{error}</div>
+                )}
+                {!loading && !error &&
+                  filteredTasks.map((task) => (
+                    viewMode === 'grid' ? (
+                      <TaskCard key={task.id} task={task} />
+                    ) : (
+                      <div key={task.id} className="px-6 py-4 transition hover:bg-muted/40">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-semibold text-foreground truncate max-w-[260px] sm:max-w-[360px]">
+                                {task.title}
+                              </p>
+                              <Badge variant="secondary" className={statusColors[task.status]}>
+                                {task.status}
+                              </Badge>
+                              <Badge variant="outline" className={priorityColors[task.priority]}>
+                                {task.priority}
+                              </Badge>
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground">{task.description}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <User className="h-3.5 w-3.5" />
+                                {task.assignedTo.length > 0 ? task.assignedTo.join(', ') : 'Unassigned'}
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
+                              </span>
+                              <Badge variant="outline" className="border border-dashed">
+                                {task.client ?? 'Internal'}
+                              </Badge>
+                            </div>
+                            {task.tags.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-2">
+                                {task.tags.map((tag) => (
+                                  <Badge key={tag} variant="secondary" className="bg-muted text-muted-foreground">
+                                    #{tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-end">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Task actions">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  ))}
+                {!loading && !error && filteredTasks.length > 0 && nextCursor && (
+                  <div className={viewMode === 'grid' ? "col-span-full px-6 py-4 text-center" : "px-6 py-4 text-center"}>
+                    <Button variant="outline" onClick={handleLoadMore} disabled={loadingMore}>
+                      {loadingMore ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading…
+                        </span>
+                      ) : (
+                        'Load more tasks'
+                      )}
+                    </Button>
+                  </div>
+                )}
+                {!loading && !error && filteredTasks.length === 0 && (
+                  <div className={viewMode === 'grid' ? "col-span-full px-6 py-12 text-center text-sm text-muted-foreground" : "px-6 py-12 text-center text-sm text-muted-foreground"}>
+                    No tasks match the current filters.
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </Tabs>
     </div>
   )
 }

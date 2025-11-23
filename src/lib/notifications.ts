@@ -58,7 +58,7 @@ export async function notifyContactSlack(payload: ContactPayload) {
   }
 }
 
-type WhatsAppNotificationKind = 'task-created' | 'collaboration-message'
+type WhatsAppNotificationKind = 'task-created' | 'collaboration-message' | 'invoice-sent' | 'invoice-paid'
 
 type WorkspaceNotificationRecipients = {
   roles: WorkspaceNotificationRole[]
@@ -279,7 +279,9 @@ async function dispatchWorkspaceWhatsAppNotification(options: {
 
   const fieldPath = kind === 'task-created'
     ? 'notificationPreferences.whatsapp.tasks'
-    : 'notificationPreferences.whatsapp.collaboration'
+    : kind === 'invoice-sent' || kind === 'invoice-paid'
+      ? 'notificationPreferences.whatsapp.billing' // TODO: Add billing preference to user model
+      : 'notificationPreferences.whatsapp.collaboration'
 
   try {
     const snapshot = await adminDb
@@ -329,6 +331,65 @@ export async function notifyCollaborationMessageWhatsApp(options: {
 }) {
   const body = formatCollaborationNotification(options.message, options.actorName)
   await dispatchWorkspaceWhatsAppNotification({ workspaceId: options.workspaceId, kind: 'collaboration-message', body })
+}
+
+export async function notifyInvoiceSentWhatsApp(options: {
+  workspaceId: string
+  clientName: string
+  amount: number
+  currency: string
+  invoiceNumber: string | null
+  invoiceUrl: string | null
+}) {
+  const { workspaceId, clientName, amount, currency, invoiceNumber, invoiceUrl } = options
+
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amount)
+
+  const segments = [
+    `Invoice Sent to ${clientName}`,
+    `Amount: ${formattedAmount}`,
+  ]
+
+  if (invoiceNumber) {
+    segments.push(`Invoice #: ${invoiceNumber}`)
+  }
+
+  if (invoiceUrl) {
+    segments.push(`Pay here: ${invoiceUrl}`)
+  }
+
+  const body = segments.join('\n')
+  await dispatchWorkspaceWhatsAppNotification({ workspaceId, kind: 'invoice-sent', body })
+}
+
+export async function notifyInvoicePaidWhatsApp(options: {
+  workspaceId: string
+  clientName: string
+  amount: number
+  currency: string
+  invoiceNumber: string | null
+}) {
+  const { workspaceId, clientName, amount, currency, invoiceNumber } = options
+
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amount)
+
+  const segments = [
+    `Invoice Paid by ${clientName}`,
+    `Amount: ${formattedAmount}`,
+  ]
+
+  if (invoiceNumber) {
+    segments.push(`Invoice #: ${invoiceNumber}`)
+  }
+
+  const body = segments.join('\n')
+  await dispatchWorkspaceWhatsAppNotification({ workspaceId, kind: 'invoice-paid', body })
 }
 
 export async function recordTaskNotification(options: {
@@ -508,6 +569,89 @@ export async function recordProposalDeckReadyNotification(options: {
       clientId: clientId ?? null,
       clientName: clientName ?? null,
       storageUrl: options.storageUrl ?? null,
+    },
+  })
+}
+
+export async function recordInvoiceSentNotification(options: {
+  workspaceId: string
+  invoiceId: string
+  clientId: string
+  clientName: string
+  amount: number
+  currency: string
+  invoiceNumber: string | null
+  actorId: string
+}) {
+  const { workspaceId, invoiceId, clientId, clientName, amount, currency, invoiceNumber, actorId } = options
+
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amount)
+
+  const title = `Invoice sent: ${clientName}`
+  const body = `Amount: ${formattedAmount}${invoiceNumber ? ` · #${invoiceNumber}` : ''}`
+
+  await createWorkspaceNotification({
+    workspaceId,
+    kind: 'invoice.sent',
+    title,
+    body,
+    actor: { id: actorId, name: 'Admin' },
+    resource: { type: 'invoice', id: invoiceId },
+    recipients: {
+      roles: ['admin', 'team', 'client'],
+      clientIds: [clientId],
+      clientId,
+    },
+    metadata: {
+      amount,
+      currency,
+      invoiceNumber,
+      clientId,
+      clientName,
+    },
+  })
+}
+
+export async function recordInvoicePaidNotification(options: {
+  workspaceId: string
+  invoiceId: string
+  clientId: string
+  clientName: string
+  amount: number
+  currency: string
+  invoiceNumber: string | null
+}) {
+  const { workspaceId, invoiceId, clientId, clientName, amount, currency, invoiceNumber } = options
+
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(amount)
+
+  const title = `Invoice paid: ${clientName}`
+  const body = `Received ${formattedAmount}${invoiceNumber ? ` · #${invoiceNumber}` : ''}`
+
+  await createWorkspaceNotification({
+    workspaceId,
+    kind: 'invoice.paid',
+    title,
+    body,
+    actor: { id: null, name: 'Stripe' },
+    resource: { type: 'invoice', id: invoiceId },
+    recipients: {
+      roles: ['admin', 'team'],
+      clientIds: [clientId],
+      clientId,
+    },
+    metadata: {
+      amount,
+      currency,
+      invoiceNumber,
+      clientId,
+      clientName,
     },
   })
 }

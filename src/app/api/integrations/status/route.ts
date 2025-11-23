@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         lastSyncRequestedAt: toISO(data.lastSyncRequestedAt),
         message: (data.lastSyncMessage as string | undefined) ?? null,
         linkedAt: toISO(data.linkedAt),
+        accountId: typeof data.accountId === 'string' && data.accountId.length > 0 ? data.accountId : null,
         autoSyncEnabled: typeof data.autoSyncEnabled === 'boolean' ? data.autoSyncEnabled : null,
         syncFrequencyMinutes:
           typeof data.syncFrequencyMinutes === 'number' && Number.isFinite(data.syncFrequencyMinutes)

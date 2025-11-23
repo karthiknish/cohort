@@ -410,3 +410,17 @@ export async function writeMetricsBatch(options: {
 
   await batch.commit()
 }
+
+export async function deleteAdIntegration(options: {
+  userId: string
+  providerId: string
+}): Promise<void> {
+  const { userId, providerId } = options
+
+  await adminDb
+    .collection('users')
+    .doc(userId)
+    .collection('adIntegrations')
+    .doc(providerId)
+    .delete()
+}

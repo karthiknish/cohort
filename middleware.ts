@@ -1,9 +1,24 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 
 const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, 100)
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, 60_000)
 
+// Initialize Upstash Ratelimit if env vars are present
+let ratelimit: Ratelimit | null = null
+
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(API_RATE_LIMIT_MAX, `${API_RATE_LIMIT_WINDOW_MS} ms`),
+    analytics: true,
+    prefix: '@upstash/ratelimit',
+  })
+}
+
+// Fallback in-memory rate limiting for when Redis is not configured
 type RateLimitBucket = {
   count: number
   resetAt: number
@@ -21,11 +36,11 @@ function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_MATCHER.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (pathname.startsWith('/api/')) {
-    const rateLimit = consumeRateLimit(request)
+    const rateLimit = await consumeRateLimit(request)
 
     if (!rateLimit.allowed) {
       const response = NextResponse.json(
@@ -81,8 +96,26 @@ export const config = {
   matcher: ['/dashboard/:path*', '/admin/:path*', '/auth/:path*', '/api/:path*'],
 }
 
-function consumeRateLimit(request: NextRequest) {
+async function consumeRateLimit(request: NextRequest) {
   const key = getClientKey(request)
+  
+  // Use Upstash Redis if available
+  if (ratelimit) {
+    try {
+      const { success, limit, remaining, reset } = await ratelimit.limit(key)
+      return {
+        allowed: success,
+        limit,
+        remaining,
+        resetAt: reset,
+      }
+    } catch (error) {
+      console.error('Rate limit check failed:', error)
+      // Fallback to in-memory if Redis fails
+    }
+  }
+
+  // In-memory fallback
   const now = Date.now()
   const bucket = rateLimitBuckets.get(key)
   const windowMs = API_RATE_LIMIT_WINDOW_MS

@@ -19,6 +19,7 @@ import {
   Megaphone,
   ChevronLeft,
   ChevronRight,
+  Activity,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,7 @@ type NavItem = {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Activity', href: '/dashboard/activity', icon: Activity },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },

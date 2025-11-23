@@ -4,25 +4,17 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const DocViewer = dynamic(() => import('react-doc-viewer'), { ssr: false })
+import { DocViewerRenderers } from 'react-doc-viewer'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-function buildViewerUrl(source: string): string {
-  // Google Docs viewer tends to handle Firebase signed URLs more reliably
-  return `https://docs.google.com/gview?url=${encodeURIComponent(source)}&embedded=true`
-}
-
 export default function ProposalDeckViewerPage() {
   const searchParams = useSearchParams()
   const src = searchParams.get('src')
-
-  const viewerUrl = useMemo(() => {
-    if (!src) {
-      return null
-    }
-    return buildViewerUrl(src)
-  }, [src])
 
   return (
     <div className="space-y-6">
@@ -51,13 +43,6 @@ export default function ProposalDeckViewerPage() {
             </CardDescription>
           </CardHeader>
         </Card>
-      ) : !viewerUrl ? (
-        <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <p>Preparing viewer…</p>
-          </div>
-        </div>
       ) : (
         <Card className="border-muted/60 bg-background">
           <CardHeader className="pb-2">
@@ -65,12 +50,18 @@ export default function ProposalDeckViewerPage() {
             <CardDescription>Use the toolbar below to navigate the slides.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border bg-muted/30">
-              <iframe
-                title="Proposal presentation preview"
-                src={viewerUrl}
-                className="h-[70vh] w-full"
-                allowFullScreen
+            <div className="h-[70vh] overflow-hidden rounded-lg border bg-muted/30">
+              <DocViewer
+                documents={[{ uri: src }]}
+                pluginRenderers={DocViewerRenderers}
+                style={{ height: '100%' }}
+                config={{
+                  header: {
+                    disableHeader: true,
+                    disableFileName: true,
+                    retainURLParams: true,
+                  },
+                }}
               />
             </div>
             <p className="mt-4 text-xs text-muted-foreground">

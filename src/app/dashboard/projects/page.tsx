@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Briefcase, Calendar, ListChecks, Loader2, MessageSquare, RefreshCw, Search, Tag, Users } from 'lucide-react'
+import { Briefcase, Calendar, LayoutGrid, List, ListChecks, Loader2, MessageSquare, Plus, RefreshCw, Search, Tag, Users } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -51,6 +51,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchInput, setSearchInput] = useState('')
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -143,6 +144,24 @@ export default function ProjectsPage() {
           <p className="text-muted-foreground">Portfolio overview for {portfolioLabel}.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center rounded-md border bg-background p-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('grid')}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -154,6 +173,10 @@ export default function ProjectsPage() {
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Refresh
+          </Button>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Project
           </Button>
         </div>
       </div>
@@ -241,15 +264,85 @@ export default function ProjectsPage() {
 
           {!initialLoading && !error && projects.length > 0 && (
             <ScrollArea className="max-h-[640px]">
-              <div className="space-y-4 pr-4">
+              <div className={viewMode === 'grid' ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pr-4" : "space-y-4 pr-4"}>
                 {projects.map((project) => (
-                  <ProjectRow key={project.id} project={project} />
+                  viewMode === 'grid' ? (
+                    <ProjectCard key={project.id} project={project} />
+                  ) : (
+                    <ProjectRow key={project.id} project={project} />
+                  )
                 ))}
               </div>
             </ScrollArea>
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function ProjectCard({ project }: { project: ProjectRecord }) {
+  const tasksQuery = new URLSearchParams({
+    projectId: project.id,
+    projectName: project.name,
+  })
+  const tasksHref = `/dashboard/tasks?${tasksQuery.toString()}`
+  const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
+
+  return (
+    <div className="flex flex-col justify-between rounded-md border border-muted/40 bg-background p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md">
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-foreground line-clamp-1">{project.name}</h3>
+          <Badge variant="secondary" className={STATUS_CLASSES[project.status]}>
+            {formatStatusLabel(project.status)}
+          </Badge>
+        </div>
+        {project.clientName && (
+          <p className="text-xs font-medium text-muted-foreground">{project.clientName}</p>
+        )}
+        {project.description && (
+          <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">{project.description}</p>
+        )}
+        
+        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <ListChecks className="h-3.5 w-3.5" />
+            <span>{project.openTaskCount} open tasks</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span>{project.recentActivityAt ? formatRelativeTime(project.recentActivityAt) : 'No activity'}</span>
+          </div>
+        </div>
+
+        {project.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {project.tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                {tag}
+              </Badge>
+            ))}
+            {project.tags.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{project.tags.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-4 flex items-center gap-2 pt-3 border-t border-muted/40">
+        <Button asChild size="sm" variant="ghost" className="flex-1 h-8 text-xs">
+          <Link href={tasksHref} prefetch>
+            Tasks
+          </Link>
+        </Button>
+        <Separator orientation="vertical" className="h-4" />
+        <Button asChild size="sm" variant="ghost" className="flex-1 h-8 text-xs">
+          <Link href={collaborationHref} prefetch>
+            Chat
+          </Link>
+        </Button>
+      </div>
     </div>
   )
 }

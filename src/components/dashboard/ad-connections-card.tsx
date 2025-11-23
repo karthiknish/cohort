@@ -30,6 +30,7 @@ interface AdConnectionsCardProps {
   connectingProvider: string | null
   connectionErrors: Record<string, string>
   onConnect: (providerId: string, connect: () => Promise<void>) => Promise<void> | void
+  onDisconnect: (providerId: string) => Promise<void> | void
   onOauthRedirect?: (providerId: string) => Promise<void> | void
   onRefresh: () => void
   refreshing: boolean
@@ -41,6 +42,7 @@ export function AdConnectionsCard({
   connectingProvider,
   connectionErrors,
   onConnect,
+  onDisconnect,
   onOauthRedirect,
   onRefresh,
   refreshing,
@@ -99,26 +101,67 @@ export function AdConnectionsCard({
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
-                  <Button
-                    type="button"
-                    className="w-full"
-                    variant={isConnected ? 'outline' : 'default'}
-                    disabled={isConnecting}
-                    onClick={() => {
-                      if (provider.mode === 'oauth') {
-                        void onOauthRedirect?.(provider.id)
-                        return
-                      }
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      className="flex-1"
+                      variant={isConnected ? 'outline' : 'default'}
+                      disabled={isConnecting}
+                      onClick={() => {
+                        if (isConnected) {
+                          // Reconnect logic if needed, or just show connected state
+                          // For now, we treat "Reconnect" as running the connect flow again
+                          if (provider.mode === 'oauth') {
+                            void onOauthRedirect?.(provider.id)
+                            return
+                          }
+                          if (provider.connect) {
+                            void onConnect(provider.id, provider.connect)
+                          }
+                          return
+                        }
 
-                      if (!provider.connect) {
-                        return
-                      }
+                        if (provider.mode === 'oauth') {
+                          void onOauthRedirect?.(provider.id)
+                          return
+                        }
 
-                      void onConnect(provider.id, provider.connect)
-                    }}
-                  >
-                    {isConnected ? 'Reconnect account' : `Connect ${provider.name}`}
-                  </Button>
+                        if (!provider.connect) {
+                          return
+                        }
+
+                        void onConnect(provider.id, provider.connect)
+                      }}
+                    >
+                      {isConnected ? 'Reconnect' : `Connect ${provider.name}`}
+                    </Button>
+                    {isConnected && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        disabled={isConnecting}
+                        onClick={() => void onDisconnect(provider.id)}
+                        title="Disconnect account"
+                      >
+                        <span className="sr-only">Disconnect</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="h-4 w-4"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        </svg>
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )

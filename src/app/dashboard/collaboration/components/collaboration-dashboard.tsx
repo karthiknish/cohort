@@ -241,13 +241,16 @@ export function CollaborationDashboard() {
             reactionPendingByMessage={reactionPendingByMessage}
           />
 
-          <Separator orientation="vertical" className="hidden h-[640px] lg:block" />
-
-          <CollaborationSidebar
-            channel={selectedChannel}
-            channelParticipants={channelParticipants}
-            sharedFiles={sharedFiles}
-          />
+          {selectedChannel && (
+            <>
+              <Separator orientation="vertical" className="hidden h-[640px] lg:block" />
+              <CollaborationSidebar
+                channel={selectedChannel}
+                channelParticipants={channelParticipants}
+                sharedFiles={sharedFiles}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

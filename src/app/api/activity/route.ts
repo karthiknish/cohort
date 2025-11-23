@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { toISO } from '@/lib/projects'
-import type { Activity, ActivityResponse, ActivityQueryParams } from '@/types/activity'
+import type { Activity, ActivityResponse } from '@/types/activity'
 
 const MAX_ACTIVITIES = 50
 

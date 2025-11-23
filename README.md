@@ -178,6 +178,25 @@ This project now includes hardened Firestore and Storage rules for production de
 	```
 	The generated files (`firestore.rules`, `firestore.indexes.json`, `storage.rules`) match the application’s access patterns—users may only touch their own nested data, while administrative operations run through secured API routes using the Firebase Admin SDK.
 
+### Monitoring & Observability (Sentry)
+
+Sentry is wired into both the client (`sentry.client.config.ts`) and every server runtime (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation.ts`).
+
+1. Add these variables to `.env.local` (and production secrets):
+	- `SENTRY_DSN` (or `NEXT_PUBLIC_SENTRY_DSN` for client usage)
+	- `SENTRY_EDGE_DSN` (optional edge-only DSN)
+	- `SENTRY_TRACES_SAMPLE_RATE` (defaults to `0.1`)
+	- `SENTRY_PROFILES_SAMPLE_RATE` (defaults to `0.1`, Node runtime only)
+	- `SENTRY_ENVIRONMENT` (falls back to `NODE_ENV`)
+	- `SENTRY_DEBUG` (`true` to enable verbose logging)
+2. Rebuild the app so instrumentation is bundled:
+	```bash
+	npm run build
+	```
+3. Deploy as normal. `withSentryConfig` in `next.config.ts` enables automatic error and trace capture for API routes, server components, and edge handlers.
+
+Tune sample rates per environment—e.g., heavier sampling in staging, lighter in production—simply by adjusting the env vars before releasing.
+
 ## 📝 License
 
 This project is licensed under the MIT License.

@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const DocViewer = dynamic(() => import('react-doc-viewer'), { ssr: false })
+import { DocViewerRenderers } from 'react-doc-viewer'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,10 +15,9 @@ import { Badge } from '@/components/ui/badge'
 import type { ProposalDraft } from '@/services/proposals'
 import { getProposalById } from '@/services/proposals'
 
-function buildViewerUrl(src: string): string {
-  const encoded = encodeURIComponent(src)
-  return `https://view.officeapps.live.com/op/embed.aspx?src=${encoded}`
-}
+type ViewerSource = 
+  | { type: 'gamma'; url: string }
+  | { type: 'document'; url: string; fileType?: string }
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
@@ -74,12 +77,37 @@ export default function ProposalDeckPage() {
     )
   }, [proposal])
 
-  const viewerUrl = useMemo(() => {
-    if (!presentationUrl) {
-      return null
+  const viewerSource = useMemo<ViewerSource | null>(() => {
+    if (!proposal) return null
+
+    // 1. Gamma Web URL (Best experience)
+    if (proposal.gammaDeck?.webUrl || proposal.gammaDeck?.shareUrl) {
+      return {
+        type: 'gamma',
+        url: (proposal.gammaDeck.webUrl ?? proposal.gammaDeck.shareUrl) as string
+      }
     }
-    return buildViewerUrl(presentationUrl)
-  }, [presentationUrl])
+
+    // 2. Document URL (PDF or PPTX)
+    const fileUrl = proposal.pdfUrl ?? proposal.gammaDeck?.pdfUrl ?? proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl
+    
+    if (fileUrl) {
+      let fileType: string | undefined = undefined
+      if (proposal.pdfUrl || proposal.gammaDeck?.pdfUrl) {
+        fileType = 'pdf'
+      } else if (proposal.pptUrl || proposal.gammaDeck?.pptxUrl) {
+        fileType = 'pptx'
+      }
+      
+      return {
+        type: 'document',
+        url: fileUrl,
+        fileType
+      }
+    }
+
+    return null
+  }, [proposal])
 
   const shareUrl = useMemo(() => {
     if (!proposal) {
@@ -170,20 +198,40 @@ export default function ProposalDeckPage() {
                   </Button>
                 )}
               </div>
-              {viewerUrl ? (
+              {viewerSource?.type === 'gamma' ? (
                 <div className="rounded-lg border bg-muted/30">
                   <iframe
                     title="Proposal presentation preview"
-                    src={viewerUrl}
+                    src={viewerSource.url}
                     className="h-[70vh] w-full"
                     allowFullScreen
                   />
                 </div>
+              ) : viewerSource?.type === 'document' ? (
+                <div className="h-[70vh] overflow-hidden rounded-lg border bg-muted/30">
+                  <DocViewer
+                    documents={[{ uri: viewerSource.url, fileType: viewerSource.fileType }]}
+                    pluginRenderers={DocViewerRenderers}
+                    style={{ height: '100%' }}
+                    config={{
+                      header: {
+                        disableHeader: true,
+                        disableFileName: true,
+                        retainURLParams: true,
+                      },
+                    }}
+                  />
+                </div>
               ) : (
-                <div className="rounded-md border border-dashed border-muted p-6 text-sm text-muted-foreground">
-                  {presentationUrl
-                    ? 'Inline preview is unavailable for this deck. Use the download button above to open the presentation.'
-                    : 'This proposal does not have a presentation deck yet. Generate a deck from the proposal history panel first.'}
+                <div className="rounded-md border border-dashed border-muted p-6 text-center text-sm text-muted-foreground">
+                  <p className="mb-2">Preview unavailable for this file type.</p>
+                  {presentationUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={presentationUrl} target="_blank" rel="noreferrer">
+                        Download File
+                      </a>
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -1,4 +1,3 @@
-// @ts-ignore -- vitest config types resolve after dependency install
 import { defineConfig } from 'vitest/config'
 import path from 'node:path'
 

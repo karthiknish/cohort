@@ -1,19 +1,18 @@
-
 'use client'
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, Suspense } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity,
+  AlertTriangle,
+  ArrowUpRight,
   BarChart3,
-  CheckCircle,
-  Clock,
   CreditCard,
   DollarSign,
   Megaphone,
   Sparkles,
   TrendingUp,
+  Trophy,
 } from 'lucide-react'
 
 import {
@@ -31,15 +30,19 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
-import type { CollaborationMessage } from '@/types/collaboration'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ActivityWidget } from '@/components/activity/activity-widget'
+import { DashboardFilterBar } from '@/components/dashboard/dashboard-filter-bar'
+import { DashboardHeader } from '@/components/dashboard/dashboard-header'
+import { PerformanceChart } from '@/components/dashboard/performance-chart'
 
 interface MetricRecord {
   id: string
   providerId: string
   date: string
+  clientId?: string | null
+  createdAt?: string | null
   spend: number
   impressions: number
   clicks: number
@@ -56,20 +59,35 @@ type SummaryStat = {
   emphasis?: 'positive' | 'negative' | 'neutral'
 }
 
-type ActivityFeedItem = {
-  id: string
-  message: string
-  timestampLabel: string
-  icon: LucideIcon
-  accentClass?: string
-}
-
 type DashboardTaskItem = {
   id: string
   title: string
   dueLabel: string
   priority: TaskRecord['priority']
   clientName: string
+}
+
+type ClientComparisonSummary = {
+  clientId: string
+  clientName: string
+  totalRevenue: number
+  totalOperatingExpenses: number
+  totalAdSpend: number
+  totalConversions: number
+  roas: number
+  cpa: number | null
+  outstanding: number
+  currency: string
+  periodDays: number
+}
+
+type ComparisonInsight = {
+  id: string
+  title: string
+  highlight: string
+  body: string
+  tone: 'positive' | 'warning' | 'neutral'
+  icon: LucideIcon
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -81,6 +99,25 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 
 function formatCurrency(value: number): string {
   return currencyFormatter.format(Number.isFinite(value) ? value : 0)
+}
+
+const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
+
+function formatCurrencyWithCode(value: number, currency = 'USD'): string {
+  if (!currencyFormatterCache.has(currency)) {
+    currencyFormatterCache.set(
+      currency,
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }),
+    )
+  }
+  const formatter = currencyFormatterCache.get(currency) ?? currencyFormatter
+  const safeValue = Number.isFinite(value) ? value : 0
+  return formatter.format(safeValue)
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -134,30 +171,6 @@ const onboardingSteps = [
   },
 ] as const
 
-const DEFAULT_ACTIVITY: ActivityFeedItem[] = [
-  {
-    id: 'default-activity-1',
-    message: 'New task assigned: "Q4 Campaign Review"',
-    timestampLabel: '2 minutes ago',
-    icon: CheckCircle,
-    accentClass: 'text-green-600',
-  },
-  {
-    id: 'default-activity-2',
-    message: 'Google Ads budget exceeded for Client ABC',
-    timestampLabel: '1 hour ago',
-    icon: Activity,
-    accentClass: 'text-red-600',
-  },
-  {
-    id: 'default-activity-3',
-    message: 'Meta campaign "Holiday Sale" reached 50% of budget',
-    timestampLabel: '3 hours ago',
-    icon: Activity,
-    accentClass: 'text-blue-600',
-  },
-]
-
 const DEFAULT_TASKS: DashboardTaskItem[] = [
   {
     id: 'default-task-1',
@@ -183,7 +196,7 @@ const DEFAULT_TASKS: DashboardTaskItem[] = [
 ]
 
 export default function DashboardPage() {
-  const { selectedClient, selectedClientId } = useClientContext()
+  const { clients, selectedClient, selectedClientId } = useClientContext()
   const { user, getIdToken } = useAuth()
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
   const [financeLoading, setFinanceLoading] = useState(false)
@@ -191,12 +204,60 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<MetricRecord[]>([])
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricsError, setMetricsError] = useState<string | null>(null)
-  const [activityItems, setActivityItems] = useState<ActivityFeedItem[]>([])
-  const [activityLoading, setActivityLoading] = useState(false)
-  const [activityError, setActivityError] = useState<string | null>(null)
   const [taskItems, setTaskItems] = useState<DashboardTaskItem[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
+  const [comparisonClientIds, setComparisonClientIds] = useState<string[]>(() => (selectedClientId ? [selectedClientId] : []))
+  const [comparisonPeriodDays, setComparisonPeriodDays] = useState(30)
+  const [comparisonSummaries, setComparisonSummaries] = useState<ClientComparisonSummary[]>([])
+  const [comparisonLoading, setComparisonLoading] = useState(false)
+  const [comparisonError, setComparisonError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
+
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1)
+  }
+
+  const comparisonTargets = comparisonClientIds.length > 0
+    ? comparisonClientIds
+    : selectedClientId
+      ? [selectedClientId]
+      : []
+
+  const canCompareAcrossClients = user?.role === 'admin'
+  const comparisonHasSelection = comparisonTargets.length > 0
+
+  useEffect(() => {
+    setComparisonClientIds((current) => {
+      if (clients.length === 0) {
+        return []
+      }
+      const validIds = current.filter((id) => clients.some((client) => client.id === id))
+      if (validIds.length === current.length && (current.length > 0 || !selectedClientId)) {
+        return current
+      }
+      if (validIds.length === 0 && selectedClientId) {
+        return [selectedClientId]
+      }
+      return validIds
+    })
+  }, [clients, selectedClientId])
+
+  useEffect(() => {
+    if (canCompareAcrossClients) {
+      return
+    }
+    setComparisonClientIds((current) => {
+      if (selectedClientId) {
+        if (current.length === 1 && current[0] === selectedClientId) {
+          return current
+        }
+        return [selectedClientId]
+      }
+      return current.length > 1 ? current.slice(0, 1) : current
+    })
+  }, [canCompareAcrossClients, selectedClientId])
 
   useEffect(() => {
     let isCancelled = false
@@ -208,9 +269,6 @@ export default function DashboardPage() {
       setMetricsError(null)
       setFinanceLoading(false)
       setMetricsLoading(false)
-      setActivityItems([])
-      setActivityError(null)
-      setActivityLoading(false)
       setTaskItems([])
       setTasksError(null)
       setTasksLoading(false)
@@ -346,70 +404,121 @@ export default function DashboardPage() {
       }
     }
 
-    const loadActivity = async () => {
-      setActivityLoading(true)
-      setActivityError(null)
+    const loadAll = async () => {
+      await Promise.all([loadFinance(), loadMetrics(), loadTasks()])
+      if (!isCancelled) {
+        setLastRefreshed(new Date())
+      }
+    }
+
+    void loadAll()
+    return () => {
+      isCancelled = true
+    }
+  }, [user?.id, selectedClientId, getIdToken, refreshKey])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    if (!user?.id) {
+      setComparisonSummaries([])
+      setComparisonError(null)
+      setComparisonLoading(false)
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : []
+
+    if (targets.length === 0) {
+      setComparisonSummaries([])
+      setComparisonError(null)
+      setComparisonLoading(false)
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    const loadComparison = async () => {
+      setComparisonLoading(true)
+      setComparisonError(null)
       try {
         const token = await getIdToken()
-        const params = new URLSearchParams()
-        if (selectedClientId) {
-          params.set('channelType', 'client')
-          params.set('clientId', selectedClientId)
-        } else {
-          params.set('channelType', 'team')
-        }
 
-        const endpoint = `/api/collaboration/messages?${params.toString()}`
-        const response = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: 'no-store',
+        const params = new URLSearchParams()
+        targets.forEach((clientId) => {
+          if (clientId) {
+            params.append('clientIds', clientId)
+          }
+        })
+        params.set('pageSize', '250')
+
+        const financeRequests = targets.map((clientId) => {
+          const financeParams = new URLSearchParams()
+          if (clientId) {
+            financeParams.set('clientId', clientId)
+          }
+          const endpoint = financeParams.toString() ? `/api/finance?${financeParams.toString()}` : '/api/finance'
+          return fetch(endpoint, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          }).then((response) => resolveJson(response, 'Unable to load finance data for comparison') as Promise<FinanceSummaryResponse>)
         })
 
-        if (!response.ok) {
-          let message = 'Failed to load recent activity'
-          try {
-            const payload = (await response.json()) as { error?: unknown }
-            if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
-              message = payload.error
-            }
-          } catch {
-            // ignore JSON parse errors
-          }
-          throw new Error(message)
-        }
+        const metricsEndpoint = params.toString() ? `/api/metrics?${params.toString()}` : '/api/metrics'
+        const metricsPromise = fetch(metricsEndpoint, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        }).then((response) => resolveJson(response, 'Unable to load metrics for comparison') as Promise<{ metrics?: MetricRecord[] }>)
 
-        const payload = (await response.json()) as { messages?: CollaborationMessage[] }
-        const messages = Array.isArray(payload.messages) ? payload.messages : []
+        const [financeResponses, metricsPayload] = await Promise.all([Promise.all(financeRequests), metricsPromise])
+        const groupedMetrics = groupMetricsByClient(metricsPayload.metrics ?? [])
+
+        const summaries = targets.map((clientId, index) => {
+          const financeData = financeResponses[index] ?? null
+          const metricsForClient = groupedMetrics.get(clientId) ?? []
+          const clientName = clients.find((client) => client.id === clientId)?.name ?? 'Workspace'
+
+          return buildClientComparisonSummary({
+            clientId,
+            clientName,
+            finance: financeData,
+            metrics: metricsForClient,
+            periodDays: comparisonPeriodDays,
+          })
+        })
+
         if (!isCancelled) {
-          setActivityItems(mapActivityMessages(messages))
+          const ordered = [...summaries].sort((a, b) => {
+            if (a.totalRevenue === b.totalRevenue) {
+              return b.totalAdSpend - a.totalAdSpend
+            }
+            return b.totalRevenue - a.totalRevenue
+          })
+          setComparisonSummaries(ordered)
         }
       } catch (error) {
         if (!isCancelled) {
-          setActivityItems([])
-          setActivityError(getErrorMessage(error, 'Unable to load recent activity'))
+          setComparisonSummaries([])
+          setComparisonError(getErrorMessage(error, 'Unable to build comparison view'))
         }
       } finally {
         if (!isCancelled) {
-          setActivityLoading(false)
+          setComparisonLoading(false)
         }
       }
     }
 
-    void loadFinance()
-    void loadMetrics()
-    void loadTasks()
-    void loadActivity()
+    void loadComparison()
 
     return () => {
       isCancelled = true
     }
-  }, [user?.id, selectedClientId, getIdToken])
+  }, [clients, comparisonClientIds, comparisonPeriodDays, getIdToken, selectedClientId, user?.id])
 
   const summaryStats = useMemo<SummaryStat[]>(() => {
     const revenueRecords = financeSummary?.revenue ?? []
-    const invoices = financeSummary?.invoices ?? []
     const costs = financeSummary?.costs ?? []
 
     const totalRevenue = revenueRecords.reduce((sum, record) => sum + record.revenue, 0)
@@ -468,34 +577,83 @@ export default function DashboardPage() {
       financeError && { id: 'finance', title: 'Finance data unavailable', message: financeError },
       metricsError && { id: 'metrics', title: 'Ad metrics unavailable', message: metricsError },
       tasksError && { id: 'tasks', title: 'Tasks unavailable', message: tasksError },
-      activityError && { id: 'activity', title: 'Activity feed unavailable', message: activityError },
     ].filter((entry): entry is { id: string; title: string; message: string } => Boolean(entry)),
-    [financeError, metricsError, tasksError, activityError],
+    [financeError, metricsError, tasksError],
   )
 
-  const resolvedActivity = useMemo(() => {
-    if (activityItems.length > 0) {
-      return activityItems
-    }
-    if (activityError) {
-      return DEFAULT_ACTIVITY
-    }
-    return []
-  }, [activityItems, activityError])
-
-  const filteredActivity = useMemo(() => {
-    if (resolvedActivity.length === 0) {
-      return resolvedActivity
+  const comparisonInsights = useMemo<ComparisonInsight[]>(() => {
+    if (comparisonSummaries.length === 0) {
+      return []
     }
 
-    if (!selectedClient?.name) {
-      return resolvedActivity
+    const roasLeader = [...comparisonSummaries]
+      .filter((summary) => Number.isFinite(summary.roas) && summary.roas !== 0)
+      .sort((a, b) => (b.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : b.roas) - (a.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : a.roas))[0]
+
+    const spendLeader = [...comparisonSummaries].sort((a, b) => b.totalAdSpend - a.totalAdSpend)[0]
+    const cpaRisk = [...comparisonSummaries]
+      .filter((summary) => summary.cpa !== null)
+      .sort((a, b) => (b.cpa ?? 0) - (a.cpa ?? 0))[0]
+
+    const insights: ComparisonInsight[] = []
+
+    if (roasLeader) {
+      insights.push({
+        id: 'roas-leader',
+        title: 'Top ROAS performer',
+        highlight: roasLeader.clientName,
+        body: `${formatRoas(roasLeader.roas)} over the past ${roasLeader.periodDays} days`,
+        tone: 'positive',
+        icon: Trophy,
+      })
     }
 
-    const needle = selectedClient.name.toLowerCase()
-    const matches = resolvedActivity.filter((activity) => activity.message.toLowerCase().includes(needle))
-    return matches.length > 0 ? matches : resolvedActivity
-  }, [resolvedActivity, selectedClient?.name])
+    if (spendLeader) {
+      insights.push({
+        id: 'spend-leader',
+        title: 'Highest ad investment',
+        highlight: spendLeader.clientName,
+        body: `${formatCurrencyWithCode(spendLeader.totalAdSpend, spendLeader.currency)} spent`,
+        tone: 'neutral',
+        icon: ArrowUpRight,
+      })
+    }
+
+    if (cpaRisk) {
+      insights.push({
+        id: 'cpa-risk',
+        title: 'Rising CPA risk',
+        highlight: cpaRisk.clientName,
+        body: `${formatCpa(cpaRisk.cpa, cpaRisk.currency)} per conversion`,
+        tone: 'warning',
+        icon: AlertTriangle,
+      })
+    }
+
+    return insights
+  }, [comparisonSummaries])
+
+  const comparisonAggregate = useMemo(() => {
+    if (comparisonSummaries.length === 0) {
+      return null
+    }
+    const totalRevenue = comparisonSummaries.reduce((sum, summary) => sum + summary.totalRevenue, 0)
+    const totalAdSpend = comparisonSummaries.reduce((sum, summary) => sum + summary.totalAdSpend, 0)
+    const totalOutstanding = comparisonSummaries.reduce((sum, summary) => sum + summary.outstanding, 0)
+    const currencySet = new Set(comparisonSummaries.map((summary) => summary.currency))
+    const singleCurrency = currencySet.size === 1 ? comparisonSummaries[0].currency : null
+    const avgRoas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : null
+
+    return {
+      totalRevenue,
+      totalAdSpend,
+      totalOutstanding,
+      avgRoas,
+      selectionCount: comparisonSummaries.length,
+      currency: singleCurrency,
+      mixedCurrencies: singleCurrency === null,
+    }
+  }, [comparisonSummaries])
 
   const resolvedTasks = useMemo(() => {
     if (taskItems.length > 0) {
@@ -522,6 +680,41 @@ export default function DashboardPage() {
     return scoped.slice(0, 5)
   }, [resolvedTasks, selectedClient?.name])
 
+  const chartData = useMemo(() => {
+    const dailyMap = new Map<string, { revenue: number; spend: number }>()
+
+    metrics.forEach((m) => {
+      const date = m.date.split('T')[0]
+      const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
+      dailyMap.set(date, {
+        ...current,
+        spend: current.spend + m.spend,
+      })
+    })
+
+    financeSummary?.revenue.forEach((r) => {
+      let date = ''
+      if (r.period && r.period.length === 7) {
+        // YYYY-MM -> YYYY-MM-01
+        date = `${r.period}-01`
+      } else if (r.createdAt) {
+        date = r.createdAt.split('T')[0]
+      }
+
+      if (date) {
+        const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
+        dailyMap.set(date, {
+          ...current,
+          revenue: current.revenue + r.revenue,
+        })
+      }
+    })
+
+    return Array.from(dailyMap.entries())
+      .map(([date, vals]) => ({ date, ...vals }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }, [metrics, financeSummary])
+
   const showOnboarding = !statsLoading && !selectedClientId && metrics.length === 0 && !financeSummary
 
   return (
@@ -536,12 +729,12 @@ export default function DashboardPage() {
       ))}
 
       <FadeIn>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Welcome back! Quickly scan your pipeline, team priorities, and account health from one view.
-          </p>
-        </div>
+        <DashboardHeader
+          userDisplayName={user?.name}
+          onRefresh={handleRefresh}
+          isRefreshing={financeLoading || metricsLoading || tasksLoading}
+          lastRefreshed={lastRefreshed}
+        />
       </FadeIn>
 
       {showOnboarding && (
@@ -583,6 +776,126 @@ export default function DashboardPage() {
       </FadeInStagger>
 
       <FadeIn>
+        <div className="space-y-4">
+          <DashboardFilterBar
+            clients={clients}
+            selectedClientIds={comparisonClientIds}
+            onClientChange={setComparisonClientIds}
+            periodDays={comparisonPeriodDays}
+            onPeriodChange={setComparisonPeriodDays}
+            canCompare={Boolean(canCompareAcrossClients)}
+          />
+          {comparisonHasSelection && !comparisonError && (comparisonLoading || comparisonSummaries.length > 0) && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {comparisonLoading || !comparisonAggregate ? (
+                <>
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                </>
+              ) : (
+                <>
+                  <ComparisonSummaryTile
+                    label="Combined revenue"
+                    value={comparisonAggregate.currency ? formatCurrencyWithCode(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
+                    helper={comparisonAggregate.mixedCurrencies
+                      ? 'Totals unavailable for mixed currencies'
+                      : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
+                  />
+                  <ComparisonSummaryTile
+                    label="Ad spend"
+                    value={comparisonAggregate.currency ? formatCurrencyWithCode(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
+                    helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
+                  />
+                  <ComparisonSummaryTile
+                    label="Outstanding"
+                    value={comparisonAggregate.currency ? formatCurrencyWithCode(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
+                    helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
+                  />
+                  <ComparisonSummaryTile
+                    label="Weighted ROAS"
+                    value={comparisonAggregate.mixedCurrencies || comparisonAggregate.avgRoas === null ? '—' : formatRoas(comparisonAggregate.avgRoas)}
+                    helper={comparisonAggregate.mixedCurrencies ? 'Unavailable for mixed currencies' : 'Revenue ÷ ad spend across selection'}
+                  />
+                </>
+              )}
+            </div>
+          )}
+          {comparisonError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Comparison data unavailable</AlertTitle>
+              <AlertDescription>{comparisonError}</AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <Card className="lg:col-span-2 shadow-sm">
+                <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-base">Workspace comparison</CardTitle>
+                    <CardDescription>
+                      {comparisonHasSelection
+                        ? `Tracking ${comparisonTargets.length} workspace${comparisonTargets.length > 1 ? 's' : ''} over the last ${comparisonPeriodDays} days.`
+                        : 'Pick at least one workspace to start comparing performance.'}
+                    </CardDescription>
+                  </div>
+                  {!canCompareAcrossClients && (
+                    <Badge variant="secondary" className="text-xs">Admin view only</Badge>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <ComparisonTable rows={comparisonSummaries} loading={comparisonLoading} hasSelection={comparisonHasSelection} />
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base">Workspace highlights</CardTitle>
+                  <CardDescription>Auto-generated callouts based on the selected period.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {comparisonLoading && (
+                    <div className="space-y-3">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
+                  )}
+                  {!comparisonLoading && comparisonInsights.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Select at least one workspace to see quick insights.</p>
+                  )}
+                  {!comparisonLoading &&
+                    comparisonInsights.map((insight) => {
+                      const Icon = insight.icon
+                      return (
+                        <div
+                          key={insight.id}
+                          className={cn(
+                            'rounded-lg border p-4 text-sm',
+                            insight.tone === 'positive' && 'border-emerald-200 bg-emerald-50/60',
+                            insight.tone === 'warning' && 'border-amber-200 bg-amber-50/80',
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-background/70 p-2 text-primary">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {insight.title}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-base font-semibold text-foreground">{insight.highlight}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{insight.body}</p>
+                        </div>
+                      )
+                    })}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </FadeIn>
+
+      <FadeIn>
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Quick actions</CardTitle>
@@ -619,27 +932,7 @@ export default function DashboardPage() {
       <FadeIn>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <FadeInItem className="lg:col-span-2">
-            <Card className="h-full">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Performance Overview</CardTitle>
-                  <CardDescription>Key metrics from pipelines, tasks, and active campaigns.</CardDescription>
-                </div>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/analytics">Open analytics workspace</Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted/70 p-10 text-center">
-                  <p className="max-w-md text-sm text-muted-foreground">
-                    Charts appear once analytics data is connected. Until then, you can explore channel-level insights in the analytics workspace.
-                  </p>
-                  <Button asChild size="sm">
-                    <Link href="/dashboard/analytics">Review analytics</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <PerformanceChart metrics={chartData} loading={statsLoading} />
           </FadeInItem>
 
           <div className="space-y-6">
@@ -691,6 +984,230 @@ export default function DashboardPage() {
   )
 }
 
+async function resolveJson(response: Response, fallbackMessage: string): Promise<unknown> {
+  if (response.ok) {
+    return await response.json()
+  }
+
+  let message = fallbackMessage
+  try {
+    const payload = (await response.json()) as { error?: unknown }
+    if (typeof payload?.error === 'string' && payload.error.trim().length > 0) {
+      message = payload.error
+    }
+  } catch {
+    // swallow JSON parse failures, fall back to default message
+  }
+  throw new Error(message)
+}
+
+type BuildComparisonSummaryArgs = {
+  clientId: string
+  clientName: string
+  finance: FinanceSummaryResponse | null
+  metrics: MetricRecord[]
+  periodDays: number
+}
+
+function buildClientComparisonSummary({ clientId, clientName, finance, metrics, periodDays }: BuildComparisonSummaryArgs): ClientComparisonSummary {
+  const cutoff = Date.now() - periodDays * DAY_IN_MS
+  const revenueRecords = finance?.revenue ?? []
+  const filteredRevenue = revenueRecords.filter((record) => isRevenueRecordWithinPeriod(record, cutoff))
+  const totalRevenue = filteredRevenue.reduce((sum, record) => sum + record.revenue, 0)
+  const totalOperatingExpenses = filteredRevenue.reduce((sum, record) => sum + record.operatingExpenses, 0)
+
+  const filteredMetrics = metrics.filter((record) => isMetricWithinPeriod(record, cutoff))
+  const totalAdSpend = filteredMetrics.reduce((sum, record) => sum + record.spend, 0)
+  const totalConversions = filteredMetrics.reduce((sum, record) => sum + record.conversions, 0)
+  const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : 0
+  const cpa = totalConversions > 0 ? totalAdSpend / totalConversions : null
+
+  const outstanding = sumOutstandingTotals(finance?.payments?.totals ?? [])
+  const currency = determineDominantCurrency(finance)
+
+  return {
+    clientId,
+    clientName,
+    totalRevenue,
+    totalOperatingExpenses,
+    totalAdSpend,
+    totalConversions,
+    roas,
+    cpa,
+    outstanding,
+    currency,
+    periodDays,
+  }
+}
+
+function groupMetricsByClient(records: MetricRecord[]): Map<string | null, MetricRecord[]> {
+  const map = new Map<string | null, MetricRecord[]>()
+  records.forEach((record) => {
+    const key = record.clientId ?? null
+    const bucket = map.get(key)
+    if (bucket) {
+      bucket.push(record)
+      return
+    }
+    map.set(key, [record])
+  })
+  return map
+}
+
+function sumOutstandingTotals(totals: { totalOutstanding: number; currency?: string | null }[]): number {
+  if (!Array.isArray(totals) || totals.length === 0) {
+    return 0
+  }
+  return totals.reduce((sum, entry) => sum + (Number.isFinite(entry.totalOutstanding) ? entry.totalOutstanding : 0), 0)
+}
+
+function determineDominantCurrency(finance: FinanceSummaryResponse | null): string {
+  const revenueCurrency = finance?.revenue?.find((record) => typeof record.currency === 'string' && record.currency)?.currency
+  if (revenueCurrency) {
+    return revenueCurrency
+  }
+  const paymentsCurrency = finance?.payments?.totals?.find((total) => typeof total.currency === 'string' && total.currency)
+  if (paymentsCurrency?.currency) {
+    return paymentsCurrency.currency
+  }
+  return 'USD'
+}
+
+function isRevenueRecordWithinPeriod(record: { createdAt?: string | null; period?: string }, cutoff: number): boolean {
+  const timestamp = parsePeriodDate(record)
+  if (timestamp === null) {
+    return true
+  }
+  return timestamp >= cutoff
+}
+
+function parsePeriodDate(record: { createdAt?: string | null; period?: string }): number | null {
+  if (record.createdAt) {
+    const parsed = Date.parse(record.createdAt)
+    if (!Number.isNaN(parsed)) {
+      return parsed
+    }
+  }
+  if (record.period) {
+    const parsedPeriod = Date.parse(record.period)
+    if (!Number.isNaN(parsedPeriod)) {
+      return parsedPeriod
+    }
+    // attempt to parse YYYY-MM strings by appending day
+    const asMonth = Date.parse(`${record.period}-01`)
+    if (!Number.isNaN(asMonth)) {
+      return asMonth
+    }
+  }
+  return null
+}
+
+function isMetricWithinPeriod(record: MetricRecord, cutoff: number): boolean {
+  const timestamp = parseDateSafe(record.date) ?? parseDateSafe(record.createdAt ?? null)
+  if (timestamp === null) {
+    return true
+  }
+  return timestamp >= cutoff
+}
+
+function parseDateSafe(value: string | null | undefined): number | null {
+  if (!value) {
+    return null
+  }
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function formatRoas(value: number): string {
+  if (value === Number.POSITIVE_INFINITY) {
+    return 'INF'
+  }
+  if (!Number.isFinite(value) || value === 0) {
+    return '—'
+  }
+  return `${value.toFixed(2)}x`
+}
+
+function formatCpa(value: number | null, currency = 'USD'): string {
+  if (value === null || !Number.isFinite(value)) {
+    return '—'
+  }
+  return formatCurrencyWithCode(value, currency)
+}
+
+function ComparisonTable({ rows, loading, hasSelection }: { rows: ClientComparisonSummary[]; loading: boolean; hasSelection: boolean }) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    )
+  }
+
+  if (!hasSelection) {
+    return <p className="text-sm text-muted-foreground">Select one or more workspaces to populate this table.</p>
+  }
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">No comparison data yet. Once revenue and ad metrics sync in, you&rsquo;ll see client-by-client stats here.</p>
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <th className="pb-2">Workspace</th>
+            <th className="pb-2">Revenue</th>
+            <th className="pb-2">Ad spend</th>
+            <th className="pb-2">ROAS</th>
+            <th className="pb-2">CPA</th>
+            <th className="pb-2">Outstanding</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/60">
+          {rows.map((row) => (
+            <tr key={row.clientId} className="align-top">
+              <td className="py-3">
+                <p className="text-sm font-semibold text-foreground">{row.clientName}</p>
+                <p className="text-xs text-muted-foreground">{row.periodDays}-day window</p>
+              </td>
+              <td className="py-3 font-medium text-foreground">{formatCurrencyWithCode(row.totalRevenue, row.currency)}</td>
+              <td className="py-3">{formatCurrencyWithCode(row.totalAdSpend, row.currency)}</td>
+              <td className="py-3">
+                <span className={cn(
+                  'rounded-md px-2 py-1 text-xs font-semibold',
+                  row.roas !== Number.POSITIVE_INFINITY && row.roas < 1
+                    ? 'bg-rose-100 text-rose-700'
+                    : row.roas > 2
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-muted text-foreground',
+                )}>
+                  {formatRoas(row.roas)}
+                </span>
+              </td>
+              <td className="py-3">{formatCpa(row.cpa, row.currency)}</td>
+              <td className="py-3">{formatCurrencyWithCode(row.outstanding, row.currency)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ComparisonSummaryTile({ label, value, helper }: { label: string; value: string; helper: string }) {
+  return (
+    <div className="rounded-lg border border-muted/70 bg-background p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+    </div>
+  )
+}
+
 function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
   const Icon = stat.icon
   const valueClasses = cn(
@@ -716,21 +1233,6 @@ function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-function ActivityItem({ item }: { item: ActivityFeedItem }) {
-  const Icon = item.icon
-  return (
-    <div className="flex items-start space-x-3">
-      <div className={cn('flex h-8 w-8 items-center justify-center rounded-full bg-primary/10', item.accentClass)}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{item.message}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{item.timestampLabel}</p>
-      </div>
-    </div>
   )
 }
 
@@ -760,27 +1262,7 @@ function TaskItem({ task }: { task: DashboardTaskItem }) {
   )
 }
 
-const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 const DAY_IN_MS = 24 * 60 * 60 * 1000
-
-function mapActivityMessages(messages: CollaborationMessage[]): ActivityFeedItem[] {
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return []
-  }
-
-  const relevantMessages = messages
-    .filter((message) => typeof message.content === 'string' && message.content.trim().length > 0)
-    .slice(-5)
-    .reverse()
-
-  return relevantMessages.map((message) => ({
-    id: message.id,
-    message: formatActivityMessage(message),
-    timestampLabel: formatRelativeTime(message.createdAt),
-    icon: Activity,
-    accentClass: getActivityAccent(message.channelType),
-  }))
-}
 
 function mapTasksForDashboard(tasks: TaskRecord[]): DashboardTaskItem[] {
   if (!Array.isArray(tasks) || tasks.length === 0) {
@@ -805,70 +1287,11 @@ function mapTasksForDashboard(tasks: TaskRecord[]): DashboardTaskItem[] {
 
   withSortKey.sort((a, b) => a.sortValue - b.sortValue)
 
-  return withSortKey.slice(0, 5).map(({ sortValue, ...task }) => task)
-}
-
-function formatActivityMessage(message: CollaborationMessage): string {
-  const sender = typeof message.senderName === 'string' ? message.senderName.trim() : ''
-  const normalized = truncateText(normalizeWhitespace(message.content))
-  return sender.length > 0 ? `${sender}: ${normalized}` : normalized
-}
-
-function getActivityAccent(channelType: CollaborationMessage['channelType']): string {
-  switch (channelType) {
-    case 'client':
-      return 'text-blue-600'
-    case 'project':
-      return 'text-purple-600'
-    default:
-      return 'text-primary'
-  }
-}
-
-function formatRelativeTime(input: string | null | undefined): string {
-  if (!input) {
-    return 'Moments ago'
-  }
-
-  const date = new Date(input)
-  if (Number.isNaN(date.getTime())) {
-    return input
-  }
-
-  const diffMs = date.getTime() - Date.now()
-  const diffSeconds = Math.round(diffMs / 1000)
-
-  if (Math.abs(diffSeconds) < 60) {
-    return RELATIVE_TIME_FORMATTER.format(diffSeconds, 'second')
-  }
-
-  const diffMinutes = Math.round(diffSeconds / 60)
-  if (Math.abs(diffMinutes) < 60) {
-    return RELATIVE_TIME_FORMATTER.format(diffMinutes, 'minute')
-  }
-
-  const diffHours = Math.round(diffMinutes / 60)
-  if (Math.abs(diffHours) < 24) {
-    return RELATIVE_TIME_FORMATTER.format(diffHours, 'hour')
-  }
-
-  const diffDays = Math.round(diffHours / 24)
-  if (Math.abs(diffDays) < 7) {
-    return RELATIVE_TIME_FORMATTER.format(diffDays, 'day')
-  }
-
-  const diffWeeks = Math.round(diffDays / 7)
-  if (Math.abs(diffWeeks) < 5) {
-    return RELATIVE_TIME_FORMATTER.format(diffWeeks, 'week')
-  }
-
-  const diffMonths = Math.round(diffDays / 30)
-  if (Math.abs(diffMonths) < 12) {
-    return RELATIVE_TIME_FORMATTER.format(diffMonths, 'month')
-  }
-
-  const diffYears = Math.round(diffDays / 365)
-  return RELATIVE_TIME_FORMATTER.format(diffYears, 'year')
+  return withSortKey.slice(0, 5).map((task) => {
+    const { sortValue, ...taskWithoutSort } = task
+    void sortValue
+    return taskWithoutSort
+  })
 }
 
 function deriveDueMetadata(rawDue: string | null | undefined): { label: string; timestamp: number } {
@@ -917,17 +1340,6 @@ function startOfDay(date: Date): number {
   const copy = new Date(date)
   copy.setHours(0, 0, 0, 0)
   return copy.getTime()
-}
-
-function truncateText(value: string, maxLength = 140): string {
-  if (value.length <= maxLength) {
-    return value
-  }
-  return `${value.slice(0, maxLength - 3).trimEnd()}...`
-}
-
-function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
 }
 
 function normalizeTaskPriority(value: unknown): DashboardTaskItem['priority'] {

@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
 
     const workspace = await resolveWorkspaceContext(auth)
 
-    let revenueQuery = workspace.financeRevenueCollection
+    const revenueQuery = workspace.financeRevenueCollection
       .orderBy('period', 'asc')
       .limit(MAX_REVENUE_DOCS)
 

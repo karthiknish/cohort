@@ -1,8 +1,8 @@
 'use client'
 
-import type { FormEvent } from 'react'
+import { type FormEvent, useState } from 'react'
 
-import { Loader2, Plus, Trash } from 'lucide-react'
+import { Loader2, Plus, Search, Trash } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -57,22 +57,43 @@ export function FinanceCostsCard({
   loadingMore,
   currency,
 }: FinanceCostsCardProps) {
+  const [searchQuery, setSearchQuery] = useState('')
   const resolvedCurrency = currency ?? 'USD'
+
+  const filteredCosts = costs.filter((cost) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      cost.category.toLowerCase().includes(query) ||
+      cost.cadence.toLowerCase().includes(query)
+    )
+  })
 
   return (
     <Card className="border-muted/60 bg-background">
-      <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div>
+      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <CardTitle>Operating costs</CardTitle>
           <CardDescription>
             Track SaaS, people, and overhead expenses that roll into financial charts.
           </CardDescription>
         </div>
-        <Badge variant="secondary" className="w-fit bg-primary/10 text-xs font-medium uppercase tracking-wide text-primary">
-          {formatCurrency(Math.round(monthlyCostTotal), resolvedCurrency)} per month
-        </Badge>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search costs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Badge variant="secondary" className="w-fit whitespace-nowrap bg-primary/10 text-xs font-medium uppercase tracking-wide text-primary">
+            {formatCurrency(Math.round(monthlyCostTotal), resolvedCurrency)} per month
+          </Badge>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         <form onSubmit={onAddCost} className="grid gap-3 md:grid-cols-[2fr,1fr,1fr,auto]">
           <div className="space-y-1">
             <Label htmlFor="cost-category">Cost category</Label>
@@ -130,10 +151,12 @@ export function FinanceCostsCard({
         <Separator />
 
         <div className="space-y-3">
-          {costs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No company-level costs captured yet.</p>
+          {filteredCosts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {costs.length === 0 ? 'No company-level costs captured yet.' : 'No costs match your search.'}
+            </p>
           ) : (
-            costs.map((cost) => (
+            filteredCosts.map((cost) => (
               <div
                 key={cost.id}
                 className="flex flex-col gap-3 rounded-lg border border-muted/40 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between"

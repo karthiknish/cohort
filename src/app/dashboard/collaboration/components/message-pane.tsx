@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage, CollaborationReaction } from '@/types/collaboration'
 import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
@@ -51,6 +52,7 @@ import {
   formatTimestamp,
   getInitials,
   isLikelyImageUrl,
+  groupMessages,
 } from '../utils'
 import { LinkPreviewCard } from './link-preview-card'
 import { MessageContent } from './message-content'
@@ -153,6 +155,8 @@ export function CollaborationMessagePane({
   const [selectedMessageForTask, setSelectedMessageForTask] = useState<CollaborationMessage | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const isSearchActive = messageSearchQuery.trim().length > 0
+
   const editingPreview = useMemo(() => {
     if (!editingMessageId) return ''
     const target = channelMessages.find((message) => message.id === editingMessageId)
@@ -163,6 +167,15 @@ export function CollaborationMessagePane({
     }
     return `${text.slice(0, MAX_PREVIEW_LENGTH)}…`
   }, [channelMessages, editingMessageId])
+
+  const messageGroups = useMemo(() => {
+    if (isSearchActive) return []
+    // Filter out replies that are shown in threads (assuming visibleMessages contains all messages including replies if they are flattened, 
+    // but usually visibleMessages are top-level messages or we filter them here)
+    // Based on existing code: visibleMessages.map((message) => { const isReply = Boolean(message.parentMessageId); if (!isSearchActive && isReply) return null; ... })
+    // So visibleMessages might contain replies.
+    return groupMessages(visibleMessages.filter((m) => !m.parentMessageId))
+  }, [visibleMessages, isSearchActive])
 
   useEffect(() => {
     if (!editingMessageId) {
@@ -326,17 +339,23 @@ export function CollaborationMessagePane({
 
   if (!channel) {
     return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-        Add a client to start a shared collaboration workspace.
+      <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
+        <div className="mb-4 rounded-full bg-muted/30 p-4">
+          <MessageSquare className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <h3 className="mb-2 text-lg font-semibold text-foreground">No channel selected</h3>
+        <p className="max-w-sm text-sm">
+          Select a channel from the list to view messages, or start a new conversation with your team.
+        </p>
       </div>
     )
   }
 
-  const isSearchActive = messageSearchQuery.trim().length > 0
-
-  const renderMessage = (message: CollaborationMessage, options: { isReply?: boolean; isSearchResult?: boolean } = {}) => {
+  const renderMessage = (message: CollaborationMessage, options: { isReply?: boolean; isSearchResult?: boolean; showAvatar?: boolean; showHeader?: boolean } = {}) => {
     const isReply = options.isReply ?? false
     const isSearchResult = options.isSearchResult ?? false
+    const showAvatar = options.showAvatar ?? true
+    const showHeader = options.showHeader ?? true
 
     const canManageMessage =
       !message.isDeleted &&
@@ -372,8 +391,9 @@ export function CollaborationMessagePane({
     const containerClass = [
       isReply
         ? 'ml-12 flex items-start gap-3 rounded-md border border-muted/40 bg-muted/10 p-3'
-        : 'flex items-start gap-3',
+        : 'group flex items-start gap-3 px-2 py-1 hover:bg-muted/30 rounded-md -mx-2',
       isSearchResult ? 'ring-1 ring-primary/40 ring-offset-1' : '',
+      !showAvatar && !isReply ? 'mt-0.5' : '',
     ]
       .filter(Boolean)
       .join(' ')
@@ -384,20 +404,28 @@ export function CollaborationMessagePane({
 
     return (
       <div key={message.id} className={containerClass}>
-        <span className={avatarClass}>{getInitials(message.senderName)}</span>
-        <div className="flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-foreground">{message.senderName}</p>
-            {message.senderRole && (
-              <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                {message.senderRole}
-              </Badge>
-            )}
-            <span className="text-xs text-muted-foreground">
-              {formatTimestamp(message.createdAt)}
-              {message.isEdited && !message.isDeleted ? ' · edited' : ''}
-            </span>
-            {canManageMessage && (
+        {showAvatar ? (
+          <span className={avatarClass}>{getInitials(message.senderName)}</span>
+        ) : (
+          <div className="w-10" />
+        )}
+        <div className="flex-1 space-y-1">
+          {showHeader && (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-foreground">{message.senderName}</p>
+              {message.senderRole && (
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                  {message.senderRole}
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {formatTimestamp(message.createdAt)}
+                {message.isEdited && !message.isDeleted ? ' · edited' : ''}
+              </span>
+            </div>
+          )}
+          {canManageMessage && (
+            <div className={cn('absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100', isReply && 'static opacity-100')}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -442,8 +470,8 @@ export function CollaborationMessagePane({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
-          </div>
+            </div>
+          )}
 
           {editingMessageId === message.id ? (
             <div className="space-y-2">
@@ -773,13 +801,39 @@ export function CollaborationMessagePane({
             </div>
           )}
 
-          {visibleMessages.map((message) => {
-            const isReply = Boolean(message.parentMessageId)
-            if (!isSearchActive && isReply) {
-              return null
-            }
-            return renderMessage(message, { isReply, isSearchResult: isSearchActive })
-          })}
+          {messageGroups.map((group, groupIndex) => (
+            <div key={group.id} className="group-block mb-4">
+              {group.dateSeparator && (
+                <div className="relative my-6 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-muted/40" />
+                  </div>
+                  <div className="relative flex justify-center text-xs font-medium uppercase text-muted-foreground">
+                    <span className="bg-background px-2">{group.dateSeparator}</span>
+                  </div>
+                </div>
+              )}
+              {group.messages.map((message, messageIndex) => {
+                const isFirstInGroup = messageIndex === 0
+                
+                // Show avatar only for the first message in the group
+                const showAvatar = isFirstInGroup
+                // Show header only for the first message in the group
+                const showHeader = isFirstInGroup
+
+                return (
+                  <div key={message.id}>
+                    {renderMessage(message, { 
+                      isReply: false, 
+                      isSearchResult: false,
+                      showAvatar,
+                      showHeader
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
 
           <div ref={messagesEndRef} />
         </div>

@@ -1,11 +1,17 @@
 export type WorkspaceNotificationRole = 'admin' | 'team' | 'client'
 
-export type WorkspaceNotificationKind = 'task.created' | 'collaboration.message' | 'proposal.deck.ready'
+export type WorkspaceNotificationKind =
+  | 'task.created'
+  | 'collaboration.message'
+  | 'proposal.deck.ready'
+  | 'invoice.sent'
+  | 'invoice.paid'
 
 export type WorkspaceNotificationResource =
   | { type: 'task'; id: string }
   | { type: 'collaboration'; id: string }
   | { type: 'proposal'; id: string }
+  | { type: 'invoice'; id: string }
 
 export type WorkspaceNotification = {
   id: string

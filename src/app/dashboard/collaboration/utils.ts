@@ -1,5 +1,5 @@
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
-import type { CollaborationAttachment, CollaborationChannelType } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationChannelType, CollaborationMessage } from '@/types/collaboration'
 
 export type ChannelTypeColorMap = Record<CollaborationChannelType, string>
 
@@ -143,4 +143,80 @@ export function isLikelyImageUrl(url: string): boolean {
   } catch {
     return false
   }
+}
+
+export type MessageGroup = {
+  id: string
+  dateSeparator?: string
+  messages: CollaborationMessage[]
+}
+
+export function groupMessages(messages: CollaborationMessage[]): MessageGroup[] {
+  const groups: MessageGroup[] = []
+  let currentGroup: MessageGroup | null = null
+
+  messages.forEach((message, index) => {
+    const messageDate = message.createdAt ? new Date(message.createdAt) : new Date()
+    const prevMessage = index > 0 ? messages[index - 1] : null
+    const prevDate = prevMessage?.createdAt ? new Date(prevMessage.createdAt) : null
+
+    // Check for date separator
+    let dateSeparator: string | undefined
+    if (!prevDate || !isSameDay(messageDate, prevDate)) {
+      dateSeparator = formatDateSeparator(messageDate)
+    }
+
+    // Check if we should start a new group
+    const shouldStartNewGroup =
+      !currentGroup ||
+      dateSeparator ||
+      message.senderId !== currentGroup.messages[0].senderId ||
+      (prevDate && messageDate.getTime() - prevDate.getTime() > 5 * 60 * 1000) // 5 minutes
+
+    if (shouldStartNewGroup) {
+      if (currentGroup) {
+        groups.push(currentGroup)
+      }
+      currentGroup = {
+        id: `group-${message.id}`,
+        dateSeparator,
+        messages: [message],
+      }
+    } else {
+      currentGroup!.messages.push(message)
+    }
+  })
+
+  if (currentGroup) {
+    groups.push(currentGroup)
+  }
+
+  return groups
+}
+
+function isSameDay(d1: Date, d2: Date): boolean {
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  )
+}
+
+export function formatDateSeparator(date: Date): string {
+  const today = new Date()
+  if (isSameDay(date, today)) {
+    return 'Today'
+  }
+
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (isSameDay(date, yesterday)) {
+    return 'Yesterday'
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(date)
 }

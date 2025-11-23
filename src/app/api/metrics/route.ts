@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const clientIdFilter = searchParams.get('clientId')?.trim() ?? null
+    const clientIds = searchParams.getAll('clientIds').flatMap((raw) => raw.split(',').map((value) => value.trim()).filter(Boolean))
+    const clientIdFilter = clientIds.length === 1 ? clientIds[0] : null
     const pageSizeParam = searchParams.get('pageSize')
     const afterParam = searchParams.get('after')
 
@@ -113,7 +114,10 @@ export async function GET(request: NextRequest) {
         clientId: typeof data.clientId === 'string' ? data.clientId : null,
       }
     })
-    const metrics = mapped
+    let metrics = mapped
+    if (clientIds.length > 1) {
+      metrics = metrics.filter((record) => record.clientId && clientIds.includes(record.clientId))
+    }
     const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
     const nextCursor = nextCursorDoc
       ? (() => {

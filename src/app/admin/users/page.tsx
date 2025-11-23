@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon } from 'lucide-react'
+import { AlertCircle, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -22,6 +22,24 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 import { cn } from '@/lib/utils'
@@ -46,6 +64,13 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
+  
+  // Dialog states
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [revokeOpen, setRevokeOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
 
   const fetchUsers = useCallback(
     async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
@@ -204,12 +229,26 @@ export default function AdminUsersPage() {
 
       setUsers((prev) => prev.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord)))
       toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
+      setRevokeOpen(false)
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to update status')
       toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
     }
+  }
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail) return
+    
+    // Mock invite functionality
+    toast({
+      title: 'Invitation sent',
+      description: `Invitation sent to ${inviteEmail} as ${inviteRole}.`,
+    })
+    setInviteOpen(false)
+    setInviteEmail('')
+    setInviteRole('team')
   }
 
   const handleRefresh = () => {
@@ -246,6 +285,49 @@ export default function AdminUsersPage() {
             <Button type="button" variant="outline" onClick={handleRefresh} disabled={loading} className="inline-flex items-center gap-2">
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
             </Button>
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <UserPlus className="h-4 w-4" /> Invite User
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Invite new user</DialogTitle>
+                  <DialogDescription>
+                    Send an invitation email to add a new member to your organization.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input
+                      id="email"
+                      placeholder="colleague@company.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AdminUserRole)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="team">Team Member</SelectItem>
+                        <SelectItem value="client">Client</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
+                  <Button onClick={handleInviteUser} disabled={!inviteEmail}>Send Invitation</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -383,7 +465,15 @@ export default function AdminUsersPage() {
                           <td className="py-3 pr-3 text-center align-middle">
                             <Checkbox
                               checked={record.status === 'active'}
-                              onChange={(event) => handleApprovalToggle(record, event.target.checked)}
+                              onChange={(e) => {
+                                const checked = e.target.checked
+                                if (checked === false) {
+                                  setSelectedUser(record)
+                                  setRevokeOpen(true)
+                                } else {
+                                  handleApprovalToggle(record, true)
+                                }
+                              }}
                               disabled={approvalDisabled}
                               aria-label={`Toggle approval for ${record.name}`}
                             />
@@ -397,17 +487,35 @@ export default function AdminUsersPage() {
                             {formatDate(record.lastLoginAt)}
                           </td>
                           <td className="py-3 text-right align-middle">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={record.status === 'active' ? 'destructive' : 'outline'}
-                              onClick={() => handleApprovalToggle(record, record.status !== 'active')}
-                              disabled={savingId === record.id || record.role === 'admin'}
-                              className="inline-flex items-center gap-2"
-                            >
-                              {savingId === record.id ? <UserCheck className="h-4 w-4 animate-pulse" /> : <UserCheck className="h-4 w-4" />}
-                              {record.status === 'active' ? 'Revoke access' : 'Approve user'}
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(record.email)}>
+                                  Copy email
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {record.status !== 'active' ? (
+                                  <DropdownMenuItem onClick={() => handleApprovalToggle(record, true)}>
+                                    <UserCheck className="mr-2 h-4 w-4" /> Approve user
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setSelectedUser(record)
+                                      setRevokeOpen(true)
+                                    }}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Revoke access
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       )
@@ -434,6 +542,30 @@ export default function AdminUsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={revokeOpen} onOpenChange={setRevokeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke access?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to revoke access for <strong>{selectedUser?.name}</strong>? They will no longer be able to sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeOpen(false)}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (selectedUser) {
+                  handleApprovalToggle(selectedUser, false)
+                }
+              }}
+            >
+              Revoke Access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

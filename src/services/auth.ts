@@ -795,6 +795,24 @@ export class AuthService {
       throw new Error('Failed to delete account')
     }
   }
+
+  async disconnectProvider(providerId: string): Promise<void> {
+    const token = await this.getIdToken()
+    const response = await fetch('/api/integrations/disconnect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ providerId }),
+    })
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string }
+      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to disconnect provider'
+      throw new Error(message)
+    }
+  }
 }
 
 function isFirebaseError(error: unknown): error is { code: string } {

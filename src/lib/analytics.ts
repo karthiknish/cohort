@@ -29,6 +29,15 @@ async function initializeAnalytics(): Promise<Analytics | null> {
       }
 
       analyticsInstance = getAnalytics(app)
+
+      // Check current consent status on initialization
+      if (typeof window !== 'undefined') {
+        const consent = window.localStorage.getItem('cookie-consent')
+        const { setAnalyticsCollectionEnabled } = await import('firebase/analytics')
+        // Default to false if not explicitly set to 'true'
+        setAnalyticsCollectionEnabled(analyticsInstance, consent === 'true')
+      }
+
       return analyticsInstance
     } catch (error) {
       console.warn('[analytics] failed to initialize Firebase Analytics', error)
@@ -43,6 +52,16 @@ async function initializeAnalytics(): Promise<Analytics | null> {
 
 export async function getAnalyticsInstance(): Promise<Analytics | null> {
   return await initializeAnalytics()
+}
+
+export async function updateAnalyticsConsent(consented: boolean): Promise<void> {
+  const instance = await initializeAnalytics()
+  if (!instance) {
+    return
+  }
+
+  const { setAnalyticsCollectionEnabled } = await import('firebase/analytics')
+  setAnalyticsCollectionEnabled(instance, consented)
 }
 
 export async function logAnalyticsEvent(eventName: string, parameters?: AnalyticsParams): Promise<void> {

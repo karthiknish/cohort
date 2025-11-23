@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -19,37 +19,12 @@ export function useActivityNotifications(activities: Activity[]) {
   const previousActivitiesRef = useRef<Activity[]>([])
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null)
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Default notification configuration
-  const config: NotificationConfig = {
+  const [config, setConfig] = useState<NotificationConfig>({
     enabled: true,
     showProjectUpdates: true,
     showTaskCompletions: true,
     showNewMessages: true,
-  }
-
-  // Initialize broadcast channel for cross-tab sync
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      broadcastChannelRef.current = new BroadcastChannel('activity-notifications')
-      
-      // Listen for notifications from other tabs
-      const handleMessage = (event: MessageEvent) => {
-        if (event.data.type === 'NEW_ACTIVITY' && event.data.activity) {
-          showNotificationToast(event.data.activity, true)
-        }
-      }
-
-      broadcastChannelRef.current.addEventListener('message', handleMessage)
-
-      return () => {
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.removeEventListener('message', handleMessage)
-          broadcastChannelRef.current.close()
-        }
-      }
-    }
-  }, [])
+  })
 
   // Show notification toast for new activity
   const showNotificationToast = useCallback((activity: Activity, isFromOtherTab = false) => {
@@ -101,6 +76,31 @@ export function useActivityNotifications(activities: Activity[]) {
       })
     }
   }, [config, user])
+
+  // Initialize broadcast channel for cross-tab sync
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) {
+      return
+    }
+
+    broadcastChannelRef.current = new BroadcastChannel('activity-notifications')
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'NEW_ACTIVITY' && event.data.activity) {
+        showNotificationToast(event.data.activity, true)
+      }
+    }
+
+    broadcastChannelRef.current.addEventListener('message', handleMessage)
+
+    return () => {
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.removeEventListener('message', handleMessage)
+        broadcastChannelRef.current.close()
+        broadcastChannelRef.current = null
+      }
+    }
+  }, [showNotificationToast])
 
   // Detect new activities and show notifications
   useEffect(() => {
@@ -176,7 +176,10 @@ export function useActivityNotifications(activities: Activity[]) {
   return {
     config,
     updateConfig: (newConfig: Partial<NotificationConfig>) => {
-      Object.assign(config, newConfig)
+      setConfig((previous) => ({
+        ...previous,
+        ...newConfig,
+      }))
     },
   }
 }

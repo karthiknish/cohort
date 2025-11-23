@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo } from 'react'
-import { AlertTriangle, Calendar, CreditCard, Mail, RefreshCcw, Users as UsersIcon } from 'lucide-react'
+import { AlertTriangle, Calendar, CreditCard, Mail, RefreshCcw, Users as UsersIcon, UserPlus, Settings } from 'lucide-react'
 
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function ClientsDashboardPage() {
   return (
@@ -72,7 +73,10 @@ function ClientsDashboardContent() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button asChild variant="outline">
-            <Link href="/admin/clients">Manage clients</Link>
+            <Link href="/admin/clients">
+              <Settings className="mr-2 h-4 w-4" />
+              Manage settings
+            </Link>
           </Button>
           <Button
             type="button"
@@ -94,8 +98,15 @@ function ClientsDashboardContent() {
             <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-semibold">{selectedClient.accountManager || 'Unassigned'}</div>
-            <p className="text-xs text-muted-foreground">Primary point of contact</p>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>{getInitials(selectedClient.accountManager || 'U')}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="text-lg font-semibold">{selectedClient.accountManager || 'Unassigned'}</div>
+                <p className="text-xs text-muted-foreground">Primary point of contact</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -116,7 +127,9 @@ function ClientsDashboardContent() {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-medium text-foreground">{selectedClient.billingEmail ?? 'Not provided'}</div>
+            <div className="text-sm font-medium text-foreground truncate" title={selectedClient.billingEmail ?? ''}>
+              {selectedClient.billingEmail ?? 'Not provided'}
+            </div>
             <p className="text-xs text-muted-foreground">Invoices and reminders are sent here</p>
           </CardContent>
         </Card>
@@ -135,24 +148,42 @@ function ClientsDashboardContent() {
 
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <Card className="border-muted/60 bg-background">
-          <CardHeader>
-            <CardTitle className="text-lg">Client collaborators</CardTitle>
-            <CardDescription>Everyone with access to this workspace.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Client collaborators</CardTitle>
+              <CardDescription>Everyone with access to this workspace.</CardDescription>
+            </div>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/admin/clients">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add member
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
             {teamMembers.length === 0 ? (
-              <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-6 text-sm text-muted-foreground">
-                No team members have been assigned yet. Add collaborators from the admin clients page.
+              <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
+                <UsersIcon className="mb-3 h-10 w-10 text-muted-foreground/50" />
+                <p className="text-sm font-medium text-foreground">No team members assigned</p>
+                <p className="mt-1 text-sm text-muted-foreground">Add collaborators from the admin clients page to start working together.</p>
+                <Button asChild variant="outline" className="mt-4">
+                  <Link href="/admin/clients">Manage Team</Link>
+                </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {teamMembers.map((member, index) => (
-                  <div key={`${member.name}-${index}`} className="flex items-center justify-between rounded-md border border-muted/40 bg-muted/10 px-4 py-3">
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{member.name}</div>
-                      <div className="text-xs text-muted-foreground">{member.role || 'Contributor'}</div>
+                  <div key={`${member.name}-${index}`} className="flex items-center gap-3 rounded-lg border border-muted/40 bg-card p-3 transition-colors hover:bg-muted/50">
+                    <Avatar>
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {getInitials(member.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="truncate text-sm font-medium text-foreground">{member.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">{member.role || 'Contributor'}</div>
                     </div>
-                    <Badge variant="outline">Member</Badge>
+                    <Badge variant="secondary" className="ml-auto shrink-0">Member</Badge>
                   </div>
                 ))}
               </div>
@@ -258,4 +289,13 @@ function formatDate(value: string | null): string {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, Eye, EyeOff, Lock, Mail, Sparkles } from "lucide-react"
+import { CheckCircle2, Eye, EyeOff, Lock, Mail } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,6 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FadeIn, FadeInItem, FadeInStagger } from "@/components/ui/animate-in"
 import { useToast } from "@/components/ui/use-toast"
-import { Badge } from "@/components/ui/badge"
 
 const HERO_HIGHLIGHTS = [
   {
@@ -422,10 +421,14 @@ export default function AuthPage() {
               By continuing, you agree to our{" "}
               <Link href="/terms" className="font-medium text-primary hover:underline">
                 Terms of Service
-              </Link>{" "}
-              and{" "}
+              </Link>
+              ,{" "}
               <Link href="/privacy" className="font-medium text-primary hover:underline">
                 Privacy Policy
+              </Link>
+              , and{" "}
+              <Link href="/cookies" className="font-medium text-primary hover:underline">
+                Cookie Policy
               </Link>
               .
             </p>

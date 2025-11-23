@@ -130,6 +130,7 @@ users/{userId}/adMetrics/{periodId}/{providerDocId}
 ## API & Scheduling Notes
 
 - All integration APIs (`/api/integrations/status`, `/api/metrics`, `/api/integrations/process`) require an authenticated Firebase ID token via the `Authorization: Bearer <token>` header.
+- `POST /api/integrations/manual-sync` lets authenticated workspace owners queue a one-off sync for the specified provider (`providerId`). The endpoint forces scheduling immediately and is what the dashboard uses for the "Run sync now" button.
 - Automation or cron jobs can use the `INTEGRATIONS_CRON_SECRET` environment variable and send it via `x-cron-key` header to bypass user tokens. Cron requests **must** specify `userId` explicitly.
 - Cron setup:
   - **Queue jobs**: call `POST /api/integrations/schedule` with header `x-cron-key: ${INTEGRATIONS_CRON_SECRET}` every 6 hours (or desired cadence). Use `{ "allUsers": true }` to fan out across tenants.

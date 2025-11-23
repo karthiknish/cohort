@@ -6,6 +6,7 @@ import type Stripe from 'stripe'
 import { getStripeClient } from '@/lib/stripe'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
+import { recordInvoiceSentNotification, notifyInvoiceSentWhatsApp } from '@/lib/notifications'
 
 const invoiceSchema = z.object({
   amount: z.coerce
@@ -267,6 +268,30 @@ export async function POST(
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     })
+
+    try {
+      await recordInvoiceSentNotification({
+        workspaceId: workspace.workspaceId,
+        invoiceId: invoice.id,
+        clientId,
+        clientName,
+        amount: amountDueCents / 100,
+        currency: invoice.currency ?? 'usd',
+        invoiceNumber: invoice.number,
+        actorId: auth.uid,
+      })
+
+      await notifyInvoiceSentWhatsApp({
+        workspaceId: workspace.workspaceId,
+        clientName,
+        amount: amountDueCents / 100,
+        currency: invoice.currency ?? 'usd',
+        invoiceNumber: invoice.number,
+        invoiceUrl: invoice.hosted_invoice_url ?? null,
+      })
+    } catch (notifyError) {
+      console.error('[clients] Failed to send invoice notifications', notifyError)
+    }
 
     return NextResponse.json({
       invoice: {

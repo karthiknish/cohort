@@ -15,6 +15,7 @@ const footerLinks = [
     links: [
       { name: 'Terms', href: '/terms' },
       { name: 'Privacy', href: '/privacy' },
+      { name: 'Cookies', href: '/cookies' },
       { name: 'Support', href: '/#contact' },
       { name: 'Contact', href: '/contact' },
     ],
@@ -63,6 +64,9 @@ export function SiteFooter() {
             </Link>
             <Link href="/privacy" className="transition hover:text-primary">
               Privacy
+            </Link>
+            <Link href="/cookies" className="transition hover:text-primary">
+              Cookies
             </Link>
           </div>
         </div>
