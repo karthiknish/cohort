@@ -23,6 +23,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { FinanceCostEntry } from '@/types/finance'
 
 import { formatCadence, formatCurrency } from '../utils'
@@ -171,21 +177,30 @@ export function FinanceCostsCard({
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
                     {formatCurrency(Math.round(cost.monthlyValue), cost.currency ?? resolvedCurrency)} / mo
                   </Badge>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => void onRemoveCost(cost.id)}
-                    aria-label={`Remove ${cost.category}`}
-                    disabled={removingCostId === cost.id}
-                  >
-                    {removingCostId === cost.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash className="h-4 w-4" />
-                    )}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => void onRemoveCost(cost.id)}
+                          aria-label={`Remove ${cost.category}`}
+                          disabled={removingCostId === cost.id}
+                        >
+                          {removingCostId === cost.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Remove cost</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             ))

@@ -169,7 +169,7 @@ function ProposalStepContentComponent({
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => onToggleArrayValue(['marketing', 'platforms'], platform)}
+                      onChange={() => onToggleArrayValue(['marketing', 'platforms'], platform)}
                     />
                     <span className="text-sm font-medium">{platform}</span>
                   </label>
@@ -215,7 +215,7 @@ function ProposalStepContentComponent({
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => onToggleArrayValue(['goals', 'objectives'], goal)}
+                      onChange={() => onToggleArrayValue(['goals', 'objectives'], goal)}
                       className="mt-0.5"
                     />
                     <div className="space-y-1">
@@ -256,7 +256,7 @@ function ProposalStepContentComponent({
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => onToggleArrayValue(['goals', 'challenges'], challenge)}
+                      onChange={() => onToggleArrayValue(['goals', 'challenges'], challenge)}
                       className="mt-0.5"
                     />
                     <span className="font-medium leading-none">{challenge}</span>
@@ -294,7 +294,7 @@ function ProposalStepContentComponent({
                   >
                     <Checkbox
                       checked={isSelected}
-                      onCheckedChange={() => onToggleArrayValue(['scope', 'services'], service)}
+                      onChange={() => onToggleArrayValue(['scope', 'services'], service)}
                       className="mt-0.5"
                     />
                     <span className="font-medium leading-none">{service}</span>

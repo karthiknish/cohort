@@ -44,67 +44,69 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <FadeIn as="div" className="mx-auto max-w-md space-y-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold text-foreground">Forgot password</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter the email associated with your account and we&apos;ll email you reset instructions.
-        </p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
+      <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-semibold text-foreground">Forgot password</h1>
+          <p className="text-sm text-muted-foreground">
+            Enter the email associated with your account and we&apos;ll email you reset instructions.
+          </p>
+        </div>
 
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        <FadeInStagger as="div" className="space-y-5">
-          <FadeInItem as="div" className="space-y-2">
-            <Label htmlFor="reset-email">Email address</Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                <Mail className="h-4 w-4" />
-              </span>
-              <Input
-                id="reset-email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                className="pl-9"
-              />
-            </div>
-          </FadeInItem>
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <FadeInStagger as="div" className="space-y-5">
+            <FadeInItem as="div" className="space-y-2">
+              <Label htmlFor="reset-email">Email address</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                  <Mail className="h-4 w-4" />
+                </span>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="pl-9"
+                />
+              </div>
+            </FadeInItem>
 
-          <FadeInItem as="div">
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Sending reset link…' : 'Send reset link'}
-            </Button>
-          </FadeInItem>
-        </FadeInStagger>
-      </form>
+            <FadeInItem as="div">
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? 'Sending reset link…' : 'Send reset link'}
+              </Button>
+            </FadeInItem>
+          </FadeInStagger>
+        </form>
 
-      {success && (
-        <Alert>
-          <AlertTitle>Reset email sent</AlertTitle>
-          <AlertDescription>
-            If an account exists for <strong>{email.trim()}</strong>, you&apos;ll receive an email with steps to reset your password.
-            Be sure to check your spam folder as well.
-          </AlertDescription>
-        </Alert>
-      )}
+        {success && (
+          <Alert>
+            <AlertTitle>Reset email sent</AlertTitle>
+            <AlertDescription>
+              If an account exists for <strong>{email.trim()}</strong>, you&apos;ll receive an email with steps to reset your password.
+              Be sure to check your spam folder as well.
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Something went wrong</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Something went wrong</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="text-center text-xs text-muted-foreground">
-        Remember your password?{' '}
-        <Link href="/auth" className="font-medium text-primary hover:underline">
-          Return to sign in
-        </Link>
-      </div>
-    </FadeIn>
+        <div className="text-center text-xs text-muted-foreground">
+          Remember your password?{' '}
+          <Link href="/auth" className="font-medium text-primary hover:underline">
+            Return to sign in
+          </Link>
+        </div>
+      </FadeIn>
+    </div>
   )
 }
 

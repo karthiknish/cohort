@@ -7,6 +7,7 @@ import { CheckCircle2, Eye, EyeOff, Lock, Mail } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
@@ -164,275 +165,246 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-4 py-12 md:px-8 lg:flex-row lg:items-center lg:justify-between lg:gap-16 lg:py-20">
-        <FadeIn as="section" className="w-full max-w-2xl space-y-8 text-foreground">
-       
-
-          <div className="space-y-4">
-            <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+    <div className="flex min-h-screen w-full bg-muted/30">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-12 px-6 py-10 lg:flex-row lg:items-center lg:justify-between lg:gap-20 lg:px-10 lg:py-20">
+        <FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center space-y-10 lg:py-12">
+          <div className="space-y-6">
+            <div className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-sm font-medium shadow-sm">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 mr-2"></span>
+              Now in public beta
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl xl:text-6xl">
               Run every client engagement from a single modern workspace.
             </h1>
-            <p className="max-w-xl text-base text-muted-foreground">
+            <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
               Streamline onboarding, proposals, performance snapshots, and feedback loops with a platform designed
               for agencies that need to move fast.
             </p>
           </div>
 
-          <FadeInStagger className="grid gap-4 sm:grid-cols-2">
+          <FadeInStagger className="grid gap-5 sm:grid-cols-2">
             {HERO_HIGHLIGHTS.map((item) => (
               <FadeInItem
                 key={item.title}
                 as="div"
-                className="flex gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm"
+                className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm transition-all hover:border-primary/20 hover:bg-background hover:shadow-md"
               >
-                <div className="mt-1 text-emerald-500">
+                <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                  <p className="font-semibold text-foreground">{item.title}</p>
+                  <p className="text-sm text-muted-foreground leading-snug">{item.description}</p>
                 </div>
               </FadeInItem>
             ))}
           </FadeInStagger>
         </FadeIn>
 
-        <FadeIn as="section" className="w-full lg:max-w-xl">
-          <div className="space-y-8">
-            <div className="space-y-1">
-              <h2 className="text-3xl font-semibold text-foreground">Welcome back</h2>
-              <p className="text-sm text-muted-foreground">
+        <FadeIn as="section" className="w-full lg:max-w-[480px]">
+          <Card className="border-border/60 shadow-xl shadow-primary/5">
+            <CardHeader className="space-y-1 pb-6 text-center">
+              <CardTitle className="text-2xl">Welcome to Cohorts</CardTitle>
+              <CardDescription className="text-base">
                 {activeTab === "signup"
-                  ? "Create an account to launch proposals, automate reporting, and collaborate with your clients."
-                  : "Sign in to access live insights across campaigns, proposals, and collaboration threads."}
-              </p>
-            </div>
+                  ? "Create an account to get started."
+                  : "Sign in to access your dashboard."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="signin">Sign in</TabsTrigger>
+                  <TabsTrigger value="signup">Sign up</TabsTrigger>
+                </TabsList>
 
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 rounded-lg border border-border bg-card p-1 shadow-sm">
-                <TabsTrigger
-                  value="signin"
-                  className="flex items-center justify-center rounded-md border border-transparent text-sm font-medium text-muted-foreground transition data-[state=active]:border-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  Sign in
-                </TabsTrigger>
-                <TabsTrigger
-                  value="signup"
-                  className="flex items-center justify-center rounded-md border border-transparent text-sm font-medium text-muted-foreground transition data-[state=active]:border-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  Sign up
-                </TabsTrigger>
-              </TabsList>
+                <TabsContent value="signin" className="mt-0">
+                  <FadeInStagger as="form" className="space-y-4" onSubmit={handleSubmit("signin")}>
+                    <FadeInItem as="div" className="space-y-2">
+                      <Label htmlFor="signInEmail">Email address</Label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                        </span>
+                        <Input
+                          id="signInEmail"
+                          name="email"
+                          type="email"
+                          autoComplete="email"
+                          required
+                          value={signInData.email}
+                          onChange={handleSignInChange}
+                          placeholder="name@company.com"
+                          className="pl-9"
+                        />
+                      </div>
+                    </FadeInItem>
 
-              <TabsContent value="signin">
-                <FadeInStagger as="form" className="space-y-5" onSubmit={handleSubmit("signin")}>
-                  <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signInEmail" className="text-foreground">
-                      Email address
-                    </Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                      </span>
+                    <FadeInItem as="div" className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signInPassword">Password</Label>
+                        <Link
+                          href="/auth/forgot"
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Forgot password?
+                        </Link>
+                      </div>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                        </span>
+                        <Input
+                          id="signInPassword"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          required
+                          value={signInData.password}
+                          onChange={handleSignInChange}
+                          placeholder="••••••••"
+                          className="pl-9 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setShowPassword((previous) => !previous)}
+                          className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </FadeInItem>
+
+                    <Button className="w-full" size="lg" disabled={loading} type="submit">
+                      {loading ? "Signing in..." : "Sign In"}
+                    </Button>
+                  </FadeInStagger>
+                </TabsContent>
+
+                <TabsContent value="signup" className="mt-0">
+                  <FadeInStagger as="form" className="space-y-4" onSubmit={handleSubmit("signup")}>
+                    <FadeInItem as="div" className="space-y-2">
+                      <Label htmlFor="displayName">Full name</Label>
                       <Input
-                        id="signInEmail"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={signInData.email}
-                        onChange={handleSignInChange}
-                        placeholder="you@example.com"
-                        className="border-input bg-card pl-9 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
-                      />
-                    </div>
-                  </FadeInItem>
-
-                  <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signInPassword" className="text-foreground">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                        <Lock className="h-4 w-4" />
-                      </span>
-                      <Input
-                        id="signInPassword"
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="current-password"
-                        required
-                        value={signInData.password}
-                        onChange={handleSignInChange}
-                        placeholder="••••••••"
-                        className="border-input bg-card pl-9 pr-10 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setShowPassword((previous) => !previous)}
-                        className="absolute inset-y-0 right-1 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </FadeInItem>
-
-                  <Button className="w-full" disabled={loading} type="submit">
-                    {loading ? "Please wait…" : "Sign In"}
-                  </Button>
-                  <div className="text-center text-xs text-muted-foreground">
-                    <Link href="/auth/forgot" className="font-medium text-primary hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
-                </FadeInStagger>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <FadeInStagger as="form" className="space-y-5" onSubmit={handleSubmit("signup")}>
-                  <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="displayName" className="text-foreground">
-                      Full name (optional)
-                    </Label>
-                    <Input
-                      id="displayName"
-                      name="displayName"
-                      type="text"
-                      value={signUpData.displayName}
-                      onChange={handleSignUpChange}
-                      placeholder="Jane Smith"
-                      className="border-input bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
-                    />
-                  </FadeInItem>
-
-                  <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signUpEmail" className="text-foreground">
-                      Email address
-                    </Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                      </span>
-                      <Input
-                        id="signUpEmail"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={signUpData.email}
+                        id="displayName"
+                        name="displayName"
+                        type="text"
+                        value={signUpData.displayName}
                         onChange={handleSignUpChange}
-                        placeholder="you@example.com"
-                        className="border-input bg-card pl-9 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
+                        placeholder="Jane Smith"
                       />
-                    </div>
-                  </FadeInItem>
+                    </FadeInItem>
 
-                  <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="signUpPassword" className="text-foreground">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                        <Lock className="h-4 w-4" />
-                      </span>
+                    <FadeInItem as="div" className="space-y-2">
+                      <Label htmlFor="signUpEmail">Email address</Label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                        </span>
+                        <Input
+                          id="signUpEmail"
+                          name="email"
+                          type="email"
+                          autoComplete="email"
+                          required
+                          value={signUpData.email}
+                          onChange={handleSignUpChange}
+                          placeholder="name@company.com"
+                          className="pl-9"
+                        />
+                      </div>
+                    </FadeInItem>
+
+                    <FadeInItem as="div" className="space-y-2">
+                      <Label htmlFor="signUpPassword">Password</Label>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                        </span>
+                        <Input
+                          id="signUpPassword"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          required
+                          value={signUpData.password}
+                          onChange={handleSignUpChange}
+                          placeholder="Create a strong password"
+                          className="pl-9 pr-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setShowPassword((previous) => !previous)}
+                          className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </FadeInItem>
+
+                    <FadeInItem as="div" className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm password</Label>
                       <Input
-                        id="signUpPassword"
-                        name="password"
+                        id="confirmPassword"
+                        name="confirmPassword"
                         type={showPassword ? "text" : "password"}
                         autoComplete="new-password"
                         required
-                        value={signUpData.password}
+                        value={signUpData.confirmPassword}
                         onChange={handleSignUpChange}
-                        placeholder="Create a strong password"
-                        className="border-input bg-card pl-9 pr-10 text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
+                        placeholder="Re-enter your password"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setShowPassword((previous) => !previous)}
-                        className="absolute inset-y-0 right-1 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </FadeInItem>
+                    </FadeInItem>
 
-                  <FadeInItem as="div" className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-foreground">
-                      Confirm password
-                    </Label>
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      value={signUpData.confirmPassword}
-                      onChange={handleSignUpChange}
-                      placeholder="Re-enter your password"
-                      className="border-input bg-card text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary"
-                    />
-                  </FadeInItem>
+                    <Button className="w-full" size="lg" disabled={loading} type="submit">
+                      {loading ? "Creating account..." : "Create Account"}
+                    </Button>
+                  </FadeInStagger>
+                </TabsContent>
+              </Tabs>
 
-                  <Button className="w-full" disabled={loading} type="submit">
-                    {loading ? "Please wait…" : "Create Account"}
-                  </Button>
-                </FadeInStagger>
-              </TabsContent>
-            </Tabs>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
 
-            <FadeInStagger className="space-y-4">
-              <FadeInItem as="div" className="relative flex items-center gap-3">
-                <Separator className="flex-1 border-border" />
-                <span className="text-xs uppercase tracking-wider text-muted-foreground">Or continue with</span>
-                <Separator className="flex-1 border-border" />
-              </FadeInItem>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={handleGoogleSignIn}
+                className="w-full"
+              >
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                {loading ? "Signing in..." : "Google"}
+              </Button>
 
-              <FadeInItem>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={loading}
-                  onClick={handleGoogleSignIn}
-                  className="w-full border-input bg-card text-foreground hover:bg-muted"
-                >
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  {loading ? "Signing in…" : "Continue with Google"}
-                </Button>
-              </FadeInItem>
-
-              <FadeInItem>
-                <p className="text-center text-xs text-muted-foreground">
-                  You can link your advertising accounts separately from the dashboard once you are signed in.
-                </p>
-              </FadeInItem>
-            </FadeInStagger>
-
-            <p className="text-center text-xs text-muted-foreground">
-              By continuing, you agree to our{" "}
-              <Link href="/terms" className="font-medium text-primary hover:underline">
-                Terms of Service
-              </Link>
-              ,{" "}
-              <Link href="/privacy" className="font-medium text-primary hover:underline">
-                Privacy Policy
-              </Link>
-              , and{" "}
-              <Link href="/cookies" className="font-medium text-primary hover:underline">
-                Cookie Policy
-              </Link>
-              .
-            </p>
-          </div>
+              <p className="text-center text-xs text-muted-foreground px-6">
+                By clicking continue, you agree to our{" "}
+                <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
+                  Privacy Policy
+                </Link>
+                .
+              </p>
+            </CardContent>
+          </Card>
         </FadeIn>
       </div>
     </div>

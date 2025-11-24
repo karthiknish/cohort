@@ -2,15 +2,12 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, Suspense } from 'react'
-import type { LucideIcon } from 'lucide-react'
 import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
-  CreditCard,
   DollarSign,
   Megaphone,
-  Sparkles,
   TrendingUp,
   Trophy,
 } from 'lucide-react'
@@ -23,8 +20,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { cn, formatCurrency } from '@/lib/utils'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { formatCurrency } from '@/lib/utils'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
@@ -37,109 +34,32 @@ import { DashboardFilterBar } from '@/components/dashboard/dashboard-filter-bar'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
 
-interface MetricRecord {
-  id: string
-  providerId: string
-  date: string
-  clientId?: string | null
-  createdAt?: string | null
-  spend: number
-  impressions: number
-  clicks: number
-  conversions: number
-  revenue?: number | null
-}
+// New components
+import { OnboardingCard } from '@/components/dashboard/onboarding-card'
+import { QuickActions } from '@/components/dashboard/quick-actions'
+import { StatsCards } from '@/components/dashboard/stats-cards'
+import { TasksCard } from '@/components/dashboard/tasks-card'
+import { ComparisonTable } from '@/components/dashboard/comparison/comparison-table'
+import { ComparisonSummaryTile } from '@/components/dashboard/comparison/comparison-summary-tile'
+import { ComparisonInsights } from '@/components/dashboard/comparison/comparison-insights'
 
-type SummaryStat = {
-  id: string
-  label: string
-  value: string
-  helper: string
-  icon: LucideIcon
-  emphasis?: 'positive' | 'negative' | 'neutral'
-}
-
-type DashboardTaskItem = {
-  id: string
-  title: string
-  dueLabel: string
-  priority: TaskRecord['priority']
-  clientName: string
-}
-
-type ClientComparisonSummary = {
-  clientId: string
-  clientName: string
-  totalRevenue: number
-  totalOperatingExpenses: number
-  totalAdSpend: number
-  totalConversions: number
-  roas: number
-  cpa: number | null
-  outstanding: number
-  currency: string
-  periodDays: number
-}
-
-type ComparisonInsight = {
-  id: string
-  title: string
-  highlight: string
-  body: string
-  tone: 'positive' | 'warning' | 'neutral'
-  icon: LucideIcon
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
-  return fallback
-}
-
-const quickLinks = [
-  {
-    title: 'Manage ad integrations',
-    description: 'Connect platforms, refresh syncs, and review campaign metrics in the Ads hub.',
-    href: '/dashboard/ads',
-    icon: Megaphone,
-  },
-  {
-    title: 'Track cash flow',
-    description: 'Log operating costs and monitor profitability trends on the Finance tab.',
-    href: '/dashboard/finance',
-    icon: CreditCard,
-  },
-  {
-    title: 'Deep-dive analytics',
-    description: 'Use advanced breakdowns and visualizations to compare channel performance.',
-    href: '/dashboard/analytics',
-    icon: BarChart3,
-  },
-]
-
-const onboardingSteps = [
-  {
-    title: 'Pick a client',
-    description: 'Use the client switcher to focus this dashboard on one relationship at a time.',
-  },
-  {
-    title: 'Log revenue & costs',
-    description: 'Add invoicing data so cash flow and margin stats stay up to date.',
-  },
-  {
-    title: 'Connect ad platforms',
-    description: 'Head to the Ads hub to sync Google, Meta, LinkedIn, or TikTok campaigns.',
-  },
-] as const
+// Types and Utils
+import type {
+  MetricRecord,
+  SummaryStat,
+  DashboardTaskItem,
+  ClientComparisonSummary,
+  ComparisonInsight,
+} from '@/types/dashboard'
+import {
+  resolveJson,
+  buildClientComparisonSummary,
+  groupMetricsByClient,
+  formatRoas,
+  formatCpa,
+  mapTasksForDashboard,
+  getErrorMessage,
+} from '@/lib/dashboard-utils'
 
 const DEFAULT_TASKS: DashboardTaskItem[] = [
   {
@@ -688,633 +608,149 @@ export default function DashboardPage() {
   const showOnboarding = !statsLoading && !selectedClientId && metrics.length === 0 && !financeSummary
 
   return (
-    <div className="space-y-6">
-      {errorStates.map((error) => (
-        <FadeIn key={error.id}>
-          <Alert variant="destructive">
-            <AlertTitle>{error.title}</AlertTitle>
-            <AlertDescription>{error.message}</AlertDescription>
-          </Alert>
-        </FadeIn>
-      ))}
-
-      <FadeIn>
-        <DashboardHeader
-          userDisplayName={user?.name}
-          onRefresh={handleRefresh}
-          isRefreshing={financeLoading || metricsLoading || tasksLoading}
-          lastRefreshed={lastRefreshed}
-        />
-      </FadeIn>
-
-      {showOnboarding && (
-        <FadeIn>
-          <Card className="border-muted/70 bg-background shadow-sm">
-            <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Sparkles className="h-4 w-4" />
-                </span>
-                <div>
-                  <CardTitle className="text-base">Get the most from Cohorts</CardTitle>
-                  <CardDescription>Follow these quick steps to personalise this dashboard for your agency.</CardDescription>
-                </div>
-              </div>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/docs/background-sync-setup">View setup guide</Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-3">
-              {onboardingSteps.map((step, index) => (
-                <div key={step.title} className="space-y-2 rounded-lg border border-muted/60 p-4">
-                  <Badge variant="secondary">Step {index + 1}</Badge>
-                  <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </FadeIn>
-      )}
-
-      <FadeInStagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {summaryStats.map((stat) => (
-          <FadeInItem key={stat.id}>
-            <StatsCard stat={stat} loading={statsLoading} />
-          </FadeInItem>
-        ))}
-      </FadeInStagger>
-
-      <FadeIn>
-        <div className="space-y-4">
-          <DashboardFilterBar
-            clients={clients}
-            selectedClientIds={comparisonClientIds}
-            onClientChange={setComparisonClientIds}
-            periodDays={comparisonPeriodDays}
-            onPeriodChange={setComparisonPeriodDays}
-            canCompare={Boolean(canCompareAcrossClients)}
-          />
-          {comparisonHasSelection && !comparisonError && (comparisonLoading || comparisonSummaries.length > 0) && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {comparisonLoading || !comparisonAggregate ? (
-                <>
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                </>
-              ) : (
-                <>
-                  <ComparisonSummaryTile
-                    label="Combined revenue"
-                    value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
-                    helper={comparisonAggregate.mixedCurrencies
-                      ? 'Totals unavailable for mixed currencies'
-                      : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
-                  />
-                  <ComparisonSummaryTile
-                    label="Ad spend"
-                    value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
-                    helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
-                  />
-                  <ComparisonSummaryTile
-                    label="Outstanding"
-                    value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
-                    helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
-                  />
-                  <ComparisonSummaryTile
-                    label="Weighted ROAS"
-                    value={comparisonAggregate.mixedCurrencies || comparisonAggregate.avgRoas === null ? '—' : formatRoas(comparisonAggregate.avgRoas)}
-                    helper={comparisonAggregate.mixedCurrencies ? 'Unavailable for mixed currencies' : 'Revenue ÷ ad spend across selection'}
-                  />
-                </>
-              )}
-            </div>
-          )}
-          {comparisonError ? (
+    <TooltipProvider>
+      <div className="space-y-6">
+        {errorStates.map((error) => (
+          <FadeIn key={error.id}>
             <Alert variant="destructive">
-              <AlertTitle>Comparison data unavailable</AlertTitle>
-              <AlertDescription>{comparisonError}</AlertDescription>
+              <AlertTitle>{error.title}</AlertTitle>
+              <AlertDescription>{error.message}</AlertDescription>
             </Alert>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="lg:col-span-2 shadow-sm">
-                <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <CardTitle className="text-base">Workspace comparison</CardTitle>
-                    <CardDescription>
-                      {comparisonHasSelection
-                        ? `Tracking ${comparisonTargets.length} workspace${comparisonTargets.length > 1 ? 's' : ''} over the last ${comparisonPeriodDays} days.`
-                        : 'Pick at least one workspace to start comparing performance.'}
-                    </CardDescription>
-                  </div>
-                  {!canCompareAcrossClients && (
-                    <Badge variant="secondary" className="text-xs">Admin view only</Badge>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <ComparisonTable rows={comparisonSummaries} loading={comparisonLoading} hasSelection={comparisonHasSelection} />
-                </CardContent>
-              </Card>
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base">Workspace highlights</CardTitle>
-                  <CardDescription>Auto-generated callouts based on the selected period.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {comparisonLoading && (
-                    <div className="space-y-3">
-                      <Skeleton className="h-20 w-full" />
-                      <Skeleton className="h-20 w-full" />
-                      <Skeleton className="h-20 w-full" />
-                    </div>
-                  )}
-                  {!comparisonLoading && comparisonInsights.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Select at least one workspace to see quick insights.</p>
-                  )}
-                  {!comparisonLoading &&
-                    comparisonInsights.map((insight) => {
-                      const Icon = insight.icon
-                      return (
-                        <div
-                          key={insight.id}
-                          className={cn(
-                            'rounded-lg border p-4 text-sm',
-                            insight.tone === 'positive' && 'border-emerald-200 bg-emerald-50/60',
-                            insight.tone === 'warning' && 'border-amber-200 bg-amber-50/80',
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-full bg-background/70 p-2 text-primary">
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {insight.title}
-                            </span>
-                          </div>
-                          <p className="mt-3 text-base font-semibold text-foreground">{insight.highlight}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{insight.body}</p>
-                        </div>
-                      )
-                    })}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      </FadeIn>
+          </FadeIn>
+        ))}
 
-      <FadeIn>
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Quick actions</CardTitle>
-            <CardDescription>Jump into the teams and workflows that need attention.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {quickLinks.map((link) => {
-              const Icon = link.icon
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="group flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-background p-4 transition hover:border-primary/80 hover:shadow-sm"
-                >
-                  <div className="space-y-3">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Icon className="h-4 w-4" />
-                    </span>
+        <FadeIn>
+          <DashboardHeader
+            userDisplayName={user?.name}
+            onRefresh={handleRefresh}
+            isRefreshing={financeLoading || metricsLoading || tasksLoading}
+            lastRefreshed={lastRefreshed}
+          />
+        </FadeIn>
+
+        {showOnboarding && (
+          <FadeIn>
+            <OnboardingCard />
+          </FadeIn>
+        )}
+
+        <StatsCards stats={summaryStats} loading={statsLoading} />
+
+        <FadeIn>
+          <div className="space-y-4">
+            <DashboardFilterBar
+              clients={clients}
+              selectedClientIds={comparisonClientIds}
+              onClientChange={setComparisonClientIds}
+              periodDays={comparisonPeriodDays}
+              onPeriodChange={setComparisonPeriodDays}
+              canCompare={Boolean(canCompareAcrossClients)}
+            />
+            {comparisonHasSelection && !comparisonError && (comparisonLoading || comparisonSummaries.length > 0) && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {comparisonLoading || !comparisonAggregate ? (
+                  <>
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </>
+                ) : (
+                  <>
+                    <ComparisonSummaryTile
+                      label="Combined revenue"
+                      value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
+                      helper={comparisonAggregate.mixedCurrencies
+                        ? 'Totals unavailable for mixed currencies'
+                        : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
+                      tooltip="Total revenue across all selected workspaces"
+                    />
+                    <ComparisonSummaryTile
+                      label="Ad spend"
+                      value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
+                      helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
+                      tooltip="Total ad spend across all selected workspaces"
+                    />
+                    <ComparisonSummaryTile
+                      label="Outstanding"
+                      value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
+                      helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
+                      tooltip="Total unpaid invoices and retainers"
+                    />
+                    <ComparisonSummaryTile
+                      label="Weighted ROAS"
+                      value={comparisonAggregate.mixedCurrencies || comparisonAggregate.avgRoas === null ? '—' : formatRoas(comparisonAggregate.avgRoas)}
+                      helper={comparisonAggregate.mixedCurrencies ? 'Unavailable for mixed currencies' : 'Revenue ÷ ad spend across selection'}
+                      tooltip="Average ROAS weighted by ad spend"
+                    />
+                  </>
+                )}
+              </div>
+            )}
+            {comparisonError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Comparison data unavailable</AlertTitle>
+                <AlertDescription>{comparisonError}</AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <Card className="lg:col-span-2 shadow-sm">
+                  <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-foreground group-hover:text-primary">{link.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                      <CardTitle className="text-base">Workspace comparison</CardTitle>
+                      <CardDescription>
+                        {comparisonHasSelection
+                          ? `Tracking ${comparisonTargets.length} workspace${comparisonTargets.length > 1 ? 's' : ''} over the last ${comparisonPeriodDays} days.`
+                          : 'Pick at least one workspace to start comparing performance.'}
+                      </CardDescription>
                     </div>
-                  </div>
-                  <span className="mt-4 inline-flex items-center text-xs font-medium text-primary">
-                    Go to {link.title.split(' ')[0]}
-                  </span>
-                </Link>
-              )
-            })}
-          </CardContent>
-        </Card>
-      </FadeIn>
-
-      <FadeIn>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <FadeInItem className="lg:col-span-2">
-            <PerformanceChart metrics={chartData} loading={statsLoading} />
-          </FadeInItem>
-
-          <div className="space-y-6">
-            <FadeInItem>
-              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <ActivityWidget />
-              </Suspense>
-            </FadeInItem>
-
-            <FadeInItem>
-              <Card className="shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Upcoming Tasks</CardTitle>
-                    <CardDescription>Important actions scheduled this week</CardDescription>
-                  </div>
-                  <Button asChild variant="ghost" size="sm" className="text-xs">
-                    <Link href="/dashboard/tasks">Manage tasks</Link>
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {tasksLoading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-16 w-full" />
-                    </div>
-                  ) : filteredUpcomingTasks.length > 0 ? (
-                    filteredUpcomingTasks.map((task) => (
-                      <FadeInItem key={task.id}>
-                        <TaskItem task={task} />
-                      </FadeInItem>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
-                      <p>No open tasks on your radar. Add an item to keep your team aligned.</p>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href="/dashboard/tasks/new">Create a task</Link>
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </FadeInItem>
+                    {!canCompareAcrossClients && (
+                      <Badge variant="secondary" className="text-xs">Admin view only</Badge>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <ComparisonTable rows={comparisonSummaries} loading={comparisonLoading} hasSelection={comparisonHasSelection} />
+                  </CardContent>
+                </Card>
+                <Card className="shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Workspace highlights</CardTitle>
+                    <CardDescription>Auto-generated callouts based on the selected period.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ComparisonInsights insights={comparisonInsights} loading={comparisonLoading} />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
-        </div>
-      </FadeIn>
-    </div>
-  )
-}
+        </FadeIn>
 
-async function resolveJson(response: Response, fallbackMessage: string): Promise<unknown> {
-  if (response.ok) {
-    return await response.json()
-  }
+        <FadeIn>
+          <QuickActions />
+        </FadeIn>
 
-  let message = fallbackMessage
-  try {
-    const payload = (await response.json()) as { error?: unknown }
-    if (typeof payload?.error === 'string' && payload.error.trim().length > 0) {
-      message = payload.error
-    }
-  } catch {
-    // swallow JSON parse failures, fall back to default message
-  }
-  throw new Error(message)
-}
+        <FadeIn>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <FadeInItem className="lg:col-span-2">
+              <PerformanceChart metrics={chartData} loading={statsLoading} />
+            </FadeInItem>
 
-type BuildComparisonSummaryArgs = {
-  clientId: string
-  clientName: string
-  finance: FinanceSummaryResponse | null
-  metrics: MetricRecord[]
-  periodDays: number
-}
+            <div className="space-y-6">
+              <FadeInItem>
+                <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                  <ActivityWidget />
+                </Suspense>
+              </FadeInItem>
 
-function buildClientComparisonSummary({ clientId, clientName, finance, metrics, periodDays }: BuildComparisonSummaryArgs): ClientComparisonSummary {
-  const cutoff = Date.now() - periodDays * DAY_IN_MS
-  const revenueRecords = finance?.revenue ?? []
-  const filteredRevenue = revenueRecords.filter((record) => isRevenueRecordWithinPeriod(record, cutoff))
-  const totalRevenue = filteredRevenue.reduce((sum, record) => sum + record.revenue, 0)
-  const totalOperatingExpenses = filteredRevenue.reduce((sum, record) => sum + record.operatingExpenses, 0)
-
-  const filteredMetrics = metrics.filter((record) => isMetricWithinPeriod(record, cutoff))
-  const totalAdSpend = filteredMetrics.reduce((sum, record) => sum + record.spend, 0)
-  const totalConversions = filteredMetrics.reduce((sum, record) => sum + record.conversions, 0)
-  const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : 0
-  const cpa = totalConversions > 0 ? totalAdSpend / totalConversions : null
-
-  const outstanding = sumOutstandingTotals(finance?.payments?.totals ?? [])
-  const currency = determineDominantCurrency(finance)
-
-  return {
-    clientId,
-    clientName,
-    totalRevenue,
-    totalOperatingExpenses,
-    totalAdSpend,
-    totalConversions,
-    roas,
-    cpa,
-    outstanding,
-    currency,
-    periodDays,
-  }
-}
-
-function groupMetricsByClient(records: MetricRecord[]): Map<string | null, MetricRecord[]> {
-  const map = new Map<string | null, MetricRecord[]>()
-  records.forEach((record) => {
-    const key = record.clientId ?? null
-    const bucket = map.get(key)
-    if (bucket) {
-      bucket.push(record)
-      return
-    }
-    map.set(key, [record])
-  })
-  return map
-}
-
-function sumOutstandingTotals(totals: { totalOutstanding: number; currency?: string | null }[]): number {
-  if (!Array.isArray(totals) || totals.length === 0) {
-    return 0
-  }
-  return totals.reduce((sum, entry) => sum + (Number.isFinite(entry.totalOutstanding) ? entry.totalOutstanding : 0), 0)
-}
-
-function determineDominantCurrency(finance: FinanceSummaryResponse | null): string {
-  const revenueCurrency = finance?.revenue?.find((record) => typeof record.currency === 'string' && record.currency)?.currency
-  if (revenueCurrency) {
-    return revenueCurrency
-  }
-  const paymentsCurrency = finance?.payments?.totals?.find((total) => typeof total.currency === 'string' && total.currency)
-  if (paymentsCurrency?.currency) {
-    return paymentsCurrency.currency
-  }
-  return 'USD'
-}
-
-function isRevenueRecordWithinPeriod(record: { createdAt?: string | null; period?: string }, cutoff: number): boolean {
-  const timestamp = parsePeriodDate(record)
-  if (timestamp === null) {
-    return true
-  }
-  return timestamp >= cutoff
-}
-
-function parsePeriodDate(record: { createdAt?: string | null; period?: string }): number | null {
-  if (record.createdAt) {
-    const parsed = Date.parse(record.createdAt)
-    if (!Number.isNaN(parsed)) {
-      return parsed
-    }
-  }
-  if (record.period) {
-    const parsedPeriod = Date.parse(record.period)
-    if (!Number.isNaN(parsedPeriod)) {
-      return parsedPeriod
-    }
-    // attempt to parse YYYY-MM strings by appending day
-    const asMonth = Date.parse(`${record.period}-01`)
-    if (!Number.isNaN(asMonth)) {
-      return asMonth
-    }
-  }
-  return null
-}
-
-function isMetricWithinPeriod(record: MetricRecord, cutoff: number): boolean {
-  const timestamp = parseDateSafe(record.date) ?? parseDateSafe(record.createdAt ?? null)
-  if (timestamp === null) {
-    return true
-  }
-  return timestamp >= cutoff
-}
-
-function parseDateSafe(value: string | null | undefined): number | null {
-  if (!value) {
-    return null
-  }
-  const parsed = Date.parse(value)
-  return Number.isNaN(parsed) ? null : parsed
-}
-
-function formatRoas(value: number): string {
-  if (value === Number.POSITIVE_INFINITY) {
-    return 'INF'
-  }
-  if (!Number.isFinite(value) || value === 0) {
-    return '—'
-  }
-  return `${value.toFixed(2)}x`
-}
-
-function formatCpa(value: number | null, currency = 'USD'): string {
-  if (value === null || !Number.isFinite(value)) {
-    return '—'
-  }
-  return formatCurrency(value, currency)
-}
-
-function ComparisonTable({ rows, loading, hasSelection }: { rows: ClientComparisonSummary[]; loading: boolean; hasSelection: boolean }) {
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+              <FadeInItem>
+                <TasksCard tasks={filteredUpcomingTasks} loading={tasksLoading} />
+              </FadeInItem>
+            </div>
+          </div>
+        </FadeIn>
       </div>
-    )
-  }
-
-  if (!hasSelection) {
-    return <p className="text-sm text-muted-foreground">Select one or more workspaces to populate this table.</p>
-  }
-
-  if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">No comparison data yet. Once revenue and ad metrics sync in, you&rsquo;ll see client-by-client stats here.</p>
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="pb-2">Workspace</th>
-            <th className="pb-2">Revenue</th>
-            <th className="pb-2">Ad spend</th>
-            <th className="pb-2">ROAS</th>
-            <th className="pb-2">CPA</th>
-            <th className="pb-2">Outstanding</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/60">
-          {rows.map((row) => (
-            <tr key={row.clientId} className="align-top">
-              <td className="py-3">
-                <p className="text-sm font-semibold text-foreground">{row.clientName}</p>
-                <p className="text-xs text-muted-foreground">{row.periodDays}-day window</p>
-              </td>
-              <td className="py-3 font-medium text-foreground">{formatCurrency(row.totalRevenue, row.currency)}</td>
-              <td className="py-3">{formatCurrency(row.totalAdSpend, row.currency)}</td>
-              <td className="py-3">
-                <span className={cn(
-                  'rounded-md px-2 py-1 text-xs font-semibold',
-                  row.roas !== Number.POSITIVE_INFINITY && row.roas < 1
-                    ? 'bg-rose-100 text-rose-700'
-                    : row.roas > 2
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-muted text-foreground',
-                )}>
-                  {formatRoas(row.roas)}
-                </span>
-              </td>
-              <td className="py-3">{formatCpa(row.cpa, row.currency)}</td>
-              <td className="py-3">{formatCurrency(row.outstanding, row.currency)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    </TooltipProvider>
   )
 }
 
-function ComparisonSummaryTile({ label, value, helper }: { label: string; value: string; helper: string }) {
-  return (
-    <div className="rounded-lg border border-muted/70 bg-background p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
-    </div>
-  )
-}
-
-function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
-  const Icon = stat.icon
-  const valueClasses = cn(
-    'text-3xl font-bold tracking-tight',
-    !loading && stat.emphasis === 'positive' && 'text-emerald-600',
-    !loading && stat.emphasis === 'negative' && 'text-red-600',
-  )
-
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="flex items-center justify-between p-6">
-        <div className="space-y-2">
-          <CardDescription className="text-xs font-medium uppercase text-muted-foreground">
-            {stat.label}
-          </CardDescription>
-          <div className={valueClasses}>{loading ? <Skeleton className="h-8 w-20" /> : stat.value}</div>
-          <div className="text-xs text-muted-foreground">
-            {loading ? <Skeleton className="h-4 w-32" /> : stat.helper}
-          </div>
-        </div>
-        <div className="rounded-full bg-primary/10 p-3">
-          <Icon className="h-6 w-6 text-primary" />
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function TaskItem({ task }: { task: DashboardTaskItem }) {
-  const priorityColors: Record<DashboardTaskItem['priority'], string> = {
-    urgent: 'bg-rose-100 text-rose-700',
-    high: 'bg-red-100 text-red-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    low: 'bg-green-100 text-green-700',
-  }
-
-  return (
-    <Card className="border-muted bg-background">
-      <CardContent className="flex items-center justify-between p-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{task.title}</p>
-          <p className="text-xs text-muted-foreground">{task.clientName}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className={cn('capitalize', priorityColors[task.priority] ?? 'bg-muted text-muted-foreground')}>
-            {task.priority}
-          </Badge>
-          <span className="text-xs text-muted-foreground">{task.dueLabel}</span>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-const DAY_IN_MS = 24 * 60 * 60 * 1000
-
-function mapTasksForDashboard(tasks: TaskRecord[]): DashboardTaskItem[] {
-  if (!Array.isArray(tasks) || tasks.length === 0) {
-    return []
-  }
-
-  const withSortKey = tasks
-    .filter((task) => task.status !== 'completed')
-    .map((task) => {
-      const { label, timestamp } = deriveDueMetadata(task.dueDate)
-      const rawTitle = typeof task.title === 'string' ? task.title.trim() : ''
-      const rawClient = typeof task.client === 'string' ? task.client.trim() : ''
-      return {
-        id: task.id,
-        title: rawTitle.length > 0 ? rawTitle : 'Untitled task',
-        dueLabel: label,
-        priority: normalizeTaskPriority(task.priority),
-        clientName: rawClient.length > 0 ? rawClient : 'Internal',
-        sortValue: timestamp,
-      }
-    })
-
-  withSortKey.sort((a, b) => a.sortValue - b.sortValue)
-
-  return withSortKey.slice(0, 5).map((task) => {
-    const { sortValue, ...taskWithoutSort } = task
-    void sortValue
-    return taskWithoutSort
-  })
-}
-
-function deriveDueMetadata(rawDue: string | null | undefined): { label: string; timestamp: number } {
-  if (!rawDue) {
-    return { label: 'No due date', timestamp: Number.MAX_SAFE_INTEGER }
-  }
-
-  const dueDate = new Date(rawDue)
-  if (Number.isNaN(dueDate.getTime())) {
-    return { label: rawDue, timestamp: Number.MAX_SAFE_INTEGER }
-  }
-
-  const dueStart = startOfDay(dueDate)
-  const todayStart = startOfDay(new Date())
-  const diffDays = Math.round((dueStart - todayStart) / DAY_IN_MS)
-
-  if (diffDays === 0) {
-    return { label: 'Today', timestamp: dueStart }
-  }
-
-  if (diffDays === 1) {
-    return { label: 'Tomorrow', timestamp: dueStart }
-  }
-
-  if (diffDays === -1) {
-    return { label: 'Yesterday', timestamp: dueStart }
-  }
-
-  if (diffDays < -1) {
-    const daysOverdue = Math.abs(diffDays)
-    const suffix = daysOverdue === 1 ? 'day overdue' : 'days overdue'
-    return { label: `${daysOverdue} ${suffix}`, timestamp: dueStart }
-  }
-
-  if (diffDays <= 7) {
-    return { label: `In ${diffDays} days`, timestamp: dueStart }
-  }
-
-  return {
-    label: dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    timestamp: dueStart,
-  }
-}
-
-function startOfDay(date: Date): number {
-  const copy = new Date(date)
-  copy.setHours(0, 0, 0, 0)
-  return copy.getTime()
-}
-
-function normalizeTaskPriority(value: unknown): DashboardTaskItem['priority'] {
-  if (value === 'low' || value === 'medium' || value === 'high' || value === 'urgent') {
-    return value
-  }
-  return 'medium'
-}

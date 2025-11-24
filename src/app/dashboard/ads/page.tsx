@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Info,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -43,6 +44,12 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const ADS_WORKFLOW_STEPS = [
   {
@@ -1175,7 +1182,19 @@ export default function AdsPage() {
                     <FadeInItem key={card.id}>
                       <Card className="border-muted/70 bg-background shadow-sm">
                         <CardContent className="space-y-2 p-5">
-                          <p className="text-xs font-medium uppercase text-muted-foreground">{card.label}</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium uppercase text-muted-foreground">{card.label}</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground/70" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{card.helper}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                           <p className="text-2xl font-semibold text-foreground">{card.value}</p>
                           <p className="text-xs text-muted-foreground">{card.helper}</p>
                         </CardContent>
@@ -1319,11 +1338,81 @@ export default function AdsPage() {
                     <tr className="border-b border-muted/60">
                       <th className="py-2 pr-4 font-medium">Date</th>
                       <th className="py-2 pr-4 font-medium">Provider</th>
-                      <th className="py-2 pr-4 font-medium">Spend</th>
-                      <th className="py-2 pr-4 font-medium">Impressions</th>
-                      <th className="py-2 pr-4 font-medium">Clicks</th>
-                      <th className="py-2 pr-4 font-medium">Conversions</th>
-                      <th className="py-2 font-medium">Revenue</th>
+                      <th className="py-2 pr-4 font-medium">
+                        <div className="flex items-center gap-1">
+                          Spend
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-muted-foreground/70" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Total amount spent on ads</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        <div className="flex items-center gap-1">
+                          Impressions
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-muted-foreground/70" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Number of times your ads were shown</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        <div className="flex items-center gap-1">
+                          Clicks
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-muted-foreground/70" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Number of times your ads were clicked</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </th>
+                      <th className="py-2 pr-4 font-medium">
+                        <div className="flex items-center gap-1">
+                          Conversions
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-muted-foreground/70" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Number of desired actions taken (e.g. purchases, signups)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </th>
+                      <th className="py-2 font-medium">
+                        <div className="flex items-center gap-1">
+                          Revenue
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-muted-foreground/70" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Total revenue generated from ads</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

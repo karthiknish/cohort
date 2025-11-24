@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from 'recharts'
@@ -24,6 +24,7 @@ import {
   Target,
   RefreshCw,
   Loader2,
+  Info,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,6 +35,12 @@ import { useClientContext } from '@/contexts/client-context'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface MetricRecord {
   id: string
@@ -461,7 +468,19 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-muted/60 bg-background">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total spend</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Total spend</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3 w-3 text-muted-foreground/70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Total amount spent across all selected platforms</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -474,7 +493,19 @@ export default function AnalyticsPage() {
         </Card>
         <Card className="border-muted/60 bg-background">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3 w-3 text-muted-foreground/70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Total revenue generated from ad campaigns</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -487,7 +518,19 @@ export default function AnalyticsPage() {
         </Card>
         <Card className="border-muted/60 bg-background">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average ROAS</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Average ROAS</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3 w-3 text-muted-foreground/70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Return on Ad Spend (Revenue / Spend)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -500,7 +543,19 @@ export default function AnalyticsPage() {
         </Card>
         <Card className="border-muted/60 bg-background">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion rate</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium">Conversion rate</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3 w-3 text-muted-foreground/70" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Percentage of clicks that resulted in a conversion</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="space-y-1">
@@ -536,7 +591,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
+                  <RechartsTooltip content={<CustomTooltip />} />
                   <Legend />
                   <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} activeDot={{ r: 6 }} name="Revenue" />
                   <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 6 }} name="Spend" />
@@ -562,7 +617,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
+                  <RechartsTooltip content={<CustomTooltip />} />
                   <Legend />
                   <Bar dataKey="roas" fill="#6366f1" name="ROAS" />
                 </BarChart>
@@ -589,7 +644,7 @@ export default function AnalyticsPage() {
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number, _name, props) => [`${formatCurrency(value)}`, props?.payload?.name]} />
+                  <RechartsTooltip formatter={(value: number, _name, props) => [`${formatCurrency(value)}`, props?.payload?.name]} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -612,7 +667,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
+                  <RechartsTooltip content={<CustomTooltip />} />
                   <Legend />
                   <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} activeDot={{ r: 6 }} name="Clicks" />
                 </LineChart>
@@ -716,10 +771,66 @@ export default function AnalyticsPage() {
                 <thead className="sticky top-0 bg-background">
                   <tr className="border-b border-muted/60 text-xs uppercase text-muted-foreground">
                     <th className="py-2 pr-4 font-medium">Creative</th>
-                    <th className="py-2 pr-4 font-medium">Spend</th>
-                    <th className="py-2 pr-4 font-medium">Clicks</th>
-                    <th className="py-2 pr-4 font-medium">Conversions</th>
-                    <th className="py-2 pr-4 font-medium">Revenue</th>
+                    <th className="py-2 pr-4 font-medium">
+                      <div className="flex items-center gap-1">
+                        Spend
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-3 w-3 text-muted-foreground/70" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Amount spent on this creative</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </th>
+                    <th className="py-2 pr-4 font-medium">
+                      <div className="flex items-center gap-1">
+                        Clicks
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-3 w-3 text-muted-foreground/70" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Number of clicks on this creative</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </th>
+                    <th className="py-2 pr-4 font-medium">
+                      <div className="flex items-center gap-1">
+                        Conversions
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-3 w-3 text-muted-foreground/70" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Number of conversions from this creative</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </th>
+                    <th className="py-2 pr-4 font-medium">
+                      <div className="flex items-center gap-1">
+                        Revenue
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-3 w-3 text-muted-foreground/70" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Revenue generated by this creative</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

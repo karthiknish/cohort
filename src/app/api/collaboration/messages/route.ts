@@ -460,7 +460,7 @@ export async function POST(request: NextRequest) {
 
     const timestamp = Timestamp.now()
 
-    let parentMessageId = payload.parentMessageId ?? null
+    const parentMessageId = payload.parentMessageId ?? null
     let threadRootId: string | null = null
     let isThreadRoot = true
 

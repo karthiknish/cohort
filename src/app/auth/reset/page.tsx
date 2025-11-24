@@ -96,7 +96,7 @@ function ResetPasswordContent() {
   }
 
   return (
-    <FadeIn as="div" className="mx-auto max-w-md space-y-6">
+    <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold text-foreground">Reset your password</h1>
         <p className="text-sm text-muted-foreground">
@@ -220,18 +220,20 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <FadeIn as="div" className="mx-auto max-w-md space-y-6">
-          <Alert>
-            <AlertTitle>Loading reset link…</AlertTitle>
-            <AlertDescription>Preparing your password reset request.</AlertDescription>
-          </Alert>
-        </FadeIn>
-      }
-    >
-      <ResetPasswordContent />
-    </Suspense>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
+      <Suspense
+        fallback={
+          <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
+            <Alert>
+              <AlertTitle>Loading reset link…</AlertTitle>
+              <AlertDescription>Preparing your password reset request.</AlertDescription>
+            </Alert>
+          </FadeIn>
+        }
+      >
+        <ResetPasswordContent />
+      </Suspense>
+    </div>
   )
 }
 

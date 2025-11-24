@@ -262,26 +262,33 @@ export default function HomePage() {
         </FadeInItem>
       </FadeIn>
 
-      <FadeIn as="section" id="features" className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 overflow-hidden">
-      
-        <div className="space-y-3 text-center">
-          <Badge className="bg-primary text-primary-foreground">Features</Badge>
-          <h2 className="text-3xl font-semibold tracking-tight">Everything your agency needs to run on autopilot</h2>
-          <p className="text-sm text-muted-foreground sm:text-base">
+      <FadeIn as="section" id="features" className="relative mx-auto flex w-full max-w-6xl flex-col gap-12 overflow-hidden px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl space-y-4 text-center">
+          <Badge variant="outline" className="border-primary/20 bg-primary/5 px-4 py-1 text-sm text-primary">
+            Features
+          </Badge>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Everything your agency needs to run on autopilot
+          </h2>
+          <p className="text-lg text-muted-foreground">
             Cohorts consolidates the tool stack for high-performing agencies. Automate workflows, wow clients, and keep
             revenue predictable.
           </p>
         </div>
-        <FadeInStagger className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <FadeInStagger className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
           {features.map((feature) => (
             <FadeInItem key={feature.title}>
-              <Card className="h-full border-muted/60">
-                <CardHeader className="space-y-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <feature.icon className="h-5 w-5" />
-                  </span>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
+              <Card className="group h-full border-muted/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-lg">
+                <CardHeader className="space-y-4">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <feature.icon className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-2">
+                    <CardTitle className="text-xl">{feature.title}</CardTitle>
+                    <CardDescription className="text-base leading-relaxed">
+                      {feature.description}
+                    </CardDescription>
+                  </div>
                 </CardHeader>
               </Card>
             </FadeInItem>

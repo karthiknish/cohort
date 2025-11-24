@@ -38,7 +38,7 @@ export function CookieConsent() {
         <div className="flex-1 space-y-2 text-center md:text-left">
           <h3 className="text-lg font-semibold">We use cookies</h3>
           <p className="text-sm text-muted-foreground">
-            We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. Read our{' '}
+            We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking &quot;Accept All&quot;, you consent to our use of cookies. Read our{' '}
             <Link href="/cookies" className="font-medium text-primary hover:underline">
               Cookie Policy
             </Link>

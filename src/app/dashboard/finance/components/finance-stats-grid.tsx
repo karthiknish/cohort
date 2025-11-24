@@ -1,8 +1,14 @@
 'use client'
 
-import type { LucideIcon } from 'lucide-react'
+import { Info, type LucideIcon } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface StatCard {
   name: string
@@ -26,7 +32,19 @@ export function FinanceStatsGrid({ stats }: FinanceStatsGridProps) {
           <Card key={stat.name} className="border-muted/60 bg-background">
             <CardContent className="flex items-center justify-between gap-3 p-5">
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{stat.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{stat.name}</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3 w-3 text-muted-foreground/70" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{stat.helper}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
                 <span className="text-xs text-muted-foreground">{stat.helper}</span>
               </div>

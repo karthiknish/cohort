@@ -21,6 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { FinanceInvoice, FinanceInvoiceStatus } from '@/types/finance'
 import { exportToCsv } from '@/lib/utils'
 
@@ -198,55 +204,94 @@ export function FinanceInvoiceTable({
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        aria-label="View invoice"
-                        disabled={!invoice.hostedInvoiceUrl}
-                        onClick={() => {
-                          if (!invoice.hostedInvoiceUrl) return
-                          window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        aria-label="Download invoice"
-                        disabled={!invoice.hostedInvoiceUrl}
-                        onClick={() => {
-                          if (!invoice.hostedInvoiceUrl) return
-                          window.open(`${invoice.hostedInvoiceUrl}?download=1`, '_blank', 'noopener')
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label="View invoice"
+                              disabled={!invoice.hostedInvoiceUrl}
+                              onClick={() => {
+                                if (!invoice.hostedInvoiceUrl) return
+                                window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View invoice</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label="Download invoice"
+                              disabled={!invoice.hostedInvoiceUrl}
+                              onClick={() => {
+                                if (!invoice.hostedInvoiceUrl) return
+                                window.open(`${invoice.hostedInvoiceUrl}?download=1`, '_blank', 'noopener')
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Download invoice</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
                       {onSendReminder && (invoice.status === 'sent' || invoice.status === 'overdue') && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          aria-label="Send reminder"
-                          disabled={sendingInvoiceId === invoice.id}
-                          onClick={() => onSendReminder(invoice)}
-                        >
-                          <BellRing className={`h-4 w-4 ${sendingInvoiceId === invoice.id ? 'animate-pulse text-primary' : ''}`} />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label="Send reminder"
+                                disabled={sendingInvoiceId === invoice.id}
+                                onClick={() => onSendReminder(invoice)}
+                              >
+                                <BellRing className={`h-4 w-4 ${sendingInvoiceId === invoice.id ? 'animate-pulse text-primary' : ''}`} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Send payment reminder</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
+
                       {onIssueRefund && invoice.status === 'paid' && typeof invoice.amountPaid === 'number' && (invoice.amountRefunded ?? 0) < invoice.amountPaid && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          aria-label="Issue refund"
-                          disabled={refundingInvoiceId === invoice.id}
-                          onClick={() => onIssueRefund(invoice)}
-                        >
-                          <RotateCcw className={`h-4 w-4 ${refundingInvoiceId === invoice.id ? 'animate-spin text-primary' : ''}`} />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label="Issue refund"
+                                disabled={refundingInvoiceId === invoice.id}
+                                onClick={() => onIssueRefund(invoice)}
+                              >
+                                <RotateCcw className={`h-4 w-4 ${refundingInvoiceId === invoice.id ? 'animate-spin text-primary' : ''}`} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Issue refund</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                   </div>
