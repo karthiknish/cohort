@@ -64,6 +64,8 @@ import { authService } from '@/services/auth'
 import { isFeatureEnabled } from '@/lib/features'
 import { Skeleton } from '@/components/ui/skeleton'
 import { exportToCsv } from '@/lib/utils'
+import { RelatedPages } from '@/components/dashboard/related-pages'
+import { Briefcase, MessageSquare, Users } from 'lucide-react'
 
 type SummaryCardConfig = {
   status: TaskStatus
@@ -1036,6 +1038,16 @@ export default function TasksPage() {
           </CardContent>
         </Card>
       </Tabs>
+
+      <RelatedPages
+        title="Related features"
+        description="Navigate to sections that work alongside Tasks."
+        pages={[
+          { name: 'Projects', href: '/dashboard/projects', description: 'Organize work into projects', icon: Briefcase },
+          { name: 'Collaboration', href: '/dashboard/collaboration', description: 'Team discussions', icon: MessageSquare },
+          { name: 'Clients', href: '/dashboard/clients', description: 'Client workspaces', icon: Users },
+        ]}
+      />
     </div>
   )
 }

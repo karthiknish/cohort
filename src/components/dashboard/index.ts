@@ -1,0 +1,13 @@
+// Dashboard components barrel export
+export { OnboardingCard } from './onboarding-card'
+export { QuickActions } from './quick-actions'
+export { StatsCards } from './stats-cards'
+export { TasksCard } from './tasks-card'
+export { DashboardHeader } from './dashboard-header'
+export { DashboardFilterBar } from './dashboard-filter-bar'
+export { PerformanceChart } from './performance-chart'
+export { ClientAccessGate } from './client-access-gate'
+export { RelatedPages } from './related-pages'
+export { PageHeader } from './page-header'
+export { ContextualEmptyState } from './contextual-empty-state'
+export { FeatureTips } from './feature-tips'

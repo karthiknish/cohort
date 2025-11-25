@@ -166,7 +166,7 @@ export async function POST(
       status: nextStatus,
       aiInsights: summary,
       pptUrl: storedPptUrl ?? previousPptUrl,
-      gammaDeck,
+      presentationDeck: gammaDeck,
       aiSuggestions: suggestions,
     })
   } catch (error: unknown) {

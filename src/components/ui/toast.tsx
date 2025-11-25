@@ -26,13 +26,14 @@ const ToastViewport = React.forwardRef<React.ElementRef<typeof ToastPrimitives.V
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-md border bg-background p-3 pr-8 text-sm shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+  'group pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-lg border bg-background p-4 pr-8 text-sm shadow-lg transition-all duration-300 ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full data-[state=open]:slide-in-from-top-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   {
     variants: {
       variant: {
-        default: 'border-border bg-background text-foreground',
-        success: 'border-emerald-600 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-500 dark:text-emerald-50',
-        destructive: 'border-destructive/50 bg-destructive text-destructive-foreground',
+        default: 'border-border bg-background text-foreground shadow-lg',
+        success: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-50',
+        destructive: 'border-destructive/50 bg-destructive text-destructive-foreground shadow-lg',
+        warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-50',
       },
     },
     defaultVariants: {

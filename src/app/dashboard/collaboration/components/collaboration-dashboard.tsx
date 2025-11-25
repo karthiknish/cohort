@@ -16,6 +16,8 @@ import { CollaborationSidebar } from './sidebar'
 import { useCollaborationData } from '../hooks/use-collaboration-data'
 import { CollaborationSkeleton } from './collaboration-skeleton'
 import { isFeatureEnabled } from '@/lib/features'
+import { RelatedPages } from '@/components/dashboard/related-pages'
+import { CheckSquare, FileText } from 'lucide-react'
 
 export function CollaborationDashboard() {
   const searchParams = useSearchParams()
@@ -253,6 +255,16 @@ export function CollaborationDashboard() {
           )}
         </CardContent>
       </Card>
+
+      <RelatedPages
+        title="Related features"
+        description="Features that work alongside Collaboration."
+        pages={[
+          { name: 'Tasks', href: '/dashboard/tasks', description: 'Manage team tasks', icon: CheckSquare },
+          { name: 'Projects', href: '/dashboard/projects', description: 'Project organization', icon: Briefcase },
+          { name: 'Proposals', href: '/dashboard/proposals', description: 'Client proposals', icon: FileText },
+        ]}
+      />
     </div>
   )
 }

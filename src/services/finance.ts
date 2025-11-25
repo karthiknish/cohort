@@ -17,6 +17,7 @@ type CreateFinanceCostInput = {
   category: string
   amount: number
   cadence: FinanceCostCadence
+  currency?: string
   clientId?: string | null
 }
 
@@ -89,6 +90,7 @@ export async function createFinanceCost(input: CreateFinanceCostInput): Promise<
       category: input.category,
       amount: input.amount,
       cadence: input.cadence,
+      currency: input.currency ?? 'USD',
       clientId: input.clientId ?? null,
     }),
   })

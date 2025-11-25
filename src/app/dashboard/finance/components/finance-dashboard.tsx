@@ -15,9 +15,12 @@ import { FinanceChartsSection } from './finance-charts-section'
 import { FinanceInvoiceTable } from './finance-invoice-table'
 import { FinanceRevenueSidebar } from './finance-revenue-sidebar'
 import { FinanceDashboardSkeleton } from './finance-dashboard-skeleton'
+import { RecurringInvoicesCard } from './recurring-invoices-card'
+import { RelatedPages } from '@/components/dashboard/related-pages'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
+import { BarChart3, FileText, Users, Megaphone } from 'lucide-react'
 
 export function FinanceDashboard() {
   const { user } = useAuth()
@@ -190,6 +193,7 @@ export function FinanceDashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="recurring">Recurring</TabsTrigger>
           <TabsTrigger value="costs">Costs</TabsTrigger>
         </TabsList>
 
@@ -225,6 +229,10 @@ export function FinanceDashboard() {
           />
         </TabsContent>
 
+        <TabsContent value="recurring" className="space-y-4">
+          <RecurringInvoicesCard />
+        </TabsContent>
+
         <TabsContent value="costs" className="space-y-4">
           <FinanceCostsCard
             costs={costs}
@@ -242,6 +250,17 @@ export function FinanceDashboard() {
           />
         </TabsContent>
       </Tabs>
+
+      <RelatedPages
+        title="Related features"
+        description="Navigate to features that work together with Finance."
+        pages={[
+          { name: 'Analytics', href: '/dashboard/analytics', description: 'Ad spend & performance', icon: BarChart3 },
+          { name: 'Proposals', href: '/dashboard/proposals', description: 'Create client proposals', icon: FileText },
+          { name: 'Clients', href: '/dashboard/clients', description: 'Manage workspaces', icon: Users },
+          { name: 'Ads', href: '/dashboard/ads', description: 'Ad platform integrations', icon: Megaphone },
+        ]}
+      />
     </div>
   )
 }

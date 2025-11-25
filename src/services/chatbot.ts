@@ -16,8 +16,8 @@ const DEFAULT_SUGGESTIONS = [
 
 const SITE_KNOWLEDGE_BASE = `
 - Cohorts is a Next.js 16 + Firebase workspace for marketing agencies that unifies analytics, tasks, finance, proposals, collaboration, projects, and billing in one dashboard.
-- Key dashboards: Analytics (campaign metrics and Gemini insights), Ads (platform connectors), Tasks (full CRUD with client + project linking), Finance (revenue, expenses, invoices, Stripe integration), Proposals (AI-powered multi-step wizard with Gamma PPT exports stored in Firebase), Collaboration (real-time team/client/project channels with attachments), Projects (project summaries with task and message stats), Settings/Admin (team roles, client workspaces, billing).
-- AI integrations: Gemini generates insights, summaries, and chatbot replies; Gamma produces PowerPoint decks that are persisted to Firebase Storage with retry safeguards.
+- Key dashboards: Analytics (campaign metrics and Gemini insights), Ads (platform connectors), Tasks (full CRUD with client + project linking), Finance (revenue, expenses, invoices, Stripe integration), Proposals (AI-powered multi-step wizard with presentation exports stored in Firebase), Collaboration (real-time team/client/project channels with attachments), Projects (project summaries with task and message stats), Settings/Admin (team roles, client workspaces, billing).
+- AI integrations: Gemini generates insights, summaries, and chatbot replies; presentation generation produces PowerPoint decks that are persisted to Firebase Storage with retry safeguards.
 - Notifications: Workspace notifications fire for task creation, collaboration messages, and proposal deck readiness so admins, team, and relevant clients stay informed.
 - Security & data: Firebase Auth guards all API routes, Firestore/Storage rules enforce tenant isolation, and client context scopes data per workspace.
 - Documentation highlights remaining gaps (automated testing, CI/CD, background ingestion jobs, monitoring) but core feature set is production-ready.

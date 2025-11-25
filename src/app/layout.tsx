@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientProvider } from '@/contexts/client-context'
 import { ProjectProvider } from '@/contexts/project-context'
+import { PreferencesProvider } from '@/contexts/preferences-context'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { Toaster } from '@/components/ui/toaster'
@@ -56,19 +57,21 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <ClientProvider>
-              <Suspense fallback={null}>
-                <ProjectProvider>
-                  <AnalyticsProvider>
-                    <MotionProvider>
-                      <div className="flex min-h-screen flex-col">
-                        <SiteHeader />
-                        <main className="flex-1">{children}</main>
-                        <SiteFooter />
-                      </div>
-                    </MotionProvider>
-                  </AnalyticsProvider>
-                </ProjectProvider>
-              </Suspense>
+              <PreferencesProvider>
+                <Suspense fallback={null}>
+                  <ProjectProvider>
+                    <AnalyticsProvider>
+                      <MotionProvider>
+                        <div className="flex min-h-screen flex-col">
+                          <SiteHeader />
+                          <main className="flex-1">{children}</main>
+                          <SiteFooter />
+                        </div>
+                      </MotionProvider>
+                    </AnalyticsProvider>
+                  </ProjectProvider>
+                </Suspense>
+              </PreferencesProvider>
             </ClientProvider>
           </AuthProvider>
           <Toaster />

@@ -1,19 +1,93 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { CheckCircle2, Eye, EyeOff, Lock, Mail, User, AlertCircle, Check, X, Shield, Loader2 } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FadeIn, FadeInItem, FadeInStagger } from "@/components/ui/animate-in"
 import { useToast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
+
+// Password strength calculation
+interface PasswordStrength {
+  score: number // 0-4
+  label: string
+  color: string
+  checks: {
+    length: boolean
+    uppercase: boolean
+    lowercase: boolean
+    number: boolean
+    special: boolean
+  }
+}
+
+function calculatePasswordStrength(password: string): PasswordStrength {
+  const checks = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  }
+
+  const passedChecks = Object.values(checks).filter(Boolean).length
+  
+  let score: number
+  let label: string
+  let color: string
+
+  if (password.length === 0) {
+    score = 0
+    label = ""
+    color = "bg-muted"
+  } else if (passedChecks <= 1) {
+    score = 1
+    label = "Weak"
+    color = "bg-red-500"
+  } else if (passedChecks === 2) {
+    score = 2
+    label = "Fair"
+    color = "bg-orange-500"
+  } else if (passedChecks === 3) {
+    score = 3
+    label = "Good"
+    color = "bg-yellow-500"
+  } else if (passedChecks === 4) {
+    score = 3
+    label = "Strong"
+    color = "bg-emerald-500"
+  } else {
+    score = 4
+    label = "Very Strong"
+    color = "bg-emerald-600"
+  }
+
+  return { score, label, color, checks }
+}
+
+// Password requirement component
+function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      {met ? (
+        <Check className="h-3 w-3 text-emerald-500" />
+      ) : (
+        <X className="h-3 w-3 text-muted-foreground" />
+      )}
+      <span className={cn(met ? "text-emerald-600" : "text-muted-foreground")}>{label}</span>
+    </div>
+  )
+}
 
 const HERO_HIGHLIGHTS = [
   {
@@ -23,7 +97,7 @@ const HERO_HIGHLIGHTS = [
   },
   {
     title: "AI-assisted proposals",
-    description: "Draft tailored pitch decks with automated insights and instant Gamma exports.",
+    description: "Draft tailored pitch decks with automated insights and instant presentation exports.",
   },
   {
     title: "Automated reporting",
@@ -33,8 +107,13 @@ const HERO_HIGHLIGHTS = [
 
 export default function AuthPage() {
   const TAB_STORAGE_KEY = "cohorts.auth.activeTab"
+  const REMEMBER_ME_KEY = "cohorts.auth.rememberMe"
   const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin")
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [signInData, setSignInData] = useState({ email: "", password: "" })
   const [signUpData, setSignUpData] = useState({
     email: "",
@@ -46,6 +125,23 @@ export default function AuthPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Calculate password strength for signup
+  const passwordStrength = useMemo(
+    () => calculatePasswordStrength(signUpData.password),
+    [signUpData.password]
+  )
+
+  // Check if passwords match in real-time
+  const passwordsMatch = useMemo(
+    () => signUpData.password === signUpData.confirmPassword,
+    [signUpData.password, signUpData.confirmPassword]
+  )
+
+  // Validate email format
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
   useEffect(() => {
     if (!loading && user) {
       router.replace("/dashboard")
@@ -61,6 +157,13 @@ export default function AuthPage() {
       const stored = window.localStorage.getItem(TAB_STORAGE_KEY)
       if (stored === "signin" || stored === "signup") {
         setActiveTab(stored)
+      }
+      
+      // Load remember me preference
+      const rememberedEmail = window.localStorage.getItem(REMEMBER_ME_KEY)
+      if (rememberedEmail) {
+        setSignInData((prev) => ({ ...prev, email: rememberedEmail }))
+        setRememberMe(true)
       }
     } catch (error) {
       console.warn("[AuthPage] failed to hydrate tab selection", error)
@@ -94,15 +197,36 @@ export default function AuthPage() {
 
   const handleSubmit = (mode: "signin" | "signup") => async (event: React.FormEvent) => {
     event.preventDefault()
+    setIsSubmitting(true)
+    setEmailError(null)
 
     try {
       if (mode === "signup") {
+        // Validate email
+        if (!validateEmail(signUpData.email)) {
+          setEmailError("Please enter a valid email address")
+          setIsSubmitting(false)
+          return
+        }
+
+        // Validate password strength
+        if (passwordStrength.score < 2) {
+          toast({
+            title: "Password too weak",
+            description: "Please create a stronger password with at least 8 characters.",
+            variant: "destructive",
+          })
+          setIsSubmitting(false)
+          return
+        }
+
         if (signUpData.password !== signUpData.confirmPassword) {
           toast({
             title: "Passwords do not match",
             description: "Please confirm your password and try again.",
             variant: "destructive",
           })
+          setIsSubmitting(false)
           return
         }
 
@@ -113,55 +237,87 @@ export default function AuthPage() {
         })
         toast({
           title: "Account created",
-          description: "Redirecting to your dashboard…",
+          description: "Welcome to Cohorts! Redirecting to your dashboard…",
         })
       } else {
+        // Validate email
+        if (!validateEmail(signInData.email)) {
+          setEmailError("Please enter a valid email address")
+          setIsSubmitting(false)
+          return
+        }
+
         await signIn(signInData.email, signInData.password)
+        
+        // Handle remember me
+        if (rememberMe && typeof window !== "undefined") {
+          window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
+        } else if (typeof window !== "undefined") {
+          window.localStorage.removeItem(REMEMBER_ME_KEY)
+        }
+        
         toast({
-          title: "Signed in",
+          title: "Welcome back!",
           description: "Redirecting to your dashboard…",
         })
       }
 
       router.push("/dashboard")
     } catch (error) {
+      const errorMessage = getFirebaseErrorMessage(error)
       toast({
-        title: "Authentication error",
-        description: getErrorMessage(error, "Authentication failed. Please try again."),
+        title: mode === "signin" ? "Sign in failed" : "Sign up failed",
+        description: errorMessage,
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleGoogleSignIn = async () => {
+    setIsSubmitting(true)
     try {
       await signInWithGoogle()
       toast({
-        title: "Signed in with Google",
-        description: "Redirecting to your dashboard…",
+        title: "Welcome!",
+        description: "Signed in with Google. Redirecting to your dashboard…",
       })
       router.push("/dashboard")
     } catch (error) {
+      const errorMessage = getFirebaseErrorMessage(error)
       toast({
         title: "Google sign-in failed",
-        description: getErrorMessage(error, "Google sign-in failed. Please try again."),
+        description: errorMessage,
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleSignInChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target
     setSignInData((previous) => ({
       ...previous,
-      [event.target.name]: event.target.value,
+      [name]: value,
     }))
+    // Clear email error when user starts typing
+    if (name === "email" && emailError) {
+      setEmailError(null)
+    }
   }
 
   const handleSignUpChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target
     setSignUpData((previous) => ({
       ...previous,
-      [event.target.name]: event.target.value,
+      [name]: value,
     }))
+    // Clear email error when user starts typing
+    if (name === "email" && emailError) {
+      setEmailError(null)
+    }
   }
 
   return (
@@ -235,9 +391,16 @@ export default function AuthPage() {
                           value={signInData.email}
                           onChange={handleSignInChange}
                           placeholder="name@company.com"
-                          className="pl-9"
+                          className={cn("pl-9", emailError && activeTab === "signin" && "border-red-500 focus-visible:ring-red-500")}
+                          disabled={isSubmitting}
                         />
                       </div>
+                      {emailError && activeTab === "signin" && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {emailError}
+                        </p>
+                      )}
                     </FadeInItem>
 
                     <FadeInItem as="div" className="space-y-2">
@@ -264,6 +427,7 @@ export default function AuthPage() {
                           onChange={handleSignInChange}
                           placeholder="••••••••"
                           className="pl-9 pr-10"
+                          disabled={isSubmitting}
                         />
                         <Button
                           type="button"
@@ -271,14 +435,37 @@ export default function AuthPage() {
                           size="icon-sm"
                           onClick={() => setShowPassword((previous) => !previous)}
                           className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                          disabled={isSubmitting}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
                     </FadeInItem>
 
-                    <Button className="w-full" size="lg" disabled={loading} type="submit">
-                      {loading ? "Signing in..." : "Sign In"}
+                    <FadeInItem as="div" className="flex items-center space-x-2">
+                      <Checkbox
+                        id="remember-me"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        disabled={isSubmitting}
+                      />
+                      <label
+                        htmlFor="remember-me"
+                        className="text-sm font-medium text-muted-foreground leading-none cursor-pointer select-none"
+                      >
+                        Remember me
+                      </label>
+                    </FadeInItem>
+
+                    <Button className="w-full" size="lg" disabled={isSubmitting || loading} type="submit">
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
                     </Button>
                   </FadeInStagger>
                 </TabsContent>
@@ -287,14 +474,21 @@ export default function AuthPage() {
                   <FadeInStagger as="form" className="space-y-4" onSubmit={handleSubmit("signup")}>
                     <FadeInItem as="div" className="space-y-2">
                       <Label htmlFor="displayName">Full name</Label>
-                      <Input
-                        id="displayName"
-                        name="displayName"
-                        type="text"
-                        value={signUpData.displayName}
-                        onChange={handleSignUpChange}
-                        placeholder="Jane Smith"
-                      />
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                          <User className="h-4 w-4" />
+                        </span>
+                        <Input
+                          id="displayName"
+                          name="displayName"
+                          type="text"
+                          value={signUpData.displayName}
+                          onChange={handleSignUpChange}
+                          placeholder="Jane Smith"
+                          className="pl-9"
+                          disabled={isSubmitting}
+                        />
+                      </div>
                     </FadeInItem>
 
                     <FadeInItem as="div" className="space-y-2">
@@ -312,9 +506,16 @@ export default function AuthPage() {
                           value={signUpData.email}
                           onChange={handleSignUpChange}
                           placeholder="name@company.com"
-                          className="pl-9"
+                          className={cn("pl-9", emailError && activeTab === "signup" && "border-red-500 focus-visible:ring-red-500")}
+                          disabled={isSubmitting}
                         />
                       </div>
+                      {emailError && activeTab === "signup" && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {emailError}
+                        </p>
+                      )}
                     </FadeInItem>
 
                     <FadeInItem as="div" className="space-y-2">
@@ -333,6 +534,7 @@ export default function AuthPage() {
                           onChange={handleSignUpChange}
                           placeholder="Create a strong password"
                           className="pl-9 pr-10"
+                          disabled={isSubmitting}
                         />
                         <Button
                           type="button"
@@ -340,28 +542,114 @@ export default function AuthPage() {
                           size="icon-sm"
                           onClick={() => setShowPassword((previous) => !previous)}
                           className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                          disabled={isSubmitting}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
+                      
+                      {/* Password Strength Indicator */}
+                      {signUpData.password.length > 0 && (
+                        <div className="space-y-2 pt-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Shield className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-muted-foreground">Password strength:</span>
+                            </div>
+                            <span className={cn(
+                              "font-medium",
+                              passwordStrength.score <= 1 && "text-red-500",
+                              passwordStrength.score === 2 && "text-orange-500",
+                              passwordStrength.score === 3 && "text-emerald-500",
+                              passwordStrength.score >= 4 && "text-emerald-600"
+                            )}>
+                              {passwordStrength.label}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4].map((level) => (
+                              <div
+                                key={level}
+                                className={cn(
+                                  "h-1 flex-1 rounded-full transition-colors",
+                                  level <= passwordStrength.score ? passwordStrength.color : "bg-muted"
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1">
+                            <PasswordRequirement met={passwordStrength.checks.length} label="At least 8 characters" />
+                            <PasswordRequirement met={passwordStrength.checks.uppercase} label="Uppercase letter" />
+                            <PasswordRequirement met={passwordStrength.checks.lowercase} label="Lowercase letter" />
+                            <PasswordRequirement met={passwordStrength.checks.number} label="Number" />
+                            <PasswordRequirement met={passwordStrength.checks.special} label="Special character" />
+                          </div>
+                        </div>
+                      )}
                     </FadeInItem>
 
                     <FadeInItem as="div" className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirm password</Label>
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="new-password"
-                        required
-                        value={signUpData.confirmPassword}
-                        onChange={handleSignUpChange}
-                        placeholder="Re-enter your password"
-                      />
+                      <div className="relative">
+                        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                        </span>
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          required
+                          value={signUpData.confirmPassword}
+                          onChange={handleSignUpChange}
+                          placeholder="Re-enter your password"
+                          className={cn(
+                            "pl-9 pr-10",
+                            signUpData.confirmPassword.length > 0 && !passwordsMatch && "border-red-500 focus-visible:ring-red-500",
+                            signUpData.confirmPassword.length > 0 && passwordsMatch && "border-emerald-500 focus-visible:ring-emerald-500"
+                          )}
+                          disabled={isSubmitting}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setShowConfirmPassword((previous) => !previous)}
+                          className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                          disabled={isSubmitting}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      {signUpData.confirmPassword.length > 0 && (
+                        <p className={cn(
+                          "text-xs flex items-center gap-1",
+                          passwordsMatch ? "text-emerald-500" : "text-red-500"
+                        )}>
+                          {passwordsMatch ? (
+                            <>
+                              <Check className="h-3 w-3" />
+                              Passwords match
+                            </>
+                          ) : (
+                            <>
+                              <X className="h-3 w-3" />
+                              Passwords do not match
+                            </>
+                          )}
+                        </p>
+                      )}
                     </FadeInItem>
 
-                    <Button className="w-full" size="lg" disabled={loading} type="submit">
-                      {loading ? "Creating account..." : "Create Account"}
+                    <Button className="w-full" size="lg" disabled={isSubmitting || loading} type="submit">
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Create Account"
+                      )}
                     </Button>
                   </FadeInStagger>
                 </TabsContent>
@@ -376,21 +664,32 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                disabled={loading}
-                onClick={handleGoogleSignIn}
-                className="w-full"
-              >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-                {loading ? "Signing in..." : "Google"}
-              </Button>
+              <div className="grid gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting || loading}
+                  onClick={handleGoogleSignIn}
+                  className="w-full"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                  )}
+                  Continue with Google
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Shield className="h-3 w-3" />
+                <span>Secured with SSL encryption</span>
+              </div>
 
               <p className="text-center text-xs text-muted-foreground px-6">
                 By clicking continue, you agree to our{" "}
@@ -424,4 +723,61 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback
+}
+
+// Enhanced Firebase error message mapping
+function getFirebaseErrorMessage(error: unknown): string {
+  if (typeof error === "string") {
+    return error
+  }
+
+  if (error && typeof error === "object") {
+    // Check for Firebase error code
+    const errorCode = (error as { code?: string }).code
+    const errorMessage = (error as { message?: string }).message
+
+    // Map Firebase error codes to user-friendly messages
+    const errorMessages: Record<string, string> = {
+      // Sign-in errors
+      "auth/invalid-email": "Please enter a valid email address.",
+      "auth/user-disabled": "This account has been disabled. Please contact support.",
+      "auth/user-not-found": "No account found with this email. Please check your email or sign up.",
+      "auth/wrong-password": "Incorrect password. Please try again or reset your password.",
+      "auth/invalid-credential": "Invalid email or password. Please check your credentials and try again.",
+      "auth/too-many-requests": "Too many failed attempts. Please try again later or reset your password.",
+      
+      // Sign-up errors
+      "auth/email-already-in-use": "An account with this email already exists. Please sign in instead.",
+      "auth/weak-password": "Password is too weak. Please use at least 8 characters with mixed case, numbers, and symbols.",
+      "auth/operation-not-allowed": "This sign-in method is not enabled. Please contact support.",
+      
+      // OAuth errors
+      "auth/popup-closed-by-user": "Sign-in was cancelled. Please try again.",
+      "auth/popup-blocked": "Pop-up was blocked by your browser. Please allow pop-ups for this site.",
+      "auth/unauthorized-domain": "This domain is not authorized. Please contact support.",
+      "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
+      "auth/cancelled-popup-request": "Only one sign-in window can be open at a time.",
+      
+      // Network errors
+      "auth/network-request-failed": "Network error. Please check your connection and try again.",
+      "auth/timeout": "Request timed out. Please try again.",
+      
+      // Other errors
+      "auth/internal-error": "An unexpected error occurred. Please try again later.",
+      "auth/invalid-api-key": "Configuration error. Please contact support.",
+    }
+
+    if (errorCode && errorMessages[errorCode]) {
+      return errorMessages[errorCode]
+    }
+
+    // If we have a message from the error object, use it
+    if (typeof errorMessage === "string" && errorMessage.trim().length > 0) {
+      // Clean up Firebase error messages that include the error code
+      const cleanMessage = errorMessage.replace(/^Firebase: /, "").replace(/\([^)]+\)\.?$/, "").trim()
+      return cleanMessage || "Authentication failed. Please try again."
+    }
+  }
+
+  return "Authentication failed. Please try again."
 }

@@ -11,6 +11,7 @@ type StoredFinanceCost = {
   category?: unknown
   amount?: unknown
   cadence?: unknown
+  currency?: unknown
   createdAt?: unknown
   updatedAt?: unknown
 }
@@ -30,6 +31,7 @@ const createCostSchema = z.object({
   category: z.string().trim().min(1, 'Category is required').max(200),
   amount: amountSchema,
   cadence: z.enum(['monthly', 'quarterly', 'annual']),
+  currency: z.string().trim().min(3).max(3).toUpperCase().default('USD'),
   clientId: z
     .union([z.string().trim().min(1), z.null(), z.undefined()])
     .transform((value) => (typeof value === 'string' ? value : null))
@@ -80,6 +82,7 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
     category: typeof data.category === 'string' ? data.category : 'Uncategorized',
     amount: coerceNumber(data.amount),
     cadence: cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
+    currency: typeof data.currency === 'string' ? data.currency.toUpperCase() : 'USD',
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
   }

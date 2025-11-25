@@ -28,6 +28,7 @@ const INITIAL_COST_FORM: CostFormState = {
   category: '',
   amount: '',
   cadence: 'monthly',
+  currency: 'USD',
 }
 
 const EMPTY_PAYMENT_SUMMARY: FinancePaymentSummary = {
@@ -43,6 +44,7 @@ export type CostFormState = {
   category: string
   amount: string
   cadence: FinanceCostEntry['cadence']
+  currency: string
 }
 
 type StatCard = {
@@ -480,6 +482,7 @@ export function useFinanceData(): FinanceHookReturn {
           category: newCost.category.trim(),
           amount: amountValue,
           cadence: newCost.cadence,
+          currency: newCost.currency || 'USD',
           clientId: selectedClientId ?? null,
         })
 

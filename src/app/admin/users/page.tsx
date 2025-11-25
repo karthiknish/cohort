@@ -71,6 +71,7 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<AdminUserRecord | null>(null)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
+  const [inviteSending, setInviteSending] = useState(false)
 
   const fetchUsers = useCallback(
     async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
@@ -241,14 +242,45 @@ export default function AdminUsersPage() {
   const handleInviteUser = async () => {
     if (!inviteEmail) return
     
-    // Mock invite functionality
-    toast({
-      title: 'Invitation sent',
-      description: `Invitation sent to ${inviteEmail} as ${inviteRole}.`,
-    })
-    setInviteOpen(false)
-    setInviteEmail('')
-    setInviteRole('team')
+    setInviteSending(true)
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/admin/invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to send invitation'
+        throw new Error(message)
+      }
+
+      const emailSent = payload.emailSent === true
+      
+      toast({
+        title: 'Invitation created',
+        description: emailSent 
+          ? `Invitation sent to ${inviteEmail} as ${inviteRole}.`
+          : `Invitation created for ${inviteEmail}. Email notification could not be sent.`,
+      })
+      setInviteOpen(false)
+      setInviteEmail('')
+      setInviteRole('team')
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, 'Unable to send invitation')
+      toast({ title: 'Invitation error', description: message, variant: 'destructive' })
+    } finally {
+      setInviteSending(false)
+    }
   }
 
   const handleRefresh = () => {
@@ -323,8 +355,10 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-                  <Button onClick={handleInviteUser} disabled={!inviteEmail}>Send Invitation</Button>
+                  <Button variant="outline" onClick={() => setInviteOpen(false)} disabled={inviteSending}>Cancel</Button>
+                  <Button onClick={handleInviteUser} disabled={!inviteEmail || inviteSending}>
+                    {inviteSending ? 'Sending…' : 'Send Invitation'}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

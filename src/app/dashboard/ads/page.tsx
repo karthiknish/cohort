@@ -255,6 +255,8 @@ export default function AdsPage() {
   const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({})
   const [initializingMeta, setInitializingMeta] = useState(false)
+  const [initializingTikTok, setInitializingTikTok] = useState(false)
+  const [tiktokSetupMessage, setTiktokSetupMessage] = useState<string | null>(null)
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null)
   const [viewTimeframe, setViewTimeframe] = useState(30)
 
@@ -328,6 +330,42 @@ export default function AdsPage() {
       })
     } finally {
       setInitializingMeta(false)
+    }
+  }, [getIdToken, toast])
+
+  const initializeTikTokIntegration = useCallback(async () => {
+    setTiktokSetupMessage(null)
+    setInitializingTikTok(true)
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/integrations/tiktok/initialize', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
+
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to finish TikTok Ads setup'
+        throw new Error(message)
+      }
+      toast({
+        title: 'TikTok Ads connected',
+        description: payload?.accountName ? `Using ${payload.accountName} for syncs.` : 'Default ad account linked successfully.',
+      })
+      setRefreshTick((tick) => tick + 1)
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, 'Unable to complete TikTok setup')
+      setTiktokSetupMessage(message)
+      toast({
+        variant: 'destructive',
+        title: 'TikTok setup failed',
+        description: message,
+      })
+    } finally {
+      setInitializingTikTok(false)
     }
   }, [getIdToken, toast])
 
@@ -504,6 +542,14 @@ export default function AdsPage() {
   }, [initializeMetaIntegration])
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+    const hasTikTokCookie = document.cookie.split(';').some((cookie) => cookie.trim().startsWith('tiktok_oauth_success='))
+    if (!hasTikTokCookie) return
+    document.cookie = 'tiktok_oauth_success=; Path=/; Max-Age=0; SameSite=Lax'
+    void initializeTikTokIntegration()
+  }, [initializeTikTokIntegration])
+
+  useEffect(() => {
     if (!integrationStatuses || integrationStatuses.statuses.length === 0) {
       setAutomationDraft({})
       return
@@ -530,6 +576,12 @@ export default function AdsPage() {
     [automationStatuses]
   )
   const metaNeedsAccountSelection = Boolean(metaStatus?.linkedAt && !metaStatus.accountId)
+
+  const tiktokStatus = useMemo(
+    () => automationStatuses.find((status) => status.providerId === 'tiktok'),
+    [automationStatuses]
+  )
+  const tiktokNeedsAccountSelection = Boolean(tiktokStatus?.linkedAt && !tiktokStatus.accountId)
 
   const processedMetrics = useMemo(() => {
     // 1. Deduplicate: Keep latest createdAt for each (providerId, date)
@@ -789,6 +841,10 @@ export default function AdsPage() {
       setMetaSetupMessage(null)
     }
 
+    if (providerId === 'tiktok') {
+      setTiktokSetupMessage(null)
+    }
+
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
 
@@ -822,6 +878,12 @@ export default function AdsPage() {
       if (providerId === 'facebook' && message.toLowerCase().includes('meta business login is not configured')) {
         setMetaSetupMessage(
           'Meta business login is not configured. Add META_APP_ID, META_BUSINESS_CONFIG_ID, and META_OAUTH_REDIRECT_URI environment variables before trying again.',
+        )
+      }
+
+      if (providerId === 'tiktok' && message.toLowerCase().includes('tiktok oauth is not configured')) {
+        setTiktokSetupMessage(
+          'TikTok OAuth is not configured. Add TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, and TIKTOK_OAUTH_REDIRECT_URI environment variables before trying again.',
         )
       }
     } finally {
@@ -959,6 +1021,37 @@ export default function AdsPage() {
             </AlertTitle>
             <AlertDescription className="mt-2 text-xs text-muted-foreground">
               Choose a default Meta ad account so Cohorts knows which campaigns to sync.
+            </AlertDescription>
+          </Alert>
+        </FadeIn>
+      )}
+
+      {tiktokSetupMessage && (
+        <FadeIn>
+          <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+            <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
+              <AlertCircle className="h-4 w-4" /> TikTok setup required
+            </AlertTitle>
+            <AlertDescription className="mt-1 text-xs leading-relaxed">
+              {tiktokSetupMessage}
+            </AlertDescription>
+          </Alert>
+        </FadeIn>
+      )}
+
+      {tiktokNeedsAccountSelection && (
+        <FadeIn>
+          <Alert className="border-primary/40 bg-primary/5">
+            <AlertTitle className="flex items-center justify-between gap-3 text-sm font-semibold">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-primary" /> TikTok account selection pending
+              </span>
+              <Button size="sm" onClick={() => { void initializeTikTokIntegration() }} disabled={initializingTikTok}>
+                {initializingTikTok ? 'Finishing…' : 'Finish setup'}
+              </Button>
+            </AlertTitle>
+            <AlertDescription className="mt-2 text-xs text-muted-foreground">
+              Choose a default TikTok advertiser account so Cohorts knows which campaigns to sync.
             </AlertDescription>
           </Alert>
         </FadeIn>

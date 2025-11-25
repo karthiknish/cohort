@@ -3,7 +3,7 @@ import { authService } from '@/services/auth'
 
 export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'sent'
 
-export interface ProposalGammaDeck {
+export interface ProposalPresentationDeck {
   generationId: string | null
   status: string
   instructions: string | null
@@ -14,6 +14,9 @@ export interface ProposalGammaDeck {
   generatedFiles: Array<{ fileType: string; fileUrl: string }>
   storageUrl: string | null
 }
+
+/** @deprecated Use ProposalPresentationDeck instead */
+export type ProposalGammaDeck = ProposalPresentationDeck
 
 export interface ProposalDraft {
   id: string
@@ -29,7 +32,9 @@ export interface ProposalDraft {
   lastAutosaveAt: string | null
   clientId: string | null
   clientName: string | null
-  gammaDeck?: ProposalGammaDeck | null
+  presentationDeck?: ProposalPresentationDeck | null
+  /** @deprecated Use presentationDeck instead */
+  gammaDeck?: ProposalPresentationDeck | null
 }
 
 async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
@@ -134,7 +139,8 @@ export async function submitProposalDraft(id: string, delivery: 'summary' | 'sum
     aiInsights: string | null
     pdfUrl?: string | null
     pptUrl?: string | null
-    gammaDeck?: ProposalGammaDeck | null
+    presentationDeck?: ProposalPresentationDeck | null
+    gammaDeck?: ProposalPresentationDeck | null
     aiSuggestions?: string | null
   }
 
@@ -168,16 +174,18 @@ export async function prepareProposalDeck(id: string) {
   const payload = await response.json() as {
     ok: boolean
     storageUrl: string | null
-    gammaDeck?: ProposalGammaDeck | null
+    presentationDeck?: ProposalPresentationDeck | null
+    gammaDeck?: ProposalPresentationDeck | null
     aiSuggestions?: string | null
   }
 
   return resolveProposalDeck(payload)
 }
 
-function resolveProposalDeck<T extends { pptUrl?: string | null; gammaDeck?: ProposalGammaDeck | null; aiSuggestions?: string | null }>(payload: T): T {
-  const gammaDeck = payload.gammaDeck
-  if (!gammaDeck) {
+function resolveProposalDeck<T extends { pptUrl?: string | null; presentationDeck?: ProposalPresentationDeck | null; gammaDeck?: ProposalPresentationDeck | null; aiSuggestions?: string | null }>(payload: T): T & { presentationDeck?: ProposalPresentationDeck | null } {
+  // Support both new presentationDeck and legacy gammaDeck
+  const deck = payload.presentationDeck ?? payload.gammaDeck
+  if (!deck) {
     const fallbackUrl = payload.pptUrl ?? null
     if (fallbackUrl && payload.pptUrl !== fallbackUrl) {
       return { ...payload, pptUrl: fallbackUrl, aiSuggestions: payload.aiSuggestions ?? null }
@@ -185,16 +193,16 @@ function resolveProposalDeck<T extends { pptUrl?: string | null; gammaDeck?: Pro
     return { ...payload, aiSuggestions: payload.aiSuggestions ?? null }
   }
 
-  const resolvedStorage = gammaDeck.storageUrl ?? payload.pptUrl ?? null
-  if (!resolvedStorage || (gammaDeck.storageUrl === resolvedStorage && payload.pptUrl === resolvedStorage)) {
-    return { ...payload, aiSuggestions: payload.aiSuggestions ?? null }
+  const resolvedStorage = deck.storageUrl ?? payload.pptUrl ?? null
+  if (!resolvedStorage || (deck.storageUrl === resolvedStorage && payload.pptUrl === resolvedStorage)) {
+    return { ...payload, presentationDeck: deck, aiSuggestions: payload.aiSuggestions ?? null }
   }
 
   return {
     ...payload,
     pptUrl: payload.pptUrl ?? resolvedStorage,
-    gammaDeck: {
-      ...gammaDeck,
+    presentationDeck: {
+      ...deck,
       storageUrl: resolvedStorage,
     },
     aiSuggestions: payload.aiSuggestions ?? null,

@@ -5,13 +5,21 @@ This document outlines how Cohorts links paid media accounts, ingests campaign d
 ## Data Flow Overview
 
 1. **Account linking (client)**
-   - Users connect Google Ads, Meta Ads Manager, or LinkedIn Ads from the dashboard.
+   - Users connect Google Ads, Meta Ads Manager, LinkedIn Ads, or TikTok Ads from the dashboard.
    - `AuthService.connect{Provider}AdsAccount` links the provider credential with Firebase Auth and persists tokens/scopes inside Firestore at `users/{userId}/adIntegrations/{providerId}`.
    - A `syncJobs` Firestore document is enqueued to request an initial 90-day backfill after each successful link.
 
   > **Meta redirect URI**
   >
   > When enabling the Meta Ads integration, set the authorized redirect URI inside Meta Business settings to `https://<your-domain>/api/integrations/meta/oauth/callback` (use `http://localhost:3000/api/integrations/meta/oauth/callback` during local development) and mirror that value in the `META_OAUTH_REDIRECT_URI` environment variable.
+
+  > **TikTok redirect URI**
+  >
+  > When enabling the TikTok Ads integration, register your app in the [TikTok for Business Developer Portal](https://business-api.tiktok.com/portal/apps) and set the authorized redirect URI to `https://<your-domain>/api/integrations/tiktok/oauth/callback` (use `http://localhost:3000/api/integrations/tiktok/oauth/callback` during local development). Configure the following environment variables:
+  > - `TIKTOK_CLIENT_KEY` - Your TikTok app's client key
+  > - `TIKTOK_CLIENT_SECRET` - Your TikTok app's client secret
+  > - `TIKTOK_OAUTH_REDIRECT_URI` - The redirect URI registered in TikTok Developer Portal
+  > - `TIKTOK_OAUTH_SCOPES` - Comma-separated scopes (e.g., `ads.read,ads.management`)
 
 2. **Automated scheduling (server)**
   - `/api/integrations/schedule` queues sync jobs for a single user or the entire tenant when invoked with the `x-cron-key` header (`INTEGRATIONS_CRON_SECRET`).
@@ -45,7 +53,7 @@ users/{userId}/adIntegrations/{providerId}
   scheduledTimeframeDays: number | null
 
 users/{userId}/syncJobs/{jobId}
-  providerId: 'google' | 'facebook' | 'linkedin'
+  providerId: 'google' | 'facebook' | 'linkedin' | 'tiktok'
   jobType: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
   timeframeDays: number
   status: 'queued' | 'running' | 'success' | 'error'
@@ -80,7 +88,7 @@ users/{userId}/adMetrics/{periodId}/{providerDocId}
 
 ## Ingestion Requirements & Assumptions
 
-- **Supported sources**: Google Ads, Meta Ads Manager, LinkedIn Ads (expandable via `providerId`). Each source must supply spend, impressions, clicks, conversions, and creative metadata. Optional revenue is accepted when providers surface ROAS data.
+- **Supported sources**: Google Ads, Meta Ads Manager, LinkedIn Ads, TikTok Ads (expandable via `providerId`). Each source must supply spend, impressions, clicks, conversions, and creative metadata. Optional revenue is accepted when providers surface ROAS data.
 - **Sync cadence**: Nightly incremental syncs (UTC) with optional manual triggers. Initial backfill spans 90 days to populate historical dashboards.
 - **Attribution window**: Default 7-day click / 1-day view. Providers that expose alternative windows should persist raw values inside `rawPayloadRef` for downstream reconciliation.
 - **Firestore contract**:

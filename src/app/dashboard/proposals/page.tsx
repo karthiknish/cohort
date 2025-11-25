@@ -9,7 +9,7 @@ import {
   CardContent,
   CardHeader,
 } from '@/components/ui/card'
-import { createProposalDraft, deleteProposalDraft, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalGammaDeck } from '@/services/proposals'
+import { createProposalDraft, deleteProposalDraft, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalPresentationDeck } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
@@ -22,6 +22,20 @@ import { ProposalWizardHeader } from './components/proposal-wizard-header'
 import { ProposalSubmittedPanel } from './components/proposal-submitted-panel'
 import { ProposalDraftPanel } from './components/proposal-draft-panel'
 import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
+import { ProposalTemplateSelector } from './components/proposal-template-selector'
+import { ProposalVersionHistory } from './components/proposal-version-history'
+import { RelatedPages } from '@/components/dashboard/related-pages'
+import { BarChart3, CreditCard, Users, FileText } from 'lucide-react'
+import {
+  trackDraftCreated,
+  trackProposalSubmitted,
+  trackAiGenerationStarted,
+  trackAiGenerationCompleted,
+  trackAiGenerationFailed,
+  trackDeckGenerationStarted,
+  trackDeckGenerationCompleted,
+  trackDeckGenerationFailed,
+} from '@/services/proposal-analytics'
 import {
   proposalSteps,
   createInitialProposalFormState,
@@ -63,7 +77,7 @@ export default function ProposalsPage() {
   const [isCreatingDraft, setIsCreatingDraft] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  const [gammaDeck, setGammaDeck] = useState<ProposalGammaDeck | null>(null)
+  const [presentationDeck, setPresentationDeck] = useState<ProposalPresentationDeck | null>(null)
   const [aiSuggestions, setAiSuggestions] = useState<string | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
@@ -166,7 +180,7 @@ export default function ProposalsPage() {
         setFormState(createInitialProposalFormState())
         setCurrentStep(0)
         setSubmitted(false)
-        setGammaDeck(null)
+        setPresentationDeck(null)
         setAiSuggestions(null)
         setLastSubmissionSnapshot(null)
       }
@@ -235,7 +249,7 @@ export default function ProposalsPage() {
     setFormState(mergedForm)
     setCurrentStep(targetStep)
     setSubmitted(proposal.status === 'ready')
-    setGammaDeck(proposal.gammaDeck ? { ...proposal.gammaDeck, storageUrl: proposal.gammaDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
+    setPresentationDeck(proposal.presentationDeck ? { ...proposal.presentationDeck, storageUrl: proposal.presentationDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
     setAiSuggestions(proposal.aiSuggestions ?? null)
 
     if (proposal.status === 'ready') {
@@ -272,7 +286,7 @@ export default function ProposalsPage() {
   const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
 
   const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId
-  const deckDownloadUrl = gammaDeck?.storageUrl ?? gammaDeck?.pptxUrl ?? null
+  const deckDownloadUrl = presentationDeck?.storageUrl ?? presentationDeck?.pptxUrl ?? null
   const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
   const canResumeSubmission = Boolean(
     lastSubmissionSnapshot &&
@@ -337,11 +351,11 @@ export default function ProposalsPage() {
 
   const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
     
-    const localDeckUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
+    const localDeckUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
     console.log('[ProposalDownload] URL priority check:', {
       pptUrl: proposal.pptUrl,
-      storageUrl: proposal.gammaDeck?.storageUrl,
-      pptxUrl: proposal.gammaDeck?.pptxUrl,
+      storageUrl: proposal.presentationDeck?.storageUrl,
+      pptxUrl: proposal.presentationDeck?.pptxUrl,
       selectedUrl: localDeckUrl
     })
 
@@ -389,21 +403,32 @@ export default function ProposalsPage() {
       }
       setDeckProgressStage('polling')
       setDownloadingDeckId(proposal.id)
+      
+      // Track deck generation start for analytics
+      const deckStartTime = Date.now()
+      trackDeckGenerationStarted(proposal.id, proposal.clientId, proposal.clientName).catch(console.error)
+      
       const result = await prepareProposalDeck(proposal.id)
+      const deckDuration = Date.now() - deckStartTime
       console.log('[ProposalDownload] Deck preparation result:', {
         storageUrl: result.storageUrl,
-        gammaDeckStorageUrl: result.gammaDeck?.storageUrl,
-        gammaDeckPptxUrl: result.gammaDeck?.pptxUrl,
-        gammaDeckShareUrl: result.gammaDeck?.shareUrl
+        deckStorageUrl: result.presentationDeck?.storageUrl,
+        deckPptxUrl: result.presentationDeck?.pptxUrl,
+        deckShareUrl: result.presentationDeck?.shareUrl
       })
       
       const deckUrl = result.storageUrl
-        ?? result.gammaDeck?.storageUrl
-        ?? result.gammaDeck?.pptxUrl
-        ?? result.gammaDeck?.shareUrl
+        ?? result.presentationDeck?.storageUrl
+        ?? result.presentationDeck?.pptxUrl
+        ?? result.presentationDeck?.shareUrl
         ?? null
 
       console.log('[ProposalDownload] Final selected deck URL:', deckUrl)
+
+      // Track deck generation success
+      if (deckUrl) {
+        trackDeckGenerationCompleted(proposal.id, deckDuration, proposal.clientId, proposal.clientName).catch(console.error)
+      }
 
       if (deckUrl) {
         setDeckProgressStage('launching')
@@ -425,15 +450,15 @@ export default function ProposalsPage() {
             if (item.id !== proposal.id) {
               return item
             }
-            const nextGammaDeck = result.gammaDeck
-              ? { ...result.gammaDeck, storageUrl: deckUrl }
-              : item.gammaDeck
-                ? { ...item.gammaDeck, storageUrl: deckUrl }
+            const nextDeck = result.presentationDeck
+              ? { ...result.presentationDeck, storageUrl: deckUrl }
+              : item.presentationDeck
+                ? { ...item.presentationDeck, storageUrl: deckUrl }
                 : null
             return {
               ...item,
               pptUrl: deckUrl,
-              gammaDeck: nextGammaDeck,
+              presentationDeck: nextDeck,
             }
           })
         )
@@ -444,10 +469,10 @@ export default function ProposalsPage() {
       if (proposal.id === draftId && Array.isArray(refreshed)) {
         const latest = refreshed.find((candidate) => candidate.id === proposal.id)
         if (latest) {
-          console.log('[ProposalDownload] Updating gamma deck for active draft')
-          setGammaDeck(
-            latest.gammaDeck
-              ? { ...latest.gammaDeck, storageUrl: latest.pptUrl ?? latest.gammaDeck?.storageUrl ?? null }
+          console.log('[ProposalDownload] Updating presentation deck for active draft')
+          setPresentationDeck(
+            latest.presentationDeck
+              ? { ...latest.presentationDeck, storageUrl: latest.pptUrl ?? latest.presentationDeck?.storageUrl ?? null }
               : null
           )
           setAiSuggestions(latest.aiSuggestions ?? null)
@@ -464,6 +489,10 @@ export default function ProposalsPage() {
       setDeckProgressStage('error')
       console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
       const message = getErrorMessage(error, 'Failed to prepare the presentation deck')
+      
+      // Track deck generation failure
+      trackDeckGenerationFailed(proposal.id, message, proposal.clientId, proposal.clientName).catch(console.error)
+      
       toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })
       if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
         pendingDeckWindowRef.current.close()
@@ -496,7 +525,7 @@ export default function ProposalsPage() {
     setFormState(restoredForm)
     setCurrentStep(restoredStep)
     setSubmitted(false)
-    setGammaDeck(null)
+    setPresentationDeck(null)
     setAiSuggestions(null)
     setDraftId(lastSubmissionSnapshot.draftId)
     setLastSubmissionSnapshot(null)
@@ -600,10 +629,13 @@ export default function ProposalsPage() {
       setFormState(initialForm)
       setCurrentStep(0)
       setSubmitted(false)
-      setGammaDeck(null)
+      setPresentationDeck(null)
       setAiSuggestions(null)
       setLastSubmissionSnapshot(null)
       setAutosaveStatus('saved')
+
+      // Track draft creation for analytics
+      trackDraftCreated(newDraftId, selectedClientId, selectedClient?.name).catch(console.error)
 
       await refreshProposals()
 
@@ -624,6 +656,24 @@ export default function ProposalsPage() {
       setIsCreatingDraft(false)
     }
   }, [isCreatingDraft, refreshProposals, selectedClient, selectedClientId, toast])
+
+  const handleSelectTemplate = useCallback((templateFormData: ProposalFormData) => {
+    setFormState(templateFormData)
+    setCurrentStep(0)
+    toast({
+      title: 'Template applied',
+      description: 'The template has been applied to your proposal. You can customize it as needed.',
+    })
+  }, [toast])
+
+  const handleVersionRestored = useCallback((restoredFormData: ProposalFormData) => {
+    setFormState(restoredFormData)
+    setCurrentStep(0)
+    toast({
+      title: 'Version restored',
+      description: 'The proposal has been restored to the selected version.',
+    })
+  }, [toast])
 
   const submitProposal = async () => {
     try {
@@ -660,12 +710,26 @@ export default function ProposalsPage() {
 
       setLastSubmissionSnapshot(null)
 
+      // Track AI generation start for analytics
+      const aiStartTime = Date.now()
+      trackAiGenerationStarted(activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+
       const response = await submitProposalDraft(activeDraftId, 'summary')
       const isReady = response.status === 'ready'
+      const aiDuration = Date.now() - aiStartTime
+
+      // Track AI generation completion or failure
+      if (isReady) {
+        trackAiGenerationCompleted(activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
+        trackProposalSubmitted(activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+      } else {
+        trackAiGenerationFailed(activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch(console.error)
+      }
+
       setSubmitted(isReady)
-      setGammaDeck(response.gammaDeck ? { ...response.gammaDeck, storageUrl: response.pptUrl ?? response.gammaDeck.storageUrl ?? null } : null)
+      setPresentationDeck(response.presentationDeck ? { ...response.presentationDeck, storageUrl: response.pptUrl ?? response.presentationDeck.storageUrl ?? null } : null)
       setAiSuggestions(response.aiSuggestions ?? null)
-      const storedPptUrl = response.pptUrl ?? response.gammaDeck?.storageUrl ?? null
+      const storedPptUrl = response.pptUrl ?? response.presentationDeck?.storageUrl ?? null
 
       if (isReady) {
         const formSnapshot = structuredClone(formState) as ProposalFormData
@@ -693,7 +757,7 @@ export default function ProposalsPage() {
       } else {
         toast({
           title: 'Presentation queued',
-          description: 'We are generating the Gamma deck in the background. Check back in a few moments.',
+          description: 'We are generating the presentation deck in the background. Check back in a few moments.',
         })
       }
 
@@ -713,8 +777,14 @@ export default function ProposalsPage() {
     } catch (err: unknown) {
       console.error('[ProposalWizard] submit failed', err)
       const message = getErrorMessage(err, 'Failed to submit proposal')
+      
+      // Track AI generation failure
+      if (draftId) {
+        trackAiGenerationFailed(draftId, message, selectedClientId, selectedClient?.name).catch(console.error)
+      }
+      
       setSubmitted(false)
-      setGammaDeck(null)
+      setPresentationDeck(null)
       setAiSuggestions(null)
       setLastSubmissionSnapshot(null)
       toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
@@ -735,7 +805,7 @@ export default function ProposalsPage() {
           setFormState(createInitialProposalFormState())
           setCurrentStep(0)
           setSubmitted(false)
-          setGammaDeck(null)
+          setPresentationDeck(null)
           setAiSuggestions(null)
           setProposals([])
           setLastSubmissionSnapshot(null)
@@ -754,7 +824,7 @@ export default function ProposalsPage() {
           setFormState(mergeProposalForm(draft.formData as Partial<ProposalFormData>))
           setCurrentStep(Math.min(draft.stepProgress ?? 0, steps.length - 1))
           setSubmitted(draft.status === 'ready')
-          setGammaDeck(draft.gammaDeck ? { ...draft.gammaDeck, storageUrl: draft.gammaDeck.storageUrl ?? draft.pptUrl ?? null } : null)
+          setPresentationDeck(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
           setAiSuggestions(draft.aiSuggestions ?? null)
           setLastSubmissionSnapshot(null)
         } else {
@@ -762,7 +832,7 @@ export default function ProposalsPage() {
           setFormState(createInitialProposalFormState())
           setCurrentStep(0)
           setSubmitted(false)
-          setGammaDeck(null)
+          setPresentationDeck(null)
           setAiSuggestions(null)
           setLastSubmissionSnapshot(null)
         }
@@ -817,14 +887,26 @@ export default function ProposalsPage() {
     <div ref={wizardRef} className="space-y-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <ProposalWizardHeader />
-        <Button 
-          onClick={handleCreateNewProposal} 
-          disabled={!selectedClientId || isCreatingDraft}
-          className="shrink-0"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          New Proposal
-        </Button>
+        <div className="flex items-center gap-2">
+          <ProposalTemplateSelector
+            currentFormData={formState}
+            onApplyTemplate={handleSelectTemplate}
+          />
+          <ProposalVersionHistory
+            proposalId={draftId}
+            currentFormData={formState}
+            onVersionRestored={handleVersionRestored}
+            disabled={!draftId || isSubmitting}
+          />
+          <Button 
+            onClick={handleCreateNewProposal} 
+            disabled={!selectedClientId || isCreatingDraft}
+            className="shrink-0"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Proposal
+          </Button>
+        </div>
       </div>
 
       <Card className="border-muted/60 bg-background">
@@ -837,7 +919,7 @@ export default function ProposalsPage() {
           ) : submitted ? (
             <ProposalSubmittedPanel
               summary={summary}
-              gammaDeck={gammaDeck}
+              presentationDeck={presentationDeck}
               deckDownloadUrl={deckDownloadUrl}
               activeProposalIdForDeck={activeProposalIdForDeck}
               canResumeSubmission={canResumeSubmission}
@@ -889,6 +971,16 @@ export default function ProposalsPage() {
       />
       <ProposalGenerationOverlay isSubmitting={isSubmitting} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
+      
+      <RelatedPages
+        title="Related features"
+        description="Navigate to other sections that work together with proposals."
+        pages={[
+          { name: 'Proposal Analytics', href: '/dashboard/proposals/analytics', description: 'Track proposal performance', icon: BarChart3 },
+          { name: 'Finance', href: '/dashboard/finance', description: 'Manage invoices & costs', icon: CreditCard },
+          { name: 'Clients', href: '/dashboard/clients', description: 'View client details', icon: Users },
+        ]}
+      />
     </div>
   )
 }

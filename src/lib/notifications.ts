@@ -511,6 +511,71 @@ export async function recordCollaborationNotification(options: {
       projectId: isProjectChannel && typeof message.projectId === 'string' ? message.projectId : null,
     },
   })
+
+  // Send mention notifications for each mentioned user
+  if (message.mentions && message.mentions.length > 0) {
+    await recordMentionNotifications({
+      workspaceId,
+      message,
+      actorId: options.actorId ?? message.senderId ?? null,
+      actorName: options.actorName ?? message.senderName ?? null,
+    })
+  }
+}
+
+export async function recordMentionNotifications(options: {
+  workspaceId: string
+  message: CollaborationMessage
+  actorId?: string | null
+  actorName?: string | null
+}) {
+  const { workspaceId, message } = options
+  if (!workspaceId || !message?.id || !message.mentions?.length) {
+    return
+  }
+
+  const isClientChannel = message.channelType === 'client'
+  const isProjectChannel = message.channelType === 'project'
+  const clientId = (isClientChannel || isProjectChannel) && typeof message.clientId === 'string' && message.clientId.trim().length > 0
+    ? message.clientId.trim()
+    : null
+
+  const content = typeof message.content === 'string' ? message.content : ''
+  const rawSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
+  const snippet = rawSnippet.trim().length > 0 ? rawSnippet : '(no message content)'
+
+  const senderName = options.actorName ?? message.senderName ?? 'Someone'
+
+  // Create a notification for each mention
+  for (const mention of message.mentions) {
+    const mentionedName = mention.name
+
+    await createWorkspaceNotification({
+      workspaceId,
+      kind: 'collaboration.mention',
+      title: `${senderName} mentioned you`,
+      body: snippet,
+      actor: {
+        id: options.actorId ?? null,
+        name: senderName,
+      },
+      resource: { type: 'collaboration', id: message.id },
+      recipients: {
+        roles: ['admin', 'team', 'client'],
+        clientIds: clientId ? [clientId] : undefined,
+        clientId,
+      },
+      metadata: {
+        channelType: message.channelType,
+        clientId,
+        senderId: message.senderId ?? null,
+        senderName: message.senderName ?? null,
+        mentionedName,
+        mentionSlug: mention.slug,
+        projectId: isProjectChannel && typeof message.projectId === 'string' ? message.projectId : null,
+      },
+    })
+  }
 }
 
 export async function recordProposalDeckReadyNotification(options: {

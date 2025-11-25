@@ -317,7 +317,7 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     textMode: 'generate',
     numCards: estimateGammaSlideCount(formData),
     exportAs: 'pptx',
-    themeName: DEFAULT_GAMMA_THEME,
+    themeId: DEFAULT_GAMMA_THEME,
     cardOptions: {
       dimensions: '16x9',
     },

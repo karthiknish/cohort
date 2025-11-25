@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, ArrowRight, CheckCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,44 +7,85 @@ import { Badge } from '@/components/ui/badge'
 
 const onboardingSteps = [
   {
-    title: 'Pick a client',
-    description: 'Use the client switcher to focus this dashboard on one relationship at a time.',
+    title: 'Select a client workspace',
+    description: 'Use the workspace selector in the header to focus on a specific client. This filters all data to that relationship.',
+    href: null,
+    actionLabel: null,
   },
   {
-    title: 'Log revenue & costs',
-    description: 'Add invoicing data so cash flow and margin stats stay up to date.',
+    title: 'Connect your ad platforms',
+    description: 'Link Google Ads, Meta, LinkedIn, or TikTok to automatically sync campaign data and insights.',
+    href: '/dashboard/ads',
+    actionLabel: 'Go to Ads',
   },
   {
-    title: 'Connect ad platforms',
-    description: 'Head to the Ads hub to sync Google, Meta, LinkedIn, or TikTok campaigns.',
+    title: 'Set up finance tracking',
+    description: 'Log invoices, retainers, and operating costs to track profitability and cash flow.',
+    href: '/dashboard/finance',
+    actionLabel: 'Go to Finance',
   },
 ] as const
 
 export function OnboardingCard() {
   return (
-    <Card className="border-muted/70 bg-background shadow-sm">
+    <Card className="border-muted/70 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Sparkles className="h-4 w-4" />
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Sparkles className="h-5 w-5" />
           </span>
           <div>
-            <CardTitle className="text-base">Get the most from Cohorts</CardTitle>
-            <CardDescription>Follow these quick steps to personalise this dashboard for your agency.</CardDescription>
+            <CardTitle className="text-lg">Welcome to Cohorts</CardTitle>
+            <CardDescription>Complete these steps to get the most from your dashboard.</CardDescription>
           </div>
         </div>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/docs/background-sync-setup">View setup guide</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">
+            Getting started
+          </Badge>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/docs/background-sync-setup">
+              View setup guide
+              <ArrowRight className="ml-1 h-3 w-3" />
+            </Link>
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-3">
-        {onboardingSteps.map((step, index) => (
-          <div key={step.title} className="space-y-2 rounded-lg border border-muted/60 p-4">
-            <Badge variant="secondary">Step {index + 1}</Badge>
-            <p className="text-sm font-semibold text-foreground">{step.title}</p>
-            <p className="text-xs text-muted-foreground">{step.description}</p>
-          </div>
-        ))}
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {onboardingSteps.map((step, index) => (
+            <div
+              key={step.title}
+              className="group relative space-y-3 rounded-lg border border-muted/60 bg-background p-4 transition-all hover:border-primary/40 hover:shadow-sm"
+            >
+              <div className="flex items-start justify-between">
+                <Badge variant="outline" className="text-xs">
+                  Step {index + 1}
+                </Badge>
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <span className="text-xs font-medium">{index + 1}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{step.description}</p>
+              </div>
+              {step.href && step.actionLabel && (
+                <Button asChild variant="ghost" size="sm" className="w-full justify-start px-0 text-primary">
+                  <Link href={step.href}>
+                    {step.actionLabel}
+                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <CheckCircle className="h-3.5 w-3.5" />
+          <span>Tip: Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd> anytime to quickly navigate between pages</span>
+        </div>
       </CardContent>
     </Card>
   )

@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { ProposalFormData } from "@/lib/proposals"
-import { ProposalGammaDeck } from "@/services/proposals"
+import { ProposalPresentationDeck } from "@/services/proposals"
 
 interface ProposalSubmittedPanelProps {
   summary: ProposalFormData
-  gammaDeck: ProposalGammaDeck | null
+  presentationDeck: ProposalPresentationDeck | null
   deckDownloadUrl: string | null
   activeProposalIdForDeck: string | null
   canResumeSubmission: boolean
@@ -23,7 +23,7 @@ interface ProposalSubmittedPanelProps {
 
 export function ProposalSubmittedPanel({
   summary,
-  gammaDeck,
+  presentationDeck,
   deckDownloadUrl,
   activeProposalIdForDeck,
   canResumeSubmission,
@@ -107,7 +107,7 @@ Timeline: ${summary.timelines.startTime}
           </CardContent>
         </Card>
 
-        {gammaDeck ? (
+        {presentationDeck ? (
           <Card className="h-full border-muted">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Presentation deck</CardTitle>
@@ -125,10 +125,10 @@ Timeline: ${summary.timelines.startTime}
                 ) : null}
                 
                 <div className="flex gap-2">
-                  {gammaDeck.storageUrl || gammaDeck.pptxUrl ? (
+                  {presentationDeck.storageUrl || presentationDeck.pptxUrl ? (
                     <Button variant="outline" className="flex-1" asChild>
                       <a 
-                        href={gammaDeck.storageUrl || gammaDeck.pptxUrl || '#'} 
+                        href={presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} 
                         target="_blank" 
                         rel="noreferrer"
                       >
@@ -146,10 +146,10 @@ Timeline: ${summary.timelines.startTime}
                   ) : null}
                 </div>
 
-                {gammaDeck.shareUrl && gammaDeck.shareUrl !== gammaDeck.webUrl ? (
+                {presentationDeck.shareUrl && presentationDeck.shareUrl !== presentationDeck.webUrl ? (
                   <Button variant="ghost" className="w-full justify-start text-muted-foreground" asChild>
-                    <a href={gammaDeck.shareUrl} target="_blank" rel="noreferrer">
-                      Open Gamma link
+                    <a href={presentationDeck.shareUrl} target="_blank" rel="noreferrer">
+                      View online
                     </a>
                   </Button>
                 ) : null}
@@ -158,7 +158,7 @@ Timeline: ${summary.timelines.startTime}
               <div className="flex items-center justify-between border-t pt-4">
                 <span className="text-xs text-muted-foreground">Status</span>
                 <Badge variant="outline" className="uppercase tracking-wide">
-                  {gammaDeck.status}
+                  {presentationDeck.status}
                 </Badge>
               </div>
             </CardContent>

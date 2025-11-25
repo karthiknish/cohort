@@ -1,0 +1,313 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp } from 'firebase-admin/firestore'
+import { z } from 'zod'
+
+import { adminDb } from '@/lib/firebase-admin'
+import { authenticateRequest, AuthenticationError, assertAdmin } from '@/lib/server-auth'
+
+const ADMIN_USER_ROLES = ['admin', 'team', 'client'] as const
+type AdminUserRole = (typeof ADMIN_USER_ROLES)[number]
+
+const invitationSchema = z.object({
+  email: z.string().email('Valid email is required').max(254),
+  role: z.enum(ADMIN_USER_ROLES).default('team'),
+  name: z.string().trim().max(120).optional(),
+  message: z.string().trim().max(500).optional(),
+})
+
+type InvitationInput = z.infer<typeof invitationSchema>
+
+type InvitationRecord = {
+  id: string
+  email: string
+  role: AdminUserRole
+  name: string | null
+  message: string | null
+  status: 'pending' | 'accepted' | 'expired' | 'revoked'
+  invitedBy: string
+  invitedByName: string | null
+  token: string
+  expiresAt: string
+  createdAt: string
+  acceptedAt: string | null
+}
+
+type StoredInvitation = {
+  email?: unknown
+  role?: unknown
+  name?: unknown
+  message?: unknown
+  status?: unknown
+  invitedBy?: unknown
+  invitedByName?: unknown
+  token?: unknown
+  expiresAt?: unknown
+  createdAt?: unknown
+  acceptedAt?: unknown
+}
+
+function toISO(value: unknown): string | null {
+  if (!value) return null
+  if (value instanceof Timestamp) {
+    return value.toDate().toISOString()
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  return null
+}
+
+function mapInvitationDoc(docId: string, data: StoredInvitation): InvitationRecord {
+  return {
+    id: docId,
+    email: typeof data.email === 'string' ? data.email : '',
+    role: ADMIN_USER_ROLES.includes(data.role as AdminUserRole) ? (data.role as AdminUserRole) : 'team',
+    name: typeof data.name === 'string' ? data.name : null,
+    message: typeof data.message === 'string' ? data.message : null,
+    status: ['pending', 'accepted', 'expired', 'revoked'].includes(data.status as string)
+      ? (data.status as InvitationRecord['status'])
+      : 'pending',
+    invitedBy: typeof data.invitedBy === 'string' ? data.invitedBy : '',
+    invitedByName: typeof data.invitedByName === 'string' ? data.invitedByName : null,
+    token: typeof data.token === 'string' ? data.token : '',
+    expiresAt: toISO(data.expiresAt) ?? new Date().toISOString(),
+    createdAt: toISO(data.createdAt) ?? new Date().toISOString(),
+    acceptedAt: toISO(data.acceptedAt),
+  }
+}
+
+function generateToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let token = ''
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return token
+}
+
+const EMAIL_WEBHOOK_URL = process.env.INVITATION_EMAIL_WEBHOOK_URL || process.env.CONTACT_EMAIL_WEBHOOK_URL
+
+async function sendInvitationEmail(invitation: {
+  email: string
+  role: string
+  invitedByName: string | null
+  token: string
+  expiresAt: string
+}) {
+  if (!EMAIL_WEBHOOK_URL) {
+    console.info('[invitations] email webhook not configured, skipping email send')
+    return { sent: false, reason: 'webhook_not_configured' }
+  }
+
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3000'
+    const inviteUrl = `${appUrl}/auth?invite=${invitation.token}`
+    
+    await fetch(EMAIL_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'invitation.created',
+        payload: {
+          to: invitation.email,
+          role: invitation.role,
+          invitedBy: invitation.invitedByName || 'An administrator',
+          inviteUrl,
+          expiresAt: invitation.expiresAt,
+        },
+      }),
+    })
+    return { sent: true }
+  } catch (error) {
+    console.error('[invitations] email webhook failed', error)
+    return { sent: false, reason: 'webhook_failed' }
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request)
+    assertAdmin(auth)
+    
+    if (!auth.uid) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const statusFilter = searchParams.get('status')
+    const limitParam = searchParams.get('limit')
+    const limit = Math.min(Math.max(Number(limitParam) || 50, 1), 100)
+
+    let query = adminDb
+      .collection('invitations')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+
+    if (statusFilter && ['pending', 'accepted', 'expired', 'revoked'].includes(statusFilter)) {
+      query = adminDb
+        .collection('invitations')
+        .where('status', '==', statusFilter)
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+    }
+
+    const snapshot = await query.get()
+    const invitations = snapshot.docs.map((doc) =>
+      mapInvitationDoc(doc.id, doc.data() as StoredInvitation)
+    )
+
+    return NextResponse.json({ invitations })
+  } catch (error: unknown) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    console.error('[invitations] failed to list invitations', error)
+    return NextResponse.json({ error: 'Failed to list invitations' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request)
+    assertAdmin(auth)
+    
+    if (!auth.uid) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const json = (await request.json().catch(() => null)) ?? {}
+    const payload = invitationSchema.parse(json) satisfies InvitationInput
+
+    const normalizedEmail = payload.email.toLowerCase().trim()
+
+    // Check if user already exists
+    const existingUserSnapshot = await adminDb
+      .collection('users')
+      .where('email', '==', normalizedEmail)
+      .limit(1)
+      .get()
+
+    if (!existingUserSnapshot.empty) {
+      return NextResponse.json(
+        { error: 'A user with this email already exists' },
+        { status: 409 }
+      )
+    }
+
+    // Check for existing pending invitation
+    const existingInviteSnapshot = await adminDb
+      .collection('invitations')
+      .where('email', '==', normalizedEmail)
+      .where('status', '==', 'pending')
+      .limit(1)
+      .get()
+
+    if (!existingInviteSnapshot.empty) {
+      return NextResponse.json(
+        { error: 'A pending invitation already exists for this email' },
+        { status: 409 }
+      )
+    }
+
+    // Get inviter's name
+    const inviterDoc = await adminDb.collection('users').doc(auth.uid).get()
+    const inviterData = inviterDoc.data()
+    const inviterName = typeof inviterData?.name === 'string' ? inviterData.name : null
+
+    const token = generateToken()
+    const now = Timestamp.now()
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)) // 7 days
+
+    const docRef = await adminDb.collection('invitations').add({
+      email: normalizedEmail,
+      role: payload.role,
+      name: payload.name?.trim() || null,
+      message: payload.message?.trim() || null,
+      status: 'pending',
+      invitedBy: auth.uid,
+      invitedByName: inviterName,
+      token,
+      expiresAt,
+      createdAt: now,
+      acceptedAt: null,
+    })
+
+    const createdDoc = await docRef.get()
+    const invitation = mapInvitationDoc(createdDoc.id, createdDoc.data() as StoredInvitation)
+
+    // Send invitation email
+    const emailResult = await sendInvitationEmail({
+      email: invitation.email,
+      role: invitation.role,
+      invitedByName: invitation.invitedByName,
+      token: invitation.token,
+      expiresAt: invitation.expiresAt,
+    })
+
+    return NextResponse.json(
+      {
+        invitation,
+        emailSent: emailResult.sent,
+        emailError: emailResult.sent ? undefined : emailResult.reason,
+      },
+      { status: 201 }
+    )
+  } catch (error: unknown) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    console.error('[invitations] failed to create invitation', error)
+    return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await authenticateRequest(request)
+    assertAdmin(auth)
+    
+    if (!auth.uid) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const invitationId = searchParams.get('id')
+
+    if (!invitationId) {
+      return NextResponse.json({ error: 'Invitation ID is required' }, { status: 400 })
+    }
+
+    const docRef = adminDb.collection('invitations').doc(invitationId)
+    const doc = await docRef.get()
+
+    if (!doc.exists) {
+      return NextResponse.json({ error: 'Invitation not found' }, { status: 404 })
+    }
+
+    const data = doc.data() as StoredInvitation
+    if (data.status !== 'pending') {
+      return NextResponse.json(
+        { error: 'Only pending invitations can be revoked' },
+        { status: 400 }
+      )
+    }
+
+    await docRef.update({
+      status: 'revoked',
+      updatedAt: Timestamp.now(),
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error: unknown) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    console.error('[invitations] failed to revoke invitation', error)
+    return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 })
+  }
+}

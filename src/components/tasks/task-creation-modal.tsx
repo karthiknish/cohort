@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Users, Flag, MessageSquare, X } from 'lucide-react'
+import { MessageSquare } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,9 @@ import {
 } from '@/components/ui/select'
 import { useSmartDefaults, createTaskWithDefaults } from '@/hooks/use-smart-defaults'
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
+import { useToast } from '@/components/ui/use-toast'
+import { authService } from '@/services/auth'
 import type { TaskRecord } from '@/types/tasks'
 
 interface TaskCreationModalProps {
@@ -44,8 +47,11 @@ export function TaskCreationModal({
   onTaskCreated,
 }: TaskCreationModalProps) {
   const { user } = useAuth()
+  const { selectedClientId, selectedClient } = useClientContext()
+  const { toast } = useToast()
   const { taskDefaults, contextInfo } = useSmartDefaults()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
   // Form state with smart defaults
   const [formData, setFormData] = useState({
@@ -62,25 +68,53 @@ export function TaskCreationModal({
     e.preventDefault()
     if (!formData.title.trim()) return
 
+    if (!user?.id) {
+      setError('You must be signed in to create tasks.')
+      return
+    }
+
     setIsLoading(true)
+    setError(null)
+
     try {
-      // Create task with smart defaults
-      const taskOverrides = {
+      const token = await authService.getIdToken()
+      
+      const payload = {
         title: formData.title.trim(),
-        description: formData.description.trim(),
-        priority: formData.priority as any,
-        dueDate: formData.dueDate || null,
+        description: formData.description.trim() || undefined,
+        priority: formData.priority,
+        status: 'todo',
+        dueDate: formData.dueDate || undefined,
         assignedTo: formData.assignedTo,
-        projectId: formData.projectId || null,
-        projectName: formData.projectName || null,
+        clientId: selectedClientId || undefined,
+        client: selectedClient?.name || undefined,
+        projectId: formData.projectId || undefined,
+        tags: [],
       }
 
-      const newTask = createTaskWithDefaults(taskOverrides, taskDefaults)
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const message = typeof errorData?.error === 'string' ? errorData.error : 'Failed to create task'
+        throw new Error(message)
+      }
+
+      const createdTask = (await response.json()) as TaskRecord
       
-      // TODO: Save task to API
-      console.log('Creating task:', newTask)
+      toast({
+        title: 'Task created',
+        description: `"${createdTask.title}" has been added to your task list.`,
+      })
       
-      onTaskCreated?.(newTask)
+      onTaskCreated?.(createdTask)
       onClose()
       
       // Reset form
@@ -93,8 +127,15 @@ export function TaskCreationModal({
         projectId: taskDefaults.projectId || '',
         projectName: taskDefaults.projectName || '',
       })
-    } catch (error) {
-      console.error('Failed to create task:', error)
+    } catch (err) {
+      console.error('Failed to create task:', err)
+      const message = err instanceof Error ? err.message : 'Unexpected error creating task'
+      setError(message)
+      toast({
+        title: 'Error creating task',
+        description: message,
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -197,6 +238,10 @@ export function TaskCreationModal({
               {formData.assignedTo.length > 0 ? `${formData.assignedTo.length} user(s)` : 'Unassigned'}
             </div>
           </div>
+
+          {error && (
+            <div className="text-sm text-destructive">{error}</div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

@@ -2,7 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ChevronRight, Home, Briefcase, ListChecks, MessageSquare } from 'lucide-react'
+import { 
+  ChevronRight, 
+  Home, 
+  Briefcase, 
+  ListChecks, 
+  MessageSquare,
+  BarChart3,
+  CreditCard,
+  FileText,
+  Megaphone,
+  Activity,
+  Users,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { useClientContext } from '@/contexts/client-context'
@@ -217,6 +229,75 @@ function generateBreadcrumbItems(
           href: `/dashboard/collaboration?projectId=${collabProjectId}&projectName=${collabProjectName}`,
         })
       }
+      break
+
+    case 'analytics':
+      items.push({
+        label: 'Analytics',
+        href: '/dashboard/analytics',
+        icon: BarChart3,
+      })
+      break
+
+    case 'finance':
+      items.push({
+        label: 'Finance',
+        href: '/dashboard/finance',
+        icon: CreditCard,
+      })
+      
+      // Sub-pages for finance
+      if (pathSegments[1] === 'payments') {
+        items.push({
+          label: 'Payments',
+          isCurrent: true,
+        })
+      }
+      break
+
+    case 'proposals':
+      items.push({
+        label: 'Proposals',
+        href: '/dashboard/proposals',
+        icon: FileText,
+      })
+      
+      // Sub-pages for proposals
+      if (pathSegments[1] === 'analytics') {
+        items.push({
+          label: 'Analytics',
+          isCurrent: true,
+        })
+      } else if (pathSegments[1] === 'viewer') {
+        items.push({
+          label: 'Viewer',
+          isCurrent: true,
+        })
+      }
+      break
+
+    case 'ads':
+      items.push({
+        label: 'Ads',
+        href: '/dashboard/ads',
+        icon: Megaphone,
+      })
+      break
+
+    case 'activity':
+      items.push({
+        label: 'Activity',
+        href: '/dashboard/activity',
+        icon: Activity,
+      })
+      break
+
+    case 'clients':
+      items.push({
+        label: 'Clients',
+        href: '/dashboard/clients',
+        icon: Users,
+      })
       break
 
     default:

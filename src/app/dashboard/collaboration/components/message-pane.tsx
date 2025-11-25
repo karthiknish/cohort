@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, RefObject } from 'react'
 import Link from 'next/link'
 import {
+  ChevronDown,
+  ChevronRight,
   Download,
   FileText,
   Image as ImageIcon,
@@ -12,9 +14,11 @@ import {
   MoreHorizontal,
   Paperclip,
   RefreshCw,
+  Reply,
   Search,
   Send,
   SmilePlus,
+  Trash2,
   X,
 } from 'lucide-react'
 
@@ -26,6 +30,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -37,6 +42,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage, CollaborationReaction } from '@/types/collaboration'
@@ -55,6 +66,8 @@ import {
   isLikelyImageUrl,
   groupMessages,
 } from '../utils'
+import { ImageGallery } from './image-gallery'
+import { ImageUrlPreview } from './image-url-preview'
 import { LinkPreviewCard } from './link-preview-card'
 import { MessageContent } from './message-content'
 import { RichComposer } from './rich-composer'
@@ -241,6 +254,18 @@ export function CollaborationMessagePane({
     setConfirmingDeleteMessageId(messageId)
   }
 
+  const handleExecuteDelete = () => {
+    if (!confirmingDeleteMessageId || messageDeletingId === confirmingDeleteMessageId) {
+      return
+    }
+    onDeleteMessage(confirmingDeleteMessageId)
+    setConfirmingDeleteMessageId(null)
+  }
+
+  const handleCancelDelete = () => {
+    setConfirmingDeleteMessageId(null)
+  }
+
   const handleCreateTaskFromMessage = (message: CollaborationMessage) => {
     setSelectedMessageForTask(message)
     setTaskCreationModalOpen(true)
@@ -407,9 +432,12 @@ export function CollaborationMessagePane({
       !message.isDeleted &&
       ((message.senderId && message.senderId === currentUserId) || currentUserRole === 'admin')
 
+    const canReact = !message.isDeleted && currentUserId
     const isDeleting = messageDeletingId === message.id
     const isUpdating = messageUpdatingId === message.id
-    const linkPreviews = extractUrlsFromContent(message.content).filter((url) => !isLikelyImageUrl(url))
+    const allUrlsFromContent = extractUrlsFromContent(message.content)
+    const imageUrlPreviews = allUrlsFromContent.filter((url) => isLikelyImageUrl(url))
+    const linkPreviews = allUrlsFromContent.filter((url) => !isLikelyImageUrl(url))
     const reactionPendingEmoji = reactionPendingByMessage[message.id] ?? null
     const reactions = Array.isArray(message.reactions) ? message.reactions : []
     const disableReactionActions =
@@ -434,28 +462,27 @@ export function CollaborationMessagePane({
       message.threadLastReplyAt ?? (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
     const lastReplyLabel = lastReplyIso ? formatRelativeTime(lastReplyIso) : null
 
-    const containerClass = [
+    const containerClass = cn(
+      'relative',
       isReply
-        ? 'ml-12 flex items-start gap-3 rounded-md border border-muted/40 bg-muted/10 p-3'
-        : 'group flex items-start gap-3 px-2 py-1 hover:bg-muted/30 rounded-md -mx-2',
-      isSearchResult ? 'ring-1 ring-primary/40 ring-offset-1' : '',
-      !showAvatar && !isReply ? 'mt-0.5' : '',
-    ]
-      .filter(Boolean)
-      .join(' ')
+        ? 'flex items-start gap-3 rounded-md border border-muted/40 bg-muted/10 p-3 transition-all hover:border-muted/60'
+        : 'group flex items-start gap-3 px-2 py-1.5 hover:bg-muted/30 rounded-md -mx-2 transition-colors',
+      isSearchResult && 'ring-1 ring-primary/40 ring-offset-1',
+      !showAvatar && !isReply && 'mt-0.5'
+    )
 
     const avatarClass = isReply
-      ? 'flex h-9 w-9 items-center justify-center rounded-full bg-primary/80 text-xs font-medium text-primary-foreground'
-      : 'flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground'
+      ? 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/80 text-xs font-medium text-primary-foreground'
+      : 'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground'
 
     return (
       <div key={message.id} className={containerClass}>
         {showAvatar ? (
           <span className={avatarClass}>{getInitials(message.senderName)}</span>
         ) : (
-          <div className="w-10" />
+          <div className="w-10 flex-shrink-0" />
         )}
-        <div className="flex-1 space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           {showHeader && (
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-foreground">{message.senderName}</p>
@@ -470,8 +497,148 @@ export function CollaborationMessagePane({
               </span>
             </div>
           )}
-          {canManageMessage && (
-            <div className={cn('absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100', isReply && 'static opacity-100')}>
+
+          {/* Quick Actions Bar - Appears on hover */}
+          {!message.isDeleted && !isReply && (
+            <div className="absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border border-muted/60 bg-background p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              <TooltipProvider delayDuration={200}>
+                {/* Quick Reactions */}
+                {canReact && COLLABORATION_REACTIONS.slice(0, 3).map((emoji) => (
+                  <Tooltip key={emoji}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-base"
+                        disabled={disableReactionActions}
+                        onClick={() => onToggleReaction(message.id, emoji)}
+                      >
+                        {emoji}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      React with {emoji}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+
+                {/* More Reactions */}
+                {canReact && (
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={disableReactionActions}
+                          >
+                            <SmilePlus className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        Add reaction
+                      </TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" className="grid w-40 grid-cols-3 gap-1 p-2 text-lg">
+                      {COLLABORATION_REACTIONS.map((emoji) => (
+                        <DropdownMenuItem
+                          key={emoji}
+                          className="flex items-center justify-center p-2 text-lg hover:scale-110 transition-transform"
+                          disabled={disableReactionActions}
+                          onSelect={() => onToggleReaction(message.id, emoji)}
+                        >
+                          {emoji}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Reply Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => handleReply(message)}
+                      disabled={isUpdating || isDeleting}
+                    >
+                      <Reply className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Reply in thread
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* More Actions */}
+                {canManageMessage && (
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={isUpdating || isDeleting}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        More actions
+                      </TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" className="w-44 text-sm">
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          handleStartEdit(message)
+                        }}
+                        disabled={isUpdating || isDeleting}
+                      >
+                        Edit message
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          handleCreateTaskFromMessage(message)
+                        }}
+                        disabled={isUpdating || isDeleting}
+                      >
+                        Create task from message
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={(event) => {
+                          event.preventDefault()
+                          handleConfirmDelete(message.id)
+                        }}
+                        className="text-destructive focus:text-destructive"
+                        disabled={isDeleting || isUpdating}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete message
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </TooltipProvider>
+            </div>
+          )}
+
+          {/* Reply quick actions (for nested replies) */}
+          {!message.isDeleted && isReply && canManageMessage && (
+            <div className="absolute right-2 top-2 flex items-center gap-0.5">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -489,29 +656,11 @@ export function CollaborationMessagePane({
                   <DropdownMenuItem
                     onSelect={(event) => {
                       event.preventDefault()
-                      handleReply(message)
-                    }}
-                    disabled={isUpdating || isDeleting}
-                  >
-                    Reply in thread
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={(event) => {
-                      event.preventDefault()
                       handleStartEdit(message)
                     }}
                     disabled={isUpdating || isDeleting}
                   >
                     Edit message
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={(event) => {
-                      event.preventDefault()
-                      handleCreateTaskFromMessage(message)
-                    }}
-                    disabled={isUpdating || isDeleting}
-                  >
-                    Create task from message
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={(event) => {
@@ -559,57 +708,62 @@ export function CollaborationMessagePane({
 
           {Array.isArray(message.attachments) && message.attachments.length > 0 && !message.isDeleted && (
             <div className="space-y-3">
-              {message.attachments.map((attachment) => {
-                const key = `${attachment.url}-${attachment.name}`
-                const isImageAttachment = Boolean(attachment.url && isLikelyImageUrl(attachment.url))
-
-                if (isImageAttachment) {
-                  return (
-                    <figure key={key} className="max-w-xl overflow-hidden rounded-md border border-muted/60 bg-muted/10">
-                      <img
-                        src={attachment.url}
-                        alt={attachment.name}
-                        className="max-h-96 w-full object-contain"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <figcaption className="flex items-center justify-between gap-3 border-t border-muted/40 p-3 text-xs text-muted-foreground">
-                        <div className="flex flex-1 items-center gap-2 truncate">
-                          <ImageIcon className="h-4 w-4" />
-                          <span className="truncate">{attachment.name}</span>
-                          {attachment.size ? <span className="whitespace-nowrap">{attachment.size}</span> : null}
-                        </div>
-                        <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                          <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                            <Download className="mr-1 h-3.5 w-3.5" />
-                            Download
-                          </a>
-                        </Button>
-                      </figcaption>
-                    </figure>
-                  )
-                }
+              {(() => {
+                const imageAttachments = message.attachments.filter(
+                  (a) => a.url && isLikelyImageUrl(a.url)
+                )
+                const fileAttachments = message.attachments.filter(
+                  (a) => !a.url || !isLikelyImageUrl(a.url)
+                )
 
                 return (
-                  <Card key={key} className="border-muted/60 bg-muted/20">
-                    <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
-                      <div className="flex items-center gap-2 truncate">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="truncate">{attachment.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {attachment.size && <span>{attachment.size}</span>}
-                        <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                          <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4" />
-                            <span className="sr-only">Download {attachment.name}</span>
-                          </a>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <>
+                    {/* Image Gallery for all images */}
+                    {imageAttachments.length > 0 && (
+                      <ImageGallery
+                        images={imageAttachments.map((a) => ({
+                          url: a.url,
+                          name: a.name,
+                          size: a.size ?? undefined,
+                        }))}
+                      />
+                    )}
+
+                    {/* File attachments */}
+                    {fileAttachments.map((attachment) => {
+                      const key = `${attachment.url}-${attachment.name}`
+                      return (
+                        <Card key={key} className="border-muted/60 bg-muted/20">
+                          <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
+                            <div className="flex items-center gap-2 truncate">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span className="truncate">{attachment.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {attachment.size && <span>{attachment.size}</span>}
+                              <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                                <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4" />
+                                  <span className="sr-only">Download {attachment.name}</span>
+                                </a>
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </>
                 )
-              })}
+              })()}
+            </div>
+          )}
+
+          {/* Image URL Previews */}
+          {!message.isDeleted && imageUrlPreviews.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {imageUrlPreviews.map((url) => (
+                <ImageUrlPreview key={`${message.id}-img-${url}`} url={url} />
+              ))}
             </div>
           )}
 
@@ -621,61 +775,45 @@ export function CollaborationMessagePane({
             </div>
           )}
 
-          {!message.isDeleted && editingMessageId !== message.id && (
-            <div className="flex flex-wrap items-center gap-2">
-              {reactions.map((reaction) => {
-                const isPendingReaction = reactionPendingEmoji === reaction.emoji
-                const isActive = Boolean(currentUserId && reaction.userIds.includes(currentUserId))
-                return (
-                  <Button
-                    key={`${message.id}-${reaction.emoji}`}
-                    type="button"
-                    size="sm"
-                    variant={isActive ? 'secondary' : 'outline'}
-                    className="h-7 rounded-full px-3 text-xs"
-                    disabled={disableReactionActions}
-                    aria-pressed={isActive}
-                    onClick={() => onToggleReaction(message.id, reaction.emoji)}
-                  >
-                    <span className="flex items-center gap-1">
-                      {isPendingReaction ? <Loader2 className="h-3 w-3 animate-spin" /> : <span className="text-sm leading-none">{reaction.emoji}</span>}
-                      <span className="leading-none">{reaction.count}</span>
-                    </span>
-                  </Button>
-                )
-              })}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="inline-flex h-7 items-center gap-1 rounded-full px-3 text-xs"
-                    disabled={disableReactionActions}
-                  >
-                    {showReactionSpinner ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SmilePlus className="h-4 w-4" />}
-                    React
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="grid w-40 grid-cols-3 gap-1 p-2 text-lg">
-                  {COLLABORATION_REACTIONS.map((emoji) => (
-                    <DropdownMenuItem
-                      key={emoji}
-                      className="flex items-center justify-center p-2"
-                      disabled={disableReactionActions}
-                      onSelect={(event) => {
-                        if (disableReactionActions) {
-                          event.preventDefault()
-                          return
-                        }
-                        onToggleReaction(message.id, emoji)
-                      }}
-                    >
-                      {emoji}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+          {/* Reactions Display */}
+          {!message.isDeleted && editingMessageId !== message.id && reactions.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <TooltipProvider delayDuration={300}>
+                {reactions.map((reaction) => {
+                  const isPendingReaction = reactionPendingEmoji === reaction.emoji
+                  const isActive = Boolean(currentUserId && reaction.userIds.includes(currentUserId))
+                  return (
+                    <Tooltip key={`${message.id}-${reaction.emoji}`}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isActive ? 'secondary' : 'outline'}
+                          className={cn(
+                            "h-7 rounded-full px-2.5 text-xs transition-all hover:scale-105",
+                            isActive && "bg-primary/10 border-primary/30 hover:bg-primary/20"
+                          )}
+                          disabled={disableReactionActions}
+                          aria-pressed={isActive}
+                          onClick={() => onToggleReaction(message.id, reaction.emoji)}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            {isPendingReaction ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <span className="text-base leading-none">{reaction.emoji}</span>
+                            )}
+                            <span className="font-medium leading-none tabular-nums">{reaction.count}</span>
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        {isActive ? 'Remove your reaction' : 'Add reaction'}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </TooltipProvider>
             </div>
           )}
 
@@ -686,40 +824,73 @@ export function CollaborationMessagePane({
             </div>
           )}
 
-          {!isReply && hasThreadReplies && (
+          {/* Thread Section */}
+          {!isReply && !message.isDeleted && (
             <div className="pt-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="inline-flex items-center gap-2 text-xs"
-                  onClick={() => handleThreadToggle(threadRootId)}
-                  disabled={threadLoading && !isThreadOpen && threadReplies.length === 0}
-                >
-                  {threadLoading && !isThreadOpen && threadReplies.length === 0 ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <MessageSquare className="h-3.5 w-3.5" />
-                  )}
-                  {isThreadOpen ? 'Hide thread' : `View thread · ${replyCount === 1 ? '1 reply' : `${replyCount} replies`}`}
-                  {lastReplyLabel && <span className="text-[11px] text-muted-foreground">· Last reply {lastReplyLabel}</span>}
-                </Button>
-                {threadError && !isThreadOpen && (
+              {/* Thread Toggle Button */}
+              {hasThreadReplies ? (
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-[11px] text-destructive"
-                    onClick={() => handleRetryThreadLoad(threadRootId)}
+                    className={cn(
+                      "inline-flex items-center gap-2 text-xs text-primary hover:text-primary/90 hover:bg-primary/5 transition-colors",
+                      isThreadOpen && "bg-primary/5"
+                    )}
+                    onClick={() => handleThreadToggle(threadRootId)}
+                    disabled={threadLoading && !isThreadOpen && threadReplies.length === 0}
                   >
-                    Retry
+                    {threadLoading && !isThreadOpen && threadReplies.length === 0 ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isThreadOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span className="font-medium">
+                      {replyCount === 1 ? '1 reply' : `${replyCount} replies`}
+                    </span>
+                    {lastReplyLabel && (
+                      <span className="text-muted-foreground font-normal">
+                        · Last reply {lastReplyLabel}
+                      </span>
+                    )}
                   </Button>
-                )}
-              </div>
+                  {threadError && !isThreadOpen && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[11px] text-destructive hover:text-destructive/90"
+                      onClick={() => handleRetryThreadLoad(threadRootId)}
+                    >
+                      <RefreshCw className="mr-1 h-3 w-3" />
+                      Retry
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                /* Start Thread Button for messages without replies */
+                !message.isDeleted && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleReply(message)}
+                  >
+                    <Reply className="h-3.5 w-3.5" />
+                    <span>Reply</span>
+                  </Button>
+                )
+              )}
 
+              {/* Thread Replies Container */}
               {isThreadOpen && (
-                <div className="mt-3 space-y-3 border-l border-muted/40 pl-4">
+                <div className="mt-3 space-y-2 border-l-2 border-primary/20 pl-4 animate-in slide-in-from-top-2 duration-200">
+                  {/* Thread Error */}
                   {threadError && (
                     <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                       <span>{threadError}</span>
@@ -727,60 +898,85 @@ export function CollaborationMessagePane({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2 text-[11px] text-destructive"
+                        className="h-6 px-2 text-[11px] text-destructive hover:text-destructive/90"
                         onClick={() => handleRetryThreadLoad(threadRootId)}
                         disabled={threadLoading}
                       >
+                        <RefreshCw className={cn("mr-1 h-3 w-3", threadLoading && "animate-spin")} />
                         Retry
                       </Button>
                     </div>
                   )}
 
+                  {/* Loading State */}
                   {threadLoading && threadReplies.length === 0 && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Loading replies…
+                      <span>Loading replies…</span>
                     </div>
                   )}
 
-                  {threadReplies.map((reply) =>
-                    renderMessage(reply, { isReply: true, isSearchResult }),
-                  )}
+                  {/* Thread Replies */}
+                  <div className="space-y-2">
+                    {threadReplies.map((reply) =>
+                      renderMessage(reply, { isReply: true, isSearchResult }),
+                    )}
+                  </div>
 
+                  {/* Loading More State */}
                   {threadLoading && threadReplies.length > 0 && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Updating replies…
+                      <span>Loading more replies…</span>
                     </div>
                   )}
 
+                  {/* Empty State */}
                   {!threadLoading && threadReplies.length === 0 && !threadError && (
-                    <div className="rounded-md border border-dashed border-muted/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                      Replies will appear here once your team responds.
+                    <div className="rounded-md border border-dashed border-muted/50 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+                      Be the first to reply in this thread
                     </div>
                   )}
 
+                  {/* Load More Button */}
                   {threadNextCursor && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="inline-flex items-center gap-2 text-xs"
+                      className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
                       onClick={() => handleLoadMoreThread(threadRootId)}
                       disabled={threadLoading}
                     >
-                      <RefreshCw className={threadLoading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
-                      {threadLoading ? 'Loading replies…' : 'Load older replies'}
+                      <RefreshCw className={cn("h-3.5 w-3.5", threadLoading && "animate-spin")} />
+                      {threadLoading ? 'Loading…' : 'Load older replies'}
                     </Button>
                   )}
+
+                  {/* Inline Thread Reply Composer */}
+                  <div className="pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start text-xs text-muted-foreground hover:text-foreground h-9"
+                      onClick={() => handleReply(message)}
+                    >
+                      <Reply className="mr-2 h-3.5 w-3.5" />
+                      Reply to thread…
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           )}
         </div>
         {!message.isDeleted && isDeleting && (
-          <div className="mt-2 text-xs text-destructive">
-            <Loader2 className="mr-1 inline h-3 w-3 animate-spin align-middle" /> Removing message…
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 backdrop-blur-sm">
+            <div className="flex items-center gap-2 text-xs text-destructive">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Removing message…</span>
+            </div>
           </div>
         )}
       </div>
@@ -820,8 +1016,13 @@ export function CollaborationMessagePane({
             value={messageSearchQuery}
             onChange={handleSearchChange}
             placeholder="Search messages in this channel…"
-            className="pl-9"
+            className="pl-9 pr-20"
           />
+          {isSearchActive && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+              {visibleMessages.length} {visibleMessages.length === 1 ? 'result' : 'results'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -973,14 +1174,27 @@ export function CollaborationMessagePane({
           <div className="space-y-3">
             <div className="w-full">
               {replyingToMessage && (
-                <div className="flex items-center justify-between rounded-t-md border-x border-t border-muted/40 bg-muted/10 px-3 py-2 text-xs">
+                <div className="flex items-center justify-between rounded-t-md border-x border-t border-primary/30 bg-primary/5 px-3 py-2.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>
-                      Replying to <strong>{replyingToMessage.senderName}</strong>
-                    </span>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                      <Reply className="h-3 w-3 text-primary" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">Replying to thread</span>
+                      <span className="font-medium text-foreground">{replyingToMessage.senderName}</span>
+                    </div>
+                    {replyingToMessage.content && (
+                      <span className="ml-2 max-w-[200px] truncate text-muted-foreground">
+                        "{replyingToMessage.content.slice(0, 50)}{replyingToMessage.content.length > 50 ? '…' : ''}"
+                      </span>
+                    )}
                   </div>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleCancelReply}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 rounded-full hover:bg-primary/10" 
+                    onClick={handleCancelReply}
+                  >
                     <X className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -998,19 +1212,11 @@ export function CollaborationMessagePane({
                 onDrop={handleComposerDrop}
                 onDragOver={handleComposerDragOver}
                 participants={channelParticipants}
+                onAttachClick={() => fileInputRef.current?.click()}
+                hasAttachments={pendingAttachments.length > 0}
               />
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!channel || sending}
-                className="inline-flex items-center gap-2"
-              >
-                <Paperclip className="h-4 w-4" />
-                Attach
-              </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
                 onClick={() => {
                   onSendMessage({ parentMessageId: replyingToMessage?.id })
@@ -1048,6 +1254,19 @@ export function CollaborationMessagePane({
           projectName: channel?.name || '',
         }}
         onTaskCreated={handleTaskCreated}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(confirmingDeleteMessageId)}
+        onOpenChange={(open) => !open && handleCancelDelete()}
+        title="Delete message"
+        description="Are you sure you want to delete this message? This action cannot be undone. The message will be marked as deleted and hidden from all participants."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={handleExecuteDelete}
+        onCancel={handleCancelDelete}
       />
     </div>
   )

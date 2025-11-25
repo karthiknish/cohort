@@ -23,6 +23,7 @@ type ProposalSnapshot = {
   clientId?: string | null
   clientName?: string | null
   gammaDeck?: unknown
+  presentationDeck?: unknown
 }
 
 const normalizeFormData = (input: unknown): ProposalFormData => {
@@ -65,7 +66,7 @@ type SerializedProposal = {
   lastAutosaveAt: string | null
   clientId: string | null
   clientName: string | null
-  gammaDeck: ReturnType<typeof serializeGammaDeck>
+  presentationDeck: ReturnType<typeof serializePresentationDeck>
 }
 
 export async function GET(request: NextRequest) {
@@ -280,11 +281,11 @@ function mapProposalSnapshot(docSnap: DocumentSnapshot<DocumentData>): Serialize
     lastAutosaveAt: serializeTimestamp(data.lastAutosaveAt),
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     clientName: typeof data.clientName === 'string' ? data.clientName : null,
-    gammaDeck: serializeGammaDeck(data.gammaDeck),
+    presentationDeck: serializePresentationDeck(data.presentationDeck ?? data.gammaDeck),
   }
 }
 
-function serializeGammaDeck(value: unknown) {
+function serializePresentationDeck(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null
   }

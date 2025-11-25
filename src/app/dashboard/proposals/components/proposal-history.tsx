@@ -121,7 +121,7 @@ function ProposalHistoryComponent({
           ) : (
             proposals.map((proposal) => {
               const isActiveDraft = proposal.id === draftId
-              const presentationUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl ?? null
+              const presentationUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
               const suggestionText = (typeof proposal.aiSuggestions === 'string' ? proposal.aiSuggestions.trim() : '')
                 || extractAiSummary(proposal.aiInsights)
               const displayName = proposal.clientName?.trim().length ? proposal.clientName : 'Unnamed company'

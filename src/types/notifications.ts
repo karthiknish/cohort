@@ -5,6 +5,7 @@ export type WorkspaceNotificationKind =
   | 'task.updated'
   | 'project.created'
   | 'collaboration.message'
+  | 'collaboration.mention'
   | 'proposal.deck.ready'
   | 'invoice.sent'
   | 'invoice.paid'

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ComponentType, DragEvent, KeyboardEvent, MouseEvent } from 'react'
-import { AtSign, Bold, Code, Italic, List, ListOrdered, Quote } from 'lucide-react'
+import { AtSign, Bold, Code, Italic, List, ListOrdered, Paperclip, Quote, Upload } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,6 +26,8 @@ export type RichComposerProps = {
   onBlur?: () => void
   onDrop?: (event: DragEvent<HTMLTextAreaElement>) => void
   onDragOver?: (event: DragEvent<HTMLTextAreaElement>) => void
+  onAttachClick?: () => void
+  hasAttachments?: boolean
 }
 
 type FormattingAction = 'bold' | 'italic' | 'blockquote' | 'code' | 'unordered-list' | 'ordered-list'
@@ -53,12 +55,15 @@ export function RichComposer({
   onBlur,
   onDrop,
   onDragOver,
+  onAttachClick,
+  hasAttachments = false,
 }: RichComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const mentionStateRef = useRef<MentionState>(DEFAULT_MENTION_STATE)
   const [mentionState, setMentionState] = useState<MentionState>(DEFAULT_MENTION_STATE)
   const [highlightedMention, setHighlightedMention] = useState(0)
   const mentionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   const uniqueParticipants = useMemo(() => {
     const map = new Map<string, ClientTeamMember>()
@@ -383,6 +388,7 @@ export function RichComposer({
       mentionTimeoutRef.current = null
     }
     resetMentionState()
+    setIsDraggingOver(false)
     onBlur?.()
   }, [onBlur, resetMentionState])
 
@@ -390,9 +396,43 @@ export function RichComposer({
     onFocus?.()
   }, [onFocus])
 
+  const handleDragEnter = useCallback((event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault()
+    if (!disabled && event.dataTransfer.types.includes('Files')) {
+      setIsDraggingOver(true)
+    }
+  }, [disabled])
+
+  const handleDragLeave = useCallback((event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault()
+    // Only reset if leaving the textarea entirely (not entering a child element)
+    const relatedTarget = event.relatedTarget as Node | null
+    const target = event.currentTarget as Node
+    if (!relatedTarget || !target.contains(relatedTarget)) {
+      setIsDraggingOver(false)
+    }
+  }, [])
+
+  const handleDragOverInternal = useCallback((event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault()
+    if (!disabled && event.dataTransfer.types.includes('Files')) {
+      event.dataTransfer.dropEffect = 'copy'
+      setIsDraggingOver(true)
+    } else {
+      event.dataTransfer.dropEffect = 'none'
+    }
+    onDragOver?.(event)
+  }, [disabled, onDragOver])
+
+  const handleDropInternal = useCallback((event: DragEvent<HTMLTextAreaElement>) => {
+    event.preventDefault()
+    setIsDraggingOver(false)
+    onDrop?.(event)
+  }, [onDrop])
+
   return (
     <div className="relative flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1">
         <ComposerButton icon={Bold} label="Bold" onClick={() => handleFormattingAction('bold')} disabled={disabled} />
         <ComposerButton icon={Italic} label="Italic" onClick={() => handleFormattingAction('italic')} disabled={disabled} />
         <ComposerButton icon={Quote} label="Quote" onClick={() => handleFormattingAction('blockquote')} disabled={disabled} />
@@ -430,21 +470,53 @@ export function RichComposer({
           }}
           disabled={disabled}
         />
+        <div className="mx-1 h-5 w-px bg-muted/60" />
+        {onAttachClick && (
+          <Button
+            type="button"
+            size="sm"
+            variant={hasAttachments ? 'secondary' : 'ghost'}
+            onClick={onAttachClick}
+            disabled={disabled}
+            className={cn(
+              "h-8 gap-1.5 px-2 text-xs",
+              hasAttachments && "bg-primary/10 text-primary hover:bg-primary/20"
+            )}
+          >
+            <Paperclip className="h-4 w-4" />
+            <span className="hidden sm:inline">Attach</span>
+          </Button>
+        )}
       </div>
-      <Textarea
-        ref={textareaRef}
-        value={value}
-        placeholder={placeholder}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onFocus={handleFocus}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        disabled={disabled}
-        maxLength={2000}
-        className="min-h-[120px] resize-y"
-      />
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          placeholder={placeholder}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          onFocus={handleFocus}
+          onDrop={handleDropInternal}
+          onDragOver={handleDragOverInternal}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          disabled={disabled}
+          maxLength={2000}
+          className={cn(
+            "min-h-[120px] resize-y transition-all",
+            isDraggingOver && "border-primary border-2 border-dashed bg-primary/5"
+          )}
+        />
+        {isDraggingOver && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-primary/10">
+            <div className="flex flex-col items-center gap-2 text-primary">
+              <Upload className="h-8 w-8" />
+              <span className="text-sm font-medium">Drop files here to attach</span>
+            </div>
+          </div>
+        )}
+      </div>
       {mentionState.active && mentionResults.length > 0 && (
         <div className="absolute bottom-2 left-2 z-20 w-64 rounded-md border border-muted/60 bg-popover p-1 shadow-lg">
           <p className="px-2 py-1 text-xs font-medium uppercase text-muted-foreground">Mention teammate</p>

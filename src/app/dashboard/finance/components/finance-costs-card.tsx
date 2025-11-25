@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { CurrencySelect, CurrencyBadge } from '@/components/ui/currency-select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -30,6 +31,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { FinanceCostEntry } from '@/types/finance'
+import type { CurrencyCode } from '@/constants/currencies'
 
 import { formatCadence, formatCurrency } from '../utils'
 import type { CostFormState } from '../hooks/use-finance-data'
@@ -100,7 +102,7 @@ export function FinanceCostsCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-6">
-        <form onSubmit={onAddCost} className="grid gap-3 md:grid-cols-[2fr,1fr,1fr,auto]">
+        <form onSubmit={onAddCost} className="grid gap-3 md:grid-cols-[2fr,1fr,1fr,1fr,auto]">
           <div className="space-y-1">
             <Label htmlFor="cost-category">Cost category</Label>
             <Input
@@ -121,6 +123,14 @@ export function FinanceCostsCard({
               onChange={(event) => onChangeNewCost((prev) => ({ ...prev, amount: event.target.value }))}
               placeholder="1500"
               required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="cost-currency">Currency</Label>
+            <CurrencySelect
+              value={(newCost.currency ?? 'USD') as CurrencyCode}
+              onValueChange={(value) => onChangeNewCost((prev) => ({ ...prev, currency: value }))}
+              showPopular
             />
           </div>
           <div className="space-y-1">
@@ -167,11 +177,14 @@ export function FinanceCostsCard({
                 key={cost.id}
                 className="flex flex-col gap-3 rounded-lg border border-muted/40 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{cost.category}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCadence(cost.cadence)} · {formatCurrency(Math.round(cost.amount), cost.currency ?? resolvedCurrency)}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <CurrencyBadge currency={(cost.currency ?? 'USD')} />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{cost.category}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCadence(cost.cadence)} · {formatCurrency(Math.round(cost.amount), cost.currency ?? resolvedCurrency)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge variant="secondary" className="bg-primary/10 text-primary">

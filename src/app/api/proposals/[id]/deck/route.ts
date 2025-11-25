@@ -63,13 +63,13 @@ export async function POST(
       return NextResponse.json({
         ok: true,
         storageUrl: existingStorageUrl,
-        gammaDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
+        presentationDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
       })
     }
 
     if (!process.env.GAMMA_API_KEY) {
       return NextResponse.json({
-        error: 'Gamma integration is not configured',
+        error: 'Presentation generation is not configured',
       }, { status: 503 })
     }
 
@@ -142,7 +142,7 @@ export async function POST(
     return NextResponse.json({
       ok: true,
       storageUrl: existingStorageUrl,
-      gammaDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
+      presentationDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
       queued: true,
     })
   } catch (error: unknown) {
@@ -150,7 +150,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     console.error('[ProposalDeck] POST failed for proposal:', proposalId, error)
-    return NextResponse.json({ error: 'Failed to prepare Gamma deck' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to prepare presentation deck' }, { status: 500 })
   }
 }
 
