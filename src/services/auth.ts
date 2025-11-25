@@ -103,7 +103,7 @@ export class AuthService {
       role,
       status,
       agencyId: 'default-agency', // Would be fetched from database
-      createdAt: new Date(),
+      createdAt: firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime) : new Date(),
       updatedAt: new Date(),
       notificationPreferences: {
         whatsapp: {

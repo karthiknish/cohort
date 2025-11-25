@@ -89,14 +89,13 @@ export default function DashboardPage() {
   const { clients, selectedClient, selectedClientId } = useClientContext()
   const { user, getIdToken } = useAuth()
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
-  const [financeLoading, setFinanceLoading] = useState(false)
+  const [financeLoading, setFinanceLoading] = useState(true)
   const [financeError, setFinanceError] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<MetricRecord[]>([])
-  const [metricsLoading, setMetricsLoading] = useState(false)
+  const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [taskItems, setTaskItems] = useState<DashboardTaskItem[]>([])
-  const [tasksLoading, setTasksLoading] = useState(false)
-  const [tasksError, setTasksError] = useState<string | null>(null)
+  const [tasksLoading, setTasksLoading] = useState(true)
   const [comparisonClientIds, setComparisonClientIds] = useState<string[]>(() => (selectedClientId ? [selectedClientId] : []))
   const [comparisonPeriodDays, setComparisonPeriodDays] = useState(30)
   const [comparisonSummaries, setComparisonSummaries] = useState<ClientComparisonSummary[]>([])
@@ -605,7 +604,15 @@ export default function DashboardPage() {
       .sort((a, b) => a.date.localeCompare(b.date))
   }, [metrics, financeSummary])
 
-  const showOnboarding = !statsLoading && !selectedClientId && metrics.length === 0 && !financeSummary
+  const isNewUser = useMemo(() => {
+    if (!user?.createdAt) return false
+    const created = new Date(user.createdAt)
+    const now = new Date()
+    // User is considered new if account created within last 24 hours
+    return (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
+  }, [user?.createdAt])
+
+  const showOnboarding = !statsLoading && isNewUser && !selectedClientId && metrics.length === 0 && !financeSummary
 
   return (
     <TooltipProvider>

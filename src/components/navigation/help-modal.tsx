@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/contexts/auth-context'
 
 interface HelpModalProps {
   open: boolean
@@ -338,15 +339,24 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
 export function useHelpModal() {
   const [open, setOpen] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
+  const { user } = useAuth()
 
   useEffect(() => {
+    if (!user) return
+
     // Check if user has seen the welcome modal
     const hasSeenWelcome = localStorage.getItem('cohorts_welcome_seen')
-    if (!hasSeenWelcome) {
+    
+    // Check if user is new (created within last 24 hours)
+    const created = user.createdAt ? new Date(user.createdAt) : new Date()
+    const now = new Date()
+    const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
+
+    if (!hasSeenWelcome && isNewUser) {
       setShowWelcome(true)
       setOpen(true)
     }
-  }, [])
+  }, [user])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
