@@ -1,0 +1,461 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { formatDistanceToNow } from 'date-fns'
+import { Bell, BellOff, Check, CheckCheck, Loader2, Trash2, Filter } from 'lucide-react'
+
+import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
+import type { WorkspaceNotification } from '@/types/notifications'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useToast } from '@/components/ui/use-toast'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+
+const PAGE_SIZE = 25
+
+type NotificationResponse = {
+  notifications?: WorkspaceNotification[]
+  nextCursor?: string | null
+  error?: string
+}
+
+type AckAction = 'read' | 'dismiss'
+
+type FilterType = 'all' | 'unread' | 'mentions' | 'system'
+
+export default function NotificationsPage() {
+  const { user, getIdToken } = useAuth()
+  const { selectedClientId } = useClientContext()
+  const { toast } = useToast()
+
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [ackInFlight, setAckInFlight] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchNotifications = useCallback(
+    async ({ append = false, cursor, filter = activeFilter }: { append?: boolean; cursor?: string | null; filter?: FilterType } = {}) => {
+      if (!user?.id) {
+        return
+      }
+
+      const params = new URLSearchParams()
+      params.set('pageSize', String(PAGE_SIZE))
+      if (user.role) {
+        params.set('role', user.role)
+      }
+      if (user.role === 'client' && selectedClientId) {
+        params.set('clientId', selectedClientId)
+      }
+      if (cursor) {
+        params.set('after', cursor)
+      }
+      if (filter === 'unread') {
+        params.set('unread', 'true')
+      }
+
+      const token = await getIdToken()
+
+      const response = await fetch(`/api/notifications?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: 'no-store',
+      })
+
+      const payload = (await response.json().catch(() => null)) as NotificationResponse | null
+
+      if (!response.ok || !payload) {
+        const message = payload?.error ?? 'Failed to load notifications'
+        throw new Error(message)
+      }
+
+      let items = Array.isArray(payload.notifications) ? payload.notifications : []
+
+      // Client-side filtering for mentions and system
+      if (filter === 'mentions') {
+        items = items.filter((n) => n.kind === 'collaboration.mention')
+      } else if (filter === 'system') {
+        items = items.filter((n) => 
+          n.kind === 'invoice.sent' || 
+          n.kind === 'invoice.paid' || 
+          n.kind === 'proposal.deck.ready'
+        )
+      }
+
+      setNotifications((prev) => (append ? [...prev, ...items] : items))
+      setNextCursor(payload.nextCursor ?? null)
+      setError(null)
+    },
+    [getIdToken, selectedClientId, user?.id, user?.role, activeFilter]
+  )
+
+  const updateNotificationStatus = useCallback(
+    async (ids: string[], action: AckAction) => {
+      if (!user?.id || ids.length === 0) {
+        return
+      }
+
+      const token = await getIdToken()
+
+      try {
+        setAckInFlight(true)
+        const response = await fetch('/api/notifications/ack', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ ids, action }),
+        })
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null
+          const message = payload?.error ?? 'Failed to update notifications'
+          throw new Error(message)
+        }
+
+        setNotifications((prev) => {
+          if (action === 'dismiss') {
+            return prev.filter((item) => !ids.includes(item.id))
+          }
+
+          return prev.map((item) => (ids.includes(item.id) ? { ...item, read: true } : item))
+        })
+
+        toast({ 
+          title: action === 'dismiss' ? 'Notifications dismissed' : 'Notifications marked as read',
+          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} updated`
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Notification update failed'
+        toast({ title: 'Notification error', description: message, variant: 'destructive' })
+      } finally {
+        setAckInFlight(false)
+      }
+    },
+    [getIdToken, toast, user?.id]
+  )
+
+  useEffect(() => {
+    if (!user?.id) {
+      return
+    }
+
+    setLoading(true)
+    fetchNotifications({ filter: activeFilter })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Unable to load notifications'
+        setError(message)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [user?.id, activeFilter, fetchNotifications])
+
+  const handleRefresh = useCallback(() => {
+    setLoading(true)
+    fetchNotifications({ filter: activeFilter })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Unable to load notifications'
+        setError(message)
+      })
+      .finally(() => setLoading(false))
+  }, [fetchNotifications, activeFilter])
+
+  const handleLoadMore = useCallback(() => {
+    if (!nextCursor || loadingMore) {
+      return
+    }
+
+    setLoadingMore(true)
+    fetchNotifications({ append: true, cursor: nextCursor, filter: activeFilter })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Unable to load notifications'
+        toast({ title: 'Notification error', description: message, variant: 'destructive' })
+      })
+      .finally(() => setLoadingMore(false))
+  }, [fetchNotifications, loadingMore, nextCursor, toast, activeFilter])
+
+  const handleDismiss = useCallback(
+    (id: string) => {
+      void updateNotificationStatus([id], 'dismiss')
+    },
+    [updateNotificationStatus]
+  )
+
+  const handleMarkAsRead = useCallback(
+    (id: string) => {
+      void updateNotificationStatus([id], 'read')
+    },
+    [updateNotificationStatus]
+  )
+
+  const handleMarkAllRead = useCallback(() => {
+    const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
+    if (unreadIds.length === 0) {
+      toast({ title: 'No unread notifications', description: 'All notifications are already marked as read' })
+      return
+    }
+    void updateNotificationStatus(unreadIds, 'read')
+  }, [notifications, updateNotificationStatus, toast])
+
+  const handleClearAll = useCallback(() => {
+    const allIds = notifications.map((item) => item.id)
+    if (allIds.length === 0) {
+      toast({ title: 'No notifications', description: 'Nothing to clear' })
+      return
+    }
+    void updateNotificationStatus(allIds, 'dismiss')
+  }, [notifications, updateNotificationStatus, toast])
+
+  const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications])
+
+  const renderTimestamp = (input: string | null) => {
+    if (!input) {
+      return 'Just now'
+    }
+
+    const date = new Date(input)
+    if (Number.isNaN(date.getTime())) {
+      return 'Just now'
+    }
+    return formatDistanceToNow(date, { addSuffix: true })
+  }
+
+  const getNotificationIcon = (kind: WorkspaceNotification['kind']) => {
+    switch (kind) {
+      case 'collaboration.mention':
+        return '💬'
+      case 'invoice.sent':
+      case 'invoice.paid':
+        return '💰'
+      case 'proposal.deck.ready':
+        return '📊'
+      case 'task.created':
+      case 'task.updated':
+        return '✅'
+      default:
+        return '📬'
+    }
+  }
+
+  const getNotificationCategory = (kind: WorkspaceNotification['kind']) => {
+    if (kind === 'collaboration.mention') return 'Mention'
+    if (kind === 'invoice.sent' || kind === 'invoice.paid' || kind === 'proposal.deck.ready') return 'System'
+    if (kind === 'task.created' || kind === 'task.updated') return 'Task'
+    return 'General'
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+          <p className="text-muted-foreground">Stay updated on what matters most</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight}>
+            <CheckCheck className="mr-2 h-4 w-4" />
+            Mark all read
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleClearAll} disabled={notifications.length === 0 || ackInFlight}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Clear all
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Failed to load notifications</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs value={activeFilter} onValueChange={(value) => setActiveFilter(value as FilterType)}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="all" className="relative">
+            All
+            {activeFilter === 'all' && notifications.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {notifications.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="unread" className="relative">
+            Unread
+            {unreadCount > 0 && (
+              <Badge variant="default" className="ml-2">
+                {unreadCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="mentions">
+            <span className="mr-1">💬</span>
+            Mentions
+          </TabsTrigger>
+          <TabsTrigger value="system">
+            <Filter className="mr-2 h-4 w-4" />
+            System
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeFilter} className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">
+                    {activeFilter === 'all' && 'All notifications'}
+                    {activeFilter === 'unread' && 'Unread notifications'}
+                    {activeFilter === 'mentions' && 'Mentions'}
+                    {activeFilter === 'system' && 'System notifications'}
+                  </CardTitle>
+                  <CardDescription>
+                    {activeFilter === 'all' && 'Everything that happened in your workspace'}
+                    {activeFilter === 'unread' && 'Notifications you haven\'t read yet'}
+                    {activeFilter === 'mentions' && 'Times you were mentioned in conversations'}
+                    {activeFilter === 'system' && 'Automated updates about invoices, proposals, and more'}
+                  </CardDescription>
+                </div>
+                {unreadCount > 0 && activeFilter !== 'unread' && (
+                  <Badge variant="destructive">{unreadCount} unread</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" /> Loading notifications…
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                  <div className="rounded-full bg-muted p-4">
+                    <BellOff className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">No notifications yet</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {activeFilter === 'unread' && 'You\'re all caught up! No unread notifications.'}
+                      {activeFilter === 'mentions' && 'No one has mentioned you recently.'}
+                      {activeFilter === 'system' && 'No system notifications at this time.'}
+                      {activeFilter === 'all' && 'When something happens, you\'ll see it here.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <ScrollArea className="h-[calc(100vh-24rem)]">
+                  <div className="space-y-2">
+                    {notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={cn(
+                          'group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
+                          !notification.read && 'border-primary/30 bg-primary/5'
+                        )}
+                      >
+                        <div className="text-2xl">{getNotificationIcon(notification.kind)}</div>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-foreground">{notification.title}</p>
+                                {!notification.read && (
+                                  <Badge variant="default" className="h-5 text-[10px]">
+                                    NEW
+                                  </Badge>
+                                )}
+                                <Badge variant="outline" className="h-5 text-[10px]">
+                                  {getNotificationCategory(notification.kind)}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{notification.body}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{renderTimestamp(notification.createdAt)}</span>
+                            {notification.actor.name && (
+                              <>
+                                <span>•</span>
+                                <span>by {notification.actor.name}</span>
+                              </>
+                            )}
+                            {notification.recipients.clientId && (
+                              <>
+                                <span>•</span>
+                                <Badge variant="secondary" className="h-4 text-[10px]">
+                                  Client
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          {!notification.read && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleMarkAsRead(notification.id)}
+                              disabled={ackInFlight}
+                              title="Mark as read"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDismiss(notification.id)}
+                            disabled={ackInFlight}
+                            title="Dismiss"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+
+              {!loading && notifications.length > 0 && nextCursor && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Load more
+                  </Button>
+                </div>
+              )}
+
+              {!loading && notifications.length > 0 && (
+                <div className="mt-4 text-center text-xs text-muted-foreground">
+                  Showing {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

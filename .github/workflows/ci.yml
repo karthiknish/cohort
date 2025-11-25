@@ -61,13 +61,6 @@ jobs:
           NEXT_PUBLIC_FEATURE_BIDIRECTIONAL_NAV=false
           NEXT_PUBLIC_FEATURE_NAVIGATION_PERSISTENCE=false
           NEXT_PUBLIC_FEATURE_ACTIVITY_WIDGET=false
-          NEXT_PUBLIC_SENTRY_DSN=https://public@example.ingest.sentry.io/111
-          SENTRY_DSN=https://public@example.ingest.sentry.io/111
-          SENTRY_EDGE_DSN=https://edge@example.ingest.sentry.io/111
-          SENTRY_TRACES_SAMPLE_RATE=0.1
-          SENTRY_PROFILES_SAMPLE_RATE=0.1
-          SENTRY_ENVIRONMENT=ci
-          SENTRY_DEBUG=false
           METRIC_SECRET=ci-metric-secret
           JWT_SECRET=ci-jwt-secret
           NEXTAUTH_SECRET=ci-nextauth-secret

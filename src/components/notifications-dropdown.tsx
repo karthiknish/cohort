@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, Check, Loader2, Trash2 } from 'lucide-react'
+import { Bell, Check, Loader2, Trash2, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -294,15 +295,23 @@ export function NotificationsDropdown() {
         <DropdownMenuSeparator />
         <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground">
           <span>{notifications.length} shown</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLoadMore}
-            disabled={loadingMore || !nextCursor}
-          >
-            {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Load more
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLoadMore}
+              disabled={loadingMore || !nextCursor}
+            >
+              {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Load more
+            </Button>
+            <Link href="/dashboard/notifications">
+              <Button variant="ghost" size="sm">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View all
+              </Button>
+            </Link>
+          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
