@@ -96,6 +96,7 @@ export default function DashboardPage() {
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [taskItems, setTaskItems] = useState<DashboardTaskItem[]>([])
   const [tasksLoading, setTasksLoading] = useState(true)
+  const [tasksError, setTasksError] = useState<string | null>(null)
   const [comparisonClientIds, setComparisonClientIds] = useState<string[]>(() => (selectedClientId ? [selectedClientId] : []))
   const [comparisonPeriodDays, setComparisonPeriodDays] = useState(30)
   const [comparisonSummaries, setComparisonSummaries] = useState<ClientComparisonSummary[]>([])
