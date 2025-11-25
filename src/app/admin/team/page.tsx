@@ -115,7 +115,7 @@ export default function AdminTeamPage() {
       } catch (err: unknown) {
         const message = extractErrorMessage(err, 'Unable to fetch team members')
         setError(message)
-        toast({ title: 'Admin error', description: message, variant: 'destructive' })
+        toast({ title: '❌ Failed to load team', description: message, variant: 'destructive' })
       } finally {
         if (append) {
           setLoadingMore(false)
@@ -186,11 +186,11 @@ export default function AdminTeamPage() {
       }
 
       setUsers((prev) => prev.map((record) => (record.id === userId ? { ...record, role } : record)))
-      toast({ title: 'Role updated', description: `Role changed to ${role}.` })
+      toast({ title: '✅ Role updated', description: `Member is now a ${role}.` })
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to update role')
       setError(message)
-      toast({ title: 'Admin error', description: message, variant: 'destructive' })
+      toast({ title: '❌ Role update failed', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
     }
@@ -234,13 +234,13 @@ export default function AdminTeamPage() {
 
       setUsers((prev) => prev.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record)))
       toast({
-        title: 'Status updated',
-        description: `Member status set to ${nextStatus.replace('_', ' ')}.`,
+        title: '✅ Status updated',
+        description: `Member is now ${nextStatus.replace('_', ' ')}.`,
       })
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to update status')
       setError(message)
-      toast({ title: 'Admin error', description: message, variant: 'destructive' })
+      toast({ title: '❌ Status update failed', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
     }
@@ -274,17 +274,17 @@ export default function AdminTeamPage() {
       const emailSent = payload.emailSent === true
       
       toast({
-        title: 'Invitation created',
+        title: '📧 Invitation sent!',
         description: emailSent 
-          ? `Invitation sent to ${inviteEmail} as ${inviteRole}.`
-          : `Invitation created for ${inviteEmail}. Email notification could not be sent.`,
+          ? `${inviteEmail} will receive an invite to join as ${inviteRole}.`
+          : `Invitation created for ${inviteEmail}, but email delivery failed.`,
       })
       setInviteOpen(false)
       setInviteEmail('')
       setInviteRole('team')
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to send invitation')
-      toast({ title: 'Invitation error', description: message, variant: 'destructive' })
+      toast({ title: '❌ Invitation failed', description: message, variant: 'destructive' })
     } finally {
       setInviteSending(false)
     }

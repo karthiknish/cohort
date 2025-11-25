@@ -59,12 +59,12 @@ export default function ContactPage() {
         throw new Error(data?.error ?? 'Failed to submit your request.')
       }
 
-      toast({ title: 'Message sent', description: 'Our team will reach out within one business day.' })
+      toast({ title: '📨 Message sent!', description: 'Thanks for reaching out. We\'ll get back to you within one business day.' })
       setStatus('idle')
       form.reset()
     } catch (error: unknown) {
       toast({
-        title: 'Submission failed',
+        title: '❌ Message not sent',
         description: getErrorMessage(error, 'We were unable to send your message. Please try again.'),
         variant: 'destructive',
       })

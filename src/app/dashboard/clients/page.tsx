@@ -121,13 +121,13 @@ function ClientsDashboardContent() {
               try {
                 await refreshClients()
                 toast({
-                  title: 'Clients refreshed',
-                  description: 'Client data has been updated.',
+                  title: '🔄 Clients refreshed',
+                  description: 'All client data has been updated.',
                 })
               } catch (error) {
                 toast({
-                  title: 'Refresh failed',
-                  description: 'Unable to update client data.',
+                  title: '❌ Refresh failed',
+                  description: 'Unable to update client data. Please try again.',
                   variant: 'destructive',
                 })
               }

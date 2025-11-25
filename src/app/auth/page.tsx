@@ -212,20 +212,20 @@ export default function AuthPage() {
         // Validate password strength
         if (passwordStrength.score < 2) {
           toast({
-            title: "Password too weak",
-            description: "Please create a stronger password with at least 8 characters.",
-            variant: "destructive",
-          })
+          title: "🔒 Password needs work",
+          description: "Create a stronger password with at least 8 characters, including letters and numbers.",
+          variant: "destructive",
+        })
           setIsSubmitting(false)
           return
         }
 
         if (signUpData.password !== signUpData.confirmPassword) {
           toast({
-            title: "Passwords do not match",
-            description: "Please confirm your password and try again.",
-            variant: "destructive",
-          })
+          title: "🔐 Passwords don't match",
+          description: "Please make sure both passwords are identical.",
+          variant: "destructive",
+        })
           setIsSubmitting(false)
           return
         }
@@ -236,8 +236,8 @@ export default function AuthPage() {
           displayName: signUpData.displayName.trim() || undefined,
         })
         toast({
-          title: "Account created",
-          description: "Welcome to Cohorts! Redirecting to your dashboard…",
+          title: "🎉 Welcome to Cohorts!",
+          description: "Your account has been created. Taking you to your dashboard...",
         })
       } else {
         // Validate email
@@ -257,8 +257,8 @@ export default function AuthPage() {
         }
         
         toast({
-          title: "Welcome back!",
-          description: "Redirecting to your dashboard…",
+          title: "👋 Welcome back!",
+          description: "Signed in successfully. Loading your workspace...",
         })
       }
 
@@ -266,7 +266,7 @@ export default function AuthPage() {
     } catch (error) {
       const errorMessage = getFirebaseErrorMessage(error)
       toast({
-        title: mode === "signin" ? "Sign in failed" : "Sign up failed",
+        title: mode === "signin" ? "❌ Sign in failed" : "❌ Sign up failed",
         description: errorMessage,
         variant: "destructive",
       })
@@ -280,15 +280,15 @@ export default function AuthPage() {
     try {
       await signInWithGoogle()
       toast({
-        title: "Welcome!",
-        description: "Signed in with Google. Redirecting to your dashboard…",
+        title: "👋 Welcome!",
+        description: "Signed in with Google. Loading your workspace...",
       })
       router.push("/dashboard")
     } catch (error) {
       const errorMessage = getFirebaseErrorMessage(error)
       toast({
-        title: "Google sign-in failed",
-        description: errorMessage,
+        title: "❌ Google sign-in failed",
+        description: `${errorMessage}. Please try again.`,
         variant: "destructive",
       })
     } finally {

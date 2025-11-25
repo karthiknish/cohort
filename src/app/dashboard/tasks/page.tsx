@@ -55,6 +55,23 @@ import {
   SheetTrigger,
   SheetDescription,
 } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -148,6 +165,14 @@ export default function TasksPage() {
   const [formState, setFormState] = useState<TaskFormState>(() => buildInitialFormState(selectedClient ?? undefined))
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [editingTask, setEditingTask] = useState<TaskRecord | null>(null)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editFormState, setEditFormState] = useState<TaskFormState>(() => buildInitialFormState())
+  const [updating, setUpdating] = useState(false)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [deletingTask, setDeletingTask] = useState<TaskRecord | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const initialLoading = loading && tasks.length === 0
 
   const resetForm = useCallback(() => {
@@ -260,8 +285,8 @@ export default function TasksPage() {
           setTasks([])
           setNextCursor(null)
           toast({
-            title: 'Error loading tasks',
-            description: message,
+            title: '❌ Failed to load tasks',
+            description: `${message}. Please check your connection and try again.`,
             variant: 'destructive',
           })
         }
@@ -313,8 +338,8 @@ export default function TasksPage() {
     } catch (error) {
       console.error('Failed to load additional tasks', error)
       toast({
-        title: 'Task pagination error',
-        description: error instanceof Error ? error.message : 'Unable to load more tasks',
+        title: '⚠️ Couldn\'t load more tasks',
+        description: error instanceof Error ? error.message : 'Unable to load more tasks. Try refreshing the page.',
         variant: 'destructive',
       })
     } finally {
@@ -547,8 +572,8 @@ export default function TasksPage() {
       setError(null)
       handleCreateOpenChange(false)
       toast({
-        title: 'Task created',
-        description: `Task "${createdTask.title}" has been added.`,
+        title: '✅ Task created successfully',
+        description: `"${createdTask.title}" has been added to your task list.`,
       })
     } catch (taskError: unknown) {
       console.error('Failed to create task', taskError)
@@ -560,15 +585,202 @@ export default function TasksPage() {
     }
   }
 
+  const handleEditOpen = (task: TaskRecord) => {
+    setEditingTask(task)
+    setEditFormState({
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      priority: task.priority,
+      assignedTo: task.assignedTo.join(', '),
+      clientId: task.clientId || null,
+      clientName: task.client || '',
+      dueDate: task.dueDate || '',
+      tags: task.tags.join(', '),
+    })
+    setUpdateError(null)
+    setIsEditOpen(true)
+  }
+
+  const handleEditClose = () => {
+    setIsEditOpen(false)
+    setEditingTask(null)
+    setEditFormState(buildInitialFormState())
+    setUpdateError(null)
+  }
+
+  const handleUpdateTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!editingTask) return
+
+    const trimmedTitle = editFormState.title.trim()
+    if (!trimmedTitle) {
+      setUpdateError('Title is required.')
+      return
+    }
+
+    setUpdating(true)
+    setUpdateError(null)
+
+    const assignedMembers = editFormState.assignedTo
+      .split(',')
+      .map((member) => member.trim())
+      .filter((member) => member.length > 0)
+
+    const normalizedTags = editFormState.tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0)
+
+    const payload = {
+      title: trimmedTitle,
+      description: editFormState.description.trim() || undefined,
+      status: editFormState.status,
+      priority: editFormState.priority,
+      assignedTo: assignedMembers,
+      dueDate: editFormState.dueDate || undefined,
+      tags: normalizedTags,
+    }
+
+    try {
+      const token = await authService.getIdToken()
+      const response = await fetch(`/api/tasks/${editingTask.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(errorData?.error || 'Unable to update task')
+      }
+
+      const updatedTask = (await response.json()) as TaskRecord
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      )
+      handleEditClose()
+      toast({
+        title: '✅ Task updated',
+        description: `Changes to "${updatedTask.title}" have been saved.`,
+      })
+    } catch (error) {
+      console.error('Failed to update task', error)
+      setUpdateError(error instanceof Error ? error.message : 'Unexpected error updating task')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleQuickStatusChange = async (task: TaskRecord, newStatus: TaskStatus) => {
+    try {
+      const token = await authService.getIdToken()
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(errorData?.error || 'Unable to update status')
+      }
+
+      const updatedTask = (await response.json()) as TaskRecord
+      setTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
+      )
+      toast({
+        title: '🔄 Status updated',
+        description: `Task moved to "${newStatus.replace('_', ' ')}".`,
+      })
+    } catch (error) {
+      console.error('Failed to update task status', error)
+      toast({
+        title: '❌ Status update failed',
+        description: error instanceof Error ? error.message : 'Unable to update status. Please try again.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleDeleteClick = (task: TaskRecord) => {
+    setDeletingTask(task)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTask) return
+
+    setDeleting(true)
+    try {
+      const token = await authService.getIdToken()
+      const response = await fetch(`/api/tasks/${deletingTask.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(errorData?.error || 'Unable to delete task')
+      }
+
+      setTasks((prev) => prev.filter((t) => t.id !== deletingTask.id))
+      toast({
+        title: '🗑️ Task deleted',
+        description: `"${deletingTask.title}" has been permanently removed.`,
+      })
+    } catch (error) {
+      console.error('Failed to delete task', error)
+      toast({
+        title: '❌ Deletion failed',
+        description: error instanceof Error ? error.message : 'Unable to delete task. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeleting(false)
+      setIsDeleteDialogOpen(false)
+      setDeletingTask(null)
+    }
+  }
+
   function TaskCard({ task }: { task: TaskRecord }) {
     return (
       <div className="flex flex-col justify-between rounded-md border border-muted/40 bg-background p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md">
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-semibold text-foreground line-clamp-2">{task.title}</h3>
-            <Badge variant="secondary" className={statusColors[task.status]}>
-              {task.status}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Badge variant="secondary" className={`${statusColors[task.status]} cursor-pointer hover:opacity-80`}>
+                  {task.status}
+                </Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'todo')} disabled={task.status === 'todo'}>
+                  To do
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'in-progress')} disabled={task.status === 'in-progress'}>
+                  In progress
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'review')} disabled={task.status === 'review'}>
+                  Review
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'completed')} disabled={task.status === 'completed'}>
+                  Completed
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
           <div className="flex flex-wrap gap-2">
@@ -621,10 +833,29 @@ export default function TasksPage() {
           )}
         </div>
         
-        <div className="mt-4 flex items-center justify-end pt-3 border-t border-muted/40">
-          <Button variant="ghost" size="sm" className="h-8 text-xs">
-            View Details
+        <div className="mt-4 flex items-center justify-end gap-2 pt-3 border-t border-muted/40">
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleEditOpen(task)}>
+            Edit
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditOpen(task)}>
+                Edit task
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => handleDeleteClick(task)}
+                className="text-destructive focus:text-destructive"
+              >
+                Delete task
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     )
@@ -964,9 +1195,27 @@ export default function TasksPage() {
                               <p className="text-sm font-semibold text-foreground truncate max-w-[260px] sm:max-w-[360px]">
                                 {task.title}
                               </p>
-                              <Badge variant="secondary" className={statusColors[task.status]}>
-                                {task.status}
-                              </Badge>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Badge variant="secondary" className={`${statusColors[task.status]} cursor-pointer hover:opacity-80`}>
+                                    {task.status}
+                                  </Badge>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'todo')} disabled={task.status === 'todo'}>
+                                    To do
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'in-progress')} disabled={task.status === 'in-progress'}>
+                                    In progress
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'review')} disabled={task.status === 'review'}>
+                                    Review
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleQuickStatusChange(task, 'completed')} disabled={task.status === 'completed'}>
+                                    Completed
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                               <Badge variant="outline" className={priorityColors[task.priority]}>
                                 {task.priority}
                               </Badge>
@@ -1005,10 +1254,29 @@ export default function TasksPage() {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center justify-end">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Task actions">
-                              <MoreHorizontal className="h-4 w-4" />
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => handleEditOpen(task)}>
+                              Edit
                             </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Task actions">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditOpen(task)}>
+                                  Edit task
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteClick(task)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  Delete task
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       </div>
@@ -1038,6 +1306,174 @@ export default function TasksPage() {
           </CardContent>
         </Card>
       </Tabs>
+
+      {/* Edit Task Sheet */}
+      <Sheet open={isEditOpen} onOpenChange={(open) => !open && handleEditClose()}>
+        <SheetContent side="right" className="w-full max-w-md px-0">
+          <form className="flex h-full flex-col" onSubmit={handleUpdateTask}>
+            <SheetHeader>
+              <SheetTitle>Edit task</SheetTitle>
+              <SheetDescription>
+                Update task details, assignments, and scheduling.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-title">Title</Label>
+                <Input
+                  id="edit-task-title"
+                  autoFocus
+                  value={editFormState.title}
+                  onChange={(event) =>
+                    setEditFormState((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  placeholder="Task title"
+                  required
+                  disabled={updating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-description">Description</Label>
+                <Textarea
+                  id="edit-task-description"
+                  value={editFormState.description}
+                  onChange={(event) =>
+                    setEditFormState((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  placeholder="Add context, goals, or next steps"
+                  rows={4}
+                  disabled={updating}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-task-status">Status</Label>
+                  <Select
+                    value={editFormState.status}
+                    onValueChange={(value) =>
+                      setEditFormState((prev) => ({ ...prev, status: value as TaskStatus }))
+                    }
+                    disabled={updating}
+                  >
+                    <SelectTrigger id="edit-task-status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todo">To do</SelectItem>
+                      <SelectItem value="in-progress">In progress</SelectItem>
+                      <SelectItem value="review">Review</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-task-priority">Priority</Label>
+                  <Select
+                    value={editFormState.priority}
+                    onValueChange={(value) =>
+                      setEditFormState((prev) => ({ ...prev, priority: value as TaskPriority }))
+                    }
+                    disabled={updating}
+                  >
+                    <SelectTrigger id="edit-task-priority">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-assignees">Assigned to</Label>
+                <Input
+                  id="edit-task-assignees"
+                  value={editFormState.assignedTo}
+                  onChange={(event) =>
+                    setEditFormState((prev) => ({ ...prev, assignedTo: event.target.value }))
+                  }
+                  placeholder="e.g. Alice, Bob (comma separated)"
+                  disabled={updating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-due-date">Due date</Label>
+                <Input
+                  id="edit-task-due-date"
+                  type="date"
+                  value={editFormState.dueDate}
+                  onChange={(event) =>
+                    setEditFormState((prev) => ({ ...prev, dueDate: event.target.value }))
+                  }
+                  disabled={updating}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-tags">Tags</Label>
+                <Input
+                  id="edit-task-tags"
+                  value={editFormState.tags}
+                  onChange={(event) =>
+                    setEditFormState((prev) => ({ ...prev, tags: event.target.value }))
+                  }
+                  placeholder="e.g. urgent, marketing (comma separated)"
+                  disabled={updating}
+                />
+              </div>
+              {updateError && (
+                <p className="text-sm text-destructive">{updateError}</p>
+              )}
+            </div>
+            <SheetFooter className="border-t px-4 py-4">
+              <SheetClose asChild>
+                <Button type="button" variant="outline" disabled={updating}>
+                  Cancel
+                </Button>
+              </SheetClose>
+              <Button type="submit" disabled={updating}>
+                {updating ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                  </span>
+                ) : (
+                  'Save changes'
+                )}
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deletingTask?.title}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
+                </span>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <RelatedPages
         title="Related features"

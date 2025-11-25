@@ -133,8 +133,8 @@ export default function NotificationsPage() {
         })
 
         toast({ 
-          title: action === 'dismiss' ? 'Notifications dismissed' : 'Notifications marked as read',
-          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} updated`
+          title: action === 'dismiss' ? '🗑️ Notifications cleared' : '✅ Marked as read',
+          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Notification update failed'
@@ -181,7 +181,7 @@ export default function NotificationsPage() {
     fetchNotifications({ append: true, cursor: nextCursor, filter: activeFilter })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: 'Notification error', description: message, variant: 'destructive' })
+        toast({ title: '⚠️ Loading failed', description: `${message}. Try refreshing the page.`, variant: 'destructive' })
       })
       .finally(() => setLoadingMore(false))
   }, [fetchNotifications, loadingMore, nextCursor, toast, activeFilter])
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
     if (unreadIds.length === 0) {
-      toast({ title: 'No unread notifications', description: 'All notifications are already marked as read' })
+      toast({ title: '✨ All caught up!', description: 'You have no unread notifications.' })
       return
     }
     void updateNotificationStatus(unreadIds, 'read')
@@ -212,7 +212,7 @@ export default function NotificationsPage() {
   const handleClearAll = useCallback(() => {
     const allIds = notifications.map((item) => item.id)
     if (allIds.length === 0) {
-      toast({ title: 'No notifications', description: 'Nothing to clear' })
+      toast({ title: '📥 Inbox empty', description: 'There are no notifications to clear.' })
       return
     }
     void updateNotificationStatus(allIds, 'dismiss')

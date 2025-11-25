@@ -621,7 +621,7 @@ export function useCollaborationData() {
           ...prev,
           [trimmedId]: message,
         }))
-        toast({ title: 'Thread error', description: message, variant: 'destructive' })
+        toast({ title: '⚠️ Thread loading failed', description: message, variant: 'destructive' })
       } finally {
         setThreadLoadingByRootId((prev) => ({
           ...prev,
@@ -760,7 +760,7 @@ export function useCollaborationData() {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to load messages'
         setMessagesError(message)
-        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+        toast({ title: '❌ Failed to load messages', description: message, variant: 'destructive' })
       } finally {
         setLoadingChannelId(null)
       }
@@ -824,7 +824,7 @@ export function useCollaborationData() {
         const message = error instanceof Error ? error.message : 'Unable to subscribe to messages'
         setMessagesError(message)
         setLoadingChannelId((current) => (current === channelId ? null : current))
-        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+        toast({ title: '⚠️ Connection lost', description: 'Messages may be delayed. Trying to reconnect...', variant: 'destructive' })
         void fetchMessages(selectedChannel)
       }
     )
@@ -973,7 +973,7 @@ export function useCollaborationData() {
 
     if (errors.length > 0) {
       toast({
-        title: 'File upload errors',
+        title: '❌ Some files couldn\'t be attached',
         description: errors.join('. '),
         variant: 'destructive',
       })
@@ -1024,7 +1024,7 @@ export function useCollaborationData() {
     const { senderName, senderRole } = resolveSenderDetails()
     if (!senderName) {
       toast({
-        title: 'Select a teammate',
+        title: '👤 Select a sender',
         description: 'Choose who is speaking before sending a message.',
         variant: 'destructive',
       })
@@ -1125,7 +1125,7 @@ export function useCollaborationData() {
       stopTyping()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to send message'
-      toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+      toast({ title: '❌ Message failed to send', description: message, variant: 'destructive' })
     } finally {
       setSending(false)
       setUploading(false)
@@ -1176,12 +1176,12 @@ export function useCollaborationData() {
     async (channelId: string, messageId: string, nextContent: string) => {
       const trimmedContent = nextContent.trim()
       if (!trimmedContent) {
-        toast({ title: 'Message required', description: 'Enter a message before saving.', variant: 'destructive' })
+        toast({ title: '✏️ Message required', description: 'Enter a message before saving.', variant: 'destructive' })
         return
       }
 
       if (!channels.some((channel) => channel.id === channelId)) {
-        toast({ title: 'Channel unavailable', description: 'Refresh and try editing again.', variant: 'destructive' })
+        toast({ title: '⚠️ Channel unavailable', description: 'Refresh the page and try editing again.', variant: 'destructive' })
         return
       }
 

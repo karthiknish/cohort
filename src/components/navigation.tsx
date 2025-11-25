@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -22,6 +22,7 @@ import {
   Activity,
   Users,
   HelpCircle,
+  Shield,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -36,7 +37,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { ClientWorkspaceSelector } from '@/components/client-workspace-selector'
 import { NotificationsDropdown } from '@/components/notifications-dropdown'
 import { CommandMenu } from '@/components/navigation/command-menu'
@@ -53,23 +54,35 @@ type NavItem = {
   href: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   description: string
+  roles?: ('admin' | 'team' | 'client')[] // If undefined, available to all roles
 }
 
-const navigation: NavItem[] = [
+// Define navigation items with role-based access
+const allNavigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'Overview and stats' },
-  { name: 'Clients', href: '/dashboard/clients', icon: Users, description: 'Manage workspaces' },
+  { name: 'Clients', href: '/dashboard/clients', icon: Users, description: 'Manage workspaces', roles: ['admin', 'team'] },
   { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent activity' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
-  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations' },
+  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations', roles: ['admin', 'team'] },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
-  { name: 'Finance', href: '/dashboard/finance', icon: CreditCard, description: 'Invoices & costs' },
-  { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals' },
+  { name: 'Finance', href: '/dashboard/finance', icon: CreditCard, description: 'Invoices & costs', roles: ['admin', 'team'] },
+  { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] },
   { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },
 ]
 
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()
+  const { user } = useAuth()
+  
+  // Filter navigation items based on user role
+  const navigation = useMemo(() => {
+    const userRole = user?.role ?? 'client'
+    return allNavigation.filter(item => {
+      if (!item.roles) return true // Available to all roles
+      return item.roles.includes(userRole as 'admin' | 'team' | 'client')
+    })
+  }, [user?.role])
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -122,6 +135,40 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
         </ScrollArea>
 
         <div className="space-y-2 border-t pt-4 px-1">
+          {/* Admin Panel Link - Only for admins */}
+          {user?.role === 'admin' && (
+            collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
+                  >
+                    <Link href="/admin" onClick={onNavigate}>
+                      <Shield className="h-4 w-4" />
+                      <span className={cn(collapsed && 'hidden')}>Admin</span>
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <span className="font-medium">Admin Panel</span>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                asChild
+                variant="ghost"
+                className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
+              >
+                <Link href="/admin" onClick={onNavigate}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  <span className={cn(collapsed && 'hidden')}>Admin Panel</span>
+                </Link>
+              </Button>
+            )
+          )}
+          
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -203,6 +250,24 @@ export function Header() {
         .toUpperCase()
     : 'US'
 
+  const roleLabel = useMemo(() => {
+    switch (user?.role) {
+      case 'admin': return 'Admin'
+      case 'team': return 'Team'
+      case 'client': return 'Client'
+      default: return null
+    }
+  }, [user?.role])
+
+  const roleBadgeVariant = useMemo(() => {
+    switch (user?.role) {
+      case 'admin': return 'default'
+      case 'team': return 'secondary'
+      case 'client': return 'outline'
+      default: return 'outline'
+    }
+  }, [user?.role])
+
   return (
     <>
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -277,16 +342,39 @@ export function Header() {
                   <span className="hidden text-sm font-medium sm:inline">
                     {user?.name ?? 'Account User'}
                   </span>
+                  {roleLabel && (
+                    <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="hidden sm:inline-flex text-[10px] px-1.5 py-0">
+                      {roleLabel}
+                    </Badge>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold">{user?.name ?? 'Account User'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{user?.name ?? 'Account User'}</span>
+                      {roleLabel && (
+                        <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="text-[10px] px-1.5 py-0">
+                          {roleLabel}
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground">{user?.email ?? 'user@example.com'}</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {user?.role === 'admin' && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/settings">Settings</Link>
                 </DropdownMenuItem>

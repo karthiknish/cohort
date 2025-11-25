@@ -1,17 +1,37 @@
 import Link from 'next/link'
-import { BarChart3, CreditCard, Megaphone, FileText, MessageSquare, CheckSquare, Plus } from 'lucide-react'
+import { BarChart3, CreditCard, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase, Users } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/contexts/auth-context'
 
-const quickLinks = [
+type QuickLink = {
+  title: string
+  description: string
+  href: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  badge: string | null
+  roles?: ('admin' | 'team' | 'client')[]
+}
+
+type CreateAction = {
+  label: string
+  href: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  description: string
+  roles?: ('admin' | 'team' | 'client')[]
+}
+
+// Admin-specific quick links
+const adminQuickLinks: QuickLink[] = [
   {
     title: 'Manage ad integrations',
     description: 'Connect platforms, refresh syncs, and review campaign metrics in the Ads hub.',
     href: '/dashboard/ads',
     icon: Megaphone,
     badge: null,
+    roles: ['admin', 'team'],
   },
   {
     title: 'Track cash flow',
@@ -19,6 +39,7 @@ const quickLinks = [
     href: '/dashboard/finance',
     icon: CreditCard,
     badge: null,
+    roles: ['admin', 'team'],
   },
   {
     title: 'Deep-dive analytics',
@@ -29,12 +50,38 @@ const quickLinks = [
   },
 ]
 
-const createActions = [
+// Client-specific quick links (simpler, focused on their needs)
+const clientQuickLinks: QuickLink[] = [
+  {
+    title: 'View your projects',
+    description: 'Check project status, timelines, and deliverables.',
+    href: '/dashboard/projects',
+    icon: Briefcase,
+    badge: null,
+  },
+  {
+    title: 'Track your tasks',
+    description: 'See tasks assigned to you and their current status.',
+    href: '/dashboard/tasks',
+    icon: CheckSquare,
+    badge: null,
+  },
+  {
+    title: 'Team collaboration',
+    description: 'Message your team and stay updated on discussions.',
+    href: '/dashboard/collaboration',
+    icon: MessageSquare,
+    badge: null,
+  },
+]
+
+const createActions: CreateAction[] = [
   {
     label: 'New Proposal',
     href: '/dashboard/proposals',
     icon: FileText,
     description: 'AI-powered',
+    roles: ['admin', 'team'],
   },
   {
     label: 'New Task',
@@ -55,6 +102,24 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ compact }: QuickActionsProps) {
+  const { user } = useAuth()
+  const userRole = user?.role ?? 'client'
+  
+  // Choose quick links based on role
+  const quickLinks = userRole === 'client' ? clientQuickLinks : adminQuickLinks
+  
+  // Filter create actions based on role
+  const filteredCreateActions = createActions.filter(action => {
+    if (!action.roles) return true
+    return action.roles.includes(userRole as 'admin' | 'team' | 'client')
+  })
+  
+  // Filter quick links based on role
+  const filteredQuickLinks = quickLinks.filter(link => {
+    if (!link.roles) return true
+    return link.roles.includes(userRole as 'admin' | 'team' | 'client')
+  })
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -65,7 +130,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
           </div>
           {!compact && (
             <div className="hidden sm:flex items-center gap-2">
-              {createActions.map((action) => {
+              {filteredCreateActions.map((action) => {
                 const Icon = action.icon
                 return (
                   <Button key={action.href} asChild variant="outline" size="sm" className="gap-1.5">
@@ -84,7 +149,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
         {/* Mobile create actions */}
         {!compact && (
           <div className="grid gap-2 sm:hidden mb-4">
-            {createActions.map((action) => {
+            {filteredCreateActions.map((action) => {
               const Icon = action.icon
               return (
                 <Button key={action.href} asChild variant="outline" size="sm" className="justify-start gap-2">
@@ -100,7 +165,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
         )}
 
         <div className={`grid gap-4 ${compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
-          {quickLinks.map((link) => {
+          {filteredQuickLinks.map((link) => {
             const Icon = link.icon
             return (
               <Link

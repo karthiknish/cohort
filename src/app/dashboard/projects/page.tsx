@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Briefcase, Calendar, LayoutGrid, List, ListChecks, Loader2, MessageSquare, Plus, RefreshCw, Search, Tag, Users } from 'lucide-react'
+import { Briefcase, Calendar, Edit, LayoutGrid, List, ListChecks, Loader2, MessageSquare, MoreHorizontal, Plus, RefreshCw, Search, Tag, Trash2, Users } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
+import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,9 +27,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../collaboration/utils'
 
 type ProjectResponse = {
@@ -56,6 +75,9 @@ export default function ProjectsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const debouncedQuery = useDebouncedValue(searchInput, 350)
 
@@ -112,8 +134,8 @@ export default function ProjectsPage() {
       setProjects([])
       setError(message)
       toast({
-        title: 'Error loading projects',
-        description: message,
+        title: '❌ Failed to load projects',
+        description: `${message}. Please check your connection and try again.`,
         variant: 'destructive',
       })
     } finally {
@@ -124,6 +146,91 @@ export default function ProjectsPage() {
   useEffect(() => {
     void loadProjects()
   }, [loadProjects])
+
+  const handleProjectCreated = useCallback((project: ProjectRecord) => {
+    setProjects((prev) => [project, ...prev])
+  }, [])
+
+  const handleDeleteProject = useCallback(async () => {
+    if (!projectToDelete || !user?.id) return
+
+    setDeleting(true)
+    try {
+      const token = await getIdToken()
+      const response = await fetch(`/api/projects/${projectToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        let message = 'Failed to delete project'
+        try {
+          const data = await response.json() as { error?: string }
+          if (data.error) message = data.error
+        } catch {
+          // ignore
+        }
+        throw new Error(message)
+      }
+
+      setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
+      toast({
+        title: '🗑️ Project deleted',
+        description: `"${projectToDelete.name}" has been permanently removed.`,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete project'
+      toast({ title: '❌ Deletion failed', description: message, variant: 'destructive' })
+    } finally {
+      setDeleting(false)
+      setDeleteDialogOpen(false)
+      setProjectToDelete(null)
+    }
+  }, [projectToDelete, user?.id, getIdToken, toast])
+
+  const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
+    if (!user?.id) return
+
+    try {
+      const token = await getIdToken()
+      const response = await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        let message = 'Failed to update project'
+        try {
+          const data = await response.json() as { error?: string }
+          if (data.error) message = data.error
+        } catch {
+          // ignore
+        }
+        throw new Error(message)
+      }
+
+      const data = await response.json() as { project: ProjectRecord }
+      setProjects((prev) => prev.map((p) => p.id === project.id ? data.project : p))
+      toast({
+        title: '✅ Project status updated',
+        description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update project'
+      toast({ title: '❌ Status update failed', description: message, variant: 'destructive' })
+    }
+  }, [user?.id, getIdToken, toast])
+
+  const openDeleteDialog = useCallback((project: ProjectRecord) => {
+    setProjectToDelete(project)
+    setDeleteDialogOpen(true)
+  }, [])
 
   const statusCounts = useMemo(() => {
     return projects.reduce<Record<ProjectStatus, number>>((acc, project) => {
@@ -177,8 +284,8 @@ export default function ProjectsPage() {
               void loadProjects().then(() => {
                 if (!error) {
                   toast({
-                    title: 'Projects refreshed',
-                    description: 'The project list has been updated.',
+                    title: '🔄 Projects refreshed',
+                    description: `${projects.length} project${projects.length !== 1 ? 's' : ''} loaded successfully.`,
                   })
                 }
               })
@@ -189,12 +296,33 @@ export default function ProjectsPage() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Refresh
           </Button>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
+          <CreateProjectDialog onProjectCreated={handleProjectCreated} />
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action cannot be undone. 
+              All associated tasks and collaboration history will remain but will no longer be linked to this project.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProject}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard
@@ -282,9 +410,19 @@ export default function ProjectsPage() {
               <div className={viewMode === 'grid' ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pr-4" : "space-y-4 pr-4"}>
                 {projects.map((project) => (
                   viewMode === 'grid' ? (
-                    <ProjectCard key={project.id} project={project} />
+                    <ProjectCard 
+                      key={project.id} 
+                      project={project} 
+                      onDelete={openDeleteDialog}
+                      onUpdateStatus={handleUpdateStatus}
+                    />
                   ) : (
-                    <ProjectRow key={project.id} project={project} />
+                    <ProjectRow 
+                      key={project.id} 
+                      project={project}
+                      onDelete={openDeleteDialog}
+                      onUpdateStatus={handleUpdateStatus}
+                    />
                   )
                 ))}
               </div>
@@ -296,7 +434,11 @@ export default function ProjectsPage() {
   )
 }
 
-function ProjectCard({ project }: { project: ProjectRecord }) {
+function ProjectCard({ project, onDelete, onUpdateStatus }: { 
+  project: ProjectRecord
+  onDelete: (project: ProjectRecord) => void
+  onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
+}) {
   const tasksQuery = new URLSearchParams({
     projectId: project.id,
     projectName: project.name,
@@ -309,9 +451,36 @@ function ProjectCard({ project }: { project: ProjectRecord }) {
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-foreground line-clamp-1">{project.name}</h3>
-          <Badge variant="secondary" className={STATUS_CLASSES[project.status]}>
-            {formatStatusLabel(project.status)}
-          </Badge>
+          <div className="flex items-center gap-1">
+            <Badge variant="secondary" className={STATUS_CLASSES[project.status]}>
+              {formatStatusLabel(project.status)}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
+                  Change status
+                </DropdownMenuItem>
+                {PROJECT_STATUSES.filter((s) => s !== project.status).map((status) => (
+                  <DropdownMenuItem key={status} onClick={() => onUpdateStatus(project, status)}>
+                    {formatStatusLabel(status)}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(project)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         {project.clientName && (
           project.clientId ? (
@@ -368,7 +537,11 @@ function ProjectCard({ project }: { project: ProjectRecord }) {
   )
 }
 
-function ProjectRow({ project }: { project: ProjectRecord }) {
+function ProjectRow({ project, onDelete, onUpdateStatus }: { 
+  project: ProjectRecord
+  onDelete: (project: ProjectRecord) => void
+  onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
+}) {
   const tasksQuery = new URLSearchParams({
     projectId: project.id,
     projectName: project.name,
@@ -382,9 +555,23 @@ function ProjectRow({ project }: { project: ProjectRecord }) {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-foreground">{project.name}</h3>
-            <Badge variant="secondary" className={STATUS_CLASSES[project.status]}>
-              {formatStatusLabel(project.status)}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Badge variant="secondary" className={cn(STATUS_CLASSES[project.status], "cursor-pointer hover:opacity-80")}>
+                  {formatStatusLabel(project.status)}
+                </Badge>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
+                  Change status
+                </DropdownMenuItem>
+                {PROJECT_STATUSES.filter((s) => s !== project.status).map((status) => (
+                  <DropdownMenuItem key={status} onClick={() => onUpdateStatus(project, status)}>
+                    {formatStatusLabel(status)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {project.clientName ? (
               project.clientId ? (
                 <Link href={`/dashboard/clients?clientId=${project.clientId}`}>
@@ -444,6 +631,15 @@ function ProjectRow({ project }: { project: ProjectRecord }) {
                 <MessageSquare className="h-4 w-4" />
                 Open discussion
               </Link>
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="gap-2 text-destructive hover:bg-destructive/10"
+              onClick={() => onDelete(project)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
             </Button>
           </div>
         </div>

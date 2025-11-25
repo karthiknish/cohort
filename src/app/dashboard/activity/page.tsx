@@ -85,8 +85,8 @@ export default function ActivityPage() {
   useEffect(() => {
     if (error) {
       toast({
-        title: 'Activity sync failed',
-        description: error,
+        title: '❌ Activity sync failed',
+        description: `${error}. Try refreshing.`,
         variant: 'destructive',
       })
     }
@@ -94,7 +94,7 @@ export default function ActivityPage() {
 
   const handleRetry = () => {
     toast({
-      title: 'Refreshing activity',
+      title: '🔄 Refreshing activity',
       description: 'Syncing latest updates...',
     })
     retry()

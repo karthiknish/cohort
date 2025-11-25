@@ -308,3 +308,32 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ p
     return NextResponse.json({ error: 'Failed to update project' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest, context: { params: Promise<{ projectId: string }> }) {
+  try {
+    const auth = await authenticateRequest(request)
+    if (!auth.uid) {
+      throw new AuthenticationError('Authentication required', 401)
+    }
+
+    const { projectId } = await context.params
+    if (!projectId) {
+      return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
+    }
+
+    const workspace = await resolveWorkspaceContext(auth)
+    const snapshot = await ensureProjectAccess(workspace, projectId)
+
+    // Delete the project document
+    await snapshot.ref.delete()
+
+    return NextResponse.json({ success: true, message: 'Project deleted successfully' })
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+
+    console.error('[projects] detail DELETE failed', error)
+    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 })
+  }
+}

@@ -26,6 +26,7 @@ export function FinanceDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
   const isAdmin = user?.role === 'admin'
+  const isClient = user?.role === 'client'
 
   const {
     selectedPeriod,
@@ -96,8 +97,8 @@ export function FinanceDashboard() {
       // Validate data exists before export
       if (!filteredInvoices || !costs) {
         toast({
-          title: 'Export failed',
-          description: 'No data available for export',
+          title: '📊 No data to export',
+          description: 'Add some invoices or costs first, then try exporting again.',
           variant: 'destructive',
         })
         return
@@ -151,14 +152,14 @@ export function FinanceDashboard() {
 
       // Success feedback
       toast({
-        title: 'Export successful',
-        description: `Downloaded ${filteredInvoices.length} invoices and ${costs.length} costs`,
+        title: '📥 Export complete!',
+        description: `Downloaded ${filteredInvoices.length} invoice${filteredInvoices.length !== 1 ? 's' : ''} and ${costs.length} cost${costs.length !== 1 ? 's' : ''} to CSV.`,
       })
     } catch (error) {
       console.error('Failed to export finance data:', error)
       toast({
-        title: 'Export failed',
-        description: 'Unable to generate CSV file',
+        title: '❌ Export failed',
+        description: 'Unable to generate CSV file. Please try again.',
         variant: 'destructive',
       })
     }
@@ -193,8 +194,8 @@ export function FinanceDashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          <TabsTrigger value="recurring">Recurring</TabsTrigger>
-          <TabsTrigger value="costs">Costs</TabsTrigger>
+          {!isClient && <TabsTrigger value="recurring">Recurring</TabsTrigger>}
+          {!isClient && <TabsTrigger value="costs">Costs</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -229,26 +230,30 @@ export function FinanceDashboard() {
           />
         </TabsContent>
 
-        <TabsContent value="recurring" className="space-y-4">
-          <RecurringInvoicesCard />
-        </TabsContent>
+        {!isClient && (
+          <TabsContent value="recurring" className="space-y-4">
+            <RecurringInvoicesCard />
+          </TabsContent>
+        )}
 
-        <TabsContent value="costs" className="space-y-4">
-          <FinanceCostsCard
-            costs={costs}
-            monthlyCostTotal={monthlyCostTotal}
-            newCost={newCost}
-            onChangeNewCost={setNewCost}
-            onAddCost={handleAddCost}
-            onRemoveCost={handleRemoveCost}
-            submitting={isSubmittingCost}
-            removingCostId={removingCostId}
-            onLoadMore={loadMoreCosts}
-            hasMore={hasMoreCosts}
-            loadingMore={loadingMoreCosts}
-            currency={stats.primaryCurrency}
-          />
-        </TabsContent>
+        {!isClient && (
+          <TabsContent value="costs" className="space-y-4">
+            <FinanceCostsCard
+              costs={costs}
+              monthlyCostTotal={monthlyCostTotal}
+              newCost={newCost}
+              onChangeNewCost={setNewCost}
+              onAddCost={handleAddCost}
+              onRemoveCost={handleRemoveCost}
+              submitting={isSubmittingCost}
+              removingCostId={removingCostId}
+              onLoadMore={loadMoreCosts}
+              hasMore={hasMoreCosts}
+              loadingMore={loadingMoreCosts}
+              currency={stats.primaryCurrency}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       <RelatedPages
