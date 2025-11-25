@@ -31,11 +31,16 @@ export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, last
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {lastRefreshed && (
-            <span className="text-xs text-muted-foreground hidden sm:inline-block">
-              Updated {lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <div className="hidden sm:flex flex-col items-end mr-2">
+            <span className="text-sm font-medium">
+              {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </span>
-          )}
+            {lastRefreshed && (
+              <span className="text-xs text-muted-foreground">
+                Updated {lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
           <Button
             variant="outline"
             size="sm"

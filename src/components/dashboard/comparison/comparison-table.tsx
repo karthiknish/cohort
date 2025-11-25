@@ -34,11 +34,11 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="pb-2">Workspace</th>
-            <th className="pb-2">Revenue</th>
-            <th className="pb-2">Ad spend</th>
-            <th className="pb-2">
+          <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
+            <th className="pb-3 pl-2 font-medium">Workspace</th>
+            <th className="pb-3 font-medium">Revenue</th>
+            <th className="pb-3 font-medium">Ad spend</th>
+            <th className="pb-3 font-medium">
               <div className="flex items-center gap-1">
                 ROAS
                 <Tooltip>
@@ -51,7 +51,7 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 </Tooltip>
               </div>
             </th>
-            <th className="pb-2">
+            <th className="pb-3 font-medium">
               <div className="flex items-center gap-1">
                 CPA
                 <Tooltip>
@@ -64,7 +64,7 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 </Tooltip>
               </div>
             </th>
-            <th className="pb-2">
+            <th className="pb-3 pr-2 font-medium">
               <div className="flex items-center gap-1">
                 Outstanding
                 <Tooltip>
@@ -79,29 +79,29 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/60">
+        <tbody className="divide-y divide-border/50">
           {rows.map((row) => (
-            <tr key={row.clientId} className="align-top">
-              <td className="py-3">
-                <p className="text-sm font-semibold text-foreground">{row.clientName}</p>
+            <tr key={row.clientId} className="group transition-colors hover:bg-muted/50">
+              <td className="py-3 pl-2">
+                <p className="font-medium text-foreground">{row.clientName}</p>
                 <p className="text-xs text-muted-foreground">{row.periodDays}-day window</p>
               </td>
-              <td className="py-3 font-medium text-foreground">{formatCurrency(row.totalRevenue, row.currency)}</td>
-              <td className="py-3">{formatCurrency(row.totalAdSpend, row.currency)}</td>
+              <td className="py-3 font-medium">{formatCurrency(row.totalRevenue, row.currency)}</td>
+              <td className="py-3 text-muted-foreground">{formatCurrency(row.totalAdSpend, row.currency)}</td>
               <td className="py-3">
                 <span className={cn(
-                  'rounded-md px-2 py-1 text-xs font-semibold',
+                  'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset',
                   row.roas !== Number.POSITIVE_INFINITY && row.roas < 1
-                    ? 'bg-rose-100 text-rose-700'
+                    ? 'bg-rose-50 text-rose-700 ring-rose-600/20'
                     : row.roas > 2
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-muted text-foreground',
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                      : 'bg-gray-50 text-gray-600 ring-gray-500/10',
                 )}>
                   {formatRoas(row.roas)}
                 </span>
               </td>
-              <td className="py-3">{formatCpa(row.cpa, row.currency)}</td>
-              <td className="py-3">{formatCurrency(row.outstanding, row.currency)}</td>
+              <td className="py-3 text-muted-foreground">{formatCpa(row.cpa, row.currency)}</td>
+              <td className="py-3 pr-2 text-muted-foreground">{formatCurrency(row.outstanding, row.currency)}</td>
             </tr>
           ))}
         </tbody>

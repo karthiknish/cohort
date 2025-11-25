@@ -420,11 +420,18 @@ export default function DashboardPage() {
     const netMargin = totalRevenue - combinedExpenses
     const roas = totalAdSpend > 0 && totalRevenue > 0 ? totalRevenue / totalAdSpend : null
 
+    // Detect currency from records
+    const currencies = new Set([
+      ...revenueRecords.map((r) => r.currency).filter(Boolean),
+      ...costs.map((c) => c.currency).filter(Boolean),
+    ])
+    const displayCurrency = currencies.size === 1 ? (Array.from(currencies)[0] as string) : 'USD'
+
     return [
       {
         id: 'total-revenue',
         label: 'Total Revenue',
-        value: formatCurrency(totalRevenue),
+        value: formatCurrency(totalRevenue, displayCurrency),
         helper:
           revenueRecords.length > 0
             ? revenueRecords.length === 1
@@ -437,7 +444,7 @@ export default function DashboardPage() {
       {
         id: 'ad-spend',
         label: 'Ad Spend',
-        value: formatCurrency(totalAdSpend),
+        value: formatCurrency(totalAdSpend, displayCurrency),
         helper: providerCount > 0 ? `Data from ${providerCount} ad platforms` : 'Connect ad accounts to see spend',
         icon: Megaphone,
         emphasis: 'neutral',
@@ -445,7 +452,7 @@ export default function DashboardPage() {
       {
         id: 'net-margin',
         label: 'Net Margin',
-        value: formatCurrency(netMargin),
+        value: formatCurrency(netMargin, displayCurrency),
         helper: 'Money left after marketing and operating costs',
         icon: TrendingUp,
         emphasis: netMargin > 0 ? 'positive' : netMargin < 0 ? 'negative' : 'neutral',
@@ -644,82 +651,99 @@ export default function DashboardPage() {
 
         <StatsCards stats={summaryStats} loading={statsLoading} />
 
-        <FadeIn>
-          <div className="space-y-4">
-            <DashboardFilterBar
-              clients={clients}
-              selectedClientIds={comparisonClientIds}
-              onClientChange={setComparisonClientIds}
-              periodDays={comparisonPeriodDays}
-              onPeriodChange={setComparisonPeriodDays}
-              canCompare={Boolean(canCompareAcrossClients)}
-            />
-            {comparisonHasSelection && !comparisonError && (comparisonLoading || comparisonSummaries.length > 0) && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {comparisonLoading || !comparisonAggregate ? (
-                  <>
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                  </>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <FadeIn>
+              <PerformanceChart metrics={chartData} loading={statsLoading} />
+            </FadeIn>
+
+            <FadeIn>
+              <div className="space-y-4">
+                <DashboardFilterBar
+                  clients={clients}
+                  selectedClientIds={comparisonClientIds}
+                  onClientChange={setComparisonClientIds}
+                  periodDays={comparisonPeriodDays}
+                  onPeriodChange={setComparisonPeriodDays}
+                  canCompare={Boolean(canCompareAcrossClients)}
+                />
+                {comparisonHasSelection && !comparisonError && (comparisonLoading || comparisonSummaries.length > 0) && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {comparisonLoading || !comparisonAggregate ? (
+                      <>
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                      </>
+                    ) : (
+                      <>
+                        <ComparisonSummaryTile
+                          label="Combined revenue"
+                          value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
+                          helper={comparisonAggregate.mixedCurrencies
+                            ? 'Totals unavailable for mixed currencies'
+                            : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
+                          tooltip="Total revenue across all selected workspaces"
+                        />
+                        <ComparisonSummaryTile
+                          label="Ad spend"
+                          value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
+                          helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
+                          tooltip="Total ad spend across all selected workspaces"
+                        />
+                        <ComparisonSummaryTile
+                          label="Outstanding"
+                          value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
+                          helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
+                          tooltip="Total unpaid invoices and retainers"
+                        />
+                        <ComparisonSummaryTile
+                          label="Weighted ROAS"
+                          value={comparisonAggregate.mixedCurrencies || comparisonAggregate.avgRoas === null ? '—' : formatRoas(comparisonAggregate.avgRoas)}
+                          helper={comparisonAggregate.mixedCurrencies ? 'Unavailable for mixed currencies' : 'Revenue ÷ ad spend across selection'}
+                          tooltip="Average ROAS weighted by ad spend"
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+                {comparisonError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Comparison data unavailable</AlertTitle>
+                    <AlertDescription>{comparisonError}</AlertDescription>
+                  </Alert>
                 ) : (
-                  <>
-                    <ComparisonSummaryTile
-                      label="Combined revenue"
-                      value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
-                      helper={comparisonAggregate.mixedCurrencies
-                        ? 'Totals unavailable for mixed currencies'
-                        : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
-                      tooltip="Total revenue across all selected workspaces"
-                    />
-                    <ComparisonSummaryTile
-                      label="Ad spend"
-                      value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
-                      helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
-                      tooltip="Total ad spend across all selected workspaces"
-                    />
-                    <ComparisonSummaryTile
-                      label="Outstanding"
-                      value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
-                      helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
-                      tooltip="Total unpaid invoices and retainers"
-                    />
-                    <ComparisonSummaryTile
-                      label="Weighted ROAS"
-                      value={comparisonAggregate.mixedCurrencies || comparisonAggregate.avgRoas === null ? '—' : formatRoas(comparisonAggregate.avgRoas)}
-                      helper={comparisonAggregate.mixedCurrencies ? 'Unavailable for mixed currencies' : 'Revenue ÷ ad spend across selection'}
-                      tooltip="Average ROAS weighted by ad spend"
-                    />
-                  </>
+                  <Card className="shadow-sm">
+                    <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <CardTitle className="text-base">Workspace comparison</CardTitle>
+                        <CardDescription>
+                          {comparisonHasSelection
+                            ? `Tracking ${comparisonTargets.length} workspace${comparisonTargets.length > 1 ? 's' : ''} over the last ${comparisonPeriodDays} days.`
+                            : 'Pick at least one workspace to start comparing performance.'}
+                        </CardDescription>
+                      </div>
+                      {!canCompareAcrossClients && (
+                        <Badge variant="secondary" className="text-xs">Admin view only</Badge>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <ComparisonTable rows={comparisonSummaries} loading={comparisonLoading} hasSelection={comparisonHasSelection} />
+                    </CardContent>
+                  </Card>
                 )}
               </div>
-            )}
-            {comparisonError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Comparison data unavailable</AlertTitle>
-                <AlertDescription>{comparisonError}</AlertDescription>
-              </Alert>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <Card className="lg:col-span-2 shadow-sm">
-                  <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <CardTitle className="text-base">Workspace comparison</CardTitle>
-                      <CardDescription>
-                        {comparisonHasSelection
-                          ? `Tracking ${comparisonTargets.length} workspace${comparisonTargets.length > 1 ? 's' : ''} over the last ${comparisonPeriodDays} days.`
-                          : 'Pick at least one workspace to start comparing performance.'}
-                      </CardDescription>
-                    </div>
-                    {!canCompareAcrossClients && (
-                      <Badge variant="secondary" className="text-xs">Admin view only</Badge>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <ComparisonTable rows={comparisonSummaries} loading={comparisonLoading} hasSelection={comparisonHasSelection} />
-                  </CardContent>
-                </Card>
+            </FadeIn>
+          </div>
+
+          <div className="space-y-6">
+            <FadeIn>
+              <QuickActions compact />
+            </FadeIn>
+
+            {!comparisonError && comparisonHasSelection && (comparisonLoading || comparisonSummaries.length > 0) && (
+              <FadeIn>
                 <Card className="shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-base">Workspace highlights</CardTitle>
@@ -729,34 +753,20 @@ export default function DashboardPage() {
                     <ComparisonInsights insights={comparisonInsights} loading={comparisonLoading} />
                   </CardContent>
                 </Card>
-              </div>
+              </FadeIn>
             )}
+
+            <FadeIn>
+              <TasksCard tasks={filteredUpcomingTasks} loading={tasksLoading} />
+            </FadeIn>
+
+            <FadeIn>
+              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                <ActivityWidget />
+              </Suspense>
+            </FadeIn>
           </div>
-        </FadeIn>
-
-        <FadeIn>
-          <QuickActions />
-        </FadeIn>
-
-        <FadeIn>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <FadeInItem className="lg:col-span-2">
-              <PerformanceChart metrics={chartData} loading={statsLoading} />
-            </FadeInItem>
-
-            <div className="space-y-6">
-              <FadeInItem>
-                <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                  <ActivityWidget />
-                </Suspense>
-              </FadeInItem>
-
-              <FadeInItem>
-                <TasksCard tasks={filteredUpcomingTasks} loading={tasksLoading} />
-              </FadeInItem>
-            </div>
-          </div>
-        </FadeIn>
+        </div>
       </div>
     </TooltipProvider>
   )

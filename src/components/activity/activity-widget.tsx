@@ -193,77 +193,76 @@ export function ActivityWidget() {
   }
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="shadow-sm h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <CardTitle className="text-lg">Recent Activity</CardTitle>
+          <CardTitle className="text-base">Recent Activity</CardTitle>
           {isRealTime && (
-            <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              Live
-            </span>
-          )}
-          {(activityType !== 'all' || dateRange !== '7d') && (
-            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-              Filtered
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
           )}
         </div>
         
         {/* Filter Controls */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={activityType} onValueChange={(value) => updateFilters(value, dateRange)}>
-              <SelectTrigger className="w-32 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="task_completed">Tasks</SelectItem>
-                <SelectItem value="message_posted">Messages</SelectItem>
-                <SelectItem value="project_updated">Projects</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex items-center gap-1">
+          <Select value={activityType} onValueChange={(value) => updateFilters(value, dateRange)}>
+            <SelectTrigger className="h-7 w-[28px] px-0 border-0 hover:bg-muted focus:ring-0 data-[state=open]:bg-muted">
+              <Filter className="h-4 w-4 text-muted-foreground mx-auto" />
+              <span className="sr-only">Filter type</span>
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="task_completed">Tasks</SelectItem>
+              <SelectItem value="message_posted">Messages</SelectItem>
+              <SelectItem value="project_updated">Projects</SelectItem>
+            </SelectContent>
+          </Select>
           
           <Select value={dateRange} onValueChange={(value) => updateFilters(activityType, value)}>
-            <SelectTrigger className="w-24 h-8 text-xs">
-              <SelectValue />
+            <SelectTrigger className="h-7 text-xs border-0 hover:bg-muted focus:ring-0 data-[state=open]:bg-muted gap-1 px-2">
+              <span className="text-muted-foreground">
+                {dateRange === '1d' ? '24h' : dateRange === '7d' ? '7d' : dateRange === '30d' ? '30d' : '90d'}
+              </span>
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1d">1 Day</SelectItem>
-              <SelectItem value="7d">7 Days</SelectItem>
-              <SelectItem value="30d">30 Days</SelectItem>
-              <SelectItem value="90d">90 Days</SelectItem>
+            <SelectContent align="end">
+              <SelectItem value="1d">Last 24h</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         {error ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={handleRefresh}>
+          <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+            <p className="text-sm text-destructive mb-2">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
               Try again
             </Button>
           </div>
         ) : filteredActivities.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+            <div className="rounded-full bg-muted/50 p-3 mb-3">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No activity found</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-[180px]">
               {activities.length === 0 
-                ? 'No recent activity for this client'
-                : 'No activities match the current filters'
+                ? 'No recent updates for this client'
+                : 'Try adjusting your filters'
               }
             </p>
             {(activityType !== 'all' || dateRange !== '7d') && (
-              <Button variant="outline" size="sm" className="mt-2" onClick={() => updateFilters('all', '7d')}>
+              <Button variant="ghost" size="sm" className="mt-2 h-8 text-xs" onClick={() => updateFilters('all', '7d')}>
                 Clear filters
               </Button>
             )}
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-0.5 -mx-2">
             {filteredActivities.map((activity) => (
               <ActivityItem key={activity.id} activity={activity} />
             ))}

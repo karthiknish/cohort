@@ -50,48 +50,56 @@ const createActions = [
   },
 ]
 
-export function QuickActions() {
+interface QuickActionsProps {
+  compact?: boolean
+}
+
+export function QuickActions({ compact }: QuickActionsProps) {
   return (
     <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">Quick actions</CardTitle>
-            <CardDescription>Jump into the teams and workflows that need attention.</CardDescription>
+            {!compact && <CardDescription>Jump into the teams and workflows that need attention.</CardDescription>}
           </div>
-          <div className="hidden sm:flex items-center gap-2">
+          {!compact && (
+            <div className="hidden sm:flex items-center gap-2">
+              {createActions.map((action) => {
+                const Icon = action.icon
+                return (
+                  <Button key={action.href} asChild variant="outline" size="sm" className="gap-1.5">
+                    <Link href={action.href}>
+                      <Plus className="h-3.5 w-3.5" />
+                      {action.label}
+                    </Link>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Mobile create actions */}
+        {!compact && (
+          <div className="grid gap-2 sm:hidden mb-4">
             {createActions.map((action) => {
               const Icon = action.icon
               return (
-                <Button key={action.href} asChild variant="outline" size="sm" className="gap-1.5">
+                <Button key={action.href} asChild variant="outline" size="sm" className="justify-start gap-2">
                   <Link href={action.href}>
-                    <Plus className="h-3.5 w-3.5" />
+                    <Icon className="h-4 w-4" />
                     {action.label}
+                    <span className="ml-auto text-xs text-muted-foreground">{action.description}</span>
                   </Link>
                 </Button>
               )
             })}
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Mobile create actions */}
-        <div className="grid gap-2 sm:hidden mb-4">
-          {createActions.map((action) => {
-            const Icon = action.icon
-            return (
-              <Button key={action.href} asChild variant="outline" size="sm" className="justify-start gap-2">
-                <Link href={action.href}>
-                  <Icon className="h-4 w-4" />
-                  {action.label}
-                  <span className="ml-auto text-xs text-muted-foreground">{action.description}</span>
-                </Link>
-              </Button>
-            )
-          })}
-        </div>
+        )}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-4 ${compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
           {quickLinks.map((link) => {
             const Icon = link.icon
             return (
@@ -111,12 +119,14 @@ export function QuickActions() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground group-hover:text-primary">{link.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>
+                    {!compact && <p className="mt-1 text-xs text-muted-foreground">{link.description}</p>}
                   </div>
                 </div>
-                <span className="mt-4 inline-flex items-center text-xs font-medium text-primary">
-                  Go to {link.title.split(' ')[0]}
-                </span>
+                {!compact && (
+                  <span className="mt-4 inline-flex items-center text-xs font-medium text-primary">
+                    Go to {link.title.split(' ')[0]}
+                  </span>
+                )}
               </Link>
             )
           })}
