@@ -3,6 +3,7 @@ import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import type {
   CollaborationAttachment,
   CollaborationChannelType,
@@ -51,7 +52,8 @@ const createMessageSchema = z
       .min(1)
       .max(120)
       .optional(),
-    senderName: z.string().trim().min(1).max(120),
+    // senderName and senderRole are now derived from auth context - ignored if sent
+    senderName: z.string().trim().max(120).optional(),
     senderRole: z.string().trim().max(120).optional(),
     content: z.string().trim().min(1).max(2000),
     attachments: z.array(attachmentSchema).max(5).optional(),
@@ -435,10 +437,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    // Rate limit: 10 requests per 10 seconds per user for message creation
+    const rateLimitResult = await checkRateLimit(`collaboration:${uid}`)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many messages. Please slow down.' },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+            'X-RateLimit-Reset': String(rateLimitResult.reset),
+          }
+        }
+      )
+    }
+
     const workspace = await resolveWorkspaceContext(auth)
 
     const json = (await request.json().catch(() => null)) ?? {}
     const payload = createMessageSchema.parse(json)
+
+    // Derive senderName and senderRole from auth context to prevent impersonation
+    const senderName = typeof auth.claims?.name === 'string' && auth.claims.name.trim()
+      ? auth.claims.name.trim()
+      : auth.email || 'Unknown User'
+    const senderRole = typeof auth.claims?.role === 'string'
+      ? auth.claims.role
+      : null
 
     let resolvedClientId: string | null = null
     let resolvedProjectId: string | null = null
@@ -486,8 +512,8 @@ export async function POST(request: NextRequest) {
       clientId: resolvedClientId,
       projectId: resolvedProjectId,
       senderId: uid,
-      senderName: payload.senderName,
-      senderRole: payload.senderRole ?? null,
+      senderName,
+      senderRole,
       content: payload.content,
       attachments: payload.attachments ?? [],
       format: payload.format ?? 'markdown',

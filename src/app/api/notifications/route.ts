@@ -108,6 +108,16 @@ export async function GET(request: NextRequest) {
     const clientIdParam = searchParams.get('clientId')
     const unreadOnly = searchParams.get('unread') === 'true'
 
+    // Validate role parameter if provided
+    if (roleParam && !['admin', 'team', 'client'].includes(roleParam)) {
+      return NextResponse.json({ error: 'Invalid role parameter' }, { status: 400 })
+    }
+
+    // Validate clientId format if provided (alphanumeric with dashes/underscores)
+    if (clientIdParam && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientIdParam)) {
+      return NextResponse.json({ error: 'Invalid clientId format' }, { status: 400 })
+    }
+
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || PAGE_SIZE_DEFAULT, 1), PAGE_SIZE_MAX)
 
     let query = workspace.workspaceRef
@@ -139,7 +149,8 @@ export async function GET(request: NextRequest) {
 
     const notifications = docs.slice(0, pageSize).map((doc) => mapNotification(doc, auth.uid!))
 
-    const nextCursorDoc = docs.length > pageSize ? docs[docs.length - 1] : null
+    // Fix: Use pageSize index for next cursor, not last doc in slice
+    const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
     const nextCursor = nextCursorDoc
       ? (() => {
           const createdAt = toISO(nextCursorDoc.get('createdAt'))

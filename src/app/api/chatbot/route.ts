@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { chatbotService } from '@/services/chatbot'
 import { ChatbotGenerateRequest } from '@/types/chatbot'
 
@@ -9,6 +10,22 @@ export async function POST(request: NextRequest) {
     const auth = await authenticateRequest(request)
     if (!auth.uid) {
       throw new AuthenticationError('Authentication required', 401)
+    }
+
+    // Rate limit: 10 requests per 10 seconds per user
+    const rateLimitResult = await checkRateLimit(`chatbot:${auth.uid}`)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please slow down.' },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+            'X-RateLimit-Reset': String(rateLimitResult.reset),
+          }
+        }
+      )
     }
 
     const body = (await request.json()) as ChatbotGenerateRequest | null

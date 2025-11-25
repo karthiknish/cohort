@@ -274,19 +274,38 @@ export async function GET(request: NextRequest) {
     const invoicePageSizeParam = searchParams.get('invoicePageSize')
     const costPageSizeParam = searchParams.get('costPageSize')
 
+    // Validate clientId format if provided (alphanumeric with dashes/underscores)
+    if (clientId && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientId)) {
+      return NextResponse.json({ error: 'Invalid clientId format' }, { status: 400 })
+    }
+
     const invoicePageSize = Math.min(Math.max(Number(invoicePageSizeParam) || MAX_INVOICES, 1), MAX_INVOICES)
     const costPageSize = Math.min(Math.max(Number(costPageSizeParam) || MAX_COSTS, 1), MAX_COSTS)
 
     const workspace = await resolveWorkspaceContext(auth)
 
-    const revenueQuery = workspace.financeRevenueCollection
+    // Build queries with clientId filter at the database level when provided
+    let revenueQuery = workspace.financeRevenueCollection
       .orderBy('period', 'asc')
       .limit(MAX_REVENUE_DOCS)
 
-    let invoiceQuery = workspace.financeInvoicesCollection
-      .orderBy('createdAt', 'desc')
-      .orderBy(FieldPath.documentId(), 'desc')
-      .limit(invoicePageSize + 1)
+    if (clientId) {
+      revenueQuery = workspace.financeRevenueCollection
+        .where('clientId', '==', clientId)
+        .orderBy('period', 'asc')
+        .limit(MAX_REVENUE_DOCS)
+    }
+
+    let invoiceQuery = clientId
+      ? workspace.financeInvoicesCollection
+          .where('clientId', '==', clientId)
+          .orderBy('createdAt', 'desc')
+          .orderBy(FieldPath.documentId(), 'desc')
+          .limit(invoicePageSize + 1)
+      : workspace.financeInvoicesCollection
+          .orderBy('createdAt', 'desc')
+          .orderBy(FieldPath.documentId(), 'desc')
+          .limit(invoicePageSize + 1)
 
     if (invoiceAfterParam) {
       const [timestamp, docId] = invoiceAfterParam.split('|')
@@ -298,10 +317,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    let costQuery = workspace.financeCostsCollection
-      .orderBy('createdAt', 'desc')
-      .orderBy(FieldPath.documentId(), 'desc')
-      .limit(costPageSize + 1)
+    let costQuery = clientId
+      ? workspace.financeCostsCollection
+          .where('clientId', 'in', [clientId, null])
+          .orderBy('createdAt', 'desc')
+          .orderBy(FieldPath.documentId(), 'desc')
+          .limit(costPageSize + 1)
+      : workspace.financeCostsCollection
+          .orderBy('createdAt', 'desc')
+          .orderBy(FieldPath.documentId(), 'desc')
+          .limit(costPageSize + 1)
 
     if (costAfterParam) {
       const [timestamp, docId] = costAfterParam.split('|')
@@ -321,19 +346,16 @@ export async function GET(request: NextRequest) {
 
     const revenue = revenueSnapshot.docs
       .map((doc) => mapRevenueDoc(doc.id, doc.data() as StoredFinanceRevenue))
-      .filter((entry) => !clientId || entry.clientId === clientId)
 
     const invoiceDocs = invoiceSnapshot.docs
     const invoices = invoiceDocs
       .slice(0, invoicePageSize)
       .map((doc) => mapInvoiceDoc(doc.id, doc.data() as StoredFinanceInvoice))
-      .filter((invoice) => !clientId || invoice.clientId === clientId)
 
     const costDocs = costSnapshot.docs
     const costs = costDocs
       .slice(0, costPageSize)
       .map((doc) => mapCostDoc(doc.id, doc.data() as StoredFinanceCost))
-      .filter((cost) => !clientId || cost.clientId === clientId || cost.clientId === null)
 
     const payments = computePaymentSummary(invoices)
 
