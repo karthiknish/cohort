@@ -159,23 +159,29 @@ export function CollaborationDashboard() {
         </div>
       )}
 
-      <Card className="border-muted/60 bg-background">
+      <Card className="border-muted/60 bg-background shadow-sm">
         <CardHeader className="border-b border-muted/40 pb-4">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <MessageSquare className="h-3.5 w-3.5" /> {totalChannels} channels
-            </Badge>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> {totalParticipants} teammates
-            </Badge>
-            {selectedChannel && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" /> {channelMessages.length} messages in current thread
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">Channels</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <Badge variant="outline" className="flex items-center gap-1 bg-muted/50">
+                <MessageSquare className="h-3 w-3" /> {totalChannels} channels
               </Badge>
-            )}
+              <Badge variant="outline" className="flex items-center gap-1 bg-muted/50">
+                <Users className="h-3 w-3" /> {totalParticipants} teammates
+              </Badge>
+              {selectedChannel && (
+                <Badge variant="outline" className="flex items-center gap-1 bg-primary/5 text-primary border-primary/20">
+                  <MessageSquare className="h-3 w-3" /> {channelMessages.length} messages
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 p-0 lg:flex-row">
+        <CardContent className="flex flex-col p-0 lg:flex-row">
           <CollaborationChannelList
             channels={channels}
             filteredChannels={filteredChannels}

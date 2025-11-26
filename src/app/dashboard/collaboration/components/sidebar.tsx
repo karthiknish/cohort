@@ -24,54 +24,62 @@ export function CollaborationSidebar({ channel, channelParticipants, sharedFiles
   const [open, setOpen] = useState(true)
 
   const Content = () => (
-    <div className="flex w-full flex-col gap-6 p-4 text-sm text-muted-foreground">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">Participants</p>
+    <div className="flex w-full flex-col gap-6 p-4 text-sm text-muted-foreground bg-muted/5 h-full">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 pb-2 border-b border-muted/20">
+           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Participants</p>
+        </div>
         {channel ? (
           channelParticipants.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {channelParticipants.map((participant) => (
-                <div key={participant.name} className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[11px] font-medium text-foreground">
+                <div key={participant.name} className="flex items-center gap-3 group">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background border border-muted text-xs font-medium text-foreground shadow-sm group-hover:border-primary/30 transition-colors">
                     {getInitials(participant.name)}
                   </span>
-                  <div className="flex flex-col">
-                    <span className="text-sm text-foreground">{participant.name}</span>
-                    {participant.role && <span className="text-xs text-muted-foreground">{participant.role}</span>}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-foreground truncate">{participant.name}</span>
+                    {participant.role && <span className="text-xs text-muted-foreground truncate">{participant.role}</span>}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No teammates added yet.</p>
+            <p className="text-sm text-muted-foreground italic">No teammates added yet.</p>
           )
         ) : (
-          <p className="text-sm text-muted-foreground">Select a channel to view its roster.</p>
+          <p className="text-sm text-muted-foreground italic">Select a channel to view its roster.</p>
         )}
       </div>
 
       <Separator className="lg:hidden" />
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">Shared files</p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 pb-2 border-b border-muted/20">
+           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Shared files</p>
+        </div>
         {sharedFiles.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Files shared in messages will appear here automatically.</p>
+          <p className="text-sm text-muted-foreground italic">Files shared in messages will appear here automatically.</p>
         ) : (
-          sharedFiles.map((file) => (
-            <Card key={`${file.url}-${file.name}`} className="border-muted/40 bg-muted/10">
-              <CardContent className="flex items-center gap-2 p-3">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-xs text-foreground hover:underline"
-                >
-                  {file.name}
-                </a>
-              </CardContent>
-            </Card>
-          ))
+          <div className="space-y-2">
+            {sharedFiles.map((file) => (
+              <Card key={`${file.url}-${file.name}`} className="border-muted/40 bg-background shadow-sm hover:shadow-md transition-shadow group">
+                <CardContent className="flex items-center gap-3 p-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted/20 text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-xs font-medium text-foreground hover:underline hover:text-primary transition-colors"
+                  >
+                    {file.name}
+                  </a>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </div>

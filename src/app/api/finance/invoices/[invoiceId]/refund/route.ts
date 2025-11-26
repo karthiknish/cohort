@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type Stripe from 'stripe'
 
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { getStripeClient } from '@/lib/stripe'
 import { recordInvoiceRevenue, syncInvoiceRecords } from '@/lib/finance-sync'
@@ -22,6 +23,15 @@ export async function POST(
   try {
     const auth = await authenticateRequest(request)
     assertAdmin(auth)
+
+    // Rate limit: 5 refund attempts per minute per user
+    const rateLimitResult = await checkRateLimit(`refund:${auth.uid}`)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many refund requests. Please wait a moment.' },
+        { status: 429 }
+      )
+    }
 
     const { invoiceId } = await context.params
     const trimmedInvoiceId = invoiceId?.trim()
@@ -84,15 +94,21 @@ export async function POST(
         ? stripeInvoice.amount_paid
         : Math.round(amountPaid * 100)
 
-    const refund = await stripe.refunds.create({
-      payment_intent: paymentIntentId,
-      amount: refundAmountCents,
-      metadata: {
-        workspaceId: workspace.workspaceId,
-        invoiceId: trimmedInvoiceId,
-        clientId: typeof invoiceData?.clientId === 'string' ? invoiceData.clientId : '',
+    // Generate idempotency key to prevent duplicate refunds
+    const idempotencyKey = `refund_${trimmedInvoiceId}_${refundAmountCents}_${Date.now().toString(36)}`
+
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: paymentIntentId,
+        amount: refundAmountCents,
+        metadata: {
+          workspaceId: workspace.workspaceId,
+          invoiceId: trimmedInvoiceId,
+          clientId: typeof invoiceData?.clientId === 'string' ? invoiceData.clientId : '',
+        },
       },
-    })
+      { idempotencyKey }
+    )
 
     const refundAmountDollars = Math.round((refund.amount / 100) * 100) / 100
 

@@ -1,32 +1,48 @@
-import { Ratelimit } from '@upstash/ratelimit'
-import { Redis } from '@upstash/redis'
+// Simple in-memory rate limiter to replace Upstash
+// This is a basic implementation and will reset on server restart
 
-// Create a new ratelimiter, that allows 10 requests per 10 seconds
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, '10 s'),
-  analytics: true,
-  /**
-   * Optional prefix for the keys used in redis.
-   *
-   * @default "@upstash/ratelimit"
-   */
-  prefix: '@upstash/ratelimit',
-})
+interface RateLimitBucket {
+  count: number
+  resetAt: number
+}
+
+const buckets = new Map<string, RateLimitBucket>()
+
+// Default: 10 requests per 10 seconds
+const LIMIT = 10
+const WINDOW_MS = 10 * 1000
 
 export async function checkRateLimit(identifier: string) {
-  // If Redis env vars are not set, skip rate limiting (dev mode fallback)
-  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-    console.warn('Rate limiting disabled: UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set')
-    return { success: true, limit: 0, remaining: 0, reset: 0 }
+  const now = Date.now()
+  const bucket = buckets.get(identifier)
+
+  if (!bucket || now >= bucket.resetAt) {
+    buckets.set(identifier, {
+      count: 1,
+      resetAt: now + WINDOW_MS
+    })
+    return { 
+      success: true, 
+      limit: LIMIT, 
+      remaining: LIMIT - 1, 
+      reset: now + WINDOW_MS 
+    }
   }
 
-  try {
-    const { success, limit, remaining, reset } = await ratelimit.limit(identifier)
-    return { success, limit, remaining, reset }
-  } catch (error) {
-    console.error('Rate limit check failed:', error)
-    // Fail open if rate limiting service is down
-    return { success: true, limit: 0, remaining: 0, reset: 0 }
+  if (bucket.count < LIMIT) {
+    bucket.count++
+    return { 
+      success: true, 
+      limit: LIMIT, 
+      remaining: LIMIT - bucket.count, 
+      reset: bucket.resetAt 
+    }
+  }
+
+  return { 
+    success: false, 
+    limit: LIMIT, 
+    remaining: 0, 
+    reset: bucket.resetAt 
   }
 }

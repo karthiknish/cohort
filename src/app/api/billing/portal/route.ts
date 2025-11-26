@@ -4,6 +4,7 @@ import type Stripe from 'stripe'
 import { z } from 'zod'
 
 import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { ensureStripeCustomer } from '@/lib/billing'
 import { getStripeClient } from '@/lib/stripe'
 import { resolveWorkspaceContext } from '@/lib/workspace'
@@ -18,6 +19,15 @@ export async function POST(request: NextRequest) {
     const auth = await authenticateRequest(request)
     if (!auth.uid) {
       throw new AuthenticationError('Authentication required', 401)
+    }
+
+    // Rate limit: 10 portal access attempts per minute per user
+    const rateLimitResult = await checkRateLimit(`portal:${auth.uid}`)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      )
     }
 
     const stripe = getStripeClient()

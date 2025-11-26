@@ -7,6 +7,9 @@ import { adminDb } from '@/lib/firebase-admin'
 import { recordInvoicePaidNotification, notifyInvoicePaidWhatsApp } from '@/lib/notifications'
 import { syncInvoiceRecords, recordInvoiceRevenue } from '@/lib/finance-sync'
 
+// Maximum age of webhook events to accept (5 minutes)
+const WEBHOOK_TOLERANCE_SECONDS = 300
+
 export async function POST(request: Request) {
   const body = await request.text()
   const signature = (await headers()).get('stripe-signature')
@@ -33,6 +36,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
+  // Replay attack protection: reject events older than tolerance
+  const eventAge = Math.floor(Date.now() / 1000) - event.created
+  if (eventAge > WEBHOOK_TOLERANCE_SECONDS) {
+    console.warn(`[stripe-webhook] Rejecting stale event ${event.id}, age: ${eventAge}s`)
+    return NextResponse.json({ error: 'Event too old' }, { status: 400 })
+  }
+
+  // Idempotency check: ensure we haven't processed this event before
+  const processedRef = adminDb.collection('_stripeWebhookEvents').doc(event.id)
+  const processedSnap = await processedRef.get()
+  
+  if (processedSnap.exists) {
+    // Already processed this event, return success to prevent retries
+    console.log(`[stripe-webhook] Event ${event.id} already processed, skipping`)
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+
   try {
     switch (event.type) {
       case 'invoice.paid':
@@ -46,6 +66,13 @@ export async function POST(request: Request) {
         // Unhandled event type
         break
     }
+
+    // Mark event as processed
+    await processedRef.set({
+      eventType: event.type,
+      processedAt: new Date().toISOString(),
+      livemode: event.livemode,
+    })
   } catch (error) {
     console.error(`[stripe-webhook] Error handling event ${event.type}`, error)
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })

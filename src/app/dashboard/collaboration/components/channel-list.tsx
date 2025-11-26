@@ -57,33 +57,38 @@ export function CollaborationChannelList({
               const summary = channelSummaries.get(channel.id)
               const isSelected = selectedChannel?.id === channel.id
               return (
-                <Button
+                <button
                   key={channel.id}
                   type="button"
-                  variant="ghost"
                   onClick={() => onSelectChannel(channel.id)}
                   className={cn(
-                    'h-auto w-full justify-start rounded-lg border border-transparent bg-transparent px-3 py-3 text-left shadow-none transition hover:bg-muted',
-                    isSelected && 'border-primary/40 bg-muted',
+                    'flex w-full flex-col gap-1.5 rounded-lg border p-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+                    isSelected
+                      ? 'border-primary/20 bg-primary/5 shadow-sm'
+                      : 'border-transparent hover:bg-muted/50 hover:border-muted/40'
                   )}
                 >
-                  <div className="flex w-full items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-foreground">{channel.name}</p>
-                        <Badge variant="outline" className={CHANNEL_TYPE_COLORS[channel.type]}>
-                          {channel.type}
-                        </Badge>
-                      </div>
-                      <p className="line-clamp-2 text-xs text-muted-foreground">
-                        {summary?.lastMessage ?? 'No messages yet'}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {summary?.lastTimestamp ? formatRelativeTime(summary.lastTimestamp) : ''}
+                  <div className="flex w-full items-start justify-between gap-2">
+                    <span className={cn("truncate text-sm font-medium", isSelected ? "text-primary" : "text-foreground")}>
+                      {channel.name}
+                    </span>
+                    {summary?.lastTimestamp && (
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        {formatRelativeTime(summary.lastTimestamp)}
                       </span>
-                    </div>
+                    )}
                   </div>
-                </Button>
+                  
+                  <div className="flex items-center gap-2">
+                     <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 font-normal", CHANNEL_TYPE_COLORS[channel.type])}>
+                        {channel.type}
+                      </Badge>
+                  </div>
+
+                  <p className="line-clamp-2 text-xs text-muted-foreground/80 mt-0.5">
+                    {summary?.lastMessage ?? 'No messages yet'}
+                  </p>
+                </button>
               )
             })}
           </div>

@@ -463,17 +463,17 @@ export function CollaborationMessagePane({
     const lastReplyLabel = lastReplyIso ? formatRelativeTime(lastReplyIso) : null
 
     const containerClass = cn(
-      'relative',
+      'relative group flex items-start gap-3 px-4 py-2 transition-colors hover:bg-muted/30',
       isReply
-        ? 'flex items-start gap-3 rounded-md border border-muted/40 bg-muted/10 p-3 transition-all hover:border-muted/60'
-        : 'group flex items-start gap-3 px-2 py-1.5 hover:bg-muted/30 rounded-md -mx-2 transition-colors',
-      isSearchResult && 'ring-1 ring-primary/40 ring-offset-1',
-      !showAvatar && !isReply && 'mt-0.5'
+        ? 'ml-12 mt-2 rounded-md border border-muted/40 bg-muted/10 p-3 hover:border-muted/60'
+        : '-mx-4',
+      isSearchResult && 'bg-primary/5 ring-1 ring-primary/20',
+      !showAvatar && !isReply && 'mt-0 py-1'
     )
 
     const avatarClass = isReply
-      ? 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/80 text-xs font-medium text-primary-foreground'
-      : 'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground'
+      ? 'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-medium text-primary ring-2 ring-background'
+      : 'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary ring-2 ring-background'
 
     return (
       <div key={message.id} className={containerClass}>
@@ -984,32 +984,32 @@ export function CollaborationMessagePane({
   }
 
   return (
-    <div className="flex min-h-[480px] flex-1 flex-col lg:h-[640px]">
-      <div className="flex items-start justify-between gap-3 border-b border-muted/40 p-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-lg font-semibold text-foreground">{channel.name}</CardTitle>
-            <Badge variant="outline" className={CHANNEL_TYPE_COLORS[channel.type]}>
+    <div className="flex min-h-[480px] flex-1 flex-col lg:h-[640px] bg-background/50">
+      <div className="flex items-center justify-between gap-3 border-b border-muted/40 bg-background/50 p-4 backdrop-blur-sm">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-base font-semibold text-foreground">{channel.name}</h2>
+            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-5 font-normal", CHANNEL_TYPE_COLORS[channel.type])}>
               {channel.type}
             </Badge>
             {channel.clientId && (
               <Link href={`/dashboard/clients?clientId=${channel.clientId}`}>
-                <Badge variant="outline" className="border-dashed hover:bg-muted cursor-pointer">
+                <Badge variant="outline" className="border-dashed hover:bg-muted cursor-pointer text-[10px] px-1.5 py-0 h-5 font-normal">
                   Client Workspace
                 </Badge>
               </Link>
             )}
           </div>
-          <CardDescription className="mt-1">
+          <p className="mt-1 truncate text-xs text-muted-foreground">
             {channelParticipants.map((member) => member.name).join(', ')}
-          </CardDescription>
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleExportChannel} disabled={channelMessages.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
+        <Button variant="outline" size="sm" onClick={handleExportChannel} disabled={channelMessages.length === 0} className="h-8 text-xs">
+          <Download className="mr-2 h-3.5 w-3.5" />
+          Export
         </Button>
       </div>
-      <div className="border-b border-muted/40 px-4 py-3">
+      <div className="border-b border-muted/40 bg-muted/5 px-4 py-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -1106,20 +1106,20 @@ export function CollaborationMessagePane({
         </div>
       </ScrollArea>
 
-      <div className="border-t border-muted/40 p-4">
-        <div className="space-y-2">
+      <div className="border-t border-muted/40 bg-background p-4">
+        <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <Select
               value={senderSelection}
               onValueChange={onSenderSelectionChange}
               disabled={channelParticipants.length === 0 || sending}
             >
-              <SelectTrigger className="w-full sm:w-56">
+              <SelectTrigger className="w-full sm:w-56 h-8 text-xs">
                 <SelectValue placeholder="Choose teammate" />
               </SelectTrigger>
               <SelectContent>
                 {channelParticipants.map((participant) => (
-                  <SelectItem key={participant.name} value={participant.name}>
+                  <SelectItem key={participant.name} value={participant.name} className="text-xs">
                     {participant.name}
                     {participant.role ? ` • ${participant.role}` : ''}
                   </SelectItem>
@@ -1172,11 +1172,11 @@ export function CollaborationMessagePane({
           )}
 
           <div className="space-y-3">
-            <div className="w-full">
+            <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
               {replyingToMessage && (
-                <div className="flex items-center justify-between rounded-t-md border-x border-t border-primary/30 bg-primary/5 px-3 py-2.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="flex items-center justify-between rounded-t-lg border-b border-muted/40 bg-muted/20 px-3 py-2 text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
                       <Reply className="h-3 w-3 text-primary" />
                     </div>
                     <div className="flex flex-col">
@@ -1184,7 +1184,7 @@ export function CollaborationMessagePane({
                       <span className="font-medium text-foreground">{replyingToMessage.senderName}</span>
                     </div>
                     {replyingToMessage.content && (
-                      <span className="ml-2 max-w-[200px] truncate text-muted-foreground">
+                      <span className="ml-2 max-w-[200px] truncate text-muted-foreground border-l border-muted pl-2">
                         "{replyingToMessage.content.slice(0, 50)}{replyingToMessage.content.length > 50 ? '…' : ''}"
                       </span>
                     )}
@@ -1192,10 +1192,10 @@ export function CollaborationMessagePane({
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-6 w-6 rounded-full hover:bg-primary/10" 
+                    className="h-5 w-5 rounded-full hover:bg-muted/50" 
                     onClick={handleCancelReply}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
               )}
@@ -1223,10 +1223,10 @@ export function CollaborationMessagePane({
                   setReplyingToMessage(null)
                 }}
                 disabled={isSendDisabled}
-                className="inline-flex items-center gap-2"
+                className="inline-flex items-center gap-2 h-8 text-xs"
               >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Send
+                {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Send Message
               </Button>
             </div>
           </div>

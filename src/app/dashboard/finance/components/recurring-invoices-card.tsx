@@ -7,12 +7,12 @@ import {
   Pause,
   Play,
   Trash2,
-  ChevronDown,
   Loader2,
   RefreshCw,
   DollarSign,
   Calendar,
   Receipt,
+  MoreHorizontal,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -287,37 +287,40 @@ export function RecurringInvoicesCard() {
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarClock className="h-4 w-4" />
+      <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6 border-b border-muted/40">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+              <CalendarClock className="h-5 w-5 text-primary" />
               Recurring Invoices
             </CardTitle>
             <CardDescription>
-              {activeCount} active schedule{activeCount !== 1 ? 's' : ''}
+              {activeCount} active schedule{activeCount !== 1 ? 's' : ''} running automatically.
             </CardDescription>
           </div>
-          <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="shadow-sm">
             <Plus className="mr-2 h-4 w-4" />
             Add Schedule
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
             </div>
           ) : schedules.length === 0 ? (
-            <div className="rounded-md border border-dashed border-muted/50 bg-muted/10 p-6 text-center">
-              <CalendarClock className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm text-muted-foreground">
-                No recurring invoices set up yet.
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 bg-muted/5 p-10 text-center">
+              <div className="rounded-full bg-muted/20 p-3 mb-4">
+                <CalendarClock className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground">No recurring invoices</h3>
+              <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                Set up automatic billing schedules for your clients to save time on manual invoicing.
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-4"
+                className="mt-6"
                 onClick={() => setCreateDialogOpen(true)}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -329,35 +332,41 @@ export function RecurringInvoicesCard() {
               {schedules.map((schedule) => (
                 <div
                   key={schedule.id}
-                  className="flex items-center justify-between rounded-md border border-muted/50 p-3"
+                  className="group flex items-center justify-between rounded-lg border border-muted/40 bg-card p-4 transition-all hover:bg-muted/20 hover:border-muted/60"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{schedule.clientName}</span>
-                      <Badge variant={schedule.isActive ? 'default' : 'secondary'}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="font-semibold text-foreground truncate">{schedule.clientName}</span>
+                      <Badge 
+                        variant={schedule.isActive ? 'default' : 'secondary'}
+                        className={schedule.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200' : ''}
+                      >
                         {schedule.isActive ? 'Active' : 'Paused'}
                       </Badge>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground/80">
+                        <DollarSign className="h-3.5 w-3.5" />
                         {formatCurrency(schedule.amount, schedule.currency)}
                       </span>
-                      <span>{FREQUENCY_LABELS[schedule.frequency]}</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        {FREQUENCY_LABELS[schedule.frequency]}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" />
                         Next: {formatDate(schedule.nextRunDate)}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Receipt className="h-3 w-3" />
+                      <span className="flex items-center gap-1.5">
+                        <Receipt className="h-3.5 w-3.5" />
                         {schedule.totalInvoicesGenerated} generated
                       </span>
                     </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <ChevronDown className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-70 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">

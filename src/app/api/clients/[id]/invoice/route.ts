@@ -5,6 +5,7 @@ import type Stripe from 'stripe'
 
 import { getStripeClient } from '@/lib/stripe'
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { recordInvoiceSentNotification, notifyInvoiceSentWhatsApp } from '@/lib/notifications'
 
@@ -96,6 +97,15 @@ export async function POST(
 
     assertAdmin(auth)
 
+    // Rate limit: 10 invoices per minute per user
+    const rateLimitResult = await checkRateLimit(`invoice:${auth.uid}`)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many invoice requests. Please wait a moment.' },
+        { status: 429 }
+      )
+    }
+
     const { id } = await context.params
     const clientId = id?.trim()
 
@@ -184,18 +194,24 @@ export async function POST(
 
     const invoiceLineDescription = description ?? `Services for ${clientName}`
 
-    const invoiceItem = await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      amount: amountCents,
-      currency: 'usd',
-      description: invoiceLineDescription,
-      metadata: {
-        ownerUid: auth.uid,
-        clientId,
-        workspaceId: workspace.workspaceId,
-        source: 'admin_manual_invoice',
+    // Generate idempotency key to prevent duplicate invoice items
+    const idempotencyKey = `invoice_${workspace.workspaceId}_${clientId}_${amountCents}_${Date.now().toString(36)}`
+
+    const invoiceItem = await stripe.invoiceItems.create(
+      {
+        customer: stripeCustomerId,
+        amount: amountCents,
+        currency: 'usd',
+        description: invoiceLineDescription,
+        metadata: {
+          ownerUid: auth.uid,
+          clientId,
+          workspaceId: workspace.workspaceId,
+          source: 'admin_manual_invoice',
+        },
       },
-    })
+      { idempotencyKey: `${idempotencyKey}_item` }
+    )
     createdInvoiceItemId = typeof invoiceItem?.id === 'string' ? invoiceItem.id : null
 
     const baseInvoiceParams: Stripe.InvoiceCreateParams = {

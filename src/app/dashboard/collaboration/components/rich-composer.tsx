@@ -431,8 +431,8 @@ export function RichComposer({
   }, [onDrop])
 
   return (
-    <div className="relative flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1">
+    <div className="relative flex flex-col">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-muted/40 bg-muted/10 px-2 py-1.5 rounded-t-lg">
         <ComposerButton icon={Bold} label="Bold" onClick={() => handleFormattingAction('bold')} disabled={disabled} />
         <ComposerButton icon={Italic} label="Italic" onClick={() => handleFormattingAction('italic')} disabled={disabled} />
         <ComposerButton icon={Quote} label="Quote" onClick={() => handleFormattingAction('blockquote')} disabled={disabled} />
@@ -470,7 +470,7 @@ export function RichComposer({
           }}
           disabled={disabled}
         />
-        <div className="mx-1 h-5 w-px bg-muted/60" />
+        <div className="mx-1 h-4 w-px bg-muted/60" />
         {onAttachClick && (
           <Button
             type="button"
@@ -479,11 +479,11 @@ export function RichComposer({
             onClick={onAttachClick}
             disabled={disabled}
             className={cn(
-              "h-8 gap-1.5 px-2 text-xs",
+              "h-7 gap-1.5 px-2 text-xs hover:bg-background/50",
               hasAttachments && "bg-primary/10 text-primary hover:bg-primary/20"
             )}
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Attach</span>
           </Button>
         )}
@@ -504,12 +504,12 @@ export function RichComposer({
           disabled={disabled}
           maxLength={2000}
           className={cn(
-            "min-h-[120px] resize-y transition-all",
-            isDraggingOver && "border-primary border-2 border-dashed bg-primary/5"
+            "min-h-[120px] resize-y border-0 shadow-none focus-visible:ring-0 bg-transparent p-3 rounded-b-lg rounded-t-none",
+            isDraggingOver && "bg-primary/5"
           )}
         />
         {isDraggingOver && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-primary/10">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/10 rounded-b-lg">
             <div className="flex flex-col items-center gap-2 text-primary">
               <Upload className="h-8 w-8" />
               <span className="text-sm font-medium">Drop files here to attach</span>
@@ -562,8 +562,8 @@ function ComposerButton({ icon: Icon, label, onClick, disabled }: ComposerButton
   }, [disabled, onClick])
 
   return (
-    <Button type="button" size="icon" variant="ghost" onClick={handleClick} disabled={disabled} className="h-8 w-8">
-      <Icon className="h-4 w-4" />
+    <Button type="button" size="icon" variant="ghost" onClick={handleClick} disabled={disabled} className="h-7 w-7 hover:bg-background/50">
+      <Icon className="h-3.5 w-3.5" />
       <span className="sr-only">{label}</span>
     </Button>
   )

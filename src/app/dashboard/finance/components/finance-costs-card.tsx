@@ -78,10 +78,10 @@ export function FinanceCostsCard({
   })
 
   return (
-    <Card className="border-muted/60 bg-background">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <CardTitle>Operating costs</CardTitle>
+          <CardTitle className="text-xl font-semibold">Operating Costs</CardTitle>
           <CardDescription>
             Track SaaS, people, and overhead expenses that roll into financial charts.
           </CardDescription>
@@ -93,28 +93,29 @@ export function FinanceCostsCard({
               placeholder="Search costs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 focus-visible:ring-primary"
             />
           </div>
-          <Badge variant="secondary" className="w-fit whitespace-nowrap bg-primary/10 text-xs font-medium uppercase tracking-wide text-primary">
+          <Badge variant="secondary" className="w-fit whitespace-nowrap bg-primary/10 text-xs font-semibold uppercase tracking-wide text-primary px-3 py-1.5">
             {formatCurrency(Math.round(monthlyCostTotal), resolvedCurrency)} per month
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-6">
         <form onSubmit={onAddCost} className="grid gap-3 md:grid-cols-[2fr,1fr,1fr,1fr,auto]">
-          <div className="space-y-1">
-            <Label htmlFor="cost-category">Cost category</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="cost-category" className="text-sm font-medium">Cost category</Label>
             <Input
               id="cost-category"
               value={newCost.category}
               onChange={(event) => onChangeNewCost((prev) => ({ ...prev, category: event.target.value }))}
               placeholder="e.g. Creative tooling"
+              className="focus-visible:ring-primary"
               required
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="cost-amount">Amount</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="cost-amount" className="text-sm font-medium">Amount</Label>
             <Input
               id="cost-amount"
               type="number"
@@ -122,19 +123,20 @@ export function FinanceCostsCard({
               value={newCost.amount}
               onChange={(event) => onChangeNewCost((prev) => ({ ...prev, amount: event.target.value }))}
               placeholder="1500"
+              className="focus-visible:ring-primary"
               required
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="cost-currency">Currency</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="cost-currency" className="text-sm font-medium">Currency</Label>
             <CurrencySelect
               value={(newCost.currency ?? 'USD') as CurrencyCode}
               onValueChange={(value) => onChangeNewCost((prev) => ({ ...prev, currency: value }))}
               showPopular
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="cost-cadence">Cadence</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="cost-cadence" className="text-sm font-medium">Cadence</Label>
             <Select
               value={newCost.cadence}
               onValueChange={(value) => onChangeNewCost((prev) => ({ ...prev, cadence: value as FinanceCostEntry['cadence'] }))}
@@ -150,7 +152,7 @@ export function FinanceCostsCard({
             </Select>
           </div>
           <div className="flex items-end">
-            <Button type="submit" className="w-full" disabled={submitting}>
+            <Button type="submit" className="w-full shadow-sm hover:shadow transition-shadow" disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
@@ -164,30 +166,30 @@ export function FinanceCostsCard({
           </div>
         </form>
 
-        <Separator />
+        <Separator className="bg-muted/50" />
 
         <div className="space-y-3">
           {filteredCosts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground py-2">
               {costs.length === 0 ? 'No company-level costs captured yet.' : 'No costs match your search.'}
             </p>
           ) : (
             filteredCosts.map((cost) => (
               <div
                 key={cost.id}
-                className="flex flex-col gap-3 rounded-lg border border-muted/40 bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-lg border border-muted/40 bg-muted/10 p-4 transition-colors hover:bg-muted/20 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex items-start gap-3">
                   <CurrencyBadge currency={(cost.currency ?? 'USD')} />
                   <div>
                     <p className="text-sm font-semibold text-foreground">{cost.category}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatCadence(cost.cadence)} · {formatCurrency(Math.round(cost.amount), cost.currency ?? resolvedCurrency)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  <Badge variant="secondary" className="bg-primary/10 text-primary font-semibold">
                     {formatCurrency(Math.round(cost.monthlyValue), cost.currency ?? resolvedCurrency)} / mo
                   </Badge>
                   <TooltipProvider>
@@ -197,7 +199,7 @@ export function FinanceCostsCard({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                           onClick={() => void onRemoveCost(cost.id)}
                           aria-label={`Remove ${cost.category}`}
                           disabled={removingCostId === cost.id}
@@ -225,6 +227,7 @@ export function FinanceCostsCard({
                 variant="outline"
                 onClick={() => void onLoadMore?.()}
                 disabled={loadingMore}
+                className="hover:bg-muted/50 transition-colors"
               >
                 {loadingMore ? (
                   <span className="inline-flex items-center gap-2 text-sm">

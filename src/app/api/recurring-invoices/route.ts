@@ -166,21 +166,37 @@ export async function GET(request: NextRequest) {
     const activeOnly = url.searchParams.get('activeOnly') === 'true'
     const clientId = url.searchParams.get('clientId')
 
+    // Validate clientId format if provided
+    if (clientId && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientId)) {
+      return NextResponse.json({ error: 'Invalid clientId format' }, { status: 400 })
+    }
+
+    // Build query with filters at database level
     let query = schedulesRef.orderBy('nextRunDate', 'asc')
     
     if (activeOnly) {
       query = query.where('isActive', '==', true)
     }
 
+    // Filter by clientId at query level when provided
+    if (clientId) {
+      query = schedulesRef
+        .where('clientId', '==', clientId)
+        .orderBy('nextRunDate', 'asc')
+      
+      if (activeOnly) {
+        query = schedulesRef
+          .where('clientId', '==', clientId)
+          .where('isActive', '==', true)
+          .orderBy('nextRunDate', 'asc')
+      }
+    }
+
     const snapshot = await query.limit(100).get()
 
-    let schedules: RecurringInvoiceSchedule[] = snapshot.docs.map((doc) =>
+    const schedules: RecurringInvoiceSchedule[] = snapshot.docs.map((doc) =>
       mapScheduleDoc(doc.id, doc.data() as StoredSchedule)
     )
-
-    if (clientId) {
-      schedules = schedules.filter((s) => s.clientId === clientId)
-    }
 
     return NextResponse.json({ schedules })
   } catch (error) {

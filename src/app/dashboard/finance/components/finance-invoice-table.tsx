@@ -1,7 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { BellRing, Calendar, Download, Eye, Loader2, RotateCcw, Search, FileDown } from 'lucide-react'
+import {
+  BellRing,
+  Calendar,
+  Download,
+  Eye,
+  FileDown,
+  Loader2,
+  MoreHorizontal,
+  RotateCcw,
+  Search,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,6 +22,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -105,14 +123,20 @@ export function FinanceInvoiceTable({
   }
 
   return (
-    <Card className="border-muted/60 bg-background">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle>Recent invoices</CardTitle>
-          <CardDescription>Filter, download, and monitor the latest billing activity.</CardDescription>
+          <CardTitle className="text-xl font-semibold">Recent Invoices</CardTitle>
+          <CardDescription className="mt-1">Filter, download, and monitor the latest billing activity.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={filteredInvoices.length === 0}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExport} 
+            disabled={filteredInvoices.length === 0}
+            className="hover:bg-muted/50 transition-colors"
+          >
             <FileDown className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
@@ -122,7 +146,7 @@ export function FinanceInvoiceTable({
               placeholder="Search invoices..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 focus-visible:ring-primary"
             />
           </div>
           <Select value={selectedStatus} onValueChange={onSelectStatus}>
@@ -140,9 +164,9 @@ export function FinanceInvoiceTable({
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="max-h-[420px]">
+        <ScrollArea className="max-h-[520px]">
           {filteredInvoices.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+            <div className="px-6 py-12 text-center text-sm text-muted-foreground">
               No invoices found for the selected filters.
             </div>
           ) : (
@@ -150,150 +174,136 @@ export function FinanceInvoiceTable({
               {filteredInvoices.map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="flex flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between"
+                  className="group flex flex-col gap-4 px-6 py-5 transition-colors hover:bg-muted/20 md:flex-row md:items-center md:justify-between"
                 >
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex-1 space-y-2.5">
+                    <div className="flex flex-wrap items-center gap-2.5">
                       <p className="text-sm font-semibold text-foreground">
-                        {invoice.number ?? invoice.id} · {invoice.clientName}
+                        {invoice.number ?? invoice.id}
                       </p>
-                      <Badge variant="secondary" className={STATUS_COLORS[invoice.status]}>
+                      <span className="text-muted-foreground">·</span>
+                      <p className="text-sm text-foreground">{invoice.clientName}</p>
+                      <Badge variant="secondary" className={`${STATUS_COLORS[invoice.status]} font-medium`}>
                         {invoice.status}
                       </Badge>
                       {invoice.stripeStatus && invoice.stripeStatus !== invoice.status && (
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="outline" className="capitalize text-xs">
                           {invoice.stripeStatus.replace(/_/g, ' ')}
                         </Badge>
                       )}
                     </div>
-                    {invoice.description && <p className="text-sm text-muted-foreground">{invoice.description}</p>}
+                    {invoice.description && (
+                      <p className="text-sm text-muted-foreground leading-relaxed">{invoice.description}</p>
+                    )}
                     <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                       {invoice.issuedDate && (
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" /> Issued {new Date(invoice.issuedDate).toLocaleDateString()}
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" /> 
+                          Issued {new Date(invoice.issuedDate).toLocaleDateString()}
                         </span>
                       )}
                       {invoice.dueDate && (
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" /> Due {new Date(invoice.dueDate).toLocaleDateString()}
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" /> 
+                          Due {new Date(invoice.dueDate).toLocaleDateString()}
                         </span>
                       )}
                       {invoice.paidDate && (
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" /> Paid {new Date(invoice.paidDate).toLocaleDateString()}
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" /> 
+                          Paid {new Date(invoice.paidDate).toLocaleDateString()}
                         </span>
                       )}
                       {typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0 ? (
-                        <span>Paid {formatCurrency(invoice.amountPaid, invoice.currency ?? 'USD')}</span>
+                        <span className="font-medium">
+                          Paid {formatCurrency(invoice.amountPaid, invoice.currency ?? 'USD')}
+                        </span>
                       ) : null}
                       {typeof invoice.amountRemaining === 'number' && invoice.amountRemaining > 0 ? (
-                        <span>Outstanding {formatCurrency(invoice.amountRemaining, invoice.currency ?? 'USD')}</span>
+                        <span className="font-medium text-amber-600">
+                          Outstanding {formatCurrency(invoice.amountRemaining, invoice.currency ?? 'USD')}
+                        </span>
                       ) : null}
                       {typeof invoice.amountRefunded === 'number' && invoice.amountRefunded > 0 ? (
-                        <span>Refunded {formatCurrency(invoice.amountRefunded, invoice.currency ?? 'USD')}</span>
+                        <span className="font-medium text-blue-600">
+                          Refunded {formatCurrency(invoice.amountRefunded, invoice.currency ?? 'USD')}
+                        </span>
                       ) : null}
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-4 md:justify-end">
                     <div className="text-right">
-                      <p className="text-base font-semibold text-foreground">
+                      <p className="text-lg font-semibold text-foreground">
                         {formatCurrency(invoice.amount, invoice.currency ?? 'USD')}
                       </p>
                       {invoice.status === 'overdue' && (
-                        <span className="text-xs font-medium text-red-600">Overdue</span>
+                        <span className="text-xs font-semibold text-red-600">Overdue</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              aria-label="View invoice"
-                              disabled={!invoice.hostedInvoiceUrl}
-                              onClick={() => {
-                                if (!invoice.hostedInvoiceUrl) return
-                                window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
-                              }}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 opacity-70 group-hover:opacity-100 transition-opacity"
+                          aria-label="Invoice actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          disabled={!invoice.hostedInvoiceUrl}
+                          onClick={() => {
+                            if (!invoice.hostedInvoiceUrl) return
+                            window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
+                          }}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Invoice
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!invoice.hostedInvoiceUrl}
+                          onClick={() => {
+                            if (!invoice.hostedInvoiceUrl) return
+                            window.open(`${invoice.hostedInvoiceUrl}?download=1`, '_blank', 'noopener')
+                          }}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download PDF
+                        </DropdownMenuItem>
+                        {onSendReminder && (invoice.status === 'sent' || invoice.status === 'overdue') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={sendingInvoiceId === invoice.id}
+                              onClick={() => onSendReminder(invoice)}
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>View invoice</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              aria-label="Download invoice"
-                              disabled={!invoice.hostedInvoiceUrl}
-                              onClick={() => {
-                                if (!invoice.hostedInvoiceUrl) return
-                                window.open(`${invoice.hostedInvoiceUrl}?download=1`, '_blank', 'noopener')
-                              }}
+                              <BellRing className={`mr-2 h-4 w-4 ${sendingInvoiceId === invoice.id ? 'animate-pulse text-primary' : ''}`} />
+                              {sendingInvoiceId === invoice.id ? 'Sending...' : 'Send Reminder'}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {onIssueRefund && 
+                          invoice.status === 'paid' && 
+                          typeof invoice.amountPaid === 'number' && 
+                          (invoice.amountRefunded ?? 0) < invoice.amountPaid && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={refundingInvoiceId === invoice.id}
+                              onClick={() => onIssueRefund(invoice)}
+                              className="text-red-600 focus:text-red-600"
                             >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Download invoice</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      {onSendReminder && (invoice.status === 'sent' || invoice.status === 'overdue') && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                aria-label="Send reminder"
-                                disabled={sendingInvoiceId === invoice.id}
-                                onClick={() => onSendReminder(invoice)}
-                              >
-                                <BellRing className={`h-4 w-4 ${sendingInvoiceId === invoice.id ? 'animate-pulse text-primary' : ''}`} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Send payment reminder</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-
-                      {onIssueRefund && invoice.status === 'paid' && typeof invoice.amountPaid === 'number' && (invoice.amountRefunded ?? 0) < invoice.amountPaid && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                aria-label="Issue refund"
-                                disabled={refundingInvoiceId === invoice.id}
-                                onClick={() => onIssueRefund(invoice)}
-                              >
-                                <RotateCcw className={`h-4 w-4 ${refundingInvoiceId === invoice.id ? 'animate-spin text-primary' : ''}`} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Issue refund</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
+                              <RotateCcw className={`mr-2 h-4 w-4 ${refundingInvoiceId === invoice.id ? 'animate-spin' : ''}`} />
+                              {refundingInvoiceId === invoice.id ? 'Processing...' : 'Issue Refund'}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -301,12 +311,13 @@ export function FinanceInvoiceTable({
           )}
         </ScrollArea>
         {hasMore ? (
-          <div className="border-t border-muted/30 px-6 py-3 text-center">
+          <div className="border-t border-muted/30 px-6 py-4 text-center bg-muted/5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => void onLoadMore?.()}
               disabled={loadingMore}
+              className="hover:bg-muted/50 transition-colors"
             >
               {loadingMore ? (
                 <span className="inline-flex items-center gap-2">

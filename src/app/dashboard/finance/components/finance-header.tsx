@@ -40,16 +40,16 @@ export function FinanceHeader({
   onExportData,
 }: FinanceHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Finance dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-1.5">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Finance Dashboard</h1>
+        <p className="text-base text-muted-foreground max-w-2xl">
           Manage invoices, track revenue, and keep company-wide costs tied directly to your reporting charts.
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Select value={selectedPeriod} onValueChange={onSelectPeriod}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px] shadow-sm">
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
           <SelectContent>
@@ -60,32 +60,30 @@ export function FinanceHeader({
             ))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => void onRefresh()} disabled={refreshing}>
-            {refreshing ? (
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Refresh data
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => void onRefresh()} disabled={refreshing} className="shadow-sm">
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
           {onExportData && (
-            <Button variant="outline" onClick={() => void onExportData()}>
+            <Button variant="outline" onClick={() => void onExportData()} className="shadow-sm">
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export
             </Button>
           )}
           {paymentsHref && (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="shadow-sm">
               <Link href={paymentsHref} className="inline-flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Payments
               </Link>
             </Button>
           )}
-          <Button onClick={onCreateInvoice} disabled={!onCreateInvoice}>
-            <Plus className="mr-2 h-4 w-4" /> Create invoice
-          </Button>
+          {onCreateInvoice && (
+            <Button onClick={onCreateInvoice} className="shadow-sm">
+              <Plus className="mr-2 h-4 w-4" /> Create Invoice
+            </Button>
+          )}
         </div>
       </div>
     </div>
