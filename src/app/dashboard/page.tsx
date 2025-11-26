@@ -654,19 +654,19 @@ export default function DashboardPage() {
         {/* Role-specific welcome messages */}
         {user?.role === 'admin' && (
           <FadeIn>
-            <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30">
+            <Card className="border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10">
               <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-                  <Shield className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <Shield className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-red-900 dark:text-red-100">Admin Dashboard</p>
-                  <p className="text-sm text-red-700 dark:text-red-300">
+                  <p className="font-medium text-foreground">Admin Dashboard</p>
+                  <p className="text-sm text-muted-foreground">
                     You have full access to all workspaces, team management, and administrative functions.
                   </p>
                 </div>
                 <Link href="/admin">
-                  <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900">
+                  <Button variant="outline" size="sm" className="border-primary/20 hover:bg-primary/10">
                     Admin Panel <ArrowUpRight className="ml-1 h-3 w-3" />
                   </Button>
                 </Link>

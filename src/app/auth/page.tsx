@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, Eye, EyeOff, Lock, Mail, User, AlertCircle, Check, X, Shield, Loader2 } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
@@ -123,6 +123,7 @@ export default function AuthPage() {
   })
   const { user, signIn, signInWithGoogle, signUp, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
 
   // Calculate password strength for signup
@@ -144,9 +145,18 @@ export default function AuthPage() {
   }
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/dashboard")
+      const redirect = searchParams.get("redirect")
+      // If no explicit redirect, try to restore last visited dashboard tab
+      if (!redirect && typeof window !== 'undefined') {
+        const lastTab = window.localStorage.getItem('cohorts_last_tab')
+        if (lastTab && lastTab.startsWith('/dashboard')) {
+          router.replace(lastTab)
+          return
+        }
+      }
+      router.replace(redirect || "/dashboard")
     }
-  }, [loading, user, router])
+  }, [loading, user, router, searchParams])
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -262,7 +272,16 @@ export default function AuthPage() {
         })
       }
 
-      router.push("/dashboard")
+      const redirect = searchParams.get("redirect")
+      // Restore last visited tab if no explicit redirect
+      let destination = redirect || "/dashboard"
+      if (!redirect && typeof window !== 'undefined') {
+        const lastTab = window.localStorage.getItem('cohorts_last_tab')
+        if (lastTab && lastTab.startsWith('/dashboard')) {
+          destination = lastTab
+        }
+      }
+      router.push(destination)
     } catch (error) {
       const errorMessage = getFirebaseErrorMessage(error)
       toast({
@@ -283,7 +302,16 @@ export default function AuthPage() {
         title: "👋 Welcome!",
         description: "Signed in with Google. Loading your workspace...",
       })
-      router.push("/dashboard")
+      const redirect = searchParams.get("redirect")
+      // Restore last visited tab if no explicit redirect
+      let destination = redirect || "/dashboard"
+      if (!redirect && typeof window !== 'undefined') {
+        const lastTab = window.localStorage.getItem('cohorts_last_tab')
+        if (lastTab && lastTab.startsWith('/dashboard')) {
+          destination = lastTab
+        }
+      }
+      router.push(destination)
     } catch (error) {
       const errorMessage = getFirebaseErrorMessage(error)
       toast({

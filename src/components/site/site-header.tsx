@@ -35,10 +35,7 @@ export function SiteHeader() {
     : marketingLinks.filter((link) => !['Home', 'Features', 'Integrations'].includes(link.name))
 
   const sessionLinks: SessionLink[] = user
-    ? [
-        { name: 'Dashboard', href: '/dashboard' },
-        ...(user.role === 'admin' ? [{ name: 'Admin', href: '/admin' }] : []),
-      ]
+    ? []
     : [{ name: 'Sign in', href: '/auth' }]
 
   const mobileLinks = [...marketingLinksDisplay, ...sessionLinks]
@@ -120,14 +117,6 @@ export function SiteHeader() {
           <div className="hidden items-center gap-3 md:flex">
             {user ? (
               <>
-                <Button asChild>
-                  <Link href="/dashboard">Dashboard</Link>
-                </Button>
-                {user.role === 'admin' && (
-                  <Button asChild variant="outline">
-                    <Link href="/admin">Admin</Link>
-                  </Button>
-                )}
                 <Button
                   type="button"
                   variant="ghost"

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Separator } from '@/components/ui/separator'
+import { CookieSettingsButton } from './cookie-settings-button'
 
 const footerLinks = [
   {
@@ -68,6 +69,7 @@ export function SiteFooter() {
             <Link href="/cookies" className="transition hover:text-primary">
               Cookies
             </Link>
+            <CookieSettingsButton />
           </div>
         </div>
       </div>

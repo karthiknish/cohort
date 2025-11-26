@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -74,6 +74,13 @@ const allNavigation: NavItem[] = [
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()
   const { user } = useAuth()
+  
+  // Persist last visited dashboard tab
+  useEffect(() => {
+    if (pathname.startsWith('/dashboard')) {
+      localStorage.setItem('cohorts_last_tab', pathname)
+    }
+  }, [pathname])
   
   // Filter navigation items based on user role
   const navigation = useMemo(() => {

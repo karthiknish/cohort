@@ -226,9 +226,11 @@ async function syncSessionCookies(authUser: AuthUser | null) {
     }
 
     const token = await authService.getIdToken()
-    setCookie('cohorts_token', token, 60 * 60)
-    setCookie('cohorts_role', authUser.role, 60 * 60)
-    setCookie('cohorts_status', authUser.status, 60 * 60)
+    // Set cookies for 14 days - they'll be refreshed on each page load
+    const FOURTEEN_DAYS = 14 * 24 * 60 * 60
+    setCookie('cohorts_token', token, FOURTEEN_DAYS)
+    setCookie('cohorts_role', authUser.role, FOURTEEN_DAYS)
+    setCookie('cohorts_status', authUser.status, FOURTEEN_DAYS)
   } catch (error) {
     console.error('Failed to sync auth cookies', error)
     clearCookie('cohorts_token')

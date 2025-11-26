@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
@@ -61,7 +61,8 @@ export class AuthService {
 
   private constructor() {
     // Initialize Firebase auth state listener
-    onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    // Using onIdTokenChanged to also trigger when token refreshes (ensures cookies stay fresh)
+    onIdTokenChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       this.clearIdTokenCache()
       if (firebaseUser) {
         try {
