@@ -332,66 +332,140 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
     throw new IntegrationTokenError('TikTok client credentials are not configured', 'tiktok', userId)
   }
 
-  const response = await fetch(TIKTOK_REFRESH_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      app_id: clientKey,
-      secret: clientSecret,
-      refresh_token: integration.refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  })
+  let lastError: Error | null = null
 
-  if (!response.ok) {
-    const errorPayload = await response.text()
-    throw new IntegrationTokenError(
-      `Failed to refresh TikTok access token (${response.status}): ${errorPayload}`,
-      'tiktok',
-      userId,
-    )
-  }
+  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+    try {
+      console.log(`[TikTok Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`)
 
-  const payload = (await response.json()) as {
-    code?: number
-    message?: string
-    data?: {
-      access_token?: string
-      expires_in?: number
-      refresh_token?: string
-      refresh_token_expires_in?: number
+      const response = await fetch(TIKTOK_REFRESH_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          app_id: clientKey,
+          secret: clientSecret,
+          refresh_token: integration.refreshToken,
+          grant_type: 'refresh_token',
+        }),
+      })
+
+      if (!response.ok) {
+        const errorPayload = await response.text()
+        let parsedError: { code?: number; message?: string } = {}
+        try {
+          parsedError = JSON.parse(errorPayload) as { code?: number; message?: string }
+        } catch {
+          // Non-JSON error response
+        }
+
+        // Check for retryable status codes (5xx, rate limits)
+        const isRetryable = response.status >= 500 || response.status === 429
+        
+        if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+          // Check for Retry-After header
+          const retryAfter = response.headers.get('Retry-After')
+          let delayMs = calculateBackoffDelay(attempt)
+          
+          if (retryAfter) {
+            const retryAfterSeconds = parseInt(retryAfter, 10)
+            if (!isNaN(retryAfterSeconds)) {
+              delayMs = Math.max(delayMs, retryAfterSeconds * 1000)
+            }
+          }
+          
+          console.warn(`[TikTok Token Refresh] Server error ${response.status} on attempt ${attempt + 1}, retrying in ${delayMs}ms...`)
+          await sleep(delayMs)
+          continue
+        }
+
+        // Check for specific TikTok error codes (40001 = invalid token, 40100 = rate limited)
+        if (parsedError.code === 40001) {
+          throw new IntegrationTokenError(
+            'TikTok refresh token has been revoked or expired. Please reconnect your TikTok Ads account.',
+            'tiktok',
+            userId,
+            { isRetryable: false, httpStatus: response.status }
+          )
+        }
+
+        throw new IntegrationTokenError(
+          `Failed to refresh TikTok access token (${response.status}): ${parsedError.message || errorPayload}`,
+          'tiktok',
+          userId,
+          { isRetryable: false, httpStatus: response.status }
+        )
+      }
+
+      const payload = (await response.json()) as {
+        code?: number
+        message?: string
+        data?: {
+          access_token?: string
+          expires_in?: number
+          refresh_token?: string
+          refresh_token_expires_in?: number
+        }
+      }
+
+      // TikTok API returns code 0 for success, non-zero for errors
+      if (payload.code && payload.code !== 0) {
+        // Check for retryable TikTok error codes (40100 = rate limited)
+        const isRetryableCode = payload.code === 40100
+        
+        if (isRetryableCode && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+          console.warn(`[TikTok Token Refresh] TikTok error code ${payload.code} on attempt ${attempt + 1}, retrying...`)
+          await sleep(calculateBackoffDelay(attempt))
+          continue
+        }
+
+        throw new IntegrationTokenError(
+          payload.message || `TikTok refresh token response returned code ${payload.code}`,
+          'tiktok',
+          userId,
+          { isRetryable: false }
+        )
+      }
+
+      const data = payload.data ?? {}
+
+      if (!data.access_token) {
+        throw new IntegrationTokenError('TikTok refresh response missing access_token', 'tiktok', userId)
+      }
+
+      const accessTokenExpiresAt = computeExpiry(data.expires_in)
+      const refreshTokenExpiresAt = computeExpiry(data.refresh_token_expires_in)
+
+      await updateIntegrationCredentials({
+        userId,
+        providerId: 'tiktok',
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token ?? undefined,
+        accessTokenExpiresAt: accessTokenExpiresAt ?? undefined,
+        refreshTokenExpiresAt: refreshTokenExpiresAt ?? undefined,
+      })
+
+      console.log(`[TikTok Token Refresh] Successfully refreshed token for user ${userId}, expires in ${data.expires_in ?? 'unknown'} seconds`)
+
+      return data.access_token
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        throw error
+      }
+
+      // Network errors are retryable
+      lastError = error instanceof Error ? error : new Error('Unknown error')
+
+      if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+        console.warn(`[TikTok Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
+        await sleep(calculateBackoffDelay(attempt))
+        continue
+      }
     }
   }
 
-  if (payload.code && payload.code !== 0) {
-    throw new IntegrationTokenError(
-      payload.message || `TikTok refresh token response returned code ${payload.code}`,
-      'tiktok',
-      userId,
-    )
-  }
-
-  const data = payload.data ?? {}
-
-  if (!data.access_token) {
-    throw new IntegrationTokenError('TikTok refresh response missing access_token', 'tiktok', userId)
-  }
-
-  const accessTokenExpiresAt = computeExpiry(data.expires_in)
-  const refreshTokenExpiresAt = computeExpiry(data.refresh_token_expires_in)
-
-  await updateIntegrationCredentials({
-    userId,
-    providerId: 'tiktok',
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token ?? undefined,
-    accessTokenExpiresAt: accessTokenExpiresAt ?? undefined,
-    refreshTokenExpiresAt: refreshTokenExpiresAt ?? undefined,
-  })
-
-  return data.access_token
+  throw lastError ?? new IntegrationTokenError('TikTok token refresh failed after all retries', 'tiktok', userId)
 }
 
 export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {

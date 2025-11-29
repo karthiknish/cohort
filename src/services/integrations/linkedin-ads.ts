@@ -81,14 +81,14 @@ export class LinkedInApiError extends Error {
   }
 
   private checkIsAuthError(): boolean {
-    const authErrors = [
+    const authErrors: string[] = [
       LINKEDIN_ERROR_CODES.INVALID_ACCESS_TOKEN,
       LINKEDIN_ERROR_CODES.EXPIRED_ACCESS_TOKEN,
       LINKEDIN_ERROR_CODES.REVOKED_ACCESS_TOKEN,
     ]
     return this.httpStatus === 401 || 
            this.httpStatus === 403 || 
-           authErrors.includes(this.errorCode as string)
+           (this.errorCode !== undefined && authErrors.includes(this.errorCode))
   }
 
   private checkIsRateLimitError(): boolean {

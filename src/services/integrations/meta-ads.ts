@@ -82,20 +82,22 @@ export class MetaApiError extends Error {
   }
 
   private checkIsAuthError(): boolean {
-    return [
+    const authCodes: number[] = [
       META_ERROR_CODES.OAUTH_EXCEPTION,
       META_ERROR_CODES.ACCESS_TOKEN_EXPIRED,
       META_ERROR_CODES.PASSWORD_CHANGED,
-    ].includes(this.code as MetaErrorCode)
+    ]
+    return this.code !== undefined && authCodes.includes(this.code)
   }
 
   private checkIsRateLimitError(): boolean {
-    return [
+    const rateLimitCodes: number[] = [
       META_ERROR_CODES.RATE_LIMIT_EXCEEDED,
       META_ERROR_CODES.TOO_MANY_CALLS,
       META_ERROR_CODES.ACCOUNT_RATE_LIMIT,
       META_ERROR_CODES.TOO_MANY_DATA_REQUESTS,
-    ].includes(this.code as MetaErrorCode)
+    ]
+    return this.code !== undefined && rateLimitCodes.includes(this.code)
   }
 
   private checkIsRetryable(): boolean {
@@ -103,11 +105,12 @@ export class MetaApiError extends Error {
     if (this.isRateLimitError) return true
     
     // Temporary/service errors
-    if ([
+    const retryableCodes: number[] = [
       META_ERROR_CODES.TEMPORARY_ERROR,
       META_ERROR_CODES.SERVICE_UNAVAILABLE,
       META_ERROR_CODES.UNKNOWN_ERROR,
-    ].includes(this.code as MetaErrorCode)) {
+    ]
+    if (this.code !== undefined && retryableCodes.includes(this.code)) {
       return true
     }
     

@@ -104,7 +104,7 @@ export class GoogleAdsApiError extends Error {
   }
 
   private checkIsAuthError(): boolean {
-    const authErrors = [
+    const authErrors: string[] = [
       GOOGLE_ADS_ERROR_CODES.AUTHENTICATION_ERROR,
       GOOGLE_ADS_ERROR_CODES.AUTHORIZATION_ERROR,
       GOOGLE_ADS_ERROR_CODES.OAUTH_TOKEN_INVALID,
@@ -114,18 +114,18 @@ export class GoogleAdsApiError extends Error {
     ]
     return this.httpStatus === 401 || 
            this.httpStatus === 403 || 
-           authErrors.includes(this.errorCode as GoogleAdsErrorCode)
+           (this.errorCode !== undefined && authErrors.includes(this.errorCode))
   }
 
   private checkIsRateLimitError(): boolean {
-    const rateLimitErrors = [
+    const rateLimitErrors: string[] = [
       GOOGLE_ADS_ERROR_CODES.RATE_EXCEEDED,
       GOOGLE_ADS_ERROR_CODES.RESOURCE_EXHAUSTED,
       GOOGLE_ADS_ERROR_CODES.RESOURCE_TEMPORARILY_EXHAUSTED,
     ]
     return this.httpStatus === 429 || 
            this.grpcStatus === 'RESOURCE_EXHAUSTED' ||
-           rateLimitErrors.includes(this.errorCode as GoogleAdsErrorCode)
+           (this.errorCode !== undefined && rateLimitErrors.includes(this.errorCode))
   }
 
   private checkIsRetryable(): boolean {
