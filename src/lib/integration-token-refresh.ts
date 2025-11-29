@@ -4,29 +4,58 @@ import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-
 
 interface RefreshParams {
   userId: string
+  forceRefresh?: boolean
 }
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v18.0/oauth/access_token'
 const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
 
+// Retry configuration for token refresh operations
+const TOKEN_REFRESH_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+}
+
 function computeExpiry(expiresInSeconds?: number): Date | null {
   if (!expiresInSeconds || !Number.isFinite(expiresInSeconds)) {
     return null
   }
+  // Subtract 30 seconds buffer to ensure we refresh before actual expiry
   const expiresAt = new Date(Date.now() + expiresInSeconds * 1000 - 30 * 1000)
   return expiresAt
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function calculateBackoffDelay(attempt: number): number {
+  const { baseDelayMs, maxDelayMs } = TOKEN_REFRESH_CONFIG
+  const exponentialDelay = baseDelayMs * Math.pow(2, attempt)
+  const jitter = exponentialDelay * 0.3 * Math.random()
+  return Math.min(exponentialDelay + jitter, maxDelayMs)
 }
 
 export class IntegrationTokenError extends Error {
   userId?: string
   providerId?: string
+  isRetryable: boolean
+  httpStatus?: number
 
-  constructor(message: string, providerId?: string, userId?: string) {
+  constructor(
+    message: string, 
+    providerId?: string, 
+    userId?: string, 
+    options?: { isRetryable?: boolean; httpStatus?: number }
+  ) {
     super(message)
     this.name = 'IntegrationTokenError'
     this.providerId = providerId
     this.userId = userId
+    this.isRetryable = options?.isRetryable ?? false
+    this.httpStatus = options?.httpStatus
   }
 }
 
@@ -62,7 +91,7 @@ export function isTokenExpiringSoon(expiresAt?: AnyTimestamp | null | string, bu
   return Date.now() + bufferMs >= expiryMs
 }
 
-export async function refreshGoogleAccessToken({ userId }: RefreshParams): Promise<string> {
+export async function refreshGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'google' })
 
   if (!integration?.refreshToken) {
@@ -83,49 +112,108 @@ export async function refreshGoogleAccessToken({ userId }: RefreshParams): Promi
     refresh_token: integration.refreshToken,
   })
 
-  const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
-  })
+  let lastError: Error | null = null
 
-  if (!response.ok) {
-    const errorPayload = await response.text()
-    throw new IntegrationTokenError(
-      `Failed to refresh Google Ads token (${response.status}): ${errorPayload}`,
-      'google',
-      userId,
-    )
+  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+    try {
+      const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      })
+
+      if (!response.ok) {
+        const errorPayload = await response.text()
+        let parsedError: { error?: string; error_description?: string } = {}
+        
+        try {
+          parsedError = JSON.parse(errorPayload)
+        } catch {
+          // Not JSON
+        }
+
+        const errorMessage = parsedError.error_description ?? parsedError.error ?? errorPayload
+        
+        // Check if error is retryable (5xx errors)
+        const isRetryable = response.status >= 500 || response.status === 429
+        
+        if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+          console.warn(`[Google Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`)
+          lastError = new IntegrationTokenError(
+            `Failed to refresh Google Ads token (${response.status}): ${errorMessage}`,
+            'google',
+            userId,
+            { isRetryable: true, httpStatus: response.status }
+          )
+          await sleep(calculateBackoffDelay(attempt))
+          continue
+        }
+
+        // Check for specific error types
+        if (parsedError.error === 'invalid_grant') {
+          throw new IntegrationTokenError(
+            'Google refresh token has been revoked or expired. Please reconnect your Google Ads account.',
+            'google',
+            userId,
+            { isRetryable: false, httpStatus: response.status }
+          )
+        }
+
+        throw new IntegrationTokenError(
+          `Failed to refresh Google Ads token (${response.status}): ${errorMessage}`,
+          'google',
+          userId,
+          { isRetryable: false, httpStatus: response.status }
+        )
+      }
+
+      const tokenPayload = (await response.json()) as {
+        access_token?: string
+        expires_in?: number
+        refresh_token?: string
+        id_token?: string
+      }
+
+      if (!tokenPayload.access_token) {
+        throw new IntegrationTokenError('Google Ads token response missing access_token', 'google', userId)
+      }
+
+      const expiresAt = computeExpiry(tokenPayload.expires_in)
+
+      await updateIntegrationCredentials({
+        userId,
+        providerId: 'google',
+        accessToken: tokenPayload.access_token,
+        accessTokenExpiresAt: expiresAt ?? undefined,
+        refreshToken: tokenPayload.refresh_token ?? undefined,
+        idToken: tokenPayload.id_token ?? undefined,
+      })
+
+      console.log(`[Google Token Refresh] Successfully refreshed token for user ${userId}, expires in ${tokenPayload.expires_in ?? 'unknown'} seconds`)
+
+      return tokenPayload.access_token
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        throw error
+      }
+      
+      // Network errors are retryable
+      lastError = error instanceof Error ? error : new Error('Unknown error')
+      
+      if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+        console.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
+        await sleep(calculateBackoffDelay(attempt))
+        continue
+      }
+    }
   }
 
-  const tokenPayload = (await response.json()) as {
-    access_token?: string
-    expires_in?: number
-    refresh_token?: string
-    id_token?: string
-  }
-
-  if (!tokenPayload.access_token) {
-    throw new IntegrationTokenError('Google Ads token response missing access_token', 'google', userId)
-  }
-
-  const expiresAt = computeExpiry(tokenPayload.expires_in)
-
-  await updateIntegrationCredentials({
-    userId,
-    providerId: 'google',
-    accessToken: tokenPayload.access_token,
-    accessTokenExpiresAt: expiresAt ?? undefined,
-    refreshToken: tokenPayload.refresh_token ?? undefined,
-    idToken: tokenPayload.id_token ?? undefined,
-  })
-
-  return tokenPayload.access_token
+  throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', 'google', userId)
 }
 
-export async function refreshMetaAccessToken({ userId }: RefreshParams): Promise<string> {
+export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'facebook' })
 
   if (!integration?.accessToken) {
@@ -146,37 +234,88 @@ export async function refreshMetaAccessToken({ userId }: RefreshParams): Promise
     fb_exchange_token: integration.accessToken,
   })
 
-  const response = await fetch(`${META_TOKEN_ENDPOINT}?${params.toString()}`)
+  let lastError: Error | null = null
+  
+  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+    try {
+      const response = await fetch(`${META_TOKEN_ENDPOINT}?${params.toString()}`)
 
-  if (!response.ok) {
-    const errorPayload = await response.text()
-    throw new IntegrationTokenError(
-      `Failed to refresh Meta Ads token (${response.status}): ${errorPayload}`,
-      'facebook',
-      userId,
-    )
+      if (!response.ok) {
+        const errorPayload = await response.text()
+        let parsedError: { error?: { message?: string; code?: number } } = {}
+        
+        try {
+          parsedError = JSON.parse(errorPayload)
+        } catch {
+          // Not JSON, use raw text
+        }
+
+        const errorMessage = parsedError?.error?.message ?? errorPayload
+        const errorCode = parsedError?.error?.code ?? response.status
+        
+        // Check if error is retryable (5xx errors or specific Meta error codes)
+        const isRetryable = response.status >= 500 || response.status === 429
+        
+        if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+          console.warn(`[Meta Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`)
+          lastError = new IntegrationTokenError(
+            `Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`,
+            'facebook',
+            userId,
+            { isRetryable: true, httpStatus: response.status }
+          )
+          await sleep(calculateBackoffDelay(attempt))
+          continue
+        }
+
+        // Non-retryable error or exhausted retries
+        throw new IntegrationTokenError(
+          `Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`,
+          'facebook',
+          userId,
+          { isRetryable: false, httpStatus: response.status }
+        )
+      }
+
+      const tokenPayload = (await response.json()) as {
+        access_token?: string
+        expires_in?: number
+        token_type?: string
+      }
+
+      if (!tokenPayload.access_token) {
+        throw new IntegrationTokenError('Meta token response missing access_token', 'facebook', userId)
+      }
+
+      const expiresAt = computeExpiry(tokenPayload.expires_in)
+
+      await updateIntegrationCredentials({
+        userId,
+        providerId: 'facebook',
+        accessToken: tokenPayload.access_token,
+        accessTokenExpiresAt: expiresAt ?? undefined,
+      })
+
+      console.log(`[Meta Token Refresh] Successfully refreshed token for user ${userId}, expires in ${tokenPayload.expires_in ?? 'unknown'} seconds`)
+
+      return tokenPayload.access_token
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        throw error
+      }
+      
+      // Network errors are retryable
+      lastError = error instanceof Error ? error : new Error('Unknown error')
+      
+      if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+        console.warn(`[Meta Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
+        await sleep(calculateBackoffDelay(attempt))
+        continue
+      }
+    }
   }
 
-  const tokenPayload = (await response.json()) as {
-    access_token?: string
-    expires_in?: number
-    token_type?: string
-  }
-
-  if (!tokenPayload.access_token) {
-    throw new IntegrationTokenError('Meta token response missing access_token', 'facebook', userId)
-  }
-
-  const expiresAt = computeExpiry(tokenPayload.expires_in)
-
-  await updateIntegrationCredentials({
-    userId,
-    providerId: 'facebook',
-    accessToken: tokenPayload.access_token,
-    accessTokenExpiresAt: expiresAt ?? undefined,
-  })
-
-  return tokenPayload.access_token
+  throw lastError ?? new IntegrationTokenError('Meta token refresh failed after all retries', 'facebook', userId)
 }
 
 export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
@@ -255,26 +394,36 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
   return data.access_token
 }
 
-export async function ensureGoogleAccessToken({ userId }: RefreshParams): Promise<string> {
+export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'google' })
   if (!integration?.accessToken) {
     throw new IntegrationTokenError('Google Ads integration missing access token', 'google', userId)
   }
 
-  if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
+  // Force refresh if requested or token is expiring soon
+  // Use a 10-minute buffer for pre-emptive refresh
+  const PRE_EMPTIVE_REFRESH_BUFFER_MS = 10 * 60 * 1000
+
+  if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
+    console.log(`[Google Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
     return refreshGoogleAccessToken({ userId })
   }
 
   return integration.accessToken
 }
 
-export async function ensureMetaAccessToken({ userId }: RefreshParams): Promise<string> {
+export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'facebook' })
   if (!integration?.accessToken) {
     throw new IntegrationTokenError('Meta Ads integration missing access token', 'facebook', userId)
   }
 
-  if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
+  // Force refresh if requested or token is expiring soon
+  // Use a 10-minute buffer for pre-emptive refresh
+  const PRE_EMPTIVE_REFRESH_BUFFER_MS = 10 * 60 * 1000
+  
+  if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
+    console.log(`[Meta Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
     return refreshMetaAccessToken({ userId })
   }
 

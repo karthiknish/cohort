@@ -10,6 +10,24 @@ interface MetaOAuthContext {
 
 const STATE_TTL_MS = 5 * 60 * 1000
 
+// Retry configuration for OAuth operations
+const OAUTH_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 500,
+  maxDelayMs: 5000,
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function calculateBackoffDelay(attempt: number): number {
+  const { baseDelayMs, maxDelayMs } = OAUTH_RETRY_CONFIG
+  const exponentialDelay = baseDelayMs * Math.pow(2, attempt)
+  const jitter = exponentialDelay * 0.2 * Math.random()
+  return Math.min(exponentialDelay + jitter, maxDelayMs)
+}
+
 type MetaOAuthStatePayload = Omit<MetaOAuthContext, 'createdAt'> & { createdAt?: number }
 
 export function createMetaOAuthState(payload: MetaOAuthStatePayload): string {
@@ -44,6 +62,18 @@ export function validateMetaOAuthState(state: string): MetaOAuthContext {
   return parsed
 }
 
+export class MetaOAuthError extends Error {
+  readonly code?: number
+  readonly isRetryable: boolean
+
+  constructor(message: string, code?: number, isRetryable = false) {
+    super(message)
+    this.name = 'MetaOAuthError'
+    this.code = code
+    this.isRetryable = isRetryable
+  }
+}
+
 export async function completeMetaOAuthFlow(options: {
   code: string
   userId: string
@@ -54,37 +84,99 @@ export async function completeMetaOAuthFlow(options: {
   const appSecret = process.env.META_APP_SECRET
 
   if (!appId || !appSecret) {
-    throw new Error('Meta app credentials are not configured')
+    throw new MetaOAuthError('Meta app credentials are not configured')
   }
 
-  const tokenResponse = await exchangeMetaCodeForToken({
-    appId,
-    appSecret,
-    redirectUri,
-    code,
-  })
-
-  const longLived = await fetch(
-    `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
+  // Exchange code for short-lived token
+  let tokenResponse
+  try {
+    tokenResponse = await exchangeMetaCodeForToken({
       appId,
-    )}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(tokenResponse.access_token)}`,
-  )
-
-  if (!longLived.ok) {
-    const errorPayload = await longLived.text()
-    throw new Error(`Failed to extend Meta access token (${longLived.status}): ${errorPayload}`)
+      appSecret,
+      redirectUri,
+      code,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Token exchange failed'
+    console.error('[Meta OAuth] Code exchange failed:', message)
+    throw new MetaOAuthError(`Failed to exchange authorization code: ${message}`)
   }
 
-  const extended = (await longLived.json()) as { access_token?: string; expires_in?: number }
-  const accessToken = extended.access_token ?? tokenResponse.access_token
+  if (!tokenResponse.access_token) {
+    throw new MetaOAuthError('No access token received from Meta')
+  }
 
+  // Exchange for long-lived token with retry logic
+  let longLivedToken: string = tokenResponse.access_token
+  let expiresIn: number | undefined = tokenResponse.expires_in
+
+  for (let attempt = 0; attempt < OAUTH_RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      const longLivedResponse = await fetch(
+        `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
+          appId,
+        )}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(tokenResponse.access_token)}`,
+      )
+
+      if (!longLivedResponse.ok) {
+        const errorPayload = await longLivedResponse.text()
+        let parsedError: { error?: { message?: string; code?: number } } = {}
+        
+        try {
+          parsedError = JSON.parse(errorPayload)
+        } catch {
+          // Not JSON
+        }
+
+        const errorMessage = parsedError?.error?.message ?? errorPayload
+        const isRetryable = longLivedResponse.status >= 500 || longLivedResponse.status === 429
+        
+        if (isRetryable && attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
+          console.warn(`[Meta OAuth] Long-lived token exchange attempt ${attempt + 1} failed (${longLivedResponse.status}), retrying...`)
+          await sleep(calculateBackoffDelay(attempt))
+          continue
+        }
+        
+        // If we can't get long-lived token, we can still proceed with short-lived
+        console.warn(`[Meta OAuth] Failed to get long-lived token, using short-lived: ${errorMessage}`)
+        break
+      }
+
+      const extended = (await longLivedResponse.json()) as { access_token?: string; expires_in?: number }
+      
+      if (extended.access_token) {
+        longLivedToken = extended.access_token
+        expiresIn = extended.expires_in
+        console.log(`[Meta OAuth] Successfully obtained long-lived token, expires in ${expiresIn} seconds`)
+      }
+      
+      break
+    } catch (networkError) {
+      const message = networkError instanceof Error ? networkError.message : 'Network error'
+      console.warn(`[Meta OAuth] Network error on attempt ${attempt + 1}: ${message}`)
+      
+      if (attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
+        await sleep(calculateBackoffDelay(attempt))
+        continue
+      }
+      
+      // Use short-lived token if long-lived exchange fails
+      console.warn('[Meta OAuth] All attempts to get long-lived token failed, using short-lived token')
+      break
+    }
+  }
+
+  // Persist the tokens
   await persistIntegrationTokens({
     userId,
     providerId: 'facebook',
-    accessToken,
+    accessToken: longLivedToken,
     scopes: ['ads_management', 'ads_read', 'business_management'],
-    accessTokenExpiresAt: extended.expires_in ? new Date(Date.now() + extended.expires_in * 1000) : null,
+    accessTokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
   })
 
+  console.log(`[Meta OAuth] Successfully persisted integration for user ${userId}`)
+
+  // Enqueue initial sync job
   await enqueueSyncJob({ userId, providerId: 'facebook', jobType: 'initial-backfill' })
 }

@@ -2,34 +2,84 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { completeMetaOAuthFlow, validateMetaOAuthState } from '@/services/meta-business'
 
+// Meta OAuth error codes reference:
+// https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived
+
 export async function GET(request: NextRequest) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  
   try {
+    // Check for OAuth error from Meta
+    const error = request.nextUrl.searchParams.get('error')
+    const errorReason = request.nextUrl.searchParams.get('error_reason')
+    const errorDescription = request.nextUrl.searchParams.get('error_description')
+    
+    if (error) {
+      console.error('[meta.oauth.callback] OAuth error from Meta:', {
+        error,
+        errorReason,
+        errorDescription,
+      })
+      
+      // Redirect to dashboard with error message
+      const errorMessage = encodeURIComponent(errorDescription ?? errorReason ?? error)
+      return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=meta_oauth_failed&message=${errorMessage}`)
+    }
+
     const code = request.nextUrl.searchParams.get('code')
     const state = request.nextUrl.searchParams.get('state')
 
     if (!code) {
-      return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 })
+      console.error('[meta.oauth.callback] Missing authorization code')
+      return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=missing_code`)
     }
 
     const redirectUri = process.env.META_OAUTH_REDIRECT_URI
     if (!redirectUri) {
-      return NextResponse.json({ error: 'Meta OAuth not configured' }, { status: 500 })
+      console.error('[meta.oauth.callback] META_OAUTH_REDIRECT_URI not configured')
+      return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=config_error`)
     }
 
-    const context = validateMetaOAuthState(state ?? '')
+    // Validate state to prevent CSRF attacks
+    let context
+    try {
+      context = validateMetaOAuthState(state ?? '')
+    } catch (stateError) {
+      console.error('[meta.oauth.callback] State validation failed:', stateError)
+      return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=invalid_state`)
+    }
 
     if (!context.state) {
-      return NextResponse.json({ error: 'Invalid state' }, { status: 400 })
+      console.error('[meta.oauth.callback] Invalid state - missing user ID')
+      return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=invalid_state`)
     }
 
+    // Complete the OAuth flow
     await completeMetaOAuthFlow({ code, userId: context.state, redirectUri })
 
-    const redirectTarget = context.redirect ?? '/dashboard'
+    console.log(`[meta.oauth.callback] Successfully completed OAuth for user ${context.state}`)
+
+    const redirectTarget = context.redirect ?? `${appUrl}/dashboard/integrations`
     const response = NextResponse.redirect(redirectTarget)
-    response.cookies.set('meta_oauth_success', '1', { path: '/', maxAge: 60 })
+    
+    // Set success cookie for UI feedback
+    response.cookies.set('meta_oauth_success', '1', { 
+      path: '/', 
+      maxAge: 60,
+      httpOnly: false, // Allow JS to read for UI feedback
+      sameSite: 'lax',
+    })
+    
     return response
   } catch (error: unknown) {
-    console.error('[meta.oauth.callback] error', error)
-    return NextResponse.json({ error: 'Meta OAuth callback failed' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[meta.oauth.callback] Error completing OAuth flow:', {
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    
+    // Redirect to dashboard with error
+    const encodedError = encodeURIComponent(errorMessage)
+    return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=oauth_failed&message=${encodedError}`)
   }
 }

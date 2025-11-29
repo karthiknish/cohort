@@ -127,10 +127,14 @@ export async function POST(request: NextRequest) {
       }
       case 'linkedin': {
         const accountId = ensureString(integration.accountId, 'LinkedIn Ads accountId must be stored on the integration')
+        
+        // Note: LinkedIn doesn't support automatic token refresh like OAuth 2.0
+        // Tokens are long-lived (60 days) and require re-authorization when expired
         metrics = await fetchLinkedInAdsMetrics({
           accessToken: integration.accessToken,
           accountId,
           timeframeDays: job.timeframeDays,
+          maxRetries: 3,
         })
         break
       }

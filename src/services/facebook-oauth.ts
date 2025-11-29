@@ -10,6 +10,9 @@ interface BuildMetaAuthUrlOptions {
 
 const DEFAULT_SCOPES = ['ads_management', 'ads_read', 'business_management']
 
+// Meta Graph API version - update this when upgrading
+const META_GRAPH_API_VERSION = 'v18.0'
+
 export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): string {
   const { businessConfigId, appId, redirectUri, state, scopes = DEFAULT_SCOPES } = options
 
@@ -47,15 +50,57 @@ interface ExchangeCodeOptions {
   code: string
 }
 
-export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Promise<{
+interface MetaTokenResponse {
   access_token: string
   token_type?: string
   expires_in?: number
-}> {
+}
+
+interface MetaErrorResponse {
+  error?: {
+    message?: string
+    type?: string
+    code?: number
+    error_subcode?: number
+    fbtrace_id?: string
+  }
+}
+
+export class MetaTokenExchangeError extends Error {
+  readonly code?: number
+  readonly subcode?: number
+  readonly type?: string
+  readonly fbTraceId?: string
+
+  constructor(options: {
+    message: string
+    code?: number
+    subcode?: number
+    type?: string
+    fbTraceId?: string
+  }) {
+    super(options.message)
+    this.name = 'MetaTokenExchangeError'
+    this.code = options.code
+    this.subcode = options.subcode
+    this.type = options.type
+    this.fbTraceId = options.fbTraceId
+  }
+}
+
+export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Promise<MetaTokenResponse> {
   const { appId, appSecret, redirectUri, code } = options
 
   if (!appId || !appSecret) {
-    throw new Error('Meta app credentials are required to exchange the code')
+    throw new MetaTokenExchangeError({ 
+      message: 'Meta app credentials are required to exchange the code' 
+    })
+  }
+
+  if (!code) {
+    throw new MetaTokenExchangeError({ 
+      message: 'Authorization code is required' 
+    })
   }
 
   const params = new URLSearchParams({
@@ -65,16 +110,49 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
     code,
   })
 
-  const response = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?${params.toString()}`)
+  const url = `https://graph.facebook.com/${META_GRAPH_API_VERSION}/oauth/access_token?${params.toString()}`
+  
+  let response: Response
+  try {
+    response = await fetch(url)
+  } catch (networkError) {
+    const message = networkError instanceof Error ? networkError.message : 'Network error'
+    throw new MetaTokenExchangeError({ 
+      message: `Network error during Meta token exchange: ${message}` 
+    })
+  }
+
+  const responseText = await response.text()
+  let responseData: MetaTokenResponse | MetaErrorResponse
+
+  try {
+    responseData = JSON.parse(responseText) as MetaTokenResponse | MetaErrorResponse
+  } catch {
+    throw new MetaTokenExchangeError({ 
+      message: `Invalid response from Meta: ${responseText.substring(0, 200)}` 
+    })
+  }
 
   if (!response.ok) {
-    const errorPayload = await response.text()
-    throw new Error(`Meta token exchange failed (${response.status}): ${errorPayload}`)
+    const errorData = responseData as MetaErrorResponse
+    const error = errorData?.error ?? {}
+    
+    throw new MetaTokenExchangeError({
+      message: error.message ?? `Meta token exchange failed (${response.status})`,
+      code: error.code ?? response.status,
+      subcode: error.error_subcode,
+      type: error.type,
+      fbTraceId: error.fbtrace_id,
+    })
   }
 
-  return (await response.json()) as {
-    access_token: string
-    token_type?: string
-    expires_in?: number
+  const tokenData = responseData as MetaTokenResponse
+  
+  if (!tokenData.access_token) {
+    throw new MetaTokenExchangeError({ 
+      message: 'Meta token response missing access_token' 
+    })
   }
+
+  return tokenData
 }
