@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
-import type { ChannelSummary } from '../hooks/use-collaboration-data'
+import type { ChannelSummary } from '../hooks'
 import type { Channel } from '../types'
 import { CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
 
