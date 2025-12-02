@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { useToast } from '@/components/ui/use-toast'
@@ -20,13 +21,14 @@ import { RelatedPages } from '@/components/dashboard/related-pages'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
-import { BarChart3, FileText, Users, Megaphone } from 'lucide-react'
+import { BarChart3, FileText, Users, Megaphone, RefreshCw, AlertCircle } from 'lucide-react'
 
 export function FinanceDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
   const isAdmin = user?.role === 'admin'
   const isClient = user?.role === 'client'
+  const [activeTab, setActiveTab] = useState('overview')
 
   const {
     selectedPeriod,
@@ -172,14 +174,39 @@ export function FinanceDashboard() {
     return <FinanceDashboardSkeleton />
   }
 
+  // Error state with retry
+  if (loadError && !hasAttemptedLoad) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
+        <div className="rounded-full bg-destructive/10 p-4 mb-4">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <h2 className="text-xl font-semibold text-foreground mb-2">Unable to load finance data</h2>
+        <p className="text-muted-foreground text-center max-w-md mb-6">{loadError}</p>
+        <Button onClick={() => void refresh()} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Try Again
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {loadError && (
-        <Alert variant="destructive">
-          <AlertTitle>Finance data unavailable</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
+        <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Finance data partially unavailable</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{loadError}</span>
+            <Button variant="outline" size="sm" onClick={() => void refresh()} className="ml-4 gap-2">
+              <RefreshCw className="h-3 w-3" />
+              Retry
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
+      
       <FinanceHeader
         selectedPeriod={selectedPeriod}
         onSelectPeriod={setSelectedPeriod}
@@ -188,34 +215,44 @@ export function FinanceDashboard() {
         paymentsHref="/dashboard/finance/payments"
         onExportData={handleExportData}
       />
+      
       <FinanceStatsGrid stats={stats} />
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          {!isClient && <TabsTrigger value="recurring">Recurring</TabsTrigger>}
-          {!isClient && <TabsTrigger value="costs">Costs</TabsTrigger>}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            Invoices
+          </TabsTrigger>
+          {!isClient && (
+            <TabsTrigger value="recurring" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Recurring
+            </TabsTrigger>
+          )}
+          {!isClient && (
+            <TabsTrigger value="costs" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Costs
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <div className="col-span-4">
-              <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
-            </div>
-            <div className="col-span-3">
-              <FinanceRevenueSidebar
-                revenue={revenueByClient}
-                upcomingPayments={upcomingPayments}
-                totalOutstanding={stats.totalOutstanding}
-                currencyTotals={stats.currencyTotals}
-                primaryCurrency={stats.primaryCurrency}
-              />
-            </div>
-          </div>
+        <TabsContent value="overview" className="space-y-6 mt-0">
+          {/* Charts Section - Full Width */}
+          <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
+          
+          {/* Revenue Sidebar - Below Charts */}
+          <FinanceRevenueSidebar
+            revenue={revenueByClient}
+            upcomingPayments={upcomingPayments}
+            totalOutstanding={stats.totalOutstanding}
+            currencyTotals={stats.currencyTotals}
+            primaryCurrency={stats.primaryCurrency}
+          />
         </TabsContent>
 
-        <TabsContent value="invoices" className="space-y-4">
+        <TabsContent value="invoices" className="space-y-4 mt-0">
           <FinanceInvoiceTable
             invoices={filteredInvoices}
             selectedStatus={invoiceStatusFilter}
@@ -231,13 +268,13 @@ export function FinanceDashboard() {
         </TabsContent>
 
         {!isClient && (
-          <TabsContent value="recurring" className="space-y-4">
+          <TabsContent value="recurring" className="space-y-4 mt-0">
             <RecurringInvoicesCard />
           </TabsContent>
         )}
 
         {!isClient && (
-          <TabsContent value="costs" className="space-y-4">
+          <TabsContent value="costs" className="space-y-4 mt-0">
             <FinanceCostsCard
               costs={costs}
               monthlyCostTotal={monthlyCostTotal}

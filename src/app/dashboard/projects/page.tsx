@@ -1,8 +1,32 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Briefcase, Calendar, Edit, LayoutGrid, List, ListChecks, Loader2, MessageSquare, MoreHorizontal, Plus, RefreshCw, Search, Tag, Trash2, Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { 
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Briefcase, 
+  Calendar, 
+  CheckCircle2,
+  Clock, 
+  FolderKanban,
+  LayoutGrid, 
+  List, 
+  ListChecks, 
+  Loader2, 
+  MessageSquare, 
+  MoreHorizontal, 
+  PauseCircle,
+  Pencil,
+  Plus, 
+  RefreshCw, 
+  Search, 
+  Tag, 
+  Trash2, 
+  Users,
+  XCircle
+} from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -10,6 +34,7 @@ import { useToast } from '@/components/ui/use-toast'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
+import { EditProjectDialog } from '@/components/projects/edit-project-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +72,13 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../collaboration/utils'
 
@@ -55,14 +87,63 @@ type ProjectResponse = {
 }
 
 type StatusFilter = 'all' | ProjectStatus
+type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount'
+type SortDirection = 'asc' | 'desc'
 
 const STATUS_FILTERS: StatusFilter[] = ['all', ...PROJECT_STATUSES]
 
 const STATUS_CLASSES: Record<ProjectStatus, string> = {
-  planning: 'bg-slate-100 text-slate-800',
-  active: 'bg-emerald-100 text-emerald-800',
-  on_hold: 'bg-amber-100 text-amber-800',
+  planning: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
+  active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+  on_hold: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
   completed: 'bg-muted text-muted-foreground',
+}
+
+const STATUS_ICONS: Record<ProjectStatus, React.ComponentType<{ className?: string }>> = {
+  planning: FolderKanban,
+  active: CheckCircle2,
+  on_hold: AlertTriangle,
+  completed: CheckCircle2,
+}
+
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'updatedAt', label: 'Last updated' },
+  { value: 'createdAt', label: 'Created date' },
+  { value: 'name', label: 'Name' },
+  { value: 'status', label: 'Status' },
+  { value: 'taskCount', label: 'Task count' },
+]
+
+// Retry configuration
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function calculateBackoffDelay(attempt: number): number {
+  const delay = RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt)
+  const jitter = Math.random() * delay * 0.3
+  return Math.min(delay + jitter, RETRY_CONFIG.maxDelayMs)
+}
+
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    return true
+  }
+  if (error instanceof Error && (
+    error.message.includes('network') ||
+    error.message.includes('Network') ||
+    error.message.includes('Failed to fetch') ||
+    error.message.includes('Connection')
+  )) {
+    return true
+  }
+  return false
 }
 
 export default function ProjectsPage() {
@@ -73,15 +154,28 @@ export default function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchInput, setSearchInput] = useState('')
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [sortField, setSortField] = useState<SortField>('updatedAt')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
+  
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [projectToEdit, setProjectToEdit] = useState<ProjectRecord | null>(null)
+  
+  // Optimistic update tracking
+  const [pendingStatusUpdates, setPendingStatusUpdates] = useState<Set<string>>(new Set())
+  
+  // Abort controller for cancelling requests
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const debouncedQuery = useDebouncedValue(searchInput, 350)
 
-  const loadProjects = useCallback(async () => {
+  const loadProjects = useCallback(async (retryAttempt = 0) => {
     if (!user?.id) {
       setProjects([])
       setLoading(false)
@@ -89,8 +183,16 @@ export default function ProjectsPage() {
       return
     }
 
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+
     setLoading(true)
-    setError(null)
+    if (retryAttempt === 0) {
+      setError(null)
+    }
 
     try {
       const token = await getIdToken()
@@ -111,6 +213,7 @@ export default function ProjectsPage() {
           Authorization: `Bearer ${token}`,
         },
         cache: 'no-store',
+        signal: abortControllerRef.current.signal,
       })
 
       if (!response.ok) {
@@ -123,14 +226,40 @@ export default function ProjectsPage() {
         } catch {
           // ignore JSON parse errors
         }
+        
+        // Retry on server errors
+        if (response.status >= 500 && retryAttempt < RETRY_CONFIG.maxRetries) {
+          const delay = calculateBackoffDelay(retryAttempt)
+          console.warn(`[Projects] Server error, retrying in ${delay}ms (attempt ${retryAttempt + 1}/${RETRY_CONFIG.maxRetries})`)
+          await sleep(delay)
+          return loadProjects(retryAttempt + 1)
+        }
+        
         throw new Error(message)
       }
 
       const data = (await response.json()) as ProjectResponse
       setProjects(Array.isArray(data.projects) ? data.projects : [])
+      setError(null)
+      setRetryCount(0)
     } catch (fetchError: unknown) {
+      // Ignore abort errors
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return
+      }
+      
       console.error('Failed to fetch projects', fetchError)
       const message = getErrorMessage(fetchError, 'Unable to load projects')
+      
+      // Retry on network errors
+      if (retryAttempt < RETRY_CONFIG.maxRetries && isNetworkError(fetchError)) {
+        const delay = calculateBackoffDelay(retryAttempt)
+        console.warn(`[Projects] Network error, retrying in ${delay}ms (attempt ${retryAttempt + 1}/${RETRY_CONFIG.maxRetries})`)
+        setRetryCount(retryAttempt + 1)
+        await sleep(delay)
+        return loadProjects(retryAttempt + 1)
+      }
+      
       setProjects([])
       setError(message)
       toast({
@@ -143,12 +272,50 @@ export default function ProjectsPage() {
     }
   }, [debouncedQuery, getIdToken, selectedClientId, statusFilter, user?.id, toast])
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   useEffect(() => {
     void loadProjects()
   }, [loadProjects])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      // Cmd/Ctrl + K to focus search
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        const searchInput = document.getElementById('project-search')
+        searchInput?.focus()
+      }
+      // Cmd/Ctrl + Shift + N to open create dialog
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'n') {
+        event.preventDefault()
+        // Trigger is handled by the CreateProjectDialog
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const handleProjectCreated = useCallback((project: ProjectRecord) => {
     setProjects((prev) => [project, ...prev])
+  }, [])
+
+  const handleProjectUpdated = useCallback((updatedProject: ProjectRecord) => {
+    setProjects((prev) => prev.map((p) => p.id === updatedProject.id ? updatedProject : p))
+  }, [])
+
+  const openEditDialog = useCallback((project: ProjectRecord) => {
+    setProjectToEdit(project)
+    setEditDialogOpen(true)
   }, [])
 
   const handleDeleteProject = useCallback(async () => {
@@ -192,6 +359,16 @@ export default function ProjectsPage() {
 
   const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
     if (!user?.id) return
+    
+    // Prevent duplicate updates
+    if (pendingStatusUpdates.has(project.id)) return
+
+    // Optimistic update
+    const previousStatus = project.status
+    setProjects((prev) => prev.map((p) => 
+      p.id === project.id ? { ...p, status: newStatus } : p
+    ))
+    setPendingStatusUpdates((prev) => new Set(prev).add(project.id))
 
     try {
       const token = await getIdToken()
@@ -218,19 +395,60 @@ export default function ProjectsPage() {
       const data = await response.json() as { project: ProjectRecord }
       setProjects((prev) => prev.map((p) => p.id === project.id ? data.project : p))
       toast({
-        title: '✅ Project status updated',
+        title: '✅ Status updated',
         description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
       })
     } catch (error) {
+      // Rollback optimistic update
+      setProjects((prev) => prev.map((p) => 
+        p.id === project.id ? { ...p, status: previousStatus } : p
+      ))
       const message = error instanceof Error ? error.message : 'Failed to update project'
       toast({ title: '❌ Status update failed', description: message, variant: 'destructive' })
+    } finally {
+      setPendingStatusUpdates((prev) => {
+        const next = new Set(prev)
+        next.delete(project.id)
+        return next
+      })
     }
-  }, [user?.id, getIdToken, toast])
+  }, [user?.id, getIdToken, toast, pendingStatusUpdates])
 
   const openDeleteDialog = useCallback((project: ProjectRecord) => {
     setProjectToDelete(project)
     setDeleteDialogOpen(true)
   }, [])
+
+  // Sort projects
+  const sortedProjects = useMemo(() => {
+    const sorted = [...projects]
+    sorted.sort((a, b) => {
+      let comparison = 0
+      
+      switch (sortField) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name)
+          break
+        case 'status':
+          comparison = PROJECT_STATUSES.indexOf(a.status) - PROJECT_STATUSES.indexOf(b.status)
+          break
+        case 'taskCount':
+          comparison = a.taskCount - b.taskCount
+          break
+        case 'createdAt':
+          comparison = (new Date(a.createdAt ?? 0).getTime()) - (new Date(b.createdAt ?? 0).getTime())
+          break
+        case 'updatedAt':
+        default:
+          comparison = (new Date(a.updatedAt ?? 0).getTime()) - (new Date(b.updatedAt ?? 0).getTime())
+          break
+      }
+      
+      return sortDirection === 'desc' ? -comparison : comparison
+    })
+    
+    return sorted
+  }, [projects, sortField, sortDirection])
 
   const statusCounts = useMemo(() => {
     return projects.reduce<Record<ProjectStatus, number>>((acc, project) => {
@@ -247,197 +465,343 @@ export default function ProjectsPage() {
     return projects.reduce((total, project) => total + project.taskCount, 0)
   }, [projects])
 
+  const completionRate = useMemo(() => {
+    if (projects.length === 0) return 0
+    return Math.round((statusCounts.completed / projects.length) * 100)
+  }, [projects.length, statusCounts.completed])
+
   const initialLoading = loading && projects.length === 0
 
   const portfolioLabel = selectedClient?.name ? `${selectedClient.name} workspace` : 'all workspaces'
 
+  const toggleSortDirection = useCallback(() => {
+    setSortDirection((prev) => prev === 'asc' ? 'desc' : 'asc')
+  }, [])
+
+  // Keyboard shortcuts
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-          <p className="text-muted-foreground">Portfolio overview for {portfolioLabel}.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center rounded-md border bg-background p-1">
-            <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setViewMode('grid')}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+            <p className="text-muted-foreground">
+              Portfolio overview for {portfolioLabel}.
+              {retryCount > 0 && (
+                <span className="ml-2 text-amber-600 dark:text-amber-400">
+                  (Retrying... attempt {retryCount}/{RETRY_CONFIG.maxRetries})
+                </span>
+              )}
+            </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void loadProjects().then(() => {
-                if (!error) {
-                  toast({
-                    title: '🔄 Projects refreshed',
-                    description: `${projects.length} project${projects.length !== 1 ? 's' : ''} loaded successfully.`,
-                  })
-                }
-              })
-            }}
-            className="inline-flex items-center gap-2"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Refresh
-          </Button>
-          <CreateProjectDialog onProjectCreated={handleProjectCreated} />
-        </div>
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete project?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action cannot be undone. 
-              All associated tasks and collaboration history will remain but will no longer be linked to this project.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteProject}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard
-          label="Total projects"
-          icon={Briefcase}
-          value={projects.length}
-          caption={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'Tracking active and planned work'}
-        />
-        <SummaryCard
-          label="Active"
-          icon={ListChecks}
-          value={statusCounts.active}
-          caption={`${statusCounts.planning} planning · ${statusCounts.on_hold} on hold`}
-        />
-        <SummaryCard
-          label="Open tasks"
-          icon={Users}
-          value={openTaskTotal}
-          caption={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for assignments'}
-        />
-        <SummaryCard
-          label="Recent updates"
-          icon={MessageSquare}
-          value={projects.filter((project) => project.recentActivityAt).length}
-          caption="Tracked over the past 30 days"
-        />
-      </div>
-
-      <Card className="border-muted/60 bg-background">
-        <CardHeader className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <CardTitle className="text-lg">Project backlog</CardTitle>
-              <CardDescription>Search, filter, and review current initiatives.</CardDescription>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center rounded-md border bg-background p-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode('list')}
+                    aria-label="List view"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>List view</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode('grid')}
+                    aria-label="Grid view"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Grid view</TooltipContent>
+              </Tooltip>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative w-full sm:w-72">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search projects..."
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  className="pl-9"
-                />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    void loadProjects().then(() => {
+                      if (!error) {
+                        toast({
+                          title: '🔄 Projects refreshed',
+                          description: `${projects.length} project${projects.length !== 1 ? 's' : ''} loaded successfully.`,
+                        })
+                      }
+                    })
+                  }}
+                  className="inline-flex items-center gap-2"
+                  disabled={loading}
+                  aria-label="Refresh projects"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh projects list</TooltipContent>
+            </Tooltip>
+            <CreateProjectDialog onProjectCreated={handleProjectCreated} />
+          </div>
+        </div>
+
+        {/* Edit Project Dialog */}
+        <EditProjectDialog
+          project={projectToEdit}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onProjectUpdated={handleProjectUpdated}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-destructive" />
+                Delete project?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action cannot be undone. 
+                All associated tasks and collaboration history will remain but will no longer be linked to this project.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteProject}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Summary Cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <SummaryCard
+            label="Total projects"
+            icon={Briefcase}
+            value={projects.length}
+            caption={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'Tracking active and planned work'}
+          />
+          <SummaryCard
+            label="Active"
+            icon={ListChecks}
+            value={statusCounts.active}
+            caption={`${statusCounts.planning} planning · ${statusCounts.on_hold} on hold`}
+          />
+          <SummaryCard
+            label="Open tasks"
+            icon={Users}
+            value={openTaskTotal}
+            caption={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for assignments'}
+          />
+          <Card className="border-muted/60 bg-background">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completion rate</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold text-foreground">{completionRate}%</div>
+              <Progress value={completionRate} className="mt-2 h-2" />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {statusCounts.completed} of {projects.length} projects
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-lg">Project backlog</CardTitle>
+                <CardDescription>
+                  Search, filter, and review current initiatives.
+                  <span className="ml-2 hidden text-xs text-muted-foreground/70 sm:inline">
+                    (⌘K to search)
+                  </span>
+                </CardDescription>
               </div>
-              <Select value={statusFilter} onValueChange={(value: StatusFilter) => setStatusFilter(value)}>
-                <SelectTrigger className="sm:w-44">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_FILTERS.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value === 'all' ? 'All statuses' : formatStatusLabel(value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative w-full sm:w-72">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="project-search"
+                    placeholder="Search projects..."
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    className="pl-9"
+                    aria-label="Search projects"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={(value: StatusFilter) => setStatusFilter(value)}>
+                  <SelectTrigger className="sm:w-40" aria-label="Filter by status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTERS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value === 'all' ? 'All statuses' : formatStatusLabel(value)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-1">
+                  <Select value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
+                    <SelectTrigger className="sm:w-36" aria-label="Sort by">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SORT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={toggleSortDirection}
+                        className="h-10 w-10"
+                        aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+                      >
+                        {sortDirection === 'asc' ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {sortDirection === 'asc' ? 'Sort descending' : 'Sort ascending'}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
             </div>
-          </div>
-          <Separator />
-        </CardHeader>
-        <CardContent>
-          {initialLoading && (
-            <div className="space-y-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-28 w-full" />
-              ))}
-            </div>
-          )}
-
-          {!initialLoading && error && (
-            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          {!initialLoading && !error && projects.length === 0 && (
-            <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-              No projects match the current filters.
-            </div>
-          )}
-
-          {!initialLoading && !error && projects.length > 0 && (
-            <ScrollArea className="max-h-[640px]">
-              <div className={viewMode === 'grid' ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pr-4" : "space-y-4 pr-4"}>
-                {projects.map((project) => (
-                  viewMode === 'grid' ? (
-                    <ProjectCard 
-                      key={project.id} 
-                      project={project} 
-                      onDelete={openDeleteDialog}
-                      onUpdateStatus={handleUpdateStatus}
-                    />
-                  ) : (
-                    <ProjectRow 
-                      key={project.id} 
-                      project={project}
-                      onDelete={openDeleteDialog}
-                      onUpdateStatus={handleUpdateStatus}
-                    />
-                  )
+            <Separator />
+          </CardHeader>
+          <CardContent>
+            {initialLoading && (
+              <div className="space-y-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-28 w-full" />
                 ))}
               </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            )}
+
+            {!initialLoading && error && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
+                <AlertTriangle className="mx-auto h-10 w-10 text-destructive/60" />
+                <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => void loadProjects()}
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                  Try again
+                </Button>
+              </div>
+            )}
+
+            {!initialLoading && !error && projects.length === 0 && (
+              <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
+                <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
+                <h3 className="mt-4 text-lg font-medium text-foreground">No projects yet</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {statusFilter !== 'all' || debouncedQuery
+                    ? 'No projects match the current filters. Try adjusting your search or filter.'
+                    : 'Get started by creating your first project.'}
+                </p>
+                {statusFilter === 'all' && !debouncedQuery && (
+                  <CreateProjectDialog
+                    onProjectCreated={handleProjectCreated}
+                    trigger={
+                      <Button className="mt-4 gap-2">
+                        <Plus className="h-4 w-4" />
+                        Create your first project
+                      </Button>
+                    }
+                  />
+                )}
+              </div>
+            )}
+
+            {!initialLoading && !error && sortedProjects.length > 0 && (
+              <ScrollArea className="max-h-[640px]">
+                <div className={viewMode === 'grid' ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pr-4" : "space-y-4 pr-4"}>
+                  {sortedProjects.map((project) => (
+                    viewMode === 'grid' ? (
+                      <ProjectCard 
+                        key={project.id} 
+                        project={project} 
+                        onDelete={openDeleteDialog}
+                        onEdit={openEditDialog}
+                        onUpdateStatus={handleUpdateStatus}
+                        isPendingUpdate={pendingStatusUpdates.has(project.id)}
+                      />
+                    ) : (
+                      <ProjectRow 
+                        key={project.id} 
+                        project={project}
+                        onDelete={openDeleteDialog}
+                        onEdit={openEditDialog}
+                        onUpdateStatus={handleUpdateStatus}
+                        isPendingUpdate={pendingStatusUpdates.has(project.id)}
+                      />
+                    )
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+            
+            {/* Results count */}
+            {!initialLoading && !error && projects.length > 0 && (
+              <div className="mt-4 flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
+                <span>
+                  Showing {sortedProjects.length} project{sortedProjects.length !== 1 ? 's' : ''}
+                </span>
+                {loading && (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Updating...
+                  </span>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </TooltipProvider>
   )
 }
 
-function ProjectCard({ project, onDelete, onUpdateStatus }: { 
+function ProjectCard({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: { 
   project: ProjectRecord
   onDelete: (project: ProjectRecord) => void
+  onEdit: (project: ProjectRecord) => void
   onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
+  isPendingUpdate?: boolean
 }) {
   const tasksQuery = new URLSearchParams({
     projectId: project.id,
@@ -445,16 +809,32 @@ function ProjectCard({ project, onDelete, onUpdateStatus }: {
   })
   const tasksHref = `/dashboard/tasks?${tasksQuery.toString()}`
   const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
+  const StatusIcon = STATUS_ICONS[project.status]
 
   return (
-    <div className="flex flex-col justify-between rounded-md border border-muted/40 bg-background p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md">
+    <div className={cn(
+      "flex flex-col justify-between rounded-md border border-muted/40 bg-background p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md",
+      isPendingUpdate && "opacity-75 pointer-events-none"
+    )}>
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-foreground line-clamp-1">{project.name}</h3>
           <div className="flex items-center gap-1">
-            <Badge variant="secondary" className={STATUS_CLASSES[project.status]}>
-              {formatStatusLabel(project.status)}
-            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="secondary" className={cn(STATUS_CLASSES[project.status], "gap-1")}>
+                  {isPendingUpdate ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <StatusIcon className="h-3 w-3" />
+                  )}
+                  {formatStatusLabel(project.status)}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isPendingUpdate ? 'Updating status...' : 'Click menu to change status'}
+              </TooltipContent>
+            </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -462,6 +842,11 @@ function ProjectCard({ project, onDelete, onUpdateStatus }: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit(project)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit project
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-xs font-medium text-muted-foreground" disabled>
                   Change status
                 </DropdownMenuItem>
@@ -537,10 +922,12 @@ function ProjectCard({ project, onDelete, onUpdateStatus }: {
   )
 }
 
-function ProjectRow({ project, onDelete, onUpdateStatus }: { 
+function ProjectRow({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: { 
   project: ProjectRecord
   onDelete: (project: ProjectRecord) => void
+  onEdit: (project: ProjectRecord) => void
   onUpdateStatus: (project: ProjectRecord, status: ProjectStatus) => void
+  isPendingUpdate?: boolean
 }) {
   const tasksQuery = new URLSearchParams({
     projectId: project.id,
@@ -548,16 +935,25 @@ function ProjectRow({ project, onDelete, onUpdateStatus }: {
   })
   const tasksHref = `/dashboard/tasks?${tasksQuery.toString()}`
   const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
+  const StatusIcon = STATUS_ICONS[project.status]
 
   return (
-    <div className="rounded-md border border-muted/40 bg-background p-4 shadow-sm">
+    <div className={cn(
+      "rounded-md border border-muted/40 bg-background p-4 shadow-sm transition-all",
+      isPendingUpdate && "opacity-75 pointer-events-none"
+    )}>
       <div className="flex flex-col gap-4 md:flex-row md:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-foreground">{project.name}</h3>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Badge variant="secondary" className={cn(STATUS_CLASSES[project.status], "cursor-pointer hover:opacity-80")}>
+                <Badge variant="secondary" className={cn(STATUS_CLASSES[project.status], "cursor-pointer hover:opacity-80 gap-1")}>
+                  {isPendingUpdate ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <StatusIcon className="h-3 w-3" />
+                  )}
                   {formatStatusLabel(project.status)}
                 </Badge>
               </DropdownMenuTrigger>
@@ -620,6 +1016,15 @@ function ProjectRow({ project, onDelete, onUpdateStatus }: {
             <p>Updated {formatDate(project.updatedAt)}</p>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => onEdit(project)}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
             <Button asChild size="sm" variant="outline" className="gap-2">
               <Link href={tasksHref} prefetch>
                 <ListChecks className="h-4 w-4" />

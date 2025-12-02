@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ─────────────────────────────────────────────────────────────────────────
+    // HELPER FUNCTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+    
     function isSignedIn() {
       return request.auth != null;
     }
@@ -9,17 +13,37 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isAgencyMember(workspaceId) {
+      return isSignedIn() && (
+        getUserData().agencyId == workspaceId || 
+        request.auth.uid == workspaceId
+      );
+    }
+
+    function isAdminOrAgencyMember(workspaceId) {
+      return isAdmin() || isAgencyMember(workspaceId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TOP-LEVEL COLLECTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Users collection
     match /users/{userId} {
       allow create: if isSelf(userId);
       allow read: if isSelf(userId) || isAdmin();
       allow update: if isSelf(userId) || isAdmin();
       allow delete: if isAdmin();
 
+      // User subcollections (legacy structure)
       match /adIntegrations/{integrationId} {
         allow read, write: if isSelf(userId) || isAdmin();
       }
@@ -36,11 +60,20 @@ service cloud.firestore {
 
       match /proposals/{proposalId} {
         allow read, write: if isSelf(userId) || isAdmin();
+        
+        match /versions/{versionId} {
+          allow read, write: if isSelf(userId) || isAdmin();
+        }
+      }
+
+      match /proposalAnalytics/{eventId} {
+        allow read: if isSelf(userId) || isAdmin();
+        allow create: if isSelf(userId) || isAdmin();
+        allow update, delete: if isAdmin();
       }
 
       match /tasks/{taskId} {
-        allow read: if isSelf(userId) || isAdmin();
-        allow create, update, delete: if isSelf(userId) || isAdmin();
+        allow read, write: if isSelf(userId) || isAdmin();
       }
 
       match /collaborationTyping/{typingId} {
@@ -74,9 +107,148 @@ service cloud.firestore {
       }
     }
 
+    // User preferences (top-level for settings)
+    match /userPreferences/{userId} {
+      allow read, write: if isSelf(userId) || isAdmin();
+    }
+
+    // Consent records for GDPR compliance
+    match /consent_records/{recordId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Consent records are immutable
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // WORKSPACES (Multi-tenant structure)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /workspaces/{workspaceId} {
+      allow read: if isAdminOrAgencyMember(workspaceId);
+      allow create: if isSignedIn() && request.auth.uid == workspaceId;
+      allow update: if isAdminOrAgencyMember(workspaceId);
+      allow delete: if isAdmin();
+
+      // Clients within workspace
+      match /clients/{clientId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update: if isAdminOrAgencyMember(workspaceId);
+        allow delete: if isAdmin();
+      }
+
+      // Tasks within workspace
+      match /tasks/{taskId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update: if isAdminOrAgencyMember(workspaceId);
+        allow delete: if isAdminOrAgencyMember(workspaceId);
+      }
+
+      // Projects within workspace
+      match /projects/{projectId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update: if isAdminOrAgencyMember(workspaceId);
+        allow delete: if isAdmin();
+      }
+
+      // Collaboration messages within workspace
+      match /collaborationMessages/{messageId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create: if isAdminOrAgencyMember(workspaceId);
+        allow update: if isAdminOrAgencyMember(workspaceId) && 
+          (resource.data.senderId == request.auth.uid || isAdmin());
+        allow delete: if isAdmin();
+      }
+
+      // Notifications within workspace
+      match /notifications/{notificationId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create: if isAdmin();
+        allow update: if isAdminOrAgencyMember(workspaceId);
+        allow delete: if isAdmin();
+      }
+
+      // Finance - Invoices
+      match /financeInvoices/{invoiceId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update, delete: if isAdmin();
+      }
+
+      // Finance - Revenue records
+      match /financeRevenue/{revenueId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update, delete: if isAdmin();
+      }
+
+      // Finance - Cost entries
+      match /financeCosts/{costId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create: if isAdminOrAgencyMember(workspaceId);
+        allow update, delete: if isAdmin();
+      }
+
+      // Recurring invoice schedules
+      match /recurringInvoices/{scheduleId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update, delete: if isAdmin();
+      }
+
+      // Proposal templates
+      match /proposalTemplates/{templateId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update, delete: if isAdminOrAgencyMember(workspaceId);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ADMIN-ONLY COLLECTIONS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Contact form submissions
     match /contactMessages/{messageId} {
       allow read, write: if isAdmin();
+      allow create: if true; // Public contact form
     }
+
+    // Invitations (admin manages, invited users can read their own)
+    match /invitations/{invitationId} {
+      allow read: if isAdmin() || 
+        (isSignedIn() && resource.data.email == request.auth.token.email);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Admin scheduler events
+    match /admin/{adminDocId} {
+      allow read, write: if isAdmin();
+      
+      match /events/{eventId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Stripe webhook deduplication
+    match /_stripeWebhookEvents/{eventId} {
+      allow read, write: if false; // Server-only
+    }
+
+    // Health check collection
+    match /_health/{docId} {
+      allow read: if true; // Public health checks
+      allow write: if false;
+    }
+
+    match /_health_check/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Scheduler alert preferences
+    match /config/scheduler/alertPreferences/{prefId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DEFAULT DENY
+    // ─────────────────────────────────────────────────────────────────────────
 
     match /{document=**} {
       allow read, write: if false;
