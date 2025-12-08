@@ -127,7 +127,7 @@ export default function AdminPage() {
         const messages = data.messages ?? []
         pendingLeads = messages.filter((m: { status: string }) => m.status === 'new').length
         const today = new Date().toDateString()
-        newLeadsToday = messages.filter((m: { createdAt: string }) => 
+        newLeadsToday = messages.filter((m: { createdAt: string }) =>
           m.createdAt && new Date(m.createdAt).toDateString() === today
         ).length
 
@@ -153,7 +153,7 @@ export default function AdminPage() {
         recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
         if (recentErrors > 5) schedulerHealth = 'error'
         else if (recentErrors > 0) schedulerHealth = 'warning'
-        
+
         const lastSync = events.find((e: { source: string }) => e.source === 'cron' || e.source === 'worker')
         if (lastSync?.createdAt) {
           lastSyncTime = lastSync.createdAt
@@ -474,10 +474,10 @@ export default function AdminPage() {
                       <div key={activity.id} className="flex gap-3">
                         <div className={cn(
                           'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                          activity.type === 'lead_received' && 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-                          activity.type === 'user_joined' && 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
-                          activity.type === 'client_created' && 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
-                          activity.type === 'error' && 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                          activity.type === 'lead_received' && 'bg-blue-100 text-blue-600',
+                          activity.type === 'user_joined' && 'bg-emerald-100 text-emerald-600',
+                          activity.type === 'client_created' && 'bg-purple-100 text-purple-600',
+                          activity.type === 'error' && 'bg-red-100 text-red-600',
                         )}>
                           {activity.type === 'lead_received' && <Inbox className="h-4 w-4" />}
                           {activity.type === 'user_joined' && <Users className="h-4 w-4" />}

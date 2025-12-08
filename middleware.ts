@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, 100)
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, 60_000)
 
-// Fallback in-memory rate limiting for when Redis is not configured
+// In-memory rate limiting (fallback for when Redis is not configured)
 type RateLimitBucket = {
   count: number
   resetAt: number
@@ -84,8 +84,8 @@ export const config = {
 
 async function consumeRateLimit(request: NextRequest) {
   const key = getClientKey(request)
-  
-  // In-memory fallback
+
+  // In-memory rate limiting
   const now = Date.now()
   const bucket = rateLimitBuckets.get(key)
   const windowMs = API_RATE_LIMIT_WINDOW_MS

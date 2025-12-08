@@ -343,7 +343,7 @@ export default function Chatbot() {
                         )}
                       >
                         {message.sender === 'bot' ? (
-                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:p-2 prose-pre:rounded-md">
+                          <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-muted/50 prose-pre:p-2 prose-pre:rounded-md">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {message.text}
                             </ReactMarkdown>

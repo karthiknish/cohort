@@ -44,7 +44,7 @@ const variantConfig = {
   warning: {
     icon: AlertTriangle,
     iconClass: 'text-amber-600',
-    bgClass: 'bg-amber-100 dark:bg-amber-900/30',
+    bgClass: 'bg-amber-100',
     buttonVariant: 'default' as const,
   },
 }

@@ -75,17 +75,17 @@ const STATUS_OPTIONS: ContactMessage['status'][] = ['new', 'in_progress', 'resol
 const STATUS_CONFIG = {
   new: {
     label: 'New',
-    color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    color: 'bg-blue-100 text-blue-700',
     icon: Inbox,
   },
   in_progress: {
     label: 'In Progress',
-    color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    color: 'bg-amber-100 text-amber-700',
     icon: Clock,
   },
   resolved: {
     label: 'Resolved',
-    color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    color: 'bg-emerald-100 text-emerald-700',
     icon: CheckCircle2,
   },
 }
@@ -215,11 +215,11 @@ export default function AdminLeadsPage() {
       }
 
       setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, status: nextStatus } : msg)))
-      toast({ 
-        title: 'Status updated', 
-        description: `Lead marked as ${nextStatus.replace('_', ' ')}.` 
+      toast({
+        title: 'Status updated',
+        description: `Lead marked as ${nextStatus.replace('_', ' ')}.`
       })
-      
+
       // Update selected lead if it's the one being modified
       if (selectedLead?.id === id) {
         setSelectedLead((prev) => prev ? { ...prev, status: nextStatus } : null)
@@ -301,7 +301,7 @@ export default function AdminLeadsPage() {
           </CardContent>
         </Card>
 
-        <Card 
+        <Card
           className={cn(
             'cursor-pointer transition-all hover:shadow-md',
             statusFilter === 'new' && 'ring-2 ring-blue-500'
@@ -318,14 +318,14 @@ export default function AdminLeadsPage() {
                   <p className="text-3xl font-bold text-blue-600">{summary.new}</p>
                 )}
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
                 <Inbox className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card 
+        <Card
           className={cn(
             'cursor-pointer transition-all hover:shadow-md',
             statusFilter === 'in_progress' && 'ring-2 ring-amber-500'
@@ -342,14 +342,14 @@ export default function AdminLeadsPage() {
                   <p className="text-3xl font-bold text-amber-600">{summary.in_progress}</p>
                 )}
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
                 <Clock className="h-6 w-6 text-amber-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card 
+        <Card
           className={cn(
             'cursor-pointer transition-all hover:shadow-md',
             statusFilter === 'resolved' && 'ring-2 ring-emerald-500'
@@ -366,7 +366,7 @@ export default function AdminLeadsPage() {
                   <p className="text-3xl font-bold text-emerald-600">{summary.resolved}</p>
                 )}
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
                 <CheckCircle2 className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
@@ -410,7 +410,7 @@ export default function AdminLeadsPage() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-0">
           {isLoading && messages.length === 0 ? (
             <div className="divide-y">
@@ -433,8 +433,8 @@ export default function AdminLeadsPage() {
                 {searchQuery
                   ? 'Try adjusting your search terms'
                   : statusFilter !== 'all'
-                  ? 'No leads with this status'
-                  : 'New leads will appear here'}
+                    ? 'No leads with this status'
+                    : 'New leads will appear here'}
               </p>
             </div>
           ) : (

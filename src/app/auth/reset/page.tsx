@@ -40,7 +40,7 @@ function calculatePasswordStrength(password: string): PasswordStrength {
   }
 
   const passedChecks = Object.values(checks).filter(Boolean).length
-  
+
   let score: number
   let label: string
   let color: string
@@ -185,8 +185,8 @@ function ResetPasswordContent() {
   return (
     <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
       {/* Back Link */}
-      <Link 
-        href="/auth" 
+      <Link
+        href="/auth"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -391,8 +391,8 @@ function ResetPasswordContent() {
 
       {status === 'success' && (
         <FadeIn as="div" className="space-y-6">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950/30">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 mb-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 mb-4">
               <CheckCircle className="h-6 w-6 text-emerald-600" />
             </div>
             <h3 className="font-semibold text-foreground mb-1">Password reset successful</h3>

@@ -197,6 +197,11 @@ service cloud.firestore {
         allow read: if isAdminOrAgencyMember(workspaceId);
         allow create, update, delete: if isAdminOrAgencyMember(workspaceId);
       }
+
+      // Proposal versions
+      match /proposalVersions/{versionId} {
+        allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -223,6 +228,11 @@ service cloud.firestore {
       match /events/{eventId} {
         allow read, write: if isAdmin();
       }
+    }
+
+    // Admin collection for scheduler monitoring and system events
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
     }
 
     // Stripe webhook deduplication
