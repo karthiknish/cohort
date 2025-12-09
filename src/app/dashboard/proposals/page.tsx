@@ -24,7 +24,7 @@ import { ProposalDraftPanel } from './components/proposal-draft-panel'
 import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
 import { ProposalTemplateSelector } from './components/proposal-template-selector'
 import { ProposalVersionHistory } from './components/proposal-version-history'
-import { RelatedPages } from '@/components/dashboard/related-pages'
+
 import { BarChart3, CreditCard, Users, FileText } from 'lucide-react'
 import {
   trackDraftCreated,
@@ -971,16 +971,7 @@ export default function ProposalsPage() {
       />
       <ProposalGenerationOverlay isSubmitting={isSubmitting} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
-      
-      <RelatedPages
-        title="Related features"
-        description="Navigate to other sections that work together with proposals."
-        pages={[
-          { name: 'Proposal Analytics', href: '/dashboard/proposals/analytics', description: 'Track proposal performance', icon: BarChart3 },
-          { name: 'Finance', href: '/dashboard/finance', description: 'Manage invoices & costs', icon: CreditCard },
-          { name: 'Clients', href: '/dashboard/clients', description: 'View client details', icon: Users },
-        ]}
-      />
+
     </div>
   )
 }

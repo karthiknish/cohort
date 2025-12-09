@@ -33,10 +33,10 @@ export function ClientStatsGrid({
 }: ClientStatsGridProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card className="border-muted/60 bg-gradient-to-br from-blue-50/50 to-background dark:from-blue-950/20 transition-all hover:shadow-md">
+      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Projects</CardTitle>
-          <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <Briefcase className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {statsLoading ? (
@@ -55,10 +55,10 @@ export function ClientStatsGrid({
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-gradient-to-br from-emerald-50/50 to-background dark:from-emerald-950/20 transition-all hover:shadow-md">
+      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Tasks</CardTitle>
-          <CheckSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <CheckSquare className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {statsLoading ? (
@@ -77,10 +77,10 @@ export function ClientStatsGrid({
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-gradient-to-br from-violet-50/50 to-background dark:from-violet-950/20 transition-all hover:shadow-md">
+      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Team</CardTitle>
-          <UsersIcon className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+          <UsersIcon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
@@ -93,10 +93,10 @@ export function ClientStatsGrid({
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-gradient-to-br from-amber-50/50 to-background dark:from-amber-950/20 transition-all hover:shadow-md">
+      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Proposals</CardTitle>
-          <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {statsLoading ? (

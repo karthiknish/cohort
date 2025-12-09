@@ -105,11 +105,11 @@ const navigationGuide = [
   },
 ]
 
-const keyboardShortcuts = [
-  { keys: ['⌘', 'K'], description: 'Open quick navigation' },
+const getKeyboardShortcuts = (isMac: boolean) => [
+  { keys: [isMac ? '⌘' : 'Ctrl', 'K'], description: 'Open quick navigation' },
   { keys: ['?'], description: 'Show help & shortcuts' },
   { keys: ['Esc'], description: 'Close dialogs and modals' },
-  { keys: ['⌘', '/'], description: 'Focus search' },
+  { keys: [isMac ? '⌘' : 'Ctrl', '/'], description: 'Focus search' },
 ]
 
 const gettingStartedSteps = [
@@ -137,12 +137,19 @@ const gettingStartedSteps = [
 
 export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
   const [activeTab, setActiveTab] = useState(showWelcome ? 'welcome' : 'navigation')
+  const [isMac, setIsMac] = useState(false)
+
+  useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform))
+  }, [])
 
   useEffect(() => {
     if (showWelcome) {
       setActiveTab('welcome')
     }
   }, [showWelcome])
+
+  const keyboardShortcuts = getKeyboardShortcuts(isMac)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,7 +187,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                     <div>
                       <h4 className="font-semibold text-foreground">Quick tip</h4>
                       <p className="text-sm text-muted-foreground">
-                        Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">⌘K</kbd> anytime to quickly navigate to any page.
+                        Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{isMac ? '⌘' : 'Ctrl+'}K</kbd> anytime to quickly navigate to any page.
                       </p>
                     </div>
                   </div>

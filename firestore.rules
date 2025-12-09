@@ -235,6 +235,16 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Platform features for admin Kanban board
+    match /platform_features/{featureId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Admin notifications for new user signups and other alerts
+    match /admin_notifications/{notificationId} {
+      allow read, write: if isAdmin();
+    }
+
     // Stripe webhook deduplication
     match /_stripeWebhookEvents/{eventId} {
       allow read, write: if false; // Server-only

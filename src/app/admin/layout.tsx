@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
+import React, { type ReactNode } from 'react'
 import {
   Activity,
   ArrowLeft,
   ChevronRight,
   LayoutDashboard,
+  Lightbulb,
   Megaphone,
   ShieldCheck,
   Users,
@@ -46,6 +47,11 @@ const adminNavItems = [
     title: 'Leads',
     href: '/admin/leads',
     icon: Megaphone,
+  },
+  {
+    title: 'Features',
+    href: '/admin/features',
+    icon: Lightbulb,
   },
   {
     title: 'Scheduler',
@@ -119,20 +125,22 @@ function AdminBreadcrumb() {
     <Breadcrumb className="px-4 py-2 text-sm">
       <BreadcrumbList>
         {breadcrumbs.map((crumb, index) => (
-          <BreadcrumbItem key={crumb.href}>
-            {index < breadcrumbs.length - 1 ? (
-              <>
+          <React.Fragment key={crumb.href}>
+            <BreadcrumbItem>
+              {index < breadcrumbs.length - 1 ? (
                 <BreadcrumbLink asChild>
                   <Link href={crumb.href}>{crumb.title}</Link>
                 </BreadcrumbLink>
-                <BreadcrumbSeparator>
-                  <ChevronRight className="h-4 w-4" />
-                </BreadcrumbSeparator>
-              </>
-            ) : (
-              <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+            {index < breadcrumbs.length - 1 && (
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4" />
+              </BreadcrumbSeparator>
             )}
-          </BreadcrumbItem>
+          </React.Fragment>
         ))}
       </BreadcrumbList>
     </Breadcrumb>

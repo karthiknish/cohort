@@ -91,6 +91,12 @@ service firebase.storage {
       allow write: if isOwner(userId) && (isDeleteOperation() || isAllowedProposalUpload(userId));
     }
 
+    // Feature images for admin Kanban board (admin-only)
+    match /features/{featureId}/{allPaths=**} {
+      allow read: if isSignedIn() || hasValidDownloadToken();
+      allow write: if isSignedIn(); // Admin check happens at API layer
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

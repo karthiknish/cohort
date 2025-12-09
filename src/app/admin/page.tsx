@@ -49,7 +49,7 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string
-  type: 'user_joined' | 'client_created' | 'lead_received' | 'sync_completed' | 'error'
+  type: 'user_joined' | 'client_created' | 'lead_received' | 'sync_completed' | 'error' | 'new_user_signup'
   title: string
   description: string
   timestamp: string
@@ -85,7 +85,7 @@ export default function AdminPage() {
       const token = await getIdToken()
 
       // Fetch stats from multiple endpoints in parallel
-      const [usersRes, clientsRes, leadsRes, schedulerRes] = await Promise.allSettled([
+      const [usersRes, clientsRes, leadsRes, schedulerRes, notificationsRes] = await Promise.allSettled([
         fetch('/api/admin/users?pageSize=1', {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -96,6 +96,9 @@ export default function AdminPage() {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('/api/admin/scheduler/events?pageSize=10', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('/api/admin/notifications?limit=10', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ])
@@ -159,6 +162,26 @@ export default function AdminPage() {
           lastSyncTime = lastSync.createdAt
         }
       }
+
+      // Process admin notifications (new signups)
+      if (notificationsRes.status === 'fulfilled' && notificationsRes.value.ok) {
+        const data = await notificationsRes.value.json()
+        const notifications = data.notifications ?? []
+        notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
+          if (n.type === 'new_user_signup') {
+            recentActivities.push({
+              id: `notification-${n.id}`,
+              type: 'new_user_signup',
+              title: n.title || 'New User Signup',
+              description: n.message,
+              timestamp: n.createdAt,
+            })
+          }
+        })
+      }
+
+      // Sort activities by timestamp (most recent first)
+      recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
       setStats({
         totalUsers,
@@ -477,11 +500,13 @@ export default function AdminPage() {
                           activity.type === 'lead_received' && 'bg-blue-100 text-blue-600',
                           activity.type === 'user_joined' && 'bg-emerald-100 text-emerald-600',
                           activity.type === 'client_created' && 'bg-purple-100 text-purple-600',
+                          activity.type === 'new_user_signup' && 'bg-amber-100 text-amber-600',
                           activity.type === 'error' && 'bg-red-100 text-red-600',
                         )}>
                           {activity.type === 'lead_received' && <Inbox className="h-4 w-4" />}
                           {activity.type === 'user_joined' && <Users className="h-4 w-4" />}
                           {activity.type === 'client_created' && <ShieldCheck className="h-4 w-4" />}
+                          {activity.type === 'new_user_signup' && <Bell className="h-4 w-4" />}
                           {activity.type === 'error' && <AlertCircle className="h-4 w-4" />}
                         </div>
                         <div className="min-w-0 flex-1">

@@ -15,6 +15,36 @@ const payloadSchema = z
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'pending', 'invited', 'disabled', 'suspended'])
 
+/**
+ * Create a notification for admins when a new user signs up
+ */
+async function notifyAdminsOfNewSignup(
+  userId: string,
+  email: string,
+  name: string
+): Promise<void> {
+  try {
+    const serverTimestamp = FieldValue.serverTimestamp()
+    
+    // Create notification record in admin_notifications collection
+    await adminDb.collection('admin_notifications').add({
+      type: 'new_user_signup',
+      title: 'New User Signup',
+      message: `${name || email} has signed up for an account.`,
+      userId,
+      userEmail: email,
+      userName: name || 'New User',
+      read: false,
+      createdAt: serverTimestamp,
+    })
+    
+    console.log(`[auth/bootstrap] Admin notification created for new user: ${email}`)
+  } catch (error) {
+    // Log but don't fail the signup process
+    console.error('[auth/bootstrap] Failed to create admin notification:', error)
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request)
@@ -47,7 +77,9 @@ export async function POST(request: NextRequest) {
       lastLoginAt: serverTimestamp,
     }
 
-    if (!snapshot.exists) {
+    const isNewUser = !snapshot.exists
+
+    if (isNewUser) {
       updatePayload.createdAt = serverTimestamp
       updatePayload.email = auth.email ?? ''
       updatePayload.agencyId = existingData?.agencyId ?? null
@@ -67,6 +99,15 @@ export async function POST(request: NextRequest) {
     }
 
     await userRef.set(updatePayload, { merge: true })
+
+    // Notify admins of new user signup
+    if (isNewUser) {
+      await notifyAdminsOfNewSignup(
+        auth.uid,
+        auth.email ?? '',
+        providedName ?? auth.email ?? 'New User'
+      )
+    }
 
     const userRecord = await adminAuth.getUser(auth.uid)
     const customClaims = userRecord.customClaims ?? {}

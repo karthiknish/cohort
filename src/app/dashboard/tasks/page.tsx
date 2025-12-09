@@ -18,7 +18,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
-import { RelatedPages } from '@/components/dashboard/related-pages'
+
 
 // Import task components and hooks
 import {
@@ -131,7 +131,8 @@ export default function TasksPage() {
       clientId: selectedClient?.id ?? null,
       clientName: selectedClient?.name ?? '',
     }))
-  }, [selectedClient, form])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClient?.id, selectedClient?.name])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -315,31 +316,7 @@ export default function TasksPage() {
           onConfirm={handleConfirmDelete}
         />
 
-        {/* Related Pages */}
-        <RelatedPages
-          title="Related features"
-          description="Navigate to sections that work alongside Tasks."
-          pages={[
-            {
-              name: 'Projects',
-              href: '/dashboard/projects',
-              description: 'Organize work into projects',
-              icon: Briefcase,
-            },
-            {
-              name: 'Collaboration',
-              href: '/dashboard/collaboration',
-              description: 'Team discussions',
-              icon: MessageSquare,
-            },
-            {
-              name: 'Clients',
-              href: '/dashboard/clients',
-              description: 'Client workspaces',
-              icon: Users,
-            },
-          ]}
-        />
+
       </div>
     </TooltipProvider>
   )

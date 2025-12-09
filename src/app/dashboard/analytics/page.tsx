@@ -41,7 +41,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { RelatedPages } from '@/components/dashboard/related-pages'
+
 import { FeatureTips } from '@/components/dashboard/feature-tips'
 import { Megaphone, CreditCard, FileText } from 'lucide-react'
 
@@ -858,15 +858,7 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <RelatedPages
-        title="Related features"
-        description="Explore connected parts of your workspace."
-        pages={[
-          { name: 'Ad Integrations', href: '/dashboard/ads', description: 'Connect ad platforms', icon: Megaphone },
-          { name: 'Finance', href: '/dashboard/finance', description: 'Track revenue & costs', icon: CreditCard },
-          { name: 'Proposals', href: '/dashboard/proposals', description: 'Create proposals', icon: FileText },
-        ]}
-      />
+
     </div>
   )
 }

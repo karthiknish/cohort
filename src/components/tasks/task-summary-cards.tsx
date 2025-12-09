@@ -30,19 +30,19 @@ const summaryCards: SummaryCardConfig[] = [
     status: 'in-progress',
     label: 'In progress',
     icon: AlertCircle,
-    iconClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
+    iconClass: 'bg-muted/80 text-muted-foreground',
   },
   {
     status: 'review',
     label: 'Review',
     icon: EyeIcon,
-    iconClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
+    iconClass: 'bg-muted/80 text-muted-foreground',
   },
   {
     status: 'completed',
     label: 'Completed',
     icon: CheckCircle,
-    iconClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400',
+    iconClass: 'bg-muted/80 text-muted-foreground',
   },
 ]
 

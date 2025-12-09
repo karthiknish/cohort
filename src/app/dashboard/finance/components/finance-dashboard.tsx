@@ -17,7 +17,7 @@ import { FinanceInvoiceTable } from './finance-invoice-table'
 import { FinanceRevenueSidebar } from './finance-revenue-sidebar'
 import { FinanceDashboardSkeleton } from './finance-dashboard-skeleton'
 import { RecurringInvoicesCard } from './recurring-invoices-card'
-import { RelatedPages } from '@/components/dashboard/related-pages'
+
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
@@ -293,16 +293,6 @@ export function FinanceDashboard() {
         )}
       </Tabs>
 
-      <RelatedPages
-        title="Related features"
-        description="Navigate to features that work together with Finance."
-        pages={[
-          { name: 'Analytics', href: '/dashboard/analytics', description: 'Ad spend & performance', icon: BarChart3 },
-          { name: 'Proposals', href: '/dashboard/proposals', description: 'Create client proposals', icon: FileText },
-          { name: 'Clients', href: '/dashboard/clients', description: 'Manage workspaces', icon: Users },
-          { name: 'Ads', href: '/dashboard/ads', description: 'Ad platform integrations', icon: Megaphone },
-        ]}
-      />
     </div>
   )
 }

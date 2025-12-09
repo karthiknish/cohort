@@ -56,7 +56,13 @@ const quickActions = [
 
 export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
+  const [isMac, setIsMac] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    // Detect if user is on Mac
+    setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform))
+  }, [])
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -84,7 +90,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
         <Search className="h-4 w-4" />
         <span>Quick navigation...</span>
         <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-muted bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-          <span className="text-xs">⌘</span>K
+          <span className="text-xs">{isMac ? '⌘' : 'Ctrl'}</span>K
         </kbd>
       </button>
       
