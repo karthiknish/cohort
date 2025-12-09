@@ -1,8 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Plus, X } from 'lucide-react'
+import { Loader2, Plus, Sparkles, X } from 'lucide-react'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+
+import { useAuth } from '@/contexts/auth-context'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -62,7 +64,10 @@ export function FeatureFormDialog({
   onSubmit,
 }: FeatureFormDialogProps) {
   const { toast } = useToast()
+  const { getIdToken } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
 
   // Form state
   const [title, setTitle] = useState('')
@@ -112,6 +117,58 @@ export function FeatureFormDialog({
 
     return downloadUrl
   }, [])
+
+  const handleGenerateAI = useCallback(async (field: 'title' | 'description') => {
+    if (field === 'title') {
+      setIsGeneratingTitle(true)
+    } else {
+      setIsGeneratingDescription(true)
+    }
+
+    try {
+      const token = await getIdToken()
+      const response = await fetch('/api/admin/features/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          field,
+          context: {
+            currentTitle: title,
+            currentDescription: description,
+            status,
+            priority,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate content')
+      }
+
+      const data = await response.json()
+      
+      if (field === 'title' && data.title) {
+        setTitle(data.title)
+        toast({ title: 'Title generated', description: 'AI has suggested a title for your feature.' })
+      } else if (field === 'description' && data.description) {
+        setDescription(data.description)
+        toast({ title: 'Description generated', description: 'AI has suggested a description for your feature.' })
+      }
+    } catch (error) {
+      console.error('AI generation failed:', error)
+      toast({
+        title: 'Generation failed',
+        description: 'Unable to generate content. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsGeneratingTitle(false)
+      setIsGeneratingDescription(false)
+    }
+  }, [getIdToken, title, description, status, priority, toast])
 
   const handleAddReference = useCallback(() => {
     if (!newRefUrl.trim()) return
@@ -192,26 +249,60 @@ export function FeatureFormDialog({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="feature-title">Title *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="feature-title">Title *</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                onClick={() => handleGenerateAI('title')}
+                disabled={isSubmitting || isGeneratingTitle}
+              >
+                {isGeneratingTitle ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                AI Generate
+              </Button>
+            </div>
             <Input
               id="feature-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., User Authentication System"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isGeneratingTitle}
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="feature-description">Description</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="feature-description">Description</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                onClick={() => handleGenerateAI('description')}
+                disabled={isSubmitting || isGeneratingDescription}
+              >
+                {isGeneratingDescription ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                AI Generate
+              </Button>
+            </div>
             <Textarea
               id="feature-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what this feature should accomplish..."
               rows={3}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isGeneratingDescription}
             />
           </div>
 
