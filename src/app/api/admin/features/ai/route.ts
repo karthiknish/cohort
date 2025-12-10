@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
