@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { useAuth } from '@/contexts/auth-context'
+
 export type SchedulerEvent = {
   id: string
   createdAt: string | null
@@ -25,6 +27,7 @@ export type SchedulerEvent = {
 type FetchState = 'idle' | 'loading' | 'refreshing' | 'error'
 
 export function useSchedulerEvents() {
+  const { getIdToken } = useAuth()
   const [events, setEvents] = useState<SchedulerEvent[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [isEndReached, setIsEndReached] = useState(false)
@@ -60,8 +63,16 @@ export function useSchedulerEvents() {
       setErrorMessage(null)
 
       try {
+        const token = await getIdToken()
+        if (!token) {
+          throw new Error('Authentication required')
+        }
+
         const response = await fetch(buildQuery(append ? cursor : null), {
           cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         })
 
         if (!response.ok) {
@@ -83,7 +94,7 @@ export function useSchedulerEvents() {
         setFetchState('idle')
       }
     },
-    [buildQuery, cursor, fetchState]
+    [buildQuery, cursor, fetchState, getIdToken]
   )
 
   useEffect(() => {
