@@ -4,10 +4,16 @@ import type { Query, DocumentData, DocumentSnapshot } from 'firebase-admin/fires
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { mergeProposalForm, proposalDraftUpdateSchema, sanitizeProposalUpdate, type ProposalFormData } from '@/lib/proposals'
 
 const updateSchema = proposalDraftUpdateSchema
+
+const proposalQuerySchema = z.object({
+  id: z.string().optional(),
+  status: z.string().optional(),
+  clientId: z.string().optional(),
+})
 
 type ProposalSnapshot = {
   status?: string
@@ -69,18 +75,13 @@ type SerializedProposal = {
   presentationDeck: ReturnType<typeof serializePresentationDeck>
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const url = new URL(request.url)
-    const idParam = url.searchParams.get('id')
-    const statusParam = url.searchParams.get('status')
-    const clientIdParam = url.searchParams.get('clientId')
-    const proposalsRef = adminDb.collection('users').doc(auth.uid).collection('proposals')
+export const GET = createApiHandler(
+  {
+    querySchema: proposalQuerySchema,
+  },
+  async (req, { auth, query }) => {
+    const { id: idParam, status: statusParam, clientId: clientIdParam } = query
+    const proposalsRef = adminDb.collection('users').doc(auth.uid!).collection('proposals')
 
     if (idParam) {
       const docSnap = await proposalsRef.doc(idParam).get()
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
       }
 
       const proposal = mapProposalSnapshot(docSnap)
-      return NextResponse.json({ proposal })
+      return { proposal }
     }
 
     let proposalsQuery: Query<DocumentData> = proposalsRef
@@ -105,24 +106,17 @@ export async function GET(request: NextRequest) {
     const snapshot = await proposalsQuery.get()
     const results = snapshot.docs.map((docSnap) => mapProposalSnapshot(docSnap))
 
-    return NextResponse.json({ proposals: results })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[api/proposals] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load proposals' }, { status: 500 })
+    return { proposals: results }
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const rawBody = (await request.json().catch(() => null)) as Record<string, unknown> | null
+export const POST = createApiHandler(
+  {
+    // We'll use a custom body parsing here because of the complex normalization
+    // but we could also use a schema if we wanted to be stricter.
+  },
+  async (req, { auth }) => {
+    const rawBody = (await req.json().catch(() => null)) as Record<string, unknown> | null
 
     const mergedFormData = normalizeFormData(rawBody?.formData)
 
@@ -140,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     const docRef = await adminDb
       .collection('users')
-      .doc(auth.uid)
+      .doc(auth.uid!)
       .collection('proposals')
       .add({
         ownerId: auth.uid,
@@ -159,24 +153,14 @@ export async function POST(request: NextRequest) {
       })
 
     return NextResponse.json({ id: docRef.id }, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[api/proposals] POST failed', error)
-    return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 })
   }
-}
+)
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const body = (await request.json().catch(() => null)) as unknown
-    const parsed = updateSchema.parse(body ?? {})
+export const PATCH = createApiHandler(
+  {
+    bodySchema: updateSchema,
+  },
+  async (req, { auth, body }) => {
     const proposalId = extractProposalId(body)
 
     if (!proposalId) {
@@ -185,40 +169,26 @@ export async function PATCH(request: NextRequest) {
 
     const proposalRef = adminDb
       .collection('users')
-      .doc(auth.uid)
+      .doc(auth.uid!)
       .collection('proposals')
       .doc(proposalId)
-    await proposalRef.update(sanitizeProposalUpdate(parsed, FieldValue.serverTimestamp()))
+    await proposalRef.update(sanitizeProposalUpdate(body, FieldValue.serverTimestamp()))
 
-    return NextResponse.json({ ok: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    if (error instanceof z.ZodError) {
-      console.error('[api/proposals] update validation failed', error.flatten())
-      return NextResponse.json({ error: 'Invalid payload', details: error.flatten() }, { status: 400 })
-    }
-    console.error('[api/proposals] PATCH failed', error)
-    return NextResponse.json({ error: 'Failed to update proposal' }, { status: 500 })
+    return { ok: true }
   }
-}
+)
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const body = (await request.json().catch(() => null)) as { id?: unknown } | null
+export const DELETE = createApiHandler(
+  {},
+  async (req, { auth }) => {
+    const body = (await req.json().catch(() => null)) as { id?: unknown } | null
     const rawId = body?.id
     if (typeof rawId !== 'string' || rawId.trim().length === 0) {
       return NextResponse.json({ error: 'Proposal id required' }, { status: 400 })
     }
 
     const proposalId = rawId.trim()
-    const proposalRef = adminDb.collection('users').doc(auth.uid).collection('proposals').doc(proposalId)
+    const proposalRef = adminDb.collection('users').doc(auth.uid!).collection('proposals').doc(proposalId)
     const snapshot = await proposalRef.get()
 
     if (!snapshot.exists) {
@@ -227,15 +197,9 @@ export async function DELETE(request: NextRequest) {
 
     await proposalRef.delete()
 
-    return NextResponse.json({ ok: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[api/proposals] DELETE failed', error)
-    return NextResponse.json({ error: 'Failed to delete proposal' }, { status: 500 })
+    return { ok: true }
   }
-}
+)
 
 type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
 

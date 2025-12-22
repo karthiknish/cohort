@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { AuthenticationError } from '@/lib/server-auth'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type {
   CollaborationAttachment,
@@ -13,11 +13,21 @@ import type {
   CollaborationReaction,
 } from '@/types/collaboration'
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
-import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
+import { type WorkspaceContext } from '@/lib/workspace'
 import { notifyCollaborationMessageWhatsApp, recordCollaborationNotification } from '@/lib/notifications'
+import { createApiHandler } from '@/lib/api-handler'
 
 export const channelTypeSchema = z.enum(['client', 'team', 'project'])
 export const messageFormatSchema = z.enum(['markdown', 'plaintext'])
+
+const messageQuerySchema = z.object({
+  pageSize: z.string().optional(),
+  cursor: z.string().optional(),
+  threadRootId: z.string().optional(),
+  channelType: z.string().optional(),
+  clientId: z.string().optional(),
+  projectId: z.string().optional(),
+})
 
 const attachmentSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -308,23 +318,26 @@ async function ensureProjectOwnership(workspace: WorkspaceContext, projectId: st
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: messageQuerySchema,
+  },
+  async (req, { auth, workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const {
+      pageSize: pageSizeParam,
+      cursor: cursorParam,
+      threadRootId: threadRootIdRaw,
+      channelType: channelTypeParam = 'team',
+      clientId: clientIdParam,
+      projectId: projectIdParam,
+    } = query
 
-    const workspace = await resolveWorkspaceContext(auth)
-
-    const searchParams = request.nextUrl.searchParams
-    const pageSizeParam = searchParams.get('pageSize')
-    const cursorParam = searchParams.get('cursor')
-    const threadRootIdRaw = searchParams.get('threadRootId')
     const threadRootId = threadRootIdRaw?.trim()
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
 
-    if (threadRootIdRaw !== null) {
+    if (threadRootIdRaw !== undefined) {
       if (!threadRootId) {
         return NextResponse.json({ error: 'threadRootId must be provided' }, { status: 400 })
       }
@@ -356,10 +369,9 @@ export async function GET(request: NextRequest) {
           })()
         : null
 
-      return NextResponse.json({ messages, nextCursor })
+      return { messages, nextCursor }
     }
 
-    const channelTypeParam = searchParams.get('channelType') ?? 'team'
     const parseChannel = channelTypeSchema.safeParse(channelTypeParam)
 
     if (!parseChannel.success) {
@@ -367,8 +379,8 @@ export async function GET(request: NextRequest) {
     }
 
     const channelType = parseChannel.data
-    const clientId = searchParams.get('clientId') ?? undefined
-    const projectId = searchParams.get('projectId') ?? undefined
+    const clientId = clientIdParam
+    const projectId = projectIdParam
 
     if (channelType === 'client') {
       if (!clientId) {
@@ -384,28 +396,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'projectId is only valid for project channels' }, { status: 400 })
     }
 
-    let query = workspace.collaborationCollection.where('channelType', '==', channelType)
+    let messagesQuery = workspace.collaborationCollection.where('channelType', '==', channelType)
 
     if (channelType === 'client' && clientId) {
-      query = query.where('clientId', '==', clientId)
+      messagesQuery = messagesQuery.where('clientId', '==', clientId)
     }
 
     if (channelType === 'project' && projectId) {
-      query = query.where('projectId', '==', projectId)
+      messagesQuery = messagesQuery.where('projectId', '==', projectId)
     }
-    query = query.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
+    messagesQuery = messagesQuery.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 
     if (cursorParam) {
       const [cursorTime, cursorId] = cursorParam.split('|')
       if (cursorTime && cursorId) {
         const cursorDate = new Date(cursorTime)
         if (!Number.isNaN(cursorDate.getTime())) {
-          query = query.startAfter(Timestamp.fromDate(cursorDate), cursorId)
+          messagesQuery = messagesQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
         }
       }
     }
 
-    const snapshot = await query.limit(pageSize + 1).get()
+    const snapshot = await messagesQuery.limit(pageSize + 1).get()
 
     const docs = snapshot.docs
     const messages = docs.slice(0, pageSize).map((doc) => mapMessageDoc(doc.id, doc.data() as StoredMessage))
@@ -417,54 +429,41 @@ export async function GET(request: NextRequest) {
         })()
       : null
 
-    return NextResponse.json({ messages, nextCursor })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[collaboration/messages] failed to load messages', error)
-    return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
+    return { messages, nextCursor }
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    const uid = auth.uid
-
-    if (!uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+export const POST = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: createMessageSchema,
+  },
+  async (req, { auth, workspace, body: payload }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const uid = auth.uid!
 
     // Rate limit: 10 requests per 10 seconds per user for message creation
     const rateLimitResult = await checkRateLimit(`collaboration:${uid}`)
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Too many messages. Please slow down.' },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': String(rateLimitResult.limit),
             'X-RateLimit-Remaining': String(rateLimitResult.remaining),
             'X-RateLimit-Reset': String(rateLimitResult.reset),
-          }
+          },
         }
       )
     }
 
-    const workspace = await resolveWorkspaceContext(auth)
-
-    const json = (await request.json().catch(() => null)) ?? {}
-    const payload = createMessageSchema.parse(json)
-
     // Derive senderName and senderRole from auth context to prevent impersonation
-    const senderName = typeof auth.claims?.name === 'string' && auth.claims.name.trim()
-      ? auth.claims.name.trim()
-      : auth.email || 'Unknown User'
-    const senderRole = typeof auth.claims?.role === 'string'
-      ? auth.claims.role
-      : null
+    const senderName =
+      typeof auth.claims?.name === 'string' && auth.claims.name.trim()
+        ? auth.claims.name.trim()
+        : auth.email || 'Unknown User'
+    const senderRole = typeof auth.claims?.role === 'string' ? auth.claims.role : null
 
     let resolvedClientId: string | null = null
     let resolvedProjectId: string | null = null
@@ -496,7 +495,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Parent message not found' }, { status: 404 })
       }
       const parentData = parentDoc.data() as StoredMessage
-      
+
       // If the parent is already a reply (has a threadRootId), use that root.
       // Otherwise, the parent itself is the root.
       if (typeof parentData.threadRootId === 'string' && parentData.threadRootId) {
@@ -543,9 +542,7 @@ export async function POST(request: NextRequest) {
     const createdDoc = await docRef.get()
     const message = mapMessageDoc(createdDoc.id, createdDoc.data() as StoredMessage)
 
-    const actorName = typeof auth.claims?.name === 'string'
-      ? (auth.claims.name as string)
-      : auth.email
+    const actorName = typeof auth.claims?.name === 'string' ? (auth.claims.name as string) : auth.email
 
     try {
       await notifyCollaborationMessageWhatsApp({ workspaceId: workspace.workspaceId, message, actorName })
@@ -565,16 +562,5 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ message }, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.flatten().formErrors.join('\n') || 'Invalid payload' }, { status: 400 })
-    }
-
-    console.error('[collaboration/messages] failed to create message', error)
-    return NextResponse.json({ error: 'Failed to create message' }, { status: 500 })
   }
-}
+)

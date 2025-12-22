@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
@@ -180,63 +179,45 @@ function mapClientDoc(docId: string, data: StoredClient): ClientRecord {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+  },
+  async (req, { workspace }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     const snapshot = await workspace.clientsCollection.get()
 
     const clients = snapshot.docs
       .map((doc) => mapClientDoc(doc.id, doc.data() as StoredClient))
       .sort((a, b) => a.name.localeCompare(b.name))
 
-    return NextResponse.json({ clients })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[clients] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load clients' }, { status: 500 })
+    return { clients }
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    assertAdmin(auth)
-
-    let json
-    try {
-      json = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
-
-    const payload = createClientSchema.parse(json)
+export const POST = createApiHandler(
+  {
+    workspace: 'required',
+    adminOnly: true,
+    bodySchema: createClientSchema,
+  },
+  async (req, { auth, workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const payload = body
 
     const resolvedTeam = payload.teamMembers
-      .map((member) => ({
+      .map((member: any) => ({
         name: member.name.trim(),
         role: (member.role ?? '').trim() || 'Contributor',
       }))
-      .filter((member) => member.name.length > 0)
+      .filter((member: any) => member.name.length > 0)
 
-    if (!resolvedTeam.some((member) => member.name.toLowerCase() === payload.accountManager.toLowerCase())) {
+    if (!resolvedTeam.some((member: any) => member.name.toLowerCase() === payload.accountManager.toLowerCase())) {
       resolvedTeam.unshift({ name: payload.accountManager, role: 'Account Manager' })
     }
 
     const billingEmail = payload.billingEmail?.trim().toLowerCase() ?? null
 
-    const workspace = await resolveWorkspaceContext(auth)
     const clientId = await generateClientId(workspace.clientsCollection, payload.name)
     const timestamp = FieldValue.serverTimestamp()
 
@@ -263,45 +244,19 @@ export async function POST(request: NextRequest) {
     const created = await docRef.get()
     const client = mapClientDoc(created.id, created.data() as StoredClient)
 
-    return NextResponse.json({ client }, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid client data', details: error.flatten() }, { status: 400 })
-    }
-
-    console.error('[clients] POST failed', error)
-    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+    return { client }
   }
-}
+)
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    assertAdmin(auth)
-
-    let json
-    try {
-      json = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
-
-    const parsed = addTeamMemberSchema.safeParse(json)
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid team member data', details: parsed.error.flatten() }, { status: 400 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const { id, name, role } = parsed.data
+export const PATCH = createApiHandler(
+  {
+    workspace: 'required',
+    adminOnly: true,
+    bodySchema: addTeamMemberSchema,
+  },
+  async (req, { workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const { id, name, role } = body
     const clientRef = workspace.clientsCollection.doc(id)
     const snapshot = await clientRef.get()
 
@@ -324,37 +279,20 @@ export async function PATCH(request: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     })
 
-    return NextResponse.json({ teamMembers: updatedMembers })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[clients] PATCH failed', error)
-    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 })
+    return { teamMembers: updatedMembers }
   }
-}
+)
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    assertAdmin(auth)
-
-    let json
-    try {
-      json = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
-
-    const payload = deleteClientSchema.parse(json)
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const docRef = workspace.clientsCollection.doc(payload.id)
+export const DELETE = createApiHandler(
+  {
+    workspace: 'required',
+    adminOnly: true,
+    bodySchema: deleteClientSchema,
+  },
+  async (req, { workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const { id } = body
+    const docRef = workspace.clientsCollection.doc(id)
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {
@@ -363,17 +301,6 @@ export async function DELETE(request: NextRequest) {
 
     await docRef.delete()
 
-    return NextResponse.json({ ok: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid client delete payload', details: error.flatten() }, { status: 400 })
-    }
-
-    console.error('[clients] DELETE failed', error)
-    return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 })
+    return { ok: true }
   }
-}
+)

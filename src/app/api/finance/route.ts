@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath, Timestamp } from 'firebase-admin/firestore'
+import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { AuthenticationError } from '@/lib/server-auth'
 import type {
   FinanceCostEntry,
   FinanceInvoice,
@@ -10,10 +11,22 @@ import type {
   FinanceSummaryResponse,
 } from '@/types/finance'
 import { resolveWorkspaceContext } from '@/lib/workspace'
+import { createApiHandler } from '@/lib/api-handler'
 
 const MAX_REVENUE_DOCS = 36
 const MAX_INVOICES = 200
 const MAX_COSTS = 200
+
+const financeQuerySchema = z.object({
+  clientId: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{1,100}$/)
+    .optional(),
+  invoiceAfter: z.string().optional(),
+  costAfter: z.string().optional(),
+  invoicePageSize: z.string().optional(),
+  costPageSize: z.string().optional(),
+})
 
 type StoredFinanceRevenue = {
   clientId?: unknown
@@ -260,34 +273,26 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const searchParams = request.nextUrl.searchParams
-    const clientId = searchParams.get('clientId') ?? null
-    const invoiceAfterParam = searchParams.get('invoiceAfter')
-    const costAfterParam = searchParams.get('costAfter')
-    const invoicePageSizeParam = searchParams.get('invoicePageSize')
-    const costPageSizeParam = searchParams.get('costPageSize')
-
-    // Validate clientId format if provided (alphanumeric with dashes/underscores)
-    if (clientId && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientId)) {
-      return NextResponse.json({ error: 'Invalid clientId format' }, { status: 400 })
-    }
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: financeQuerySchema,
+  },
+  async (req, { auth, workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const {
+      clientId = null,
+      invoiceAfter: invoiceAfterParam,
+      costAfter: costAfterParam,
+      invoicePageSize: invoicePageSizeParam,
+      costPageSize: costPageSizeParam,
+    } = query
 
     const invoicePageSize = Math.min(Math.max(Number(invoicePageSizeParam) || MAX_INVOICES, 1), MAX_INVOICES)
     const costPageSize = Math.min(Math.max(Number(costPageSizeParam) || MAX_COSTS, 1), MAX_COSTS)
 
-    const workspace = await resolveWorkspaceContext(auth)
-
     // Build queries with clientId filter at the database level when provided
-    let revenueQuery = workspace.financeRevenueCollection
-      .orderBy('period', 'asc')
-      .limit(MAX_REVENUE_DOCS)
+    let revenueQuery = workspace.financeRevenueCollection.orderBy('period', 'asc').limit(MAX_REVENUE_DOCS)
 
     if (clientId) {
       revenueQuery = workspace.financeRevenueCollection
@@ -344,8 +349,7 @@ export async function GET(request: NextRequest) {
       costQuery.get(),
     ])
 
-    const revenue = revenueSnapshot.docs
-      .map((doc) => mapRevenueDoc(doc.id, doc.data() as StoredFinanceRevenue))
+    const revenue = revenueSnapshot.docs.map((doc) => mapRevenueDoc(doc.id, doc.data() as StoredFinanceRevenue))
 
     const invoiceDocs = invoiceSnapshot.docs
     const invoices = invoiceDocs
@@ -353,9 +357,7 @@ export async function GET(request: NextRequest) {
       .map((doc) => mapInvoiceDoc(doc.id, doc.data() as StoredFinanceInvoice))
 
     const costDocs = costSnapshot.docs
-    const costs = costDocs
-      .slice(0, costPageSize)
-      .map((doc) => mapCostDoc(doc.id, doc.data() as StoredFinanceCost))
+    const costs = costDocs.slice(0, costPageSize).map((doc) => mapCostDoc(doc.id, doc.data() as StoredFinanceCost))
 
     const payments = computePaymentSummary(invoices)
 
@@ -384,13 +386,6 @@ export async function GET(request: NextRequest) {
       costNextCursor,
     }
 
-    return NextResponse.json(payload)
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[finance] failed to load summary', error)
-    return NextResponse.json({ error: 'Failed to load finance data' }, { status: 500 })
+    return payload
   }
-}
+)

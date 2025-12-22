@@ -3,9 +3,18 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
+import { createApiHandler } from '@/lib/api-handler'
+
+const recurringInvoiceQuerySchema = z.object({
+  activeOnly: z.string().optional(),
+  clientId: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{1,100}$/)
+    .optional(),
+})
 
 const createScheduleSchema = z.object({
   clientId: z.string().trim().min(1, 'Client ID is required'),
@@ -152,78 +161,58 @@ function adjustToTargetDay(
   return result
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: recurringInvoiceQuerySchema,
+  },
+  async (req, { auth, workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const { activeOnly: activeOnlyParam, clientId } = query
+    const activeOnly = activeOnlyParam === 'true'
 
-    const workspace = await resolveWorkspaceContext(auth)
     const schedulesRef = workspace.workspaceRef.collection('recurringInvoices')
 
-    const url = new URL(request.url)
-    const activeOnly = url.searchParams.get('activeOnly') === 'true'
-    const clientId = url.searchParams.get('clientId')
-
-    // Validate clientId format if provided
-    if (clientId && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientId)) {
-      return NextResponse.json({ error: 'Invalid clientId format' }, { status: 400 })
-    }
-
     // Build query with filters at database level
-    let query = schedulesRef.orderBy('nextRunDate', 'asc')
-    
+    let schedulesQuery = schedulesRef.orderBy('nextRunDate', 'asc')
+
     if (activeOnly) {
-      query = query.where('isActive', '==', true)
+      schedulesQuery = schedulesQuery.where('isActive', '==', true)
     }
 
     // Filter by clientId at query level when provided
     if (clientId) {
-      query = schedulesRef
-        .where('clientId', '==', clientId)
-        .orderBy('nextRunDate', 'asc')
-      
+      schedulesQuery = schedulesRef.where('clientId', '==', clientId).orderBy('nextRunDate', 'asc')
+
       if (activeOnly) {
-        query = schedulesRef
+        schedulesQuery = schedulesRef
           .where('clientId', '==', clientId)
           .where('isActive', '==', true)
           .orderBy('nextRunDate', 'asc')
       }
     }
 
-    const snapshot = await query.limit(100).get()
+    const snapshot = await schedulesQuery.limit(100).get()
 
     const schedules: RecurringInvoiceSchedule[] = snapshot.docs.map((doc) =>
       mapScheduleDoc(doc.id, doc.data() as StoredSchedule)
     )
 
-    return NextResponse.json({ schedules })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[recurring-invoices] GET error', error)
-    return NextResponse.json({ error: 'Failed to fetch schedules' }, { status: 500 })
+    return { schedules }
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const json = await request.json().catch(() => null)
-    const input = createScheduleSchema.parse(json ?? {})
-
-    const workspace = await resolveWorkspaceContext(auth)
-    
+export const POST = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: createScheduleSchema,
+  },
+  async (req, { auth, workspace, body: input }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     // Verify client exists
     const clientRef = workspace.clientsCollection.doc(input.clientId)
     const clientSnap = await clientRef.get()
-    
+
     if (!clientSnap.exists) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
     }
@@ -266,14 +255,5 @@ export async function POST(request: NextRequest) {
     const schedule = mapScheduleDoc(createdDoc.id, createdDoc.data() as StoredSchedule)
 
     return NextResponse.json({ schedule }, { status: 201 })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.flatten().formErrors.join(', ') || 'Invalid input' }, { status: 400 })
-    }
-    console.error('[recurring-invoices] POST error', error)
-    return NextResponse.json({ error: 'Failed to create schedule' }, { status: 500 })
   }
-}
+)

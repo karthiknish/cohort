@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
+import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { AuthenticationError } from '@/lib/server-auth'
 import { geminiAI } from '@/services/gemini'
 import { formatCurrency } from '@/lib/utils'
+import { createApiHandler } from '@/lib/api-handler'
+
+const insightsQuerySchema = z.object({
+  userId: z.string().optional(),
+  clientId: z.string().optional(),
+  periodDays: z.string().optional(),
+})
 
 interface MetricRecord {
   providerId: string
@@ -48,26 +56,27 @@ function toISO(value: unknown): string | null {
   return null
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const authResult = await authenticateRequest(request)
-
+export const GET = createApiHandler(
+  {
+    querySchema: insightsQuerySchema,
+  },
+  async (req, { auth, query }) => {
     let userId: string | null = null
-    if (authResult.isCron) {
-      userId = request.nextUrl.searchParams.get('userId')
+    if (auth.isCron) {
+      userId = query.userId ?? null
       if (!userId) {
         return NextResponse.json({ error: 'Cron requests must specify userId' }, { status: 400 })
       }
     } else {
-      userId = authResult.uid
+      userId = auth.uid ?? null
     }
 
     if (!userId) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
-    const clientIdFilter = request.nextUrl.searchParams.get('clientId')?.trim() ?? null
-    const periodParam = request.nextUrl.searchParams.get('periodDays')
+    const clientIdFilter = query.clientId?.trim() ?? null
+    const periodParam = query.periodDays
     const periodDays = periodParam ? Math.max(Number(periodParam) || 30, 1) : 30
     const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
 
@@ -110,21 +119,15 @@ export async function GET(request: NextRequest) {
       })
 
     if (records.length === 0) {
-      return NextResponse.json({ insights: [] })
+      return { insights: [] }
     }
 
     const summaries = summarizeByProvider(records, periodDays)
     const insights = await generateInsightsFromGemini(summaries)
 
-    return NextResponse.json({ insights })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[analytics/insights] failed to load', error)
-    return NextResponse.json({ error: 'Failed to generate insights' }, { status: 500 })
+    return { insights }
   }
-}
+)
 
 function summarizeByProvider(records: MetricRecord[], periodDays: number): ProviderSummary[] {
   const map = new Map<string, ProviderSummary>()

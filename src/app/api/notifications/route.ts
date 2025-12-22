@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath, Timestamp } from 'firebase-admin/firestore'
+import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole } from '@/types/notifications'
+import { createApiHandler } from '@/lib/api-handler'
 
 const PAGE_SIZE_DEFAULT = 25
 const PAGE_SIZE_MAX = 100
+
+const notificationQuerySchema = z.object({
+  pageSize: z.string().optional(),
+  after: z.string().optional(),
+  role: z.enum(['admin', 'team', 'client']).optional(),
+  clientId: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{1,100}$/)
+    .optional(),
+  unread: z.string().optional(),
+})
 
 function toISO(value: unknown): string | null {
   if (!value && value !== 0) {
@@ -92,46 +105,36 @@ function mapNotification(doc: FirebaseFirestore.QueryDocumentSnapshot, userId: s
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: notificationQuerySchema,
+  },
+  async (req, { auth, workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const {
+      pageSize: pageSizeParam,
+      after: afterParam,
+      role: roleParam,
+      clientId: clientIdParam,
+      unread: unreadParam,
+    } = query
 
-    const workspace = await resolveWorkspaceContext(auth)
-
-    const searchParams = request.nextUrl.searchParams
-    const pageSizeParam = searchParams.get('pageSize')
-    const afterParam = searchParams.get('after')
-    const roleParam = searchParams.get('role')
-    const clientIdParam = searchParams.get('clientId')
-    const unreadOnly = searchParams.get('unread') === 'true'
-
-    // Validate role parameter if provided
-    if (roleParam && !['admin', 'team', 'client'].includes(roleParam)) {
-      return NextResponse.json({ error: 'Invalid role parameter' }, { status: 400 })
-    }
-
-    // Validate clientId format if provided (alphanumeric with dashes/underscores)
-    if (clientIdParam && !/^[a-zA-Z0-9_-]{1,100}$/.test(clientIdParam)) {
-      return NextResponse.json({ error: 'Invalid clientId format' }, { status: 400 })
-    }
-
+    const unreadOnly = unreadParam === 'true'
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || PAGE_SIZE_DEFAULT, 1), PAGE_SIZE_MAX)
 
-    let query = workspace.workspaceRef
+    let notificationsQuery = workspace.workspaceRef
       .collection('notifications')
       .orderBy('createdAt', 'desc')
       .orderBy(FieldPath.documentId(), 'desc')
       .limit(pageSize + 1)
 
     if (roleParam) {
-      query = query.where('recipients.roles', 'array-contains', roleParam)
+      notificationsQuery = notificationsQuery.where('recipients.roles', 'array-contains', roleParam)
     }
 
     if (clientIdParam) {
-      query = query.where('recipients.clientId', '==', clientIdParam)
+      notificationsQuery = notificationsQuery.where('recipients.clientId', '==', clientIdParam)
     }
 
     if (afterParam) {
@@ -139,17 +142,16 @@ export async function GET(request: NextRequest) {
       if (timestamp && docId) {
         const afterDate = new Date(timestamp)
         if (!Number.isNaN(afterDate.getTime())) {
-          query = query.startAfter(Timestamp.fromDate(afterDate), docId)
+          notificationsQuery = notificationsQuery.startAfter(Timestamp.fromDate(afterDate), docId)
         }
       }
     }
 
-    const snapshot = await query.get()
+    const snapshot = await notificationsQuery.get()
     const docs = snapshot.docs
 
     const notifications = docs.slice(0, pageSize).map((doc) => mapNotification(doc, auth.uid!))
 
-    // Fix: Use pageSize index for next cursor, not last doc in slice
     const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
     const nextCursor = nextCursorDoc
       ? (() => {
@@ -160,12 +162,6 @@ export async function GET(request: NextRequest) {
 
     const filtered = unreadOnly ? notifications.filter((notification) => !notification.read) : notifications
 
-    return NextResponse.json({ notifications: filtered, nextCursor })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[notifications] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load notifications' }, { status: 500 })
+    return { notifications: filtered, nextCursor }
   }
-}
+)

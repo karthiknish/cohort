@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { ensureStripeCustomer, getBillingPlans, BillingPlanDefinition } from '@/lib/billing'
 import { getStripeClient } from '@/lib/stripe'
 
@@ -13,17 +13,15 @@ interface PlanSummary extends BillingPlanDefinition {
   productName: string | null
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
+export const GET = createApiHandler(
+  {
+    auth: 'required',
+  },
+  async (request, { auth }) => {
     const stripe = getStripeClient()
     const { customerId, userRef } = await ensureStripeCustomer({
-      uid: auth.uid,
-      email: auth.email,
+      uid: auth.uid!,
+      email: auth.email!,
     })
 
     const planSummaries = await loadPlanSummaries(stripe)
@@ -80,21 +78,14 @@ export async function GET(request: NextRequest) {
       { merge: true },
     )
 
-    return NextResponse.json({
+    return {
       plans: planSummaries,
       subscription: subscriptionSummary,
       invoices: invoiceSummaries,
       upcomingInvoice,
-    })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-
-    console.error('[billing/status] Failed to load billing overview', error)
-    return NextResponse.json({ error: 'Unable to load billing overview' }, { status: 500 })
   }
-}
+)
 
 async function loadPlanSummaries(stripe: Stripe): Promise<PlanSummary[]> {
   const plans = getBillingPlans()

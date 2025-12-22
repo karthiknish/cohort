@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
 import { buildCacheHeaders, serverCache } from '@/lib/cache'
 import { resolveWorkspaceContext } from '@/lib/workspace'
@@ -30,6 +30,16 @@ export const baseTaskSchema = z.object({
 })
 
 type CreateTaskInput = z.infer<typeof baseTaskSchema>
+
+const taskQuerySchema = z.object({
+  status: z.string().optional(),
+  assignee: z.string().optional(),
+  query: z.string().optional(),
+  clientId: z.string().optional(),
+  projectId: z.string().optional(),
+  pageSize: z.string().optional(),
+  after: z.string().optional(),
+})
 
 export type StoredTask = {
   title?: unknown
@@ -104,37 +114,35 @@ export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    const uid = auth.uid
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: taskQuerySchema,
+  },
+  async (req, { workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
 
-    if (!uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+    const {
+      status: statusFilter,
+      assignee: assigneeFilter,
+      query: queryParam,
+      clientId: clientIdFilter,
+      projectId: projectIdFilter,
+      pageSize: pageSizeParam,
+      after: afterParam,
+    } = query
 
-    const workspace = await resolveWorkspaceContext(auth)
-
-    const searchParams = request.nextUrl.searchParams
-    const statusFilter = searchParams.get('status')
-    const assigneeFilter = searchParams.get('assignee')
-    const rawQuery = searchParams.get('query')
-    const queryFilter = rawQuery ? rawQuery.trim().toLowerCase() : null
-    const clientIdFilter = searchParams.get('clientId')
-    const projectIdFilter = searchParams.get('projectId')
-    const pageSizeParam = searchParams.get('pageSize')
-    const afterParam = searchParams.get('after')
-
+    const queryFilter = queryParam ? queryParam.trim().toLowerCase() : null
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), 100)
 
     const cacheKey = buildTasksCacheKey(workspace.workspaceId, {
-      statusFilter,
-      assigneeFilter,
+      statusFilter: statusFilter ?? null,
+      assigneeFilter: assigneeFilter ?? null,
       queryFilter,
-      clientIdFilter,
-      projectIdFilter,
+      clientIdFilter: clientIdFilter ?? null,
+      projectIdFilter: projectIdFilter ?? null,
       pageSize,
-      after: afterParam,
+      after: afterParam ?? null,
     })
 
     const cached = serverCache.get<TaskListResponse>(cacheKey)
@@ -144,7 +152,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    let query = workspace.tasksCollection
+    let baseQuery = workspace.tasksCollection
       .orderBy('createdAt', 'desc')
       .orderBy(FieldPath.documentId(), 'desc')
       .limit(pageSize + 1)
@@ -154,12 +162,12 @@ export async function GET(request: NextRequest) {
       if (timestamp && docId) {
         const afterDate = new Date(timestamp)
         if (!Number.isNaN(afterDate.getTime())) {
-          query = query.startAfter(Timestamp.fromDate(afterDate), docId)
+          baseQuery = baseQuery.startAfter(Timestamp.fromDate(afterDate), docId)
         }
       }
     }
 
-    const snapshot = await query.get()
+    const snapshot = await baseQuery.get()
     const docs = snapshot.docs
 
     const mapped = docs.map((doc) => mapTaskDoc(doc.id, doc.data() as StoredTask))
@@ -209,34 +217,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(payload, {
       headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
     })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[tasks] failed to load tasks', error)
-    return NextResponse.json({ error: 'Failed to load tasks' }, { status: 500 })
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    const uid = auth.uid
+export const POST = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: baseTaskSchema,
+  },
+  async (req, { auth, workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
 
-    if (!uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-
-    let json
-    try {
-      json = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
-
-    const payload = baseTaskSchema.parse(json) satisfies CreateTaskInput
+    const payload = body as CreateTaskInput
+    const uid = auth.uid!
 
     const normalizedAssignedTo = payload.assignedTo.map((name) => name.trim()).filter((name) => name.length > 0)
     const normalizedTags = payload.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0)
@@ -255,7 +248,6 @@ export async function POST(request: NextRequest) {
       projectName = typeof projectData.name === 'string' ? projectData.name : null
 
       if (!payload.clientId && typeof projectData.clientId === 'string') {
-        // inherit client context from project when not explicitly provided
         payload.clientId = projectData.clientId
       }
 
@@ -289,7 +281,7 @@ export async function POST(request: NextRequest) {
 
     const actorName = typeof auth.claims?.name === 'string'
       ? (auth.claims.name as string)
-      : auth.email
+      : auth.email || 'Unknown'
 
     try {
       await notifyTaskCreatedWhatsApp({ workspaceId: workspace.workspaceId, task, actorName })
@@ -308,20 +300,9 @@ export async function POST(request: NextRequest) {
       console.error('[tasks] workspace notification failed', notificationError)
     }
 
-    return NextResponse.json(task, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    console.error('[tasks] failed to create task', error)
-    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 })
+    return task
   }
-}
+)
 
 const TASKS_CACHE_TTL_MS = 60_000
 

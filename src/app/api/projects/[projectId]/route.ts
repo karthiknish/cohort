@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { projectStatusSchema, coerceStringArray } from '@/lib/projects'
 import type { ProjectDetail, ProjectRecord } from '@/types/projects'
@@ -11,6 +11,7 @@ import type { CollaborationMessage } from '@/types/collaboration'
 import { buildProjectSummary } from '@/app/api/projects/route'
 import { mapTaskDoc, type StoredTask } from '@/app/api/tasks/route'
 import { mapMessageDoc, type StoredMessage } from '@/app/api/collaboration/messages/route'
+import { AuthenticationError } from '@/lib/server-auth'
 
 const updateProjectSchema = z
   .object({
@@ -160,53 +161,41 @@ function buildDetailResponse(base: ProjectRecord, tasks: TaskRecord[], recentMes
   }
 }
 
-export async function GET(request: NextRequest, context: { params: Promise<{ projectId: string }> }) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const { projectId } = await context.params
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+  },
+  async (req, { workspace, params }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
       return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
     }
 
-    const workspace = await resolveWorkspaceContext(auth)
     const snapshot = await ensureProjectAccess(workspace, projectId)
 
     const projectRecord = await buildProjectSummary(workspace, snapshot.id, snapshot.data() as Record<string, unknown>)
     const { tasks, recentMessages } = await loadProjectRelations(workspace, projectId)
     const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages)
 
-    return NextResponse.json({ project: projectDetail })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[projects] detail GET failed', error)
-    return NextResponse.json({ error: 'Failed to load project' }, { status: 500 })
+    return { project: projectDetail }
   }
-}
+)
 
-export async function PATCH(request: NextRequest, context: { params: Promise<{ projectId: string }> }) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const { projectId } = await context.params
+export const PATCH = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: updateProjectSchema,
+  },
+  async (req, { auth, workspace, body, params }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
       return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
     }
 
-    const workspace = await resolveWorkspaceContext(auth)
     const snapshot = await ensureProjectAccess(workspace, projectId)
-
-    const json = (await request.json().catch(() => null)) ?? {}
-    const payload = updateProjectSchema.parse(json)
+    const payload = body
 
     let inferredClientName: string | null | undefined
     if (payload.clientId !== undefined && payload.clientId !== null) {
@@ -224,7 +213,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ p
       }
     }
 
-    if (Object.keys(json).length === 0) {
+    if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: 'No fields provided for update' }, { status: 400 })
     }
 
@@ -290,50 +279,26 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ p
     const { tasks, recentMessages } = await loadProjectRelations(workspace, projectId)
     const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages)
 
-    return NextResponse.json({ project: projectDetail })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    if (error instanceof Error && error.message === 'Invalid date') {
-      return NextResponse.json({ error: 'Invalid date provided' }, { status: 400 })
-    }
-
-    console.error('[projects] detail PATCH failed', error)
-    return NextResponse.json({ error: 'Failed to update project' }, { status: 500 })
+    return { project: projectDetail }
   }
-}
+)
 
-export async function DELETE(request: NextRequest, context: { params: Promise<{ projectId: string }> }) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const { projectId } = await context.params
+export const DELETE = createApiHandler(
+  {
+    workspace: 'required',
+  },
+  async (req, { workspace, params }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
       return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
     }
 
-    const workspace = await resolveWorkspaceContext(auth)
     const snapshot = await ensureProjectAccess(workspace, projectId)
 
     // Delete the project document
     await snapshot.ref.delete()
 
-    return NextResponse.json({ success: true, message: 'Project deleted successfully' })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[projects] detail DELETE failed', error)
-    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 })
+    return { success: true, message: 'Project deleted successfully' }
   }
-}
+)

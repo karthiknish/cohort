@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldPath, Timestamp, type Query, type QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { mapProjectDoc, projectStatusSchema, coerceStringArray, toISO } from '@/lib/projects'
 import type { ProjectRecord } from '@/types/projects'
@@ -30,6 +30,12 @@ const createProjectSchema = z.object({
 })
 
 type CreateProjectInput = z.infer<typeof createProjectSchema>
+
+const projectQuerySchema = z.object({
+  status: projectStatusSchema.optional(),
+  clientId: z.string().optional(),
+  query: z.string().optional(),
+})
 
 type ProjectListResponse = {
   projects: ProjectRecord[]
@@ -111,35 +117,31 @@ export async function buildProjectSummary(
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: projectQuerySchema,
+  },
+  async (req, { workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
 
-    const workspace = await resolveWorkspaceContext(auth)
-
-    const searchParams = request.nextUrl.searchParams
-    const statusParam = searchParams.get('status')
-    const clientIdParam = searchParams.get('clientId')
-    const queryParam = searchParams.get('query')?.trim().toLowerCase() ?? null
+    const { status, clientId, query: queryParam } = query
+    const normalizedQuery = queryParam?.trim().toLowerCase() ?? null
 
     let baseQuery = workspace.projectsCollection as Query
 
-    if (statusParam) {
-      const parseStatus = projectStatusSchema.safeParse(statusParam)
-      if (!parseStatus.success) {
-        return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 })
-      }
-      baseQuery = baseQuery.where('status', '==', parseStatus.data)
+    if (status) {
+      baseQuery = baseQuery.where('status', '==', status)
     }
 
-    if (clientIdParam) {
-      baseQuery = baseQuery.where('clientId', '==', clientIdParam)
+    if (clientId) {
+      baseQuery = baseQuery.where('clientId', '==', clientId)
     }
 
-    const orderedQuery = baseQuery.orderBy('updatedAt', 'desc').orderBy(FieldPath.documentId(), 'desc').limit(MAX_PROJECTS)
+    const orderedQuery = baseQuery
+      .orderBy('updatedAt', 'desc')
+      .orderBy(FieldPath.documentId(), 'desc')
+      .limit(MAX_PROJECTS)
 
     let docs: QueryDocumentSnapshot[]
 
@@ -162,23 +164,62 @@ export async function GET(request: NextRequest) {
       mapped.push(record)
     }
 
-    const filtered = queryParam
+    const filtered = normalizedQuery
       ? mapped.filter((project) => {
           const haystack = `${project.name} ${project.description ?? ''}`.toLowerCase()
-          return haystack.includes(queryParam)
+          return haystack.includes(normalizedQuery)
         })
       : mapped
 
-    const response: ProjectListResponse = { projects: filtered }
-    return NextResponse.json(response)
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[projects] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load projects' }, { status: 500 })
+    return { projects: filtered }
   }
-}
+)
+
+export const POST = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: createProjectSchema,
+  },
+  async (req, { auth, workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+
+    const payload = body as CreateProjectInput
+    const now = Timestamp.now()
+    const startDate = payload.startDate ? Timestamp.fromDate(new Date(payload.startDate)) : null
+    const endDate = payload.endDate ? Timestamp.fromDate(new Date(payload.endDate)) : null
+
+    const tags = coerceStringArray(payload.tags)
+    const clientId = payload.clientId?.trim() ?? null
+    const clientName = payload.clientName?.trim() ?? null
+
+    const docRef = await workspace.projectsCollection.add({
+      name: payload.name,
+      description: payload.description ?? null,
+      status: payload.status,
+      clientId,
+      clientName,
+      startDate,
+      endDate,
+      tags,
+      ownerId: auth.uid,
+      workspaceId: workspace.workspaceId,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    const createdDoc = await docRef.get()
+    const project = await buildProjectSummary(workspace, createdDoc.id, createdDoc.data() as Record<string, unknown>)
+
+    await recordProjectCreatedNotification({
+      workspaceId: workspace.workspaceId,
+      project,
+      actorId: auth.uid!,
+      actorName: auth.name!,
+    })
+
+    return { project }
+  }
+)
 
 function isMissingIndexError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
@@ -222,70 +263,4 @@ function parseDateFromDoc(doc: QueryDocumentSnapshot): Date | null {
 
   const parsed = new Date(iso)
   return Number.isNaN(parsed.getTime()) ? null : parsed
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-
-    let json
-    try {
-      json = await request.json()
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-    }
-
-    const payload = createProjectSchema.parse(json) satisfies CreateProjectInput
-
-    const now = Timestamp.now()
-    const startDate = payload.startDate ? Timestamp.fromDate(new Date(payload.startDate)) : null
-    const endDate = payload.endDate ? Timestamp.fromDate(new Date(payload.endDate)) : null
-
-    const tags = coerceStringArray(payload.tags)
-    const clientId = payload.clientId?.trim() ?? null
-    const clientName = payload.clientName?.trim() ?? null
-
-    const docRef = await workspace.projectsCollection.add({
-      name: payload.name,
-      description: payload.description ?? null,
-      status: payload.status,
-      clientId,
-      clientName,
-      startDate,
-      endDate,
-      tags,
-      ownerId: auth.uid,
-      workspaceId: workspace.workspaceId,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    const createdDoc = await docRef.get()
-    const project = await buildProjectSummary(workspace, createdDoc.id, createdDoc.data() as Record<string, unknown>)
-
-    await recordProjectCreatedNotification({
-      workspaceId: workspace.workspaceId,
-      project,
-      actorId: auth.uid,
-      actorName: auth.name,
-    })
-
-    return NextResponse.json({ project }, { status: 201 })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    console.error('[projects] POST failed', error)
-    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 })
-  }
 }

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { toISO } from '@/lib/projects'
 import type { Activity, ActivityResponse } from '@/types/activity'
+import { createApiHandler } from '@/lib/api-handler'
 
 const MAX_ACTIVITIES = 50
 
@@ -138,28 +139,16 @@ async function createMessageActivity(
   return activities
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    // Authenticate the request
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Parse query parameters
-    const { searchParams } = new URL(request.url)
-    const query = activityQuerySchema.parse({
-      clientId: searchParams.get('clientId'),
-      limit: searchParams.get('limit'),
-      offset: searchParams.get('offset'),
-    })
-
-    // Resolve workspace context
-    const workspace = await resolveWorkspaceContext(auth)
-
+export const GET = createApiHandler(
+  {
+    workspace: 'required',
+    querySchema: activityQuerySchema,
+  },
+  async (req, { auth, workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     // Fetch activities from different sources
     const limitPerType = Math.ceil(query.limit / 3)
-    
+
     const [projectActivities, taskActivities, messageActivities] = await Promise.all([
       createProjectActivity(workspace, query.clientId, limitPerType + query.offset),
       createTaskActivity(workspace, query.clientId, limitPerType + query.offset),
@@ -167,8 +156,9 @@ export async function GET(request: NextRequest) {
     ])
 
     // Combine and sort all activities by timestamp (most recent first)
-    const allActivities = [...projectActivities, ...taskActivities, ...messageActivities]
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    const allActivities = [...projectActivities, ...taskActivities, ...messageActivities].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
 
     // Apply pagination
     const paginatedActivities = allActivities.slice(query.offset, query.offset + query.limit)
@@ -180,18 +170,6 @@ export async function GET(request: NextRequest) {
       total: allActivities.length,
     }
 
-    return NextResponse.json(response)
-  } catch (error) {
-    console.error('Activity API error:', error)
-    
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
-    }
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid query parameters', details: error.issues }, { status: 400 })
-    }
-
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return response
   }
-}
+)

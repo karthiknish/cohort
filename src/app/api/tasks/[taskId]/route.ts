@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/types/tasks'
 import { coerceStringArray, invalidateTasksCache, mapTaskDoc, type StoredTask } from '../route'
 import { resolveWorkspaceContext } from '@/lib/workspace'
@@ -43,28 +43,21 @@ const updateTaskSchema = z.object({
 
 type UpdateTaskInput = z.infer<typeof updateTaskSchema>
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ taskId: string }> }
-) {
-  try {
-    const params = await context.params
-    const taskId = params?.taskId?.trim()
+export const PATCH = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: updateTaskSchema,
+  },
+  async (req, { auth, workspace, body, params }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+
+    const taskId = (params?.taskId as string)?.trim()
     if (!taskId) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
     }
 
-    const auth = await authenticateRequest(request)
-    const uid = auth.uid
-
-    if (!uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const json = (await request.json().catch(() => null)) ?? {}
-    const payload = updateTaskSchema.parse(json)
-
-    const workspace = await resolveWorkspaceContext(auth)
+    const uid = auth.uid!
+    const payload = body as UpdateTaskInput
     const docRef = workspace.tasksCollection.doc(taskId)
 
     const existingDoc = await docRef.get()
@@ -136,45 +129,27 @@ export async function PATCH(
         workspaceId: workspace.workspaceId,
         task,
         changes,
-        actorId: auth.uid,
-        actorName: auth.name,
+        actorId: auth.uid!,
+        actorName: auth.name!,
       })
     }
 
-    return NextResponse.json(task)
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    console.error('[tasks] failed to update task', error)
-    return NextResponse.json({ error: 'Failed to update task' }, { status: 500 })
+    return task
   }
-}
+)
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ taskId: string }> }
-) {
-  try {
-    const params = await context.params
-    const taskId = params?.taskId?.trim()
+export const DELETE = createApiHandler(
+  {
+    workspace: 'required',
+  },
+  async (req, { workspace, params }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+
+    const taskId = (params?.taskId as string)?.trim()
     if (!taskId) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
     }
 
-    const auth = await authenticateRequest(request)
-    const uid = auth.uid
-
-    if (!uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
     const docRef = workspace.tasksCollection.doc(taskId)
     const existingDoc = await docRef.get()
     if (!existingDoc.exists) {
@@ -185,16 +160,9 @@ export async function DELETE(
 
     invalidateTasksCache(workspace.workspaceId)
 
-    return NextResponse.json({ success: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[tasks] failed to delete task', error)
-    return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 })
+    return { success: true }
   }
-}
+)
 
 function buildTaskUpdate(payload: UpdateTaskInput): Record<string, unknown> | null {
   const updates: Record<string, unknown> = {}

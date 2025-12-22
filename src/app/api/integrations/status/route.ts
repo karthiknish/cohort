@@ -1,32 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
+import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function GET(request: NextRequest) {
-  try {
-    const authResult = await authenticateRequest(request)
+const statusQuerySchema = z.object({
+  userId: z.string().optional(),
+})
 
+export const GET = createApiHandler(
+  {
+    querySchema: statusQuerySchema,
+  },
+  async (req, { auth, query }) => {
     let userId: string | null = null
-    if (authResult.isCron) {
-      userId = request.nextUrl.searchParams.get('userId')
+    if (auth.isCron) {
+      userId = query.userId ?? null
       if (!userId) {
         return NextResponse.json({ error: 'Cron requests must specify userId' }, { status: 400 })
       }
     } else {
-      userId = authResult.uid
+      userId = auth.uid ?? null
     }
 
     if (!userId) {
       return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
     }
 
-    const snapshot = await adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('adIntegrations')
-      .get()
+    const snapshot = await adminDb.collection('users').doc(userId).collection('adIntegrations').get()
 
     const toISO = (value: unknown) => {
       if (!value) return null
@@ -67,12 +69,6 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ statuses })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[integrations/status] failed to load', error)
-    return NextResponse.json({ error: 'Failed to load integration statuses' }, { status: 500 })
+    return { statuses }
   }
-}
+)
