@@ -3,7 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError, assertAdmin } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const ADMIN_USER_ROLES = ['admin', 'team', 'client'] as const
 type AdminUserRole = (typeof ADMIN_USER_ROLES)[number]
@@ -61,7 +61,9 @@ function mapInvitationDoc(docId: string, data: StoredInvitation): InvitationReco
   return {
     id: docId,
     email: typeof data.email === 'string' ? data.email : '',
-    role: ADMIN_USER_ROLES.includes(data.role as AdminUserRole) ? (data.role as AdminUserRole) : 'team',
+    role: ADMIN_USER_ROLES.includes(data.role as AdminUserRole)
+      ? (data.role as AdminUserRole)
+      : 'team',
     name: typeof data.name === 'string' ? data.name : null,
     message: typeof data.message === 'string' ? data.message : null,
     status: ['pending', 'accepted', 'expired', 'revoked'].includes(data.status as string)
@@ -85,7 +87,8 @@ function generateToken(): string {
   return token
 }
 
-const EMAIL_WEBHOOK_URL = process.env.INVITATION_EMAIL_WEBHOOK_URL || process.env.CONTACT_EMAIL_WEBHOOK_URL
+const EMAIL_WEBHOOK_URL =
+  process.env.INVITATION_EMAIL_WEBHOOK_URL || process.env.CONTACT_EMAIL_WEBHOOK_URL
 
 async function sendInvitationEmail(invitation: {
   email: string
@@ -100,9 +103,10 @@ async function sendInvitationEmail(invitation: {
   }
 
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3000'
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3000'
     const inviteUrl = `${appUrl}/auth?invite=${invitation.token}`
-    
+
     await fetch(EMAIL_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -124,24 +128,17 @@ async function sendInvitationEmail(invitation: {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-    
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const searchParams = request.nextUrl.searchParams
+export const GET = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req) => {
+    const searchParams = req.nextUrl.searchParams
     const statusFilter = searchParams.get('status')
     const limitParam = searchParams.get('limit')
     const limit = Math.min(Math.max(Number(limitParam) || 50, 1), 100)
 
-    let query = adminDb
-      .collection('invitations')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
+    let query = adminDb.collection('invitations').orderBy('createdAt', 'desc').limit(limit)
 
     if (statusFilter && ['pending', 'accepted', 'expired', 'revoked'].includes(statusFilter)) {
       query = adminDb
@@ -156,27 +153,17 @@ export async function GET(request: NextRequest) {
       mapInvitationDoc(doc.id, doc.data() as StoredInvitation)
     )
 
-    return NextResponse.json({ invitations })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[invitations] failed to list invitations', error)
-    return NextResponse.json({ error: 'Failed to list invitations' }, { status: 500 })
+    return { invitations }
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-    
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const json = (await request.json().catch(() => null)) ?? {}
-    const payload = invitationSchema.parse(json) satisfies InvitationInput
+export const POST = createApiHandler(
+  {
+    adminOnly: true,
+    bodySchema: invitationSchema,
+  },
+  async (req, { auth, body }) => {
+    const payload = body as InvitationInput
 
     const normalizedEmail = payload.email.toLowerCase().trim()
 
@@ -188,10 +175,7 @@ export async function POST(request: NextRequest) {
       .get()
 
     if (!existingUserSnapshot.empty) {
-      return NextResponse.json(
-        { error: 'A user with this email already exists' },
-        { status: 409 }
-      )
+      return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 })
     }
 
     // Check for existing pending invitation
@@ -210,7 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get inviter's name
-    const inviterDoc = await adminDb.collection('users').doc(auth.uid).get()
+    const inviterDoc = await adminDb.collection('users').doc(auth.uid!).get()
     const inviterData = inviterDoc.data()
     const inviterName = typeof inviterData?.name === 'string' ? inviterData.name : null
 
@@ -252,30 +236,15 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-
-    console.error('[invitations] failed to create invitation', error)
-    return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 })
   }
-}
+)
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-    
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const searchParams = request.nextUrl.searchParams
+export const DELETE = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req) => {
+    const searchParams = req.nextUrl.searchParams
     const invitationId = searchParams.get('id')
 
     if (!invitationId) {
@@ -291,10 +260,7 @@ export async function DELETE(request: NextRequest) {
 
     const data = doc.data() as StoredInvitation
     if (data.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'Only pending invitations can be revoked' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Only pending invitations can be revoked' }, { status: 400 })
     }
 
     await docRef.update({
@@ -302,12 +268,6 @@ export async function DELETE(request: NextRequest) {
       updatedAt: Timestamp.now(),
     })
 
-    return NextResponse.json({ success: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[invitations] failed to revoke invitation', error)
-    return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 })
+    return { success: true }
   }
-}
+)

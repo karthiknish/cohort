@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import type { ProposalVersion } from '@/types/proposal-versions'
+
+const querySchema = z.object({
+  proposalId: z.string().trim().min(1, 'Proposal ID is required'),
+})
 
 const createVersionSchema = z.object({
   proposalId: z.string().trim().min(1, 'Proposal ID is required'),
@@ -56,26 +59,19 @@ function mapVersionDoc(docId: string, data: StoredVersion): ProposalVersion {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const url = new URL(request.url)
-    const proposalId = url.searchParams.get('proposalId')
-
-    if (!proposalId) {
-      return NextResponse.json({ error: 'Proposal ID required' }, { status: 400 })
-    }
+export const GET = createApiHandler(
+  {
+    querySchema,
+  },
+  async (req, { auth, query }) => {
+    const { proposalId } = query
 
     // Verify proposal ownership
-    const proposalRef = adminDb.collection('users').doc(auth.uid).collection('proposals').doc(proposalId)
+    const proposalRef = adminDb.collection('users').doc(auth.uid!).collection('proposals').doc(proposalId)
     const proposalSnap = await proposalRef.get()
-    
+
     if (!proposalSnap.exists) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+      return { error: 'Proposal not found', status: 404 }
     }
 
     const versionsRef = proposalRef.collection('versions')
@@ -85,32 +81,21 @@ export async function GET(request: NextRequest) {
       mapVersionDoc(doc.id, doc.data() as StoredVersion)
     )
 
-    return NextResponse.json({ versions })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[proposal-versions] GET error', error)
-    return NextResponse.json({ error: 'Failed to fetch versions' }, { status: 500 })
+    return { versions }
   }
-}
+)
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const json = await request.json().catch(() => null)
-    const input = createVersionSchema.parse(json ?? {})
-
+export const POST = createApiHandler(
+  {
+    bodySchema: createVersionSchema,
+  },
+  async (req, { auth, body }) => {
     // Get proposal and verify ownership
-    const proposalRef = adminDb.collection('users').doc(auth.uid).collection('proposals').doc(input.proposalId)
+    const proposalRef = adminDb.collection('users').doc(auth.uid!).collection('proposals').doc(body.proposalId)
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+      return { error: 'Proposal not found', status: 404 }
     }
 
     const proposalData = proposalSnap.data() ?? {}
@@ -122,7 +107,7 @@ export async function POST(request: NextRequest) {
     const newVersionNumber = latestVersion + 1
 
     // Get user name for attribution
-    const userRef = adminDb.collection('users').doc(auth.uid)
+    const userRef = adminDb.collection('users').doc(auth.uid!)
     const userSnap = await userRef.get()
     const userData = userSnap.data() ?? {}
     const userName = typeof userData.name === 'string' ? userData.name : auth.email ?? null
@@ -131,12 +116,12 @@ export async function POST(request: NextRequest) {
 
     // Create version snapshot
     const versionDoc = await versionsRef.add({
-      proposalId: input.proposalId,
+      proposalId: body.proposalId,
       versionNumber: newVersionNumber,
       formData: proposalData.formData ?? {},
       status: proposalData.status ?? 'draft',
       stepProgress: proposalData.stepProgress ?? 0,
-      changeDescription: input.changeDescription ?? null,
+      changeDescription: body.changeDescription ?? null,
       createdBy: auth.uid,
       createdByName: userName,
       createdAt: timestamp,
@@ -152,15 +137,6 @@ export async function POST(request: NextRequest) {
     const createdDoc = await versionDoc.get()
     const version = mapVersionDoc(createdDoc.id, createdDoc.data() as StoredVersion)
 
-    return NextResponse.json({ version }, { status: 201 })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.flatten().formErrors.join(', ') || 'Invalid input' }, { status: 400 })
-    }
-    console.error('[proposal-versions] POST error', error)
-    return NextResponse.json({ error: 'Failed to create version' }, { status: 500 })
+    return { version, status: 201 }
   }
-}
+)

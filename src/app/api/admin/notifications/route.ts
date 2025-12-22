@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const COLLECTION_NAME = 'admin_notifications'
 
@@ -35,20 +35,17 @@ function toISO(value: unknown): string | null {
 /**
  * GET /api/admin/notifications - List all admin notifications
  */
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const url = new URL(request.url)
+export const GET = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req) => {
+    const url = new URL(req.url)
     const unreadOnly = url.searchParams.get('unread') === 'true'
     const limitParam = url.searchParams.get('limit')
     const limit = Math.min(Math.max(Number(limitParam) || 50, 1), 100)
 
-    let query = adminDb
-      .collection(COLLECTION_NAME)
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
+    let query = adminDb.collection(COLLECTION_NAME).orderBy('createdAt', 'desc').limit(limit)
 
     if (unreadOnly) {
       query = adminDb
@@ -84,33 +81,23 @@ export async function GET(request: NextRequest) {
 
     const unreadCount = unreadSnapshot.data().count
 
-    return NextResponse.json({ notifications, unreadCount })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/notifications] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load notifications' }, { status: 500 })
+    return { notifications, unreadCount }
   }
-}
+)
 
 /**
  * PATCH /api/admin/notifications - Mark notifications as read
  */
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const body = await request.json().catch(() => null)
-    const { ids, markAllRead } = body as { ids?: string[]; markAllRead?: boolean } ?? {}
+export const PATCH = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req, { body }) => {
+    const { ids, markAllRead } = (body as { ids?: string[]; markAllRead?: boolean }) ?? {}
 
     if (markAllRead) {
       // Mark all as read
-      const unreadSnapshot = await adminDb
-        .collection(COLLECTION_NAME)
-        .where('read', '==', false)
-        .get()
+      const unreadSnapshot = await adminDb.collection(COLLECTION_NAME).where('read', '==', false).get()
 
       const batch = adminDb.batch()
       unreadSnapshot.docs.forEach((doc) => {
@@ -118,7 +105,7 @@ export async function PATCH(request: NextRequest) {
       })
       await batch.commit()
 
-      return NextResponse.json({ ok: true, count: unreadSnapshot.size })
+      return { ok: true, count: unreadSnapshot.size }
     }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -133,26 +120,19 @@ export async function PATCH(request: NextRequest) {
     }
     await batch.commit()
 
-    return NextResponse.json({ ok: true, count: ids.length })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/notifications] PATCH failed', error)
-    return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 })
+    return { ok: true, count: ids.length }
   }
-}
+)
 
 /**
  * DELETE /api/admin/notifications - Delete notifications
  */
-export async function DELETE(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const body = await request.json().catch(() => null)
-    const { ids, deleteAll } = body as { ids?: string[]; deleteAll?: boolean } ?? {}
+export const DELETE = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req, { body }) => {
+    const { ids, deleteAll } = (body as { ids?: string[]; deleteAll?: boolean }) ?? {}
 
     if (deleteAll) {
       // Delete all notifications
@@ -163,7 +143,7 @@ export async function DELETE(request: NextRequest) {
       })
       await batch.commit()
 
-      return NextResponse.json({ ok: true, count: allSnapshot.size })
+      return { ok: true, count: allSnapshot.size }
     }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -177,12 +157,6 @@ export async function DELETE(request: NextRequest) {
     }
     await batch.commit()
 
-    return NextResponse.json({ ok: true, count: ids.length })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/notifications] DELETE failed', error)
-    return NextResponse.json({ error: 'Failed to delete notifications' }, { status: 500 })
+    return { ok: true, count: ids.length }
   }
-}
+)

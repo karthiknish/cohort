@@ -6,16 +6,17 @@ import { getStripeClient } from '@/lib/stripe'
 import { adminDb } from '@/lib/firebase-admin'
 import { recordInvoicePaidNotification, notifyInvoicePaidWhatsApp } from '@/lib/notifications'
 import { syncInvoiceRecords, recordInvoiceRevenue } from '@/lib/finance-sync'
+import { createApiHandler } from '@/lib/api-handler'
 
 // Maximum age of webhook events to accept (5 minutes)
 const WEBHOOK_TOLERANCE_SECONDS = 300
 
-export async function POST(request: Request) {
-  const body = await request.text()
+export const POST = createApiHandler({ auth: 'none' }, async (req) => {
+  const body = await req.text()
   const signature = (await headers()).get('stripe-signature')
 
   if (!signature) {
-    return NextResponse.json({ error: 'Missing stripe-signature' }, { status: 400 })
+    return { error: 'Missing stripe-signature', status: 400 }
   }
 
   const stripe = getStripeClient()
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
 
   if (!webhookSecret) {
     console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set')
-    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    return { error: 'Server configuration error', status: 500 }
   }
 
   let event: Stripe.Event
@@ -33,14 +34,14 @@ export async function POST(request: Request) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error(`[stripe-webhook] Webhook signature verification failed: ${message}`)
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    return { error: 'Invalid signature', status: 400 }
   }
 
   // Replay attack protection: reject events older than tolerance
   const eventAge = Math.floor(Date.now() / 1000) - event.created
   if (eventAge > WEBHOOK_TOLERANCE_SECONDS) {
     console.warn(`[stripe-webhook] Rejecting stale event ${event.id}, age: ${eventAge}s`)
-    return NextResponse.json({ error: 'Event too old' }, { status: 400 })
+    return { error: 'Event too old', status: 400 }
   }
 
   // Idempotency check: ensure we haven't processed this event before
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   if (processedSnap.exists) {
     // Already processed this event, return success to prevent retries
     console.log(`[stripe-webhook] Event ${event.id} already processed, skipping`)
-    return NextResponse.json({ received: true, duplicate: true })
+    return { received: true, duplicate: true }
   }
 
   try {
@@ -75,11 +76,11 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error(`[stripe-webhook] Error handling event ${event.type}`, error)
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
+    return { error: 'Webhook handler failed', status: 500 }
   }
 
-  return NextResponse.json({ received: true })
-}
+  return { received: true }
+})
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const workspaceId = invoice.metadata?.workspaceId

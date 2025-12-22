@@ -1,33 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { completeMetaOAuthFlow, validateMetaOAuthState } from '@/services/meta-business'
+import { createApiHandler } from '@/lib/api-handler'
 
 // Meta OAuth error codes reference:
 // https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived
 
-export async function GET(request: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  
-  try {
-    // Check for OAuth error from Meta
-    const error = request.nextUrl.searchParams.get('error')
-    const errorReason = request.nextUrl.searchParams.get('error_reason')
-    const errorDescription = request.nextUrl.searchParams.get('error_description')
-    
-    if (error) {
-      console.error('[meta.oauth.callback] OAuth error from Meta:', {
-        error,
-        errorReason,
-        errorDescription,
-      })
-      
-      // Redirect to dashboard with error message
-      const errorMessage = encodeURIComponent(errorDescription ?? errorReason ?? error)
-      return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=meta_oauth_failed&message=${errorMessage}`)
-    }
+const callbackQuerySchema = z.object({
+  code: z.string().optional(),
+  state: z.string().optional(),
+  error: z.string().optional(),
+  error_reason: z.string().optional(),
+  error_description: z.string().optional(),
+})
 
-    const code = request.nextUrl.searchParams.get('code')
-    const state = request.nextUrl.searchParams.get('state')
+export const GET = createApiHandler(
+  {
+    auth: 'none',
+    querySchema: callbackQuerySchema,
+  },
+  async (req, { query }) => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    
+    try {
+      // Check for OAuth error from Meta
+      const { error, error_reason: errorReason, error_description: errorDescription, code, state } = query
 
     if (!code) {
       console.error('[meta.oauth.callback] Missing authorization code')
@@ -82,4 +80,4 @@ export async function GET(request: NextRequest) {
     const encodedError = encodeURIComponent(errorMessage)
     return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=oauth_failed&message=${encodedError}`)
   }
-}
+})

@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, type DocumentReference } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { mergeProposalForm } from '@/lib/proposals'
 import { recordProposalDeckReadyNotification } from '@/lib/notifications'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
@@ -15,33 +13,26 @@ import {
   type GammaDeckPayload,
   type GammaDeckProcessResult,
 } from '@/app/api/proposals/utils/gamma'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id: proposalId } = await context.params
+export const POST = createApiHandler(
+  { auth: 'required' },
+  async (req, { auth, params }) => {
+    const { id: proposalId } = params
 
-  if (!proposalId) {
-    return NextResponse.json({ error: 'Proposal id is required' }, { status: 400 })
-  }
-
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
+    if (!proposalId) {
+      return { error: 'Proposal id is required', status: 400 }
     }
-
 
     const proposalRef = adminDb
       .collection('users')
-      .doc(auth.uid)
+      .doc(auth.uid!)
       .collection('proposals')
-      .doc(proposalId)
+      .doc(proposalId as string)
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+      return { error: 'Proposal not found', status: 404 }
     }
 
     const proposalData = proposalSnap.data() as Record<string, unknown>
@@ -50,7 +41,7 @@ export async function POST(
     const previousPptUrl = typeof proposalData.pptUrl === 'string' ? proposalData.pptUrl : null
 
     if (ownerId && ownerId !== auth.uid) {
-      return NextResponse.json({ error: 'Not authorized to submit this proposal' }, { status: 403 })
+      return { error: 'Not authorized to submit this proposal', status: 403 }
     }
 
     const clientIdRaw = typeof proposalData.clientId === 'string' ? proposalData.clientId.trim() : ''
@@ -59,7 +50,7 @@ export async function POST(
       ? proposalData.clientName.trim()
       : null
 
-    const workspaceId = await resolveWorkspaceIdForUser(auth.uid)
+    const workspaceId = await resolveWorkspaceIdForUser(auth.uid!)
 
     const formDataRaw = proposalData.formData
     const formData = mergeProposalForm(
@@ -104,8 +95,8 @@ export async function POST(
 
     if (process.env.GAMMA_API_KEY) {
       queueGammaDeckGeneration({
-        userId: auth.uid,
-        proposalId,
+        userId: auth.uid!,
+        proposalId: proposalId as string,
         formData,
         summary,
         proposalRef,
@@ -150,33 +141,25 @@ export async function POST(
 
     if (generationError) {
       const message = 'Unable to generate an AI summary right now. Please try again in a few minutes.'
-      return NextResponse.json(
-        {
-          ok: false,
-          status: nextStatus,
-          aiInsights: null,
-          error: message,
-        },
-        { status: 503 }
-      )
+      return {
+        ok: false,
+        status: nextStatus,
+        aiInsights: null,
+        error: message,
+        status_code: 503
+      }
     }
 
-    return NextResponse.json({
+    return {
       ok: true,
       status: nextStatus,
       aiInsights: summary,
       pptUrl: storedPptUrl ?? previousPptUrl,
       presentationDeck: gammaDeck,
       aiSuggestions: suggestions,
-    })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-    console.error('[ProposalSubmit] POST failed', error)
-    return NextResponse.json({ error: 'Failed to submit proposal' }, { status: 500 })
   }
-}
+)
 
 async function queueGammaDeckGeneration(args: {
   userId: string

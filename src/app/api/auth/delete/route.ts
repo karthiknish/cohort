@@ -1,9 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-
 import type { CollectionReference } from 'firebase-admin/firestore'
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 async function deleteCollectionRecursively(collectionRef: CollectionReference, batchSize = 200): Promise<void> {
   const snapshot = await collectionRef.limit(batchSize).get()
@@ -23,41 +21,26 @@ async function deleteCollectionRecursively(collectionRef: CollectionReference, b
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
+export const DELETE = createApiHandler({}, async (req, { auth }) => {
+  const userRef = adminDb.collection('users').doc(auth.uid!)
 
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const userRef = adminDb.collection('users').doc(auth.uid)
-
-    const subcollections = await userRef.listCollections()
-    for (const subcollection of subcollections) {
-      await deleteCollectionRecursively(subcollection)
-    }
-
-    await userRef.delete().catch((error) => {
-      if (!(error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 5)) {
-        throw error
-      }
-    })
-
-    await adminAuth.deleteUser(auth.uid).catch((error: unknown) => {
-      if (error instanceof Error && error.message.includes('not found')) {
-        return
-      }
-      throw error
-    })
-
-    return NextResponse.json({ ok: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[auth/delete] failed', error)
-    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 })
+  const subcollections = await userRef.listCollections()
+  for (const subcollection of subcollections) {
+    await deleteCollectionRecursively(subcollection)
   }
-}
+
+  await userRef.delete().catch((error) => {
+    if (!(error instanceof Error && 'code' in error && (error as { code?: unknown }).code === 5)) {
+      throw error
+    }
+  })
+
+  await adminAuth.deleteUser(auth.uid!).catch((error: unknown) => {
+    if (error instanceof Error && error.message.includes('not found')) {
+      return
+    }
+    throw error
+  })
+
+  return { ok: true }
+})

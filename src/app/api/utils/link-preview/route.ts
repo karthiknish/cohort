@@ -1,6 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { load } from "cheerio"
 import { isIP } from "node:net"
+import { z } from 'zod'
+import { createApiHandler } from "@/lib/api-handler"
+
+const previewSchema = z.object({
+  url: z.string().url(),
+})
 
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:"])
 const BLOCKED_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"])
@@ -167,31 +173,19 @@ async function fetchPreviewMetadata(target: URL): Promise<PreviewMetadata | null
   }
 }
 
-export async function POST(request: NextRequest) {
-  let payload: unknown
-  try {
-    payload = await request.json()
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON payload" },
-      {
-        status: 400,
-      },
-    )
-  }
-
-  const url = typeof (payload as { url?: unknown })?.url === "string" ? (payload as { url: string }).url : ""
-  let parsed: URL
+export const POST = createApiHandler(
+  {
+    auth: 'optional',
+    bodySchema: previewSchema,
+  },
+  async (req, { body }) => {
+    const url = body.url
+    let parsed: URL
 
   try {
     parsed = new URL(url)
   } catch {
-    return NextResponse.json(
-      { error: "Invalid URL" },
-      {
-        status: 400,
-      },
-    )
+    return { error: "Invalid URL", status: 400 }
   }
 
   if (!ALLOWED_PROTOCOLS.has(parsed.protocol) || isPrivateHost(parsed.hostname)) {
@@ -216,4 +210,4 @@ export async function POST(request: NextRequest) {
       },
     },
   )
-}
+})

@@ -1,39 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { gammaService } from '@/services/gamma'
+
+const querySchema = z.object({
+  query: z.string().optional(),
+  limit: z.string().transform((v) => parseInt(v, 10)).optional(),
+  after: z.string().optional(),
+})
 
 /**
  * GET /api/gamma/folders
  * List available Gamma folders
  * Query params: query (search), limit, after (pagination cursor)
  */
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
+export const GET = createApiHandler(
+  {
+    querySchema,
+  },
+  async (req, { query }) => {
+    try {
+      const result = await gammaService.listFolders({
+        query: query.query,
+        limit: query.limit,
+        after: query.after,
+      })
+
+      return result
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('GAMMA_API_KEY')) {
+        return { error: 'Gamma API not configured', status: 503 }
+      }
+      throw error
     }
-
-    const { searchParams } = new URL(request.url)
-    const query = searchParams.get('query') || undefined
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined
-    const after = searchParams.get('after') || undefined
-
-    const result = await gammaService.listFolders({ query, limit, after })
-
-    return NextResponse.json(result)
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[GammaFolders] GET failed', error)
-
-    if (error instanceof Error && error.message.includes('GAMMA_API_KEY')) {
-      return NextResponse.json({ error: 'Gamma API not configured' }, { status: 503 })
-    }
-
-    return NextResponse.json({ error: 'Failed to fetch folders' }, { status: 500 })
   }
-}
+)

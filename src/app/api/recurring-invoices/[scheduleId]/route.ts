@@ -1,10 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
-import { resolveWorkspaceContext } from '@/lib/workspace'
+import { createApiHandler } from '@/lib/api-handler'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
 
 const updateScheduleSchema = z.object({
@@ -17,10 +14,6 @@ const updateScheduleSchema = z.object({
   endDate: z.string().trim().nullable().optional(),
   isActive: z.boolean().optional(),
 })
-
-type RouteContext = {
-  params: Promise<{ scheduleId: string }>
-}
 
 type StoredSchedule = {
   clientId?: unknown
@@ -114,58 +107,42 @@ function calculateNextRunDate(
   return next.toISOString()
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const { scheduleId } = await context.params
+export const GET = createApiHandler(
+  { workspace: 'required' },
+  async (req, { workspace, params }) => {
+    const { scheduleId } = params
     if (!scheduleId) {
-      return NextResponse.json({ error: 'Schedule ID required' }, { status: 400 })
+      return { error: 'Schedule ID required', status: 400 }
     }
 
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const docRef = workspace.workspaceRef.collection('recurringInvoices').doc(scheduleId)
+    const docRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
+      return { error: 'Schedule not found', status: 404 }
     }
 
     const schedule = mapScheduleDoc(doc.id, doc.data() as StoredSchedule)
-    return NextResponse.json({ schedule })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[recurring-invoices/[id]] GET error', error)
-    return NextResponse.json({ error: 'Failed to fetch schedule' }, { status: 500 })
+    return { schedule }
   }
-}
+)
 
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  try {
-    const { scheduleId } = await context.params
+export const PATCH = createApiHandler(
+  { 
+    workspace: 'required',
+    bodySchema: updateScheduleSchema
+  },
+  async (req, { workspace, body: input, params }) => {
+    const { scheduleId } = params
     if (!scheduleId) {
-      return NextResponse.json({ error: 'Schedule ID required' }, { status: 400 })
+      return { error: 'Schedule ID required', status: 400 }
     }
 
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const json = await request.json().catch(() => null)
-    const input = updateScheduleSchema.parse(json ?? {})
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const docRef = workspace.workspaceRef.collection('recurringInvoices').doc(scheduleId)
+    const docRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
+      return { error: 'Schedule not found', status: 404 }
     }
 
     const timestamp = Timestamp.now()
@@ -187,83 +164,58 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const updatedDoc = await docRef.get()
     const schedule = mapScheduleDoc(updatedDoc.id, updatedDoc.data() as StoredSchedule)
 
-    return NextResponse.json({ schedule })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.flatten().formErrors.join(', ') || 'Invalid input' }, { status: 400 })
-    }
-    console.error('[recurring-invoices/[id]] PATCH error', error)
-    return NextResponse.json({ error: 'Failed to update schedule' }, { status: 500 })
+    return { schedule }
   }
-}
+)
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const { scheduleId } = await context.params
+export const DELETE = createApiHandler(
+  { workspace: 'required' },
+  async (req, { workspace, params }) => {
+    const { scheduleId } = params
     if (!scheduleId) {
-      return NextResponse.json({ error: 'Schedule ID required' }, { status: 400 })
+      return { error: 'Schedule ID required', status: 400 }
     }
 
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const docRef = workspace.workspaceRef.collection('recurringInvoices').doc(scheduleId)
+    const docRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
+      return { error: 'Schedule not found', status: 404 }
     }
 
     await docRef.delete()
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[recurring-invoices/[id]] DELETE error', error)
-    return NextResponse.json({ error: 'Failed to delete schedule' }, { status: 500 })
+    return { success: true }
   }
-}
+)
 
 // Manually trigger invoice generation for a schedule
-export async function POST(request: NextRequest, context: RouteContext) {
-  try {
-    const { scheduleId } = await context.params
+export const POST = createApiHandler(
+  { workspace: 'required' },
+  async (req, { workspace, params }) => {
+    const { scheduleId } = params
     if (!scheduleId) {
-      return NextResponse.json({ error: 'Schedule ID required' }, { status: 400 })
+      return { error: 'Schedule ID required', status: 400 }
     }
 
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const scheduleRef = workspace.workspaceRef.collection('recurringInvoices').doc(scheduleId)
+    const scheduleRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const scheduleDoc = await scheduleRef.get()
 
     if (!scheduleDoc.exists) {
-      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
+      return { error: 'Schedule not found', status: 404 }
     }
 
     const scheduleData = scheduleDoc.data() as StoredSchedule
     
     if (scheduleData.isActive !== true) {
-      return NextResponse.json({ error: 'Schedule is not active' }, { status: 400 })
+      return { error: 'Schedule is not active', status: 400 }
     }
 
     // Check if end date has passed
     if (scheduleData.endDate) {
       const endDate = new Date(scheduleData.endDate as string)
       if (endDate < new Date()) {
-        return NextResponse.json({ error: 'Schedule has ended' }, { status: 400 })
+        return { error: 'Schedule has ended', status: 400 }
       }
     }
 
@@ -275,7 +227,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     dueDate.setDate(dueDate.getDate() + 30)
 
     // Create the invoice
-    const invoiceRef = await workspace.financeInvoicesCollection.add({
+    const invoiceRef = await workspace!.financeInvoicesCollection.add({
       clientId: scheduleData.clientId,
       clientName: scheduleData.clientName,
       amount: scheduleData.amount,
@@ -306,16 +258,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       updatedAt: timestamp,
     })
 
-    return NextResponse.json({
+    return {
       success: true,
       invoiceId: invoiceRef.id,
       nextRunDate,
-    })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-    console.error('[recurring-invoices/[id]] POST (generate) error', error)
-    return NextResponse.json({ error: 'Failed to generate invoice' }, { status: 500 })
   }
-}
+)

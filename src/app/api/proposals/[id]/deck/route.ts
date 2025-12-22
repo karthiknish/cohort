@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
@@ -6,44 +5,37 @@ import { mergeProposalForm } from '@/lib/proposals'
 import { recordProposalDeckReadyNotification } from '@/lib/notifications'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import type { ProposalFormData } from '@/lib/proposals'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import {
   ensureProposalGammaDeck,
   parseGammaDeckPayload,
 } from '@/app/api/proposals/utils/gamma'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id: proposalId } = await context.params
+export const POST = createApiHandler(
+  { auth: 'required' },
+  async (req, { auth, params }) => {
+    const proposalId = params.id as string
 
-  if (!proposalId) {
-    return NextResponse.json({ error: 'Proposal id is required' }, { status: 400 })
-  }
-
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
+    if (!proposalId) {
+      return { error: 'Proposal id is required', status: 400 }
     }
 
     const proposalRef = adminDb
       .collection('users')
-      .doc(auth.uid)
+      .doc(auth.uid!)
       .collection('proposals')
-      .doc(proposalId)
+      .doc(proposalId as string)
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+      return { error: 'Proposal not found', status: 404 }
     }
 
     const proposalData = proposalSnap.data() as Record<string, unknown>
     const ownerId = typeof proposalData.ownerId === 'string' ? proposalData.ownerId : null
 
     if (ownerId && ownerId !== auth.uid) {
-      return NextResponse.json({ error: 'Not authorized to prepare this deck' }, { status: 403 })
+      return { error: 'Not authorized to prepare this deck', status: 403 }
     }
 
     const clientIdRaw = typeof proposalData.clientId === 'string' ? proposalData.clientId.trim() : ''
@@ -52,7 +44,7 @@ export async function POST(
       ? proposalData.clientName.trim()
       : null
 
-    const workspaceId = await resolveWorkspaceIdForUser(auth.uid)
+    const workspaceId = await resolveWorkspaceIdForUser(auth.uid!)
 
     const existingGammaDeck = parseGammaDeckPayload(proposalData.gammaDeck)
     const storedPptUrl = typeof proposalData.pptUrl === 'string' ? proposalData.pptUrl : null
@@ -60,25 +52,27 @@ export async function POST(
 
     if (existingStorageUrl) {
       console.log('[ProposalDeck] Returning existing storage URL:', existingStorageUrl)
-      return NextResponse.json({
+      return {
         ok: true,
         storageUrl: existingStorageUrl,
         presentationDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
-      })
+      }
     }
 
     if (!process.env.GAMMA_API_KEY) {
-      return NextResponse.json({
+      return {
         error: 'Presentation generation is not configured',
-      }, { status: 503 })
+        status: 503
+      }
     }
 
     const summary = extractAiSummary(proposalData.aiInsights)
 
     if (!summary) {
-      return NextResponse.json({
+      return {
         error: 'AI summary not available for this proposal',
-      }, { status: 409 })
+        status: 409
+      }
     }
 
     const formDataRaw = proposalData.formData
@@ -92,8 +86,8 @@ export async function POST(
       : clientName
 
     void ensureProposalGammaDeck({
-      userId: auth.uid,
-      proposalId,
+      userId: auth.uid!,
+      proposalId: proposalId as string,
       formData,
       summary,
       existingDeck: existingGammaDeck,
@@ -139,20 +133,14 @@ export async function POST(
       console.error('[ProposalDeck] Deferred Gamma deck generation failed', error)
     })
 
-    return NextResponse.json({
+    return {
       ok: true,
       storageUrl: existingStorageUrl,
       presentationDeck: existingGammaDeck ? { ...existingGammaDeck, storageUrl: existingStorageUrl } : null,
       queued: true,
-    })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-    console.error('[ProposalDeck] POST failed for proposal:', proposalId, error)
-    return NextResponse.json({ error: 'Failed to prepare presentation deck' }, { status: 500 })
   }
-}
+)
 
 function extractAiSummary(insights: unknown, depth = 0): string | null {
   if (!insights || depth > 4) {

@@ -1,21 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
 import { ensureGoogleAccessToken, IntegrationTokenError } from '@/lib/integration-token-refresh'
 import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function POST(request: NextRequest) {
+export const POST = createApiHandler({}, async (req, { auth }) => {
+  if (!auth.uid) {
+    return { error: 'User context is required', status: 400 }
+  }
+
   try {
-    const auth = await authenticateRequest(request)
-
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'User context is required' }, { status: 400 })
-    }
-
     const integration = await getAdIntegration({ userId: auth.uid, providerId: 'google' })
     if (!integration) {
-      return NextResponse.json({ error: 'Google Ads integration not found' }, { status: 404 })
+      return { error: 'Google Ads integration not found', status: 404 }
     }
 
     const accessToken = await ensureGoogleAccessToken({ userId: auth.uid })
@@ -27,7 +23,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!accounts.length) {
-      return NextResponse.json({ error: 'No Google Ads accounts available for this user' }, { status: 404 })
+      return { error: 'No Google Ads accounts available for this user', status: 404 }
     }
 
     const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]
@@ -45,27 +41,22 @@ export async function POST(request: NextRequest) {
       developerToken: developerToken ?? undefined,
     })
 
-    return NextResponse.json({
+    return {
       accountId,
       accountName: primaryAccount.name,
       loginCustomerId,
       managerCustomerId,
       accounts,
-    })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-
+  } catch (error) {
     if (error instanceof IntegrationTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return { error: error.message, status: 400 }
     }
 
     if (error instanceof Error && error.message.toLowerCase().includes('developer token')) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return { error: error.message, status: 400 }
     }
 
-    console.error('[google.initialize] error', error)
-    return NextResponse.json({ error: 'Failed to initialize Google Ads integration' }, { status: 500 })
+    throw error
   }
-}
+})

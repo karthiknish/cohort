@@ -1,32 +1,28 @@
- import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { geminiAI } from '@/services/gemini'
 
 const requestSchema = z.object({
   field: z.enum(['title', 'description']),
-  context: z.object({
-    currentTitle: z.string().optional(),
-    currentDescription: z.string().optional(),
-    status: z.string().optional(),
-    priority: z.string().optional(),
-  }).optional(),
+  context: z
+    .object({
+      currentTitle: z.string().optional(),
+      currentDescription: z.string().optional(),
+      status: z.string().optional(),
+      priority: z.string().optional(),
+    })
+    .optional(),
 })
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const body = await request.json().catch(() => null)
-    const parsed = requestSchema.safeParse(body)
-
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-    }
-
-    const { field, context } = parsed.data
+export const POST = createApiHandler(
+  {
+    adminOnly: true,
+    bodySchema: requestSchema,
+  },
+  async (req, { body }) => {
+    const { field, context } = body
 
     let prompt: string
     let result: string
@@ -65,12 +61,6 @@ Return ONLY the description, nothing else. No quotes, no preamble.`
       result = result.slice(1, -1)
     }
 
-    return NextResponse.json({ [field]: result })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/features/ai] generation failed', error)
-    return NextResponse.json({ error: 'Failed to generate content' }, { status: 500 })
+    return { [field]: result }
   }
-}
+)

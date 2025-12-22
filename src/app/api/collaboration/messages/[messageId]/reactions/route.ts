@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
-import { resolveWorkspaceContext } from '@/lib/workspace'
+import { createApiHandler } from '@/lib/api-handler'
 import {
   sanitizeReaction,
   type StoredMessage,
@@ -19,40 +18,25 @@ const toggleSchema = z.object({
     .refine((value) => COLLABORATION_REACTION_SET.has(value), 'Unsupported reaction emoji'),
 })
 
-class HttpError extends Error {
-  status: number
-
-  constructor(message: string, status: number) {
-    super(message)
-    this.status = status
-  }
-}
-
-type RouteContext = { params: Promise<{ messageId: string }> }
-
-export async function POST(request: NextRequest, context: RouteContext) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
+export const POST = createApiHandler(
+  {
+    workspace: 'required',
+    bodySchema: toggleSchema,
+  },
+  async (req, { auth, workspace, body, params }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     const uid = auth.uid as string
-
-    const { messageId } = await context.params
+    const { messageId } = params as { messageId: string }
     if (!messageId) {
       return NextResponse.json({ error: 'Message id is required' }, { status: 400 })
     }
-
-    const payload = toggleSchema.parse(await request.json().catch(() => ({})))
-    const workspace = await resolveWorkspaceContext(auth)
 
     const messageRef = workspace.collaborationCollection.doc(messageId)
 
     const result = await workspace.collaborationCollection.firestore.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(messageRef)
       if (!snapshot.exists) {
-        throw new HttpError('Message not found', 404)
+        return NextResponse.json({ error: 'Message not found' }, { status: 404 })
       }
 
       const data = snapshot.data() as StoredMessage
@@ -67,7 +51,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           return
         }
 
-        if (sanitized.emoji !== payload.emoji) {
+        if (sanitized.emoji !== body.emoji) {
           updated.push({
             emoji: sanitized.emoji,
             count: sanitized.count,
@@ -94,7 +78,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       if (!reactionFound) {
         updated.push({
-          emoji: payload.emoji,
+          emoji: body.emoji,
           count: 1,
           userIds: [uid],
         })
@@ -108,27 +92,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return updated
     })
 
+    if (result instanceof Response) return result
+
     const sanitizedReactions = Array.isArray(result)
       ? result
           .map((item) => sanitizeReaction(item))
           .filter((entry): entry is NonNullable<ReturnType<typeof sanitizeReaction>> => Boolean(entry))
       : []
 
-    return NextResponse.json({ reactions: sanitizedReactions })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof HttpError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.flatten().formErrors.join('\n') || 'Invalid payload' }, { status: 400 })
-    }
-
-    console.error('[collaboration/messages] reaction toggle failed', error)
-    return NextResponse.json({ error: 'Failed to toggle reaction' }, { status: 500 })
+    return { reactions: sanitizedReactions }
   }
-}
+)

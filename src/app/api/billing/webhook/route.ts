@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 
 import { getStripeClient } from '@/lib/stripe'
 import { recordInvoiceRevenue, syncInvoiceRecords, type SyncOutcome } from '@/lib/finance-sync'
+import { createApiHandler } from '@/lib/api-handler'
 
 export const runtime = 'nodejs'
 
@@ -16,20 +16,21 @@ const RELEVANT_EVENTS = new Set([
   'invoice.marked_uncollectible',
   'charge.refunded',
 ])
-export async function POST(request: NextRequest) {
+
+export const POST = createApiHandler({ auth: 'none' }, async (req) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
   if (!webhookSecret) {
     console.error('[billing] Missing STRIPE_WEBHOOK_SECRET')
-    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+    return { error: 'Webhook not configured', status: 500 }
   }
 
-  const signature = request.headers.get('stripe-signature')
+  const signature = req.headers.get('stripe-signature')
   if (!signature) {
     console.warn('[billing] Stripe signature missing from webhook')
-    return NextResponse.json({ error: 'Signature missing' }, { status: 400 })
+    return { error: 'Signature missing', status: 400 }
   }
 
-  const rawBody = await request.text()
+  const rawBody = await req.text()
   const stripe = getStripeClient()
 
   let event: Stripe.Event
@@ -38,11 +39,11 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid payload'
     console.error('[billing] Failed to verify webhook signature', message)
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    return { error: 'Invalid signature', status: 400 }
   }
 
   if (!RELEVANT_EVENTS.has(event.type)) {
-    return NextResponse.json({ received: true })
+    return { received: true }
   }
 
   try {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
         console.warn('[billing] Charge refund missing invoice reference', {
           chargeId: charge.id,
         })
-        return NextResponse.json({ received: true })
+        return { received: true }
       }
 
       const invoice = await stripe.invoices.retrieve(invoiceId)
@@ -94,8 +95,8 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('[billing] Failed to sync invoice from webhook', error)
-    return NextResponse.json({ error: 'Failed to persist invoice' }, { status: 500 })
+    return { error: 'Failed to persist invoice', status: 500 }
   }
 
-  return NextResponse.json({ received: true })
-}
+  return { received: true }
+})

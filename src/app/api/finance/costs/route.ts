@@ -1,10 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import type { FinanceCostEntry } from '@/types/finance'
-import { resolveWorkspaceContext } from '@/lib/workspace'
 
 type StoredFinanceCost = {
   clientId?: unknown
@@ -88,20 +86,14 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    assertAdmin(auth)
-
-    const json = (await request.json().catch(() => null)) ?? {}
-    const payload = createCostSchema.parse(json)
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const docRef = workspace.financeCostsCollection.doc()
+export const POST = createApiHandler(
+  { 
+    adminOnly: true,
+    workspace: 'required',
+    bodySchema: createCostSchema
+  },
+  async (req, { auth, workspace, body: payload }) => {
+    const docRef = workspace!.financeCostsCollection.doc()
     const timestamp = FieldValue.serverTimestamp()
 
     await docRef.set({
@@ -109,7 +101,7 @@ export async function POST(request: NextRequest) {
       amount: payload.amount,
       cadence: payload.cadence,
       clientId: payload.clientId ?? null,
-      workspaceId: workspace.workspaceId,
+      workspaceId: workspace!.workspaceId,
       createdBy: auth.uid,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -118,52 +110,27 @@ export async function POST(request: NextRequest) {
     const snapshot = await docRef.get()
     const cost = mapCostDoc(snapshot.id, snapshot.data() as StoredFinanceCost)
 
-    return NextResponse.json({ cost }, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid cost payload', details: error.flatten() }, { status: 400 })
-    }
-
-    console.error('[finance/costs] POST failed', error)
-    return NextResponse.json({ error: 'Failed to create cost entry' }, { status: 500 })
+    return { cost }
   }
-}
+)
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    assertAdmin(auth)
-
-    const id = request.nextUrl.searchParams.get('id')?.trim() ?? ''
-    if (!id) {
-      return NextResponse.json({ error: 'Cost id is required' }, { status: 400 })
-    }
-
-    const workspace = await resolveWorkspaceContext(auth)
-    const docRef = workspace.financeCostsCollection.doc(id)
+export const DELETE = createApiHandler(
+  { 
+    adminOnly: true,
+    workspace: 'required',
+    querySchema: z.object({ id: z.string().trim().min(1) })
+  },
+  async (req, { workspace, query }) => {
+    const { id } = query
+    const docRef = workspace!.financeCostsCollection.doc(id)
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {
-      return NextResponse.json({ error: 'Cost entry not found' }, { status: 404 })
+      return { error: 'Cost entry not found', status: 404 }
     }
 
     await docRef.delete()
 
-    return NextResponse.json({ ok: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[finance/costs] DELETE failed', error)
-    return NextResponse.json({ error: 'Failed to delete cost entry' }, { status: 500 })
+    return { ok: true }
   }
-}
+)

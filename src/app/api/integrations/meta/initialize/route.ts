@@ -1,6 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import {
   getAdIntegration,
   updateIntegrationCredentials,
@@ -10,25 +7,24 @@ import {
   IntegrationTokenError,
 } from '@/lib/integration-token-refresh'
 import { fetchMetaAdAccounts } from '@/services/integrations/meta-ads'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function POST(request: NextRequest) {
+export const POST = createApiHandler({}, async (req, { auth }) => {
+  if (!auth.uid) {
+    return { error: 'User context is required', status: 400 }
+  }
+
   try {
-    const auth = await authenticateRequest(request)
-
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'User context is required' }, { status: 400 })
-    }
-
     const integration = await getAdIntegration({ userId: auth.uid, providerId: 'facebook' })
     if (!integration) {
-      return NextResponse.json({ error: 'Meta integration not found' }, { status: 404 })
+      return { error: 'Meta integration not found', status: 404 }
     }
 
     const accessToken = await ensureMetaAccessToken({ userId: auth.uid })
     const accounts = await fetchMetaAdAccounts({ accessToken })
 
     if (!accounts.length) {
-      return NextResponse.json({ error: 'No Meta ad accounts available for this user' }, { status: 404 })
+      return { error: 'No Meta ad accounts available for this user', status: 404 }
     }
 
     const preferredAccount =
@@ -40,21 +36,16 @@ export async function POST(request: NextRequest) {
       accountId: preferredAccount.id,
     })
 
-    return NextResponse.json({
+    return {
       accountId: preferredAccount.id,
       accountName: preferredAccount.name,
       accounts,
-    })
+    }
   } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
     if (error instanceof IntegrationTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return { error: error.message, status: 400 }
     }
 
-    console.error('[meta.initialize] error', error)
-    return NextResponse.json({ error: 'Failed to initialize Meta integration' }, { status: 500 })
+    throw error
   }
-}
+})

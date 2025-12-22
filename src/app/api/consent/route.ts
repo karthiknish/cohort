@@ -1,12 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 /**
  * GDPR Consent Record API
  * Stores consent preferences server-side for audit trail purposes
  */
+
+const consentBodySchema = z.object({
+  type: z.string().optional().default('cookie'),
+  preferences: z.object({
+    essential: z.boolean().optional().default(true),
+    analytics: z.boolean().optional().default(false),
+    functionality: z.boolean().optional().default(false),
+    marketing: z.boolean().optional().default(false),
+  }).optional(),
+})
 
 interface ConsentRecord {
   userId: string
@@ -23,24 +33,11 @@ interface ConsentRecord {
   userAgent: string | null
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const body = await request.json() as {
-      type?: string
-      preferences?: {
-        essential?: boolean
-        analytics?: boolean
-        functionality?: boolean
-        marketing?: boolean
-      }
-    }
-
+export const POST = createApiHandler(
+  {
+    bodySchema: consentBodySchema,
+  },
+  async (req, { auth, body }) => {
     const type = body.type ?? 'cookie'
     const preferences = {
       essential: true,
@@ -53,13 +50,13 @@ export async function POST(request: NextRequest) {
     const granted = preferences.analytics || preferences.functionality || preferences.marketing
 
     // Get IP address from headers (may be forwarded by proxy)
-    const forwardedFor = request.headers.get('x-forwarded-for')
+    const forwardedFor = req.headers.get('x-forwarded-for')
     const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : null
 
-    const userAgent = request.headers.get('user-agent')
+    const userAgent = req.headers.get('user-agent')
 
     const consentRecord: ConsentRecord = {
-      userId: auth.uid,
+      userId: auth.uid!,
       type: type as 'cookie' | 'marketing' | 'analytics',
       preferences,
       granted,
@@ -72,7 +69,7 @@ export async function POST(request: NextRequest) {
     await adminDb.collection('consent_records').add(consentRecord)
 
     // Also update the user document with latest consent status
-    await adminDb.collection('users').doc(auth.uid).set(
+    await adminDb.collection('users').doc(auth.uid!).set(
       {
         consentPreferences: preferences,
         consentTimestamp: consentRecord.timestamp,
@@ -81,50 +78,28 @@ export async function POST(request: NextRequest) {
       { merge: true }
     )
 
-    return NextResponse.json({
+    return {
       ok: true,
       timestamp: consentRecord.timestamp,
-    })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-
-    console.error('[consent] failed to store consent', error)
-    return NextResponse.json({ error: 'Failed to store consent record' }, { status: 500 })
   }
-}
+)
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
+export const GET = createApiHandler({}, async (req, { auth }) => {
+  // Get consent history for the user
+  const snapshot = await adminDb
+    .collection('consent_records')
+    .where('userId', '==', auth.uid!)
+    .orderBy('timestamp', 'desc')
+    .limit(50)
+    .get()
 
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
+  const records = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+    // Redact IP for privacy
+    ipAddress: doc.data().ipAddress ? '***.***.***' : null,
+  }))
 
-    // Get consent history for the user
-    const snapshot = await adminDb
-      .collection('consent_records')
-      .where('userId', '==', auth.uid)
-      .orderBy('timestamp', 'desc')
-      .limit(50)
-      .get()
-
-    const records = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      // Redact IP for privacy
-      ipAddress: doc.data().ipAddress ? '***.***.***' : null,
-    }))
-
-    return NextResponse.json({ records })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[consent] failed to get consent history', error)
-    return NextResponse.json({ error: 'Failed to retrieve consent history' }, { status: 500 })
-  }
-}
+  return { records }
+})

@@ -3,7 +3,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const COLLECTION_NAME = 'platform_features'
 
@@ -50,19 +50,15 @@ function toISO(value: unknown): string | null {
   return null
 }
 
-type RouteContext = {
-  params: Promise<{ id: string }>
-}
-
 /**
  * GET /api/admin/features/[id] - Get a single feature
  */
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const { id } = await context.params
+export const GET = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req, { params }) => {
+    const { id } = params as { id: string }
     const docRef = adminDb.collection(COLLECTION_NAME).doc(id)
     const docSnapshot = await docRef.get()
 
@@ -71,7 +67,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const data = docSnapshot.data()
-    return NextResponse.json({
+    return {
       feature: {
         id: docSnapshot.id,
         title: data?.title ?? '',
@@ -83,35 +79,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
         createdAt: toISO(data?.createdAt) ?? new Date().toISOString(),
         updatedAt: toISO(data?.updatedAt) ?? new Date().toISOString(),
       },
-    })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-    console.error('[admin/features/[id]] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load feature' }, { status: 500 })
   }
-}
+)
 
 /**
  * PATCH /api/admin/features/[id] - Update a feature
  */
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const { id } = await context.params
-    const body = await request.json().catch(() => null)
-    const parseResult = updateFeatureSchema.safeParse(body)
-
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid request payload', details: parseResult.error.flatten() },
-        { status: 400 }
-      )
-    }
-
+export const PATCH = createApiHandler(
+  {
+    adminOnly: true,
+    bodySchema: updateFeatureSchema,
+  },
+  async (req, { body, params }) => {
+    const { id } = params as { id: string }
     const docRef = adminDb.collection(COLLECTION_NAME).doc(id)
     const docSnapshot = await docRef.get()
 
@@ -123,7 +104,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       updatedAt: FieldValue.serverTimestamp(),
     }
 
-    const { title, description, status, priority, imageUrl, references } = parseResult.data
+    const { title, description, status, priority, imageUrl, references } = body
 
     if (title !== undefined) updates.title = title
     if (description !== undefined) updates.description = description
@@ -137,7 +118,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const updatedDoc = await docRef.get()
     const data = updatedDoc.data()
 
-    return NextResponse.json({
+    return {
       feature: {
         id: updatedDoc.id,
         title: data?.title ?? '',
@@ -149,25 +130,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         createdAt: toISO(data?.createdAt) ?? new Date().toISOString(),
         updatedAt: toISO(data?.updatedAt) ?? new Date().toISOString(),
       },
-    })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-    console.error('[admin/features/[id]] PATCH failed', error)
-    return NextResponse.json({ error: 'Failed to update feature' }, { status: 500 })
   }
-}
+)
 
 /**
  * DELETE /api/admin/features/[id] - Delete a feature
  */
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const { id } = await context.params
+export const DELETE = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req, { params }) => {
+    const { id } = params as { id: string }
     const docRef = adminDb.collection(COLLECTION_NAME).doc(id)
     const docSnapshot = await docRef.get()
 
@@ -177,12 +152,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     await docRef.delete()
 
-    return NextResponse.json({ ok: true, id })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/features/[id]] DELETE failed', error)
-    return NextResponse.json({ error: 'Failed to delete feature' }, { status: 500 })
+    return { ok: true, id }
   }
-}
+)

@@ -1,10 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-
 import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const payloadSchema = z
   .object({
@@ -25,7 +23,7 @@ async function notifyAdminsOfNewSignup(
 ): Promise<void> {
   try {
     const serverTimestamp = FieldValue.serverTimestamp()
-    
+
     // Create notification record in admin_notifications collection
     await adminDb.collection('admin_notifications').add({
       type: 'new_user_signup',
@@ -37,7 +35,7 @@ async function notifyAdminsOfNewSignup(
       read: false,
       createdAt: serverTimestamp,
     })
-    
+
     console.log(`[auth/bootstrap] Admin notification created for new user: ${email}`)
   } catch (error) {
     // Log but don't fail the signup process
@@ -45,20 +43,17 @@ async function notifyAdminsOfNewSignup(
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const parsedBody = payloadSchema.safeParse(await request.json().catch(() => undefined))
-    const providedName = parsedBody.success ? parsedBody.data?.name : undefined
+export const POST = createApiHandler(
+  {
+    bodySchema: payloadSchema,
+  },
+  async (req, { auth, body }) => {
+    const providedName = body?.name
 
     const claimedRole = typeof auth.claims?.role === 'string' ? normalizeRole(auth.claims.role) : null
     const claimedStatus = typeof auth.claims?.status === 'string' ? normalizeStatus(auth.claims.status, 'active') : null
 
-    const userRef = adminDb.collection('users').doc(auth.uid)
+    const userRef = adminDb.collection('users').doc(auth.uid!)
     const snapshot = await userRef.get()
     const existingData = snapshot.exists ? (snapshot.data() as Record<string, unknown>) : {}
 
@@ -103,13 +98,13 @@ export async function POST(request: NextRequest) {
     // Notify admins of new user signup
     if (isNewUser) {
       await notifyAdminsOfNewSignup(
-        auth.uid,
+        auth.uid!,
         auth.email ?? '',
         providedName ?? auth.email ?? 'New User'
       )
     }
 
-    const userRecord = await adminAuth.getUser(auth.uid)
+    const userRecord = await adminAuth.getUser(auth.uid!)
     const customClaims = userRecord.customClaims ?? {}
     const claimRoleExisting = typeof customClaims.role === 'string' ? normalizeRole(customClaims.role) : null
     const claimStatusExisting = typeof customClaims.status === 'string' ? normalizeStatus(customClaims.status, 'active') : null
@@ -124,18 +119,12 @@ export async function POST(request: NextRequest) {
         role: finalRole,
         status: finalStatus,
       }
-      await adminAuth.setCustomUserClaims(auth.uid, nextClaims)
+      await adminAuth.setCustomUserClaims(auth.uid!, nextClaims)
     }
 
-    return NextResponse.json({ ok: true, role: finalRole, status: finalStatus, claimsUpdated: claimsNeedUpdate })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[auth/bootstrap] failed', error)
-    return NextResponse.json({ error: 'Failed to synchronise account' }, { status: 500 })
+    return { ok: true, role: finalRole, status: finalStatus, claimsUpdated: claimsNeedUpdate }
   }
-}
+)
 
 function normalizeRole(value: unknown): z.infer<typeof roleSchema> {
   if (value === 'admin' || value === 'team' || value === 'client') {

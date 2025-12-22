@@ -3,7 +3,7 @@ import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const statusSchema = z.enum(['new', 'in_progress', 'resolved'])
 
@@ -23,14 +23,15 @@ function toISO(value: unknown): string | null {
   return null
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const url = new URL(request.url)
+export const GET = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req) => {
+    const url = new URL(req.url)
     const statusParam = url.searchParams.get('status')
-    const statusFilter = statusParam && statusSchema.safeParse(statusParam).success ? statusParam : null
+    const statusFilter =
+      statusParam && statusSchema.safeParse(statusParam).success ? statusParam : null
     const sizeParam = url.searchParams.get('pageSize')
     const pageSize = Math.min(Math.max(Number(sizeParam) || 20, 1), 100)
     const cursorParam = url.searchParams.get('cursor')
@@ -70,7 +71,9 @@ export async function GET(request: NextRequest) {
         email: typeof data.email === 'string' ? data.email : '',
         company: typeof data.company === 'string' ? data.company : null,
         message: typeof data.message === 'string' ? data.message : '',
-        status: statusSchema.safeParse(data.status).success ? (data.status as ContactMessageStatus) : 'new',
+        status: statusSchema.safeParse(data.status).success
+          ? (data.status as ContactMessageStatus)
+          : 'new',
         createdAt: toISO(data.createdAt),
       }
     })
@@ -85,32 +88,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ messages: results, nextCursor })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/contact-messages] get failed', error)
-    return NextResponse.json({ error: 'Failed to load contact messages' }, { status: 500 })
+    return { messages: results, nextCursor }
   }
-}
+)
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const body = await request.json().catch(() => null)
-    const schema = z.object({
+export const PATCH = createApiHandler(
+  {
+    adminOnly: true,
+    bodySchema: z.object({
       id: z.string().min(1),
       status: statusSchema,
-    })
-    const parseResult = schema.safeParse(body)
-    if (!parseResult.success) {
-      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 })
-    }
-
-    const { id, status } = parseResult.data
+    }),
+  },
+  async (req, { body }) => {
+    const { id, status } = body
     const messageRef = adminDb.collection('contactMessages').doc(id)
 
     await messageRef.update({
@@ -118,14 +109,8 @@ export async function PATCH(request: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     })
 
-    return NextResponse.json({ ok: true })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/contact-messages] patch failed', error)
-    return NextResponse.json({ error: 'Failed to update message' }, { status: 500 })
+    return { ok: true }
   }
-}
+)
 
 type ContactMessageStatus = z.infer<typeof statusSchema>

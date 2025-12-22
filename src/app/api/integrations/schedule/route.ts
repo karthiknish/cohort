@@ -1,86 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server'
-
+import { z } from 'zod'
 import { scheduleIntegrationSync, scheduleSyncsForAllUsers, scheduleSyncsForUser } from '@/lib/integration-auto-sync'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
-type ScheduleRequest = {
-  userId?: string
-  providerId?: string
-  providerIds?: string[]
-  force?: boolean
-  allUsers?: boolean
-}
+const scheduleSchema = z.object({
+  force: z.boolean().optional(),
+  providerIds: z.array(z.string()).optional(),
+  providerId: z.string().optional(),
+  allUsers: z.boolean().optional(),
+  userId: z.string().optional(),
+})
 
-function ensureAdmin(auth: { email: string | null }) {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
+const scheduleQuerySchema = z.object({
+  userId: z.string().optional(),
+})
 
-  if (!auth.email || !adminEmails.includes(auth.email.toLowerCase())) {
-    throw new AuthenticationError('Admin access required', 403)
-  }
-}
+export const POST = createApiHandler(
+  {
+    bodySchema: scheduleSchema,
+    querySchema: scheduleQuerySchema,
+  },
+  async (req, { auth, body, query }) => {
+    const force = Boolean(body.force)
+    let sanitizedProviderIds = body.providerIds
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-
-    if (!auth.isCron) {
-      ensureAdmin(auth)
+    if (body.providerId && !sanitizedProviderIds) {
+      sanitizedProviderIds = [body.providerId]
     }
 
-    let payload: ScheduleRequest = {}
-    try {
-      if (request.headers.get('content-type')?.includes('application/json')) {
-        payload = (await request.json()) as ScheduleRequest
-      }
-    } catch (error) {
-      console.warn('[integrations/schedule] unable to parse request body', error)
-    }
-
-    const force = Boolean(payload.force)
-    let sanitizedProviderIds = Array.isArray(payload.providerIds)
-      ? payload.providerIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-      : undefined
-
-    if (payload.providerId && !sanitizedProviderIds) {
-      sanitizedProviderIds = [payload.providerId]
-    }
-
-    if (payload.allUsers) {
+    if (body.allUsers) {
       if (!auth.isCron) {
-        throw new AuthenticationError('Global scheduling restricted to cron requests', 403)
+        return { error: 'Global scheduling restricted to cron requests', status: 403 }
       }
 
       const result = await scheduleSyncsForAllUsers({ force, providerIds: sanitizedProviderIds })
-      return NextResponse.json({ scope: 'all-users', ...result })
+      return { scope: 'all-users', ...result }
     }
 
-    let targetUserId = payload.userId ?? request.nextUrl.searchParams.get('userId') ?? null
+    let targetUserId = body.userId ?? query.userId ?? null
     if (!auth.isCron) {
-      targetUserId = payload.userId ?? request.nextUrl.searchParams.get('userId') ?? auth.uid
+      const isAdmin = auth.claims?.role === 'admin' || (
+        auth.email && (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).includes(auth.email.toLowerCase())
+      )
+
+      if (targetUserId && targetUserId !== auth.uid && !isAdmin) {
+        return { error: 'Admin access required', status: 403 }
+      }
+      targetUserId = targetUserId ?? auth.uid ?? null
     }
 
-    if (!targetUserId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
-    }
-
-    if (sanitizedProviderIds && sanitizedProviderIds.length === 1) {
-      const providerId = sanitizedProviderIds[0]
-      const scheduled = await scheduleIntegrationSync({ userId: targetUserId, providerId, force })
-      return NextResponse.json({ userId: targetUserId, providerId, scheduled })
-    }
-
-    const result = await scheduleSyncsForUser({ userId: targetUserId, providerIds: sanitizedProviderIds, force })
-    return NextResponse.json({ userId: targetUserId, ...result })
-  } catch (error) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
-    console.error('[integrations/schedule] failed to schedule sync jobs', error)
-    const message = error instanceof Error ? error.message : 'Failed to schedule sync jobs'
-    return NextResponse.json({ error: message }, { status: 500 })
+  if (!targetUserId) {
+    return { error: 'Missing userId', status: 400 }
   }
-}
+
+  if (sanitizedProviderIds && sanitizedProviderIds.length === 1) {
+    const providerId = sanitizedProviderIds[0]
+    const scheduled = await scheduleIntegrationSync({ userId: targetUserId, providerId, force })
+    return { userId: targetUserId, providerId, scheduled }
+  }
+
+  const result = await scheduleSyncsForUser({ userId: targetUserId, providerIds: sanitizedProviderIds, force })
+  return { userId: targetUserId, ...result }
+})

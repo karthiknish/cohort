@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type { Query, DocumentData } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import type {
   ProposalEventType,
   ProposalAnalyticsSummary,
@@ -26,6 +25,14 @@ const EVENT_TYPES: ProposalEventType[] = [
   'proposal_viewed',
   'proposal_downloaded',
 ]
+
+const querySchema = z.object({
+  view: z.enum(['summary', 'timeseries', 'by-client', 'events']).optional().default('summary'),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  clientId: z.string().optional(),
+  limit: z.string().transform((v) => parseInt(v, 10)).optional(),
+})
 
 const createEventSchema = z.object({
   eventType: z.enum(EVENT_TYPES as [ProposalEventType, ...ProposalEventType[]]),
@@ -52,28 +59,21 @@ function serializeTimestamp(value: TimestampLike): string | null {
 }
 
 // GET: Retrieve analytics summary or time series data
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
+export const GET = createApiHandler(
+  {
+    querySchema,
+  },
+  async (req, { auth, query }) => {
+    const { view, startDate: startDateParam, endDate: endDateParam, clientId: clientIdParam, limit: limitParam } = query
 
-    const url = new URL(request.url)
-    const view = url.searchParams.get('view') || 'summary' // summary | timeseries | by-client | events
-    const startDateParam = url.searchParams.get('startDate')
-    const endDateParam = url.searchParams.get('endDate')
-    const clientIdParam = url.searchParams.get('clientId')
-    const limitParam = url.searchParams.get('limit')
-
-    const eventsRef = adminDb.collection('users').doc(auth.uid).collection('proposalAnalytics')
-    let query: Query<DocumentData> = eventsRef
+    const eventsRef = adminDb.collection('users').doc(auth.uid!).collection('proposalAnalytics')
+    let firestoreQuery: Query<DocumentData> = eventsRef
 
     // Apply date filters
     if (startDateParam) {
       const startDate = new Date(startDateParam)
       if (!isNaN(startDate.getTime())) {
-        query = query.where('createdAt', '>=', Timestamp.fromDate(startDate))
+        firestoreQuery = firestoreQuery.where('createdAt', '>=', Timestamp.fromDate(startDate))
       }
     }
     if (endDateParam) {
@@ -81,19 +81,19 @@ export async function GET(request: NextRequest) {
       if (!isNaN(endDate.getTime())) {
         // End of day
         endDate.setHours(23, 59, 59, 999)
-        query = query.where('createdAt', '<=', Timestamp.fromDate(endDate))
+        firestoreQuery = firestoreQuery.where('createdAt', '<=', Timestamp.fromDate(endDate))
       }
     }
     if (clientIdParam) {
-      query = query.where('clientId', '==', clientIdParam)
+      firestoreQuery = firestoreQuery.where('clientId', '==', clientIdParam)
     }
 
-    query = query.orderBy('createdAt', 'desc')
+    firestoreQuery = firestoreQuery.orderBy('createdAt', 'desc')
 
-    const limit = limitParam ? Math.min(parseInt(limitParam, 10), 1000) : 500
-    query = query.limit(limit)
+    const limit = limitParam ? Math.min(limitParam, 1000) : 500
+    firestoreQuery = firestoreQuery.limit(limit)
 
-    const snapshot = await query.get()
+    const snapshot = await firestoreQuery.get()
     const events = snapshot.docs.map((doc) => {
       const data = doc.data()
       return {
@@ -111,75 +111,55 @@ export async function GET(request: NextRequest) {
     })
 
     if (view === 'events') {
-      return NextResponse.json({ events })
+      return { events }
     }
 
     if (view === 'summary') {
       const summary = calculateSummary(events)
-      return NextResponse.json({ summary })
+      return { summary }
     }
 
     if (view === 'timeseries') {
       const timeseries = calculateTimeSeries(events)
-      return NextResponse.json({ timeseries })
+      return { timeseries }
     }
 
     if (view === 'by-client') {
       const byClient = calculateByClient(events)
-      return NextResponse.json({ byClient })
+      return { byClient }
     }
 
-    return NextResponse.json({ events })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[api/proposal-analytics] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load analytics' }, { status: 500 })
+    return { events }
   }
-}
+)
 
 // POST: Track a new analytics event
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      throw new AuthenticationError('Authentication required', 401)
-    }
-
-    const body = await request.json().catch(() => ({}))
-    const parsed = createEventSchema.parse(body)
-
+export const POST = createApiHandler(
+  {
+    bodySchema: createEventSchema,
+  },
+  async (req, { auth, body }) => {
     const eventData = {
-      eventType: parsed.eventType,
-      proposalId: parsed.proposalId,
+      eventType: body.eventType,
+      proposalId: body.proposalId,
       userId: auth.uid,
-      clientId: parsed.clientId ?? null,
-      clientName: parsed.clientName ?? null,
-      metadata: parsed.metadata ?? {},
-      duration: parsed.duration ?? null,
-      error: parsed.error ?? null,
+      clientId: body.clientId ?? null,
+      clientName: body.clientName ?? null,
+      metadata: body.metadata ?? {},
+      duration: body.duration ?? null,
+      error: body.error ?? null,
       createdAt: FieldValue.serverTimestamp(),
     }
 
     const docRef = await adminDb
       .collection('users')
-      .doc(auth.uid)
+      .doc(auth.uid!)
       .collection('proposalAnalytics')
       .add(eventData)
 
-    return NextResponse.json({ id: docRef.id }, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid payload', details: error.flatten() }, { status: 400 })
-    }
-    console.error('[api/proposal-analytics] POST failed', error)
-    return NextResponse.json({ error: 'Failed to track event' }, { status: 500 })
+    return { id: docRef.id, status: 201 }
   }
-}
+)
 
 // Helper function to calculate summary statistics
 function calculateSummary(events: Array<{ eventType: ProposalEventType; duration?: number | null }>): ProposalAnalyticsSummary {

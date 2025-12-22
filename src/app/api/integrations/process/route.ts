@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
-
+import { z } from 'zod'
 import {
   claimNextSyncJob,
   completeSyncJob,
@@ -8,7 +7,7 @@ import {
   updateIntegrationStatus,
   writeMetricsBatch,
 } from '@/lib/firestore-integrations-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
@@ -27,29 +26,33 @@ function ensureString(value: unknown, message: string): string {
   throw new Error(message)
 }
 
-export async function POST(request: NextRequest) {
-  let resolvedUserId: string | null = null
-  let activeJob: SyncJob | null = null
-  let jobFailed = false
+const processSchema = z.object({
+  userId: z.string().optional(),
+})
 
-  try {
-    const authResult = await authenticateRequest(request)
+const processQuerySchema = z.object({
+  userId: z.string().optional(),
+})
 
-    const contentType = request.headers.get('content-type')
-    let body: { userId?: string } = {}
+export const POST = createApiHandler(
+  {
+    bodySchema: processSchema,
+    querySchema: processQuerySchema,
+  },
+  async (req, { auth, body, query }) => {
+    let resolvedUserId: string | null = null
+    let activeJob: SyncJob | null = null
+    let jobFailed = false
 
-    if (contentType?.includes('application/json')) {
-      body = await request.json()
-    }
+    try {
+      let targetUserId = body.userId || query.userId || null
 
-    let targetUserId = body.userId || request.nextUrl.searchParams.get('userId') || null
-
-    if (!authResult.isCron) {
-      targetUserId = authResult.uid
+    if (!auth.isCron) {
+      targetUserId = auth.uid ?? null
     }
 
     if (!targetUserId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+      return { error: 'Missing userId', status: 400 }
     }
 
     resolvedUserId = targetUserId
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest) {
     const job = await claimNextSyncJob({ userId: targetUserId })
 
     if (!job) {
-      return NextResponse.json({ message: 'No queued jobs available' }, { status: 204 })
+      return { message: 'No queued jobs available', status: 204 }
     }
 
     activeJob = job
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (!integration || !integration.accessToken) {
       await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' })
       await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'error', message: 'Missing credentials' })
-      return NextResponse.json({ error: 'Integration credentials missing' }, { status: 400 })
+      return { error: 'Integration credentials missing', status: 400 }
     }
 
     let metrics: NormalizedMetric[] = []
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest) {
       }
       default: {
         await failSyncJob({ userId: targetUserId, jobId: job.id, message: `Unsupported provider: ${job.providerId}` })
-        return NextResponse.json({ error: `Unsupported provider ${job.providerId}` }, { status: 400 })
+        return { error: `Unsupported provider ${job.providerId}`, status: 400 }
       }
     }
 
@@ -172,13 +175,9 @@ export async function POST(request: NextRequest) {
     await completeSyncJob({ userId: targetUserId, jobId: job.id })
     await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'success', message: null })
 
-    return NextResponse.json({ jobId: job.id, providerId: job.providerId, metricsCount: metrics.length })
+    return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
   } catch (error: unknown) {
     console.error('[integrations/process] error', error)
-
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
 
     if (error instanceof IntegrationTokenError) {
       const { userId, providerId, message } = error
@@ -189,7 +188,7 @@ export async function POST(request: NextRequest) {
       if (userId && providerId) {
         await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Token refresh failed' })
       }
-      return NextResponse.json({ error: message ?? 'Token refresh failed' }, { status: 400 })
+      return { error: message ?? 'Token refresh failed', status: 400 }
     }
 
     const { userId, jobId, providerId, message } = extractSyncErrorDetails(error)
@@ -209,9 +208,9 @@ export async function POST(request: NextRequest) {
       await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, status: 'error', message: message ?? 'Sync failed' })
     }
 
-    return NextResponse.json({ error: message ?? 'Failed to process sync job' }, { status: 500 })
+    return { error: message ?? 'Failed to process sync job', status: 500 }
   }
-}
+})
 
 interface SyncJobErrorLike {
   message?: string

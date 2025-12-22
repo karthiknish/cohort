@@ -3,7 +3,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const COLLECTION_NAME = 'platform_features'
 
@@ -53,15 +53,12 @@ function toISO(value: unknown): string | null {
 /**
  * GET /api/admin/features - List all features
  */
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const snapshot = await adminDb
-      .collection(COLLECTION_NAME)
-      .orderBy('createdAt', 'desc')
-      .get()
+export const GET = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req) => {
+    const snapshot = await adminDb.collection(COLLECTION_NAME).orderBy('createdAt', 'desc').get()
 
     const features = snapshot.docs.map((doc) => {
       const data = doc.data()
@@ -78,35 +75,20 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ features })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/features] GET failed', error)
-    return NextResponse.json({ error: 'Failed to load features' }, { status: 500 })
+    return { features }
   }
-}
+)
 
 /**
  * POST /api/admin/features - Create a new feature
  */
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const body = await request.json().catch(() => null)
-    const parseResult = createFeatureSchema.safeParse(body)
-    
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: 'Invalid request payload', details: parseResult.error.flatten() },
-        { status: 400 }
-      )
-    }
-
-    const { title, description, status, priority, imageUrl, references } = parseResult.data
+export const POST = createApiHandler(
+  {
+    adminOnly: true,
+    bodySchema: createFeatureSchema,
+  },
+  async (req, { body }) => {
+    const { title, description, status, priority, imageUrl, references } = body
     const now = FieldValue.serverTimestamp()
 
     const docRef = await adminDb.collection(COLLECTION_NAME).add({
@@ -123,24 +105,21 @@ export async function POST(request: NextRequest) {
     const createdDoc = await docRef.get()
     const data = createdDoc.data()
 
-    return NextResponse.json({
-      feature: {
-        id: docRef.id,
-        title,
-        description,
-        status,
-        priority,
-        imageUrl: imageUrl ?? null,
-        references,
-        createdAt: toISO(data?.createdAt) ?? new Date().toISOString(),
-        updatedAt: toISO(data?.updatedAt) ?? new Date().toISOString(),
+    return NextResponse.json(
+      {
+        feature: {
+          id: docRef.id,
+          title,
+          description,
+          status,
+          priority,
+          imageUrl: imageUrl ?? null,
+          references,
+          createdAt: toISO(data?.createdAt) ?? new Date().toISOString(),
+          updatedAt: toISO(data?.updatedAt) ?? new Date().toISOString(),
+        },
       },
-    }, { status: 201 })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/features] POST failed', error)
-    return NextResponse.json({ error: 'Failed to create feature' }, { status: 500 })
+      { status: 201 }
+    )
   }
-}
+)

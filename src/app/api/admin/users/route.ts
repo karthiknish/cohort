@@ -4,7 +4,7 @@ import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
-import { authenticateRequest, assertAdmin, AuthenticationError } from '@/lib/server-auth'
+import { createApiHandler } from '@/lib/api-handler'
 
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'invited', 'pending', 'disabled', 'suspended'])
@@ -35,12 +35,12 @@ function toISO(value: unknown): string | null {
   return null
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const url = new URL(request.url)
+export const GET = createApiHandler(
+  {
+    adminOnly: true,
+  },
+  async (req) => {
+    const url = new URL(req.url)
     const sizeParam = url.searchParams.get('pageSize')
     const searchParam = url.searchParams.get('search')
     const statusParam = url.searchParams.get('status')
@@ -60,11 +60,11 @@ export async function GET(request: NextRequest) {
       if (cursorTime && cursorId) {
         const cursorDate = new Date(cursorTime)
         if (!Number.isNaN(cursorDate.getTime())) {
-              usersQuery = usersQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
+          usersQuery = usersQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
         }
       }
     }
-              const snapshot = await usersQuery.get()
+    const snapshot = await usersQuery.get()
 
     const records = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>
@@ -94,7 +94,8 @@ export async function GET(request: NextRequest) {
 
     if (roleParam) {
       const normalizedFilterRole = normalizeRole(roleParam)
-      const acceptedFilter = roleParam === normalizedFilterRole || roleParam === 'manager' || roleParam === 'member'
+      const acceptedFilter =
+        roleParam === normalizedFilterRole || roleParam === 'manager' || roleParam === 'member'
       if (acceptedFilter) {
         filtered = filtered.filter((record) => record.role === normalizedFilterRole)
       }
@@ -118,23 +119,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ users: filtered, nextCursor })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/users] get failed', error)
-    return NextResponse.json({ error: 'Failed to load users' }, { status: 500 })
+    return { users: filtered, nextCursor }
   }
-}
+)
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    assertAdmin(auth)
-
-    const body = await request.json().catch(() => null)
-    const schema = z
+export const PATCH = createApiHandler(
+  {
+    adminOnly: true,
+    bodySchema: z
       .object({
         id: z.string().min(1),
         role: roleSchema.optional(),
@@ -143,14 +135,10 @@ export async function PATCH(request: NextRequest) {
       .refine((payload) => payload.role !== undefined || payload.status !== undefined, {
         message: 'Role or status must be provided',
         path: ['role'],
-      })
-
-    const parseResult = schema.safeParse(body)
-    if (!parseResult.success) {
-      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 })
-    }
-
-    const { id, role, status } = parseResult.data
+      }),
+  },
+  async (req, { body }) => {
+    const { id, role, status } = body
 
     const userRef = adminDb.collection('users').doc(id)
     const userSnapshot = await userRef.get()
@@ -200,15 +188,9 @@ export async function PATCH(request: NextRequest) {
 
     await adminAuth.setCustomUserClaims(id, nextClaims)
 
-    return NextResponse.json({ ok: true, role: nextRole, status: nextStatus })
-  } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-    console.error('[admin/users] patch failed', error)
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
+    return { ok: true, role: nextRole, status: nextStatus }
   }
-}
+)
 
 function normalizeRole(value: unknown): z.infer<typeof roleSchema> {
   if (value === 'admin' || value === 'team' || value === 'client') {

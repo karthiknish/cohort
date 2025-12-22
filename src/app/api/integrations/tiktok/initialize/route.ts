@@ -1,28 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server'
-
 import {
   getAdIntegration,
   updateIntegrationCredentials,
 } from '@/lib/firestore-integrations-admin'
-import { authenticateRequest, AuthenticationError } from '@/lib/server-auth'
 import {
   ensureTikTokAccessToken,
   IntegrationTokenError,
 } from '@/lib/integration-token-refresh'
 import { fetchTikTokAdAccounts } from '@/services/integrations/tiktok-ads'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function POST(request: NextRequest) {
+export const POST = createApiHandler({}, async (req, { auth }) => {
+  if (!auth.uid) {
+    return { error: 'User context is required', status: 400 }
+  }
+
   try {
-    const auth = await authenticateRequest(request)
-
-    if (!auth.uid) {
-      return NextResponse.json({ error: 'User context is required' }, { status: 400 })
-    }
-
     const integration = await getAdIntegration({ userId: auth.uid, providerId: 'tiktok' })
 
     if (!integration) {
-      return NextResponse.json({ error: 'TikTok integration not found' }, { status: 404 })
+      return { error: 'TikTok integration not found', status: 404 }
     }
 
     const accessToken = await ensureTikTokAccessToken({ userId: auth.uid })
@@ -32,7 +28,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!accounts.length) {
-      return NextResponse.json({ error: 'No TikTok advertisers available for this user' }, { status: 404 })
+      return { error: 'No TikTok advertisers available for this user', status: 404 }
     }
 
     const preferredAccount =
@@ -44,21 +40,16 @@ export async function POST(request: NextRequest) {
       accountId: preferredAccount.id,
     })
 
-    return NextResponse.json({
+    return {
       accountId: preferredAccount.id,
       accountName: preferredAccount.name,
       accounts,
-    })
+    }
   } catch (error: unknown) {
-    if (error instanceof AuthenticationError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
-    }
-
     if (error instanceof IntegrationTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return { error: error.message, status: 400 }
     }
 
-    console.error('[tiktok.initialize] error', error)
-    return NextResponse.json({ error: 'Failed to initialize TikTok integration' }, { status: 500 })
+    throw error
   }
-}
+})
