@@ -8,12 +8,11 @@ export interface AuthResult {
   isCron: boolean
 }
 
-class AuthenticationError extends Error {
-  status: number
+import { ApiError } from './api-errors'
+
+class AuthenticationError extends ApiError {
   constructor(message: string, status = 401) {
-    super(message)
-    this.status = status
-    this.name = 'AuthenticationError'
+    super(message, status, 'UNAUTHORIZED')
   }
 }
 

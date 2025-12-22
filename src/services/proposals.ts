@@ -37,19 +37,7 @@ export interface ProposalDraft {
   gammaDeck?: ProposalPresentationDeck | null
 }
 
-async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const token = await authService.getIdToken()
-  const headers = new Headers(init.headers)
-  headers.set('Authorization', `Bearer ${token}`)
-  if (!headers.has('Content-Type') && init.method && init.method !== 'GET') {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  return fetch(input, {
-    ...init,
-    headers,
-  })
-}
+import { apiFetch } from '@/lib/api-client'
 
 export async function listProposals(params: { status?: ProposalStatus; clientId?: string } = {}) {
   const search = new URLSearchParams()
@@ -60,31 +48,17 @@ export async function listProposals(params: { status?: ProposalStatus; clientId?
     search.set('clientId', params.clientId)
   }
 
-  const response = await authorizedFetch(`/api/proposals${search.toString() ? `?${search}` : ''}`, {
+  const payload = await apiFetch<{ proposals: ProposalDraft[] }>(`/api/proposals${search.toString() ? `?${search}` : ''}`, {
     cache: 'no-store',
   })
 
-  if (!response.ok) {
-    throw new Error('Failed to load proposals')
-  }
-
-  const payload = await response.json()
-  return (payload.proposals as ProposalDraft[]).map(resolveProposalDeck)
+  return payload.proposals.map(resolveProposalDeck)
 }
 
 export async function getProposalById(id: string) {
-  const response = await authorizedFetch(`/api/proposals?id=${encodeURIComponent(id)}`, {
+  const payload = await apiFetch<{ proposal: ProposalDraft }>(`/api/proposals?id=${encodeURIComponent(id)}`, {
     cache: 'no-store',
   })
-
-  const payload = await response.json().catch(() => ({})) as {
-    proposal?: ProposalDraft
-    error?: string
-  }
-
-  if (!response.ok) {
-    throw new Error(payload.error || 'Failed to load proposal')
-  }
 
   if (!payload.proposal) {
     throw new Error('Proposal not found')
@@ -94,90 +68,45 @@ export async function getProposalById(id: string) {
 }
 
 export async function createProposalDraft(body: Partial<ProposalDraft> = {}) {
-  const response = await authorizedFetch('/api/proposals', {
+  const payload = await apiFetch<{ id: string }>('/api/proposals', {
     method: 'POST',
     body: JSON.stringify(body),
   })
 
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'Failed to create proposal draft')
-  }
-
-  const payload = await response.json()
-  return payload.id as string
+  return payload.id
 }
 
 export async function updateProposalDraft(id: string, body: Partial<ProposalDraft>) {
-  const response = await authorizedFetch('/api/proposals', {
+  await apiFetch('/api/proposals', {
     method: 'PATCH',
     body: JSON.stringify({ id, ...body }),
   })
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'Failed to update proposal draft')
-  }
 
   return true
 }
 
 export async function submitProposalDraft(id: string, delivery: 'summary' | 'summary_and_pdf' = 'summary') {
-  const response = await authorizedFetch(`/api/proposals/${id}/submit`, {
+  const payload = await apiFetch<any>(`/api/proposals/${id}/submit`, {
     method: 'POST',
     body: JSON.stringify({ delivery }),
   })
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'Failed to submit proposal draft')
-  }
-
-  const payload = await response.json() as {
-    ok: boolean
-    status: ProposalStatus
-    aiInsights: string | null
-    pdfUrl?: string | null
-    pptUrl?: string | null
-    presentationDeck?: ProposalPresentationDeck | null
-    gammaDeck?: ProposalPresentationDeck | null
-    aiSuggestions?: string | null
-  }
 
   return resolveProposalDeck(payload)
 }
 
 export async function deleteProposalDraft(id: string) {
-  const response = await authorizedFetch('/api/proposals', {
+  await apiFetch('/api/proposals', {
     method: 'DELETE',
     body: JSON.stringify({ id }),
   })
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'Failed to delete proposal')
-  }
 
   return true
 }
 
 export async function prepareProposalDeck(id: string) {
-  const response = await authorizedFetch(`/api/proposals/${id}/deck`, {
+  const payload = await apiFetch<any>(`/api/proposals/${id}/deck`, {
     method: 'POST',
   })
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'Failed to prepare proposal deck')
-  }
-
-  const payload = await response.json() as {
-    ok: boolean
-    storageUrl: string | null
-    presentationDeck?: ProposalPresentationDeck | null
-    gammaDeck?: ProposalPresentationDeck | null
-    aiSuggestions?: string | null
-  }
 
   return resolveProposalDeck(payload)
 }

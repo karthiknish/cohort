@@ -21,41 +21,7 @@ type CreateFinanceCostInput = {
   clientId?: string | null
 }
 
-async function authorizedFetch(input: string, init: RequestInit = {}) {
-  const token = await authService.getIdToken()
-  if (!token) {
-    throw new Error('Authentication required to load finance data')
-  }
-
-  const headers = new Headers(init.headers)
-  headers.set('Authorization', `Bearer ${token}`)
-  if (!headers.has('Content-Type') && init.body) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  const response = await fetch(input, {
-    ...init,
-    headers,
-    cache: 'no-store',
-  })
-
-  let payload: unknown
-  try {
-    payload = await response.json()
-  } catch {
-    payload = null
-  }
-
-  if (!response.ok) {
-    const errorMessage =
-      payload && typeof payload === 'object' && 'error' in payload && typeof (payload as { error?: unknown }).error === 'string'
-        ? (payload as { error?: string }).error
-        : 'Failed to process finance request'
-    throw new Error(errorMessage)
-  }
-
-  return payload
-}
+import { apiFetch } from '@/lib/api-client'
 
 export async function fetchFinanceSummary(options: FetchFinanceSummaryOptions = {}): Promise<FinanceSummaryResponse> {
   const search = new URLSearchParams()
@@ -76,15 +42,12 @@ export async function fetchFinanceSummary(options: FetchFinanceSummaryOptions = 
   }
 
   const url = search.size > 0 ? `/api/finance?${search.toString()}` : '/api/finance'
-  const payload = await authorizedFetch(url)
-  if (!payload || typeof payload !== 'object') {
-    throw new Error('Invalid finance summary response')
-  }
-  return payload as FinanceSummaryResponse
+  const payload = await apiFetch<FinanceSummaryResponse>(url)
+  return payload
 }
 
 export async function createFinanceCost(input: CreateFinanceCostInput): Promise<FinanceCostEntry> {
-  const payload = await authorizedFetch('/api/finance/costs', {
+  const payload = await apiFetch<{ cost: FinanceCostEntry }>('/api/finance/costs', {
     method: 'POST',
     body: JSON.stringify({
       category: input.category,
@@ -95,11 +58,7 @@ export async function createFinanceCost(input: CreateFinanceCostInput): Promise<
     }),
   })
 
-  if (!payload || typeof payload !== 'object' || !('cost' in payload)) {
-    throw new Error('Invalid finance cost response')
-  }
-
-  return (payload as { cost: FinanceCostEntry }).cost
+  return payload.cost
 }
 
 export async function deleteFinanceCost(costId: string): Promise<void> {
@@ -108,22 +67,16 @@ export async function deleteFinanceCost(costId: string): Promise<void> {
   }
 
   const search = new URLSearchParams({ id: costId })
-  await authorizedFetch(`/api/finance/costs?${search.toString()}`, {
+  await apiFetch(`/api/finance/costs?${search.toString()}`, {
     method: 'DELETE',
   })
 }
 
 export async function createBillingPortalSession(clientId: string | null): Promise<{ url: string }> {
-  const payload = await authorizedFetch('/api/billing/portal', {
+  return apiFetch<{ url: string }>('/api/billing/portal', {
     method: 'POST',
     body: JSON.stringify({ clientId }),
   })
-
-  if (!payload || typeof payload !== 'object' || !('url' in payload) || typeof (payload as { url?: unknown }).url !== 'string') {
-    throw new Error('Failed to create billing portal session')
-  }
-
-  return { url: (payload as { url: string }).url }
 }
 
 export async function sendInvoiceReminder(invoiceId: string): Promise<void> {
@@ -131,7 +84,7 @@ export async function sendInvoiceReminder(invoiceId: string): Promise<void> {
     throw new Error('Invoice id is required')
   }
 
-  await authorizedFetch(`/api/finance/invoices/${encodeURIComponent(invoiceId)}/remind`, {
+  await apiFetch(`/api/finance/invoices/${encodeURIComponent(invoiceId)}/remind`, {
     method: 'POST',
   })
 }
@@ -146,19 +99,10 @@ export async function issueInvoiceRefund(invoiceId: string, amount?: number): Pr
     body.amount = amount
   }
 
-  const payload = await authorizedFetch(`/api/finance/invoices/${encodeURIComponent(invoiceId)}/refund`, {
+  const payload = await apiFetch<{ refund: { id: string; amount: number } }>(`/api/finance/invoices/${encodeURIComponent(invoiceId)}/refund`, {
     method: 'POST',
     body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
   })
 
-  if (!payload || typeof payload !== 'object' || !('refund' in payload)) {
-    throw new Error('Failed to process refund')
-  }
-
-  const refund = (payload as { refund: { id: string; amount: number } }).refund
-  if (!refund || typeof refund.id !== 'string') {
-    throw new Error('Invalid refund response')
-  }
-
-  return { refundId: refund.id, amount: refund.amount }
+  return { refundId: payload.refund.id, amount: payload.refund.amount }
 }

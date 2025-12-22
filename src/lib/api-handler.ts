@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest, AuthenticationError, AuthResult, assertAdmin } from './server-auth'
 import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
+import { ApiError } from './api-errors'
 
 /**
  * Standard API Response structure
@@ -140,17 +141,16 @@ export function createApiHandler<
         return result
       }
 
-      // Return the result directly. 
-      // If we want a standard envelope later, we can wrap it here.
-      // For now, we keep it backward compatible with the frontend.
-      return NextResponse.json(result)
-
+      // Return a standardized success envelope
+      return NextResponse.json(apiSuccess(result))
     } catch (error) {
-      // Handle known errors
-      if (error instanceof AuthenticationError) {
+      // Handle known API errors
+      if (error instanceof ApiError) {
         return NextResponse.json({ 
           success: false,
-          error: error.message 
+          error: error.message,
+          code: error.code,
+          details: error.details
         }, { status: error.status })
       }
 
@@ -158,16 +158,18 @@ export function createApiHandler<
         return NextResponse.json({ 
           success: false,
           error: 'Validation failed', 
-          details: error.flatten().fieldErrors 
+          details: error.flatten().fieldErrors,
+          code: 'VALIDATION_ERROR'
         }, { status: 400 })
       }
 
       // Log and handle unknown errors
       console.error(`[API Error] ${req.nextUrl.pathname}:`, error)
       
+      const isDev = process.env.NODE_ENV === 'development'
       return NextResponse.json({ 
         success: false,
-        error: options.errorMessage || 'Internal server error',
+        error: options.errorMessage || (isDev && error instanceof Error ? error.message : 'Internal server error'),
         code: 'INTERNAL_ERROR'
       }, { status: 500 })
     }

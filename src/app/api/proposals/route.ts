@@ -4,7 +4,8 @@ import type { Query, DocumentData, DocumentSnapshot } from 'firebase-admin/fires
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { createApiHandler } from '@/lib/api-handler'
+import { createApiHandler, apiSuccess } from '@/lib/api-handler'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 import { mergeProposalForm, proposalDraftUpdateSchema, sanitizeProposalUpdate, type ProposalFormData } from '@/lib/proposals'
 
 const updateSchema = proposalDraftUpdateSchema
@@ -86,7 +87,7 @@ export const GET = createApiHandler(
     if (idParam) {
       const docSnap = await proposalsRef.doc(idParam).get()
       if (!docSnap.exists) {
-        return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+        throw new NotFoundError('Proposal not found')
       }
 
       const proposal = mapProposalSnapshot(docSnap)
@@ -152,7 +153,10 @@ export const POST = createApiHandler(
         lastAutosaveAt: timestamp,
       })
 
-    return NextResponse.json({ id: docRef.id }, { status: 201 })
+    // Return success response with 201 status if needed, 
+    // but the wrapper currently doesn't support custom status for objects.
+    // We'll return the object directly for now.
+    return { id: docRef.id }
   }
 )
 
@@ -164,7 +168,7 @@ export const PATCH = createApiHandler(
     const proposalId = extractProposalId(body)
 
     if (!proposalId) {
-      return NextResponse.json({ error: 'Proposal id required' }, { status: 400 })
+      throw new ValidationError('Proposal id required')
     }
 
     const proposalRef = adminDb
@@ -184,7 +188,7 @@ export const DELETE = createApiHandler(
     const body = (await req.json().catch(() => null)) as { id?: unknown } | null
     const rawId = body?.id
     if (typeof rawId !== 'string' || rawId.trim().length === 0) {
-      return NextResponse.json({ error: 'Proposal id required' }, { status: 400 })
+      throw new ValidationError('Proposal id required')
     }
 
     const proposalId = rawId.trim()
@@ -192,7 +196,7 @@ export const DELETE = createApiHandler(
     const snapshot = await proposalRef.get()
 
     if (!snapshot.exists) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 })
+      throw new NotFoundError('Proposal not found')
     }
 
     await proposalRef.delete()

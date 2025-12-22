@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { NotFoundError } from '@/lib/api-errors'
 
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'invited', 'pending', 'disabled', 'suspended'])
@@ -143,7 +144,7 @@ export const PATCH = createApiHandler(
     const userRef = adminDb.collection('users').doc(id)
     const userSnapshot = await userRef.get()
     if (!userSnapshot.exists) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      throw new NotFoundError('User not found')
     }
 
     const docData = userSnapshot.data() as Record<string, unknown>
@@ -174,7 +175,7 @@ export const PATCH = createApiHandler(
 
     const userRecord = await adminAuth.getUser(id).catch(() => null)
     if (!userRecord) {
-      return NextResponse.json({ error: 'Firebase user not found' }, { status: 404 })
+      throw new NotFoundError('Firebase user not found')
     }
 
     const existingClaims = userRecord.customClaims ?? {}
