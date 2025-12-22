@@ -10,6 +10,12 @@ export interface AdMetricsSummary {
   averageRoaS: number
   averageCpc: number
   period: string
+  // New Industry Standard Metrics
+  mer?: number
+  aov?: number
+  rpc?: number
+  roi?: number
+  efficiencyScore?: number
 }
 
 export interface AlgorithmicInsight {
@@ -37,6 +43,8 @@ export function calculateAlgorithmicInsights(summary: AdMetricsSummary): Algorit
   const cpa = totalConversions > 0 ? totalSpend / totalConversions : Infinity
   const ctr = summary.totalImpressions > 0 ? (totalClicks / summary.totalImpressions) * 100 : 0
   const convRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0
+  const aov = totalConversions > 0 ? totalRevenue / totalConversions : 0
+  const rpc = totalClicks > 0 ? totalRevenue / totalClicks : 0
 
   // 1. ROAS Analysis
   if (averageRoaS > 4) {
@@ -44,7 +52,7 @@ export function calculateAlgorithmicInsights(summary: AdMetricsSummary): Algorit
       type: 'efficiency',
       level: 'success',
       title: 'High Performance Detected',
-      message: `Your ROAS is exceptional at ${averageRoaS.toFixed(2)}x.`,
+      message: `Your ROAS is exceptional at ${averageRoaS.toFixed(2)}x with an AOV of ${formatCurrency(aov)}.`,
       suggestion: 'Consider scaling the budget for this platform by 15-20% to capture more high-value traffic.',
       score: 90,
     })
@@ -53,7 +61,7 @@ export function calculateAlgorithmicInsights(summary: AdMetricsSummary): Algorit
       type: 'efficiency',
       level: 'critical',
       title: 'Low Efficiency Warning',
-      message: `ROAS is currently ${averageRoaS.toFixed(2)}x, which may be below break-even.`,
+      message: `ROAS is currently ${averageRoaS.toFixed(2)}x, which may be below break-even. RPC is only ${formatCurrency(rpc)}.`,
       suggestion: 'Pause underperforming ad sets and re-evaluate your value proposition or offer.',
       score: 30,
     })
@@ -95,7 +103,57 @@ export function calculateAlgorithmicInsights(summary: AdMetricsSummary): Algorit
     })
   }
 
+  // 5. Unique Metric: Efficiency Score Analysis
+  const efficiencyScore = calculateEfficiencyScore(summary)
+  if (efficiencyScore < 40 && totalSpend > 200) {
+    insights.push({
+      type: 'efficiency',
+      level: 'critical',
+      title: 'Low Overall Efficiency Score',
+      message: `Your custom Efficiency Score is ${efficiencyScore.toFixed(0)}/100.`,
+      suggestion: 'This indicates a systemic issue across creative, audience, and landing page. A full audit is recommended.',
+      score: efficiencyScore,
+    })
+  }
+
   return insights
+}
+
+/**
+ * Calculates a unique Efficiency Score (0-100)
+ * Weights: ROAS (40%), Conv Rate (30%), CTR (20%), CPC (10% inverse)
+ */
+export function calculateEfficiencyScore(summary: AdMetricsSummary): number {
+  const { totalSpend, totalRevenue, totalClicks, totalConversions, totalImpressions, averageRoaS, averageCpc } = summary
+  if (totalSpend === 0) return 0
+
+  const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+  const convRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0
+
+  // Normalize components (capped at reasonable "perfect" values)
+  const nRoas = Math.min(averageRoaS / 5, 1) * 40 // 5x ROAS is "perfect"
+  const nConvRate = Math.min(convRate / 5, 1) * 30 // 5% Conv Rate is "perfect"
+  const nCtr = Math.min(ctr / 2, 1) * 20 // 2% CTR is "perfect"
+  const nCpc = Math.max(0, (1 - averageCpc / 10)) * 10 // $10 CPC is "bad", $0 is "perfect"
+
+  return Math.round(nRoas + nConvRate + nCtr + nCpc)
+}
+
+export function enrichSummaryWithMetrics(summary: AdMetricsSummary): AdMetricsSummary {
+  const { totalSpend, totalRevenue, totalClicks, totalConversions, totalImpressions } = summary
+  
+  const aov = totalConversions > 0 ? totalRevenue / totalConversions : 0
+  const rpc = totalClicks > 0 ? totalRevenue / totalClicks : 0
+  const roi = totalSpend > 0 ? (totalRevenue - totalSpend) / totalSpend : 0
+  const efficiencyScore = calculateEfficiencyScore(summary)
+
+  return {
+    ...summary,
+    aov,
+    rpc,
+    roi,
+    efficiencyScore,
+  }
 }
 
 export function getGlobalBudgetSuggestions(summaries: AdMetricsSummary[]): AlgorithmicInsight[] {

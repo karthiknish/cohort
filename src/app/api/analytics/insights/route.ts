@@ -7,7 +7,7 @@ import { AuthenticationError } from '@/lib/server-auth'
 import { geminiAI } from '@/services/gemini'
 import { formatCurrency } from '@/lib/utils'
 import { createApiHandler } from '@/lib/api-handler'
-import { calculateAlgorithmicInsights, getGlobalBudgetSuggestions, AdMetricsSummary } from '@/lib/ad-algorithms'
+import { calculateAlgorithmicInsights, getGlobalBudgetSuggestions, AdMetricsSummary, enrichSummaryWithMetrics } from '@/lib/ad-algorithms'
 
 const insightsQuerySchema = z.object({
   userId: z.string().optional(),
@@ -168,10 +168,11 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
 async function generateAllInsights(summaries: ProviderSummary[]) {
   const insights = [] as Array<{ providerId: string; summary: string }>
   const algorithmic = [] as Array<{ providerId: string; suggestions: any[] }>
+  const enrichedSummaries = summaries.map(s => enrichSummaryWithMetrics(s as AdMetricsSummary))
 
   // 1. Generate Algorithmic Insights
-  summaries.forEach(summary => {
-    const suggestions = calculateAlgorithmicInsights(summary as AdMetricsSummary)
+  enrichedSummaries.forEach(summary => {
+    const suggestions = calculateAlgorithmicInsights(summary)
     if (suggestions.length > 0) {
       algorithmic.push({
         providerId: summary.providerId,
@@ -180,9 +181,31 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
     }
   })
 
-  // Global budget suggestions
-  const globalSuggestions = getGlobalBudgetSuggestions(summaries as AdMetricsSummary[])
-  if (globalSuggestions.length > 0) {
+  // Global budget suggestions & MER
+  const globalSuggestions = getGlobalBudgetSuggestions(enrichedSummaries)
+  
+  // Calculate Global MER
+  const totalGlobalSpend = enrichedSummaries.reduce((sum, s) => sum + s.totalSpend, 0)
+  const totalGlobalRevenue = enrichedSummaries.reduce((sum, s) => sum + s.totalRevenue, 0)
+  const globalMer = totalGlobalSpend > 0 ? totalGlobalRevenue / totalGlobalSpend : 0
+
+  if (globalMer > 0) {
+    algorithmic.push({
+      providerId: 'global',
+      suggestions: [
+        {
+          type: 'efficiency',
+          level: globalMer > 3 ? 'success' : globalMer > 1.5 ? 'info' : 'warning',
+          title: 'Global Marketing Efficiency (MER)',
+          message: `Your blended MER across all platforms is ${globalMer.toFixed(2)}x.`,
+          suggestion: globalMer > 3 
+            ? 'Your overall marketing is healthy. You have room to test new channels.' 
+            : 'Focus on optimizing your highest-performing channel to pull up the blended average.',
+        },
+        ...globalSuggestions
+      ]
+    })
+  } else if (globalSuggestions.length > 0) {
     algorithmic.push({
       providerId: 'global',
       suggestions: globalSuggestions
@@ -190,7 +213,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
   }
 
   // 2. Generate AI Insights
-  for (const summary of summaries) {
+  for (const summary of enrichedSummaries) {
     const prompt = buildInsightPrompt(summary)
     try {
       const content = await geminiAI.generateContent(prompt)
@@ -224,7 +247,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
   return { insights, algorithmic }
 }
 
-function buildInsightPrompt(summary: ProviderSummary) {
+function buildInsightPrompt(summary: AdMetricsSummary) {
   return `You are an expert marketing analyst. Provide a concise, actionable summary for the following ad platform.
 
 Platform: ${summary.providerId}
@@ -235,6 +258,9 @@ Total Clicks: ${summary.totalClicks}
 Total Conversions: ${summary.totalConversions}
 Average ROAS: ${summary.averageRoaS.toFixed(2)}
 Average CPC: ${summary.averageCpc.toFixed(2)}
+AOV: ${summary.aov?.toFixed(2)}
+ROI: ${(summary.roi ?? 0 * 100).toFixed(1)}%
+Efficiency Score: ${summary.efficiencyScore}/100
 
 Include:
 - Overall performance assessment
@@ -243,7 +269,7 @@ Include:
 Keep it under 120 words.`
 }
 
-function buildComparisonPrompt(google: ProviderSummary, meta: ProviderSummary) {
+function buildComparisonPrompt(google: AdMetricsSummary, meta: AdMetricsSummary) {
   return `You are an expert marketing analyst. Compare the performance of Google Ads and Meta (Facebook) Ads based on the following data.
 
 Google Ads:
@@ -251,12 +277,14 @@ Google Ads:
 - Revenue: ${google.totalRevenue.toFixed(2)}
 - ROAS: ${google.averageRoaS.toFixed(2)}
 - CPC: ${google.averageCpc.toFixed(2)}
+- Efficiency Score: ${google.efficiencyScore}/100
 
 Meta Ads:
 - Spend: ${meta.totalSpend.toFixed(2)}
 - Revenue: ${meta.totalRevenue.toFixed(2)}
 - ROAS: ${meta.averageRoaS.toFixed(2)}
 - CPC: ${meta.averageCpc.toFixed(2)}
+- Efficiency Score: ${meta.efficiencyScore}/100
 
 Provide a concise comparison highlighting which platform is performing better and why. Suggest where to allocate more budget. Keep it under 120 words.`
 }

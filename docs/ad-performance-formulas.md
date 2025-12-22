@@ -15,6 +15,26 @@ These metrics are calculated for each ad platform (Google, Meta, LinkedIn, TikTo
 | **Conv. Rate** | $\left( \frac{\text{Total Conversions}}{\text{Total Clicks}} \right) \times 100$ | **Conversion Rate**: The percentage of clicks that resulted in a successful conversion. |
 | **CPM** | $\left( \frac{\text{Total Spend}}{\text{Total Impressions}} \right) \times 1000$ | **Cost Per Mille**: The cost for every 1,000 impressions (views) of an ad. |
 
+## Industry Standard Metrics (New)
+
+| Metric | Formula | Description |
+| :--- | :--- | :--- |
+| **MER** | $\frac{\text{Total Blended Revenue}}{\text{Total Blended Spend}}$ | **Marketing Efficiency Ratio**: Measures the overall efficiency of all marketing efforts combined. Also known as "Blended ROAS". |
+| **AOV** | $\frac{\text{Total Revenue}}{\text{Total Conversions}}$ | **Average Order Value**: The average amount of revenue generated per conversion. |
+| **RPC** | $\frac{\text{Total Revenue}}{\text{Total Clicks}}$ | **Revenue Per Click**: The average revenue generated for every click received. |
+| **ROI** | $\frac{\text{Total Revenue} - \text{Total Spend}}{\text{Total Spend}} \times 100$ | **Return on Investment**: The percentage of profit (or loss) relative to the amount spent. |
+
+## Unique Platform Metrics
+
+### 1. Efficiency Score (0-100)
+The **Efficiency Score** is a proprietary weighted metric that provides a holistic view of campaign health by balancing volume, efficiency, and cost.
+
+**Calculation Weights:**
+*   **ROAS (40%)**: Normalized against a target of 5.0x.
+*   **Conversion Rate (30%)**: Normalized against a target of 5.0%.
+*   **CTR (20%)**: Normalized against a target of 2.0%.
+*   **CPC (10%)**: Inverse normalization (lower is better) against a $10.00 ceiling.
+
 ---
 
 ## Algorithmic Insight Logic
