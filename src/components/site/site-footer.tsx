@@ -2,24 +2,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Separator } from '@/components/ui/separator'
 
-const footerLinks = [
-  {
-    title: 'Product',
-    links: [
-      { name: 'Features', href: '/#features' },
-      { name: 'Integrations', href: '/#integrations' },
-    ],
-  },
-  {
-    title: 'Company',
-    links: [
-      { name: 'Terms', href: '/terms' },
-      { name: 'Privacy', href: '/privacy' },
-      { name: 'Support', href: '/#contact' },
-      { name: 'Contact', href: '/contact' },
-    ],
-  },
-]
 
 export function SiteFooter() {
   const currentYear = new Date().getFullYear()
@@ -37,22 +19,7 @@ export function SiteFooter() {
               and keep clients delighted.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-6 text-sm">
-            {footerLinks.map((group) => (
-              <div key={group.title} className="space-y-3">
-                <h4 className="font-semibold text-foreground">{group.title}</h4>
-                <ul className="space-y-2 text-muted-foreground">
-                  {group.links.map((link) => (
-                    <li key={link.name}>
-                      <Link href={link.href} className="transition hover:text-primary">
-                        {link.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+        
         </div>
         <Separator className="my-8" />
         <div className="flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
@@ -63,6 +30,9 @@ export function SiteFooter() {
             </Link>
             <Link href="/privacy" className="transition hover:text-primary">
               Privacy
+            </Link>
+            <Link href="/contact" className="transition hover:text-primary">
+              Contact
             </Link>
           </div>
         </div>

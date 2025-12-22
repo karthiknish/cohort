@@ -25,6 +25,7 @@ import {
   normalizeRole,
   normalizeStatus,
 } from './utils'
+import { getFriendlyAuthErrorMessage } from './error-utils'
 
 export class AuthService {
   private static instance: AuthService
@@ -446,6 +447,9 @@ export class AuthService {
       if (isFirebaseError(error) && error.code === 'auth/operation-not-allowed') {
         throw new Error('LinkedIn sign-in is not enabled. Please contact support to enable this provider.')
       }
+      if (isFirebaseError(error)) {
+        throw new Error(getFriendlyAuthErrorMessage(error))
+      }
       if (error instanceof Error && error.message) {
         throw new Error(error.message)
       }
@@ -459,18 +463,8 @@ export class AuthService {
       await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
       return await this.mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
-      if (isFirebaseError(error)) {
-        if (error.code === 'auth/user-not-found') {
-          throw new Error('No account found with that email')
-        }
-        if (error.code === 'auth/wrong-password') {
-          throw new Error('Incorrect password. Please try again.')
-        }
-      }
-      if (error instanceof Error && error.message) {
-        throw new Error(error.message)
-      }
-      throw new Error('Invalid email or password')
+      const message = getFriendlyAuthErrorMessage(error)
+      throw new Error(message)
     }
   }
 
@@ -485,25 +479,8 @@ export class AuthService {
       await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
       return await this.mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
-      console.error('Google sign-in error:', error)
-      const existingUser = auth.currentUser
-      if (existingUser) {
-        await this.ensureUserBootstrap(existingUser, existingUser.displayName)
-        return await this.mapFirebaseUser(existingUser)
-      }
-      if (isFirebaseError(error) && error.code === 'auth/popup-closed-by-user') {
-        throw new Error('Sign-in popup was closed before completion')
-      }
-      if (isFirebaseError(error) && error.code === 'auth/popup-blocked') {
-        throw new Error('Sign-in popup was blocked by the browser. Please allow popups for this site.')
-      }
-      if (isFirebaseError(error) && error.code === 'auth/unauthorized-domain') {
-        throw new Error('This domain is not authorized for Google sign-in. Please contact support.')
-      }
-      if (error instanceof Error && error.message) {
-        throw new Error(error.message)
-      }
-      throw new Error('Failed to sign in with Google. Please try again.')
+      const message = getFriendlyAuthErrorMessage(error)
+      throw new Error(message)
     }
   }
 
@@ -523,16 +500,8 @@ export class AuthService {
       const authUser = await this.mapFirebaseUser(userCredential.user)
       return authUser
     } catch (error: unknown) {
-      if (isFirebaseError(error) && error.code === 'auth/email-already-in-use') {
-        throw new Error('Email already in use')
-      }
-      if (isFirebaseError(error) && error.code === 'auth/weak-password') {
-        throw new Error('Password is too weak')
-      }
-      if (error instanceof Error && error.message) {
-        throw new Error(error.message)
-      }
-      throw new Error('Failed to create account')
+      const message = getFriendlyAuthErrorMessage(error)
+      throw new Error(message)
     }
   }
 
@@ -579,18 +548,10 @@ export class AuthService {
       await sendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings)
     } catch (error: unknown) {
       console.error('Password reset error:', error)
-      if (isFirebaseError(error)) {
-        if (error.code === 'auth/invalid-email') {
-          throw new Error('Enter a valid email address to receive reset instructions')
-        }
-        if (error.code === 'auth/missing-email') {
-          throw new Error('Enter the email associated with your account')
-        }
-        if (error.code === 'auth/user-not-found') {
-          return
-        }
+      if (isFirebaseError(error) && error.code === 'auth/user-not-found') {
+        return
       }
-      throw new Error('Unable to send reset instructions right now. Please try again shortly.')
+      throw new Error(getFriendlyAuthErrorMessage(error))
     }
   }
 
@@ -599,15 +560,7 @@ export class AuthService {
       return await verifyPasswordResetCode(auth, oobCode)
     } catch (error: unknown) {
       console.error('Password reset code verification error:', error)
-      if (isFirebaseError(error)) {
-        if (error.code === 'auth/expired-action-code') {
-          throw new Error('This reset link has expired. Please request a new one.')
-        }
-        if (error.code === 'auth/invalid-action-code') {
-          throw new Error('This reset link is invalid or has already been used.')
-        }
-      }
-      throw new Error('Unable to validate this reset link. Please request a new one.')
+      throw new Error(getFriendlyAuthErrorMessage(error))
     }
   }
 
@@ -616,18 +569,7 @@ export class AuthService {
       await confirmPasswordReset(auth, oobCode, newPassword)
     } catch (error: unknown) {
       console.error('Password reset confirmation error:', error)
-      if (isFirebaseError(error)) {
-        if (error.code === 'auth/weak-password') {
-          throw new Error('Choose a stronger password with at least 6 characters.')
-        }
-        if (error.code === 'auth/expired-action-code') {
-          throw new Error('This reset link has expired. Please request a new one.')
-        }
-        if (error.code === 'auth/invalid-action-code') {
-          throw new Error('This reset link is invalid or has already been used.')
-        }
-      }
-      throw new Error('Unable to update your password. Please try again.')
+      throw new Error(getFriendlyAuthErrorMessage(error))
     }
   }
 
@@ -669,37 +611,26 @@ export class AuthService {
   }
 
   async deleteAccount(): Promise<void> {
-    if (!this.currentUser) {
-      throw new Error('No authenticated user')
+    const firebaseUser = auth.currentUser
+    if (!firebaseUser) {
+      throw new Error('No authenticated user found')
     }
 
     try {
-      const token = await this.getIdToken(true)
-      const response = await fetch('/api/auth/delete', {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null
-        const message = payload?.error ?? 'Failed to delete account'
-        throw new Error(message)
-      }
-
+      // Re-authenticate if necessary or just attempt deletion
+      // Note: Re-auth is usually required by Firebase for sensitive ops
+      await firebaseUser.delete()
+      
       await firebaseSignOut(auth)
       this.clearIdTokenCache()
       this.currentUser = null
       this.notifyListeners(null)
     } catch (error: unknown) {
       console.error('Account deletion error:', error)
-      if (error instanceof Error && error.message) {
-        throw new Error(error.message)
-      }
-      throw new Error('Failed to delete account')
+      throw new Error(getFriendlyAuthErrorMessage(error))
     }
   }
 }
+
 
 export const authService = AuthService.getInstance()

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CheckCircle2, Eye, EyeOff, Lock, Mail, User, AlertCircle, Check, X, Shield, Loader2 } from "lucide-react"
 
 import { useAuth } from "@/contexts/auth-context"
+import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -292,7 +293,7 @@ export default function HomePage() {
       }
       router.push(destination)
     } catch (error) {
-      const errorMessage = getFirebaseErrorMessage(error)
+      const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
         title: mode === "signin" ? "❌ Sign in failed" : "❌ Sign up failed",
         description: errorMessage,
@@ -322,7 +323,7 @@ export default function HomePage() {
       }
       router.push(destination)
     } catch (error) {
-      const errorMessage = getFirebaseErrorMessage(error)
+      const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
         title: "❌ Google sign-in failed",
         description: `${errorMessage}. Please try again.`,
@@ -747,60 +748,5 @@ export default function HomePage() {
   )
 }
 
-// Enhanced Firebase error message mapping
-function getFirebaseErrorMessage(error: unknown): string {
-  if (typeof error === "string") {
-    return error
-  }
 
-  if (error && typeof error === "object") {
-    // Check for Firebase error code
-    const errorCode = (error as { code?: string }).code
-    const errorMessage = (error as { message?: string }).message
-
-    // Map Firebase error codes to user-friendly messages
-    const errorMessages: Record<string, string> = {
-      // Sign-in errors
-      "auth/invalid-email": "Please enter a valid email address.",
-      "auth/user-disabled": "This account has been disabled. Please contact support.",
-      "auth/user-not-found": "No account found with this email. Please check your email or sign up.",
-      "auth/wrong-password": "Incorrect password. Please try again or reset your password.",
-      "auth/invalid-credential": "Invalid email or password. Please check your credentials and try again.",
-      "auth/too-many-requests": "Too many failed attempts. Please try again later or reset your password.",
-      
-      // Sign-up errors
-      "auth/email-already-in-use": "An account with this email already exists. Please sign in instead.",
-      "auth/weak-password": "Password is too weak. Please use at least 8 characters with mixed case, numbers, and symbols.",
-      "auth/operation-not-allowed": "This sign-in method is not enabled. Please contact support.",
-      
-      // OAuth errors
-      "auth/popup-closed-by-user": "Sign-in was cancelled. Please try again.",
-      "auth/popup-blocked": "Pop-up was blocked by your browser. Please allow pop-ups for this site.",
-      "auth/unauthorized-domain": "This domain is not authorized. Please contact support.",
-      "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
-      "auth/cancelled-popup-request": "Only one sign-in window can be open at a time.",
-      
-      // Network errors
-      "auth/network-request-failed": "Network error. Please check your connection and try again.",
-      "auth/timeout": "Request timed out. Please try again.",
-      
-      // Other errors
-      "auth/internal-error": "An unexpected error occurred. Please try again later.",
-      "auth/invalid-api-key": "Configuration error. Please contact support.",
-    }
-
-    if (errorCode && errorMessages[errorCode]) {
-      return errorMessages[errorCode]
-    }
-
-    // If we have a message from the error object, use it
-    if (typeof errorMessage === "string" && errorMessage.trim().length > 0) {
-      // Clean up Firebase error messages that include the error code
-      const cleanMessage = errorMessage.replace(/^Firebase: /, "").replace(/\([^)]+\)\.?$/, "").trim()
-      return cleanMessage || "Authentication failed. Please try again."
-    }
-  }
-
-  return "Authentication failed. Please try again."
-}
 

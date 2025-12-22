@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 
 export default function ForgotPasswordPage() {
   const { resetPassword } = useAuth()
@@ -50,7 +51,7 @@ export default function ForgotPasswordPage() {
         description: 'If an account exists for this email, we sent password reset instructions.',
       })
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Unable to send reset instructions. Please try again.'))
+      setError(getFriendlyAuthErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -172,17 +173,4 @@ export default function ForgotPasswordPage() {
   )
 }
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
 
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
-  return fallback
-}

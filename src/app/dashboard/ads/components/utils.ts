@@ -7,6 +7,7 @@ import type {
   MetricRecord,
   MetricsResponse,
 } from './types'
+import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 
 // Constants
 export const METRICS_PAGE_SIZE = 100
@@ -147,17 +148,10 @@ export function normalizeTimeframe(value?: number | null): number {
 }
 
 export function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
+  const message = getFriendlyAuthErrorMessage(error)
+  if (message && message !== 'Authentication failed. Please try again.') {
+    return message
   }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
   return fallback
 }
 

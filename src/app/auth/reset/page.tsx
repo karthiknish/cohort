@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 
 // Password strength calculation
 interface PasswordStrength {
@@ -134,7 +135,7 @@ function ResetPasswordContent() {
       })
       .catch((error: unknown) => {
         if (!active) return
-        setVerificationError(getErrorMessage(error, 'Unable to validate this reset link. Please request a new one.'))
+        setVerificationError(getFriendlyAuthErrorMessage(error))
         setStatus('error')
       })
 
@@ -172,7 +173,7 @@ function ResetPasswordContent() {
         description: 'You can now sign in with your new password.',
       })
     } catch (error: unknown) {
-      setFormError(getErrorMessage(error, 'Unable to update your password. Please try again.'))
+      setFormError(getFriendlyAuthErrorMessage(error))
     } finally {
       setSubmitting(false)
     }
@@ -429,17 +430,4 @@ export default function ResetPasswordPage() {
   )
 }
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
 
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
-  return fallback
-}

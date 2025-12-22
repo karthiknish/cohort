@@ -11,12 +11,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useAuth } from '@/contexts/auth-context'
 
-const marketingLinks = [
-  { name: 'Home', href: '/' },
-  { name: 'Features', href: '/#features' },
-  { name: 'Integrations', href: '/#integrations' },
-  { name: 'Contact', href: '/contact' },
-]
+const marketingLinks: { name: string; href: string }[] = []
 
 interface SessionLink {
   name: string

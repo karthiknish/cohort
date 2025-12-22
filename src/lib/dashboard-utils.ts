@@ -2,6 +2,7 @@ import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
 import { formatCurrency } from '@/lib/utils'
+import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000
 
@@ -242,16 +243,9 @@ function normalizeTaskPriority(value: unknown): DashboardTaskItem['priority'] {
 }
 
 export function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
+  const message = getFriendlyAuthErrorMessage(error)
+  if (message && message !== 'Authentication failed. Please try again.') {
+    return message
   }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
   return fallback
 }
