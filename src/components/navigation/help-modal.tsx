@@ -32,7 +32,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/auth-context'
-import { KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
+import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/hooks/use-keyboard-shortcuts'
 
 interface HelpModalProps {
   open: boolean
