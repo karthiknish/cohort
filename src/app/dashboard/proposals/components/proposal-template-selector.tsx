@@ -47,7 +47,6 @@ export function ProposalTemplateSelector({
   onApplyTemplate,
   disabled = false,
 }: ProposalTemplateSelectorProps) {
-  const { getIdToken } = useAuth()
   const { toast } = useToast()
 
   const [templates, setTemplates] = useState<ProposalTemplate[]>([])
@@ -66,8 +65,7 @@ export function ProposalTemplateSelector({
   const loadTemplates = useCallback(async () => {
     try {
       setLoading(true)
-      const token = await getIdToken()
-      const data = await fetchProposalTemplates(token)
+      const data = await fetchProposalTemplates()
       setTemplates(data)
     } catch (error) {
       console.error('Failed to load templates:', error)
@@ -79,7 +77,7 @@ export function ProposalTemplateSelector({
     } finally {
       setLoading(false)
     }
-  }, [getIdToken, toast])
+  }, [toast])
 
   useEffect(() => {
     if (open) {
@@ -108,8 +106,7 @@ export function ProposalTemplateSelector({
 
     try {
       setSaving(true)
-      const token = await getIdToken()
-      const newTemplate = await createProposalTemplate(token, {
+      const newTemplate = await createProposalTemplate({
         name: templateName.trim(),
         description: templateDescription.trim() || null,
         formData: currentFormData,
@@ -145,13 +142,12 @@ export function ProposalTemplateSelector({
     } finally {
       setSaving(false)
     }
-  }, [currentFormData, getIdToken, isDefault, templateDescription, templateIndustry, templateName, toast])
+  }, [currentFormData, isDefault, templateDescription, templateIndustry, templateName, toast])
 
   const handleDeleteTemplate = useCallback(async (templateId: string, templateName: string) => {
     try {
       setDeleting(templateId)
-      const token = await getIdToken()
-      await deleteProposalTemplate(token, templateId)
+      await deleteProposalTemplate(templateId)
       setTemplates((prev) => prev.filter((t) => t.id !== templateId))
       toast({
         title: 'Template deleted',
@@ -167,7 +163,7 @@ export function ProposalTemplateSelector({
     } finally {
       setDeleting(null)
     }
-  }, [getIdToken, toast])
+  }, [toast])
 
   const defaultTemplate = templates.find((t) => t.isDefault)
 

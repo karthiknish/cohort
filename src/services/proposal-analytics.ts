@@ -1,4 +1,4 @@
-import { authService } from '@/services/auth'
+import { apiFetch } from '@/lib/api-client'
 import type {
   ProposalEventType,
   ProposalAnalyticsEvent,
@@ -9,31 +9,14 @@ import type {
   ProposalAnalyticsFilters,
 } from '@/types/proposal-analytics'
 
-async function authorizedFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const token = await authService.getIdToken()
-  const headers = new Headers(init.headers)
-  headers.set('Authorization', `Bearer ${token}`)
-  if (!headers.has('Content-Type') && init.method && init.method !== 'GET') {
-    headers.set('Content-Type', 'application/json')
-  }
-  return fetch(input, { ...init, headers })
-}
-
 /**
  * Track a proposal analytics event
  */
 export async function trackProposalEvent(input: ProposalAnalyticsInput): Promise<{ id: string }> {
-  const response = await authorizedFetch('/api/proposal-analytics', {
+  return apiFetch<{ id: string }>('/api/proposal-analytics', {
     method: 'POST',
     body: JSON.stringify(input),
   })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to track event')
-  }
-
-  return response.json()
 }
 
 /**
@@ -199,14 +182,7 @@ export async function fetchProposalAnalyticsSummary(
   if (filters?.endDate) params.set('endDate', filters.endDate)
   if (filters?.clientId) params.set('clientId', filters.clientId)
 
-  const response = await authorizedFetch(`/api/proposal-analytics?${params}`)
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to fetch analytics summary')
-  }
-
-  const data = await response.json()
+  const data = await apiFetch<{ summary: ProposalAnalyticsSummary }>(`/api/proposal-analytics?${params}`)
   return data.summary
 }
 
@@ -221,14 +197,7 @@ export async function fetchProposalAnalyticsTimeSeries(
   if (filters?.endDate) params.set('endDate', filters.endDate)
   if (filters?.clientId) params.set('clientId', filters.clientId)
 
-  const response = await authorizedFetch(`/api/proposal-analytics?${params}`)
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to fetch analytics time series')
-  }
-
-  const data = await response.json()
+  const data = await apiFetch<{ timeseries: ProposalAnalyticsTimeSeriesPoint[] }>(`/api/proposal-analytics?${params}`)
   return data.timeseries
 }
 
@@ -242,14 +211,7 @@ export async function fetchProposalAnalyticsByClient(
   if (filters?.startDate) params.set('startDate', filters.startDate)
   if (filters?.endDate) params.set('endDate', filters.endDate)
 
-  const response = await authorizedFetch(`/api/proposal-analytics?${params}`)
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to fetch analytics by client')
-  }
-
-  const data = await response.json()
+  const data = await apiFetch<{ byClient: ProposalAnalyticsByClient[] }>(`/api/proposal-analytics?${params}`)
   return data.byClient
 }
 
@@ -265,13 +227,6 @@ export async function fetchProposalAnalyticsEvents(
   if (filters?.clientId) params.set('clientId', filters.clientId)
   if (filters?.limit) params.set('limit', filters.limit.toString())
 
-  const response = await authorizedFetch(`/api/proposal-analytics?${params}`)
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error || 'Failed to fetch analytics events')
-  }
-
-  const data = await response.json()
+  const data = await apiFetch<{ events: ProposalAnalyticsEvent[] }>(`/api/proposal-analytics?${params}`)
   return data.events
 }

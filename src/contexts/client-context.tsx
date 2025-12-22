@@ -107,8 +107,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
         throw new Error(message)
       }
 
-      const payload = (await response.json()) as { clients?: ClientRecord[] }
-      const list = Array.isArray(payload.clients) ? payload.clients : []
+      const payload = (await response.json()) as { success?: boolean; data?: { clients?: ClientRecord[] }; clients?: ClientRecord[] }
+      // Handle both new envelope { success, data: { clients } } and legacy { clients }
+      const rawList = payload.data?.clients ?? payload.clients
+      const list = Array.isArray(rawList) ? rawList : []
       const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name))
       setClients(sorted)
       return sorted
@@ -220,8 +222,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       throw new Error(message)
     }
 
-    const payload = (await response.json()) as { client: ClientRecord }
-    const created = payload.client
+    const payload = (await response.json()) as { success?: boolean; data?: { client: ClientRecord }; client?: ClientRecord }
+    // Handle both new envelope { success, data: { client } } and legacy { client }
+    const created = payload.data?.client ?? payload.client
+    if (!created) {
+      throw new Error('Failed to create client: no client returned')
+    }
 
     setClients((prev) => {
       const next = [...prev, created]
