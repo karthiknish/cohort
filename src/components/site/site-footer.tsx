@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Separator } from '@/components/ui/separator'
-import { CookieSettingsButton } from './cookie-settings-button'
 
 const footerLinks = [
   {
@@ -16,7 +15,6 @@ const footerLinks = [
     links: [
       { name: 'Terms', href: '/terms' },
       { name: 'Privacy', href: '/privacy' },
-      { name: 'Cookies', href: '/cookies' },
       { name: 'Support', href: '/#contact' },
       { name: 'Contact', href: '/contact' },
     ],
@@ -66,10 +64,6 @@ export function SiteFooter() {
             <Link href="/privacy" className="transition hover:text-primary">
               Privacy
             </Link>
-            <Link href="/cookies" className="transition hover:text-primary">
-              Cookies
-            </Link>
-            <CookieSettingsButton />
           </div>
         </div>
       </div>

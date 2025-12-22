@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Cookie } from 'lucide-react'
+import { Shield } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,25 +12,15 @@ export function PrivacySettingsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Cookie className="h-5 w-5" />
-          Privacy & cookies
+          <Shield className="h-5 w-5" />
+          Privacy & Terms
         </CardTitle>
         <CardDescription>
-          Manage your cookie preferences and review our privacy policies.
+          Review our privacy policies and terms of service.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Cookie preferences</p>
-              <p className="text-sm text-muted-foreground">Manage which cookies we use on your device.</p>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/cookies">Manage cookies</Link>
-            </Button>
-          </div>
-          <Separator />
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Privacy policy</p>

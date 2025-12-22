@@ -96,8 +96,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       const keysToRemove = Object.keys(localStorage).filter(
         (key) =>
           key.startsWith('cohorts_') ||
-          key.startsWith('tips_dismissed') ||
-          key === 'cookie_consent'
+          key.startsWith('tips_dismissed')
       )
       keysToRemove.forEach((key) => localStorage.removeItem(key))
 

@@ -197,23 +197,6 @@ export const GET = createApiHandler({}, async (req, { auth }) => {
     }
   })
 
-  // 10. Consent records (if stored)
-  const consentSnapshot = await adminDb
-    .collection('consent_records')
-    .where('userId', '==', userId)
-    .get()
-
-  exportData.consentHistory = consentSnapshot.docs.map((doc) => {
-    const data = doc.data()
-    return {
-      id: doc.id,
-      type: data.type,
-      granted: data.granted,
-      timestamp: data.timestamp,
-      ipAddress: data.ipAddress ?? null,
-    }
-  })
-
   // Set filename with timestamp
   const timestamp = new Date().toISOString().split('T')[0]
   const filename = `cohort-data-export-${timestamp}.json`

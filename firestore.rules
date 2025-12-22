@@ -112,13 +112,6 @@ service cloud.firestore {
       allow read, write: if isSelf(userId) || isAdmin();
     }
 
-    // Consent records for GDPR compliance
-    match /consent_records/{recordId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false; // Consent records are immutable
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // WORKSPACES (Multi-tenant structure)
     // ─────────────────────────────────────────────────────────────────────────
