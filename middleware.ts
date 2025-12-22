@@ -44,7 +44,8 @@ export async function middleware(request: NextRequest) {
   }
   const token = request.cookies.get(AUTH_COOKIE)?.value
 
-  if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
+  // Handle auth routes (including root which is now the sign-in page)
+  if (pathname === '/' || pathname.startsWith(AUTH_ROUTE_PREFIX)) {
     if (token) {
       const target = request.nextUrl.clone()
       target.pathname = '/dashboard'
@@ -60,7 +61,7 @@ export async function middleware(request: NextRequest) {
 
   if (!token) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/auth'
+    redirectUrl.pathname = '/'
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
   }
@@ -79,7 +80,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/auth/:path*', '/api/:path*'],
+  matcher: ['/', '/dashboard/:path*', '/admin/:path*', '/auth/:path*', '/api/:path*'],
 }
 
 async function consumeRateLimit(request: NextRequest) {

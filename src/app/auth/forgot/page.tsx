@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
       <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
         {/* Back Link */}
         <Link
-          href="/auth"
+          href="/"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
 
         <div className="text-center text-xs text-muted-foreground">
           Remember your password?{' '}
-          <Link href="/auth" className="font-medium text-primary hover:underline">
+          <Link href="/" className="font-medium text-primary hover:underline">
             Return to sign in
           </Link>
         </div>

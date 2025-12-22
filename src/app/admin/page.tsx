@@ -258,7 +258,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="flex justify-center">
             <Button asChild>
-              <Link href="/auth">Sign in</Link>
+              <Link href="/">Sign in</Link>
             </Button>
           </CardContent>
         </Card>

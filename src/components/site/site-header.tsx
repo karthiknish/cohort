@@ -36,7 +36,7 @@ export function SiteHeader() {
 
   const sessionLinks: SessionLink[] = user
     ? []
-    : [{ name: 'Sign in', href: '/auth' }]
+    : [{ name: 'Sign in', href: '/' }]
 
   const mobileLinks = [...marketingLinksDisplay, ...sessionLinks]
 
@@ -130,7 +130,7 @@ export function SiteHeader() {
               </>
             ) : (
               <Button asChild>
-                <Link href="/auth">Sign in</Link>
+                <Link href="/">Sign in</Link>
               </Button>
             )}
           </div>

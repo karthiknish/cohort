@@ -103,7 +103,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       await deleteAccount()
       toast({ title: 'Account deleted', description: 'Your account and associated data have been removed.' })
       onOpenChange(false)
-      router.push('/auth')
+      router.push('/')
     } catch (accountError) {
       const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
       setDeleteAccountError(message)

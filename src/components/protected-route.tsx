@@ -21,7 +21,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     if (loading) return
 
     if (!user) {
-      router.push('/auth')
+      router.push('/')
       return
     }
 
@@ -38,7 +38,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     try {
       await signOut()
     } finally {
-      router.push('/auth')
+      router.push('/')
     }
   }, [signOut, router])
 
@@ -59,7 +59,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         message="You need to sign in to access this area."
         action={
           <Button asChild>
-            <Link href="/auth">Go to sign in</Link>
+            <Link href="/">Go to sign in</Link>
           </Button>
         }
       />
