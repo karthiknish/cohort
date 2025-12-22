@@ -4,7 +4,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 import { ClientProvider } from '@/contexts/client-context'
 import { NavigationProvider } from '@/contexts/navigation-context'
 import { NavigationBreadcrumbs } from '@/components/navigation/breadcrumbs'
-import Chatbot from '@/components/chatbot'
+
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 
@@ -33,7 +33,7 @@ export default function DashboardLayout({
                   </ScrollArea>
                 </div>
               </div>
-              <Chatbot />
+
             </div>
           </NavigationProvider>
         </ClientProvider>

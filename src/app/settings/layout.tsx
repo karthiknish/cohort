@@ -2,7 +2,7 @@ import { Sidebar, Header } from '@/components/navigation'
 import { ProtectedRoute } from '@/components/protected-route'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientProvider } from '@/contexts/client-context'
-import Chatbot from '@/components/chatbot'
+
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 </ScrollArea>
               </div>
             </div>
-            <Chatbot />
+
           </div>
         </ClientProvider>
       </ProtectedRoute>
