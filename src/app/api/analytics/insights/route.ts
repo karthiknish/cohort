@@ -7,6 +7,7 @@ import { AuthenticationError } from '@/lib/server-auth'
 import { geminiAI } from '@/services/gemini'
 import { formatCurrency } from '@/lib/utils'
 import { createApiHandler } from '@/lib/api-handler'
+import { calculateAlgorithmicInsights, getGlobalBudgetSuggestions, AdMetricsSummary } from '@/lib/ad-algorithms'
 
 const insightsQuerySchema = z.object({
   userId: z.string().optional(),
@@ -32,6 +33,7 @@ interface ProviderSummary {
   totalRevenue: number
   totalClicks: number
   totalConversions: number
+  totalImpressions: number
   averageRoaS: number
   averageCpc: number
   period: string
@@ -119,13 +121,13 @@ export const GET = createApiHandler(
       })
 
     if (records.length === 0) {
-      return { insights: [] }
+      return { insights: [], algorithmic: [] }
     }
 
     const summaries = summarizeByProvider(records, periodDays)
-    const insights = await generateInsightsFromGemini(summaries)
+    const { insights, algorithmic } = await generateAllInsights(summaries)
 
-    return { insights }
+    return { insights, algorithmic }
   }
 )
 
@@ -140,6 +142,7 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
         totalRevenue: 0,
         totalClicks: 0,
         totalConversions: 0,
+        totalImpressions: 0,
         averageRoaS: 0,
         averageCpc: 0,
         period: `${periodDays}d`,
@@ -151,6 +154,7 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
     summary.totalRevenue += metric.revenue ?? 0
     summary.totalClicks += metric.clicks
     summary.totalConversions += metric.conversions
+    summary.totalImpressions += metric.impressions
   })
 
   map.forEach((summary) => {
@@ -161,9 +165,31 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
   return Array.from(map.values())
 }
 
-async function generateInsightsFromGemini(summaries: ProviderSummary[]) {
+async function generateAllInsights(summaries: ProviderSummary[]) {
   const insights = [] as Array<{ providerId: string; summary: string }>
+  const algorithmic = [] as Array<{ providerId: string; suggestions: any[] }>
 
+  // 1. Generate Algorithmic Insights
+  summaries.forEach(summary => {
+    const suggestions = calculateAlgorithmicInsights(summary as AdMetricsSummary)
+    if (suggestions.length > 0) {
+      algorithmic.push({
+        providerId: summary.providerId,
+        suggestions
+      })
+    }
+  })
+
+  // Global budget suggestions
+  const globalSuggestions = getGlobalBudgetSuggestions(summaries as AdMetricsSummary[])
+  if (globalSuggestions.length > 0) {
+    algorithmic.push({
+      providerId: 'global',
+      suggestions: globalSuggestions
+    })
+  }
+
+  // 2. Generate AI Insights
   for (const summary of summaries) {
     const prompt = buildInsightPrompt(summary)
     try {
@@ -195,7 +221,7 @@ async function generateInsightsFromGemini(summaries: ProviderSummary[]) {
     }
   }
 
-  return insights
+  return { insights, algorithmic }
 }
 
 function buildInsightPrompt(summary: ProviderSummary) {

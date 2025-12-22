@@ -25,6 +25,10 @@ import {
   RefreshCw,
   Loader2,
   Info,
+  Lightbulb,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,7 +38,7 @@ import { authService } from '@/services/auth'
 import { useClientContext } from '@/contexts/client-context'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import {
   Tooltip,
   TooltipContent,
@@ -75,6 +79,20 @@ interface MetricsResponse {
 interface ProviderInsight {
   providerId: string
   summary: string
+}
+
+interface AlgorithmicSuggestion {
+  type: 'efficiency' | 'budget' | 'creative' | 'audience'
+  level: 'success' | 'warning' | 'info' | 'critical'
+  title: string
+  message: string
+  suggestion: string
+  score?: number
+}
+
+interface AlgorithmicInsight {
+  providerId: string
+  suggestions: AlgorithmicSuggestion[]
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -188,6 +206,7 @@ function useAnalyticsData(token: string | null, periodDays: number, clientId: st
     metricsRefreshing: isValidating,
     mutateMetrics,
     insights: (insightsData as { insights: ProviderInsight[] } | undefined)?.insights ?? [],
+    algorithmic: (insightsData as { algorithmic: AlgorithmicInsight[] } | undefined)?.algorithmic ?? [],
     insightsError: insightsError as Error | undefined,
     insightsLoading,
     insightsRefreshing: insightsValidating,
@@ -271,6 +290,7 @@ export default function AnalyticsPage() {
     metricsRefreshing,
     mutateMetrics,
     insights,
+    algorithmic,
     insightsError,
     insightsLoading,
     insightsRefreshing,
@@ -679,6 +699,69 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-primary" />
+            Algorithmic suggestions
+          </CardTitle>
+          <CardDescription>Data-driven optimizations based on your current ad performance</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {initialInsightsLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : algorithmic.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No specific optimizations identified for the current data set.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {algorithmic.flatMap((group) => 
+                group.suggestions.map((suggestion, idx) => (
+                  <div 
+                    key={`${group.providerId}-${idx}`}
+                    className={cn(
+                      "relative overflow-hidden rounded-lg border p-4 shadow-sm transition-all hover:shadow-md",
+                      suggestion.level === 'success' && "border-emerald-200 bg-emerald-50/50",
+                      suggestion.level === 'warning' && "border-amber-200 bg-amber-50/50",
+                      suggestion.level === 'critical' && "border-red-200 bg-red-50/50",
+                      suggestion.level === 'info' && "border-blue-200 bg-blue-50/50"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {suggestion.level === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+                          {suggestion.level === 'warning' && <AlertTriangle className="h-4 w-4 text-amber-600" />}
+                          {suggestion.level === 'critical' && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                          {suggestion.level === 'info' && <Info className="h-4 w-4 text-blue-600" />}
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            {group.providerId === 'global' ? 'Strategy' : PROVIDER_LABELS[group.providerId] ?? group.providerId}
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-foreground">{suggestion.title}</h4>
+                        <p className="text-sm text-muted-foreground">{suggestion.message}</p>
+                      </div>
+                      {suggestion.score && (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-primary/20 bg-background text-xs font-bold text-primary">
+                          {suggestion.score}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 flex items-center gap-2 rounded-md bg-background/80 p-2 text-sm font-medium text-foreground shadow-inner">
+                      <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+                      <span>{suggestion.suggestion}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-muted/60 bg-background">
         <CardHeader>
