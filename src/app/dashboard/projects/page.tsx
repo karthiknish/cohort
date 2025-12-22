@@ -81,6 +81,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../collaboration/utils'
+import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 
 type ProjectResponse = {
   projects?: ProjectRecord[]
@@ -286,24 +287,20 @@ export default function ProjectsPage() {
   }, [loadProjects])
 
   // Keyboard shortcuts
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      // Cmd/Ctrl + K to focus search
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        event.preventDefault()
-        const searchInput = document.getElementById('project-search')
-        searchInput?.focus()
-      }
-      // Cmd/Ctrl + Shift + N to open create dialog
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'n') {
-        event.preventDefault()
-        // Trigger is handled by the CreateProjectDialog
-      }
-    }
-    
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  useKeyboardShortcut({
+    combo: 'mod+k',
+    callback: () => {
+      const searchInput = document.getElementById('project-search')
+      searchInput?.focus()
+    },
+  })
+
+  useKeyboardShortcut({
+    combo: 'mod+shift+n',
+    callback: () => {
+      // Trigger is handled by the CreateProjectDialog
+    },
+  })
 
   const handleProjectCreated = useCallback((project: ProjectRecord) => {
     setProjects((prev) => [project, ...prev])
@@ -629,10 +626,10 @@ export default function ProjectsPage() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle className="text-lg">Project backlog</CardTitle>
-                <CardDescription>
+                <CardDescription className="flex items-center gap-1.5">
                   Search, filter, and review current initiatives.
-                  <span className="ml-2 hidden text-xs text-muted-foreground/70 sm:inline">
-                    (⌘K to search)
+                  <span className="hidden sm:flex items-center gap-1">
+                    ( <KeyboardShortcutBadge combo="mod+k" className="scale-75 origin-left" /> to search )
                   </span>
                 </CardDescription>
               </div>

@@ -74,7 +74,7 @@ export default function Chatbot() {
 
   // Keyboard shortcut to open chatbot
   useKeyboardShortcut({
-    combo: ['cmd+/', 'ctrl+/'],
+    combo: 'mod+/',
     callback: () => {
       setIsOpen((prev) => !prev)
     },
@@ -222,7 +222,7 @@ export default function Chatbot() {
                 </TooltipTrigger>
                 <TooltipContent side="left" className="flex items-center gap-2">
                   <span>AI Assistant</span>
-                  <KeyboardShortcutBadge combo="cmd+/" />
+                  <KeyboardShortcutBadge combo="mod+/" />
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

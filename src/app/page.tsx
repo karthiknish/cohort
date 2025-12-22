@@ -125,6 +125,15 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
 
+  // Fix hydration mismatch: track whether component has mounted on client
+  const [hasMounted, setHasMounted] = useState(false)
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Use stable disabled state: always disabled on server/before mount, then use actual loading state
+  const isAuthLoading = !hasMounted || loading
+
   // Calculate password strength for signup
   const passwordStrength = useMemo(
     () => calculatePasswordStrength(signUpData.password),
@@ -485,7 +494,7 @@ export default function HomePage() {
                       </label>
                     </FadeInItem>
 
-                    <Button className="w-full" size="lg" disabled={isSubmitting || loading} type="submit">
+                    <Button className="w-full" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -669,7 +678,7 @@ export default function HomePage() {
                       )}
                     </FadeInItem>
 
-                    <Button className="w-full" size="lg" disabled={isSubmitting || loading} type="submit">
+                    <Button className="w-full" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -696,7 +705,7 @@ export default function HomePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={isSubmitting || loading}
+                  disabled={isSubmitting || isAuthLoading}
                   onClick={handleGoogleSignIn}
                   className="w-full"
                 >

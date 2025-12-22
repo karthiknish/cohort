@@ -18,6 +18,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
+import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 
 
 // Import task components and hooks
@@ -135,16 +136,12 @@ export default function TasksPage() {
   }, [selectedClient?.id, selectedClient?.name])
 
   // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        document.getElementById('task-search')?.focus()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  useKeyboardShortcut({
+    combo: 'mod+k',
+    callback: () => {
+      document.getElementById('task-search')?.focus()
+    },
+  })
 
   // Export handler
   const handleExport = useCallback(() => {
@@ -221,12 +218,12 @@ export default function TasksPage() {
               <CardTitle>
                 {filters.activeTab === 'my-tasks' ? 'My Assignments' : 'All Tasks'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="flex items-center gap-1.5">
                 {filters.activeTab === 'my-tasks'
                   ? 'Tasks assigned specifically to you.'
                   : 'Search, filter, and monitor active work across the agency.'}
-                <span className="ml-2 hidden text-xs text-muted-foreground/70 sm:inline">
-                  (⌘K to search)
+                <span className="hidden sm:flex items-center gap-1">
+                  ( <KeyboardShortcutBadge combo="mod+k" className="scale-75 origin-left" /> to search )
                 </span>
               </CardDescription>
             </CardHeader>

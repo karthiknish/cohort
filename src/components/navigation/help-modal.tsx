@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/auth-context'
+import { KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 
 interface HelpModalProps {
   open: boolean
@@ -105,11 +106,11 @@ const navigationGuide = [
   },
 ]
 
-const getKeyboardShortcuts = (isMac: boolean) => [
-  { keys: [isMac ? '⌘' : 'Ctrl', 'K'], description: 'Open quick navigation' },
-  { keys: ['?'], description: 'Show help & shortcuts' },
-  { keys: ['Esc'], description: 'Close dialogs and modals' },
-  { keys: [isMac ? '⌘' : 'Ctrl', '/'], description: 'Focus search' },
+const getKeyboardShortcuts = () => [
+  { combo: 'mod+k', description: 'Open quick navigation' },
+  { combo: '?', description: 'Show help & shortcuts' },
+  { combo: 'escape', description: 'Close dialogs and modals' },
+  { combo: 'mod+/', description: 'Toggle AI assistant' },
 ]
 
 const gettingStartedSteps = [
@@ -149,7 +150,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
     }
   }, [showWelcome])
 
-  const keyboardShortcuts = getKeyboardShortcuts(isMac)
+  const keyboardShortcuts = getKeyboardShortcuts()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,8 +187,8 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                     </span>
                     <div>
                       <h4 className="font-semibold text-foreground">Quick tip</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">{isMac ? '⌘' : 'Ctrl+'}K</kbd> anytime to quickly navigate to any page.
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        Press <KeyboardShortcutBadge combo="mod+k" /> anytime to quickly navigate to any page.
                       </p>
                     </div>
                   </div>
@@ -275,18 +276,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                     className="flex items-center justify-between rounded-lg border border-muted/40 px-4 py-3"
                   >
                     <span className="text-sm text-foreground">{shortcut.description}</span>
-                    <div className="flex items-center gap-1">
-                      {shortcut.keys.map((key, i) => (
-                        <span key={i}>
-                          <kbd className="rounded bg-muted px-2 py-1 text-xs font-mono text-muted-foreground">
-                            {key}
-                          </kbd>
-                          {i < shortcut.keys.length - 1 && (
-                            <span className="mx-1 text-muted-foreground">+</span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
+                    <KeyboardShortcutBadge combo={shortcut.combo} />
                   </div>
                 ))}
               </div>
@@ -365,21 +355,13 @@ export function useHelpModal() {
     }
   }, [user])
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
-        const target = e.target as HTMLElement
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
-          e.preventDefault()
-          setShowWelcome(false)
-          setOpen(true)
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  useKeyboardShortcut({
+    combo: 'shift+?',
+    callback: () => {
+      setShowWelcome(false)
+      setOpen(true)
+    },
+  })
 
   return { open, setOpen, showWelcome, setShowWelcome }
 }

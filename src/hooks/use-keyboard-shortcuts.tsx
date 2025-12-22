@@ -23,9 +23,17 @@ function parseCombo(combo: string): { modifiers: Set<string>; key: string } {
   const key = parts.pop() || ''
   const modifiers = new Set(parts)
   
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+
   // Normalize modifiers
+  if (modifiers.has('mod')) {
+    modifiers.delete('mod')
+    modifiers.add(isMac ? 'meta' : 'ctrl')
+  }
+
   if (modifiers.has('cmd') || modifiers.has('meta')) {
     modifiers.delete('cmd')
+    modifiers.delete('meta')
     modifiers.add('meta')
   }
   
@@ -157,23 +165,24 @@ export function useKeyboardShortcuts(
 
 // Common keyboard shortcuts for the app
 export const APP_SHORTCUTS = {
-  SEARCH: ['cmd+k', 'ctrl+k'] as const,
-  NEW_ITEM: ['cmd+n', 'ctrl+n'] as const,
-  SAVE: ['cmd+s', 'ctrl+s'] as const,
-  ESCAPE: ['escape'] as const,
-  HELP: ['shift+?'] as const,
-  NAVIGATE_BACK: ['cmd+[', 'alt+left'] as const,
-  NAVIGATE_FORWARD: ['cmd+]', 'alt+right'] as const,
+  SEARCH: 'mod+k',
+  NEW_ITEM: 'mod+n',
+  SAVE: 'mod+s',
+  ESCAPE: 'escape',
+  HELP: 'shift+?',
+  NAVIGATE_BACK: ['mod+[', 'alt+left'],
+  NAVIGATE_FORWARD: ['mod+]', 'alt+right'],
 } as const
 
 // Format key combo for display
 export function formatKeyCombo(combo: string): string {
-  const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
   
   return combo
     .split('+')
     .map((part) => {
       const p = part.toLowerCase().trim()
+      if (p === 'mod') return isMac ? '⌘' : 'Ctrl'
       if (p === 'cmd' || p === 'meta') return isMac ? '⌘' : 'Ctrl'
       if (p === 'ctrl') return isMac ? '⌃' : 'Ctrl'
       if (p === 'alt') return isMac ? '⌥' : 'Alt'
@@ -195,7 +204,7 @@ export function formatKeyCombo(combo: string): string {
 
 // Component to display keyboard shortcut
 export function KeyboardShortcutBadge({ combo, className }: { combo: string; className?: string }) {
-  const isMac = typeof navigator !== 'undefined' && navigator.platform.includes('Mac')
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
   const parts = combo.split('+')
   
   return (
@@ -204,7 +213,8 @@ export function KeyboardShortcutBadge({ combo, className }: { combo: string; cla
         const p = part.toLowerCase().trim()
         let display = p.toUpperCase()
         
-        if (p === 'cmd' || p === 'meta') display = isMac ? '⌘' : 'Ctrl'
+        if (p === 'mod') display = isMac ? '⌘' : 'Ctrl'
+        else if (p === 'cmd' || p === 'meta') display = isMac ? '⌘' : 'Ctrl'
         else if (p === 'ctrl') display = isMac ? '⌃' : 'Ctrl'
         else if (p === 'alt') display = isMac ? '⌥' : 'Alt'
         else if (p === 'shift') display = isMac ? '⇧' : 'Shift'

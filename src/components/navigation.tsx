@@ -42,6 +42,7 @@ import { ClientWorkspaceSelector } from '@/components/client-workspace-selector'
 import { NotificationsDropdown } from '@/components/notifications-dropdown'
 import { CommandMenu } from '@/components/navigation/command-menu'
 import { HelpModal, useHelpModal } from '@/components/navigation/help-modal'
+import { KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import {
   Tooltip,
   TooltipContent,
@@ -333,7 +334,10 @@ export function Header() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Help & Navigation <kbd className="ml-2 rounded bg-muted px-1 text-[10px]">?</kbd></p>
+                  <div className="flex items-center gap-2">
+                    <span>Help & Navigation</span>
+                    <KeyboardShortcutBadge combo="?" />
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
