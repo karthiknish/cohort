@@ -59,11 +59,13 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         throw new Error('Failed to fetch preferences')
       }
 
-      const data = await response.json()
+      const payload = await response.json() as { success?: boolean; data?: { preferences?: UserPreferences }; preferences?: UserPreferences }
+      // Handle both new envelope { success, data: { preferences } } and legacy { preferences }
+      const prefs = payload.data?.preferences ?? payload.preferences
       setPreferences({
-        currency: data.preferences?.currency ?? DEFAULT_CURRENCY,
-        timezone: data.preferences?.timezone ?? null,
-        locale: data.preferences?.locale ?? null,
+        currency: prefs?.currency ?? DEFAULT_CURRENCY,
+        timezone: prefs?.timezone ?? null,
+        locale: prefs?.locale ?? null,
       })
     } catch (err) {
       console.error('Failed to fetch preferences:', err)
@@ -110,11 +112,13 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
           throw new Error(payload.error || 'Failed to update preferences')
         }
 
-        const data = await response.json()
+        const payload = await response.json() as { success?: boolean; data?: { preferences?: UserPreferences }; preferences?: UserPreferences }
+        // Handle both new envelope { success, data: { preferences } } and legacy { preferences }
+        const prefs = payload.data?.preferences ?? payload.preferences
         setPreferences({
-          currency: data.preferences?.currency ?? preferences.currency,
-          timezone: data.preferences?.timezone ?? preferences.timezone,
-          locale: data.preferences?.locale ?? preferences.locale,
+          currency: prefs?.currency ?? preferences.currency,
+          timezone: prefs?.timezone ?? preferences.timezone,
+          locale: prefs?.locale ?? preferences.locale,
         })
       } catch (err) {
         console.error('Failed to update preferences:', err)
