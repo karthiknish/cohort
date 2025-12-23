@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authenticateRequest, AuthenticationError, AuthResult, assertAdmin } from './server-auth'
 import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
-import { ApiError } from './api-errors'
+import { ApiError, RateLimitError } from './api-errors'
+import { checkRateLimit, createRateLimitKey, RATE_LIMITS, RateLimitPreset } from './rate-limiter'
 
 /**
  * Standard API Response structure
@@ -36,6 +37,12 @@ export type ApiHandlerOptions<TBody extends z.ZodTypeAny, TQuery extends z.ZodTy
   bodySchema?: TBody
   querySchema?: TQuery
   /**
+   * Rate limiting configuration
+   * - Use a preset name: 'standard', 'sensitive', 'critical', 'bulk'
+   * - Or provide custom config: { maxRequests: number, windowMs: number }
+   */
+  rateLimit?: RateLimitPreset | { maxRequests: number; windowMs: number }
+  /**
    * Custom error message for generic 500 errors
    */
   errorMessage?: string
@@ -57,6 +64,40 @@ export function createApiHandler<
       const params = await (context?.params || Promise.resolve({}))
       const authOption = options.auth ?? 'required'
       const workspaceOption = options.workspace ?? 'none'
+      
+      // 0. Rate Limiting (before auth to prevent brute force)
+      if (options.rateLimit) {
+        const config = typeof options.rateLimit === 'string'
+          ? RATE_LIMITS[options.rateLimit]
+          : options.rateLimit
+        
+        // Use IP address for anonymous rate limiting
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+          || req.headers.get('x-real-ip') 
+          || 'unknown'
+        const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, ip)
+        const { allowed, remaining, resetMs } = checkRateLimit(rateLimitKey, config)
+        
+        if (!allowed) {
+          const retryAfter = Math.ceil(resetMs / 1000)
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Too many requests. Please try again later.',
+              code: 'RATE_LIMIT_EXCEEDED',
+            },
+            {
+              status: 429,
+              headers: {
+                'Retry-After': String(retryAfter),
+                'X-RateLimit-Limit': String(config.maxRequests),
+                'X-RateLimit-Remaining': '0',
+                'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000) + retryAfter),
+              },
+            }
+          )
+        }
+      }
       
       let auth: AuthResult = { uid: null, email: null, name: null, claims: {}, isCron: false }
       

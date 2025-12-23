@@ -47,8 +47,21 @@ export class ForbiddenError extends ApiError {
  * 404 Not Found - Resource does not exist
  */
 export class NotFoundError extends ApiError {
-  constructor(message = 'Resource not found') {
-    super(message, 404, 'NOT_FOUND');
+  public readonly resourceType?: string;
+  public readonly resourceId?: string;
+
+  constructor(message?: string, resourceType?: string, resourceId?: string) {
+    // Build message dynamically if resource info is provided
+    let finalMessage = message || 'Resource not found';
+    if (!message && resourceType && resourceId) {
+      finalMessage = `${resourceType} with ID '${resourceId}' not found`;
+    } else if (!message && resourceType) {
+      finalMessage = `${resourceType} not found`;
+    }
+    
+    super(finalMessage, 404, 'NOT_FOUND');
+    this.resourceType = resourceType;
+    this.resourceId = resourceId;
   }
 }
 
