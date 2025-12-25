@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { scheduleIntegrationSync, scheduleSyncsForAllUsers, scheduleSyncsForUser } from '@/lib/integration-auto-sync'
 import { createApiHandler } from '@/lib/api-handler'
+import { ForbiddenError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
 
 const scheduleSchema = z.object({
   force: z.boolean().optional(),
@@ -18,6 +19,7 @@ export const POST = createApiHandler(
   {
     bodySchema: scheduleSchema,
     querySchema: scheduleQuerySchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body, query }) => {
     const force = Boolean(body.force)
@@ -29,7 +31,7 @@ export const POST = createApiHandler(
 
     if (body.allUsers) {
       if (!auth.isCron) {
-        return { error: 'Global scheduling restricted to cron requests', status: 403 }
+        throw new ForbiddenError('Global scheduling restricted to cron requests')
       }
 
       const result = await scheduleSyncsForAllUsers({ force, providerIds: sanitizedProviderIds })
@@ -43,13 +45,13 @@ export const POST = createApiHandler(
       )
 
       if (targetUserId && targetUserId !== auth.uid && !isAdmin) {
-        return { error: 'Admin access required', status: 403 }
+        throw new ForbiddenError('Admin access required')
       }
       targetUserId = targetUserId ?? auth.uid ?? null
     }
 
   if (!targetUserId) {
-    return { error: 'Missing userId', status: 400 }
+    throw new UnauthorizedError('Missing userId')
   }
 
   if (sanitizedProviderIds && sanitizedProviderIds.length === 1) {

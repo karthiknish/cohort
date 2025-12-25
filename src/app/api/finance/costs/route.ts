@@ -1,8 +1,10 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import type { FinanceCostEntry } from '@/types/finance'
+import { coerceNumber, toISO } from '@/lib/utils'
+import { NotFoundError } from '@/lib/api-errors'
 
 type StoredFinanceCost = {
   clientId?: unknown
@@ -36,49 +38,13 @@ const createCostSchema = z.object({
     .optional(),
 })
 
-function toISO(value: unknown): string | null {
-  if (!value && value !== 0) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-  return null
-}
-
-function coerceNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-  return 0
-}
-
 function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
   const cadence = (typeof data.cadence === 'string' ? data.cadence : 'monthly') as FinanceCostEntry['cadence']
   return {
     id: docId,
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     category: typeof data.category === 'string' ? data.category : 'Uncategorized',
-    amount: coerceNumber(data.amount),
+    amount: coerceNumber(data.amount) ?? 0,
     cadence: cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
     currency: typeof data.currency === 'string' ? data.currency.toUpperCase() : 'USD',
     createdAt: toISO(data.createdAt),
@@ -90,7 +56,8 @@ export const POST = createApiHandler(
   { 
     adminOnly: true,
     workspace: 'required',
-    bodySchema: createCostSchema
+    bodySchema: createCostSchema,
+    rateLimit: 'sensitive'
   },
   async (req, { auth, workspace, body: payload }) => {
     const docRef = workspace!.financeCostsCollection.doc()
@@ -118,7 +85,8 @@ export const DELETE = createApiHandler(
   { 
     adminOnly: true,
     workspace: 'required',
-    querySchema: z.object({ id: z.string().trim().min(1) })
+    querySchema: z.object({ id: z.string().trim().min(1) }),
+    rateLimit: 'sensitive'
   },
   async (req, { workspace, query }) => {
     const { id } = query
@@ -126,7 +94,7 @@ export const DELETE = createApiHandler(
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {
-      return { error: 'Cost entry not found', status: 404 }
+      throw new NotFoundError('Cost entry not found')
     }
 
     await docRef.delete()

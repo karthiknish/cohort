@@ -16,6 +16,7 @@ export const POST = createApiHandler(
   {
     auth: 'none',
     bodySchema: contactSchema,
+    rateLimit: 'standard',
   },
   async (req, { body }) => {
     const payload = {
@@ -40,7 +41,7 @@ export const POST = createApiHandler(
 )
 
 export const GET = createApiHandler(
-  { auth: 'none' },
+  { auth: 'none', rateLimit: 'standard' },
   async () => {
     return { message: 'Contact endpoint ready' }
   }

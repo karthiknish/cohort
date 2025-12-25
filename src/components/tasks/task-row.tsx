@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import type { ChangeEvent } from 'react'
 import { Calendar, User, MoreHorizontal, Loader2, Pencil, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +31,8 @@ export type TaskRowProps = {
   onEdit: (task: TaskRecord) => void
   onDelete: (task: TaskRecord) => void
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
+  selected?: boolean
+  onSelectToggle?: (taskId: string, checked: boolean) => void
 }
 
 export function TaskRow({
@@ -37,6 +41,8 @@ export function TaskRow({
   onEdit,
   onDelete,
   onQuickStatusChange,
+  selected = false,
+  onSelectToggle,
 }: TaskRowProps) {
   const StatusIcon = STATUS_ICONS[task.status]
 
@@ -50,6 +56,13 @@ export function TaskRow({
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
+            <Checkbox
+              checked={selected}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                onSelectToggle?.(task.id, event.target.checked)
+              }
+              aria-label="Select task"
+            />
             <p className="text-sm font-semibold text-foreground truncate max-w-[260px] sm:max-w-[360px]">
               {task.title}
             </p>

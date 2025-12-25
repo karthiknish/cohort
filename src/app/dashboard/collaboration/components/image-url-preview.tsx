@@ -4,6 +4,7 @@ import { useState } from "react"
 import { AlertCircle, Loader2, ZoomIn } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { LazyImage } from "@/components/ui/lazy-image"
 import { ImagePreviewModal } from "./image-preview-modal"
 
 interface ImageUrlPreviewProps {
@@ -55,7 +56,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
-          <img
+          <LazyImage
             src={url}
             alt={fileName}
             className={cn(
@@ -63,8 +64,6 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
               isLoading && "opacity-0",
               "group-hover:scale-105"
             )}
-            loading="lazy"
-            decoding="async"
             onLoad={() => setIsLoading(false)}
             onError={() => {
               setIsLoading(false)

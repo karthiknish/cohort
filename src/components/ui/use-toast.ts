@@ -4,7 +4,7 @@ import * as React from 'react'
 
 import type { ToastProps, ToastVariantProps } from '@/components/ui/toast'
 
-const TOAST_LIMIT = 1
+const TOAST_LIMIT = 20
 const TOAST_REMOVE_DELAY = 500
 
 type ToastToDismiss = string
@@ -15,6 +15,13 @@ type Toast = ToastProps & {
   description?: React.ReactNode
   action?: React.ReactNode
   variant?: ToastVariantProps['variant']
+  duration?: number
+  persistent?: boolean
+  undoLabel?: string
+  onUndo?: () => void
+  href?: string
+  onNavigate?: () => void
+  onMarkRead?: () => void
 }
 
 type ToastState = {
@@ -104,6 +111,8 @@ export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
       ...props,
       id,
       open: true,
+      // default auto-dismiss after 5s unless marked persistent
+      duration: typeof props.duration === 'number' ? props.duration : props.persistent ? 0 : 5000,
     },
   })
 

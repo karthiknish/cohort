@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
-import { createApiHandler } from '@/lib/api-handler'
+import { apiSuccess, createApiHandler } from '@/lib/api-handler'
+import { ConflictError, NotFoundError, ValidationError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 const ADMIN_USER_ROLES = ['admin', 'team', 'client'] as const
 type AdminUserRole = (typeof ADMIN_USER_ROLES)[number]
@@ -44,17 +46,6 @@ type StoredInvitation = {
   expiresAt?: unknown
   createdAt?: unknown
   acceptedAt?: unknown
-}
-
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
 }
 
 function mapInvitationDoc(docId: string, data: StoredInvitation): InvitationRecord {
@@ -131,6 +122,7 @@ async function sendInvitationEmail(invitation: {
 export const GET = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'standard',
   },
   async (req) => {
     const searchParams = req.nextUrl.searchParams
@@ -161,6 +153,7 @@ export const POST = createApiHandler(
   {
     adminOnly: true,
     bodySchema: invitationSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     const payload = body as InvitationInput
@@ -175,7 +168,7 @@ export const POST = createApiHandler(
       .get()
 
     if (!existingUserSnapshot.empty) {
-      return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 })
+      throw new ConflictError('A user with this email already exists')
     }
 
     // Check for existing pending invitation
@@ -187,10 +180,7 @@ export const POST = createApiHandler(
       .get()
 
     if (!existingInviteSnapshot.empty) {
-      return NextResponse.json(
-        { error: 'A pending invitation already exists for this email' },
-        { status: 409 }
-      )
+      throw new ConflictError('A pending invitation already exists for this email')
     }
 
     // Get inviter's name
@@ -229,11 +219,11 @@ export const POST = createApiHandler(
     })
 
     return NextResponse.json(
-      {
+      apiSuccess({
         invitation,
         emailSent: emailResult.sent,
         emailError: emailResult.sent ? undefined : emailResult.reason,
-      },
+      }),
       { status: 201 }
     )
   }
@@ -242,25 +232,26 @@ export const POST = createApiHandler(
 export const DELETE = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'sensitive',
   },
   async (req) => {
     const searchParams = req.nextUrl.searchParams
     const invitationId = searchParams.get('id')
 
     if (!invitationId) {
-      return NextResponse.json({ error: 'Invitation ID is required' }, { status: 400 })
+      throw new ValidationError('Invitation ID is required')
     }
 
     const docRef = adminDb.collection('invitations').doc(invitationId)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return NextResponse.json({ error: 'Invitation not found' }, { status: 404 })
+      throw new NotFoundError('Invitation not found')
     }
 
     const data = doc.data() as StoredInvitation
     if (data.status !== 'pending') {
-      return NextResponse.json({ error: 'Only pending invitations can be revoked' }, { status: 400 })
+      throw new ValidationError('Only pending invitations can be revoked')
     }
 
     await docRef.update({

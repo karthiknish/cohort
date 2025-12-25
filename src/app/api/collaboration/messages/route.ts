@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { AuthenticationError } from '@/lib/server-auth'
-import { checkRateLimit } from '@/lib/rate-limit'
 import type {
   CollaborationAttachment,
   CollaborationChannelType,
@@ -15,13 +14,16 @@ import type {
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
 import { type WorkspaceContext } from '@/lib/workspace'
 import { notifyCollaborationMessageWhatsApp, recordCollaborationNotification } from '@/lib/notifications'
-import { createApiHandler } from '@/lib/api-handler'
+import { apiSuccess, createApiHandler } from '@/lib/api-handler'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 export const channelTypeSchema = z.enum(['client', 'team', 'project'])
 export const messageFormatSchema = z.enum(['markdown', 'plaintext'])
 
 const messageQuerySchema = z.object({
   pageSize: z.string().optional(),
+  after: z.string().optional(),
   cursor: z.string().optional(),
   threadRootId: z.string().optional(),
   channelType: z.string().optional(),
@@ -147,32 +149,6 @@ type StoredReaction = {
   emoji?: unknown
   count?: unknown
   userIds?: unknown
-}
-
-function toISO(value: unknown): string | null {
-  if (!value && value !== 0) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-
-  return null
 }
 
 function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
@@ -322,11 +298,13 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: messageQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const {
       pageSize: pageSizeParam,
+      after: afterParam,
       cursor: cursorParam,
       threadRootId: threadRootIdRaw,
       channelType: channelTypeParam = 'team',
@@ -336,10 +314,11 @@ export const GET = createApiHandler(
 
     const threadRootId = threadRootIdRaw?.trim()
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
+    const afterCursor = afterParam ?? cursorParam ?? null
 
     if (threadRootIdRaw !== undefined) {
       if (!threadRootId) {
-        return NextResponse.json({ error: 'threadRootId must be provided' }, { status: 400 })
+        throw new ValidationError('threadRootId must be provided')
       }
 
       let threadQuery = workspace.collaborationCollection
@@ -348,8 +327,8 @@ export const GET = createApiHandler(
         .orderBy('createdAt', 'asc')
         .orderBy(FieldPath.documentId(), 'asc')
 
-      if (cursorParam) {
-        const [cursorTime, cursorId] = cursorParam.split('|')
+      if (afterCursor) {
+        const [cursorTime, cursorId] = afterCursor.split('|')
         if (cursorTime && cursorId) {
           const cursorDate = new Date(cursorTime)
           if (!Number.isNaN(cursorDate.getTime())) {
@@ -375,7 +354,7 @@ export const GET = createApiHandler(
     const parseChannel = channelTypeSchema.safeParse(channelTypeParam)
 
     if (!parseChannel.success) {
-      return NextResponse.json({ error: 'Invalid channel type' }, { status: 400 })
+      throw new ValidationError('Invalid channel type')
     }
 
     const channelType = parseChannel.data
@@ -384,16 +363,16 @@ export const GET = createApiHandler(
 
     if (channelType === 'client') {
       if (!clientId) {
-        return NextResponse.json({ error: 'clientId is required for client channels' }, { status: 400 })
+        throw new ValidationError('clientId is required for client channels')
       }
       await ensureClientOwnership(workspace, clientId)
     } else if (channelType === 'project') {
       if (!projectId) {
-        return NextResponse.json({ error: 'projectId is required for project channels' }, { status: 400 })
+        throw new ValidationError('projectId is required for project channels')
       }
       await ensureProjectOwnership(workspace, projectId)
     } else if (projectId) {
-      return NextResponse.json({ error: 'projectId is only valid for project channels' }, { status: 400 })
+      throw new ValidationError('projectId is only valid for project channels')
     }
 
     let messagesQuery = workspace.collaborationCollection.where('channelType', '==', channelType)
@@ -407,8 +386,8 @@ export const GET = createApiHandler(
     }
     messagesQuery = messagesQuery.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 
-    if (cursorParam) {
-      const [cursorTime, cursorId] = cursorParam.split('|')
+    if (afterCursor) {
+      const [cursorTime, cursorId] = afterCursor.split('|')
       if (cursorTime && cursorId) {
         const cursorDate = new Date(cursorTime)
         if (!Number.isNaN(cursorDate.getTime())) {
@@ -437,26 +416,11 @@ export const POST = createApiHandler(
   {
     workspace: 'required',
     bodySchema: createMessageSchema,
+    rateLimit: { maxRequests: 10, windowMs: 10_000 },
   },
   async (req, { auth, workspace, body: payload }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const uid = auth.uid!
-
-    // Rate limit: 10 requests per 10 seconds per user for message creation
-    const rateLimitResult = await checkRateLimit(`collaboration:${uid}`)
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: 'Too many messages. Please slow down.' },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': String(rateLimitResult.limit),
-            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-            'X-RateLimit-Reset': String(rateLimitResult.reset),
-          },
-        }
-      )
-    }
 
     // Derive senderName and senderRole from auth context to prevent impersonation
     const senderName =
@@ -492,7 +456,7 @@ export const POST = createApiHandler(
     if (parentMessageId) {
       const parentDoc = await workspace.collaborationCollection.doc(parentMessageId).get()
       if (!parentDoc.exists) {
-        return NextResponse.json({ error: 'Parent message not found' }, { status: 404 })
+        throw new NotFoundError('Parent message not found')
       }
       const parentData = parentDoc.data() as StoredMessage
 
@@ -561,6 +525,6 @@ export const POST = createApiHandler(
       console.error('[collaboration/messages] workspace notification failed', notificationError)
     }
 
-    return NextResponse.json({ message }, { status: 201 })
+    return NextResponse.json(apiSuccess({ message }), { status: 201 })
   }
 )

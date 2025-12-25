@@ -10,14 +10,15 @@ import {
   parseGammaDeckPayload,
 } from '@/app/api/proposals/utils/gamma'
 import { createApiHandler } from '@/lib/api-handler'
+import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 
 export const POST = createApiHandler(
-  { auth: 'required' },
+  { auth: 'required', rateLimit: 'sensitive' },
   async (req, { auth, params }) => {
     const proposalId = params.id as string
 
     if (!proposalId) {
-      return { error: 'Proposal id is required', status: 400 }
+      throw new ValidationError('Proposal id is required')
     }
 
     const proposalRef = adminDb
@@ -28,14 +29,14 @@ export const POST = createApiHandler(
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return { error: 'Proposal not found', status: 404 }
+      throw new NotFoundError('Proposal not found')
     }
 
     const proposalData = proposalSnap.data() as Record<string, unknown>
     const ownerId = typeof proposalData.ownerId === 'string' ? proposalData.ownerId : null
 
     if (ownerId && ownerId !== auth.uid) {
-      return { error: 'Not authorized to prepare this deck', status: 403 }
+      throw new ForbiddenError('Not authorized to prepare this deck')
     }
 
     const clientIdRaw = typeof proposalData.clientId === 'string' ? proposalData.clientId.trim() : ''
@@ -60,19 +61,13 @@ export const POST = createApiHandler(
     }
 
     if (!process.env.GAMMA_API_KEY) {
-      return {
-        error: 'Presentation generation is not configured',
-        status: 503
-      }
+      throw new ServiceUnavailableError('Presentation generation is not configured')
     }
 
     const summary = extractAiSummary(proposalData.aiInsights)
 
     if (!summary) {
-      return {
-        error: 'AI summary not available for this proposal',
-        status: 409
-      }
+      throw new ConflictError('AI summary not available for this proposal')
     }
 
     const formDataRaw = proposalData.formData

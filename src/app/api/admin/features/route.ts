@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { toISO } from '@/lib/utils'
 
 const COLLECTION_NAME = 'platform_features'
 
@@ -24,38 +25,13 @@ const createFeatureSchema = z.object({
   references: z.array(referenceSchema).default([]),
 })
 
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  try {
-    if (value instanceof Date) {
-      return value.toISOString()
-    }
-    if (value instanceof Timestamp) {
-      return value.toDate().toISOString()
-    }
-    const timestamp = (value as { toDate?: () => Date }).toDate?.()
-    if (timestamp) {
-      return timestamp.toISOString()
-    }
-  } catch {
-    // noop
-  }
-  if (typeof value === 'string') {
-    const date = new Date(value)
-    if (!Number.isNaN(date.getTime())) {
-      return date.toISOString()
-    }
-    return value
-  }
-  return null
-}
-
 /**
  * GET /api/admin/features - List all features
  */
 export const GET = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'standard',
   },
   async (req) => {
     const snapshot = await adminDb.collection(COLLECTION_NAME).orderBy('createdAt', 'desc').get()
@@ -86,6 +62,7 @@ export const POST = createApiHandler(
   {
     adminOnly: true,
     bodySchema: createFeatureSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { body }) => {
     const { title, description, status, priority, imageUrl, references } = body

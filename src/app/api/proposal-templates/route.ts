@@ -5,6 +5,7 @@ import { createApiHandler } from '@/lib/api-handler'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { adminDb } from '@/lib/firebase-admin'
 import type { ProposalTemplate } from '@/types/proposal-templates'
+import { toISO } from '@/lib/utils'
 
 const createTemplateSchema = z.object({
   name: z.string().trim().min(1, 'Template name is required').max(100),
@@ -26,20 +27,6 @@ type StoredTemplate = {
   updatedAt?: unknown
 }
 
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
-}
-
 function mapTemplateDoc(docId: string, data: StoredTemplate): ProposalTemplate {
   const rawFormData = data.formData && typeof data.formData === 'object' ? data.formData as Partial<ProposalFormData> : {}
   const formData = mergeProposalForm(rawFormData)
@@ -57,7 +44,7 @@ function mapTemplateDoc(docId: string, data: StoredTemplate): ProposalTemplate {
   }
 }
 
-export const GET = createApiHandler({ workspace: 'required' }, async (req, { workspace }) => {
+export const GET = createApiHandler({ workspace: 'required', rateLimit: 'standard' }, async (req, { workspace }) => {
   const templatesRef = workspace!.workspaceRef.collection('proposalTemplates')
 
   const snapshot = await templatesRef.orderBy('createdAt', 'desc').limit(50).get()
@@ -73,6 +60,7 @@ export const POST = createApiHandler(
   {
     workspace: 'required',
     bodySchema: createTemplateSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body }) => {
     const templatesRef = workspace!.workspaceRef.collection('proposalTemplates')

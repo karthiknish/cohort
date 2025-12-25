@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, ComponentType, DragEvent, KeyboardEvent, MouseEvent } from 'react'
+import type { ChangeEvent, ClipboardEvent, ComponentType, DragEvent, KeyboardEvent, MouseEvent } from 'react'
 import { AtSign, Bold, Code, Italic, List, ListOrdered, Paperclip, Quote, Upload } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,7 @@ export type RichComposerProps = {
   onBlur?: () => void
   onDrop?: (event: DragEvent<HTMLTextAreaElement>) => void
   onDragOver?: (event: DragEvent<HTMLTextAreaElement>) => void
+  onPaste?: (event: ClipboardEvent<HTMLTextAreaElement>) => void
   onAttachClick?: () => void
   hasAttachments?: boolean
 }
@@ -55,6 +56,7 @@ export function RichComposer({
   onBlur,
   onDrop,
   onDragOver,
+  onPaste,
   onAttachClick,
   hasAttachments = false,
 }: RichComposerProps) {
@@ -501,6 +503,7 @@ export function RichComposer({
           onDragOver={handleDragOverInternal}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
+          onPaste={onPaste}
           disabled={disabled}
           maxLength={2000}
           className={cn(

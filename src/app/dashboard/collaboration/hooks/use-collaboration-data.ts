@@ -126,6 +126,10 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   const [senderSelection, setSenderSelection] = useState('')
   const [sending, setSending] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<CollaborationMessage[]>([])
+  const [searchHighlights, setSearchHighlights] = useState<string[]>([])
+  const [searchingMessages, setSearchingMessages] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -192,24 +196,129 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // ─────────────────────────────────────────────────────────────────────────────
   const channelMessages = selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []
 
-  const normalizedMessageSearch = messageSearchQuery.trim().toLowerCase()
-  const visibleMessages = useMemo(() => {
-    if (!normalizedMessageSearch) return channelMessages
+  const normalizedMessageSearch = messageSearchQuery.trim()
 
-    return channelMessages.filter((message) => {
-      const haystacks: string[] = []
-      if (message.content) haystacks.push(message.content)
-      if (message.senderName) haystacks.push(message.senderName)
-      if (message.senderRole) haystacks.push(message.senderRole)
-      if (Array.isArray(message.attachments)) {
-        haystacks.push(...message.attachments.map((a) => a.name))
+  const visibleMessages = useMemo(() => {
+    if (normalizedMessageSearch) {
+      if (searchResults.length > 0) return searchResults
+      if (searchingMessages) return searchResults
+      if (searchError) return []
+      return searchResults
+    }
+    return channelMessages
+  }, [channelMessages, normalizedMessageSearch, searchError, searchResults, searchingMessages])
+
+  const isSearchActive = Boolean(normalizedMessageSearch)
+  const activeMessagesError = isSearchActive ? searchError : messagesError
+
+  const parseSearchQuery = useCallback((input: string) => {
+    const tokens = input.split(/\s+/).filter(Boolean)
+    const terms: string[] = []
+    let sender: string | null = null
+    let attachment: string | null = null
+    let mention: string | null = null
+    let start: string | null = null
+    let end: string | null = null
+
+    tokens.forEach((token) => {
+      const lower = token.toLowerCase()
+      if (lower.startsWith('from:')) {
+        sender = token.slice(5)
+      } else if (lower.startsWith('attachment:')) {
+        attachment = token.slice(11)
+      } else if (lower.startsWith('mention:')) {
+        mention = token.slice(8)
+      } else if (lower.startsWith('before:')) {
+        end = token.slice(7)
+      } else if (lower.startsWith('after:')) {
+        start = token.slice(6)
+      } else {
+        terms.push(token)
       }
-      if (Array.isArray(message.mentions)) {
-        haystacks.push(...message.mentions.map((m) => m.name))
-      }
-      return haystacks.some((value) => value.toLowerCase().includes(normalizedMessageSearch))
     })
-  }, [channelMessages, normalizedMessageSearch])
+
+    const highlights = [...terms]
+    if (sender) highlights.push(sender)
+    if (attachment) highlights.push(attachment)
+    if (mention) highlights.push(mention)
+
+    const normalizeField = (value: string | null): string | null => {
+      if (!value) return null
+      const trimmed = value.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+
+    return {
+      q: terms.join(' ').trim(),
+      sender: normalizeField(sender),
+      attachment: normalizeField(attachment),
+      mention: normalizeField(mention),
+      start: normalizeField(start),
+      end: normalizeField(end),
+      highlights: highlights.filter(Boolean),
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedChannel || !normalizedMessageSearch) {
+      setSearchResults([])
+      setSearchHighlights([])
+      setSearchError(null)
+      setSearchingMessages(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const parsed = parseSearchQuery(normalizedMessageSearch)
+    const params = new URLSearchParams({
+      channelType: selectedChannel.type,
+      limit: '200',
+    })
+    if (selectedChannel.type === 'client' && selectedChannel.clientId) {
+      params.set('clientId', selectedChannel.clientId)
+    }
+    if (selectedChannel.type === 'project' && selectedChannel.projectId) {
+      params.set('projectId', selectedChannel.projectId)
+    }
+    if (parsed.q) params.set('q', parsed.q)
+    if (parsed.sender) params.set('sender', parsed.sender)
+    if (parsed.attachment) params.set('attachment', parsed.attachment)
+    if (parsed.mention) params.set('mention', parsed.mention)
+    if (parsed.start) params.set('start', parsed.start)
+    if (parsed.end) params.set('end', parsed.end)
+
+    setSearchingMessages(true)
+    setSearchError(null)
+
+    fetch(`/api/collaboration/messages/search?${params.toString()}`, {
+      method: 'GET',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}))
+          throw new Error(payload.error || 'Unable to search messages')
+        }
+        return response.json() as Promise<{ messages?: CollaborationMessage[]; highlights?: string[] }>
+      })
+      .then((payload) => {
+        setSearchResults(payload.messages ?? [])
+        setSearchHighlights(payload.highlights ?? parsed.highlights)
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        const message = error instanceof Error ? error.message : 'Unable to search messages'
+        setSearchError(message)
+        setSearchResults([])
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setSearchingMessages(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [normalizedMessageSearch, parseSearchQuery, selectedChannel])
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
     const result = new Map<string, ChannelSummary>()
@@ -485,14 +594,15 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // ─────────────────────────────────────────────────────────────────────────────
   const handleLoadMore = useCallback(
     async (channelId: string) => {
-      const cursor = nextCursorByChannel[channelId]
-      if (!cursor) return
+      const nextCursor = nextCursorByChannel[channelId]
+      if (!nextCursor) return
 
       setLoadingMoreChannelId(channelId)
 
       try {
         const token = await ensureSessionToken()
-        const params = new URLSearchParams({ channelId, cursor, limit: '50' })
+        const params = new URLSearchParams({ channelId, pageSize: '50' })
+        params.set('after', nextCursor)
         const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -595,9 +705,11 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     // Messages
     channelMessages,
     visibleMessages,
+    searchingMessages,
+    searchHighlights,
     isCurrentChannelLoading,
     isBootstrapping,
-    messagesError,
+    messagesError: activeMessagesError,
     messageSearchQuery,
     setMessageSearchQuery,
 

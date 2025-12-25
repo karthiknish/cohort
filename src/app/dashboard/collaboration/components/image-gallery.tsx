@@ -4,9 +4,8 @@ import { useState } from "react"
 import { Download, Image as ImageIcon, ZoomIn } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { LazyImage } from "@/components/ui/lazy-image"
 import { cn } from "@/lib/utils"
-import type { CollaborationAttachment } from "@/types/collaboration"
-
 import { ImagePreviewModal } from "./image-preview-modal"
 
 interface ImageGalleryProps {
@@ -42,12 +41,10 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
           onClick={() => handleImageClick(0)}
         >
           <div className="relative aspect-video max-h-96 overflow-hidden">
-            <img
+            <LazyImage
               src={image.url}
               alt={image.name}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-              decoding="async"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
               <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -103,12 +100,10 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
               onClick={() => handleImageClick(index)}
             >
               <div className="relative aspect-square overflow-hidden">
-                <img
+                <LazyImage
                   src={image.url}
                   alt={image.name}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                   <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -140,12 +135,10 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
             onClick={() => handleImageClick(0)}
           >
             <div className="relative aspect-[3/4] overflow-hidden">
-              <img
+              <LazyImage
                 src={images[0].url}
                 alt={images[0].name}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-                decoding="async"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                 <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -161,12 +154,10 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
               onClick={() => handleImageClick(index + 1)}
             >
               <div className="relative aspect-square overflow-hidden">
-                <img
+                <LazyImage
                   src={image.url}
                   alt={image.name}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                   <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -202,12 +193,10 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
             onClick={() => handleImageClick(index)}
           >
             <div className="relative aspect-square overflow-hidden">
-              <img
+              <LazyImage
                 src={image.url}
                 alt={image.name}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-                decoding="async"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                 {index === 3 && remainingCount > 0 ? (

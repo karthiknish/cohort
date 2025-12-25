@@ -1,6 +1,6 @@
 'use client'
 
-import type { ChangeEvent, RefObject } from 'react'
+import type { ChangeEvent, RefObject, ClipboardEvent } from 'react'
 import { FileText, Image as ImageIcon, Loader2, Reply, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -171,6 +171,7 @@ export interface MessageComposerProps {
   onAttachmentInputChange: (event: ChangeEvent<HTMLInputElement>) => void
   onComposerDrop: (event: React.DragEvent<HTMLTextAreaElement>) => void
   onComposerDragOver: (event: React.DragEvent<HTMLTextAreaElement>) => void
+  onComposerPaste: (event: ClipboardEvent<HTMLTextAreaElement>) => void
 }
 
 export function MessageComposer({
@@ -195,6 +196,7 @@ export function MessageComposer({
   onAttachmentInputChange,
   onComposerDrop,
   onComposerDragOver,
+  onComposerPaste,
 }: MessageComposerProps) {
   return (
     <div className="border-t border-muted/40 bg-background p-4">
@@ -229,6 +231,7 @@ export function MessageComposer({
               onBlur={onComposerBlur}
               onDrop={onComposerDrop}
               onDragOver={onComposerDragOver}
+              onPaste={onComposerPaste}
               participants={channelParticipants}
               onAttachClick={() => fileInputRef.current?.click()}
               hasAttachments={pendingAttachments.length > 0}

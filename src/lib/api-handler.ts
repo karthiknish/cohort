@@ -187,6 +187,7 @@ export function createApiHandler<
     } catch (error) {
       // Handle known API errors
       if (error instanceof ApiError) {
+        logApiError(error, req)
         return NextResponse.json({ 
           success: false,
           error: error.message,
@@ -196,6 +197,7 @@ export function createApiHandler<
       }
 
       if (error instanceof z.ZodError) {
+        logApiError(error, req)
         return NextResponse.json({ 
           success: false,
           error: 'Validation failed', 
@@ -205,9 +207,8 @@ export function createApiHandler<
       }
 
       // Log and handle unknown errors
-      console.error(`[API Error] ${req.nextUrl.pathname}:`, error)
-      
       const isDev = process.env.NODE_ENV === 'development'
+      logApiError(error, req, { includeStack: isDev })
       return NextResponse.json({ 
         success: false,
         error: options.errorMessage || (isDev && error instanceof Error ? error.message : 'Internal server error'),
@@ -236,5 +237,27 @@ export function apiError(message: string, code?: string, details?: Record<string
     error: message,
     code,
     details
+  }
+}
+
+function logApiError(error: unknown, req: NextRequest, opts?: { includeStack?: boolean }) {
+  try {
+    const requestId = req.headers.get('x-request-id') || undefined
+    const asApiError = error instanceof ApiError ? error : undefined
+    const payload = {
+      level: 'error',
+      type: 'api_error',
+      path: req.nextUrl.pathname,
+      method: req.method,
+      status: asApiError?.status,
+      code: asApiError?.code,
+      message: error instanceof Error ? error.message : String(error),
+      stack: opts?.includeStack && error instanceof Error ? error.stack : undefined,
+      requestId,
+      timestamp: new Date().toISOString(),
+    }
+    console.error(JSON.stringify(payload))
+  } catch (loggingError) {
+    console.error('[api-handler] failed to log error', loggingError)
   }
 }

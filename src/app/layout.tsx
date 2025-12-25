@@ -4,7 +4,6 @@ import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 import './globals.css'
 
 import { cn } from '@/lib/utils'
-import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientProvider } from '@/contexts/client-context'
 import { ProjectProvider } from '@/contexts/project-context'
@@ -15,6 +14,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from 'sonner'
 import { MotionProvider } from '@/components/providers/motion-provider'
 import { AnalyticsProvider } from '@/components/providers/analytics-provider'
+import { PWAProvider } from '@/components/providers/pwa-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -54,29 +54,28 @@ export default function RootLayout({
           'min-h-screen bg-background font-sans antialiased text-foreground'
         )}
       >
-        <ThemeProvider>
-          <AuthProvider>
-            <ClientProvider>
-              <PreferencesProvider>
-                <Suspense fallback={null}>
-                  <ProjectProvider>
-                    <AnalyticsProvider>
-                      <MotionProvider>
-                        <div className="flex min-h-screen flex-col">
-                          <SiteHeader />
-                          <main className="flex-1">{children}</main>
-                          <SiteFooter />
-                        </div>
-                      </MotionProvider>
-                    </AnalyticsProvider>
-                  </ProjectProvider>
-                </Suspense>
-              </PreferencesProvider>
-            </ClientProvider>
-          </AuthProvider>
-          <Toaster />
-          <SonnerToaster />
-        </ThemeProvider>
+        <AuthProvider>
+          <ClientProvider>
+            <PreferencesProvider>
+              <Suspense fallback={null}>
+                <ProjectProvider>
+                  <AnalyticsProvider>
+                    <MotionProvider>
+                      <div className="flex min-h-screen flex-col">
+                        <SiteHeader />
+                        <main className="flex-1">{children}</main>
+                        <SiteFooter />
+                      </div>
+                      <PWAProvider />
+                    </MotionProvider>
+                  </AnalyticsProvider>
+                </ProjectProvider>
+              </Suspense>
+            </PreferencesProvider>
+          </ClientProvider>
+        </AuthProvider>
+        <Toaster />
+        <SonnerToaster />
       </body>
     </html>
   )

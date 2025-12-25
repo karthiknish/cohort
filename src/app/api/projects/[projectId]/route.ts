@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
@@ -8,10 +7,13 @@ import { projectStatusSchema, coerceStringArray } from '@/lib/projects'
 import type { ProjectDetail, ProjectRecord } from '@/types/projects'
 import type { TaskRecord } from '@/types/tasks'
 import type { CollaborationMessage } from '@/types/collaboration'
+import type { MilestoneRecord } from '@/types/milestones'
 import { buildProjectSummary } from '@/app/api/projects/route'
+import { mapMilestoneDoc, type StoredMilestone } from '@/lib/milestones'
 import { mapTaskDoc, type StoredTask } from '@/app/api/tasks/route'
 import { mapMessageDoc, type StoredMessage } from '@/app/api/collaboration/messages/route'
 import { AuthenticationError } from '@/lib/server-auth'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const updateProjectSchema = z
   .object({
@@ -101,7 +103,7 @@ async function ensureProjectAccess(workspace: WorkspaceContext, projectId: strin
 async function loadProjectRelations(
   workspace: WorkspaceContext,
   projectId: string
-): Promise<{ tasks: TaskRecord[]; recentMessages: CollaborationMessage[] }> {
+): Promise<{ tasks: TaskRecord[]; recentMessages: CollaborationMessage[]; milestones: MilestoneRecord[] }> {
   const tasksSnapshot = await workspace.tasksCollection
     .where('projectId', '==', projectId)
     .orderBy('createdAt', 'desc')
@@ -121,7 +123,16 @@ async function loadProjectRelations(
     .map((doc) => mapMessageDoc(doc.id, doc.data() as StoredMessage))
     .filter((message) => !message.isDeleted)
 
-  return { tasks, recentMessages }
+  const milestonesSnapshot = await workspace.projectsCollection
+    .doc(projectId)
+    .collection('milestones')
+    .orderBy('startDate', 'asc')
+    .orderBy('createdAt', 'asc')
+    .get()
+
+  const milestones = milestonesSnapshot.docs.map((doc) => mapMilestoneDoc(doc.id, doc.data() as StoredMilestone))
+
+  return { tasks, recentMessages, milestones }
 }
 
 function normalizeDateInput(value: string | null | undefined): Date | null | undefined {
@@ -153,11 +164,12 @@ function coerceNullableString(value: string | null | undefined): string | null |
   return trimmed.length > 0 ? trimmed : null
 }
 
-function buildDetailResponse(base: ProjectRecord, tasks: TaskRecord[], recentMessages: CollaborationMessage[]): ProjectDetail {
+function buildDetailResponse(base: ProjectRecord, tasks: TaskRecord[], recentMessages: CollaborationMessage[], milestones: MilestoneRecord[]): ProjectDetail {
   return {
     ...base,
     tasks,
     recentMessages,
+    milestones,
   }
 }
 
@@ -169,14 +181,14 @@ export const GET = createApiHandler(
     if (!workspace) throw new Error('Workspace context missing')
     const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
-      return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
+      throw new ValidationError('Project id is required')
     }
 
     const snapshot = await ensureProjectAccess(workspace, projectId)
 
     const projectRecord = await buildProjectSummary(workspace, snapshot.id, snapshot.data() as Record<string, unknown>)
-    const { tasks, recentMessages } = await loadProjectRelations(workspace, projectId)
-    const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages)
+    const { tasks, recentMessages, milestones } = await loadProjectRelations(workspace, projectId)
+    const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages, milestones)
 
     return { project: projectDetail }
   }
@@ -186,12 +198,13 @@ export const PATCH = createApiHandler(
   {
     workspace: 'required',
     bodySchema: updateProjectSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
-      return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
+      throw new ValidationError('Project id is required')
     }
 
     const snapshot = await ensureProjectAccess(workspace, projectId)
@@ -201,7 +214,7 @@ export const PATCH = createApiHandler(
     if (payload.clientId !== undefined && payload.clientId !== null) {
       const clientSnapshot = await workspace.clientsCollection.doc(payload.clientId).get()
       if (!clientSnapshot.exists) {
-        return NextResponse.json({ error: 'Client not found for this workspace' }, { status: 404 })
+        throw new NotFoundError('Client not found for this workspace')
       }
 
       const clientData = clientSnapshot.data() as Record<string, unknown> | undefined
@@ -214,7 +227,7 @@ export const PATCH = createApiHandler(
     }
 
     if (Object.keys(payload).length === 0) {
-      return NextResponse.json({ error: 'No fields provided for update' }, { status: 400 })
+      throw new ValidationError('No fields provided for update')
     }
 
     const updates: Record<string, unknown> = {
@@ -224,7 +237,7 @@ export const PATCH = createApiHandler(
     const normalizedName = coerceNullableString(payload.name ?? undefined)
     if (normalizedName !== undefined) {
       if (normalizedName === null) {
-        return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 })
+        throw new ValidationError('Name cannot be empty')
       }
       updates.name = normalizedName
     }
@@ -276,8 +289,8 @@ export const PATCH = createApiHandler(
       refreshed.id,
       refreshed.data() as Record<string, unknown>
     )
-    const { tasks, recentMessages } = await loadProjectRelations(workspace, projectId)
-    const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages)
+    const { tasks, recentMessages, milestones } = await loadProjectRelations(workspace, projectId)
+    const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages, milestones)
 
     return { project: projectDetail }
   }
@@ -286,12 +299,13 @@ export const PATCH = createApiHandler(
 export const DELETE = createApiHandler(
   {
     workspace: 'required',
+    rateLimit: 'sensitive',
   },
   async (req, { workspace, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
-      return NextResponse.json({ error: 'Project id is required' }, { status: 400 })
+      throw new ValidationError('Project id is required')
     }
 
     const snapshot = await ensureProjectAccess(workspace, projectId)

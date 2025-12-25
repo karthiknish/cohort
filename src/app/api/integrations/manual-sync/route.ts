@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { scheduleIntegrationSync } from '@/lib/integration-auto-sync'
 import { createApiHandler } from '@/lib/api-handler'
+import { UnauthorizedError } from '@/lib/api-errors'
 
 const manualSyncSchema = z.object({
   providerId: z.string().min(1),
@@ -11,10 +12,11 @@ const manualSyncSchema = z.object({
 export const POST = createApiHandler(
   {
     bodySchema: manualSyncSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     if (!auth.uid) {
-      return { error: 'Authentication required', status: 401 }
+      throw new UnauthorizedError('Authentication required')
     }
 
     const scheduled = await scheduleIntegrationSync({

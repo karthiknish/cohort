@@ -3,6 +3,7 @@ import { load } from "cheerio"
 import { isIP } from "node:net"
 import { z } from 'zod'
 import { createApiHandler } from "@/lib/api-handler"
+import { ValidationError } from '@/lib/api-errors'
 
 const previewSchema = z.object({
   url: z.string().url(),
@@ -177,6 +178,7 @@ export const POST = createApiHandler(
   {
     auth: 'optional',
     bodySchema: previewSchema,
+    rateLimit: 'standard',
   },
   async (req, { body }) => {
     const url = body.url
@@ -185,7 +187,7 @@ export const POST = createApiHandler(
   try {
     parsed = new URL(url)
   } catch {
-    return { error: "Invalid URL", status: 400 }
+    throw new ValidationError('Invalid URL')
   }
 
   if (!ALLOWED_PROTOCOLS.has(parsed.protocol) || isPrivateHost(parsed.hostname)) {

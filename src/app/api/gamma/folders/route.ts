@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { gammaService } from '@/services/gamma'
+import { ApiError } from '@/lib/api-errors'
 
 const querySchema = z.object({
   query: z.string().optional(),
@@ -17,6 +18,8 @@ const querySchema = z.object({
 export const GET = createApiHandler(
   {
     querySchema,
+    auth: 'none',
+    rateLimit: 'standard',
   },
   async (req, { query }) => {
     try {
@@ -29,7 +32,7 @@ export const GET = createApiHandler(
       return result
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes('GAMMA_API_KEY')) {
-        return { error: 'Gamma API not configured', status: 503 }
+        throw new ApiError('Gamma API not configured', 503, 'GAMMA_NOT_CONFIGURED')
       }
       throw error
     }

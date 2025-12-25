@@ -1,8 +1,10 @@
-import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
+import { coerceStringArray, toISO } from '@/lib/utils'
+
+export { coerceStringArray, toISO }
 
 export const projectStatusSchema = z.enum(PROJECT_STATUSES)
 
@@ -18,41 +20,6 @@ export type StoredProject = {
   ownerId?: unknown
   createdAt?: unknown
   updatedAt?: unknown
-}
-
-export function toISO(value: unknown): string | null {
-  if (!value && value !== 0) {
-    return null
-  }
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    const date = (value as { toDate: () => Date }).toDate()
-    return date instanceof Date ? date.toISOString() : null
-  }
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-  return null
-}
-
-export function coerceStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-  return value
-    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
-    .filter((entry) => entry.length > 0)
 }
 
 export function mapProjectDoc(docId: string, data: StoredProject): ProjectRecord {

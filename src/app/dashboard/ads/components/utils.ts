@@ -7,7 +7,7 @@ import type {
   MetricRecord,
   MetricsResponse,
 } from './types'
-import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
+import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 
 // Constants
 export const METRICS_PAGE_SIZE = 100
@@ -148,11 +148,7 @@ export function normalizeTimeframe(value?: number | null): number {
 }
 
 export function getErrorMessage(error: unknown, fallback: string): string {
-  const message = getFriendlyAuthErrorMessage(error)
-  if (message && message !== 'Authentication failed. Please try again.') {
-    return message
-  }
-  return fallback
+  return formatUserFacingErrorMessage(error, fallback)
 }
 
 export function formatRelativeTimestamp(iso?: string | null): string {

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createApiHandler } from '@/lib/api-handler'
+import { apiError, apiSuccess, createApiHandler } from '@/lib/api-handler'
 
 export const GET = createApiHandler(
   {
     auth: 'none',
+    rateLimit: 'standard'
   },
-  async (request) => {
+  async (_request: NextRequest) => {
     const startTime = Date.now()
     const checks: Record<string, { status: 'ok' | 'error'; message?: string; responseTime?: number }> = {}
 
@@ -84,6 +85,10 @@ export const GET = createApiHandler(
     }
 
     const statusCode = overallStatus === 'healthy' ? 200 : 503
-    return NextResponse.json(response, { status: statusCode })
+    const payload = overallStatus === 'healthy'
+      ? apiSuccess(response)
+      : { ...apiError('Service health degraded', 'SERVICE_UNAVAILABLE'), data: response }
+
+    return NextResponse.json(payload, { status: statusCode })
   }
 )

@@ -31,8 +31,8 @@ export type UseTaskFiltersReturn = {
   toggleSortDirection: () => void
 
   // View state
-  viewMode: 'list' | 'grid'
-  setViewMode: React.Dispatch<React.SetStateAction<'list' | 'grid'>>
+  viewMode: 'list' | 'grid' | 'board'
+  setViewMode: React.Dispatch<React.SetStateAction<'list' | 'grid' | 'board'>>
 
   // Computed values
   tasksForClient: TaskRecord[]
@@ -62,7 +62,7 @@ export function useTaskFilters({
   const [activeTab, setActiveTab] = useState('all-tasks')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'board'>('list')
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))

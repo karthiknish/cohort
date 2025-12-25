@@ -4,6 +4,7 @@ import { ExternalLink, GripVertical, Image, Link2, MoreHorizontal, Pencil, Trash
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { LazyImage } from '@/components/ui/lazy-image'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,7 +81,7 @@ export function FeatureCard({
       {feature.imageUrl && (
         <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted ml-4 mr-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <LazyImage
             src={feature.imageUrl}
             alt={feature.title}
             className="h-full w-full object-cover"

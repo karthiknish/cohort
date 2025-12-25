@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
+  Clock3,
   DollarSign,
+  ListChecks,
   Megaphone,
   TrendingUp,
   Trophy,
@@ -29,6 +31,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
+import { TASK_STATUSES } from '@/types/tasks'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ActivityWidget } from '@/components/activity/activity-widget'
@@ -87,6 +90,29 @@ const DEFAULT_TASKS: DashboardTaskItem[] = [
   },
 ]
 
+type TaskSummary = {
+  total: number
+  overdue: number
+  dueSoon: number
+  highPriority: number
+}
+
+const DEFAULT_TASK_SUMMARY: TaskSummary = {
+  total: 0,
+  overdue: 0,
+  dueSoon: 0,
+  highPriority: 0,
+}
+
+const ROLE_PRIORITY: Record<'admin' | 'team' | 'client' | 'default', string[]> = {
+  admin: ['net-margin', 'outstanding', 'roas', 'total-revenue', 'overdue-invoices', 'ad-spend', 'open-tasks', 'conversions'],
+  team: ['due-soon', 'high-priority-tasks', 'open-tasks', 'ad-spend', 'roas', 'conversions', 'net-margin', 'total-revenue'],
+  client: ['ad-spend', 'outstanding', 'next-due', 'roas', 'open-tasks', 'due-soon', 'net-margin', 'total-revenue'],
+  default: ['total-revenue', 'net-margin', 'roas', 'ad-spend', 'open-tasks', 'conversions', 'outstanding', 'due-soon'],
+}
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000
+
 export default function DashboardPage() {
   const { clients, selectedClient, selectedClientId } = useClientContext()
   const { user, getIdToken } = useAuth()
@@ -97,6 +123,8 @@ export default function DashboardPage() {
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [taskItems, setTaskItems] = useState<DashboardTaskItem[]>([])
+  const [rawTasks, setRawTasks] = useState<TaskRecord[]>([])
+  const [taskSummary, setTaskSummary] = useState<TaskSummary>(DEFAULT_TASK_SUMMARY)
   const [tasksLoading, setTasksLoading] = useState(true)
   const [tasksError, setTasksError] = useState<string | null>(null)
   const [comparisonClientIds, setComparisonClientIds] = useState<string[]>(() => (selectedClientId ? [selectedClientId] : []))
@@ -162,6 +190,7 @@ export default function DashboardPage() {
       setFinanceLoading(false)
       setMetricsLoading(false)
       setTaskItems([])
+      setTaskSummary(DEFAULT_TASK_SUMMARY)
       setTasksError(null)
       setTasksLoading(false)
       return () => {
@@ -282,11 +311,15 @@ export default function DashboardPage() {
         const data = (await response.json()) as { tasks?: TaskRecord[] }
         if (!isCancelled) {
           const entries = Array.isArray(data?.tasks) ? data.tasks : []
+          setRawTasks(entries)
           setTaskItems(mapTasksForDashboard(entries))
+          setTaskSummary(summarizeTasks(entries))
         }
       } catch (error) {
         if (!isCancelled) {
+          setRawTasks([])
           setTaskItems([])
+          setTaskSummary(DEFAULT_TASK_SUMMARY)
           setTasksError(getErrorMessage(error, 'Unable to load tasks'))
         }
       } finally {
@@ -409,9 +442,10 @@ export default function DashboardPage() {
     }
   }, [clients, comparisonClientIds, comparisonPeriodDays, getIdToken, selectedClientId, user?.id])
 
-  const summaryStats = useMemo<SummaryStat[]>(() => {
+  const { primaryStats, secondaryStats } = useMemo(() => {
     const revenueRecords = financeSummary?.revenue ?? []
     const costs = financeSummary?.costs ?? []
+    const payments = financeSummary?.payments
 
     const totalRevenue = revenueRecords.reduce((sum, record) => sum + record.revenue, 0)
     const totalOperatingExpenses = revenueRecords.reduce((sum, record) => sum + record.operatingExpenses, 0)
@@ -421,15 +455,21 @@ export default function DashboardPage() {
     const combinedExpenses = totalOperatingExpenses + totalCompanyCosts + totalAdSpend
     const netMargin = totalRevenue - combinedExpenses
     const roas = totalAdSpend > 0 && totalRevenue > 0 ? totalRevenue / totalAdSpend : null
+    const totalConversions = metrics.reduce((sum, record) => sum + record.conversions, 0)
+    const totalOutstanding = sumOutstanding(financeSummary?.payments?.totals ?? [])
+    const overdueInvoices = payments?.overdueCount ?? 0
+    const openInvoices = payments?.openCount ?? 0
+    const nextDueLabel = formatNextDueLabel(payments?.nextDueAt)
 
     // Detect currency from records
     const currencies = new Set([
       ...revenueRecords.map((r) => r.currency).filter(Boolean),
       ...costs.map((c) => c.currency).filter(Boolean),
+      ...(payments?.totals ?? []).map((entry) => entry.currency).filter(Boolean),
     ])
     const displayCurrency = currencies.size === 1 ? (Array.from(currencies)[0] as string) : 'USD'
 
-    return [
+    const stats: SummaryStat[] = [
       {
         id: 'total-revenue',
         label: 'Total Revenue',
@@ -442,14 +482,7 @@ export default function DashboardPage() {
             : 'Add revenue records to track income',
         icon: DollarSign,
         emphasis: totalRevenue > 0 ? 'positive' : 'neutral',
-      },
-      {
-        id: 'ad-spend',
-        label: 'Ad Spend',
-        value: formatCurrency(totalAdSpend, displayCurrency),
-        helper: providerCount > 0 ? `Data from ${providerCount} ad platforms` : 'Connect ad accounts to see spend',
-        icon: Megaphone,
-        emphasis: 'neutral',
+        urgency: totalRevenue <= 0 ? 'medium' : 'low',
       },
       {
         id: 'net-margin',
@@ -458,6 +491,7 @@ export default function DashboardPage() {
         helper: 'Money left after marketing and operating costs',
         icon: TrendingUp,
         emphasis: netMargin > 0 ? 'positive' : netMargin < 0 ? 'negative' : 'neutral',
+        urgency: netMargin < 0 ? 'high' : netMargin === 0 ? 'medium' : 'low',
       },
       {
         id: 'roas',
@@ -466,11 +500,93 @@ export default function DashboardPage() {
         helper: roas ? 'Shows revenue versus ad spend' : 'Need revenue and ad spend data',
         icon: BarChart3,
         emphasis: roas && roas < 1 ? 'negative' : roas && roas >= 1.5 ? 'positive' : 'neutral',
+        urgency: roas && roas < 1 ? 'high' : roas && roas < 1.5 ? 'medium' : 'low',
+      },
+      {
+        id: 'ad-spend',
+        label: 'Ad Spend',
+        value: formatCurrency(totalAdSpend, displayCurrency),
+        helper: providerCount > 0 ? `Data from ${providerCount} ad platforms` : 'Connect ad accounts to see spend',
+        icon: Megaphone,
+        emphasis: 'neutral',
+        urgency: providerCount === 0 ? 'medium' : 'low',
+      },
+      {
+        id: 'outstanding',
+        label: 'Outstanding',
+        value: formatCurrency(totalOutstanding, displayCurrency),
+        helper: totalOutstanding > 0 ? `${openInvoices} open invoice${openInvoices === 1 ? '' : 's'}` : 'No outstanding balances',
+        icon: Shield,
+        emphasis: totalOutstanding > 0 ? 'negative' : 'neutral',
+        urgency: overdueInvoices > 0 ? 'high' : totalOutstanding > 0 ? 'medium' : 'low',
+      },
+      {
+        id: 'overdue-invoices',
+        label: 'Overdue invoices',
+        value: overdueInvoices.toString(),
+        helper: overdueInvoices > 0 ? 'Follow up on late payments' : 'All invoices on track',
+        icon: AlertTriangle,
+        emphasis: overdueInvoices > 0 ? 'negative' : 'neutral',
+        urgency: overdueInvoices > 0 ? 'high' : 'low',
+      },
+      {
+        id: 'next-due',
+        label: 'Next due',
+        value: nextDueLabel ?? 'None scheduled',
+        helper: openInvoices > 0 ? `${openInvoices} open invoice${openInvoices === 1 ? '' : 's'}` : 'No invoices currently open',
+        icon: Clock3,
+        emphasis: nextDueLabel?.includes('overdue') ? 'negative' : 'neutral',
+        urgency: nextDueLabel?.includes('overdue') ? 'high' : openInvoices > 0 ? 'medium' : 'low',
+      },
+      {
+        id: 'open-tasks',
+        label: 'Open tasks',
+        value: taskSummary.total.toString(),
+        helper: `${taskSummary.highPriority} high priority · ${taskSummary.overdue} overdue`,
+        icon: ListChecks,
+        emphasis: taskSummary.overdue > 0 ? 'negative' : taskSummary.highPriority > 0 ? 'neutral' : 'positive',
+        urgency: taskSummary.overdue > 0 ? 'high' : taskSummary.dueSoon > 0 ? 'medium' : 'low',
+      },
+      {
+        id: 'due-soon',
+        label: 'Due soon (3d)',
+        value: taskSummary.dueSoon.toString(),
+        helper: taskSummary.dueSoon > 0 ? 'Focus on short-term deliverables' : 'No tasks due in the next 3 days',
+        icon: Clock3,
+        emphasis: taskSummary.dueSoon > 3 ? 'negative' : taskSummary.dueSoon > 0 ? 'neutral' : 'positive',
+        urgency: taskSummary.dueSoon > 3 ? 'high' : taskSummary.dueSoon > 0 ? 'medium' : 'low',
+      },
+      {
+        id: 'conversions',
+        label: 'Conversions',
+        value: totalConversions.toLocaleString('en-US'),
+        helper: providerCount > 0 ? `From ${providerCount} channels` : 'Connect ad platforms to track conversions',
+        icon: TrendingUp,
+        emphasis: totalConversions === 0 ? 'neutral' : 'positive',
+        urgency: totalConversions === 0 ? 'medium' : 'low',
+      },
+      {
+        id: 'active-channels',
+        label: 'Active channels',
+        value: providerCount.toString(),
+        helper: providerCount > 0 ? 'Ad platforms connected' : 'Connect ad platforms to see spend',
+        icon: Megaphone,
+        emphasis: providerCount === 0 ? 'negative' : 'neutral',
+        urgency: providerCount === 0 ? 'medium' : 'low',
       },
     ]
-  }, [financeSummary, metrics])
 
-  const statsLoading = financeLoading || metricsLoading
+    const { primary, secondary } = selectTopStatsByRole(stats, user?.role)
+
+    return {
+      primaryStats: primary,
+      secondaryStats: secondary,
+    }
+  }, [financeSummary, metrics, taskSummary, user?.role])
+
+  const orderedStats = useMemo(() => [...primaryStats, ...secondaryStats], [primaryStats, secondaryStats])
+
+  const statsLoading = financeLoading || metricsLoading || tasksLoading
   const errorStates = useMemo(
     () => [
       financeError && { id: 'finance', title: 'Finance data unavailable', message: financeError },
@@ -654,7 +770,7 @@ export default function DashboardPage() {
         {/* Role-specific welcome messages */}
         {user?.role === 'admin' && (
           <FadeIn>
-            <Card className="border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10">
+            <Card className="border-primary/20 bg-primary/5">
               <CardContent className="flex items-center gap-4 p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                   <Shield className="h-5 w-5 text-primary" />
@@ -677,19 +793,19 @@ export default function DashboardPage() {
 
         {user?.role === 'client' && (
           <FadeIn>
-            <Card className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
+            <Card className="border-green-200 bg-green-50">
               <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                  <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                  <Trophy className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-green-900 dark:text-green-100">Welcome, {user?.name?.split(' ')[0] || 'Client'}!</p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
+                  <p className="font-medium text-green-900">Welcome, {user?.name?.split(' ')[0] || 'Client'}!</p>
+                  <p className="text-sm text-green-700">
                     View your project progress, proposals, and collaborate with your team.
                   </p>
                 </div>
                 <Link href="/dashboard/collaboration">
-                  <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900">
+                  <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-100">
                     Messages <ArrowUpRight className="ml-1 h-3 w-3" />
                   </Button>
                 </Link>
@@ -698,17 +814,11 @@ export default function DashboardPage() {
           </FadeIn>
         )}
 
-        {/* Stats - show different stats for clients */}
-        {user?.role === 'client' ? (
-          <StatsCards 
-            stats={summaryStats.filter(stat => 
-              ['Tasks', 'Active Projects'].includes(stat.label) || stat.label.includes('Performance')
-            )} 
-            loading={statsLoading} 
-          />
-        ) : (
-          <StatsCards stats={summaryStats} loading={statsLoading} />
-        )}
+        <StatsCards
+          stats={orderedStats}
+          primaryCount={Math.max(1, primaryStats.length || Math.min(4, orderedStats.length))}
+          loading={statsLoading}
+        />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
@@ -828,6 +938,10 @@ export default function DashboardPage() {
               <QuickActions compact />
             </FadeIn>
 
+            <FadeIn>
+              <MiniTaskKanban tasks={rawTasks} loading={tasksLoading} />
+            </FadeIn>
+
             {/* Comparison insights - Admin/Team only */}
             {user?.role !== 'client' && !comparisonError && comparisonHasSelection && (comparisonLoading || comparisonSummaries.length > 0) && (
               <FadeIn>
@@ -857,5 +971,188 @@ export default function DashboardPage() {
       </div>
     </TooltipProvider>
   )
+}
+
+type MiniTaskKanbanProps = {
+  tasks: TaskRecord[]
+  loading: boolean
+}
+
+function MiniTaskKanban({ tasks, loading }: MiniTaskKanbanProps) {
+  const columns = TASK_STATUSES.map((status) => ({
+    status,
+    items: tasks.filter((task) => task.status === status).slice(0, 6),
+  }))
+
+  const formatDue = (value?: string | null) => {
+    if (!value) return 'No due date'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'No due date'
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-base">Task board (compact)</CardTitle>
+        <CardDescription>Quick glance across todo, in-progress, review, and completed.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-28 w-full" />
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className="rounded-md border border-dashed border-muted/50 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+            No tasks available. Create tasks to populate the board.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {columns.map(({ status, items }) => (
+              <div key={status} className="flex flex-col gap-2 rounded-md border border-muted/50 bg-muted/10 p-3">
+                <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                  <span className="capitalize">{status.replace('-', ' ')}</span>
+                  <Badge variant="outline" className="bg-background text-xs">{items.length}</Badge>
+                </div>
+                {items.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-muted/40 bg-background px-3 py-4 text-center text-xs text-muted-foreground">
+                    Empty lane
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {items.map((task) => (
+                      <Link
+                        key={task.id}
+                        href={`/dashboard/tasks?taskId=${task.id}`}
+                        className="block rounded-md border border-muted/40 bg-background p-2 text-sm shadow-sm transition hover:border-primary/40 hover:shadow"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate font-medium" title={task.title}>{task.title}</span>
+                          <Badge variant="secondary" className="text-[10px] capitalize">{task.priority}</Badge>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span>{task.client || 'Internal'}</span>
+                          <span>{formatDue(task.dueDate)}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function summarizeTasks(tasks: TaskRecord[]): TaskSummary {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return DEFAULT_TASK_SUMMARY
+  }
+
+  const now = Date.now()
+  const soonCutoff = now + 3 * DAY_IN_MS
+
+  let overdue = 0
+  let dueSoon = 0
+  let highPriority = 0
+
+  tasks.forEach((task) => {
+    if (task.priority === 'high' || task.priority === 'urgent') {
+      highPriority += 1
+    }
+
+    const dueTimestamp = task.dueDate ? Date.parse(task.dueDate) : Number.NaN
+    if (Number.isNaN(dueTimestamp)) {
+      return
+    }
+    if (dueTimestamp < now) {
+      overdue += 1
+      return
+    }
+    if (dueTimestamp <= soonCutoff) {
+      dueSoon += 1
+    }
+  })
+
+  return {
+    total: tasks.length,
+    overdue,
+    dueSoon,
+    highPriority,
+  }
+}
+
+function sumOutstanding(totals: { totalOutstanding: number }[]): number {
+  if (!Array.isArray(totals) || totals.length === 0) {
+    return 0
+  }
+  return totals.reduce((sum, entry) => sum + (Number.isFinite(entry.totalOutstanding) ? entry.totalOutstanding : 0), 0)
+}
+
+function formatNextDueLabel(nextDueAt: string | null | undefined): string | null {
+  if (!nextDueAt) {
+    return null
+  }
+
+  const target = new Date(nextDueAt)
+  if (Number.isNaN(target.getTime())) {
+    return null
+  }
+
+  const todayStart = startOfDay(new Date())
+  const targetStart = startOfDay(target)
+  const diffDays = Math.round((targetStart.getTime() - todayStart.getTime()) / DAY_IN_MS)
+
+  if (diffDays === 0) {
+    return 'Due today'
+  }
+  if (diffDays === 1) {
+    return 'Due tomorrow'
+  }
+  if (diffDays < 0) {
+    const daysOverdue = Math.abs(diffDays)
+    return `${daysOverdue} day${daysOverdue === 1 ? '' : 's'} overdue`
+  }
+  return `Due in ${diffDays} day${diffDays === 1 ? '' : 's'}`
+}
+
+function startOfDay(date: Date): Date {
+  const copy = new Date(date)
+  copy.setHours(0, 0, 0, 0)
+  return copy
+}
+
+function selectTopStatsByRole(stats: SummaryStat[], role?: string | null): { primary: SummaryStat[]; secondary: SummaryStat[] } {
+  if (!Array.isArray(stats) || stats.length === 0) {
+    return { primary: [], secondary: [] }
+  }
+
+  const key = role === 'admin' || role === 'team' || role === 'client' ? role : 'default'
+  const priorityOrder = ROLE_PRIORITY[key]
+
+  const statMap = new Map(stats.map((stat) => [stat.id, stat]))
+  const ordered: SummaryStat[] = []
+
+  priorityOrder.forEach((id) => {
+    const item = statMap.get(id)
+    if (item && !ordered.some((stat) => stat.id === item.id)) {
+      ordered.push(item)
+    }
+  })
+
+  stats.forEach((stat) => {
+    if (!ordered.some((item) => item.id === stat.id)) {
+      ordered.push(stat)
+    }
+  })
+
+  const primary = ordered.slice(0, 4)
+  const secondary = ordered.slice(4)
+
+  return { primary, secondary }
 }
 

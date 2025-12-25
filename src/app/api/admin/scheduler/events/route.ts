@@ -32,6 +32,7 @@ function decodeCursor(cursor?: string | null): { createdAt: Timestamp; docId: st
 export const GET = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'standard',
   },
   async (req) => {
     const searchParams = req.nextUrl.searchParams

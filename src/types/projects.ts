@@ -1,5 +1,6 @@
 import type { TaskRecord } from '@/types/tasks'
 import type { CollaborationMessage } from '@/types/collaboration'
+import type { MilestoneRecord } from '@/types/milestones'
 
 export const PROJECT_STATUSES = ['planning', 'active', 'on_hold', 'completed'] as const
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number]
@@ -25,4 +26,5 @@ export type ProjectRecord = {
 export type ProjectDetail = ProjectRecord & {
   tasks: TaskRecord[]
   recentMessages: CollaborationMessage[]
+  milestones?: MilestoneRecord[]
 }

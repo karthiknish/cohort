@@ -20,6 +20,7 @@ export type SummaryStat = {
   helper: string
   icon: LucideIcon
   emphasis?: 'positive' | 'negative' | 'neutral'
+  urgency?: 'high' | 'medium' | 'low'
 }
 
 export type DashboardTaskItem = {

@@ -21,6 +21,7 @@ import {
   NormalizedMetric,
   SyncJob,
 } from '@/types/integrations'
+import { coerceStringArray } from '@/lib/utils'
 
 type StoredIntegration = {
   accessToken?: string | null
@@ -49,13 +50,6 @@ type StoredSyncJob = {
   startedAt?: Timestamp | null
   processedAt?: Timestamp | null
   errorMessage?: string | null
-}
-
-function coerceStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-  return value.filter((item): item is string => typeof item === 'string')
 }
 
 type TimestampInput = Date | string | number | null | undefined

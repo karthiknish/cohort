@@ -2,9 +2,11 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { adminDb } from '@/lib/firebase-admin'
 import type { ProposalTemplate } from '@/types/proposal-templates'
+import { toISO } from '@/lib/utils'
 
 const updateTemplateSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
@@ -26,20 +28,6 @@ type StoredTemplate = {
   updatedAt?: unknown
 }
 
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
-}
-
 function mapTemplateDoc(docId: string, data: StoredTemplate): ProposalTemplate {
   const rawFormData = data.formData && typeof data.formData === 'object' ? data.formData as Partial<ProposalFormData> : {}
   const formData = mergeProposalForm(rawFormData)
@@ -57,10 +45,10 @@ function mapTemplateDoc(docId: string, data: StoredTemplate): ProposalTemplate {
   }
 }
 
-export const GET = createApiHandler({ workspace: 'required' }, async (req, { workspace, params }) => {
+export const GET = createApiHandler({ workspace: 'required', rateLimit: 'standard' }, async (req, { workspace, params }) => {
   const { templateId } = params as { templateId: string }
   if (!templateId) {
-    return { error: 'Template ID required', status: 400 }
+    throw new ValidationError('Template ID required')
   }
 
   const templatesRef = workspace!.workspaceRef.collection('proposalTemplates')
@@ -68,7 +56,7 @@ export const GET = createApiHandler({ workspace: 'required' }, async (req, { wor
 
   const doc = await docRef.get()
   if (!doc.exists) {
-    return { error: 'Template not found', status: 404 }
+    throw new NotFoundError('Template not found')
   }
 
   const template = mapTemplateDoc(doc.id, doc.data() as StoredTemplate)
@@ -79,11 +67,12 @@ export const PATCH = createApiHandler(
   {
     workspace: 'required',
     bodySchema: updateTemplateSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { workspace, body, params }) => {
     const { templateId } = params as { templateId: string }
     if (!templateId) {
-      return { error: 'Template ID required', status: 400 }
+      throw new ValidationError('Template ID required')
     }
 
     const templatesRef = workspace!.workspaceRef.collection('proposalTemplates')
@@ -91,7 +80,7 @@ export const PATCH = createApiHandler(
 
     const doc = await docRef.get()
     if (!doc.exists) {
-      return { error: 'Template not found', status: 404 }
+      throw new NotFoundError('Template not found')
     }
 
     const timestamp = Timestamp.now()
@@ -143,10 +132,10 @@ export const PATCH = createApiHandler(
   }
 )
 
-export const DELETE = createApiHandler({ workspace: 'required' }, async (req, { workspace, params }) => {
+export const DELETE = createApiHandler({ workspace: 'required', rateLimit: 'sensitive' }, async (req, { workspace, params }) => {
   const { templateId } = params as { templateId: string }
   if (!templateId) {
-    return { error: 'Template ID required', status: 400 }
+    throw new ValidationError('Template ID required')
   }
 
   const templatesRef = workspace!.workspaceRef.collection('proposalTemplates')
@@ -154,7 +143,7 @@ export const DELETE = createApiHandler({ workspace: 'required' }, async (req, { 
 
   const doc = await docRef.get()
   if (!doc.exists) {
-    return { error: 'Template not found', status: 404 }
+    throw new NotFoundError('Template not found')
   }
 
   await docRef.delete()

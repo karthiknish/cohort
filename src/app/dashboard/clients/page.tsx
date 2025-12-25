@@ -23,6 +23,7 @@ import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
 import {
   Card,
   CardDescription,
+  CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -49,10 +50,13 @@ import {
   QuickActionCard,
   ClientStatsGrid,
   ClientDetailsCard,
+  ClientOnboardingChecklist,
   type InvoiceData,
   type CreateInvoiceForm,
   type InvoiceSummary,
 } from './components'
+import { fetchIntegrationStatuses } from '@/app/dashboard/ads/components/utils'
+import type { ClientRecord } from '@/types/clients'
 
 // Types for client stats
 interface ClientStats {
@@ -91,11 +95,14 @@ function ClientsDashboardContent() {
   const [sendingReminder, setSendingReminder] = useState(false)
   const [refundDialogOpen, setRefundDialogOpen] = useState(false)
   const [refundLoading, setRefundLoading] = useState(false)
+  const [adStatusLoading, setAdStatusLoading] = useState(false)
+  const [adAccountsConnected, setAdAccountsConnected] = useState<boolean | null>(null)
   const [createInvoiceForm, setCreateInvoiceForm] = useState<CreateInvoiceForm>({
     amount: '',
     email: '',
     description: '',
     dueDate: '',
+    lineItems: [],
   })
 
   // Handle URL param sync
@@ -214,20 +221,59 @@ function ClientsDashboardContent() {
 
   // Initialize email from client when opening create invoice dialog
   useEffect(() => {
-    if (createInvoiceOpen && selectedClient) {
+    if (selectedClient?.billingEmail) {
       setCreateInvoiceForm((prev) => ({
         ...prev,
-        email: selectedClient.billingEmail || '',
+        email: prev.email || selectedClient.billingEmail || '',
       }))
     }
-  }, [createInvoiceOpen, selectedClient])
+  }, [selectedClient])
+
+  // Check ad account connectivity for onboarding checklist
+  useEffect(() => {
+    if (!selectedClient) {
+      setAdAccountsConnected(null)
+      return
+    }
+
+    let isActive = true
+    const loadStatuses = async () => {
+      setAdStatusLoading(true)
+      try {
+        const token = await getIdToken()
+        const response = await fetchIntegrationStatuses(token)
+        if (!isActive) return
+        const connected = response.statuses.some((status) => status.status === 'success' || Boolean(status.linkedAt))
+        setAdAccountsConnected(connected)
+      } catch {
+        if (isActive) {
+          setAdAccountsConnected(false)
+        }
+      } finally {
+        if (isActive) {
+          setAdStatusLoading(false)
+        }
+      }
+    }
+
+    void loadStatuses()
+
+    return () => {
+      isActive = false
+    }
+  }, [selectedClient, getIdToken])
 
   // Create a new invoice
   const handleCreateInvoice = async () => {
     if (!selectedClient) return
 
-    const amount = parseFloat(createInvoiceForm.amount)
-    if (isNaN(amount) || amount < 1) {
+    const lineItemsTotal = createInvoiceForm.lineItems.reduce((sum, item) => {
+      const value = parseFloat(item.amount)
+      return Number.isFinite(value) ? sum + value : sum
+    }, 0)
+
+    const amount = lineItemsTotal > 0 ? lineItemsTotal : parseFloat(createInvoiceForm.amount)
+    if (!Number.isFinite(amount) || amount < 1) {
       toast({
         title: 'Invalid amount',
         description: 'Please enter an amount of at least $1.',
@@ -245,6 +291,14 @@ function ClientsDashboardContent() {
       return
     }
 
+    const lineItemSummary = lineItemsTotal > 0 && createInvoiceForm.lineItems.length > 0
+      ? createInvoiceForm.lineItems
+          .filter((item) => item.label.trim().length > 0 || parseFloat(item.amount) > 0)
+          .map((item) => `${item.label || 'Line item'} — $${parseFloat(item.amount || '0').toFixed(2)}`)
+          .join('; ')
+      : ''
+    const mergedDescription = createInvoiceForm.description.trim() || lineItemSummary || undefined
+
     setCreateInvoiceLoading(true)
     try {
       const token = await getIdToken()
@@ -257,7 +311,7 @@ function ClientsDashboardContent() {
         body: JSON.stringify({
           amount,
           email: createInvoiceForm.email.trim(),
-          description: createInvoiceForm.description.trim() || undefined,
+          description: mergedDescription,
           dueDate: createInvoiceForm.dueDate || undefined,
         }),
       })
@@ -275,7 +329,7 @@ function ClientsDashboardContent() {
       })
 
       setCreateInvoiceOpen(false)
-      setCreateInvoiceForm({ amount: '', email: '', description: '', dueDate: '' })
+      setCreateInvoiceForm({ amount: '', email: selectedClient.billingEmail || '', description: '', dueDate: '', lineItems: [] })
       await Promise.all([refreshClients(), fetchInvoiceHistory()])
     } catch (error) {
       console.error('Failed to create invoice:', error)
@@ -400,6 +454,68 @@ function ClientsDashboardContent() {
     }
   }, [selectedClient])
 
+  const onboardingItems = useMemo(() => {
+    if (!selectedClient) return []
+
+    const contactInfoComplete = Boolean(selectedClient.billingEmail && selectedClient.accountManager)
+    const billingInfoAdded = Boolean(selectedClient.stripeCustomerId || selectedClient.billingEmail)
+    const teamMembersInvited = teamMembers.length > 0
+    const firstProjectCreated = (stats?.totalProjects ?? 0) > 0
+    const firstInvoiceSent = Boolean(
+      selectedClient.lastInvoiceIssuedAt || selectedClient.lastInvoiceStatus || invoiceHistory.length > 0
+    )
+    const adsConnected = adAccountsConnected === true
+
+    return [
+      {
+        id: 'contact-info',
+        label: 'Contact info complete',
+        done: contactInfoComplete,
+        helper: contactInfoComplete ? 'Contact details are set.' : 'Add billing contact and owner details.',
+      },
+      {
+        id: 'billing-info',
+        label: 'Billing info added',
+        done: billingInfoAdded,
+        helper: billingInfoAdded ? 'Billing details saved.' : 'Add billing email or customer ID.',
+      },
+      {
+        id: 'team-members',
+        label: 'Team members invited',
+        done: teamMembersInvited,
+        helper: teamMembersInvited ? 'Team is collaborating.' : 'Invite at least one teammate.',
+      },
+      {
+        id: 'first-project',
+        label: 'First project created',
+        done: firstProjectCreated,
+        helper: firstProjectCreated ? 'Projects underway.' : 'Create the first project.',
+      },
+      {
+        id: 'first-invoice',
+        label: 'First invoice sent',
+        done: firstInvoiceSent,
+        helper: firstInvoiceSent ? 'Invoicing started.' : 'Send your first invoice.',
+      },
+      {
+        id: 'ad-accounts',
+        label: 'Ad accounts connected',
+        done: adsConnected,
+        helper: adsConnected ? 'Ad data will sync automatically.' : 'Connect at least one ad platform.',
+        loading: adStatusLoading,
+      },
+    ]
+  }, [
+    selectedClient,
+    teamMembers.length,
+    stats?.totalProjects,
+    selectedClient?.lastInvoiceIssuedAt,
+    selectedClient?.lastInvoiceStatus,
+    invoiceHistory.length,
+    adAccountsConnected,
+    adStatusLoading,
+  ])
+
   const handleRefresh = async () => {
     if (refreshing) return
     setRefreshing(true)
@@ -499,7 +615,7 @@ function ClientsDashboardContent() {
                 </Badge>
               )}
               {invoiceSummary?.isPaid && (
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
                   Paid
                 </Badge>
               )}
@@ -598,6 +714,8 @@ function ClientsDashboardContent() {
           />
         </div>
 
+        <ClientPipelineBoard clients={clients} selectedClientId={selectedClient.id} />
+
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
           {/* Team Members */}
@@ -610,6 +728,8 @@ function ClientsDashboardContent() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            <ClientOnboardingChecklist clientName={selectedClient.name} items={onboardingItems} />
+
             {/* Invoice Management Card */}
             <InvoiceManagementCard
               clientName={selectedClient.name}
@@ -623,6 +743,7 @@ function ClientsDashboardContent() {
               sendingReminder={sendingReminder}
               refundDialogOpen={refundDialogOpen}
               refundLoading={refundLoading}
+              suggestedEmail={selectedClient.billingEmail ?? null}
               onCreateInvoiceOpenChange={setCreateInvoiceOpen}
               onCreateInvoiceFormChange={setCreateInvoiceForm}
               onCreateInvoice={handleCreateInvoice}
@@ -643,6 +764,82 @@ function ClientsDashboardContent() {
         </div>
       </div>
     </TooltipProvider>
+  )
+}
+
+type ClientPipelineBoardProps = {
+  clients: ClientRecord[]
+  selectedClientId: string
+}
+
+function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelineBoardProps) {
+  const stages = [
+    { id: 'onboarding', label: 'Onboarding', helper: 'No invoices yet' },
+    { id: 'invoicing', label: 'Invoicing', helper: 'Draft or open invoices' },
+    { id: 'paying', label: 'Paying', helper: 'Paid or recurring' },
+  ] as const
+
+  const deriveStage = (client: ClientRecord): (typeof stages)[number]['id'] => {
+    const status = client.lastInvoiceStatus?.toLowerCase() ?? ''
+    if (['paid', 'succeeded', 'settled'].includes(status)) return 'paying'
+    if (['open', 'uncollectible', 'overdue', 'draft', 'pending', 'sent'].includes(status)) return 'invoicing'
+    return 'onboarding'
+  }
+
+  const groups = stages.map((stage) => ({
+    stage,
+    items: clients.filter((client) => deriveStage(client) === stage.id),
+  }))
+
+  return (
+    <Card className="border-muted/60 bg-background shadow-sm">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base">Client pipeline</CardTitle>
+        <CardDescription>Quick CRM view grouped by billing stage.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 md:grid-cols-3">
+          {groups.map(({ stage, items }) => (
+            <div key={stage.id} className="flex flex-col gap-3 rounded-md border border-muted/50 bg-muted/10 p-3">
+              <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                <span>{stage.label}</span>
+                <Badge variant="outline" className="bg-background text-xs">{items.length}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{stage.helper}</p>
+              {items.length === 0 ? (
+                <div className="rounded-md border border-dashed border-muted/50 bg-background px-3 py-6 text-center text-xs text-muted-foreground">
+                  No clients in this stage
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {items.map((client) => (
+                    <Link
+                      key={client.id}
+                      href={`/dashboard/clients?clientId=${client.id}`}
+                      className={cn(
+                        'block rounded-md border border-muted/40 bg-background p-3 text-sm shadow-sm transition hover:border-primary/40 hover:shadow',
+                        client.id === selectedClientId && 'border-primary/50 shadow-md'
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-foreground truncate" title={client.name}>{client.name}</span>
+                        <Badge variant="secondary" className="text-[10px]">{client.accountManager || 'Unassigned'}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {client.lastInvoiceStatus ? `Invoice: ${client.lastInvoiceStatus}` : 'No billing yet'}
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted-foreground/80">
+                        Added {client.createdAt ? new Date(client.createdAt).toLocaleDateString() : 'Recently'}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

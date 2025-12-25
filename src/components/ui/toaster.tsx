@@ -1,26 +1,67 @@
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 
-import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/components/ui/toast'
+import { Toast, ToastAction, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/components/ui/toast'
 import { useToast } from '@/components/ui/use-toast'
 
 export function Toaster() {
   const { toasts, dismiss } = useToast()
+  const router = useRouter()
 
   return (
-    <ToastProvider swipeDirection="right" duration={4000}>
-      {toasts.map(({ id, title, description, action, ...props }) => {
+    <ToastProvider swipeDirection="right" duration={5000}>
+      {toasts.map(({ id, title, description, action, onNavigate, href, onMarkRead, persistent, undoLabel, onUndo, duration, ...props }) => {
         const { onOpenChange, ...restProps } = props
+
+        const handleNavigate = () => {
+          try {
+            if (onNavigate) {
+              onNavigate()
+              dismiss(id)
+              return
+            }
+            if (href) {
+              router.push(href)
+              dismiss(id)
+            }
+          } catch (err) {
+            // If navigation fails, keep toast
+            console.error('[toast] navigation failed', err)
+          }
+        }
+
+        const handleMarkRead = () => {
+          onMarkRead?.()
+          dismiss(id)
+        }
 
         return (
           <Toast
             key={id}
             {...restProps}
+            duration={duration ?? (persistent ? 0 : 5000)}
             onOpenChange={(open) => {
               onOpenChange?.(open)
               if (!open) {
                 dismiss(id)
+              }
+            }}
+            onClick={(event) => {
+              const target = event.target as HTMLElement | null
+              if (target?.closest('[data-toast-action="true"]')) return
+              if (onNavigate || href) {
+                handleNavigate()
+              }
+            }}
+            role={onNavigate || href ? 'button' : restProps.role}
+            tabIndex={onNavigate || href ? 0 : restProps.tabIndex}
+            onKeyDown={(event) => {
+              if (!onNavigate && !href) return
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                handleNavigate()
               }
             }}
           >
@@ -28,8 +69,33 @@ export function Toaster() {
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}
             </div>
-            {action}
-            <ToastClose onClick={() => dismiss(id)} />
+            <div className="flex flex-wrap items-center gap-2">
+              {action}
+              {onUndo && (
+                <ToastAction
+                  data-toast-action="true"
+                  altText={undoLabel ?? 'Undo'}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onUndo()
+                    dismiss(id)
+                  }}
+                >
+                  {undoLabel ?? 'Undo'}
+                </ToastAction>
+              )}
+              <ToastAction
+                data-toast-action="true"
+                altText="Mark as read"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  handleMarkRead()
+                }}
+              >
+                Mark as read
+              </ToastAction>
+              <ToastClose data-toast-action="true" onClick={() => dismiss(id)} />
+            </div>
           </Toast>
         )
       })}

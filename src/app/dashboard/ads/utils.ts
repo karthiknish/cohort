@@ -1,14 +1,10 @@
 import { formatDistanceToNow } from 'date-fns'
 
 import { DISPLAY_DATE_FORMATTER, FREQUENCY_OPTIONS, TIMEFRAME_OPTIONS } from './constants'
-import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
+import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 
 export function getErrorMessage(error: unknown, fallback: string): string {
-  const message = getFriendlyAuthErrorMessage(error)
-  if (message && message !== 'Authentication failed. Please try again.') {
-    return message
-  }
-  return fallback
+    return formatUserFacingErrorMessage(error, fallback)
 }
 
 export function formatRelativeTimestamp(iso?: string | null): string {

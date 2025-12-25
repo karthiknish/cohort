@@ -7,7 +7,11 @@ import { createApiHandler } from '@/lib/api-handler'
  * GDPR Article 20 - Right to Data Portability
  * Allows users to export all their personal data in a machine-readable format (JSON)
  */
-export const GET = createApiHandler({}, async (req, { auth }) => {
+export const GET = createApiHandler(
+  {
+    rateLimit: 'sensitive',
+  },
+  async (req, { auth }) => {
   const userId = auth.uid!
   const exportData: Record<string, unknown> = {
     exportedAt: new Date().toISOString(),

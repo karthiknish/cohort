@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
 import { createApiHandler } from '@/lib/api-handler'
+import { UnauthorizedError } from '@/lib/api-errors'
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
@@ -17,11 +18,12 @@ const workerSchema = z.object({
 export const POST = createApiHandler(
   {
     bodySchema: workerSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     // Verify this is an authorized cron/worker request
     if (!auth.isCron) {
-      return { error: 'Worker authentication required', status: 401 }
+      throw new UnauthorizedError('Worker authentication required')
     }
 
     const startedAt = Date.now()

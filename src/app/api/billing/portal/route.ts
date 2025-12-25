@@ -2,10 +2,10 @@ import { FieldValue } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
 import { z } from 'zod'
 
-import { checkRateLimit } from '@/lib/rate-limit'
 import { ensureStripeCustomer } from '@/lib/billing'
 import { getStripeClient } from '@/lib/stripe'
 import { resolveWorkspaceContext } from '@/lib/workspace'
+import { ApiError, NotFoundError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
 import { createApiHandler } from '@/lib/api-handler'
 
 const portalSchema = z.object({
@@ -16,16 +16,11 @@ const portalSchema = z.object({
 export const POST = createApiHandler(
   {
     bodySchema: portalSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     if (!auth.uid) {
-      return { error: 'Authentication required', status: 401 }
-    }
-
-    // Rate limit: 10 portal access attempts per minute per user
-    const rateLimitResult = await checkRateLimit(`portal:${auth.uid}`)
-    if (!rateLimitResult.success) {
-      return { error: 'Too many requests. Please wait a moment.', status: 429 }
+      throw new UnauthorizedError('Authentication required')
     }
 
     const stripe = getStripeClient()
@@ -44,7 +39,7 @@ export const POST = createApiHandler(
         const clientSnapshot = await clientRef.get()
 
         if (!clientSnapshot.exists) {
-          return { error: 'Client not found', status: 404 }
+          throw new NotFoundError('Client not found')
         }
 
         const clientData = clientSnapshot.data() as { stripeCustomerId?: unknown }
@@ -54,7 +49,7 @@ export const POST = createApiHandler(
             : null
 
         if (!stripeCustomerId) {
-          return { error: 'This client does not have a Stripe customer profile yet', status: 400 }
+          throw new ValidationError('This client does not have a Stripe customer profile yet')
         }
 
         const portalSession = await stripe.billingPortal.sessions.create({
@@ -92,7 +87,7 @@ export const POST = createApiHandler(
       return { url: portalSession.url, sessionId: portalSession.id }
     } catch (error: unknown) {
       if (isStripeError(error)) {
-        return { error: error.message, status: error.statusCode ?? 400 }
+        throw new ApiError(error.message, error.statusCode ?? 400, 'STRIPE_ERROR')
       }
       throw error
     }

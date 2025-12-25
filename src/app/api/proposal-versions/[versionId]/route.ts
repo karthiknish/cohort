@@ -5,6 +5,8 @@ import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import type { ProposalVersion } from '@/types/proposal-versions'
+import { toISO } from '@/lib/utils'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const querySchema = z.object({
   proposalId: z.string().trim().min(1, 'Proposal ID is required'),
@@ -24,20 +26,6 @@ type StoredVersion = {
   createdBy?: string
   createdByName?: string | null
   createdAt?: unknown
-}
-
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
 }
 
 function mapVersionDoc(docId: string, data: StoredVersion): ProposalVersion {
@@ -61,13 +49,14 @@ function mapVersionDoc(docId: string, data: StoredVersion): ProposalVersion {
 export const GET = createApiHandler(
   {
     querySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query, params }) => {
     const { versionId } = params as { versionId: string }
     const { proposalId } = query
 
     if (!versionId) {
-      return { error: 'Version ID required', status: 400 }
+      throw new ValidationError('Version ID required')
     }
 
     // Verify proposal ownership
@@ -75,14 +64,14 @@ export const GET = createApiHandler(
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return { error: 'Proposal not found', status: 404 }
+      throw new NotFoundError('Proposal not found')
     }
 
     const versionRef = proposalRef.collection('versions').doc(versionId)
     const versionSnap = await versionRef.get()
 
     if (!versionSnap.exists) {
-      return { error: 'Version not found', status: 404 }
+      throw new NotFoundError('Version not found')
     }
 
     const version = mapVersionDoc(versionSnap.id, versionSnap.data() as StoredVersion)
@@ -94,13 +83,14 @@ export const GET = createApiHandler(
 export const POST = createApiHandler(
   {
     bodySchema: restoreSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body, params }) => {
     const { versionId } = params as { versionId: string }
     const { proposalId } = body
 
     if (!versionId) {
-      return { error: 'Version ID required', status: 400 }
+      throw new ValidationError('Version ID required')
     }
 
     // Verify proposal ownership
@@ -108,14 +98,14 @@ export const POST = createApiHandler(
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return { error: 'Proposal not found', status: 404 }
+      throw new NotFoundError('Proposal not found')
     }
 
     const versionRef = proposalRef.collection('versions').doc(versionId)
     const versionSnap = await versionRef.get()
 
     if (!versionSnap.exists) {
-      return { error: 'Version not found', status: 404 }
+      throw new NotFoundError('Version not found')
     }
 
     const versionData = versionSnap.data() as StoredVersion

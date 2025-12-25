@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, ChangeEvent, DragEvent } from 'react'
 import { ImagePlus, Loader2, Trash2, Upload } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { LazyImage } from '@/components/ui/lazy-image'
 import { cn } from '@/lib/utils'
 
 interface ImageUploaderProps {
@@ -147,7 +148,7 @@ export function ImageUploader({
         <div className="relative group">
           <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <LazyImage
               src={previewUrl}
               alt="Feature preview"
               className="h-full w-full object-cover"

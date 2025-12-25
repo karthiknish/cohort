@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
@@ -6,7 +6,9 @@ import { adminDb } from '@/lib/firebase-admin'
 import { AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
-import { createApiHandler } from '@/lib/api-handler'
+import { apiSuccess, createApiHandler } from '@/lib/api-handler'
+import { NotFoundError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 const recurringInvoiceQuerySchema = z.object({
   activeOnly: z.string().optional(),
@@ -59,20 +61,6 @@ type StoredSchedule = {
   createdBy?: unknown
   createdAt?: unknown
   updatedAt?: unknown
-}
-
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
 }
 
 function mapScheduleDoc(docId: string, data: StoredSchedule): RecurringInvoiceSchedule {
@@ -165,6 +153,7 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: recurringInvoiceQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -206,6 +195,7 @@ export const POST = createApiHandler(
   {
     workspace: 'required',
     bodySchema: createScheduleSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body: input }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -214,7 +204,7 @@ export const POST = createApiHandler(
     const clientSnap = await clientRef.get()
 
     if (!clientSnap.exists) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+      throw new NotFoundError('Client not found')
     }
 
     const clientData = clientSnap.data() ?? {}
@@ -254,6 +244,6 @@ export const POST = createApiHandler(
     const createdDoc = await docRef.get()
     const schedule = mapScheduleDoc(createdDoc.id, createdDoc.data() as StoredSchedule)
 
-    return NextResponse.json({ schedule }, { status: 201 })
+    return NextResponse.json(apiSuccess({ schedule }), { status: 201 })
   }
 )

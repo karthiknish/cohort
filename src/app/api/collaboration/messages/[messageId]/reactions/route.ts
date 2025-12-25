@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
@@ -8,6 +8,7 @@ import {
   type StoredMessage,
 } from '@/app/api/collaboration/messages/route'
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const toggleSchema = z.object({
   emoji: z
@@ -22,13 +23,14 @@ export const POST = createApiHandler(
   {
     workspace: 'required',
     bodySchema: toggleSchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, body, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const uid = auth.uid as string
     const { messageId } = params as { messageId: string }
     if (!messageId) {
-      return NextResponse.json({ error: 'Message id is required' }, { status: 400 })
+      throw new ValidationError('Message id is required')
     }
 
     const messageRef = workspace.collaborationCollection.doc(messageId)
@@ -36,7 +38,7 @@ export const POST = createApiHandler(
     const result = await workspace.collaborationCollection.firestore.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(messageRef)
       if (!snapshot.exists) {
-        return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+        throw new NotFoundError('Message not found')
       }
 
       const data = snapshot.data() as StoredMessage

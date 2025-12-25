@@ -62,6 +62,8 @@ export interface UseCollaborationDataReturn {
   // Messages
   channelMessages: CollaborationMessage[]
   visibleMessages: CollaborationMessage[]
+  searchingMessages: boolean
+  searchHighlights: string[]
   isCurrentChannelLoading: boolean
   isBootstrapping: boolean
   messagesError: string | null

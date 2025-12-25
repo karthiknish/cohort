@@ -21,7 +21,11 @@ async function deleteCollectionRecursively(collectionRef: CollectionReference, b
   }
 }
 
-export const DELETE = createApiHandler({}, async (req, { auth }) => {
+export const DELETE = createApiHandler(
+  {
+    rateLimit: 'sensitive',
+  },
+  async (req, { auth }) => {
   const userRef = adminDb.collection('users').doc(auth.uid!)
 
   const subcollections = await userRef.listCollections()

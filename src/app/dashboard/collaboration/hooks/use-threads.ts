@@ -26,15 +26,15 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
   const fetchThreadReplies = useCallback(
     async (
       threadRootId: string,
-      options: { cursor?: string | null; replace?: boolean } = {}
+      options: { after?: string | null; replace?: boolean } = {}
     ): Promise<void> => {
       const trimmedId = threadRootId.trim()
       if (!trimmedId) {
         return
       }
 
-      const cursor = options.cursor ?? null
-      const shouldReplace = options.replace ?? !cursor
+      const after = options.after ?? null
+      const shouldReplace = options.replace ?? !after
 
       setThreadErrorsByRootId((prev) => ({
         ...prev,
@@ -50,8 +50,8 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
         const params = new URLSearchParams()
         params.set('threadRootId', trimmedId)
         params.set('pageSize', THREAD_PAGE_SIZE.toString())
-        if (cursor) {
-          params.set('cursor', cursor)
+        if (after) {
+          params.set('after', after)
         }
 
         const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
@@ -155,7 +155,7 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
         return
       }
 
-      await fetchThreadReplies(trimmedId, { cursor: null, replace: true })
+      await fetchThreadReplies(trimmedId, { after: null, replace: true })
     },
     [fetchThreadReplies]
   )
@@ -172,7 +172,7 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
         return
       }
 
-      await fetchThreadReplies(trimmedId, { cursor, replace: false })
+      await fetchThreadReplies(trimmedId, { after: cursor, replace: false })
     },
     [fetchThreadReplies, threadNextCursorByRootId]
   )

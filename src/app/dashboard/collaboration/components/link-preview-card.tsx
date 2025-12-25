@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { ExternalLink, Image as ImageIcon, Loader2 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { LazyImage } from "@/components/ui/lazy-image"
 import { cn } from "@/lib/utils"
 
 interface LinkPreviewCardProps {
@@ -70,12 +71,10 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : imageUrl ? (
-            <img
+            <LazyImage
               src={imageUrl}
               alt={title}
               className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
               onError={(event) => {
                 event.currentTarget.style.display = "none"
               }}

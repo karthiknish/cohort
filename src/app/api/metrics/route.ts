@@ -3,6 +3,8 @@ import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 const querySchema = z.object({
   userId: z.string().optional(),
@@ -14,42 +16,24 @@ const querySchema = z.object({
 const PAGE_SIZE_DEFAULT = 100
 const PAGE_SIZE_MAX = 500
 
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
-}
-
 export const GET = createApiHandler(
   {
     querySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     let userId: string | null = null
     if (auth.isCron) {
       userId = query.userId ?? null
       if (!userId) {
-        return { error: 'Cron requests must specify userId', status: 400 }
+        throw new ValidationError('Cron requests must specify userId')
       }
     } else {
       userId = auth.uid ?? null
     }
 
     if (!userId) {
-      return { error: 'Unable to resolve user context', status: 401 }
+      throw new UnauthorizedError('Unable to resolve user context')
     }
 
     const clientIds = query.clientIds

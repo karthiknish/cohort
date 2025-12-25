@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useMemo, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -74,7 +74,19 @@ const allNavigation: NavItem[] = [
 
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user } = useAuth()
+  const prefetchRoute = (href: string) => {
+    if (!href) return
+    const target = href.split('?')[0]
+    if (target && target !== pathname) {
+      try {
+        router.prefetch(href)
+      } catch {
+        // ignore prefetch failures
+      }
+    }
+  }
   
   // Persist last visited dashboard tab
   useEffect(() => {
@@ -116,7 +128,13 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                   )}
                 >
-                  <Link href={item.href} onClick={onNavigate} className="flex w-full items-center gap-2">
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    onMouseEnter={() => prefetchRoute(item.href)}
+                    onFocus={() => prefetchRoute(item.href)}
+                    className="flex w-full items-center gap-2"
+                  >
                     <item.icon className={cn('h-4 w-4 shrink-0 transition-transform duration-200', !isActive && 'group-hover:scale-110')} />
                     <span className={cn(collapsed && 'hidden', 'truncate')}>{item.name}</span>
                   </Link>
@@ -153,7 +171,12 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                     variant="ghost"
                     className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
                   >
-                    <Link href="/admin" onClick={onNavigate}>
+                    <Link
+                      href="/admin"
+                      onClick={onNavigate}
+                      onMouseEnter={() => prefetchRoute('/admin')}
+                      onFocus={() => prefetchRoute('/admin')}
+                    >
                       <Shield className="h-4 w-4" />
                       <span className={cn(collapsed && 'hidden')}>Admin</span>
                     </Link>
@@ -169,7 +192,12 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                 variant="ghost"
                 className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
               >
-                <Link href="/admin" onClick={onNavigate}>
+                <Link
+                  href="/admin"
+                  onClick={onNavigate}
+                  onMouseEnter={() => prefetchRoute('/admin')}
+                  onFocus={() => prefetchRoute('/admin')}
+                >
                   <Shield className="mr-2 h-4 w-4" />
                   <span className={cn(collapsed && 'hidden')}>Admin Panel</span>
                 </Link>
@@ -185,7 +213,12 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                   variant="ghost"
                   className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
                 >
-                  <Link href="/settings" onClick={onNavigate}>
+                  <Link
+                    href="/settings"
+                    onClick={onNavigate}
+                    onMouseEnter={() => prefetchRoute('/settings')}
+                    onFocus={() => prefetchRoute('/settings')}
+                  >
                     <Settings className="h-4 w-4" />
                     <span className={cn(collapsed && 'hidden')}>Settings</span>
                   </Link>
@@ -201,7 +234,12 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
               variant="ghost"
               className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
             >
-              <Link href="/settings" onClick={onNavigate}>
+              <Link
+                href="/settings"
+                onClick={onNavigate}
+                onMouseEnter={() => prefetchRoute('/settings')}
+                onFocus={() => prefetchRoute('/settings')}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 <span className={cn(collapsed && 'hidden')}>Settings</span>
               </Link>

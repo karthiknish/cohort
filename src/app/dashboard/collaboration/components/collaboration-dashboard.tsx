@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { MessageSquare, Users, Briefcase, X } from 'lucide-react'
+import { MessageSquare, Users, Briefcase, X, Columns3, List } from 'lucide-react'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,8 @@ import { CollaborationSidebar } from './sidebar'
 import { useCollaborationData } from '../hooks'
 import { CollaborationSkeleton } from './collaboration-skeleton'
 import { isFeatureEnabled } from '@/lib/features'
+import type { Channel } from '../types'
+import type { ChannelSummary } from '../hooks/types'
 
 import { CheckSquare, FileText } from 'lucide-react'
 
@@ -23,6 +25,7 @@ export function CollaborationDashboard() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const {
     channels,
     filteredChannels,
@@ -178,90 +181,211 @@ export function CollaborationDashboard() {
                   <MessageSquare className="h-3 w-3" /> {channelMessages.length} messages
                 </Badge>
               )}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="List view"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'board' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Kanban view"
+                  onClick={() => setViewMode('board')}
+                >
+                  <Columns3 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col p-0 lg:flex-row">
-          <CollaborationChannelList
-            channels={channels}
-            filteredChannels={filteredChannels}
-            selectedChannel={selectedChannel}
-            onSelectChannel={selectChannel}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            channelSummaries={channelSummaries}
-          />
-
-          <CollaborationMessagePane
-            channel={selectedChannel}
-            channelMessages={channelMessages}
-            visibleMessages={visibleMessages}
-            channelParticipants={channelParticipants}
-            messagesError={messagesError}
-            isLoading={isCurrentChannelLoading}
-            onLoadMore={selectedChannel ? () => { void handleLoadMore(selectedChannel.id) } : undefined}
-            canLoadMore={canLoadMore}
-            loadingMore={loadingMore}
-            senderSelection={senderSelection}
-            onSenderSelectionChange={setSenderSelection}
-            messageInput={messageInput}
-            onMessageInputChange={setMessageInput}
-            messageSearchQuery={messageSearchQuery}
-            onMessageSearchChange={setMessageSearchQuery}
-            onSendMessage={(options) => void handleSendMessage(options)}
-            sending={sending}
-            isSendDisabled={isSendDisabled}
-            pendingAttachments={pendingAttachments}
-            onAddAttachments={handleAddAttachments}
-            onRemoveAttachment={handleRemoveAttachment}
-            uploading={uploading}
-            typingParticipants={typingParticipants}
-            onComposerFocus={handleComposerFocus}
-            onComposerBlur={handleComposerBlur}
-            onEditMessage={(messageId, nextContent) => {
-              if (!selectedChannel) return
-              void handleEditMessage(selectedChannel.id, messageId, nextContent)
-            }}
-            onDeleteMessage={(messageId) => {
-              if (!selectedChannel) return
-              void handleDeleteMessage(selectedChannel.id, messageId)
-            }}
-            onToggleReaction={(messageId, emoji) => {
-              if (!selectedChannel) return
-              void handleToggleReaction(selectedChannel.id, messageId, emoji)
-            }}
-            messageUpdatingId={messageUpdatingId}
-            messageDeletingId={messageDeletingId}
-            messagesEndRef={messagesEndRef}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            threadMessagesByRootId={threadMessagesByRootId}
-            threadNextCursorByRootId={threadNextCursorByRootId}
-            threadLoadingByRootId={threadLoadingByRootId}
-            threadErrorsByRootId={threadErrorsByRootId}
-            onLoadThreadReplies={(threadRootId) => {
-              void loadThreadReplies(threadRootId)
-            }}
-            onLoadMoreThreadReplies={(threadRootId) => {
-              void loadMoreThreadReplies(threadRootId)
-            }}
-            onClearThreadReplies={clearThreadReplies}
-            reactionPendingByMessage={reactionPendingByMessage}
-          />
-
-          {selectedChannel && (
+        <CardContent className={viewMode === 'board' ? "p-4" : "flex flex-col p-0 lg:flex-row"}>
+          {viewMode === 'board' ? (
+            <CollaborationKanban
+              channels={filteredChannels}
+              channelSummaries={channelSummaries}
+              onSelect={(channelId) => {
+                selectChannel(channelId)
+                setViewMode('list')
+              }}
+            />
+          ) : (
             <>
-              <Separator orientation="vertical" className="hidden h-[640px] lg:block" />
-              <CollaborationSidebar
-                channel={selectedChannel}
-                channelParticipants={channelParticipants}
-                sharedFiles={sharedFiles}
+              <CollaborationChannelList
+                channels={channels}
+                filteredChannels={filteredChannels}
+                selectedChannel={selectedChannel}
+                onSelectChannel={selectChannel}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                channelSummaries={channelSummaries}
               />
+
+              <CollaborationMessagePane
+                channel={selectedChannel}
+                channelMessages={channelMessages}
+                visibleMessages={visibleMessages}
+                channelParticipants={channelParticipants}
+                messagesError={messagesError}
+                isLoading={isCurrentChannelLoading}
+                onLoadMore={selectedChannel ? () => { void handleLoadMore(selectedChannel.id) } : undefined}
+                canLoadMore={canLoadMore}
+                loadingMore={loadingMore}
+                senderSelection={senderSelection}
+                onSenderSelectionChange={setSenderSelection}
+                messageInput={messageInput}
+                onMessageInputChange={setMessageInput}
+                messageSearchQuery={messageSearchQuery}
+                onMessageSearchChange={setMessageSearchQuery}
+                onSendMessage={(options) => void handleSendMessage(options)}
+                sending={sending}
+                isSendDisabled={isSendDisabled}
+                pendingAttachments={pendingAttachments}
+                onAddAttachments={handleAddAttachments}
+                onRemoveAttachment={handleRemoveAttachment}
+                uploading={uploading}
+                typingParticipants={typingParticipants}
+                onComposerFocus={handleComposerFocus}
+                onComposerBlur={handleComposerBlur}
+                onEditMessage={(messageId, nextContent) => {
+                  if (!selectedChannel) return
+                  void handleEditMessage(selectedChannel.id, messageId, nextContent)
+                }}
+                onDeleteMessage={(messageId) => {
+                  if (!selectedChannel) return
+                  void handleDeleteMessage(selectedChannel.id, messageId)
+                }}
+                onToggleReaction={(messageId, emoji) => {
+                  if (!selectedChannel) return
+                  void handleToggleReaction(selectedChannel.id, messageId, emoji)
+                }}
+                messageUpdatingId={messageUpdatingId}
+                messageDeletingId={messageDeletingId}
+                messagesEndRef={messagesEndRef}
+                currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                threadMessagesByRootId={threadMessagesByRootId}
+                threadNextCursorByRootId={threadNextCursorByRootId}
+                threadLoadingByRootId={threadLoadingByRootId}
+                threadErrorsByRootId={threadErrorsByRootId}
+                onLoadThreadReplies={(threadRootId) => {
+                  void loadThreadReplies(threadRootId)
+                }}
+                onLoadMoreThreadReplies={(threadRootId) => {
+                  void loadMoreThreadReplies(threadRootId)
+                }}
+                onClearThreadReplies={clearThreadReplies}
+                reactionPendingByMessage={reactionPendingByMessage}
+              />
+
+              {selectedChannel && (
+                <>
+                  <Separator orientation="vertical" className="hidden h-[640px] lg:block" />
+                  <CollaborationSidebar
+                    channel={selectedChannel}
+                    channelParticipants={channelParticipants}
+                    sharedFiles={sharedFiles}
+                  />
+                </>
+              )}
             </>
           )}
         </CardContent>
       </Card>
 
+    </div>
+  )
+}
+
+type CollaborationKanbanProps = {
+  channels: Channel[]
+  channelSummaries: Map<string, ChannelSummary>
+  onSelect: (channelId: string) => void
+}
+
+function CollaborationKanban({ channels, channelSummaries, onSelect }: CollaborationKanbanProps) {
+  const grouped = {
+    team: [] as typeof channels,
+    client: [] as typeof channels,
+    project: [] as typeof channels,
+  }
+
+  channels.forEach((channel) => {
+    grouped[channel.type].push(channel)
+  })
+
+  const columnLabel: Record<keyof typeof grouped, string> = {
+    team: 'Team',
+    client: 'Clients',
+    project: 'Projects',
+  }
+
+  const formatUpdated = (value: string | null | undefined) => {
+    if (!value) return 'No activity'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'No activity'
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }
+
+  return (
+    <div className="w-full space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {(['team', 'client', 'project'] as const).map((typeKey) => {
+          const column = grouped[typeKey]
+          return (
+            <div key={typeKey} className="flex flex-col gap-3 rounded-md border border-muted/50 bg-muted/10 p-3">
+              <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                <span>{columnLabel[typeKey]}</span>
+                <Badge variant="outline" className="bg-background text-xs">{column.length}</Badge>
+              </div>
+              {column.length === 0 ? (
+                <div className="rounded-md border border-dashed border-muted/50 bg-background px-3 py-6 text-center text-xs text-muted-foreground">
+                  No channels in this lane
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {column.map((channel) => {
+                    const summary = channelSummaries.get(channel.id)
+                    return (
+                      <button
+                        key={channel.id}
+                        type="button"
+                        onClick={() => onSelect(channel.id)}
+                        className="w-full rounded-md border border-muted/40 bg-background p-3 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            {channel.type === 'team' && <Users className="h-4 w-4 text-muted-foreground" />}
+                            {channel.type === 'client' && <Briefcase className="h-4 w-4 text-muted-foreground" />}
+                            {channel.type === 'project' && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+                            <span className="truncate" title={channel.name}>{channel.name}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-[10px]">{channel.teamMembers.length} people</Badge>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                          {summary?.lastMessage || 'No messages yet'}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span>{formatUpdated(summary?.lastTimestamp)}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            {summary?.lastMessage ? 'Active' : 'Idle'}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

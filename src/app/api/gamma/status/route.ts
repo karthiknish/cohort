@@ -5,7 +5,7 @@ import { gammaService, GAMMA_IMAGE_MODEL_CREDITS, GAMMA_RECOMMENDED_MODELS } fro
  * GET /api/gamma/status
  * Check Gamma API configuration status and return available options
  */
-export const GET = createApiHandler({}, async () => {
+export const GET = createApiHandler({ rateLimit: 'standard' }, async () => {
   const isConfigured = gammaService.isConfigured()
 
   if (!isConfigured) {

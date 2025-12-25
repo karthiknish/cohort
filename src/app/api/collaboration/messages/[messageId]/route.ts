@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
@@ -9,6 +9,7 @@ import {
   messageFormatSchema,
   type StoredMessage,
 } from '@/app/api/collaboration/messages/route'
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const updateSchema = z.object({
   content: z.string().trim().min(1, 'Message content cannot be empty').max(2000),
@@ -20,18 +21,19 @@ export const PATCH = createApiHandler(
   {
     workspace: 'required',
     bodySchema: updateSchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, body, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const { messageId } = params as { messageId: string }
     if (!messageId) {
-      return NextResponse.json({ error: 'Message id is required' }, { status: 400 })
+      throw new ValidationError('Message id is required')
     }
 
     const messageRef = workspace.collaborationCollection.doc(messageId)
     const snapshot = await messageRef.get()
     if (!snapshot.exists) {
-      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+      throw new NotFoundError('Message not found')
     }
 
     const data = snapshot.data() as Record<string, unknown>
@@ -41,14 +43,14 @@ export const PATCH = createApiHandler(
     const deletedBy = data.deletedBy
 
     if (deleted || deletedAt || deletedBy) {
-      return NextResponse.json({ error: 'Cannot edit a deleted message' }, { status: 409 })
+      throw new ConflictError('Cannot edit a deleted message')
     }
 
     const isAuthor = senderId === auth.uid
     const isAdmin = auth.claims?.role === 'admin'
 
     if (!isAuthor && !isAdmin) {
-      return NextResponse.json({ error: 'Insufficient permissions to edit this message' }, { status: 403 })
+      throw new ForbiddenError('Insufficient permissions to edit this message')
     }
 
     const trimmedContent = body.content.trim()
@@ -87,19 +89,20 @@ export const PATCH = createApiHandler(
 export const DELETE = createApiHandler(
   {
     workspace: 'required',
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const { messageId } = params as { messageId: string }
     if (!messageId) {
-      return NextResponse.json({ error: 'Message id is required' }, { status: 400 })
+      throw new ValidationError('Message id is required')
     }
 
     const messageRef = workspace.collaborationCollection.doc(messageId)
     const snapshot = await messageRef.get()
 
     if (!snapshot.exists) {
-      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+      throw new NotFoundError('Message not found')
     }
 
     const data = snapshot.data() as Record<string, unknown>
@@ -108,7 +111,7 @@ export const DELETE = createApiHandler(
     const isAdmin = auth.claims?.role === 'admin'
 
     if (!isAuthor && !isAdmin) {
-      return NextResponse.json({ error: 'Insufficient permissions to delete this message' }, { status: 403 })
+      throw new ForbiddenError('Insufficient permissions to delete this message')
     }
 
     await messageRef.update({

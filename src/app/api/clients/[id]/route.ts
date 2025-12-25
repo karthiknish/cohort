@@ -1,22 +1,24 @@
 import { createApiHandler } from '@/lib/api-handler'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
 export const DELETE = createApiHandler(
   { 
     adminOnly: true,
-    workspace: 'required'
+    workspace: 'required',
+    rateLimit: 'sensitive'
   },
   async (req, { workspace, params }) => {
     const clientId = (params.id as string)?.trim()
 
     if (!clientId) {
-      return { error: 'Client id is required', status: 400 }
+      throw new ValidationError('Client id is required')
     }
 
     const docRef = workspace!.clientsCollection.doc(clientId)
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {
-      return { error: 'Client not found', status: 404 }
+      throw new NotFoundError('Client not found')
     }
 
     await docRef.delete()

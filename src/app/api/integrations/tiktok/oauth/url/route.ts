@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { buildTikTokOAuthUrl, createTikTokOAuthState } from '@/services/tiktok-business'
 import { createApiHandler } from '@/lib/api-handler'
+import { ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
@@ -9,10 +10,11 @@ const querySchema = z.object({
 export const POST = createApiHandler(
   {
     querySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     if (!auth.uid) {
-      return { error: 'Authentication required', status: 401 }
+      throw new UnauthorizedError('Authentication required')
     }
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY
@@ -20,7 +22,7 @@ export const POST = createApiHandler(
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
     if (!clientKey || !redirectUri) {
-      return { error: 'TikTok OAuth is not configured', status: 500 }
+      throw new ServiceUnavailableError('TikTok OAuth is not configured')
     }
 
     const redirect = query.redirect ?? `${appUrl}/dashboard/ads`

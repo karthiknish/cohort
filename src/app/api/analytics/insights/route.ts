@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { AuthenticationError } from '@/lib/server-auth'
 import { geminiAI } from '@/services/gemini'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, toISO } from '@/lib/utils'
 import { createApiHandler } from '@/lib/api-handler'
+import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
 import { calculateAlgorithmicInsights, getGlobalBudgetSuggestions, AdMetricsSummary, enrichSummaryWithMetrics } from '@/lib/ad-algorithms'
 
 const insightsQuerySchema = z.object({
@@ -39,42 +40,24 @@ interface ProviderSummary {
   period: string
 }
 
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
-}
-
 export const GET = createApiHandler(
   {
     querySchema: insightsQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     let userId: string | null = null
     if (auth.isCron) {
       userId = query.userId ?? null
       if (!userId) {
-        return NextResponse.json({ error: 'Cron requests must specify userId' }, { status: 400 })
+        throw new ValidationError('Cron requests must specify userId')
       }
     } else {
       userId = auth.uid ?? null
     }
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
+      throw new UnauthorizedError('Unable to resolve user context')
     }
 
     const clientIdFilter = query.clientId?.trim() ?? null

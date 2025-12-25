@@ -1,17 +1,22 @@
+import { z } from 'zod'
+
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
 import { ensureGoogleAccessToken, IntegrationTokenError } from '@/lib/integration-token-refresh'
 import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
 import { createApiHandler } from '@/lib/api-handler'
+import { ValidationError, NotFoundError } from '@/lib/api-errors'
 
-export const POST = createApiHandler({}, async (req, { auth }) => {
+const bodySchema = z.object({}).strict()
+
+export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, async (req, { auth }) => {
   if (!auth.uid) {
-    return { error: 'User context is required', status: 400 }
+    throw new ValidationError('User context is required')
   }
 
   try {
     const integration = await getAdIntegration({ userId: auth.uid, providerId: 'google' })
     if (!integration) {
-      return { error: 'Google Ads integration not found', status: 404 }
+      throw new NotFoundError('Google Ads integration not found')
     }
 
     const accessToken = await ensureGoogleAccessToken({ userId: auth.uid })
@@ -23,7 +28,7 @@ export const POST = createApiHandler({}, async (req, { auth }) => {
     })
 
     if (!accounts.length) {
-      return { error: 'No Google Ads accounts available for this user', status: 404 }
+      throw new NotFoundError('No Google Ads accounts available for this user')
     }
 
     const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]
@@ -50,11 +55,11 @@ export const POST = createApiHandler({}, async (req, { auth }) => {
     }
   } catch (error) {
     if (error instanceof IntegrationTokenError) {
-      return { error: error.message, status: 400 }
+      throw new ValidationError(error.message ?? 'Token refresh failed')
     }
 
     if (error instanceof Error && error.message.toLowerCase().includes('developer token')) {
-      return { error: error.message, status: 400 }
+      throw new ValidationError(error.message)
     }
 
     throw error

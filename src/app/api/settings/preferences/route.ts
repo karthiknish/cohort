@@ -1,11 +1,12 @@
 'use server'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { SUPPORTED_CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from '@/constants/currencies'
 import { createApiHandler } from '@/lib/api-handler'
+import { ValidationError } from '@/lib/api-errors'
 
 interface UserPreferences {
   currency: CurrencyCode
@@ -25,7 +26,7 @@ const preferencesSchema = z.object({
   locale: z.string().optional(),
 })
 
-export const GET = createApiHandler({}, async (req, { auth }) => {
+export const GET = createApiHandler({ rateLimit: 'standard' }, async (req, { auth }) => {
   const uid = auth.uid!
 
   const docRef = adminDb.collection('userPreferences').doc(uid)
@@ -49,6 +50,7 @@ export const GET = createApiHandler({}, async (req, { auth }) => {
 export const POST = createApiHandler(
   {
     bodySchema: preferencesSchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, body }) => {
     const uid = auth.uid!
@@ -60,7 +62,7 @@ export const POST = createApiHandler(
       if (normalizedCurrency in SUPPORTED_CURRENCIES) {
         updates.currency = normalizedCurrency
       } else {
-        return NextResponse.json({ error: 'Unsupported currency code' }, { status: 400 })
+        throw new ValidationError('Unsupported currency code')
       }
     }
 
@@ -75,7 +77,7 @@ export const POST = createApiHandler(
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No valid preferences provided' }, { status: 400 })
+      throw new ValidationError('No valid preferences provided')
     }
 
     const docRef = adminDb.collection('userPreferences').doc(uid)

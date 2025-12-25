@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { LazyImage } from "@/components/ui/lazy-image"
 import { cn } from "@/lib/utils"
 
 interface ImagePreviewModalProps {
@@ -269,7 +270,7 @@ export function ImagePreviewModal({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        <img
+        <LazyImage
           src={currentImage.url}
           alt={currentImage.name}
           className={cn(
@@ -309,7 +310,7 @@ export function ImagePreviewModal({
                 setPosition({ x: 0, y: 0 })
               }}
             >
-              <img
+              <LazyImage
                 src={image.url}
                 alt={image.name}
                 className="h-full w-full object-cover"

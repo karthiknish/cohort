@@ -1,5 +1,14 @@
 export type FinanceCostCadence = 'monthly' | 'quarterly' | 'annual'
 
+export type ExpenseCategory =
+  | 'people'
+  | 'saas'
+  | 'marketing'
+  | 'operations'
+  | 'travel'
+  | 'training'
+  | 'other'
+
 export type FinanceCostEntry = {
   id: string
   category: string
@@ -56,6 +65,11 @@ export type FinanceCurrencyTotals = {
   refundTotal: number
 }
 
+export type FinanceBudget = {
+  totalMonthlyBudget: number
+  categoryBudgets: Record<string, number>
+}
+
 export type FinanceSummaryResponse = {
   revenue: FinanceRevenueRecord[]
   invoices: FinanceInvoice[]
@@ -63,6 +77,7 @@ export type FinanceSummaryResponse = {
   payments: FinancePaymentSummary
   invoiceNextCursor?: string | null
   costNextCursor?: string | null
+  budget?: FinanceBudget
 }
 
 export type FinancePaymentSummary = {

@@ -7,16 +7,17 @@ import { adminDb } from '@/lib/firebase-admin'
 import { recordInvoicePaidNotification, notifyInvoicePaidWhatsApp } from '@/lib/notifications'
 import { syncInvoiceRecords, recordInvoiceRevenue } from '@/lib/finance-sync'
 import { createApiHandler } from '@/lib/api-handler'
+import { ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 
 // Maximum age of webhook events to accept (5 minutes)
 const WEBHOOK_TOLERANCE_SECONDS = 300
 
-export const POST = createApiHandler({ auth: 'none' }, async (req) => {
+export const POST = createApiHandler({ auth: 'none', rateLimit: 'standard' }, async (req) => {
   const body = await req.text()
   const signature = (await headers()).get('stripe-signature')
 
   if (!signature) {
-    return { error: 'Missing stripe-signature', status: 400 }
+    throw new ValidationError('Missing stripe-signature')
   }
 
   const stripe = getStripeClient()
@@ -24,7 +25,7 @@ export const POST = createApiHandler({ auth: 'none' }, async (req) => {
 
   if (!webhookSecret) {
     console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set')
-    return { error: 'Server configuration error', status: 500 }
+    throw new ServiceUnavailableError('Server configuration error')
   }
 
   let event: Stripe.Event
@@ -34,14 +35,14 @@ export const POST = createApiHandler({ auth: 'none' }, async (req) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error(`[stripe-webhook] Webhook signature verification failed: ${message}`)
-    return { error: 'Invalid signature', status: 400 }
+    throw new ValidationError('Invalid signature')
   }
 
   // Replay attack protection: reject events older than tolerance
   const eventAge = Math.floor(Date.now() / 1000) - event.created
   if (eventAge > WEBHOOK_TOLERANCE_SECONDS) {
     console.warn(`[stripe-webhook] Rejecting stale event ${event.id}, age: ${eventAge}s`)
-    return { error: 'Event too old', status: 400 }
+    throw new ValidationError('Event too old')
   }
 
   // Idempotency check: ensure we haven't processed this event before
@@ -76,7 +77,7 @@ export const POST = createApiHandler({ auth: 'none' }, async (req) => {
     })
   } catch (error) {
     console.error(`[stripe-webhook] Error handling event ${event.type}`, error)
-    return { error: 'Webhook handler failed', status: 500 }
+    throw new ServiceUnavailableError('Webhook handler failed')
   }
 
   return { received: true }

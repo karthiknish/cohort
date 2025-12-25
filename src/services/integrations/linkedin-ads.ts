@@ -1,3 +1,4 @@
+import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 import { NormalizedMetric } from '@/types/integrations'
 
 // =============================================================================
@@ -208,10 +209,7 @@ function normalizeCurrency(value: unknown): number {
   return Number(value) || 0
 }
 
-function coerceNumber(value: unknown): number {
-  const parsed = typeof value === 'string' ? parseFloat(value) : Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
+const coerceNumber = (value: unknown): number => coerceNumberNullable(value) ?? 0
 
 function isRetryableStatus(status: number): boolean {
   return status === 429 || (status >= 500 && status < 600)

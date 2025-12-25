@@ -16,13 +16,14 @@ import {
 } from '@/services/finance'
 import type {
   FinanceCostEntry,
+  FinanceBudget,
   FinanceInvoice,
   FinanceInvoiceStatus,
   FinancePaymentSummary,
   FinanceRevenueRecord,
 } from '@/types/finance'
 
-import { formatCurrency, formatCurrencyDistribution, getPrimaryCurrencyTotals, normalizeMonthly } from '../utils'
+import { formatCurrency, formatCurrencyDistribution, getPrimaryCurrencyTotals, normalizeMonthly, sumByCategory, buildFinanceForecast } from '../utils'
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -87,6 +88,11 @@ type FinanceHookReturn = {
   costs: Array<FinanceCostEntry & { monthlyValue: number }>
   monthlyCostTotal: number
   revenueByClient: Array<{ name: string; revenue: number; percentage: number }>
+  categorySpend: Record<string, number>
+  budget: FinanceBudget
+  updateBudgetTarget: (amount: number) => void
+  updateCategoryBudget: (category: string, amount: number) => void
+  forecast: Array<{ label: string; revenue: number; profit: number }>
   upcomingPayments: FinanceInvoice[]
   newCost: CostFormState
   setNewCost: (value: CostFormState | ((prev: CostFormState) => CostFormState)) => void
@@ -133,6 +139,7 @@ export function useFinanceData(): FinanceHookReturn {
   const [loadingMoreInvoices, setLoadingMoreInvoices] = useState(false)
   const [loadingMoreCosts, setLoadingMoreCosts] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+  const [budget, setBudget] = useState<FinanceBudget>({ totalMonthlyBudget: 0, categoryBudgets: {} })
   
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -167,6 +174,12 @@ export function useFinanceData(): FinanceHookReturn {
         setPaymentSummary(summary.payments)
       } else {
         setPaymentSummary(calculatePaymentSummary(invoiceEntries))
+      }
+      if (summary.budget) {
+        setBudget({
+          totalMonthlyBudget: summary.budget.totalMonthlyBudget ?? 0,
+          categoryBudgets: summary.budget.categoryBudgets ?? {},
+        })
       }
       setInvoiceNextCursor(typeof summary.invoiceNextCursor === 'string' && summary.invoiceNextCursor.length > 0 ? summary.invoiceNextCursor : null)
       setCostNextCursor(typeof summary.costNextCursor === 'string' && summary.costNextCursor.length > 0 ? summary.costNextCursor : null)
@@ -361,6 +374,7 @@ export function useFinanceData(): FinanceHookReturn {
     () => monthlyCostTotal * (revenueRecords.length || 1),
     [monthlyCostTotal, revenueRecords.length]
   )
+  const categorySpend = useMemo(() => sumByCategory(companyCosts), [companyCosts])
   const primaryCurrencyTotals = useMemo(
     () =>
       getPrimaryCurrencyTotals(paymentSummary.totals) ?? {
@@ -635,6 +649,36 @@ export function useFinanceData(): FinanceHookReturn {
     [companyCosts]
   )
 
+  const forecast = useMemo(
+    () =>
+      buildFinanceForecast(
+        chartData.map((entry) => ({
+          revenue: entry.revenue,
+          totalExpenses: entry.totalExpenses,
+          period: entry.period,
+        }))
+      ),
+    [chartData]
+  )
+
+  const updateBudgetTarget = useCallback((amount: number) => {
+    setBudget((prev) => ({
+      ...prev,
+      totalMonthlyBudget: Number.isFinite(amount) && amount > 0 ? amount : 0,
+    }))
+  }, [])
+
+  const updateCategoryBudget = useCallback((category: string, amount: number) => {
+    const key = category?.trim().toLowerCase() || 'other'
+    setBudget((prev) => ({
+      ...prev,
+      categoryBudgets: {
+        ...prev.categoryBudgets,
+        [key]: Number.isFinite(amount) && amount > 0 ? amount : 0,
+      },
+    }))
+  }, [])
+
   return {
     selectedPeriod,
     setSelectedPeriod,
@@ -653,6 +697,11 @@ export function useFinanceData(): FinanceHookReturn {
     costs: costsWithMonthly,
     monthlyCostTotal,
     revenueByClient,
+    categorySpend,
+    budget,
+    updateBudgetTarget,
+    updateCategoryBudget,
+    forecast,
     upcomingPayments,
     newCost,
     setNewCost,

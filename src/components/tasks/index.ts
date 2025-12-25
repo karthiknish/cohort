@@ -11,6 +11,8 @@ export * from './tasks-header'
 export * from './project-filter-banner'
 export * from './task-view-controls'
 export * from './task-results-count'
+export * from './task-kanban'
+export * from './task-bulk-toolbar'
 
 // Hooks
 export * from './hooks'

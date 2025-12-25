@@ -20,6 +20,7 @@ export const POST = createApiHandler(
   {
     adminOnly: true,
     bodySchema: requestSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { body }) => {
     const { field, context } = body

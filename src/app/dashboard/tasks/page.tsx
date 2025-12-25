@@ -1,7 +1,8 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Briefcase, MessageSquare, Users } from 'lucide-react'
 
 import {
@@ -19,6 +20,9 @@ import { useNavigationContext } from '@/contexts/navigation-context'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
+import { useToast } from '@/components/ui/use-toast'
+import { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks'
+import type { UpdateTaskPayload } from '@/components/tasks/hooks/use-tasks'
 
 
 // Import task components and hooks
@@ -32,14 +36,38 @@ import {
   TasksHeader,
   TaskSummaryCards,
   TaskFilters,
-  TaskList,
   ProjectFilterBanner,
   TaskViewControls,
   TaskResultsCount,
-  CreateTaskSheet,
-  EditTaskSheet,
-  DeleteTaskDialog,
+  TaskBulkToolbar,
 } from '@/components/tasks'
+
+const TaskList = dynamic(() => import('@/components/tasks/task-list').then((mod) => mod.TaskList), {
+  loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
+})
+
+const TaskKanban = dynamic(
+  () => import('@/components/tasks/task-kanban').then((mod) => mod.TaskKanban),
+  {
+    loading: () => <div className="p-6 text-sm text-muted-foreground">Loading board…</div>,
+    ssr: false,
+  }
+)
+
+const CreateTaskSheet = dynamic(
+  () => import('@/components/tasks/task-form-sheets').then((mod) => mod.CreateTaskSheet),
+  { ssr: false }
+)
+
+const EditTaskSheet = dynamic(
+  () => import('@/components/tasks/task-form-sheets').then((mod) => mod.EditTaskSheet),
+  { ssr: false }
+)
+
+const DeleteTaskDialog = dynamic(
+  () => import('@/components/tasks/delete-task-dialog').then((mod) => mod.DeleteTaskDialog),
+  { ssr: false }
+)
 
 export default function TasksPage() {
   const searchParams = useSearchParams()
@@ -48,6 +76,7 @@ export default function TasksPage() {
   const { user, loading: authLoading } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
   const { setProjectContext } = useNavigationContext()
+  const { toast } = useToast()
 
   // Project filter state
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>(() => ({
@@ -116,6 +145,25 @@ export default function TasksPage() {
     filters.setSearchQuery(debouncedQuery)
   }, [debouncedQuery, filters])
 
+  useEffect(() => {
+    setSelectedTaskIds((current) => {
+      const visibleIds = new Set(filters.sortedTasks.map((task) => task.id))
+      const next = new Set<string>()
+      current.forEach((id) => {
+        if (visibleIds.has(id)) {
+          next.add(id)
+        }
+      })
+      return next
+    })
+  }, [filters.sortedTasks])
+
+  useEffect(() => {
+    if (filters.viewMode === 'board') {
+      setSelectedTaskIds(new Set())
+    }
+  }, [filters.viewMode])
+
   // Form management hook
   const form = useTaskForm({
     selectedClient,
@@ -123,6 +171,13 @@ export default function TasksPage() {
     userId: user?.id,
     onCreateTask: handleCreateTask,
     onUpdateTask: handleUpdateTask,
+  })
+
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
+  const [bulkState, setBulkState] = useState<{ active: boolean; label: string; progress: number }>({
+    active: false,
+    label: '',
+    progress: 0,
   })
 
   // Update form when client changes
@@ -173,6 +228,157 @@ export default function TasksPage() {
       form.handleDeleteClose()
     }
   }
+
+  const visibleTasks = filters.sortedTasks
+
+  const selectedTasks = useMemo(() => {
+    if (selectedTaskIds.size === 0) return []
+    const selectedMap = new Set(selectedTaskIds)
+    return visibleTasks.filter((task) => selectedMap.has(task.id))
+  }, [selectedTaskIds, visibleTasks])
+
+  const hasSelection = selectedTasks.length > 0
+
+  const handleToggleTaskSelection = useCallback((taskId: string, checked: boolean) => {
+    setSelectedTaskIds((current) => {
+      const next = new Set(current)
+      if (checked) {
+        next.add(taskId)
+      } else {
+        next.delete(taskId)
+      }
+      return next
+    })
+  }, [])
+
+  const handleSelectAllVisible = useCallback(() => {
+    setSelectedTaskIds(new Set(visibleTasks.map((task) => task.id)))
+  }, [visibleTasks])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedTaskIds(new Set())
+  }, [])
+
+  const handleSelectHighPriority = useCallback(() => {
+    const filtered = visibleTasks.filter((task) => task.priority === 'high' || task.priority === 'urgent')
+    setSelectedTaskIds(new Set(filtered.map((task) => task.id)))
+  }, [visibleTasks])
+
+  const handleSelectDueSoon = useCallback(() => {
+    const now = Date.now()
+    const cutoff = now + 7 * 24 * 60 * 60 * 1000
+    const filtered = visibleTasks.filter((task) => {
+      if (!task.dueDate) return false
+      const ts = Date.parse(task.dueDate)
+      if (Number.isNaN(ts)) return false
+      return ts >= now && ts <= cutoff
+    })
+    setSelectedTaskIds(new Set(filtered.map((task) => task.id)))
+  }, [visibleTasks])
+
+  const buildUpdatePayload = useCallback(
+    (
+      task: TaskRecord,
+      overrides: {
+        status?: TaskStatus
+        priority?: TaskPriority
+        assignedTo?: string[]
+        dueDate?: string | null
+        tags?: string[]
+        description?: string
+        title?: string
+      },
+    ): UpdateTaskPayload => {
+      return {
+        title: task.title,
+        description: task.description ?? '',
+        status: (overrides.status ?? task.status) as TaskStatus,
+        priority: (overrides.priority ?? task.priority) as TaskPriority,
+        assignedTo: overrides.assignedTo ?? task.assignedTo,
+        dueDate: overrides.dueDate === null ? undefined : overrides.dueDate ?? (task.dueDate ?? undefined),
+        tags: overrides.tags ?? task.tags,
+      }
+    },
+    [],
+  )
+
+  const runBulkOperation = useCallback(
+    async (label: string, tasksToUpdate: TaskRecord[], worker: (task: TaskRecord) => Promise<void>) => {
+      if (tasksToUpdate.length === 0) return
+
+      setBulkState({ active: true, label, progress: 0 })
+      let successCount = 0
+      let failureCount = 0
+
+      for (let index = 0; index < tasksToUpdate.length; index += 1) {
+        const task = tasksToUpdate[index]
+        try {
+          await worker(task)
+          successCount += 1
+        } catch (err) {
+          failureCount += 1
+          console.error(`Bulk action failed for task ${task.id}`, err)
+        }
+
+        const progress = Math.round(((index + 1) / tasksToUpdate.length) * 100)
+        setBulkState({ active: true, label, progress })
+      }
+
+      setBulkState({ active: false, label: '', progress: 0 })
+      setSelectedTaskIds(new Set())
+
+      toast({
+        title: failureCount > 0 ? `${label} completed with issues` : `${label} complete`,
+        description: `${successCount}/${tasksToUpdate.length} tasks processed${failureCount > 0 ? `, ${failureCount} failed` : ''}.`,
+        variant: failureCount > 0 ? 'destructive' : 'default',
+      })
+    },
+    [toast],
+  )
+
+  const handleBulkStatusChange = useCallback(
+    (status: TaskStatus) => {
+      if (!hasSelection) return
+      void runBulkOperation('Updating status', selectedTasks, async (task) => {
+        await handleUpdateTask(task.id, buildUpdatePayload(task, { status }))
+      })
+    },
+    [buildUpdatePayload, handleUpdateTask, hasSelection, runBulkOperation, selectedTasks],
+  )
+
+  const handleBulkAssign = useCallback(
+    (assignees: string[]) => {
+      if (!hasSelection) return
+      const normalized = assignees.map((name) => name.trim()).filter((name) => name.length > 0)
+      void runBulkOperation('Updating assignees', selectedTasks, async (task) => {
+        await handleUpdateTask(task.id, buildUpdatePayload(task, { assignedTo: normalized }))
+      })
+    },
+    [buildUpdatePayload, handleUpdateTask, hasSelection, runBulkOperation, selectedTasks],
+  )
+
+  const handleBulkDueDate = useCallback(
+    (date: string | null) => {
+      if (!hasSelection) return
+      const normalized = date && !Number.isNaN(Date.parse(date)) ? date : null
+      void runBulkOperation('Updating due dates', selectedTasks, async (task) => {
+        await handleUpdateTask(task.id, buildUpdatePayload(task, { dueDate: normalized }))
+      })
+    },
+    [buildUpdatePayload, handleUpdateTask, hasSelection, runBulkOperation, selectedTasks],
+  )
+
+  const handleBulkDelete = useCallback(() => {
+    if (!hasSelection) return
+
+    void runBulkOperation('Deleting tasks', selectedTasks, async (task) => {
+      const success = await handleDeleteTask(task)
+      if (!success) {
+        throw new Error('Delete failed')
+      }
+    })
+  }, [handleDeleteTask, hasSelection, runBulkOperation, selectedTasks])
+
 
   const initialLoading = loading && tasks.length === 0
 
@@ -251,24 +457,64 @@ export default function TasksPage() {
                 onClear={clearProjectFilter}
               />
 
-              {/* Task List */}
-              <TaskList
-                tasks={filters.sortedTasks}
-                viewMode={filters.viewMode}
-                loading={loading}
-                initialLoading={initialLoading}
-                error={error}
-                pendingStatusUpdates={pendingStatusUpdates}
-                onEdit={form.handleEditOpen}
-                onDelete={form.handleDeleteClick}
-                onQuickStatusChange={handleQuickStatusChange}
-                onRefresh={handleRefresh}
-                loadingMore={loadingMore}
-                hasMore={!!nextCursor}
-                onLoadMore={handleLoadMore}
-                emptyStateMessage="Get started by creating your first task."
-                showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
-              />
+              {filters.viewMode !== 'board' && (
+                <TaskBulkToolbar
+                  selectedCount={selectedTasks.length}
+                  totalVisible={visibleTasks.length}
+                  hasSelection={hasSelection}
+                  bulkActive={bulkState.active}
+                  bulkLabel={bulkState.label}
+                  bulkProgress={bulkState.progress}
+                  onSelectAll={handleSelectAllVisible}
+                  onClearSelection={handleClearSelection}
+                  onSelectHighPriority={handleSelectHighPriority}
+                  onSelectDueSoon={handleSelectDueSoon}
+                  onBulkStatusChange={handleBulkStatusChange}
+                  onBulkAssign={handleBulkAssign}
+                  onBulkDueDate={handleBulkDueDate}
+                  onBulkDelete={handleBulkDelete}
+                />
+              )}
+
+              {/* Task List / Kanban */}
+              {filters.viewMode === 'board' ? (
+                <TaskKanban
+                  tasks={filters.sortedTasks}
+                  loading={loading}
+                  initialLoading={initialLoading}
+                  error={error}
+                  pendingStatusUpdates={pendingStatusUpdates}
+                  onEdit={form.handleEditOpen}
+                  onDelete={form.handleDeleteClick}
+                  onQuickStatusChange={handleQuickStatusChange}
+                  onRefresh={handleRefresh}
+                  loadingMore={loadingMore}
+                  hasMore={!!nextCursor}
+                  onLoadMore={handleLoadMore}
+                  emptyStateMessage="Get started by creating your first task."
+                  showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
+                />
+              ) : (
+                <TaskList
+                  tasks={filters.sortedTasks}
+                  viewMode={filters.viewMode}
+                  loading={loading}
+                  initialLoading={initialLoading}
+                  error={error}
+                  pendingStatusUpdates={pendingStatusUpdates}
+                  onEdit={form.handleEditOpen}
+                  onDelete={form.handleDeleteClick}
+                  onQuickStatusChange={handleQuickStatusChange}
+                  onRefresh={handleRefresh}
+                  loadingMore={loadingMore}
+                  hasMore={!!nextCursor}
+                  onLoadMore={handleLoadMore}
+                  emptyStateMessage="Get started by creating your first task."
+                  showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
+                  selectedTaskIds={selectedTaskIds}
+                  onToggleTaskSelection={handleToggleTaskSelection}
+                />
+              )}
 
               {/* Results count */}
               {!initialLoading && !error && (

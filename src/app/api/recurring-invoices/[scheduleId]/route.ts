@@ -3,6 +3,8 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
+import { toISO } from '@/lib/utils'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const updateScheduleSchema = z.object({
   amount: z.number().positive().optional(),
@@ -34,20 +36,6 @@ type StoredSchedule = {
   createdBy?: unknown
   createdAt?: unknown
   updatedAt?: unknown
-}
-
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
 }
 
 function mapScheduleDoc(docId: string, data: StoredSchedule): RecurringInvoiceSchedule {
@@ -108,18 +96,18 @@ function calculateNextRunDate(
 }
 
 export const GET = createApiHandler(
-  { workspace: 'required' },
+  { workspace: 'required', rateLimit: 'standard' },
   async (req, { workspace, params }) => {
     const { scheduleId } = params
     if (!scheduleId) {
-      return { error: 'Schedule ID required', status: 400 }
+      throw new ValidationError('Schedule ID required')
     }
 
     const docRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return { error: 'Schedule not found', status: 404 }
+      throw new NotFoundError('Schedule not found')
     }
 
     const schedule = mapScheduleDoc(doc.id, doc.data() as StoredSchedule)
@@ -130,19 +118,20 @@ export const GET = createApiHandler(
 export const PATCH = createApiHandler(
   { 
     workspace: 'required',
-    bodySchema: updateScheduleSchema
+    bodySchema: updateScheduleSchema,
+    rateLimit: 'sensitive'
   },
   async (req, { workspace, body: input, params }) => {
     const { scheduleId } = params
     if (!scheduleId) {
-      return { error: 'Schedule ID required', status: 400 }
+      throw new ValidationError('Schedule ID required')
     }
 
     const docRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return { error: 'Schedule not found', status: 404 }
+      throw new NotFoundError('Schedule not found')
     }
 
     const timestamp = Timestamp.now()
@@ -169,18 +158,18 @@ export const PATCH = createApiHandler(
 )
 
 export const DELETE = createApiHandler(
-  { workspace: 'required' },
+  { workspace: 'required', rateLimit: 'sensitive' },
   async (req, { workspace, params }) => {
     const { scheduleId } = params
     if (!scheduleId) {
-      return { error: 'Schedule ID required', status: 400 }
+      throw new ValidationError('Schedule ID required')
     }
 
     const docRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return { error: 'Schedule not found', status: 404 }
+      throw new NotFoundError('Schedule not found')
     }
 
     await docRef.delete()
@@ -191,31 +180,31 @@ export const DELETE = createApiHandler(
 
 // Manually trigger invoice generation for a schedule
 export const POST = createApiHandler(
-  { workspace: 'required' },
+  { workspace: 'required', rateLimit: 'sensitive' },
   async (req, { workspace, params }) => {
     const { scheduleId } = params
     if (!scheduleId) {
-      return { error: 'Schedule ID required', status: 400 }
+      throw new ValidationError('Schedule ID required')
     }
 
     const scheduleRef = workspace!.workspaceRef.collection('recurringInvoices').doc(scheduleId as string)
     const scheduleDoc = await scheduleRef.get()
 
     if (!scheduleDoc.exists) {
-      return { error: 'Schedule not found', status: 404 }
+      throw new NotFoundError('Schedule not found')
     }
 
     const scheduleData = scheduleDoc.data() as StoredSchedule
     
     if (scheduleData.isActive !== true) {
-      return { error: 'Schedule is not active', status: 400 }
+      throw new ValidationError('Schedule is not active')
     }
 
     // Check if end date has passed
     if (scheduleData.endDate) {
       const endDate = new Date(scheduleData.endDate as string)
       if (endDate < new Date()) {
-        return { error: 'Schedule has ended', status: 400 }
+        throw new ValidationError('Schedule has ended')
       }
     }
 

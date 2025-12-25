@@ -1,7 +1,7 @@
 "use client"
 
-import { memo, useMemo, useState, useCallback } from "react"
-import type { ComponentPropsWithoutRef } from "react"
+import { Fragment, memo, useMemo, useState, useCallback, Children } from "react"
+import type { ComponentPropsWithoutRef, ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -11,14 +11,17 @@ import { Check, Copy } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { LazyImage } from "@/components/ui/lazy-image"
 import type { CollaborationMention } from "@/types/collaboration"
 
 import { isLikelyImageUrl } from "../utils"
 import { MENTION_PROTOCOL } from "../utils/mentions"
+import { highlightText, hasHighlightTerms } from "./search-highlighter"
 
 interface MessageContentProps {
   content: string
   mentions?: CollaborationMention[]
+  highlightTerms?: string[]
 }
 
 const BASE_LINK_REL = "noreferrer noopener"
@@ -89,17 +92,29 @@ type AnchorProps = ComponentPropsWithoutRef<'a'>
 
 type ImageProps = ComponentPropsWithoutRef<'img'>
 
-// Create markdown components factory (to support theme)
-function createMarkdownComponents(isDark: boolean): Components {
+// Create markdown components factory (light theme only)
+function highlightChildren(children: ReactNode, terms?: string[]) {
+  if (!hasHighlightTerms(terms)) return children
+  return Children.map(children as ReactNode, (child, index) => {
+    if (typeof child === "string") {
+      return <Fragment key={index}>{highlightText(child, terms)}</Fragment>
+    }
+    return child
+  })
+}
+
+function createMarkdownComponents(highlightTerms?: string[]): Components {
   return {
-    p: ({ children }) => <p className="leading-relaxed text-sm text-foreground [&:not(:first-child)]:mt-2">{children}</p>,
-    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-    em: ({ children }) => <em className="italic text-foreground">{children}</em>,
+    p: ({ children }) => (
+      <p className="leading-relaxed text-sm text-foreground [&:not(:first-child)]:mt-2">{highlightChildren(children, highlightTerms)}</p>
+    ),
+    strong: ({ children }) => <strong className="font-semibold text-foreground">{highlightChildren(children, highlightTerms)}</strong>,
+    em: ({ children }) => <em className="italic text-foreground">{highlightChildren(children, highlightTerms)}</em>,
     ul: ({ children }) => <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">{children}</ul>,
     ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-foreground">{children}</ol>,
-    li: ({ children }) => <li>{children}</li>,
+    li: ({ children }) => <li>{highlightChildren(children, highlightTerms)}</li>,
     blockquote: ({ children }) => (
-      <blockquote className="border-l-2 border-primary/40 pl-3 text-sm italic text-muted-foreground bg-muted/20 py-1 rounded-r-md">{children}</blockquote>
+      <blockquote className="border-l-2 border-primary/40 pl-3 text-sm italic text-muted-foreground bg-muted/20 py-1 rounded-r-md">{highlightChildren(children, highlightTerms)}</blockquote>
     ),
     code: ({ inline, className, children }: CodeProps) => {
       const language = extractLanguage(className)
@@ -128,7 +143,7 @@ function createMarkdownComponents(isDark: boolean): Components {
             <CopyButton code={codeString} />
           </div>
           <SyntaxHighlighter
-            style={isDark ? oneDark : oneLight}
+            style={oneLight}
             language={normalizedLang}
             PreTag="div"
             customStyle={{
@@ -158,12 +173,10 @@ function createMarkdownComponents(isDark: boolean): Components {
       }
       if (isLikelyImageUrl(href)) {
         return (
-          <img
+          <LazyImage
             src={href}
             alt={typeof children === "string" ? children : "Shared image"}
             className="mt-3 max-h-80 w-full max-w-xl rounded-md border border-muted/50 object-contain"
-            loading="lazy"
-            decoding="async"
           />
         )
       }
@@ -176,12 +189,10 @@ function createMarkdownComponents(isDark: boolean): Components {
     img: ({ src, alt }: ImageProps) => {
       if (!src) return null
       return (
-        <img
+        <LazyImage
           src={src}
           alt={alt ?? "Shared image"}
           className="mt-3 max-h-80 w-full max-w-xl rounded-md border border-muted/50 object-contain"
-          loading="lazy"
-          decoding="async"
         />
       )
     },
@@ -210,16 +221,10 @@ function createMarkdownComponents(isDark: boolean): Components {
   }
 }
 
-function RawMessageContent({ content, mentions }: MessageContentProps) {
+function RawMessageContent({ content, mentions, highlightTerms }: MessageContentProps) {
   const markdown = useMemo(() => content?.trim() ?? "", [content])
-  
-  // Detect dark mode from CSS variable
-  const isDark = useMemo(() => {
-    if (typeof window === "undefined") return false
-    return document.documentElement.classList.contains("dark")
-  }, [])
 
-  const markdownComponents = useMemo(() => createMarkdownComponents(isDark), [isDark])
+  const markdownComponents = useMemo(() => createMarkdownComponents(highlightTerms), [highlightTerms])
 
   const mentionBadges = useMemo(() => {
     if (!Array.isArray(mentions)) {

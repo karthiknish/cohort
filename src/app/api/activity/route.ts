@@ -143,6 +143,7 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: activityQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')

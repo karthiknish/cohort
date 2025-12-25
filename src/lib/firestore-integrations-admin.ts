@@ -7,13 +7,7 @@ import {
   NormalizedMetric,
   SyncJob,
 } from '@/types/integrations'
-
-function coerceStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-  return value.filter((item): item is string => typeof item === 'string')
-}
+import { coerceStringArray } from '@/lib/utils'
 
 type TimestampInput = Date | string | number | Timestamp | null | undefined
 

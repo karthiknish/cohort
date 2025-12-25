@@ -20,6 +20,7 @@ import {
   refreshMetaAccessToken,
   refreshTikTokAccessToken,
 } from '@/lib/integration-token-refresh'
+import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 
 function ensureString(value: unknown, message: string): string {
   if (typeof value === 'string' && value.length > 0) return value
@@ -38,6 +39,7 @@ export const POST = createApiHandler(
   {
     bodySchema: processSchema,
     querySchema: processQuerySchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body, query }) => {
     let resolvedUserId: string | null = null
@@ -47,31 +49,31 @@ export const POST = createApiHandler(
     try {
       let targetUserId = body.userId || query.userId || null
 
-    if (!auth.isCron) {
-      targetUserId = auth.uid ?? null
-    }
+      if (!auth.isCron) {
+        targetUserId = auth.uid ?? null
+      }
 
-    if (!targetUserId) {
-      return { error: 'Missing userId', status: 400 }
-    }
+      if (!targetUserId) {
+        throw new ValidationError('Missing userId')
+      }
 
-    resolvedUserId = targetUserId
+      resolvedUserId = targetUserId
 
-    const job = await claimNextSyncJob({ userId: targetUserId })
+      const job = await claimNextSyncJob({ userId: targetUserId })
 
-    if (!job) {
-      return { message: 'No queued jobs available', status: 204 }
-    }
+      if (!job) {
+        throw new NotFoundError('No queued jobs available')
+      }
 
-    activeJob = job
+      activeJob = job
 
-    const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId })
+      const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId })
 
-    if (!integration || !integration.accessToken) {
-      await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' })
-      await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'error', message: 'Missing credentials' })
-      return { error: 'Integration credentials missing', status: 400 }
-    }
+      if (!integration || !integration.accessToken) {
+        await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' })
+        await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'error', message: 'Missing credentials' })
+        throw new ValidationError('Integration credentials missing')
+      }
 
     let metrics: NormalizedMetric[] = []
 
@@ -167,7 +169,7 @@ export const POST = createApiHandler(
       }
       default: {
         await failSyncJob({ userId: targetUserId, jobId: job.id, message: `Unsupported provider: ${job.providerId}` })
-        return { error: `Unsupported provider ${job.providerId}`, status: 400 }
+        throw new ValidationError(`Unsupported provider ${job.providerId}`)
       }
     }
 
@@ -175,41 +177,41 @@ export const POST = createApiHandler(
     await completeSyncJob({ userId: targetUserId, jobId: job.id })
     await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'success', message: null })
 
-    return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
-  } catch (error: unknown) {
-    console.error('[integrations/process] error', error)
+      return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
+    } catch (error: unknown) {
+      console.error('[integrations/process] error', error)
 
-    if (error instanceof IntegrationTokenError) {
-      const { userId, providerId, message } = error
-      if (resolvedUserId && activeJob && !jobFailed) {
-        await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Token refresh failed' })
+      if (error instanceof IntegrationTokenError) {
+        const { userId, providerId, message } = error
+        if (resolvedUserId && activeJob && !jobFailed) {
+          await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Token refresh failed' })
+          jobFailed = true
+        }
+        if (userId && providerId) {
+          await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Token refresh failed' })
+        }
+        throw new ValidationError(message ?? 'Token refresh failed')
+      }
+
+      const { userId, jobId, providerId, message } = extractSyncErrorDetails(error)
+
+      if (userId && jobId) {
+        await failSyncJob({ userId, jobId, message: message ?? 'Unknown error' })
         jobFailed = true
       }
+
       if (userId && providerId) {
-        await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Token refresh failed' })
+        await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Sync failed' })
       }
-      return { error: message ?? 'Token refresh failed', status: 400 }
+
+      if (resolvedUserId && activeJob && !jobFailed) {
+        await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' })
+        jobFailed = true
+        await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, status: 'error', message: message ?? 'Sync failed' })
+      }
+
+      throw new ApiError(message ?? 'Failed to process sync job', 500)
     }
-
-    const { userId, jobId, providerId, message } = extractSyncErrorDetails(error)
-
-    if (userId && jobId) {
-      await failSyncJob({ userId, jobId, message: message ?? 'Unknown error' })
-      jobFailed = true
-    }
-
-    if (userId && providerId) {
-      await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Sync failed' })
-    }
-
-    if (resolvedUserId && activeJob && !jobFailed) {
-      await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' })
-      jobFailed = true
-      await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, status: 'error', message: message ?? 'Sync failed' })
-    }
-
-    return { error: message ?? 'Failed to process sync job', status: 500 }
-  }
 })
 
 interface SyncJobErrorLike {

@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
+import { ConflictError, NotFoundError } from '@/lib/api-errors'
+import { coerceNumber, toISO } from '@/lib/utils'
 
 const teamMemberSchema = z.object({
   name: z.string().trim().min(1, 'Team member name is required').max(120),
@@ -108,45 +109,7 @@ function coerceTeamMembers(value: unknown): ClientTeamMember[] {
     .filter(Boolean) as ClientTeamMember[]
 }
 
-function coerceNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-  return null
-}
-
 type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
-
-function toISO(value: TimestampLike): string | null {
-  if (value == null) {
-    return null
-  }
-
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString()
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-    const date = value.toDate()
-    return date instanceof Date ? date.toISOString() : null
-  }
-
-  return null
-}
 
 function mapClientDoc(docId: string, data: StoredClient): ClientRecord {
   const name = typeof data.name === 'string' ? data.name : 'Untitled client'
@@ -182,6 +145,7 @@ function mapClientDoc(docId: string, data: StoredClient): ClientRecord {
 export const GET = createApiHandler(
   {
     workspace: 'required',
+    rateLimit: 'standard',
   },
   async (req, { workspace }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -200,6 +164,7 @@ export const POST = createApiHandler(
     workspace: 'required',
     adminOnly: true,
     bodySchema: createClientSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -253,6 +218,7 @@ export const PATCH = createApiHandler(
     workspace: 'required',
     adminOnly: true,
     bodySchema: addTeamMemberSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -261,7 +227,7 @@ export const PATCH = createApiHandler(
     const snapshot = await clientRef.get()
 
     if (!snapshot.exists) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+      throw new NotFoundError('Client not found')
     }
 
     const existingMembers = coerceTeamMembers(snapshot.data()?.teamMembers)
@@ -269,7 +235,7 @@ export const PATCH = createApiHandler(
     const normalizedRole = (role ?? '').trim() || 'Contributor'
 
     if (existingMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())) {
-      return NextResponse.json({ error: 'Team member already exists for this client' }, { status: 409 })
+      throw new ConflictError('Team member already exists for this client')
     }
 
     const updatedMembers = [...existingMembers, { name: normalizedName, role: normalizedRole }]
@@ -288,6 +254,7 @@ export const DELETE = createApiHandler(
     workspace: 'required',
     adminOnly: true,
     bodySchema: deleteClientSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -296,7 +263,7 @@ export const DELETE = createApiHandler(
     const snapshot = await docRef.get()
 
     if (!snapshot.exists) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+      throw new NotFoundError('Client not found')
     }
 
     await docRef.delete()

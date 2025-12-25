@@ -793,7 +793,9 @@ export default function AnalyticsPage() {
             {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
               <Skeleton className="h-full w-full" />
             ) : chartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data available.</div>
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                Welcome! Connect your first ad account to see click performance.
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>

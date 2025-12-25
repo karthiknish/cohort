@@ -8,17 +8,21 @@ import {
 } from '@/lib/integration-token-refresh'
 import { fetchTikTokAdAccounts } from '@/services/integrations/tiktok-ads'
 import { createApiHandler } from '@/lib/api-handler'
+import { z } from 'zod'
+import { ValidationError, NotFoundError } from '@/lib/api-errors'
 
-export const POST = createApiHandler({}, async (req, { auth }) => {
+const bodySchema = z.object({}).strict()
+
+export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, async (req, { auth }) => {
   if (!auth.uid) {
-    return { error: 'User context is required', status: 400 }
+    throw new ValidationError('User context is required')
   }
 
   try {
     const integration = await getAdIntegration({ userId: auth.uid, providerId: 'tiktok' })
 
     if (!integration) {
-      return { error: 'TikTok integration not found', status: 404 }
+      throw new NotFoundError('TikTok integration not found')
     }
 
     const accessToken = await ensureTikTokAccessToken({ userId: auth.uid })
@@ -28,7 +32,7 @@ export const POST = createApiHandler({}, async (req, { auth }) => {
     })
 
     if (!accounts.length) {
-      return { error: 'No TikTok advertisers available for this user', status: 404 }
+      throw new NotFoundError('No TikTok advertisers available for this user')
     }
 
     const preferredAccount =
@@ -47,7 +51,7 @@ export const POST = createApiHandler({}, async (req, { auth }) => {
     }
   } catch (error: unknown) {
     if (error instanceof IntegrationTokenError) {
-      return { error: error.message, status: 400 }
+      throw new ValidationError(error.message ?? 'Token refresh failed')
     }
 
     throw error

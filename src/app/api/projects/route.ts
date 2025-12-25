@@ -35,6 +35,8 @@ const projectQuerySchema = z.object({
   status: projectStatusSchema.optional(),
   clientId: z.string().optional(),
   query: z.string().optional(),
+  pageSize: z.string().optional(),
+  after: z.string().optional(),
 })
 
 type ProjectListResponse = {
@@ -121,12 +123,15 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: projectQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
 
-    const { status, clientId, query: queryParam } = query
+    const { status, clientId, query: queryParam, pageSize: pageSizeParam, after: afterParam } = query
     const normalizedQuery = queryParam?.trim().toLowerCase() ?? null
+    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), MAX_PROJECTS)
+    const afterCursor = afterParam?.trim() || null
 
     let baseQuery = workspace.projectsCollection as Query
 
@@ -138,28 +143,35 @@ export const GET = createApiHandler(
       baseQuery = baseQuery.where('clientId', '==', clientId)
     }
 
-    const orderedQuery = baseQuery
-      .orderBy('updatedAt', 'desc')
-      .orderBy(FieldPath.documentId(), 'desc')
-      .limit(MAX_PROJECTS)
+    let orderedQuery = baseQuery.orderBy('updatedAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
+
+    if (afterCursor) {
+      const [cursorTime, cursorId] = afterCursor.split('|')
+      if (cursorTime && cursorId) {
+        const cursorDate = new Date(cursorTime)
+        if (!Number.isNaN(cursorDate.getTime())) {
+          orderedQuery = orderedQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
+        }
+      }
+    }
 
     let docs: QueryDocumentSnapshot[]
 
     try {
-      const snapshot = await orderedQuery.get()
+      const snapshot = await orderedQuery.limit(pageSize + 1).get()
       docs = snapshot.docs
     } catch (queryError) {
       if (!isMissingIndexError(queryError)) {
         throw queryError
       }
 
-      const fallbackSnapshot = await baseQuery.limit(MAX_PROJECTS).get()
+      const fallbackSnapshot = await baseQuery.limit(pageSize + 1).get()
       docs = fallbackSnapshot.docs.sort((a, b) => compareByUpdatedAtDesc(a, b))
     }
 
     const mapped: ProjectRecord[] = []
 
-    for (const doc of docs) {
+    for (const doc of docs.slice(0, pageSize)) {
       const record = await buildProjectSummary(workspace, doc.id, doc.data() as Record<string, unknown>)
       mapped.push(record)
     }
@@ -171,7 +183,15 @@ export const GET = createApiHandler(
         })
       : mapped
 
-    return { projects: filtered }
+    const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
+    const nextCursor = nextCursorDoc
+      ? (() => {
+          const iso = toISO(nextCursorDoc.get('updatedAt') ?? nextCursorDoc.get('createdAt'))
+          return iso ? `${iso}|${nextCursorDoc.id}` : null
+        })()
+      : null
+
+    return { projects: filtered, nextCursor }
   }
 )
 
@@ -179,6 +199,7 @@ export const POST = createApiHandler(
   {
     workspace: 'required',
     bodySchema: createProjectSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')

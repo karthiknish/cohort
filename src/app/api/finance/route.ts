@@ -12,6 +12,7 @@ import type {
 } from '@/types/finance'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { createApiHandler } from '@/lib/api-handler'
+import { coerceNumber, toISO } from '@/lib/utils'
 
 const MAX_REVENUE_DOCS = 36
 const MAX_INVOICES = 200
@@ -71,40 +72,9 @@ type StoredFinanceCost = {
   updatedAt?: unknown
 }
 
-function toISO(value: unknown): string | null {
-  if (!value && value !== 0) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-  return null
-}
-
-function coerceNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-  return 0
+function ensureNumber(value: unknown): number {
+  const parsed = coerceNumber(value)
+  return typeof parsed === 'number' ? parsed : 0
 }
 
 function mapRevenueDoc(docId: string, data: StoredFinanceRevenue): FinanceRevenueRecord {
@@ -114,8 +84,8 @@ function mapRevenueDoc(docId: string, data: StoredFinanceRevenue): FinanceRevenu
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     period,
     label: typeof data.label === 'string' ? data.label : null,
-    revenue: coerceNumber(data.revenue),
-    operatingExpenses: coerceNumber(data.operatingExpenses),
+    revenue: ensureNumber(data.revenue),
+    operatingExpenses: ensureNumber(data.operatingExpenses),
     currency: typeof data.currency === 'string' ? data.currency : null,
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
@@ -123,7 +93,7 @@ function mapRevenueDoc(docId: string, data: StoredFinanceRevenue): FinanceRevenu
 }
 
 function mapInvoiceDoc(docId: string, data: StoredFinanceInvoice): FinanceInvoice {
-  const amount = coerceNumber(data.amount)
+  const amount = ensureNumber(data.amount)
   const amountPaid = coerceNullableNumber(data.amountPaid)
   const amountRefunded = coerceNullableNumber(data.amountRefunded)
   const amountRemaining = coerceNullableNumber(data.amountRemaining)
@@ -265,7 +235,7 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
     id: docId,
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     category: typeof data.category === 'string' ? data.category : 'Uncategorized',
-    amount: coerceNumber(data.amount),
+    amount: ensureNumber(data.amount),
     cadence: cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
     currency: typeof data.currency === 'string' ? data.currency : null,
     createdAt: toISO(data.createdAt),
@@ -277,6 +247,7 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: financeQuerySchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')

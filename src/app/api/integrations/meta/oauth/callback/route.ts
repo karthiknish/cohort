@@ -19,6 +19,7 @@ export const GET = createApiHandler(
   {
     auth: 'none',
     querySchema: callbackQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { query }) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'

@@ -2,9 +2,9 @@ import { FieldValue } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
 import { z } from 'zod'
 
-import { checkRateLimit } from '@/lib/rate-limit'
 import { ensureStripeCustomer, getBillingPlanById } from '@/lib/billing'
 import { getStripeClient } from '@/lib/stripe'
+import { ApiError, NotFoundError, UnauthorizedError } from '@/lib/api-errors'
 import { createApiHandler } from '@/lib/api-handler'
 
 const checkoutSchema = z.object({
@@ -16,24 +16,11 @@ const checkoutSchema = z.object({
 export const POST = createApiHandler(
   {
     bodySchema: checkoutSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
   if (!auth.uid) {
-    return { error: 'Authentication required', status: 401 }
-  }
-
-  // Rate limit: 5 checkout attempts per minute per user
-  const rateLimitResult = await checkRateLimit(`checkout:${auth.uid}`)
-  if (!rateLimitResult.success) {
-    return { 
-      error: 'Too many checkout attempts. Please wait a moment.', 
-      status: 429,
-      headers: {
-        'X-RateLimit-Limit': String(rateLimitResult.limit),
-        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        'X-RateLimit-Reset': String(rateLimitResult.reset),
-      }
-    }
+    throw new UnauthorizedError('Authentication required')
   }
 
   const stripe = getStripeClient()
@@ -41,7 +28,7 @@ export const POST = createApiHandler(
 
   const plan = getBillingPlanById(planId)
   if (!plan) {
-    return { error: 'Plan is not available', status: 404 }
+    throw new NotFoundError('Plan is not available')
   }
 
   const { customerId, userRef } = await ensureStripeCustomer({
@@ -97,7 +84,7 @@ export const POST = createApiHandler(
     return { url: session.url, sessionId: session.id }
   } catch (error: unknown) {
     if (isStripeError(error)) {
-      return { error: error.message, status: error.statusCode ?? 400 }
+      throw new ApiError(error.message, error.statusCode ?? 400, 'STRIPE_ERROR')
     }
     throw error
   }

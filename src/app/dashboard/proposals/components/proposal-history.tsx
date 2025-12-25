@@ -116,7 +116,7 @@ function ProposalHistoryComponent({
         <div className="space-y-3">
           {proposals.length === 0 && !isLoading ? (
             <div className="rounded-md border border-dashed border-muted p-6 text-center text-sm text-muted-foreground">
-              No proposals yet. Start by completing the wizard above.
+              Generate your first AI proposal to get started.
             </div>
           ) : (
             proposals.map((proposal) => {

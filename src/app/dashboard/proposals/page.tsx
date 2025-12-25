@@ -24,6 +24,7 @@ import { ProposalDraftPanel } from './components/proposal-draft-panel'
 import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
 import { ProposalTemplateSelector } from './components/proposal-template-selector'
 import { ProposalVersionHistory } from './components/proposal-version-history'
+import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 
 import { BarChart3, CreditCard, Users, FileText } from 'lucide-react'
 import {
@@ -54,16 +55,7 @@ type SubmissionSnapshot = {
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
+  return formatUserFacingErrorMessage(error, fallback)
 }
 
 export default function ProposalsPage() {

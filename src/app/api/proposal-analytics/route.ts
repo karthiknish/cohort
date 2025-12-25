@@ -62,6 +62,7 @@ function serializeTimestamp(value: TimestampLike): string | null {
 export const GET = createApiHandler(
   {
     querySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     const { view, startDate: startDateParam, endDate: endDateParam, clientId: clientIdParam, limit: limitParam } = query
@@ -137,6 +138,7 @@ export const GET = createApiHandler(
 export const POST = createApiHandler(
   {
     bodySchema: createEventSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     const eventData = {

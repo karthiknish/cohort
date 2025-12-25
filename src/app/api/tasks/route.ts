@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
@@ -7,6 +7,8 @@ import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } 
 import { buildCacheHeaders, serverCache } from '@/lib/cache'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { notifyTaskCreatedWhatsApp, recordTaskNotification } from '@/lib/notifications'
+import { NotFoundError } from '@/lib/api-errors'
+import { coerceStringArray, toISO } from '@/lib/utils'
 
 export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -57,41 +59,6 @@ export type StoredTask = {
   updatedAt?: unknown
 }
 
-export function toISO(value: unknown): string | null {
-  if (!value && value !== 0) return null
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toDate' in value &&
-    typeof (value as { toDate?: () => Date }).toDate === 'function'
-  ) {
-    return (value as Timestamp).toDate().toISOString()
-  }
-
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-
-  return null
-}
-
-export function coerceStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-  return value
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
-    .filter((item) => item.length > 0)
-}
-
 export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
   const status = (typeof data.status === 'string' ? data.status : 'todo') as TaskStatus
   const priority = (typeof data.priority === 'string' ? data.priority : 'medium') as TaskPriority
@@ -118,6 +85,7 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: taskQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -224,6 +192,7 @@ export const POST = createApiHandler(
   {
     workspace: 'required',
     bodySchema: baseTaskSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -240,7 +209,7 @@ export const POST = createApiHandler(
     if (payload.projectId) {
       const projectDoc = await workspace.projectsCollection.doc(payload.projectId).get()
       if (!projectDoc.exists) {
-        return NextResponse.json({ error: 'Project not found for this workspace' }, { status: 404 })
+        throw new NotFoundError('Project not found for this workspace')
       }
 
       projectId = projectDoc.id

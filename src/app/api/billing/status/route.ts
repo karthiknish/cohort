@@ -16,6 +16,7 @@ interface PlanSummary extends BillingPlanDefinition {
 export const GET = createApiHandler(
   {
     auth: 'required',
+    rateLimit: 'standard',
   },
   async (request, { auth }) => {
     const stripe = getStripeClient()

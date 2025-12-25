@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 const statusQuerySchema = z.object({
   userId: z.string().optional(),
@@ -12,40 +14,24 @@ const statusQuerySchema = z.object({
 export const GET = createApiHandler(
   {
     querySchema: statusQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     let userId: string | null = null
     if (auth.isCron) {
       userId = query.userId ?? null
       if (!userId) {
-        return NextResponse.json({ error: 'Cron requests must specify userId' }, { status: 400 })
+        throw new ValidationError('Cron requests must specify userId')
       }
     } else {
       userId = auth.uid ?? null
     }
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unable to resolve user context' }, { status: 401 })
+      throw new UnauthorizedError('Unable to resolve user context')
     }
 
     const snapshot = await adminDb.collection('users').doc(userId).collection('adIntegrations').get()
-
-    const toISO = (value: unknown) => {
-      if (!value) return null
-      if (value instanceof Timestamp) {
-        return value.toDate().toISOString()
-      }
-      // Handle Firestore timestamp-like objects
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        'toDate' in value &&
-        typeof (value as { toDate?: () => Date }).toDate === 'function'
-      ) {
-        return (value as Timestamp).toDate().toISOString()
-      }
-      return value as string
-    }
 
     const statuses = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>

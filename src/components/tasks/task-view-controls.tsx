@@ -1,12 +1,12 @@
 'use client'
 
-import { Download, List, LayoutGrid } from 'lucide-react'
+import { Columns3, Download, List, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export type TaskViewControlsProps = {
-  viewMode: 'list' | 'grid'
-  onViewModeChange: (mode: 'list' | 'grid') => void
+  viewMode: 'list' | 'grid' | 'board'
+  onViewModeChange: (mode: 'list' | 'grid' | 'board') => void
   onExport: () => void
   canExport: boolean
 }
@@ -62,6 +62,20 @@ export function TaskViewControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>Grid view</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={viewMode === 'board' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onViewModeChange('board')}
+              aria-label="Kanban view"
+            >
+              <Columns3 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Kanban view</TooltipContent>
         </Tooltip>
       </div>
     </div>

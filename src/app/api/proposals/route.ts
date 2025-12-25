@@ -79,6 +79,7 @@ type SerializedProposal = {
 export const GET = createApiHandler(
   {
     querySchema: proposalQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     const { id: idParam, status: statusParam, clientId: clientIdParam } = query
@@ -115,6 +116,7 @@ export const POST = createApiHandler(
   {
     // We'll use a custom body parsing here because of the complex normalization
     // but we could also use a schema if we wanted to be stricter.
+    rateLimit: 'sensitive',
   },
   async (req, { auth }) => {
     const rawBody = (await req.json().catch(() => null)) as Record<string, unknown> | null
@@ -163,6 +165,7 @@ export const POST = createApiHandler(
 export const PATCH = createApiHandler(
   {
     bodySchema: updateSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     const proposalId = extractProposalId(body)
@@ -183,7 +186,7 @@ export const PATCH = createApiHandler(
 )
 
 export const DELETE = createApiHandler(
-  {},
+  { rateLimit: 'sensitive' },
   async (req, { auth }) => {
     const body = (await req.json().catch(() => null)) as { id?: unknown } | null
     const rawId = body?.id

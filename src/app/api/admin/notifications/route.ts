@@ -1,36 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { ValidationError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 const COLLECTION_NAME = 'admin_notifications'
-
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  try {
-    if (value instanceof Date) {
-      return value.toISOString()
-    }
-    if (value instanceof Timestamp) {
-      return value.toDate().toISOString()
-    }
-    const timestamp = (value as { toDate?: () => Date }).toDate?.()
-    if (timestamp) {
-      return timestamp.toISOString()
-    }
-  } catch {
-    // noop
-  }
-  if (typeof value === 'string') {
-    const date = new Date(value)
-    if (!Number.isNaN(date.getTime())) {
-      return date.toISOString()
-    }
-    return value
-  }
-  return null
-}
 
 /**
  * GET /api/admin/notifications - List all admin notifications
@@ -38,6 +14,7 @@ function toISO(value: unknown): string | null {
 export const GET = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'standard',
   },
   async (req) => {
     const url = new URL(req.url)
@@ -91,6 +68,7 @@ export const GET = createApiHandler(
 export const PATCH = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'sensitive',
   },
   async (req, { body }) => {
     const { ids, markAllRead } = (body as { ids?: string[]; markAllRead?: boolean }) ?? {}
@@ -109,7 +87,7 @@ export const PATCH = createApiHandler(
     }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: 'No notification ids provided' }, { status: 400 })
+      throw new ValidationError('No notification ids provided')
     }
 
     // Mark specific notifications as read
@@ -130,6 +108,7 @@ export const PATCH = createApiHandler(
 export const DELETE = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'sensitive',
   },
   async (req, { body }) => {
     const { ids, deleteAll } = (body as { ids?: string[]; deleteAll?: boolean }) ?? {}
@@ -147,7 +126,7 @@ export const DELETE = createApiHandler(
     }
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: 'No notification ids provided' }, { status: 400 })
+      throw new ValidationError('No notification ids provided')
     }
 
     const batch = adminDb.batch()

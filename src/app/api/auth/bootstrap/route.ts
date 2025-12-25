@@ -46,6 +46,7 @@ async function notifyAdminsOfNewSignup(
 export const POST = createApiHandler(
   {
     bodySchema: payloadSchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, body }) => {
     const providedName = body?.name

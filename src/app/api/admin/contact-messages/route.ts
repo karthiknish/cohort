@@ -4,28 +4,14 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { toISO } from '@/lib/utils'
 
 const statusSchema = z.enum(['new', 'in_progress', 'resolved'])
-
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  try {
-    const timestamp = (value as { toDate?: () => Date }).toDate?.()
-    if (timestamp) {
-      return timestamp.toISOString()
-    }
-  } catch {
-    // noop
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return null
-}
 
 export const GET = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'standard',
   },
   async (req) => {
     const url = new URL(req.url)
@@ -34,7 +20,7 @@ export const GET = createApiHandler(
       statusParam && statusSchema.safeParse(statusParam).success ? statusParam : null
     const sizeParam = url.searchParams.get('pageSize')
     const pageSize = Math.min(Math.max(Number(sizeParam) || 20, 1), 100)
-    const cursorParam = url.searchParams.get('cursor')
+    const afterParam = url.searchParams.get('after') ?? url.searchParams.get('cursor')
 
     let messagesQuery = adminDb
       .collection('contactMessages')
@@ -51,8 +37,8 @@ export const GET = createApiHandler(
         .limit(pageSize)
     }
 
-    if (cursorParam) {
-      const [cursorTime, cursorId] = cursorParam.split('|')
+    if (afterParam) {
+      const [cursorTime, cursorId] = afterParam.split('|')
       if (cursorTime && cursorId) {
         const cursorDate = new Date(cursorTime)
         if (!Number.isNaN(cursorDate.getTime())) {
@@ -99,6 +85,7 @@ export const PATCH = createApiHandler(
       id: z.string().min(1),
       status: statusSchema,
     }),
+    rateLimit: 'sensitive',
   },
   async (req, { body }) => {
     const { id, status } = body

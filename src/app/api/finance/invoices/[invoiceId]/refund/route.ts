@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import type Stripe from 'stripe'
 
+import { ApiError, NotFoundError, ValidationError } from '@/lib/api-errors'
 import { createApiHandler } from '@/lib/api-handler'
-import { checkRateLimit } from '@/lib/rate-limit'
 import { getStripeClient } from '@/lib/stripe'
 import { recordInvoiceRevenue, syncInvoiceRecords } from '@/lib/finance-sync'
 
@@ -18,26 +18,21 @@ export const POST = createApiHandler(
   { 
     adminOnly: true,
     workspace: 'required',
-    bodySchema: refundSchema
+    bodySchema: refundSchema,
+    rateLimit: 'sensitive'
   },
   async (req, { auth, workspace, body: payload, params }) => {
     const { invoiceId } = params
     const trimmedInvoiceId = (invoiceId as string)?.trim()
     if (!trimmedInvoiceId) {
-      return { error: 'Invoice id is required', status: 400 }
-    }
-
-    // Rate limit: 5 refund attempts per minute per user
-    const rateLimitResult = await checkRateLimit(`refund:${auth.uid}`)
-    if (!rateLimitResult.success) {
-      return { error: 'Too many refund requests. Please wait a moment.', status: 429 }
+      throw new ValidationError('Invoice id is required')
     }
 
     const invoiceRef = workspace!.financeInvoicesCollection.doc(trimmedInvoiceId)
     const invoiceSnapshot = await invoiceRef.get()
 
     if (!invoiceSnapshot.exists) {
-      return { error: 'Invoice not found in this workspace', status: 404 }
+      throw new NotFoundError('Invoice not found in this workspace')
     }
 
     const invoiceData = invoiceSnapshot.data() as { amount?: unknown; amountPaid?: unknown; amountRefunded?: unknown; clientId?: unknown }
@@ -45,7 +40,7 @@ export const POST = createApiHandler(
     const amountAlreadyRefunded = typeof invoiceData?.amountRefunded === 'number' ? invoiceData.amountRefunded : 0
 
     if (amountPaid <= 0) {
-      return { error: 'Invoice has no recorded payments to refund', status: 400 }
+      throw new ValidationError('Invoice has no recorded payments to refund')
     }
 
     const requestedAmount = payload.amount
@@ -53,7 +48,7 @@ export const POST = createApiHandler(
       const normalizedRequested = Math.round(requestedAmount * 100) / 100
       const maxRefundable = Math.max(amountPaid - amountAlreadyRefunded, 0)
       if (normalizedRequested <= 0 || normalizedRequested - maxRefundable > 0.0001) {
-        return { error: 'Refund amount exceeds paid balance', status: 400 }
+        throw new ValidationError('Refund amount exceeds paid balance')
       }
     }
 
@@ -63,7 +58,7 @@ export const POST = createApiHandler(
       const invoiceWithIntent = stripeInvoice as InvoiceWithPaymentIntent
 
       if (!invoiceWithIntent.payment_intent) {
-        return { error: 'Unable to locate payment intent for this invoice', status: 400 }
+        throw new ValidationError('Unable to locate payment intent for this invoice')
       }
 
       const paymentIntentId = typeof invoiceWithIntent.payment_intent === 'string'
@@ -71,7 +66,7 @@ export const POST = createApiHandler(
         : invoiceWithIntent.payment_intent?.id ?? null
 
       if (!paymentIntentId) {
-        return { error: 'Unable to locate payment intent for this invoice', status: 400 }
+        throw new ValidationError('Unable to locate payment intent for this invoice')
       }
 
       const invoiceCurrency = typeof stripeInvoice.currency === 'string' ? stripeInvoice.currency : 'usd'
@@ -128,7 +123,7 @@ export const POST = createApiHandler(
       }
     } catch (error: unknown) {
       if (isStripeError(error)) {
-        return { error: error.message, status: error.statusCode ?? 400 }
+        throw new ApiError(error.message, error.statusCode ?? 400, 'STRIPE_ERROR')
       }
       throw error
     }

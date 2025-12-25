@@ -163,7 +163,7 @@ export function useFetchMessages({
   const [hasMoreByChannel, setHasMoreByChannel] = useState<Record<string, boolean>>({})
 
   const fetchMessages = useCallback(
-    async (channelId: string, cursor?: string | null) => {
+    async (channelId: string, after?: string | null) => {
       if (!channels.some((channel) => channel.id === channelId)) {
         return
       }
@@ -172,9 +172,9 @@ export function useFetchMessages({
 
       try {
         const token = await ensureSessionToken()
-        const params = new URLSearchParams({ channelId, limit: String(MESSAGE_PAGE_SIZE) })
-        if (cursor) {
-          params.set('cursor', cursor)
+        const params = new URLSearchParams({ channelId, pageSize: String(MESSAGE_PAGE_SIZE) })
+        if (after) {
+          params.set('after', after)
         }
 
         const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
@@ -198,7 +198,7 @@ export function useFetchMessages({
 
         setMessagesByChannel((prev) => {
           const existing = prev[channelId] ?? []
-          if (cursor) {
+          if (after) {
             // Paginating older messages
             const existingIds = new Set(existing.map((m) => m.id))
             const newMessages = messages.filter((m) => !existingIds.has(m.id))

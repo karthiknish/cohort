@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/types/tasks'
-import { coerceStringArray, invalidateTasksCache, mapTaskDoc, type StoredTask } from '../route'
-import { resolveWorkspaceContext } from '@/lib/workspace'
+import { coerceStringArray } from '@/lib/utils'
+import { invalidateTasksCache, mapTaskDoc, type StoredTask } from '../route'
 import { recordTaskUpdatedNotification } from '@/lib/notifications'
+import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const updateTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200).optional(),
@@ -47,13 +47,14 @@ export const PATCH = createApiHandler(
   {
     workspace: 'required',
     bodySchema: updateTaskSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, body, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
 
     const taskId = (params?.taskId as string)?.trim()
     if (!taskId) {
-      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
+      throw new ValidationError('Task ID is required')
     }
 
     const uid = auth.uid!
@@ -62,12 +63,12 @@ export const PATCH = createApiHandler(
 
     const existingDoc = await docRef.get()
     if (!existingDoc.exists) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+      throw new NotFoundError('Task not found')
     }
 
     const updates = buildTaskUpdate(payload)
     if (!updates) {
-      return NextResponse.json({ error: 'No valid updates supplied' }, { status: 400 })
+      throw new ValidationError('No valid updates supplied')
     }
 
     if (payload.projectId !== undefined) {
@@ -77,7 +78,7 @@ export const PATCH = createApiHandler(
       } else {
         const projectDoc = await workspace.projectsCollection.doc(payload.projectId).get()
         if (!projectDoc.exists) {
-          return NextResponse.json({ error: 'Project not found for this workspace' }, { status: 404 })
+          throw new NotFoundError('Project not found for this workspace')
         }
         const data = projectDoc.data() as Record<string, unknown>
         updates.projectId = projectDoc.id
@@ -141,19 +142,20 @@ export const PATCH = createApiHandler(
 export const DELETE = createApiHandler(
   {
     workspace: 'required',
+    rateLimit: 'sensitive',
   },
   async (req, { workspace, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
 
     const taskId = (params?.taskId as string)?.trim()
     if (!taskId) {
-      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
+      throw new ValidationError('Task ID is required')
     }
 
     const docRef = workspace.tasksCollection.doc(taskId)
     const existingDoc = await docRef.get()
     if (!existingDoc.exists) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+      throw new NotFoundError('Task not found')
     }
 
     await docRef.delete()

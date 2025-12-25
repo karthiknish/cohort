@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, DragEvent, RefObject } from 'react'
+import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -272,6 +272,14 @@ export function CollaborationMessagePane({
       return
     }
     event.dataTransfer.dropEffect = 'copy'
+  }
+
+  const handleComposerPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!channel || sending) return
+    const files = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'))
+    if (files.length === 0) return
+    event.preventDefault()
+    onAddAttachments(files)
   }
 
   const handleThreadToggle = (threadRootId: string) => {
@@ -635,6 +643,7 @@ export function CollaborationMessagePane({
         onAttachmentInputChange={handleAttachmentInputChange}
         onComposerDrop={handleComposerDrop}
         onComposerDragOver={handleComposerDragOver}
+        onComposerPaste={handleComposerPaste}
       />
 
       {/* Task Creation Modal */}

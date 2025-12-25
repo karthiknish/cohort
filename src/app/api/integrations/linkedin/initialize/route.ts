@@ -1,21 +1,26 @@
+import { z } from 'zod'
+
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
 import { fetchLinkedInAdAccounts } from '@/services/integrations/linkedin-ads'
 import { createApiHandler } from '@/lib/api-handler'
+import { NotFoundError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
 
-export const POST = createApiHandler({}, async (req, { auth }) => {
+const bodySchema = z.object({}).strict()
+
+export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, async (req, { auth }) => {
   if (!auth.uid) {
-    return { error: 'User context is required', status: 400 }
+    throw new UnauthorizedError('User context is required')
   }
 
   const integration = await getAdIntegration({ userId: auth.uid, providerId: 'linkedin' })
   if (!integration?.accessToken) {
-    return { error: 'LinkedIn integration is missing an access token', status: 400 }
+    throw new ValidationError('LinkedIn integration is missing an access token')
   }
 
   const accounts = await fetchLinkedInAdAccounts({ accessToken: integration.accessToken })
 
   if (!accounts.length) {
-    return { error: 'No LinkedIn ad accounts available for this user', status: 404 }
+    throw new NotFoundError('No LinkedIn ad accounts available for this user')
   }
 
   const preferredAccount =

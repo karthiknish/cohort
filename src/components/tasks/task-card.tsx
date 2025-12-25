@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import type { ChangeEvent } from 'react'
 import { Calendar, User, MoreHorizontal, Loader2, Pencil, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +31,8 @@ export type TaskCardProps = {
   onEdit: (task: TaskRecord) => void
   onDelete: (task: TaskRecord) => void
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
+  selected?: boolean
+  onSelectToggle?: (taskId: string, checked: boolean) => void
 }
 
 export function TaskCard({
@@ -37,6 +41,8 @@ export function TaskCard({
   onEdit,
   onDelete,
   onQuickStatusChange,
+  selected = false,
+  onSelectToggle,
 }: TaskCardProps) {
   const StatusIcon = STATUS_ICONS[task.status]
 
@@ -49,7 +55,16 @@ export function TaskCard({
     >
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground line-clamp-2">{task.title}</h3>
+          <div className="flex items-start gap-2">
+            <Checkbox
+              checked={selected}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                onSelectToggle?.(task.id, event.target.checked)
+              }
+              aria-label="Select task"
+            />
+            <h3 className="font-semibold text-foreground line-clamp-2">{task.title}</h3>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Badge

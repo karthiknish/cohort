@@ -60,3 +60,51 @@ export function exportToCsv<T extends Record<string, unknown>>(
     document.body.removeChild(link)
   }
 }
+
+// Convert Firestore Timestamp-like, Date, or ISO strings to ISO string; fallback null
+export function toISO(value: unknown): string | null {
+  if (value === null || value === undefined) return null
+
+  // Firestore Timestamp duck-typing
+  if (typeof value === 'object' && value !== null) {
+    const asDate = (value as { toDate?: () => Date }).toDate?.()
+    if (asDate instanceof Date) {
+      const iso = asDate.toISOString()
+      return iso
+    }
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString()
+  }
+
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+    return value
+  }
+
+  return null
+}
+
+// Normalize arrays of strings, trimming and removing empties
+export function coerceStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+}
+
+// Coerce number from mixed inputs
+export function coerceNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}

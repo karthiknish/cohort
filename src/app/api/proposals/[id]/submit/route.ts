@@ -5,6 +5,7 @@ import { mergeProposalForm } from '@/lib/proposals'
 import { recordProposalDeckReadyNotification } from '@/lib/notifications'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import type { ProposalFormData } from '@/lib/proposals'
+import { ForbiddenError, NotFoundError, ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 import { geminiAI } from '@/services/gemini'
 import {
   ensureProposalGammaDeck,
@@ -16,12 +17,12 @@ import {
 import { createApiHandler } from '@/lib/api-handler'
 
 export const POST = createApiHandler(
-  { auth: 'required' },
+  { auth: 'required', rateLimit: 'sensitive' },
   async (req, { auth, params }) => {
     const { id: proposalId } = params
 
     if (!proposalId) {
-      return { error: 'Proposal id is required', status: 400 }
+      throw new ValidationError('Proposal id is required')
     }
 
     const proposalRef = adminDb
@@ -32,7 +33,7 @@ export const POST = createApiHandler(
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
-      return { error: 'Proposal not found', status: 404 }
+      throw new NotFoundError('Proposal not found')
     }
 
     const proposalData = proposalSnap.data() as Record<string, unknown>
@@ -41,7 +42,7 @@ export const POST = createApiHandler(
     const previousPptUrl = typeof proposalData.pptUrl === 'string' ? proposalData.pptUrl : null
 
     if (ownerId && ownerId !== auth.uid) {
-      return { error: 'Not authorized to submit this proposal', status: 403 }
+      throw new ForbiddenError('Not authorized to submit this proposal')
     }
 
     const clientIdRaw = typeof proposalData.clientId === 'string' ? proposalData.clientId.trim() : ''
@@ -141,13 +142,7 @@ export const POST = createApiHandler(
 
     if (generationError) {
       const message = 'Unable to generate an AI summary right now. Please try again in a few minutes.'
-      return {
-        ok: false,
-        status: nextStatus,
-        aiInsights: null,
-        error: message,
-        status_code: 503
-      }
+      throw new ServiceUnavailableError(message)
     }
 
     return {

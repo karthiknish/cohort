@@ -21,17 +21,17 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ]
 
 export const statusColors: Record<TaskStatus, string> = {
-  todo: 'bg-muted text-muted-foreground dark:bg-muted/60',
-  'in-progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  review: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+  todo: 'bg-muted text-muted-foreground',
+  'in-progress': 'bg-blue-100 text-blue-800',
+  review: 'bg-amber-100 text-amber-800',
+  completed: 'bg-emerald-100 text-emerald-800',
 }
 
 export const priorityColors: Record<TaskPriority, string> = {
-  low: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  medium: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
-  urgent: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+  low: 'bg-emerald-100 text-emerald-800',
+  medium: 'bg-amber-100 text-amber-800',
+  high: 'bg-orange-100 text-orange-800',
+  urgent: 'bg-red-100 text-red-800',
 }
 
 export const STATUS_ICONS: Record<TaskStatus, typeof Clock> = {

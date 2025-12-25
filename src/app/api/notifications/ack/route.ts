@@ -11,7 +11,8 @@ const updateSchema = z.object({
 export const PATCH = createApiHandler(
   { 
     workspace: 'required',
-    bodySchema: updateSchema
+    bodySchema: updateSchema,
+    rateLimit: 'standard'
   },
   async (req, { auth, workspace, body: payload }) => {
     const batch = workspace!.workspaceRef.firestore.batch()

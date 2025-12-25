@@ -9,6 +9,7 @@ import {
 } from '@/lib/integration-auto-sync'
 import { createApiHandler } from '@/lib/api-handler'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
+import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
 
 const cronSchema = z.object({
   operation: z.string().optional(),
@@ -23,12 +24,13 @@ const cronSchema = z.object({
 export const POST = createApiHandler(
   {
     bodySchema: cronSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     const startedAt = Date.now()
     // Verify this is an authorized cron request
     if (!auth.isCron) {
-      return { error: 'Cron authentication required', status: 401 }
+      throw new UnauthorizedError('Cron authentication required')
     }
 
     const operation = body.operation ?? 'schedule_all_users'
@@ -156,7 +158,7 @@ export const POST = createApiHandler(
 
     case 'schedule_user': {
       if (!resolvedUserId) {
-        return { error: 'userId is required for schedule_user', status: 400 }
+        throw new ValidationError('userId is required for schedule_user')
       }
 
       if (resolvedProviderIds && resolvedProviderIds.length === 1) {
@@ -185,7 +187,7 @@ export const POST = createApiHandler(
     }
 
     default:
-      return { error: `Unknown operation: ${operation}`, status: 400 }
+      throw new ValidationError(`Unknown operation: ${operation}`)
   }
 
   const result = {

@@ -119,44 +119,44 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
       {/* Summary Cards Row */}
       {summaryStats && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card className="border-muted/40 bg-gradient-to-br from-emerald-50/50 to-background dark:from-emerald-950/20">
+          <Card className="border-muted/40 bg-gradient-to-br from-emerald-50/50 to-background">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Revenue</p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                  <p className="text-2xl font-bold text-emerald-600 mt-1">
                     {formatCurrency(summaryStats.totalRevenue, resolvedCurrency)}
                   </p>
                 </div>
-                <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/30 p-2">
-                  <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="rounded-full bg-emerald-100 p-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-muted/40 bg-gradient-to-br from-red-50/50 to-background dark:from-red-950/20">
+          <Card className="border-muted/40 bg-gradient-to-br from-red-50/50 to-background">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Expenses</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
+                  <p className="text-2xl font-bold text-red-600 mt-1">
                     {formatCurrency(summaryStats.totalExpenses, resolvedCurrency)}
                   </p>
                 </div>
-                <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-2">
-                  <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <div className="rounded-full bg-red-100 p-2">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-muted/40 bg-gradient-to-br from-violet-50/50 to-background dark:from-violet-950/20">
+          <Card className="border-muted/40 bg-gradient-to-br from-violet-50/50 to-background">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Net Profit</p>
-                  <p className={`text-2xl font-bold mt-1 ${summaryStats.totalProfit >= 0 ? 'text-violet-600 dark:text-violet-400' : 'text-red-600'}`}>
+                  <p className={`text-2xl font-bold mt-1 ${summaryStats.totalProfit >= 0 ? 'text-violet-600' : 'text-red-600'}`}>
                     {formatCurrency(summaryStats.totalProfit, resolvedCurrency)}
                   </p>
                 </div>
@@ -164,9 +164,9 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
                   variant="secondary" 
                   className={`${
                     summaryStats.profitTrend === 'up' 
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                      ? 'bg-emerald-100 text-emerald-700' 
                       : summaryStats.profitTrend === 'down'
-                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        ? 'bg-red-100 text-red-700'
                         : 'bg-muted text-muted-foreground'
                   }`}
                 >

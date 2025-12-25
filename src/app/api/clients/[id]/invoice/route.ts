@@ -3,8 +3,8 @@ import { z } from 'zod'
 import type Stripe from 'stripe'
 
 import { getStripeClient } from '@/lib/stripe'
-import { checkRateLimit } from '@/lib/rate-limit'
 import { recordInvoiceSentNotification, notifyInvoiceSentWhatsApp } from '@/lib/notifications'
+import { ApiError, NotFoundError, ValidationError } from '@/lib/api-errors'
 import { createApiHandler } from '@/lib/api-handler'
 
 const invoiceSchema = z.object({
@@ -83,7 +83,8 @@ export const POST = createApiHandler(
   { 
     adminOnly: true,
     workspace: 'required',
-    bodySchema: invoiceSchema
+    bodySchema: invoiceSchema,
+    rateLimit: 'sensitive'
   },
   async (req, { auth, workspace, body: payload, params }) => {
     let createdInvoiceItemId: string | null = null
@@ -91,16 +92,10 @@ export const POST = createApiHandler(
     let stripeClient: Stripe | null = null
 
     try {
-      // Rate limit: 10 invoices per minute per user
-      const rateLimitResult = await checkRateLimit(`invoice:${auth.uid}`)
-      if (!rateLimitResult.success) {
-        return { error: 'Too many invoice requests. Please wait a moment.', status: 429 }
-      }
-
       const clientId = (params.id as string)?.trim()
 
       if (!clientId) {
-        return { error: 'Client id is required', status: 400 }
+        throw new ValidationError('Client id is required')
       }
 
       const amountCents = normaliseAmountCents(payload.amount)
@@ -112,20 +107,20 @@ export const POST = createApiHandler(
       if (payload.dueDate) {
         const parsedDueDate = new Date(payload.dueDate)
         if (Number.isNaN(parsedDueDate.getTime())) {
-          return { error: 'Provide a valid due date', status: 400 }
+          throw new ValidationError('Provide a valid due date')
         }
         dueDateIso = parsedDueDate.toISOString()
         const seconds = Math.floor(parsedDueDate.getTime() / 1000)
         dueDateUnix = seconds > 0 ? seconds : undefined
         if (dueDateUnix && dueDateUnix <= Math.floor(Date.now() / 1000)) {
-          return { error: 'Due date must be in the future', status: 400 }
+          throw new ValidationError('Due date must be in the future')
         }
       }
 
       const clientRef = workspace!.clientsCollection.doc(clientId)
       const clientSnapshot = await clientRef.get()
       if (!clientSnapshot.exists) {
-        return { error: 'Client not found', status: 404 }
+        throw new NotFoundError('Client not found')
       }
 
       const clientData = clientSnapshot.data() as ClientBillingDoc | undefined
@@ -319,7 +314,7 @@ export const POST = createApiHandler(
 
       const message = error instanceof Error && error.message ? error.message : 'Failed to create invoice'
       console.error('[clients] Invoice creation failed', error)
-      return { error: message, status: statusCode >= 400 && statusCode < 600 ? statusCode : 500 }
+      throw new ApiError(message, statusCode >= 400 && statusCode < 600 ? statusCode : 500, 'STRIPE_ERROR')
     } finally {
       if (!invoiceCreated && createdInvoiceItemId && stripeClient) {
         try {

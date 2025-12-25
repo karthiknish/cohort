@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { getStripeClient } from '@/lib/stripe'
 import { recordInvoiceRevenue, syncInvoiceRecords, type SyncOutcome } from '@/lib/finance-sync'
 import { createApiHandler } from '@/lib/api-handler'
+import { ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 
 export const runtime = 'nodejs'
 
@@ -17,17 +18,17 @@ const RELEVANT_EVENTS = new Set([
   'charge.refunded',
 ])
 
-export const POST = createApiHandler({ auth: 'none' }, async (req) => {
+export const POST = createApiHandler({ auth: 'none', rateLimit: 'standard' }, async (req) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
   if (!webhookSecret) {
     console.error('[billing] Missing STRIPE_WEBHOOK_SECRET')
-    return { error: 'Webhook not configured', status: 500 }
+    throw new ServiceUnavailableError('Webhook not configured')
   }
 
   const signature = req.headers.get('stripe-signature')
   if (!signature) {
     console.warn('[billing] Stripe signature missing from webhook')
-    return { error: 'Signature missing', status: 400 }
+    throw new ValidationError('Signature missing')
   }
 
   const rawBody = await req.text()
@@ -39,7 +40,7 @@ export const POST = createApiHandler({ auth: 'none' }, async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid payload'
     console.error('[billing] Failed to verify webhook signature', message)
-    return { error: 'Invalid signature', status: 400 }
+    throw new ValidationError('Invalid signature')
   }
 
   if (!RELEVANT_EVENTS.has(event.type)) {
@@ -95,7 +96,7 @@ export const POST = createApiHandler({ auth: 'none' }, async (req) => {
     }
   } catch (error) {
     console.error('[billing] Failed to sync invoice from webhook', error)
-    return { error: 'Failed to persist invoice', status: 500 }
+    throw new ServiceUnavailableError('Failed to persist invoice')
   }
 
   return { received: true }

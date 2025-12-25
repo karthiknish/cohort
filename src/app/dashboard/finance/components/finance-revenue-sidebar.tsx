@@ -90,7 +90,7 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
               <CardDescription>Outstanding invoices expected soon.</CardDescription>
             </div>
             {upcomingPayments.length > 0 && (
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700">
                 {upcomingPayments.length} pending
               </Badge>
             )}

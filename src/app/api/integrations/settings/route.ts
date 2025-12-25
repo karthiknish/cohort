@@ -4,6 +4,7 @@ import {
   updateIntegrationPreferences,
 } from '@/lib/firestore-integrations-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
 
 const settingsSchema = z.object({
   providerId: z.string().min(1),
@@ -55,11 +56,12 @@ function coerceTimeframe(value: unknown): number | null | undefined {
 export const PATCH = createApiHandler(
   {
     bodySchema: settingsSchema,
+    rateLimit: 'sensitive',
   },
   async (req, { auth, body }) => {
     const providerId = body.providerId.trim()
     if (!providerId) {
-      return { error: 'providerId is required', status: 400 }
+      throw new ValidationError('providerId is required')
     }
 
     let targetUserId: string | null = null
@@ -67,7 +69,7 @@ export const PATCH = createApiHandler(
     if (auth.isCron) {
       targetUserId = body.userId?.trim() ?? null
       if (!targetUserId) {
-        return { error: 'Cron updates must include userId', status: 400 }
+        throw new ValidationError('Cron updates must include userId')
       }
     } else {
       if (body.userId && body.userId !== auth.uid) {
@@ -75,7 +77,7 @@ export const PATCH = createApiHandler(
           auth.email && (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).includes(auth.email.toLowerCase())
         )
         if (!isAdmin) {
-          return { error: 'Admin access required', status: 403 }
+          throw new ForbiddenError('Admin access required')
         }
         targetUserId = body.userId
       } else {
@@ -84,19 +86,19 @@ export const PATCH = createApiHandler(
     }
 
   if (!targetUserId) {
-    return { error: 'Unable to resolve target user', status: 401 }
+    throw new UnauthorizedError('Unable to resolve target user')
   }
 
   const integration = await getAdIntegration({ userId: targetUserId, providerId })
   if (!integration) {
-    return { error: 'Integration not found', status: 404 }
+    throw new NotFoundError('Integration not found')
   }
 
   const updates: Record<string, unknown> = {}
 
   if (Object.prototype.hasOwnProperty.call(body, 'autoSyncEnabled')) {
     if (typeof body.autoSyncEnabled !== 'boolean') {
-      return { error: 'autoSyncEnabled must be a boolean', status: 400 }
+      throw new ValidationError('autoSyncEnabled must be a boolean')
     }
     updates.autoSyncEnabled = body.autoSyncEnabled
   }
@@ -107,7 +109,7 @@ export const PATCH = createApiHandler(
       updates.syncFrequencyMinutes = normalizedFrequency === undefined ? undefined : normalizedFrequency
     }
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Invalid syncFrequencyMinutes', status: 400 }
+    throw new ValidationError(error instanceof Error ? error.message : 'Invalid syncFrequencyMinutes')
   }
 
   try {
@@ -116,11 +118,11 @@ export const PATCH = createApiHandler(
       updates.scheduledTimeframeDays = normalizedTimeframe === undefined ? undefined : normalizedTimeframe
     }
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Invalid scheduledTimeframeDays', status: 400 }
+    throw new ValidationError(error instanceof Error ? error.message : 'Invalid scheduledTimeframeDays')
   }
 
   if (!Object.keys(updates).length) {
-    return { error: 'No settings supplied', status: 400 }
+    throw new ValidationError('No settings supplied')
   }
 
   await updateIntegrationPreferences({
@@ -137,7 +139,7 @@ export const PATCH = createApiHandler(
 
   const refreshed = await getAdIntegration({ userId: targetUserId, providerId })
   if (!refreshed) {
-    return { error: 'Failed to load integration after update', status: 500 }
+    throw new ValidationError('Failed to load integration after update')
   }
 
   return {

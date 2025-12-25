@@ -6,39 +6,15 @@ import { z } from 'zod'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { NotFoundError } from '@/lib/api-errors'
+import { toISO } from '@/lib/utils'
 
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'invited', 'pending', 'disabled', 'suspended'])
 
-function toISO(value: unknown): string | null {
-  if (!value) return null
-  try {
-    if (value instanceof Date) {
-      return value.toISOString()
-    }
-    if (value instanceof Timestamp) {
-      return value.toDate().toISOString()
-    }
-    const timestamp = (value as { toDate?: () => Date }).toDate?.()
-    if (timestamp) {
-      return timestamp.toISOString()
-    }
-  } catch {
-    // noop
-  }
-  if (typeof value === 'string') {
-    const date = new Date(value)
-    if (!Number.isNaN(date.getTime())) {
-      return date.toISOString()
-    }
-    return value
-  }
-  return null
-}
-
 export const GET = createApiHandler(
   {
     adminOnly: true,
+    rateLimit: 'standard',
   },
   async (req) => {
     const url = new URL(req.url)
@@ -46,7 +22,7 @@ export const GET = createApiHandler(
     const searchParam = url.searchParams.get('search')
     const statusParam = url.searchParams.get('status')
     const roleParam = url.searchParams.get('role')
-    const cursorParam = url.searchParams.get('cursor')
+    const afterParam = url.searchParams.get('after') ?? url.searchParams.get('cursor')
 
     const pageSize = Math.min(Math.max(Number(sizeParam) || 50, 1), 200)
 
@@ -56,8 +32,8 @@ export const GET = createApiHandler(
       .orderBy(FieldPath.documentId(), 'desc')
       .limit(pageSize)
 
-    if (cursorParam) {
-      const [cursorTime, cursorId] = cursorParam.split('|')
+    if (afterParam) {
+      const [cursorTime, cursorId] = afterParam.split('|')
       if (cursorTime && cursorId) {
         const cursorDate = new Date(cursorTime)
         if (!Number.isNaN(cursorDate.getTime())) {
@@ -137,6 +113,7 @@ export const PATCH = createApiHandler(
         message: 'Role or status must be provided',
         path: ['role'],
       }),
+    rateLimit: 'sensitive',
   },
   async (req, { body }) => {
     const { id, role, status } = body

@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { UnauthorizedError } from '@/lib/api-errors'
 
 const phoneNumberSchema = z
   .string()
@@ -34,9 +35,9 @@ function mapPreferences(data: Record<string, unknown>) {
   }
 }
 
-export const GET = createApiHandler({}, async (req, { auth }) => {
+export const GET = createApiHandler({ auth: 'required', rateLimit: 'standard' }, async (req, { auth }) => {
   if (!auth.uid) {
-    return { error: 'Authentication required', status: 401 }
+    throw new UnauthorizedError('Authentication required')
   }
 
   const userRef = adminDb.collection('users').doc(auth.uid)
@@ -48,11 +49,13 @@ export const GET = createApiHandler({}, async (req, { auth }) => {
 
 export const PATCH = createApiHandler(
   {
+    auth: 'required',
     bodySchema: updatePreferencesSchema,
+    rateLimit: 'standard'
   },
   async (req, { auth, body: payload }) => {
     if (!auth.uid) {
-      return { error: 'Authentication required', status: 401 }
+      throw new UnauthorizedError('Authentication required')
     }
 
     const userRef = adminDb.collection('users').doc(auth.uid)

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { createMetaOAuthState } from '@/services/meta-business'
 import { buildMetaBusinessLoginUrl } from '@/services/facebook-oauth'
 import { createApiHandler } from '@/lib/api-handler'
+import { ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
@@ -10,10 +11,11 @@ const querySchema = z.object({
 export const POST = createApiHandler(
   {
     querySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, query }) => {
     if (!auth.uid) {
-      return { error: 'Authentication required', status: 401 }
+      throw new UnauthorizedError('Authentication required')
     }
 
     const appId = process.env.META_APP_ID
@@ -22,7 +24,7 @@ export const POST = createApiHandler(
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
     if (!appId || !businessConfigId || !redirectUri) {
-      return { error: 'Meta business login is not configured', status: 500 }
+      throw new ServiceUnavailableError('Meta business login is not configured')
     }
 
     const redirect = query.redirect ?? `${appUrl}/dashboard`

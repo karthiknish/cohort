@@ -6,6 +6,7 @@ import { AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole } from '@/types/notifications'
 import { createApiHandler } from '@/lib/api-handler'
+import { toISO } from '@/lib/utils'
 
 const PAGE_SIZE_DEFAULT = 25
 const PAGE_SIZE_MAX = 100
@@ -20,35 +21,6 @@ const notificationQuerySchema = z.object({
     .optional(),
   unread: z.string().optional(),
 })
-
-function toISO(value: unknown): string | null {
-  if (!value && value !== 0) {
-    return null
-  }
-
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString()
-  }
-
-  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as { toDate?: () => Date }).toDate === 'function') {
-    const converted = (value as { toDate: () => Date }).toDate()
-    return converted instanceof Date ? converted.toISOString() : null
-  }
-
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
-  }
-
-  return null
-}
 
 function mapNotification(doc: FirebaseFirestore.QueryDocumentSnapshot, userId: string): WorkspaceNotification {
   const data = doc.data() as Record<string, unknown>
@@ -109,6 +81,7 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     querySchema: notificationQuerySchema,
+    rateLimit: 'standard',
   },
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')

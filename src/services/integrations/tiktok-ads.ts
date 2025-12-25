@@ -1,3 +1,4 @@
+import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 import { NormalizedMetric } from '@/types/integrations'
 
 // =============================================================================
@@ -208,18 +209,7 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-function coerceNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    const parsed = parseFloat(value)
-    return Number.isFinite(parsed) ? parsed : 0
-  }
-
-  return 0
-}
+const coerceNumber = (value: unknown): number => coerceNumberNullable(value) ?? 0
 
 function isRetryableStatus(status: number): boolean {
   return status === 429 || (status >= 500 && status < 600)
