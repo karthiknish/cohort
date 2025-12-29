@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { logAuditAction } from '@/lib/audit-logger'
 
 const payloadSchema = z
   .object({
@@ -121,9 +122,29 @@ export const POST = createApiHandler(
         status: finalStatus,
       }
       await adminAuth.setCustomUserClaims(auth.uid!, nextClaims)
+
+      // Log role/status change
+      await logAuditAction({
+        action: 'ADMIN_ROLE_CHANGE',
+        actorId: 'SYSTEM_BOOTSTRAP',
+        targetId: auth.uid!,
+        metadata: {
+          oldRole: claimRoleExisting,
+          newRole: finalRole,
+          oldStatus: claimStatusExisting,
+          newStatus: finalStatus,
+        },
+        requestId: req.headers.get('x-request-id') || undefined,
+      })
     }
 
-    return { ok: true, role: finalRole, status: finalStatus, claimsUpdated: claimsNeedUpdate }
+    return { 
+      ok: true, 
+      role: finalRole, 
+      status: finalStatus, 
+      claimsUpdated: claimsNeedUpdate,
+      agencyId: existingData?.agencyId || auth.uid
+    }
   }
 )
 

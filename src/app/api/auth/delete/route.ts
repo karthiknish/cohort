@@ -2,6 +2,7 @@ import type { CollectionReference } from 'firebase-admin/firestore'
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { logAuditAction } from '@/lib/audit-logger'
 
 async function deleteCollectionRecursively(collectionRef: CollectionReference, batchSize = 200): Promise<void> {
   const snapshot = await collectionRef.limit(batchSize).get()
@@ -44,6 +45,15 @@ export const DELETE = createApiHandler(
       return
     }
     throw error
+  })
+
+  // Log the deletion
+  await logAuditAction({
+    action: 'USER_ACCOUNT_DELETE',
+    actorId: auth.uid!,
+    actorEmail: auth.email || undefined,
+    ip: req.headers.get('x-forwarded-for') || undefined,
+    userAgent: req.headers.get('user-agent') || undefined,
   })
 
   return { ok: true }

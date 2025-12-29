@@ -37,12 +37,12 @@ export function exportToCsv<T extends Record<string, unknown>>(
       keys
         .map((key) => {
           const value = row[key]
-          if (value === null || value === undefined) return ''
-          const stringValue = String(value)
-          if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-            return `"${stringValue.replace(/"/g, '""')}"`
+          const sanitizedValue = sanitizeCsvValue(value)
+          
+          if (sanitizedValue.includes(',') || sanitizedValue.includes('"') || sanitizedValue.includes('\n')) {
+            return `"${sanitizedValue.replace(/"/g, '""')}"`
           }
-          return stringValue
+          return sanitizedValue
         })
         .join(',')
     ),
@@ -89,6 +89,31 @@ export function toISO(value: unknown): string | null {
   return null
 }
 
+/**
+ * Basic XSS protection by stripping HTML tags from strings.
+ */
+export function sanitizeInput(value: string): string {
+  if (typeof value !== 'string') return value
+  // Strip HTML tags and trim
+  return value.replace(/<[^>]*>?/gm, '').trim()
+}
+
+/**
+ * Sanitize a value for CSV export to prevent formula injection.
+ * Prefixes values starting with =, +, -, or @ with a single quote.
+ */
+export function sanitizeCsvValue(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  const stringValue = String(value)
+  
+  // CSV Injection protection: if the value starts with a sensitive character, prefix with '
+  if (/^[=+\-@\t\r]/.test(stringValue)) {
+    return `'${stringValue}`
+  }
+  
+  return stringValue
+}
+
 // Normalize arrays of strings, trimming and removing empties
 export function coerceStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -105,6 +130,31 @@ export function coerceNumber(value: unknown): number | null {
     if (Number.isFinite(parsed)) {
       return parsed
     }
+  }
+  return null
+}
+
+// Coerce boolean from mixed inputs
+export function coerceBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase().trim()
+    return lower === 'true' || lower === '1' || lower === 'yes' || lower === 'on'
+  }
+  if (typeof value === 'number') return value !== 0
+  return false
+}
+
+// Coerce Date from mixed inputs
+export function coerceDate(value: unknown): Date | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+  // Firestore Timestamp
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
+    return (value as any).toDate()
   }
   return null
 }

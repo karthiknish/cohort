@@ -28,10 +28,10 @@ export interface SchedulerEventInput {
 }
 
 function resolveThreshold(input: SchedulerEventInput): number {
-  if (typeof input.failureThresholdOverride === 'number' && Number.isFinite(input.failureThresholdOverride) && input.failureThresholdOverride >= 0) {
+  if (typeof input.failureThresholdOverride === 'number' && Number.isFinite(input.failureThresholdOverride) && input.failureThresholdOverride >= 1) {
     return input.failureThresholdOverride
   }
-  return DEFAULT_FAILURE_THRESHOLD
+  return Math.max(1, DEFAULT_FAILURE_THRESHOLD)
 }
 
 function determineSeverity(input: SchedulerEventInput): SchedulerEventSeverity {
@@ -39,16 +39,16 @@ function determineSeverity(input: SchedulerEventInput): SchedulerEventSeverity {
     providerId: entry.providerId,
     failedJobs: entry.failedJobs,
     threshold:
-      typeof entry.threshold === 'number' && Number.isFinite(entry.threshold) && entry.threshold >= 0
+      typeof entry.threshold === 'number' && Number.isFinite(entry.threshold) && entry.threshold >= 1
         ? entry.threshold
-        : DEFAULT_FAILURE_THRESHOLD,
+        : Math.max(1, DEFAULT_FAILURE_THRESHOLD),
   }))
 
   if (providerThresholds.length > 0) {
     if (
       providerThresholds.some((entry) => {
         const threshold = entry.threshold
-        return threshold === 0 ? entry.failedJobs > 0 : entry.failedJobs >= threshold
+        return entry.failedJobs >= threshold
       })
     ) {
       return 'critical'
@@ -60,10 +60,6 @@ function determineSeverity(input: SchedulerEventInput): SchedulerEventSeverity {
   }
 
   const threshold = resolveThreshold(input)
-
-  if (threshold === 0 && input.failedJobs > 0) {
-    return 'critical'
-  }
 
   if (input.failedJobs >= threshold) {
     return 'critical'

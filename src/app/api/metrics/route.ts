@@ -3,6 +3,7 @@ import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
 
@@ -18,23 +19,12 @@ const PAGE_SIZE_MAX = 500
 
 export const GET = createApiHandler(
   {
+    workspace: 'required',
     querySchema,
     rateLimit: 'standard',
   },
-  async (req, { auth, query }) => {
-    let userId: string | null = null
-    if (auth.isCron) {
-      userId = query.userId ?? null
-      if (!userId) {
-        throw new ValidationError('Cron requests must specify userId')
-      }
-    } else {
-      userId = auth.uid ?? null
-    }
-
-    if (!userId) {
-      throw new UnauthorizedError('Unable to resolve user context')
-    }
+  async (req, { workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
 
     const clientIds = query.clientIds
       ? query.clientIds.split(',').map((value) => value.trim()).filter(Boolean)
@@ -43,10 +33,7 @@ export const GET = createApiHandler(
     const pageSize = Math.min(Math.max(query.pageSize || PAGE_SIZE_DEFAULT, 1), PAGE_SIZE_MAX)
     const afterParam = query.after
 
-    const baseCollection = adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('adMetrics')
+    const baseCollection = workspace.metricsCollection
 
     let firestoreQuery = baseCollection.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 

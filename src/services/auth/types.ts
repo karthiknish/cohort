@@ -6,11 +6,18 @@ export interface AuthUser {
   email: string
   name: string
   phoneNumber: string | null
+  photoURL: string | null
   role: AuthRole
   status: AuthStatus
   agencyId: string
   createdAt: Date
   updatedAt: Date
+  notificationPreferences?: {
+    whatsapp?: {
+      tasks?: boolean
+      collaboration?: boolean
+    }
+  }
 }
 
 export interface SignUpData {

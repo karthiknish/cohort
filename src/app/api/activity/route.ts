@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { AuthenticationError } from '@/lib/server-auth'
@@ -11,22 +12,31 @@ const MAX_ACTIVITIES = 50
 
 const activityQuerySchema = z.object({
   clientId: z.string().trim().min(1, 'Client ID is required'),
-  limit: z.coerce.number().int().min(1).max(MAX_ACTIVITIES).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
+  pageSize: z.coerce.number().int().min(1).max(MAX_ACTIVITIES).default(20),
+  after: z.string().optional(),
 })
 
 async function createProjectActivity(
   workspace: WorkspaceContext,
   clientId: string,
-  limit: number
+  limit: number,
+  after?: string
 ): Promise<Activity[]> {
   const activities: Activity[] = []
   
   // Get projects for this client
-  const projectsQuery = workspace.projectsCollection
+  let projectsQuery = workspace.projectsCollection
     .where('clientId', '==', clientId)
     .orderBy('updatedAt', 'desc')
-    .limit(limit)
+
+  if (after) {
+    const afterDate = new Date(after)
+    if (!Number.isNaN(afterDate.getTime())) {
+      projectsQuery = projectsQuery.startAfter(Timestamp.fromDate(afterDate))
+    }
+  }
+
+  projectsQuery = projectsQuery.limit(limit)
   
   const projectsSnapshot = await projectsQuery.get()
   
@@ -50,17 +60,26 @@ async function createProjectActivity(
 async function createTaskActivity(
   workspace: WorkspaceContext,
   clientId: string,
-  limit: number
+  limit: number,
+  after?: string
 ): Promise<Activity[]> {
   const activities: Activity[] = []
   
   // Get tasks for projects belonging to this client
   // Use a more efficient approach to avoid Firestore's 10-item limit for 'in' operator
-  const tasksQuery = workspace.tasksCollection
+  let tasksQuery = workspace.tasksCollection
     .where('clientId', '==', clientId)
     .where('status', '==', 'completed')
     .orderBy('updatedAt', 'desc')
-    .limit(limit)
+
+  if (after) {
+    const afterDate = new Date(after)
+    if (!Number.isNaN(afterDate.getTime())) {
+      tasksQuery = tasksQuery.startAfter(Timestamp.fromDate(afterDate))
+    }
+  }
+
+  tasksQuery = tasksQuery.limit(limit)
   
   const tasksSnapshot = await tasksQuery.get()
   
@@ -96,17 +115,26 @@ async function createTaskActivity(
 async function createMessageActivity(
   workspace: WorkspaceContext,
   clientId: string,
-  limit: number
+  limit: number,
+  after?: string
 ): Promise<Activity[]> {
   const activities: Activity[] = []
   
   // Get collaboration messages for this client directly
   // Use a more efficient approach to avoid Firestore's 10-item limit for 'in' operator
-  const messagesQuery = workspace.collaborationCollection
+  let messagesQuery = workspace.collaborationCollection
     .where('channelType', '==', 'project')
     .where('clientId', '==', clientId)
     .orderBy('createdAt', 'desc')
-    .limit(limit)
+
+  if (after) {
+    const afterDate = new Date(after)
+    if (!Number.isNaN(afterDate.getTime())) {
+      messagesQuery = messagesQuery.startAfter(Timestamp.fromDate(afterDate))
+    }
+  }
+
+  messagesQuery = messagesQuery.limit(limit)
   
   const messagesSnapshot = await messagesQuery.get()
   
@@ -148,12 +176,13 @@ export const GET = createApiHandler(
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
     // Fetch activities from different sources
-    const limitPerType = Math.ceil(query.limit / 3)
+    // Fetch one extra to determine if there's more
+    const limitPerType = Math.ceil(query.pageSize / 3) + 1
 
     const [projectActivities, taskActivities, messageActivities] = await Promise.all([
-      createProjectActivity(workspace, query.clientId, limitPerType + query.offset),
-      createTaskActivity(workspace, query.clientId, limitPerType + query.offset),
-      createMessageActivity(workspace, query.clientId, limitPerType + query.offset),
+      createProjectActivity(workspace, query.clientId, limitPerType, query.after),
+      createTaskActivity(workspace, query.clientId, limitPerType, query.after),
+      createMessageActivity(workspace, query.clientId, limitPerType, query.after),
     ])
 
     // Combine and sort all activities by timestamp (most recent first)
@@ -162,13 +191,17 @@ export const GET = createApiHandler(
     )
 
     // Apply pagination
-    const paginatedActivities = allActivities.slice(query.offset, query.offset + query.limit)
-    const hasMore = query.offset + query.limit < allActivities.length
+    const paginatedActivities = allActivities.slice(0, query.pageSize)
+    const hasMore = allActivities.length > query.pageSize
+    
+    const nextCursor = paginatedActivities.length > 0 
+      ? paginatedActivities[paginatedActivities.length - 1].timestamp 
+      : null
 
-    const response: ActivityResponse = {
+    const response = {
       activities: paginatedActivities,
+      nextCursor,
       hasMore,
-      total: allActivities.length,
     }
 
     return response

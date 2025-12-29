@@ -78,7 +78,7 @@ function toTimestamp(value: TimestampInput): Timestamp | null {
 }
 
 export async function persistIntegrationTokens(options: {
-  userId: string
+  workspaceId: string
   providerId: string
   accessToken: string | null
   idToken?: string | null
@@ -93,7 +93,7 @@ export async function persistIntegrationTokens(options: {
   refreshTokenExpiresAt?: TimestampInput
 }): Promise<void> {
   const {
-    userId,
+    workspaceId,
     providerId,
     accessToken,
     idToken,
@@ -107,7 +107,7 @@ export async function persistIntegrationTokens(options: {
     accessTokenExpiresAt = null,
     refreshTokenExpiresAt = null,
   } = options
-  const integrationRef = doc(db, 'users', userId, 'adIntegrations', providerId)
+  const integrationRef = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
 
   await setDoc(
     integrationRef,
@@ -131,7 +131,7 @@ export async function persistIntegrationTokens(options: {
 }
 
 export async function updateIntegrationCredentials(options: {
-  userId: string
+  workspaceId: string
   providerId: string
   accessToken?: string | null
   refreshToken?: string | null
@@ -144,7 +144,7 @@ export async function updateIntegrationCredentials(options: {
   accountId?: string | null
 }): Promise<void> {
   const {
-    userId,
+    workspaceId,
     providerId,
     accessToken,
     refreshToken,
@@ -157,7 +157,7 @@ export async function updateIntegrationCredentials(options: {
     accountId,
   } = options
 
-  const integrationRef = doc(db, 'users', userId, 'adIntegrations', providerId)
+  const integrationRef = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
 
   const updatePayload: Record<string, unknown> = {
     lastSyncRequestedAt: serverTimestamp(),
@@ -177,13 +177,13 @@ export async function updateIntegrationCredentials(options: {
 }
 
 export async function enqueueSyncJob(options: {
-  userId: string
+  workspaceId: string
   providerId: string
   jobType?: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
   timeframeDays?: number
 }): Promise<void> {
-  const { userId, providerId, jobType = 'initial-backfill', timeframeDays = 90 } = options
-  await addDoc(collection(db, 'users', userId, 'syncJobs'), {
+  const { workspaceId, providerId, jobType = 'initial-backfill', timeframeDays = 90 } = options
+  await addDoc(collection(db, 'workspaces', workspaceId, 'syncJobs'), {
     providerId,
     jobType,
     status: 'queued',
@@ -196,11 +196,11 @@ export async function enqueueSyncJob(options: {
 }
 
 export async function getAdIntegration(options: {
-  userId: string
+  workspaceId: string
   providerId: string
 }): Promise<AdIntegration | null> {
-  const { userId, providerId } = options
-  const ref = doc(db, 'users', userId, 'adIntegrations', providerId)
+  const { workspaceId, providerId } = options
+  const ref = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
   const snapshot = await getDoc(ref)
   if (!snapshot.exists()) {
     return null
@@ -228,10 +228,10 @@ export async function getAdIntegration(options: {
 }
 
 export async function claimNextSyncJob(options: {
-  userId: string
+  workspaceId: string
 }): Promise<SyncJob | null> {
-  const { userId } = options
-  const jobsRef = collection(db, 'users', userId, 'syncJobs')
+  const { workspaceId } = options
+  const jobsRef = collection(db, 'workspaces', workspaceId, 'syncJobs')
   const jobQuery = query(jobsRef, where('status', '==', 'queued'), orderBy('createdAt', 'asc'), limit(1))
   const snapshot = await getDocs(jobQuery)
 
@@ -261,11 +261,11 @@ export async function claimNextSyncJob(options: {
 }
 
 export async function completeSyncJob(options: {
-  userId: string
+  workspaceId: string
   jobId: string
 }): Promise<void> {
-  const { userId, jobId } = options
-  const jobRef = doc(db, 'users', userId, 'syncJobs', jobId)
+  const { workspaceId, jobId } = options
+  const jobRef = doc(db, 'workspaces', workspaceId, 'syncJobs', jobId)
   await updateDoc(jobRef, {
     status: 'success',
     processedAt: serverTimestamp(),
@@ -273,12 +273,12 @@ export async function completeSyncJob(options: {
 }
 
 export async function failSyncJob(options: {
-  userId: string
+  workspaceId: string
   jobId: string
   message: string
 }): Promise<void> {
-  const { userId, jobId, message } = options
-  const jobRef = doc(db, 'users', userId, 'syncJobs', jobId)
+  const { workspaceId, jobId, message } = options
+  const jobRef = doc(db, 'workspaces', workspaceId, 'syncJobs', jobId)
   await updateDoc(jobRef, {
     status: 'error',
     processedAt: serverTimestamp(),
@@ -287,13 +287,13 @@ export async function failSyncJob(options: {
 }
 
 export async function updateIntegrationStatus(options: {
-  userId: string
+  workspaceId: string
   providerId: string
   status: 'pending' | 'success' | 'error'
   message?: string | null
 }): Promise<void> {
-  const { userId, providerId, status, message = null } = options
-  const integrationRef = doc(db, 'users', userId, 'adIntegrations', providerId)
+  const { workspaceId, providerId, status, message = null } = options
+  const integrationRef = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
   await updateDoc(integrationRef, {
     lastSyncStatus: status,
     lastSyncMessage: message,
@@ -302,14 +302,14 @@ export async function updateIntegrationStatus(options: {
 }
 
 export async function writeMetricsBatch(options: {
-  userId: string
+  workspaceId: string
   metrics: NormalizedMetric[]
 }): Promise<void> {
-  const { userId, metrics } = options
+  const { workspaceId, metrics } = options
   if (!metrics.length) return
 
   const batch = writeBatch(db)
-  const metricsCollection = collection(db, 'users', userId, 'adMetrics')
+  const metricsCollection = collection(db, 'workspaces', workspaceId, 'adMetrics')
 
   metrics.forEach((metric) => {
     const metricRef = doc(metricsCollection)

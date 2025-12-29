@@ -13,6 +13,7 @@ import { FinanceHeader } from './finance-header'
 import { FinanceStatsGrid } from './finance-stats-grid'
 import { FinanceCostsCard } from './finance-costs-card'
 import { FinanceChartsSection } from './finance-charts-section'
+import { FinanceForecastCard } from './finance-forecast-card'
 import { FinanceInvoiceTable } from './finance-invoice-table'
 import { FinanceRevenueSidebar } from './finance-revenue-sidebar'
 import { FinanceDashboardSkeleton } from './finance-dashboard-skeleton'
@@ -56,6 +57,7 @@ export function FinanceDashboard() {
     refundingInvoiceId,
     sendInvoiceReminder,
     issueInvoiceRefund,
+    forecast,
     hasMoreInvoices,
     hasMoreCosts,
     loadMoreInvoices,
@@ -241,6 +243,11 @@ export function FinanceDashboard() {
         <TabsContent value="overview" className="space-y-6 mt-0">
           {/* Charts Section - Full Width */}
           <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
+          
+          {/* Forecast Section */}
+          {forecast && forecast.length > 0 && (
+            <FinanceForecastCard data={forecast} currency={stats.primaryCurrency} />
+          )}
           
           {/* Revenue Sidebar - Below Charts */}
           <FinanceRevenueSidebar

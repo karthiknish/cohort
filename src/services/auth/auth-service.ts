@@ -4,17 +4,21 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
   signInWithPopup,
   GoogleAuthProvider,
   FacebookAuthProvider,
   OAuthProvider,
-  updateProfile,
+  updateProfile as updateFirebaseProfile,
   linkWithPopup,
   User as FirebaseUser,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  deleteUser,
 } from 'firebase/auth'
 
 import type { AuthRole, AuthStatus, AuthUser, SignUpData } from './types'
@@ -36,16 +40,23 @@ export class AuthService {
   private bootstrapPromises = new Map<string, Promise<void>>()
   private idTokenCache: { token: string; expiresAt: number } | null = null
   private idTokenRefreshPromise: Promise<string> | null = null
+  private refreshTimeout: NodeJS.Timeout | null = null
 
   private constructor() {
-    onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    onIdTokenChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       this.clearIdTokenCache()
+      if (this.refreshTimeout) {
+        clearTimeout(this.refreshTimeout)
+        this.refreshTimeout = null
+      }
+
       if (firebaseUser) {
         try {
           await this.ensureUserBootstrap(firebaseUser, firebaseUser.displayName)
           const authUser = await this.mapFirebaseUser(firebaseUser)
           this.currentUser = authUser
           this.notifyListeners(authUser)
+          this.scheduleTokenRefresh(firebaseUser)
         } catch (error) {
           console.error('Error mapping Firebase user:', error)
           this.currentUser = null
@@ -58,6 +69,24 @@ export class AuthService {
     })
   }
 
+  private scheduleTokenRefresh(firebaseUser: FirebaseUser): void {
+    if (this.refreshTimeout) clearTimeout(this.refreshTimeout)
+
+    const buffer = 5 * 60 * 1000
+    const now = Date.now()
+    const expiresAt = this.idTokenCache?.expiresAt ?? (now + AuthService.TOKEN_DEFAULT_TTL_MS)
+    const delay = Math.max(0, expiresAt - now - buffer)
+
+    this.refreshTimeout = setTimeout(async () => {
+      try {
+        await this.getIdToken(true)
+      } catch (error) {
+        console.error('Background token refresh failed:', error)
+        this.refreshTimeout = setTimeout(() => this.scheduleTokenRefresh(firebaseUser), 60000)
+      }
+    }, delay)
+  }
+
   static getInstance(): AuthService {
     if (!AuthService.instance) {
       AuthService.instance = new AuthService()
@@ -66,9 +95,10 @@ export class AuthService {
   }
 
   private async mapFirebaseUser(firebaseUser: FirebaseUser): Promise<AuthUser> {
-    const [role, status] = await Promise.all([
+    const [role, status, agencyId] = await Promise.all([
       this.resolveUserRole(firebaseUser),
       this.resolveUserStatus(firebaseUser),
+      this.resolveUserAgency(firebaseUser),
     ])
 
     return {
@@ -76,12 +106,38 @@ export class AuthService {
       email: firebaseUser.email!,
       name: firebaseUser.displayName || 'User',
       phoneNumber: firebaseUser.phoneNumber ?? null,
+      photoURL: firebaseUser.photoURL ?? null,
       role,
       status,
-      agencyId: 'default-agency',
-      createdAt: new Date(),
+      agencyId,
+      createdAt: firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime) : new Date(),
       updatedAt: new Date(),
+      notificationPreferences: {
+        whatsapp: {
+          tasks: false,
+          collaboration: false,
+        },
+      },
     }
+  }
+
+  private async resolveUserAgency(firebaseUser: FirebaseUser): Promise<string> {
+    try {
+      const tokenResult = await firebaseUser.getIdTokenResult()
+      const claimAgency = tokenResult?.claims?.agencyId
+      if (typeof claimAgency === 'string' && claimAgency.trim().length > 0) {
+        return claimAgency.trim()
+      }
+    } catch (error) {
+      console.warn('Failed to resolve agencyId from token claims', error)
+    }
+
+    if (typeof window !== 'undefined') {
+      const cachedAgency = window.localStorage.getItem(`cohorts_agency_${firebaseUser.uid}`)
+      if (cachedAgency) return cachedAgency
+    }
+
+    return firebaseUser.uid
   }
 
   private async resolveUserRole(firebaseUser: FirebaseUser): Promise<AuthRole> {
@@ -171,33 +227,59 @@ export class AuthService {
       return existingPromise
     }
 
-    const payloadName = typeof name === 'string' && name.trim().length > 0 ? name.trim() : undefined
+    const lockKey = `cohorts_bootstrap_lock_${uid}`
+    const bootstrappedKey = `cohorts_bootstrapped_${uid}`
 
     const promise = (async () => {
-      const idToken = await this.fetchAndCacheIdToken(firebaseUser, false)
-      const response = await fetch('/api/auth/bootstrap', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(payloadName ? { name: payloadName } : {}),
-      })
+      const lastBootstrap = localStorage.getItem(bootstrappedKey)
+      if (lastBootstrap && Date.now() - parseInt(lastBootstrap, 10) < 3600000) {
+        return
+      }
 
-      let payload: { error?: string; claimsUpdated?: boolean } | null = null
+      const lock = localStorage.getItem(lockKey)
+      if (lock && Date.now() - parseInt(lock, 10) < 10000) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        return this.ensureUserBootstrap(firebaseUser, name)
+      }
+
+      localStorage.setItem(lockKey, Date.now().toString())
+
       try {
-        payload = (await response.json()) as { error?: string; claimsUpdated?: boolean } | null
-      } catch {
-        payload = null
-      }
+        const idToken = await this.fetchAndCacheIdToken(firebaseUser, false)
+        const payloadName = typeof name === 'string' && name.trim().length > 0 ? name.trim() : undefined
 
-      if (!response.ok || !payload) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to synchronise your account profile'
-        throw new Error(message)
-      }
+        const response = await fetch('/api/auth/bootstrap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify(payloadName ? { name: payloadName } : {}),
+        })
 
-      if (payload.claimsUpdated) {
-        await this.fetchAndCacheIdToken(firebaseUser, true)
+        let payload: { error?: string; claimsUpdated?: boolean; agencyId?: string } | null = null
+        try {
+          payload = (await response.json()) as { error?: string; claimsUpdated?: boolean; agencyId?: string } | null
+        } catch {
+          payload = null
+        }
+
+        if (!response.ok || !payload) {
+          const message = typeof payload?.error === 'string' ? payload.error : 'Failed to synchronise your account profile'
+          throw new Error(message)
+        }
+
+        if (payload.agencyId) {
+          localStorage.setItem(`cohorts_agency_${uid}`, payload.agencyId)
+        }
+
+        localStorage.setItem(bootstrappedKey, Date.now().toString())
+
+        if (payload.claimsUpdated) {
+          await this.fetchAndCacheIdToken(firebaseUser, true)
+        }
+      } finally {
+        localStorage.removeItem(lockKey)
       }
     })()
       .finally(() => {
@@ -248,7 +330,7 @@ export class AuthService {
         : undefined
 
       await persistIntegrationTokens({
-        userId: currentUser.uid,
+        workspaceId: this.currentUser?.agencyId ?? currentUser.uid,
         providerId: 'google',
         accessToken: resolvedAccessToken,
         idToken: credential?.idToken ?? null,
@@ -256,7 +338,7 @@ export class AuthService {
         refreshToken,
         accessTokenExpiresAt,
       })
-      await enqueueSyncJob({ userId: currentUser.uid, providerId: 'google' })
+      await enqueueSyncJob({ workspaceId: this.currentUser?.agencyId ?? currentUser.uid, providerId: 'google' })
     } catch (error: unknown) {
       console.error('Google Ads connection error:', error)
       if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
@@ -292,14 +374,14 @@ export class AuthService {
         : undefined
 
       await persistIntegrationTokens({
-        userId: currentUser.uid,
+        workspaceId: this.currentUser?.agencyId ?? currentUser.uid,
         providerId: 'facebook',
         accessToken: resolvedAccessToken,
         scopes: ['ads_management', 'ads_read', 'business_management'],
         accessTokenExpiresAt,
       })
 
-      await enqueueSyncJob({ userId: currentUser.uid, providerId: 'facebook' })
+      await enqueueSyncJob({ workspaceId: this.currentUser?.agencyId ?? currentUser.uid, providerId: 'facebook' })
     } catch (error: unknown) {
       console.error('Facebook Ads connection error:', error)
       if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
@@ -320,13 +402,13 @@ export class AuthService {
       const credential = OAuthProvider.credentialFromResult(result)
 
       await persistIntegrationTokens({
-        userId: currentUser.uid,
+        workspaceId: this.currentUser?.agencyId ?? currentUser.uid,
         providerId: 'linkedin',
         accessToken: credential?.accessToken ?? null,
         idToken: credential?.idToken ?? null,
         scopes: ['r_ads', 'rw_ads'],
       })
-      await enqueueSyncJob({ userId: currentUser.uid, providerId: 'linkedin' })
+      await enqueueSyncJob({ workspaceId: this.currentUser?.agencyId ?? currentUser.uid, providerId: 'linkedin' })
     } catch (error: unknown) {
       console.error('LinkedIn Ads connection error:', error)
       if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
@@ -392,6 +474,26 @@ export class AuthService {
     return (await response.json()) as { url: string }
   }
 
+  async startTikTokOauth(redirect?: string): Promise<{ url: string }> {
+    const idToken = await this.getIdToken()
+    const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
+    const response = await fetch(`/api/integrations/tiktok/oauth/url${search}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string }
+      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to start TikTok OAuth'
+      throw new Error(message)
+    }
+
+    return (await response.json()) as { url: string }
+  }
+
   async signInWithFacebook(): Promise<AuthUser> {
     try {
       const provider = new FacebookAuthProvider()
@@ -447,9 +549,6 @@ export class AuthService {
       if (isFirebaseError(error) && error.code === 'auth/operation-not-allowed') {
         throw new Error('LinkedIn sign-in is not enabled. Please contact support to enable this provider.')
       }
-      if (isFirebaseError(error)) {
-        throw new Error(getFriendlyAuthErrorMessage(error))
-      }
       if (error instanceof Error && error.message) {
         throw new Error(error.message)
       }
@@ -490,7 +589,7 @@ export class AuthService {
 
       if (data.displayName && userCredential.user) {
         try {
-          await updateProfile(userCredential.user, { displayName: data.displayName })
+          await updateFirebaseProfile(userCredential.user, { displayName: data.displayName })
         } catch (error) {
           console.warn('Failed to set display name during sign up:', error)
         }
@@ -541,9 +640,11 @@ export class AuthService {
       }
 
       const normalizedEmail = email.trim().toLowerCase()
-      const actionCodeSettings = typeof window !== 'undefined'
-        ? { url: `${window.location.origin}/auth/reset` }
-        : undefined
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+      const actionCodeSettings = { 
+        url: `${appUrl}/auth/reset`,
+        handleCodeInApp: true
+      }
 
       await sendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings)
     } catch (error: unknown) {
@@ -579,9 +680,34 @@ export class AuthService {
     }
 
     try {
+      const firebaseUser = auth.currentUser
+      if (!firebaseUser) {
+        throw new Error('No authenticated user')
+      }
+
+      const profileUpdates: { displayName?: string | null; photoURL?: string | null } = {}
+      let resolvedName: string | undefined
+      if (typeof data.name === 'string') {
+        resolvedName = data.name.trim()
+        if (resolvedName.length > 0 && resolvedName !== firebaseUser.displayName) {
+          profileUpdates.displayName = resolvedName
+        }
+      }
+
+      const hasPhotoUpdate = Object.prototype.hasOwnProperty.call(data, 'photoURL')
+      if (hasPhotoUpdate) {
+        profileUpdates.photoURL = data.photoURL ?? null
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        await updateFirebaseProfile(firebaseUser, profileUpdates)
+      }
+
       this.currentUser = {
         ...this.currentUser,
         ...data,
+        name: typeof resolvedName === 'string' && resolvedName.length > 0 ? resolvedName : this.currentUser.name,
+        photoURL: hasPhotoUpdate ? data.photoURL ?? null : this.currentUser.photoURL,
         updatedAt: new Date(),
       }
 
@@ -590,6 +716,24 @@ export class AuthService {
     } catch (error: unknown) {
       console.error('Profile update error:', error)
       throw new Error('Failed to update profile')
+    }
+  }
+
+  async reauthenticate(password: string): Promise<void> {
+    const user = auth.currentUser
+    if (!user || !user.email) {
+      throw new Error('No authenticated user')
+    }
+
+    const credential = EmailAuthProvider.credential(user.email, password)
+    try {
+      await reauthenticateWithCredential(user, credential)
+    } catch (error: unknown) {
+      console.error('Re-authentication error:', error)
+      if (isFirebaseError(error) && error.code === 'auth/wrong-password') {
+        throw new Error('Incorrect password')
+      }
+      throw new Error('Failed to re-authenticate')
     }
   }
 
@@ -602,35 +746,83 @@ export class AuthService {
       throw new Error('Current and new passwords are required')
     }
 
+    if (newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters long')
+    }
+
     try {
+      await this.reauthenticate(currentPassword)
+      const user = auth.currentUser
+      if (!user) throw new Error('No authenticated user')
+      await updatePassword(user, newPassword)
       console.log('Password changed successfully')
     } catch (error: unknown) {
       console.error('Password change error:', error)
+      if (error instanceof Error) throw error
       throw new Error('Failed to change password')
     }
   }
 
-  async deleteAccount(): Promise<void> {
-    const firebaseUser = auth.currentUser
-    if (!firebaseUser) {
-      throw new Error('No authenticated user found')
+  async deleteAccount(password?: string): Promise<void> {
+    if (!this.currentUser) {
+      throw new Error('No authenticated user')
     }
 
     try {
-      // Re-authenticate if necessary or just attempt deletion
-      // Note: Re-auth is usually required by Firebase for sensitive ops
-      await firebaseUser.delete()
-      
-      await firebaseSignOut(auth)
+      const user = auth.currentUser
+      if (!user) throw new Error('No authenticated user')
+
+      if (password) {
+        await this.reauthenticate(password)
+      }
+
+      const token = await this.getIdToken(true)
+      const response = await fetch('/api/auth/delete', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        const message = payload?.error ?? 'Failed to delete account'
+        throw new Error(message)
+      }
+
+      await deleteUser(user)
       this.clearIdTokenCache()
       this.currentUser = null
       this.notifyListeners(null)
     } catch (error: unknown) {
       console.error('Account deletion error:', error)
-      throw new Error(getFriendlyAuthErrorMessage(error))
+      if (isFirebaseError(error) && error.code === 'auth/requires-recent-login') {
+        throw new Error('This operation requires recent authentication. Please provide your password.')
+      }
+      if (error instanceof Error && error.message) {
+        throw new Error(error.message)
+      }
+      throw new Error('Failed to delete account')
+    }
+  }
+
+  async disconnectProvider(providerId: string): Promise<void> {
+    const token = await this.getIdToken()
+    const response = await fetch('/api/integrations/disconnect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ providerId }),
+    })
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string }
+      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to disconnect provider'
+      throw new Error(message)
     }
   }
 }
-
 
 export const authService = AuthService.getInstance()

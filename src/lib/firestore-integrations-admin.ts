@@ -2,6 +2,7 @@ import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore'
 import { FieldValue, Timestamp, WriteBatch } from 'firebase-admin/firestore'
 
 import { adminDb } from '@/lib/firebase-admin'
+import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import {
   AdIntegration,
   NormalizedMetric,
@@ -43,6 +44,11 @@ function serverTimestamp() {
   return FieldValue.serverTimestamp()
 }
 
+async function getWorkspaceRef(userId: string) {
+  const workspaceId = await resolveWorkspaceIdForUser(userId)
+  return adminDb.collection('workspaces').doc(workspaceId)
+}
+
 export async function persistIntegrationTokens(options: {
   userId: string
   providerId: string
@@ -74,9 +80,8 @@ export async function persistIntegrationTokens(options: {
     refreshTokenExpiresAt = null,
   } = options
 
-  const integrationRef = adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  const integrationRef = workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
 
@@ -127,9 +132,8 @@ export async function updateIntegrationCredentials(options: {
     accountId,
   } = options
 
-  const integrationRef = adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  const integrationRef = workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
 
@@ -158,9 +162,8 @@ export async function enqueueSyncJob(options: {
 }): Promise<void> {
   const { userId, providerId, jobType = 'initial-backfill', timeframeDays = 90 } = options
 
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('syncJobs')
     .add({
       providerId,
@@ -180,9 +183,8 @@ export async function getAdIntegration(options: {
 }): Promise<AdIntegration | null> {
   const { userId, providerId } = options
 
-  const snapshot = await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  const snapshot = await workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
     .get()
@@ -228,7 +230,8 @@ export async function claimNextSyncJob(options: {
 }): Promise<SyncJob | null> {
   const { userId } = options
 
-  const jobsRef = adminDb.collection('users').doc(userId).collection('syncJobs')
+  const workspaceRef = await getWorkspaceRef(userId)
+  const jobsRef = workspaceRef.collection('syncJobs')
   const snapshot = await jobsRef
     .where('status', '==', 'queued')
     .orderBy('createdAt', 'asc')
@@ -262,9 +265,8 @@ export async function claimNextSyncJob(options: {
 
 export async function completeSyncJob(options: { userId: string; jobId: string }): Promise<void> {
   const { userId, jobId } = options
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('syncJobs')
     .doc(jobId)
     .update({
@@ -279,9 +281,8 @@ export async function failSyncJob(options: {
   message: string
 }): Promise<void> {
   const { userId, jobId, message } = options
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('syncJobs')
     .doc(jobId)
     .update({
@@ -299,9 +300,8 @@ export async function updateIntegrationStatus(options: {
 }): Promise<void> {
   const { userId, providerId, status, message = null } = options
 
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
     .update({
@@ -317,7 +317,8 @@ export async function hasPendingSyncJob(options: {
 }): Promise<boolean> {
   const { userId, providerId } = options
 
-  const jobsRef = adminDb.collection('users').doc(userId).collection('syncJobs')
+  const workspaceRef = await getWorkspaceRef(userId)
+  const jobsRef = workspaceRef.collection('syncJobs')
   const snapshot = await jobsRef
     .where('providerId', '==', providerId)
     .where('status', 'in', ['queued', 'running'])
@@ -334,9 +335,8 @@ export async function markIntegrationSyncRequested(options: {
 }): Promise<void> {
   const { userId, providerId, status = 'pending' } = options
 
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
     .set(
@@ -376,9 +376,8 @@ export async function updateIntegrationPreferences(options: IntegrationPreferenc
     payload.scheduledTimeframeDays = options.scheduledTimeframeDays ?? null
   }
 
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
     .set(payload, { merge: true })
@@ -392,7 +391,8 @@ export async function writeMetricsBatch(options: {
   if (!metrics.length) return
 
   const batch: WriteBatch = adminDb.batch()
-  const metricsCollection = adminDb.collection('users').doc(userId).collection('adMetrics')
+  const workspaceRef = await getWorkspaceRef(userId)
+  const metricsCollection = workspaceRef.collection('adMetrics')
 
   metrics.forEach((metric) => {
     const metricRef = metricsCollection.doc()
@@ -411,9 +411,8 @@ export async function deleteAdIntegration(options: {
 }): Promise<void> {
   const { userId, providerId } = options
 
-  await adminDb
-    .collection('users')
-    .doc(userId)
+  const workspaceRef = await getWorkspaceRef(userId)
+  await workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
     .delete()

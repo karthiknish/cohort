@@ -59,10 +59,19 @@ export const POST = createApiHandler({ auth: 'none', rateLimit: 'standard' }, as
     switch (event.type) {
       case 'invoice.paid':
       case 'invoice.payment_succeeded':
-        await handleInvoicePaid(event.data.object as Stripe.Invoice)
+        await handleInvoicePaid(event.data.object as Stripe.Invoice, event.type)
         break
       case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, event.type)
+        break
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge)
+        break
+      case 'invoice.finalized':
+      case 'invoice.voided':
+      case 'invoice.marked_uncollectible':
+      case 'invoice.payment_action_required':
+        await syncInvoiceRecords(event.data.object as Stripe.Invoice, { eventType: event.type })
         break
       default:
         // Unhandled event type
@@ -83,7 +92,7 @@ export const POST = createApiHandler({ auth: 'none', rateLimit: 'standard' }, as
   return { received: true }
 })
 
-async function handleInvoicePaid(invoice: Stripe.Invoice) {
+async function handleInvoicePaid(invoice: Stripe.Invoice, eventType: string) {
   const workspaceId = invoice.metadata?.workspaceId
   const clientId = invoice.metadata?.clientId
 
@@ -93,17 +102,19 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   // Sync with Firestore (Finance & Client records)
-  const outcome = await syncInvoiceRecords(invoice)
+  const outcome = await syncInvoiceRecords(invoice, { eventType })
 
   // Record Revenue if paid
-  if (outcome && outcome.deltaPaid > 0 && outcome.workspaceId) {
-    await recordInvoiceRevenue({
-      workspaceId: outcome.workspaceId,
-      clientId: outcome.clientId,
-      amountDelta: outcome.deltaPaid,
-      paidAt: outcome.paidAt,
-      currency: outcome.currency,
-    })
+  if (outcome && outcome.workspaceId) {
+    if (outcome.deltaPaid > 0) {
+      await recordInvoiceRevenue({
+        workspaceId: outcome.workspaceId,
+        clientId: outcome.clientId,
+        amountDelta: outcome.deltaPaid,
+        paidAt: outcome.paidAt,
+        currency: outcome.currency,
+      })
+    }
   }
 
   const clientRef = adminDb
@@ -137,7 +148,39 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   })
 }
 
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, eventType: string) {
   // Sync with Firestore to update status to 'overdue' or 'open' (handled by syncInvoiceRecords logic)
-  await syncInvoiceRecords(invoice)
+  await syncInvoiceRecords(invoice, { eventType })
+}
+
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  const stripe = getStripeClient()
+  const chargeWithInvoice = charge as Stripe.Charge & { invoice?: string | Stripe.Invoice | null }
+  const invoiceRef = chargeWithInvoice.invoice ?? null
+  const invoiceId = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id ?? null
+
+  if (!invoiceId) {
+    console.warn('[stripe-webhook] Charge refund missing invoice reference', {
+      chargeId: charge.id,
+    })
+    return
+  }
+
+  const invoice = await stripe.invoices.retrieve(invoiceId)
+  const refundTotalCents = typeof charge.amount_refunded === 'number' ? charge.amount_refunded : null
+
+  const outcome = await syncInvoiceRecords(invoice, {
+    eventType: 'charge.refunded',
+    refundTotalCents,
+  })
+
+  if (outcome && outcome.workspaceId && outcome.deltaRefunded > 0) {
+    await recordInvoiceRevenue({
+      workspaceId: outcome.workspaceId,
+      clientId: outcome.clientId,
+      amountDelta: -outcome.deltaRefunded,
+      paidAt: outcome.paidAt,
+      currency: outcome.currency,
+    })
+  }
 }

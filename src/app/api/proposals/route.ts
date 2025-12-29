@@ -5,8 +5,15 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler, apiSuccess } from '@/lib/api-handler'
+import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
-import { mergeProposalForm, proposalDraftUpdateSchema, sanitizeProposalUpdate, type ProposalFormData } from '@/lib/proposals'
+import {
+  mergeProposalForm,
+  proposalDraftSchema,
+  proposalDraftUpdateSchema,
+  sanitizeProposalUpdate,
+  type ProposalFormData,
+} from '@/lib/proposals'
 
 const updateSchema = proposalDraftUpdateSchema
 
@@ -78,12 +85,14 @@ type SerializedProposal = {
 
 export const GET = createApiHandler(
   {
+    workspace: 'required',
     querySchema: proposalQuerySchema,
     rateLimit: 'standard',
   },
-  async (req, { auth, query }) => {
+  async (req, { workspace, query }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     const { id: idParam, status: statusParam, clientId: clientIdParam } = query
-    const proposalsRef = adminDb.collection('users').doc(auth.uid!).collection('proposals')
+    const proposalsRef = workspace.proposalsCollection
 
     if (idParam) {
       const docSnap = await proposalsRef.doc(idParam).get()
@@ -114,71 +123,52 @@ export const GET = createApiHandler(
 
 export const POST = createApiHandler(
   {
-    // We'll use a custom body parsing here because of the complex normalization
-    // but we could also use a schema if we wanted to be stricter.
+    workspace: 'required',
+    bodySchema: proposalDraftSchema,
     rateLimit: 'sensitive',
   },
-  async (req, { auth }) => {
-    const rawBody = (await req.json().catch(() => null)) as Record<string, unknown> | null
+  async (req, { auth, workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
+    const payload = body
 
-    const mergedFormData = normalizeFormData(rawBody?.formData)
-
-    const rawStep = typeof rawBody?.stepProgress === 'number' ? rawBody.stepProgress : 0
-    const stepProgress = Math.min(Math.max(Math.round(rawStep), 0), 10)
-
-    const rawStatus = typeof rawBody?.status === 'string' ? rawBody.status : 'draft'
-    const allowedStatuses = ['draft', 'in_progress', 'ready', 'sent'] as const
-    const status = allowedStatuses.includes(rawStatus as (typeof allowedStatuses)[number]) ? rawStatus : 'draft'
-
-    const clientId = typeof rawBody?.clientId === 'string' ? rawBody.clientId.trim() : null
-    const clientName = typeof rawBody?.clientName === 'string' ? rawBody.clientName.trim() : null
-
+    const mergedFormData = mergeProposalForm(payload.formData)
     const timestamp = FieldValue.serverTimestamp()
 
-    const docRef = await adminDb
-      .collection('users')
-      .doc(auth.uid!)
-      .collection('proposals')
-      .add({
-        ownerId: auth.uid,
-        status,
-        stepProgress,
-        formData: mergedFormData,
-        clientId: clientId && clientId.length > 0 ? clientId : null,
-        clientName: clientName && clientName.length > 0 ? clientName : null,
-        aiInsights: null,
-        aiSuggestions: null,
-        pdfUrl: null,
-        pptUrl: null,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        lastAutosaveAt: timestamp,
-      })
+    const docRef = await workspace.proposalsCollection.add({
+      ownerId: auth.uid,
+      status: payload.status,
+      stepProgress: payload.stepProgress,
+      formData: mergedFormData,
+      clientId: payload.clientId ?? null,
+      clientName: payload.clientName ?? null,
+      aiInsights: null,
+      aiSuggestions: null,
+      pdfUrl: null,
+      pptUrl: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      lastAutosaveAt: timestamp,
+    })
 
-    // Return success response with 201 status if needed, 
-    // but the wrapper currently doesn't support custom status for objects.
-    // We'll return the object directly for now.
     return { id: docRef.id }
   }
 )
 
 export const PATCH = createApiHandler(
   {
+    workspace: 'required',
     bodySchema: updateSchema,
     rateLimit: 'sensitive',
   },
-  async (req, { auth, body }) => {
+  async (req, { workspace, body }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     const proposalId = extractProposalId(body)
 
     if (!proposalId) {
       throw new ValidationError('Proposal id required')
     }
 
-    const proposalRef = adminDb
-      .collection('users')
-      .doc(auth.uid!)
-      .collection('proposals')
-      .doc(proposalId)
+    const proposalRef = workspace.proposalsCollection.doc(proposalId)
     await proposalRef.update(sanitizeProposalUpdate(body, FieldValue.serverTimestamp()))
 
     return { ok: true }
@@ -186,8 +176,12 @@ export const PATCH = createApiHandler(
 )
 
 export const DELETE = createApiHandler(
-  { rateLimit: 'sensitive' },
-  async (req, { auth }) => {
+  {
+    workspace: 'required',
+    rateLimit: 'sensitive',
+  },
+  async (req, { workspace }) => {
+    if (!workspace) throw new Error('Workspace context missing')
     const body = (await req.json().catch(() => null)) as { id?: unknown } | null
     const rawId = body?.id
     if (typeof rawId !== 'string' || rawId.trim().length === 0) {
@@ -195,7 +189,7 @@ export const DELETE = createApiHandler(
     }
 
     const proposalId = rawId.trim()
-    const proposalRef = adminDb.collection('users').doc(auth.uid!).collection('proposals').doc(proposalId)
+    const proposalRef = workspace.proposalsCollection.doc(proposalId)
     const snapshot = await proposalRef.get()
 
     if (!snapshot.exists) {

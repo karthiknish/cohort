@@ -219,31 +219,21 @@ async function syncSessionCookies(authUser: AuthUser | null) {
 
   try {
     if (!authUser) {
-      clearCookie('cohorts_token')
-      clearCookie('cohorts_role')
-      clearCookie('cohorts_status')
+      await fetch('/api/auth/session', { method: 'DELETE' })
       return
     }
 
     const token = await authService.getIdToken()
-    // Set cookies for 14 days - they'll be refreshed on each page load
-    const FOURTEEN_DAYS = 14 * 24 * 60 * 60
-    setCookie('cohorts_token', token, FOURTEEN_DAYS)
-    setCookie('cohorts_role', authUser.role, FOURTEEN_DAYS)
-    setCookie('cohorts_status', authUser.status, FOURTEEN_DAYS)
+    await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token,
+        role: authUser.role,
+        status: authUser.status,
+      }),
+    })
   } catch (error) {
     console.error('Failed to sync auth cookies', error)
-    clearCookie('cohorts_token')
-    clearCookie('cohorts_role')
-    clearCookie('cohorts_status')
   }
-}
-
-function setCookie(name: string, value: string, maxAgeSeconds: number) {
-  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}`
-}
-
-function clearCookie(name: string) {
-  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`
 }

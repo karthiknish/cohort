@@ -1,25 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { v4 as uuidv4 } from 'uuid'
+import { adminDb } from './firebase-admin'
 import { authenticateRequest, AuthenticationError, AuthResult, assertAdmin } from './server-auth'
 import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
 import { ApiError, RateLimitError } from './api-errors'
-import { checkRateLimit, createRateLimitKey, RATE_LIMITS, RateLimitPreset } from './rate-limiter'
+import { 
+  checkRateLimit, 
+  createRateLimitKey, 
+  getClientIdentifier,
+  buildRateLimitHeaders,
+  RATE_LIMITS, 
+  RateLimitPreset 
+} from './rate-limiter'
+import { sanitizeInput } from './utils'
+import { logger } from './logger'
 
 /**
  * Standard API Response structure
  */
-export type ApiResponse<T = any> = {
+export type ApiResponse<T = unknown> = {
   success: boolean
   data?: T
   error?: string
   details?: Record<string, string[]>
   code?: string
+  requestId?: string
 }
 
 /**
  * Context provided to the API handler
  */
-export type ApiHandlerContext<TBody = any, TQuery = any> = {
+export type ApiHandlerContext<TBody = unknown, TQuery = unknown> = {
   auth: AuthResult
   workspace?: WorkspaceContext
   body: TBody
@@ -49,6 +61,26 @@ export type ApiHandlerOptions<TBody extends z.ZodTypeAny, TQuery extends z.ZodTy
 }
 
 /**
+ * Recursively sanitizes all string values in an object.
+ */
+function sanitizeBody<T>(data: T): T {
+  if (typeof data === 'string') {
+    return sanitizeInput(data) as unknown as T
+  }
+  if (Array.isArray(data)) {
+    return data.map(sanitizeBody) as unknown as T
+  }
+  if (typeof data === 'object' && data !== null) {
+    const sanitized: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(data)) {
+      sanitized[key] = sanitizeBody(value)
+    }
+    return sanitized as unknown as T
+  }
+  return data
+}
+
+/**
  * Creates a standardized API handler with built-in authentication, 
  * workspace resolution, and validation.
  */
@@ -57,9 +89,11 @@ export function createApiHandler<
   TQuery extends z.ZodTypeAny = z.ZodTypeAny
 >(
   options: ApiHandlerOptions<TBody, TQuery>,
-  handler: (req: NextRequest, context: ApiHandlerContext<z.infer<TBody>, z.infer<TQuery>>) => Promise<ApiResponse | Response | any>
+  handler: (req: NextRequest, context: ApiHandlerContext<z.infer<TBody>, z.infer<TQuery>>) => Promise<ApiResponse | Response | unknown>
 ) {
-  return async (req: NextRequest, context: { params: Promise<any> }) => {
+  return async (req: NextRequest, context: { params: Promise<Record<string, string | string[]>> }) => {
+    const requestId = req.headers.get('x-request-id') || uuidv4()
+    
     try {
       const params = await (context?.params || Promise.resolve({}))
       const authOption = options.auth ?? 'required'
@@ -71,28 +105,23 @@ export function createApiHandler<
           ? RATE_LIMITS[options.rateLimit]
           : options.rateLimit
         
-        // Use IP address for anonymous rate limiting
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
-          || req.headers.get('x-real-ip') 
-          || 'unknown'
-        const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, ip)
-        const { allowed, remaining, resetMs } = checkRateLimit(rateLimitKey, config)
+        const identifier = getClientIdentifier(req)
+        const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, identifier)
+        const result = checkRateLimit(rateLimitKey, config)
         
-        if (!allowed) {
-          const retryAfter = Math.ceil(resetMs / 1000)
+        if (!result.allowed) {
           return NextResponse.json(
             {
               success: false,
               error: 'Too many requests. Please try again later.',
               code: 'RATE_LIMIT_EXCEEDED',
+              requestId,
             },
             {
               status: 429,
               headers: {
-                'Retry-After': String(retryAfter),
-                'X-RateLimit-Limit': String(config.maxRequests),
-                'X-RateLimit-Remaining': '0',
-                'X-RateLimit-Reset': String(Math.ceil(Date.now() / 1000) + retryAfter),
+                ...Object.fromEntries(buildRateLimitHeaders(result).entries()),
+                'X-Request-ID': requestId,
               },
             }
           )
@@ -107,6 +136,22 @@ export function createApiHandler<
           auth = await authenticateRequest(req)
         } catch (error) {
           if (authOption === 'required') throw error
+        }
+      }
+
+      // 1.5 Idempotency Check (for POST/PATCH)
+      const idempotencyKey = req.headers.get('x-idempotency-key')
+      const isIdempotentMethod = ['POST', 'PATCH'].includes(req.method)
+      let idempotencyRef: FirebaseFirestore.DocumentReference | null = null
+
+      if (idempotencyKey && isIdempotentMethod) {
+        const key = `${auth.uid || 'anon'}_${idempotencyKey}`
+        idempotencyRef = adminDb.collection('_apiIdempotency').doc(key)
+        const existing = await idempotencyRef.get()
+        
+        if (existing.exists) {
+          const data = existing.data()
+          return NextResponse.json(data?.response, { status: data?.status || 200 })
         }
       }
 
@@ -130,9 +175,9 @@ export function createApiHandler<
       }
 
       // 3. Body Validation
-      let body: any = {}
+      let body: z.infer<TBody> = {} as z.infer<TBody>
       if (options.bodySchema) {
-        let json: any
+        let json: unknown
         try {
           json = await req.json()
         } catch (e) {
@@ -150,11 +195,11 @@ export function createApiHandler<
             details: result.error.flatten().fieldErrors 
           }, { status: 400 })
         }
-        body = result.data
+        body = sanitizeBody(result.data)
       }
 
       // 4. Query Validation
-      let query: any = {}
+      let query: z.infer<TQuery> = {} as z.infer<TQuery>
       if (options.querySchema) {
         const searchParams = Object.fromEntries(req.nextUrl.searchParams.entries())
         const result = options.querySchema.safeParse(searchParams)
@@ -179,41 +224,69 @@ export function createApiHandler<
 
       // 6. Standardize Response
       if (result instanceof Response) {
+        result.headers.set('X-Request-ID', requestId)
         return result
       }
 
       // Return a standardized success envelope
-      return NextResponse.json(apiSuccess(result))
+      const successResponse = {
+        ...apiSuccess(result),
+        requestId,
+      }
+      
+      if (idempotencyRef) {
+        await idempotencyRef.set({
+          response: successResponse,
+          status: 200,
+          createdAt: new Date().toISOString(),
+        })
+      }
+
+      return NextResponse.json(successResponse, {
+        headers: { 'X-Request-ID': requestId }
+      })
     } catch (error) {
       // Handle known API errors
       if (error instanceof ApiError) {
-        logApiError(error, req)
+        logApiError(error, req, { requestId })
         return NextResponse.json({ 
           success: false,
           error: error.message,
           code: error.code,
-          details: error.details
-        }, { status: error.status })
+          details: error.details,
+          requestId,
+        }, { 
+          status: error.status,
+          headers: { 'X-Request-ID': requestId }
+        })
       }
 
       if (error instanceof z.ZodError) {
-        logApiError(error, req)
+        logApiError(error, req, { requestId })
         return NextResponse.json({ 
           success: false,
           error: 'Validation failed', 
           details: error.flatten().fieldErrors,
-          code: 'VALIDATION_ERROR'
-        }, { status: 400 })
+          code: 'VALIDATION_ERROR',
+          requestId,
+        }, { 
+          status: 400,
+          headers: { 'X-Request-ID': requestId }
+        })
       }
 
       // Log and handle unknown errors
       const isDev = process.env.NODE_ENV === 'development'
-      logApiError(error, req, { includeStack: isDev })
+      logApiError(error, req, { includeStack: isDev, requestId })
       return NextResponse.json({ 
         success: false,
         error: options.errorMessage || (isDev && error instanceof Error ? error.message : 'Internal server error'),
-        code: 'INTERNAL_ERROR'
-      }, { status: 500 })
+        code: 'INTERNAL_ERROR',
+        requestId,
+      }, { 
+        status: 500,
+        headers: { 'X-Request-ID': requestId }
+      })
     }
   }
 }
@@ -240,23 +313,27 @@ export function apiError(message: string, code?: string, details?: Record<string
   }
 }
 
-function logApiError(error: unknown, req: NextRequest, opts?: { includeStack?: boolean }) {
+function logApiError(error: unknown, req: NextRequest, opts?: { includeStack?: boolean, requestId?: string }) {
   try {
-    const requestId = req.headers.get('x-request-id') || undefined
+    const requestId = opts?.requestId || req.headers.get('x-request-id') || undefined
     const asApiError = error instanceof ApiError ? error : undefined
-    const payload = {
-      level: 'error',
+    
+    const context = {
       type: 'api_error',
       path: req.nextUrl.pathname,
       method: req.method,
       status: asApiError?.status,
       code: asApiError?.code,
-      message: error instanceof Error ? error.message : String(error),
-      stack: opts?.includeStack && error instanceof Error ? error.stack : undefined,
       requestId,
-      timestamp: new Date().toISOString(),
     }
-    console.error(JSON.stringify(payload))
+
+    const message = error instanceof Error ? error.message : String(error)
+    
+    if (asApiError && asApiError.status < 500) {
+      logger.warn(`API Error: ${message}`, context)
+    } else {
+      logger.error(`API Error: ${message}`, error, context)
+    }
   } catch (loggingError) {
     console.error('[api-handler] failed to log error', loggingError)
   }

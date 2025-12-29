@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase/firestore'
 
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
+import { logger } from '@/lib/logger'
 
 interface RefreshParams {
   userId: string
@@ -10,6 +11,9 @@ interface RefreshParams {
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v18.0/oauth/access_token'
 const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
+
+// Promise deduplication map
+const refreshPromises = new Map<string, Promise<string>>()
 
 // Retry configuration for token refresh operations
 const TOKEN_REFRESH_CONFIG = {
@@ -140,7 +144,7 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
         const isRetryable = response.status >= 500 || response.status === 429
         
         if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-          console.warn(`[Google Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`)
+          logger.warn(`[Google Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId })
           lastError = new IntegrationTokenError(
             `Failed to refresh Google Ads token (${response.status}): ${errorMessage}`,
             'google',
@@ -191,7 +195,7 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
         idToken: tokenPayload.id_token ?? undefined,
       })
 
-      console.log(`[Google Token Refresh] Successfully refreshed token for user ${userId}, expires in ${tokenPayload.expires_in ?? 'unknown'} seconds`)
+      logger.info(`[Google Token Refresh] Successfully refreshed token for user ${userId}`, { expiresIn: tokenPayload.expires_in })
 
       return tokenPayload.access_token
     } catch (error) {
@@ -469,6 +473,10 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
 }
 
 export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
+  const promiseKey = `google:${userId}`
+  const existingPromise = refreshPromises.get(promiseKey)
+  if (existingPromise) return existingPromise
+
   const integration = await getAdIntegration({ userId, providerId: 'google' })
   if (!integration?.accessToken) {
     throw new IntegrationTokenError('Google Ads integration missing access token', 'google', userId)
@@ -480,13 +488,21 @@ export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshP
 
   if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
     console.log(`[Google Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
-    return refreshGoogleAccessToken({ userId })
+    const refreshPromise = refreshGoogleAccessToken({ userId }).finally(() => {
+      refreshPromises.delete(promiseKey)
+    })
+    refreshPromises.set(promiseKey, refreshPromise)
+    return refreshPromise
   }
 
   return integration.accessToken
 }
 
 export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
+  const promiseKey = `facebook:${userId}`
+  const existingPromise = refreshPromises.get(promiseKey)
+  if (existingPromise) return existingPromise
+
   const integration = await getAdIntegration({ userId, providerId: 'facebook' })
   if (!integration?.accessToken) {
     throw new IntegrationTokenError('Meta Ads integration missing access token', 'facebook', userId)
@@ -498,13 +514,21 @@ export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshPar
   
   if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
     console.log(`[Meta Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
-    return refreshMetaAccessToken({ userId })
+    const refreshPromise = refreshMetaAccessToken({ userId }).finally(() => {
+      refreshPromises.delete(promiseKey)
+    })
+    refreshPromises.set(promiseKey, refreshPromise)
+    return refreshPromise
   }
 
   return integration.accessToken
 }
 
 export async function ensureTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
+  const promiseKey = `tiktok:${userId}`
+  const existingPromise = refreshPromises.get(promiseKey)
+  if (existingPromise) return existingPromise
+
   const integration = await getAdIntegration({ userId, providerId: 'tiktok' })
 
   if (!integration?.accessToken) {
@@ -512,7 +536,11 @@ export async function ensureTikTokAccessToken({ userId }: RefreshParams): Promis
   }
 
   if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
-    return refreshTikTokAccessToken({ userId })
+    const refreshPromise = refreshTikTokAccessToken({ userId }).finally(() => {
+      refreshPromises.delete(promiseKey)
+    })
+    refreshPromises.set(promiseKey, refreshPromise)
+    return refreshPromise
   }
 
   return integration.accessToken

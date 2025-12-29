@@ -61,27 +61,6 @@ function slugify(value: string): string {
   return base
 }
 
-async function generateClientId(
-  clientsCollection: FirebaseFirestore.CollectionReference,
-  name: string
-): Promise<string> {
-  const baseId = slugify(name)
-  let candidateId = baseId
-  let attempt = 1
-
-  while (attempt <= 20) {
-    const docRef = clientsCollection.doc(candidateId)
-    const snapshot = await docRef.get()
-    if (!snapshot.exists) {
-      return candidateId
-    }
-    candidateId = `${baseId}-${attempt}`
-    attempt += 1
-  }
-
-  return `${baseId}-${Date.now()}`
-}
-
 function coerceTeamMembers(value: unknown): ClientTeamMember[] {
   if (!Array.isArray(value)) {
     return []
@@ -182,34 +161,53 @@ export const POST = createApiHandler(
     }
 
     const billingEmail = payload.billingEmail?.trim().toLowerCase() ?? null
-
-    const clientId = await generateClientId(workspace.clientsCollection, payload.name)
     const timestamp = FieldValue.serverTimestamp()
 
-    const docRef = workspace.clientsCollection.doc(clientId)
+    const client = await workspace.workspaceRef.firestore.runTransaction(async (transaction) => {
+      const baseId = slugify(payload.name)
+      let candidateId = baseId
+      let attempt = 1
+      let finalId = ''
 
-    await docRef.set({
-      name: payload.name,
-      accountManager: payload.accountManager,
-      teamMembers: resolvedTeam,
-      billingEmail,
-      stripeCustomerId: null,
-      lastInvoiceStatus: null,
-      lastInvoiceAmount: null,
-      lastInvoiceCurrency: null,
-      lastInvoiceIssuedAt: null,
-      lastInvoiceNumber: null,
-      lastInvoiceUrl: null,
-      workspaceId: workspace.workspaceId,
-      createdBy: auth.uid,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+      while (attempt <= 20) {
+        const docRef = workspace.clientsCollection.doc(candidateId)
+        const snapshot = await transaction.get(docRef)
+        if (!snapshot.exists) {
+          finalId = candidateId
+          break
+        }
+        candidateId = `${baseId}-${attempt}`
+        attempt += 1
+      }
+
+      if (!finalId) {
+        finalId = `${baseId}-${Date.now()}`
+      }
+
+      const docRef = workspace.clientsCollection.doc(finalId)
+      const clientData = {
+        name: payload.name,
+        accountManager: payload.accountManager,
+        teamMembers: resolvedTeam,
+        billingEmail,
+        stripeCustomerId: null,
+        lastInvoiceStatus: null,
+        lastInvoiceAmount: null,
+        lastInvoiceCurrency: null,
+        lastInvoiceIssuedAt: null,
+        lastInvoiceNumber: null,
+        lastInvoiceUrl: null,
+        workspaceId: workspace.workspaceId,
+        createdBy: auth.uid,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }
+
+      transaction.set(docRef, clientData)
+      return { id: finalId, ...clientData }
     })
 
-    const created = await docRef.get()
-    const client = mapClientDoc(created.id, created.data() as StoredClient)
-
-    return { client }
+    return { client: mapClientDoc(client.id, client as unknown as StoredClient) }
   }
 )
 

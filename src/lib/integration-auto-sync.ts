@@ -12,8 +12,13 @@ const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60 // every 6 hours
 const DEFAULT_TIMEFRAME_DAYS = 90
 
 function minutesSince(date: Date | null | undefined): number | null {
-  if (!date) return null
-  return differenceInMinutes(new Date(), date)
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return null
+  
+  const now = new Date()
+  // Prevent future dates from bypassing rate limits
+  if (date.getTime() > now.getTime()) return 0
+  
+  return differenceInMinutes(now, date)
 }
 
 function resolveTimestamp(value: unknown): Date | null {

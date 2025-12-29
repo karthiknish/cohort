@@ -157,24 +157,29 @@ export async function recordInvoiceRevenue(params: {
 
   const revenueRef = adminDb.collection('workspaces').doc(workspaceId).collection('financeRevenue').doc(docId)
 
-  await adminDb.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(revenueRef)
-    const payload: Record<string, unknown> = {
-      clientId: clientId || null,
-      period,
-      label,
-      currency,
-      revenue: FieldValue.increment(roundedDelta),
-      operatingExpenses: FieldValue.increment(0),
-      updatedAt: FieldValue.serverTimestamp(),
-    }
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(revenueRef)
+      const payload: Record<string, unknown> = {
+        clientId: clientId || null,
+        period,
+        label,
+        currency,
+        revenue: FieldValue.increment(roundedDelta),
+        operatingExpenses: FieldValue.increment(0),
+        updatedAt: FieldValue.serverTimestamp(),
+      }
 
-    if (!snapshot.exists) {
-      payload.createdAt = FieldValue.serverTimestamp()
-    }
+      if (!snapshot.exists) {
+        payload.createdAt = FieldValue.serverTimestamp()
+      }
 
-    transaction.set(revenueRef, payload, { merge: true })
-  })
+      transaction.set(revenueRef, payload, { merge: true })
+    })
+  } catch (error) {
+    console.error('[finance-sync] Failed to record invoice revenue transaction:', error)
+    throw error // Re-throw to allow caller to handle or for transaction to fail properly
+  }
 }
 
 export async function syncInvoiceRecords(invoice: Stripe.Invoice, options: SyncOptions = {}): Promise<SyncOutcome | null> {
@@ -242,118 +247,123 @@ export async function syncInvoiceRecords(invoice: Stripe.Invoice, options: SyncO
   let deltaPaid = 0
   let deltaRefunded = 0
 
-  await adminDb.runTransaction(async (transaction) => {
-    const financeSnapshot = await transaction.get(financeInvoiceRef)
-    const existingData = financeSnapshot.exists ? (financeSnapshot.data() as Record<string, unknown>) : {}
+  try {
+    await adminDb.runTransaction(async (transaction) => {
+      const financeSnapshot = await transaction.get(financeInvoiceRef)
+      const existingData = financeSnapshot.exists ? (financeSnapshot.data() as Record<string, unknown>) : {}
 
-    const previousPaid = typeof existingData.amountPaid === 'number' ? existingData.amountPaid : 0
-    const previousRefunded = typeof existingData.amountRefunded === 'number' ? existingData.amountRefunded : 0
+      const previousPaid = typeof existingData.amountPaid === 'number' ? existingData.amountPaid : 0
+      const previousRefunded = typeof existingData.amountRefunded === 'number' ? existingData.amountRefunded : 0
 
-    if (resolvedRefunded === null) {
-      resolvedRefunded = previousRefunded
-    }
-
-    const incomingRefundTotal = resolvedRefunded ?? previousRefunded
-
-    deltaPaid = Math.max(amountPaid - previousPaid, 0)
-    deltaRefunded = incomingRefundTotal > previousRefunded ? incomingRefundTotal - previousRefunded : 0
-
-    const baseFinanceData: Record<string, unknown> = {
-      clientId,
-      clientName: clientNameFallback,
-      amount: amountTotal,
-      amountPaid,
-      amountRemaining,
-      amountRefunded: incomingRefundTotal,
-      status: financeStatus,
-      stripeStatus,
-      issuedDate: issuedAt,
-      dueDate,
-      paidDate: paidAt,
-      description: invoiceDescription,
-      hostedInvoiceUrl: hostedUrl,
-      stripeInvoiceId: invoice.id,
-      number: invoiceNumber,
-      currency,
-      paymentIntentId,
-      collectionMethod,
-      updatedAt: FieldValue.serverTimestamp(),
-    }
-
-    if (workspaceId) {
-      baseFinanceData.workspaceId = workspaceId
-      baseFinanceData.updatedBy = ownerUid
-    }
-
-    if (financeSnapshot.exists) {
-      transaction.set(financeInvoiceRef, baseFinanceData, { merge: true })
-    } else {
-      transaction.set(
-        financeInvoiceRef,
-        {
-          ...baseFinanceData,
-          createdAt: FieldValue.serverTimestamp(),
-          createdBy: ownerUid,
-        },
-        { merge: true }
-      )
-    }
-
-    const clientSnapshot = await transaction.get(clientRef)
-    const clientData = clientSnapshot.exists ? (clientSnapshot.data() as Record<string, unknown>) : {}
-    const existingIssuedAtMillis = parseTimestampMillis(clientData?.lastInvoiceIssuedAt as Timestamp | Date | string | null | undefined)
-
-    let shouldUpdateClient = true
-    if (existingIssuedAtMillis !== null) {
-      shouldUpdateClient = issuedAt.getTime() >= existingIssuedAtMillis
-    }
-
-    const clientName =
-      typeof clientData?.name === 'string' && clientData.name.trim().length > 0
-        ? (clientData.name as string)
-        : clientNameFallback
-
-    const clientPayload: Record<string, unknown> = {
-      name: clientName,
-      lastInvoiceStatus: financeStatus,
-      lastInvoiceAmount: amountTotal,
-      lastInvoiceCurrency: currency,
-      lastInvoiceIssuedAt: issuedAt,
-      lastInvoiceNumber: invoiceNumber,
-      lastInvoiceUrl: hostedUrl,
-      lastInvoicePaidAt: paidAt ?? null,
-      updatedAt: FieldValue.serverTimestamp(),
-    }
-
-    if (workspaceId) {
-      clientPayload.workspaceId = workspaceId
-      clientPayload.updatedBy = ownerUid
-    }
-
-    if (shouldUpdateClient) {
-      transaction.set(clientRef, clientPayload, { merge: true })
-    } else if (clientSnapshot.exists) {
-      const storedNumber = typeof clientData?.lastInvoiceNumber === 'string' ? (clientData.lastInvoiceNumber as string) : null
-      if (storedNumber && storedNumber === invoiceNumber) {
-        const deltaPayload: Record<string, unknown> = {
-          lastInvoiceStatus: financeStatus,
-          lastInvoiceAmount: amountTotal,
-          lastInvoiceCurrency: currency,
-          lastInvoiceIssuedAt: issuedAt,
-          lastInvoiceUrl: hostedUrl,
-          lastInvoicePaidAt: paidAt ?? null,
-          updatedAt: FieldValue.serverTimestamp(),
-        }
-
-        if (workspaceId) {
-          deltaPayload.workspaceId = workspaceId
-          deltaPayload.updatedBy = ownerUid
-        }
-
-        transaction.set(clientRef, deltaPayload, { merge: true })
+      if (resolvedRefunded === null) {
+        resolvedRefunded = previousRefunded
       }
-    }
-  })
+
+      const incomingRefundTotal = resolvedRefunded ?? previousRefunded
+
+      deltaPaid = Math.max(amountPaid - previousPaid, 0)
+      deltaRefunded = incomingRefundTotal > previousRefunded ? incomingRefundTotal - previousRefunded : 0
+
+      const baseFinanceData: Record<string, unknown> = {
+        clientId,
+        clientName: clientNameFallback,
+        amount: amountTotal,
+        amountPaid,
+        amountRemaining,
+        amountRefunded: incomingRefundTotal,
+        status: financeStatus,
+        stripeStatus,
+        issuedDate: issuedAt,
+        dueDate,
+        paidDate: paidAt,
+        description: invoiceDescription,
+        hostedInvoiceUrl: hostedUrl,
+        stripeInvoiceId: invoice.id,
+        number: invoiceNumber,
+        currency,
+        paymentIntentId,
+        collectionMethod,
+        updatedAt: FieldValue.serverTimestamp(),
+      }
+
+      if (workspaceId) {
+        baseFinanceData.workspaceId = workspaceId
+        baseFinanceData.updatedBy = ownerUid
+      }
+
+      if (financeSnapshot.exists) {
+        transaction.set(financeInvoiceRef, baseFinanceData, { merge: true })
+      } else {
+        transaction.set(
+          financeInvoiceRef,
+          {
+            ...baseFinanceData,
+            createdAt: FieldValue.serverTimestamp(),
+            createdBy: ownerUid,
+          },
+          { merge: true }
+        )
+      }
+
+      const clientSnapshot = await transaction.get(clientRef)
+      const clientData = clientSnapshot.exists ? (clientSnapshot.data() as Record<string, unknown>) : {}
+      const existingIssuedAtMillis = parseTimestampMillis(clientData?.lastInvoiceIssuedAt as Timestamp | Date | string | null | undefined)
+
+      let shouldUpdateClient = true
+      if (existingIssuedAtMillis !== null) {
+        shouldUpdateClient = issuedAt.getTime() >= existingIssuedAtMillis
+      }
+
+      const clientName =
+        typeof clientData?.name === 'string' && clientData.name.trim().length > 0
+          ? (clientData.name as string)
+          : clientNameFallback
+
+      const clientPayload: Record<string, unknown> = {
+        name: clientName,
+        lastInvoiceStatus: financeStatus,
+        lastInvoiceAmount: amountTotal,
+        lastInvoiceCurrency: currency,
+        lastInvoiceIssuedAt: issuedAt,
+        lastInvoiceNumber: invoiceNumber,
+        lastInvoiceUrl: hostedUrl,
+        lastInvoicePaidAt: paidAt ?? null,
+        updatedAt: FieldValue.serverTimestamp(),
+      }
+
+      if (workspaceId) {
+        clientPayload.workspaceId = workspaceId
+        clientPayload.updatedBy = ownerUid
+      }
+
+      if (shouldUpdateClient) {
+        transaction.set(clientRef, clientPayload, { merge: true })
+      } else if (clientSnapshot.exists) {
+        const storedNumber = typeof clientData?.lastInvoiceNumber === 'string' ? (clientData.lastInvoiceNumber as string) : null
+        if (storedNumber && storedNumber === invoiceNumber) {
+          const deltaPayload: Record<string, unknown> = {
+            lastInvoiceStatus: financeStatus,
+            lastInvoiceAmount: amountTotal,
+            lastInvoiceCurrency: currency,
+            lastInvoiceIssuedAt: issuedAt,
+            lastInvoiceUrl: hostedUrl,
+            lastInvoicePaidAt: paidAt ?? null,
+            updatedAt: FieldValue.serverTimestamp(),
+          }
+
+          if (workspaceId) {
+            deltaPayload.workspaceId = workspaceId
+            deltaPayload.updatedBy = ownerUid
+          }
+
+          transaction.set(clientRef, deltaPayload, { merge: true })
+        }
+      }
+    })
+  } catch (error) {
+    console.error('[finance-sync] Failed to sync invoice records transaction:', error)
+    throw error
+  }
 
   return {
     workspaceId,

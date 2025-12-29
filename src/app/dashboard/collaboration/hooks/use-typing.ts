@@ -8,11 +8,12 @@ import { TYPING_TIMEOUT_MS, TYPING_UPDATE_INTERVAL_MS } from './constants'
 
 interface UseTypingOptions {
   userId: string | null
+  workspaceId: string | null
   selectedChannel: Channel | null
   resolveSenderDetails: () => { senderName: string; senderRole: string | null }
 }
 
-export function useTyping({ userId, selectedChannel, resolveSenderDetails }: UseTypingOptions) {
+export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderDetails }: UseTypingOptions) {
   const composerFocusedRef = useRef(false)
   const isTypingRef = useRef(false)
   const lastTypingUpdateRef = useRef(0)
@@ -20,7 +21,7 @@ export function useTyping({ userId, selectedChannel, resolveSenderDetails }: Use
 
   const sendTypingUpdate = useCallback(
     async (isTyping: boolean) => {
-      if (!userId || !selectedChannel) {
+      if (!userId || !workspaceId || !selectedChannel) {
         return
       }
 
@@ -29,7 +30,7 @@ export function useTyping({ userId, selectedChannel, resolveSenderDetails }: Use
         return
       }
 
-      const typingDocRef = doc(db, 'users', userId, 'collaborationTyping', selectedChannel.id)
+      const typingDocRef = doc(db, 'workspaces', workspaceId, 'collaborationTyping', selectedChannel.id)
       const now = Date.now()
 
       try {
@@ -63,7 +64,7 @@ export function useTyping({ userId, selectedChannel, resolveSenderDetails }: Use
         console.warn('[collaboration] failed to update typing status', error)
       }
     },
-    [resolveSenderDetails, selectedChannel, userId]
+    [resolveSenderDetails, selectedChannel, userId, workspaceId]
   )
 
   const stopTyping = useCallback(() => {

@@ -95,8 +95,19 @@ export const POST = createApiHandler(
 )
 
 function buildReturnUrl(origin: string, path: string): string {
+  // Only allow relative paths or URLs matching the current origin
   if (/^https?:\/\//i.test(path)) {
-    return path
+    try {
+      const url = new URL(path)
+      const originUrl = new URL(origin)
+      if (url.origin !== originUrl.origin) {
+        // Fallback to origin if external URL is provided
+        return origin
+      }
+      return path
+    } catch {
+      return origin
+    }
   }
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`

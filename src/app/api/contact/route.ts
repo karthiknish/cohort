@@ -6,10 +6,10 @@ import { notifyContactEmail, notifyContactSlack } from '@/lib/notifications'
 import { createApiHandler } from '@/lib/api-handler'
 
 const contactSchema = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
-  company: z.string().max(120).optional().or(z.literal('')),
-  message: z.string().min(10).max(2000),
+  name: z.string().trim().min(2).max(80),
+  email: z.string().trim().email().toLowerCase(),
+  company: z.string().trim().max(120).optional().nullable(),
+  message: z.string().trim().min(10).max(2000),
 })
 
 export const POST = createApiHandler(

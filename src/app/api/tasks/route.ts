@@ -8,7 +8,7 @@ import { buildCacheHeaders, serverCache } from '@/lib/cache'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { notifyTaskCreatedWhatsApp, recordTaskNotification } from '@/lib/notifications'
 import { NotFoundError } from '@/lib/api-errors'
-import { coerceStringArray, toISO } from '@/lib/utils'
+import { coerceStringArray, toISO, sanitizeInput } from '@/lib/utils'
 
 export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -226,12 +226,12 @@ export const POST = createApiHandler(
     }
 
     const docRef = await workspace.tasksCollection.add({
-      title: payload.title,
-      description: payload.description ?? null,
+      title: sanitizeInput(payload.title),
+      description: payload.description ? sanitizeInput(payload.description) : null,
       status: payload.status,
       priority: payload.priority,
       assignedTo: normalizedAssignedTo,
-      client: payload.client ?? null,
+      client: payload.client ? sanitizeInput(payload.client) : null,
       clientId: payload.clientId ?? null,
       projectId,
       projectName,

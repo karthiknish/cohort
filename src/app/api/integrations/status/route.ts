@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
+import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
 
@@ -13,25 +14,14 @@ const statusQuerySchema = z.object({
 
 export const GET = createApiHandler(
   {
+    workspace: 'required',
     querySchema: statusQuerySchema,
     rateLimit: 'standard',
   },
-  async (req, { auth, query }) => {
-    let userId: string | null = null
-    if (auth.isCron) {
-      userId = query.userId ?? null
-      if (!userId) {
-        throw new ValidationError('Cron requests must specify userId')
-      }
-    } else {
-      userId = auth.uid ?? null
-    }
+  async (req, { workspace }) => {
+    if (!workspace) throw new Error('Workspace context missing')
 
-    if (!userId) {
-      throw new UnauthorizedError('Unable to resolve user context')
-    }
-
-    const snapshot = await adminDb.collection('users').doc(userId).collection('adIntegrations').get()
+    const snapshot = await workspace.integrationsCollection.get()
 
     const statuses = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>

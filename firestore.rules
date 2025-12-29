@@ -195,6 +195,26 @@ service cloud.firestore {
       match /proposalVersions/{versionId} {
         allow read, write: if isAdminOrAgencyMember(workspaceId);
       }
+
+      // Proposals within workspace
+      match /proposals/{proposalId} {
+        allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
+
+      // Ad Integrations within workspace
+      match /adIntegrations/{integrationId} {
+        allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
+
+      // Ad Metrics within workspace
+      match /adMetrics/{metricId} {
+        allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
+
+      // Sync Jobs within workspace
+      match /syncJobs/{jobId} {
+        allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

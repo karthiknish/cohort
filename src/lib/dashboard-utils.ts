@@ -1,10 +1,16 @@
+import { 
+  differenceInDays, 
+  startOfDay, 
+  parseISO, 
+  isValid, 
+  format,
+  subDays
+} from 'date-fns'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
 import { formatCurrency } from '@/lib/utils'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
-
-const DAY_IN_MS = 24 * 60 * 60 * 1000
 
 export async function resolveJson(response: Response, fallbackMessage: string): Promise<unknown> {
   if (response.ok) {
@@ -32,7 +38,7 @@ type BuildComparisonSummaryArgs = {
 }
 
 export function buildClientComparisonSummary({ clientId, clientName, finance, metrics, periodDays }: BuildComparisonSummaryArgs): ClientComparisonSummary {
-  const cutoff = Date.now() - periodDays * DAY_IN_MS
+  const cutoff = subDays(new Date(), periodDays).getTime()
   const revenueRecords = finance?.revenue ?? []
   const filteredRevenue = revenueRecords.filter((record) => isRevenueRecordWithinPeriod(record, cutoff))
   const totalRevenue = filteredRevenue.reduce((sum, record) => sum + record.revenue, 0)
@@ -105,20 +111,20 @@ function isRevenueRecordWithinPeriod(record: { createdAt?: string | null; period
 
 function parsePeriodDate(record: { createdAt?: string | null; period?: string }): number | null {
   if (record.createdAt) {
-    const parsed = Date.parse(record.createdAt)
-    if (!Number.isNaN(parsed)) {
-      return parsed
+    const parsed = parseISO(record.createdAt)
+    if (isValid(parsed)) {
+      return parsed.getTime()
     }
   }
   if (record.period) {
-    const parsedPeriod = Date.parse(record.period)
-    if (!Number.isNaN(parsedPeriod)) {
-      return parsedPeriod
+    const parsedPeriod = parseISO(record.period)
+    if (isValid(parsedPeriod)) {
+      return parsedPeriod.getTime()
     }
     // attempt to parse YYYY-MM strings by appending day
-    const asMonth = Date.parse(`${record.period}-01`)
-    if (!Number.isNaN(asMonth)) {
-      return asMonth
+    const asMonth = parseISO(`${record.period}-01`)
+    if (isValid(asMonth)) {
+      return asMonth.getTime()
     }
   }
   return null
@@ -136,8 +142,8 @@ function parseDateSafe(value: string | null | undefined): number | null {
   if (!value) {
     return null
   }
-  const parsed = Date.parse(value)
-  return Number.isNaN(parsed) ? null : parsed
+  const parsed = parseISO(value)
+  return isValid(parsed) ? parsed.getTime() : null
 }
 
 export function formatRoas(value: number): string {
@@ -192,14 +198,14 @@ function deriveDueMetadata(rawDue: string | null | undefined): { label: string; 
     return { label: 'No due date', timestamp: Number.MAX_SAFE_INTEGER }
   }
 
-  const dueDate = new Date(rawDue)
-  if (Number.isNaN(dueDate.getTime())) {
+  const dueDate = parseISO(rawDue)
+  if (!isValid(dueDate)) {
     return { label: rawDue, timestamp: Number.MAX_SAFE_INTEGER }
   }
 
-  const dueStart = startOfDay(dueDate)
-  const todayStart = startOfDay(new Date())
-  const diffDays = Math.round((dueStart - todayStart) / DAY_IN_MS)
+  const dueStart = startOfDay(dueDate).getTime()
+  const todayStart = startOfDay(new Date()).getTime()
+  const diffDays = differenceInDays(dueStart, todayStart)
 
   if (diffDays === 0) {
     return { label: 'Today', timestamp: dueStart }
@@ -224,15 +230,9 @@ function deriveDueMetadata(rawDue: string | null | undefined): { label: string; 
   }
 
   return {
-    label: dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    label: format(dueDate, 'MMM d'),
     timestamp: dueStart,
   }
-}
-
-function startOfDay(date: Date): number {
-  const copy = new Date(date)
-  copy.setHours(0, 0, 0, 0)
-  return copy.getTime()
 }
 
 function normalizeTaskPriority(value: unknown): DashboardTaskItem['priority'] {

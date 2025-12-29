@@ -65,8 +65,9 @@ export const GET = createApiHandler(
     response.cookies.set('meta_oauth_success', '1', { 
       path: '/', 
       maxAge: 60,
-      httpOnly: false, // Allow JS to read for UI feedback
-      sameSite: 'lax',
+      httpOnly: true, // Secure cookie
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
     })
     
     return response

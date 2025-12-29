@@ -554,7 +554,17 @@ async function executeGoogleAdsApiRequest<T>(
   }
 
   // Should never reach here, but just in case
-  throw lastError ?? new Error('Google Ads API request failed after all retries')
+  const finalError = lastError ?? new Error('Google Ads API request failed after all retries')
+  if (finalError instanceof GoogleAdsApiError) {
+    throw finalError
+  }
+  
+  throw new GoogleAdsApiError({
+    message: finalError.message,
+    httpStatus: 500,
+    errorCode: GOOGLE_ADS_ERROR_CODES.UNKNOWN,
+    details: [{ message: 'Request failed after all retries' }]
+  })
 }
 
 // =============================================================================

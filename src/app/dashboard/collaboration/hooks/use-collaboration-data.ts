@@ -400,6 +400,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     handleComposerBlur,
   } = useTyping({
     userId: currentUserId,
+    workspaceId: user?.agencyId ?? null,
     selectedChannel,
     resolveSenderDetails,
   })
@@ -445,7 +446,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
   // Realtime messages subscription
   useRealtimeMessages({
-    userId: currentUserId,
+    workspaceId: user?.agencyId ?? null,
     selectedChannel,
     setMessagesByChannel,
     setNextCursorByChannel,
@@ -457,6 +458,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // Realtime typing subscription
   const { typingParticipants } = useRealtimeTyping({
     userId: currentUserId,
+    workspaceId: user?.agencyId ?? null,
     selectedChannel,
   })
 
@@ -535,7 +537,9 @@ export function useCollaborationData(): UseCollaborationDataReturn {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            channelId,
+            channelType: selectedChannel.type,
+            clientId: selectedChannel.clientId,
+            projectId: selectedChannel.projectId,
             content: trimmedContent,
             format: 'markdown',
             senderName: resolveSenderDetails().senderName,
@@ -601,8 +605,18 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
       try {
         const token = await ensureSessionToken()
-        const params = new URLSearchParams({ channelId, pageSize: '50' })
-        params.set('after', nextCursor)
+        const channel = channels.find((c) => c.id === channelId)
+        if (!channel) throw new Error('Channel not found')
+
+        const params = new URLSearchParams({
+          channelType: channel.type,
+          pageSize: '50',
+          after: nextCursor,
+        })
+
+        if (channel.clientId) params.set('clientId', channel.clientId)
+        if (channel.projectId) params.set('projectId', channel.projectId)
+
         const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         })

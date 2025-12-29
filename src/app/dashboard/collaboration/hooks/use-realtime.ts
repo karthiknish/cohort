@@ -24,7 +24,7 @@ import { REALTIME_MESSAGE_LIMIT, TYPING_TIMEOUT_MS } from './constants'
 import { mapRealtimeMessage } from './utils'
 
 interface UseRealtimeMessagesOptions {
-  userId: string | null
+  workspaceId: string | null
   selectedChannel: Channel | null
   setMessagesByChannel: React.Dispatch<React.SetStateAction<MessagesByChannelState>>
   setNextCursorByChannel: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
@@ -34,7 +34,7 @@ interface UseRealtimeMessagesOptions {
 }
 
 export function useRealtimeMessages({
-  userId,
+  workspaceId,
   selectedChannel,
   setMessagesByChannel,
   setNextCursorByChannel,
@@ -49,7 +49,7 @@ export function useRealtimeMessages({
     channelUnsubscribeRef.current?.()
     channelUnsubscribeRef.current = null
 
-    if (!selectedChannel || !userId) {
+    if (!selectedChannel || !workspaceId) {
       return
     }
 
@@ -57,7 +57,7 @@ export function useRealtimeMessages({
     setLoadingChannelId(channelId)
     setMessagesError(null)
 
-    const baseCollection = collection(db, 'users', userId, 'collaborationMessages')
+    const baseCollection = collection(db, 'workspaces', workspaceId, 'collaborationMessages')
     const constraints: QueryConstraint[] = [where('channelType', '==', selectedChannel.type)]
 
     if (selectedChannel.type === 'client') {
@@ -118,27 +118,29 @@ export function useRealtimeMessages({
         channelUnsubscribeRef.current = null
       }
     }
-  }, [onError, selectedChannel, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, userId])
+  }, [onError, selectedChannel, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, workspaceId])
 }
 
 interface UseRealtimeTypingOptions {
   userId: string | null
+  workspaceId: string | null
   selectedChannel: Channel | null
 }
 
 export function useRealtimeTyping({
   userId,
+  workspaceId,
   selectedChannel,
 }: UseRealtimeTypingOptions) {
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([])
 
   useEffect(() => {
-    if (!userId || !selectedChannel) {
+    if (!userId || !workspaceId || !selectedChannel) {
       setTypingParticipants([])
       return
     }
 
-    const typingDocRef = doc(db, 'users', userId, 'collaborationTyping', selectedChannel.id)
+    const typingDocRef = doc(db, 'workspaces', workspaceId, 'collaborationTyping', selectedChannel.id)
 
     const unsubscribe = onSnapshot(
       typingDocRef,
@@ -199,7 +201,7 @@ export function useRealtimeTyping({
     return () => {
       unsubscribe()
     }
-  }, [selectedChannel, userId])
+  }, [selectedChannel, userId, workspaceId])
 
   return { typingParticipants }
 }

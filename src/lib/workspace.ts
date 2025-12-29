@@ -14,6 +14,9 @@ export type WorkspaceContext = {
   financeRevenueCollection: FirebaseFirestore.CollectionReference
   financeCostsCollection: FirebaseFirestore.CollectionReference
   projectsCollection: FirebaseFirestore.CollectionReference
+  proposalsCollection: FirebaseFirestore.CollectionReference
+  integrationsCollection: FirebaseFirestore.CollectionReference
+  metricsCollection: FirebaseFirestore.CollectionReference
 }
 
 function normalizeCandidate(value: unknown): string | null {
@@ -74,6 +77,9 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
   const financeRevenueCollection = workspaceRef.collection('financeRevenue')
   const financeCostsCollection = workspaceRef.collection('financeCosts')
   const projectsCollection = workspaceRef.collection('projects')
+  const proposalsCollection = workspaceRef.collection('proposals')
+  const integrationsCollection = workspaceRef.collection('adIntegrations')
+  const metricsCollection = workspaceRef.collection('adMetrics')
 
   return {
     workspaceId,
@@ -85,6 +91,9 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
     financeRevenueCollection,
     financeCostsCollection,
     projectsCollection,
+    proposalsCollection,
+    integrationsCollection,
+    metricsCollection,
   }
 }
 
