@@ -1,4 +1,4 @@
-import { decrypt, encrypt } from '@/lib/crypto'
+import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
 import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore-integrations-admin'
 import { fetchTikTokAdAccounts, TikTokAdAccount } from '@/services/integrations/tiktok-ads'
 
@@ -7,6 +7,7 @@ const STATE_TTL_MS = 5 * 60 * 1000
 interface TikTokOAuthContext {
   state: string
   redirect?: string
+  codeVerifier?: string
   createdAt: number
 }
 
@@ -15,6 +16,7 @@ type TikTokStatePayload = Omit<TikTokOAuthContext, 'createdAt'> & { createdAt?: 
 export function createTikTokOAuthState(payload: TikTokStatePayload): string {
   const data: TikTokOAuthContext = {
     ...payload,
+    codeVerifier: payload.codeVerifier ?? generateCodeVerifier(),
     createdAt: payload.createdAt ?? Date.now(),
   }
   return encodeURIComponent(encrypt(JSON.stringify(data)))

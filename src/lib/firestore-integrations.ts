@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
+import { parseDate } from '@/lib/dates'
 import {
   AdIntegration,
   NormalizedMetric,
@@ -63,18 +64,12 @@ function toTimestamp(value: TimestampInput): Timestamp | null {
     return value
   }
 
-  if (value instanceof Date) {
-    return Timestamp.fromDate(value)
+  try {
+    const date = parseDate(value)
+    return Timestamp.fromDate(date)
+  } catch {
+    return null
   }
-
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value)
-    if (!Number.isNaN(date.getTime())) {
-      return Timestamp.fromDate(date)
-    }
-  }
-
-  return null
 }
 
 export async function persistIntegrationTokens(options: {

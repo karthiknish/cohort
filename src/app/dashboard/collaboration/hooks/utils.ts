@@ -16,6 +16,8 @@ import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
 } from './constants'
 import type { PendingAttachment, AttachmentValidationResult } from './types'
+import { validateFile } from '@/lib/utils'
+import { toISO, parseDate } from '@/lib/dates'
 
 /**
  * Read session token from cookie
@@ -63,15 +65,22 @@ export function formatFileSize(bytes: number): string {
  * Validate a single attachment file
  */
 export function validateAttachment(file: File): string | null {
-  if (file.size > MAX_ATTACHMENT_SIZE) {
-    return `File size exceeds ${formatFileSize(MAX_ATTACHMENT_SIZE)} limit`
-  }
+  const validation = validateFile(file, {
+    allowedTypes: Array.from(ALLOWED_ATTACHMENT_MIME_TYPES),
+    maxSizeMb: MAX_ATTACHMENT_SIZE / (1024 * 1024),
+  })
 
-  if (!ALLOWED_ATTACHMENT_MIME_TYPES.has(file.type)) {
+  if (!validation.valid) {
+    // Fallback to extension check if MIME type is not recognized but extension is allowed
     const extension = file.name.toLowerCase().split('.').pop()
-    if (!extension || !ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
-      return 'File type not supported. Use PNG, JPG, PDF, DOC, PPT, XLS, TXT, CSV, ZIP, or MD files.'
+    if (extension && ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
+      // If extension is allowed, we check size separately
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        return `File size exceeds ${formatFileSize(MAX_ATTACHMENT_SIZE)} limit`
+      }
+      return null
     }
+    return validation.error || 'File type not supported'
   }
 
   return null
@@ -121,7 +130,7 @@ export function convertToIso(value: unknown): string | null {
   }
 
   if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
+    return toISO(value.toDate())
   }
 
   if (
@@ -130,15 +139,16 @@ export function convertToIso(value: unknown): string | null {
     'toDate' in value &&
     typeof (value as { toDate?: () => Date }).toDate === 'function'
   ) {
-    return (value as { toDate: () => Date }).toDate().toISOString()
+    return toISO((value as { toDate: () => Date }).toDate())
   }
 
   if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
+    const parsed = parseDate(value)
+    return parsed ? toISO(parsed) : value
+  }
+
+  if (value instanceof Date) {
+    return toISO(value)
   }
 
   return null

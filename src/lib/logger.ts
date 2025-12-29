@@ -1,3 +1,5 @@
+import { toISO } from './dates'
+
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 interface LogContext {
@@ -17,9 +19,14 @@ class Logger {
   }
 
   private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
-    const timestamp = new Date().toISOString()
-    const contextStr = context ? ` | ${JSON.stringify(context)}` : ''
-    return `[${timestamp}] [${level.toUpperCase()}] ${message}${contextStr}`
+    const timestamp = toISO()
+    const logObject = {
+      timestamp,
+      level: level.toUpperCase(),
+      message,
+      ...context,
+    }
+    return JSON.stringify(logObject)
   }
 
   info(message: string, context?: LogContext) {

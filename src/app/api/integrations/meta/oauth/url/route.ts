@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { createMetaOAuthState } from '@/services/meta-business'
 import { buildMetaBusinessLoginUrl } from '@/services/facebook-oauth'
 import { createApiHandler } from '@/lib/api-handler'
-import { ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
+import { ServiceUnavailableError, UnauthorizedError, BadRequestError } from '@/lib/api-errors'
+import { isValidRedirectUrl } from '@/lib/utils'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
@@ -29,7 +30,12 @@ export const POST = createApiHandler(
 
     const redirect = query.redirect ?? `${appUrl}/dashboard`
 
-  const statePayload = createMetaOAuthState({ state: auth.uid, redirect })
+    // Validate redirect URL to prevent Open Redirect vulnerabilities
+    if (!isValidRedirectUrl(redirect)) {
+      throw new BadRequestError('Invalid redirect URL')
+    }
+
+    const statePayload = createMetaOAuthState({ state: auth.uid, redirect })
   const loginUrl = buildMetaBusinessLoginUrl({
     businessConfigId,
     appId,

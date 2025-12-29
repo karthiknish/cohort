@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto'
 
+import { formatDate, toISO } from '@/lib/dates'
 import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 import { NormalizedMetric } from '@/types/integrations'
 
@@ -244,11 +245,9 @@ function buildTimeRange(timeframeDays: number) {
   const since = new Date(today)
   since.setUTCDate(since.getUTCDate() - Math.max(timeframeDays - 1, 0))
 
-  const format = (date: Date) => date.toISOString().slice(0, 10)
-
   return {
-    since: format(since),
-    until: format(today),
+    since: formatDate(since, 'yyyy-MM-dd'),
+    until: formatDate(today, 'yyyy-MM-dd'),
   }
 }
 
@@ -474,7 +473,7 @@ export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<Norm
 
       metrics.push({
         providerId: 'facebook',
-        date: row?.date_start ?? row?.date_stop ?? new Date().toISOString().slice(0, 10),
+        date: row?.date_start ?? row?.date_stop ?? formatDate(new Date(), 'yyyy-MM-dd'),
         spend,
         impressions,
         clicks,

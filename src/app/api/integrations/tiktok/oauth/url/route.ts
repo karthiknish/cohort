@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { buildTikTokOAuthUrl, createTikTokOAuthState } from '@/services/tiktok-business'
 import { createApiHandler } from '@/lib/api-handler'
-import { ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
+import { ServiceUnavailableError, UnauthorizedError, BadRequestError } from '@/lib/api-errors'
+import { isValidRedirectUrl } from '@/lib/utils'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
@@ -27,7 +28,12 @@ export const POST = createApiHandler(
 
     const redirect = query.redirect ?? `${appUrl}/dashboard/ads`
 
-  const state = createTikTokOAuthState({ state: auth.uid, redirect })
+    // Validate redirect URL to prevent Open Redirect vulnerabilities
+    if (!isValidRedirectUrl(redirect)) {
+      throw new BadRequestError('Invalid redirect URL')
+    }
+
+    const state = createTikTokOAuthState({ state: auth.uid, redirect })
   const scopes = process.env.TIKTOK_OAUTH_SCOPES?.split(',').map((scope) => scope.trim()).filter(Boolean)
   const url = buildTikTokOAuthUrl({ clientKey, redirectUri, state, scopes })
 

@@ -28,6 +28,7 @@ import {
 import { ImageUploader } from '@/components/ui/image-uploader'
 import { useToast } from '@/components/ui/use-toast'
 import { storage } from '@/lib/firebase'
+import { validateFile } from '@/lib/utils'
 import type {
   FeatureItem,
   FeatureStatus,
@@ -107,6 +108,15 @@ export function FeatureFormDialog({
   }, [open, feature, defaultStatus])
 
   const handleUploadImage = useCallback(async (file: File): Promise<string> => {
+    const validation = validateFile(file, {
+      allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      maxSizeMb: 2,
+    })
+
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Invalid image file')
+    }
+
     const timestamp = Date.now()
     const fileName = `${timestamp}-${file.name}`
     const storagePath = `features/temp/${fileName}`

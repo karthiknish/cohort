@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { toISO as toISOStandard, parseDate } from './dates'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -69,21 +70,17 @@ export function toISO(value: unknown): string | null {
   if (typeof value === 'object' && value !== null) {
     const asDate = (value as { toDate?: () => Date }).toDate?.()
     if (asDate instanceof Date) {
-      const iso = asDate.toISOString()
-      return iso
+      return toISOStandard(asDate)
     }
   }
 
   if (value instanceof Date) {
-    return value.toISOString()
+    return toISOStandard(value)
   }
 
   if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString()
-    }
-    return value
+    const parsed = parseDate(value)
+    return parsed ? toISOStandard(parsed) : value
   }
 
   return null
@@ -149,12 +146,78 @@ export function coerceBoolean(value: unknown): boolean {
 export function coerceDate(value: unknown): Date | null {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
   if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value)
-    return Number.isNaN(date.getTime()) ? null : date
+    const date = typeof value === 'string' ? parseDate(value) : new Date(value)
+    return date && !Number.isNaN(date.getTime()) ? date : null
   }
   // Firestore Timestamp
   if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
     return (value as any).toDate()
   }
   return null
+}
+
+/**
+ * Validates a file for upload.
+ * Checks for allowed MIME types and maximum file size.
+ */
+export function validateFile(
+  file: File | Blob,
+  options: {
+    allowedTypes?: string[]
+    maxSizeMb?: number
+  } = {}
+): { valid: boolean; error?: string } {
+  const { allowedTypes, maxSizeMb = 5 } = options
+
+  // Check file size
+  const maxSizeBytes = maxSizeMb * 1024 * 1024
+  if (file.size > maxSizeBytes) {
+    return {
+      valid: false,
+      error: `File size exceeds the maximum limit of ${maxSizeMb}MB`,
+    }
+  }
+
+  // Check file type
+  if (allowedTypes && allowedTypes.length > 0) {
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        valid: false,
+        error: `File type ${file.type} is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
+      }
+    }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Validates if a redirect URL is safe to use.
+ * Prevents Open Redirect vulnerabilities by ensuring the URL is either:
+ * 1. A relative path (starts with /)
+ * 2. An absolute URL matching the application's base URL
+ */
+export function isValidRedirectUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+
+  // Allow relative paths (must start with / and not //)
+  if (url.startsWith('/') && !url.startsWith('//')) {
+    return true
+  }
+
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appBase = new URL(appUrl)
+    const redirectBase = new URL(url)
+
+    // Check if the hostname and protocol match
+    return (
+      redirectBase.protocol === appBase.protocol &&
+      redirectBase.hostname === appBase.hostname &&
+      redirectBase.port === appBase.port
+    )
+  } catch {
+    // If URL parsing fails, it's not a valid absolute URL
+    return false
+  }
 }

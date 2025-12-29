@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
 
 import { createApiHandler } from '@/lib/api-handler'
+import { toISO } from '@/lib/dates'
 import { ensureStripeCustomer, getBillingPlans, BillingPlanDefinition } from '@/lib/billing'
 import { getStripeClient } from '@/lib/stripe'
 
@@ -52,7 +53,7 @@ export const GET = createApiHandler(
       currency: invoice.currency ?? null,
       hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
       invoicePdf: invoice.invoice_pdf ?? null,
-      createdAt: invoice.created ? new Date(invoice.created * 1000).toISOString() : null,
+      createdAt: invoice.created ? toISO(invoice.created * 1000) : null,
     }))
 
     const { subscriptionSummary, planIdForSubscription } = await mapSubscriptionSummary({
@@ -200,7 +201,7 @@ function subscriptionDateField(subscription: Stripe.Subscription, field: string)
     return null
   }
 
-  return new Date(value * 1000).toISOString()
+  return toISO(value * 1000)
 }
 
 function readUnixTimestamp(subscription: Stripe.Subscription, field: string): number | null {

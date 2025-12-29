@@ -1,3 +1,4 @@
+import { formatDate, toISO } from '@/lib/dates'
 import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 import { NormalizedMetric } from '@/types/integrations'
 
@@ -186,8 +187,8 @@ function buildTimeRange(timeframeDays: number) {
   start.setUTCDate(start.getUTCDate() - Math.max(timeframeDays - 1, 0))
 
   return {
-    start: start.toISOString(),
-    end: end.toISOString(),
+    start: toISO(start),
+    end: toISO(end),
   }
 }
 
@@ -509,7 +510,7 @@ export async function fetchLinkedInAdsMetrics(options: LinkedInAdsOptions): Prom
   const rows: LinkedInAnalyticsRow[] = Array.isArray(payload?.elements) ? payload.elements : []
 
   const metrics: NormalizedMetric[] = rows.map((row) => {
-    const date = row?.timeRange?.start ? new Date(row.timeRange.start).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
+    const date = row?.timeRange?.start ? formatDate(row.timeRange.start, 'yyyy-MM-dd') : formatDate(new Date(), 'yyyy-MM-dd')
     const spend = normalizeCurrency(row?.costInLocalCurrency)
     const impressions = coerceNumber(row?.impressions)
     const clicks = coerceNumber(row?.clicks)

@@ -10,8 +10,8 @@ export interface AuthUser {
   role: AuthRole
   status: AuthStatus
   agencyId: string
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
   notificationPreferences?: {
     whatsapp?: {
       tasks?: boolean

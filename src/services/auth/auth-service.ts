@@ -1,5 +1,6 @@
-import { auth } from '@/lib/firebase'
+import { auth, db } from '@/lib/firebase'
 import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore-integrations'
+import { doc, getDoc } from 'firebase/firestore'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -30,6 +31,8 @@ import {
   normalizeStatus,
 } from './utils'
 import { getFriendlyAuthErrorMessage } from './error-utils'
+import { isValidRedirectUrl } from '@/lib/utils'
+import { toISO } from '@/lib/dates'
 
 export class AuthService {
   private static instance: AuthService
@@ -110,8 +113,8 @@ export class AuthService {
       role,
       status,
       agencyId,
-      createdAt: firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime) : new Date(),
-      updatedAt: new Date(),
+      createdAt: firebaseUser.metadata.creationTime ? toISO(firebaseUser.metadata.creationTime) : toISO(),
+      updatedAt: toISO(),
       notificationPreferences: {
         whatsapp: {
           tasks: false,
@@ -135,6 +138,23 @@ export class AuthService {
     if (typeof window !== 'undefined') {
       const cachedAgency = window.localStorage.getItem(`cohorts_agency_${firebaseUser.uid}`)
       if (cachedAgency) return cachedAgency
+    }
+
+    // Fallback to user document in Firestore
+    try {
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
+      if (userDoc.exists()) {
+        const data = userDoc.data()
+        if (typeof data.agencyId === 'string' && data.agencyId.trim().length > 0) {
+          const agencyId = data.agencyId.trim()
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(`cohorts_agency_${firebaseUser.uid}`, agencyId)
+          }
+          return agencyId
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to resolve agencyId from Firestore', error)
     }
 
     return firebaseUser.uid
@@ -422,24 +442,31 @@ export class AuthService {
   }
 
   async getIdToken(forceRefresh = false): Promise<string> {
-    const currentUser = this.ensureAuthenticatedFirebaseUser()
+    const currentUser = auth.currentUser
+    if (!currentUser) {
+      throw new Error('No authenticated user')
+    }
+
     const now = Date.now()
     const buffer = AuthService.TOKEN_EXPIRATION_BUFFER_MS
 
+    // 1. Return cached token if valid and not forcing refresh
     if (!forceRefresh && this.idTokenCache && this.idTokenCache.expiresAt - buffer > now) {
       return this.idTokenCache.token
     }
 
+    // 2. Return existing refresh promise if one is in flight
     if (this.idTokenRefreshPromise) {
       return this.idTokenRefreshPromise
     }
 
+    // 3. Start a new refresh
     const shouldForceRefresh =
       forceRefresh ||
       !this.idTokenCache ||
       this.idTokenCache.expiresAt - buffer <= now
 
-    const refreshPromise = (async () => {
+    this.idTokenRefreshPromise = (async () => {
       try {
         return await this.fetchAndCacheIdToken(currentUser, shouldForceRefresh)
       } catch (error) {
@@ -450,11 +477,13 @@ export class AuthService {
       }
     })()
 
-    this.idTokenRefreshPromise = refreshPromise
-    return refreshPromise
+    return this.idTokenRefreshPromise
   }
 
   async startMetaOauth(redirect?: string): Promise<{ url: string }> {
+    if (redirect && !isValidRedirectUrl(redirect)) {
+      throw new Error('Invalid redirect URL')
+    }
     const idToken = await this.getIdToken()
     const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
     const response = await fetch(`/api/integrations/meta/oauth/url${search}`, {
@@ -475,6 +504,9 @@ export class AuthService {
   }
 
   async startTikTokOauth(redirect?: string): Promise<{ url: string }> {
+    if (redirect && !isValidRedirectUrl(redirect)) {
+      throw new Error('Invalid redirect URL')
+    }
     const idToken = await this.getIdToken()
     const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
     const response = await fetch(`/api/integrations/tiktok/oauth/url${search}`, {
@@ -585,6 +617,7 @@ export class AuthService {
 
   async signUp(data: SignUpData): Promise<AuthUser> {
     try {
+      this.validatePasswordStrength(data.password)
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
 
       if (data.displayName && userCredential.user) {
@@ -675,7 +708,8 @@ export class AuthService {
   }
 
   async updateProfile(data: Partial<AuthUser>): Promise<AuthUser> {
-    if (!this.currentUser) {
+    const currentUser = this.currentUser
+    if (!currentUser) {
       throw new Error('No authenticated user')
     }
 
@@ -703,16 +737,17 @@ export class AuthService {
         await updateFirebaseProfile(firebaseUser, profileUpdates)
       }
 
-      this.currentUser = {
-        ...this.currentUser,
+      const updatedUser: AuthUser = {
+        ...currentUser,
         ...data,
-        name: typeof resolvedName === 'string' && resolvedName.length > 0 ? resolvedName : this.currentUser.name,
-        photoURL: hasPhotoUpdate ? data.photoURL ?? null : this.currentUser.photoURL,
-        updatedAt: new Date(),
+        name: typeof resolvedName === 'string' && resolvedName.length > 0 ? resolvedName : currentUser.name,
+        photoURL: hasPhotoUpdate ? data.photoURL ?? null : currentUser.photoURL,
+        updatedAt: toISO(),
       }
 
-      this.notifyListeners(this.currentUser)
-      return this.currentUser
+      this.currentUser = updatedUser
+      this.notifyListeners(updatedUser)
+      return updatedUser
     } catch (error: unknown) {
       console.error('Profile update error:', error)
       throw new Error('Failed to update profile')
@@ -746,9 +781,7 @@ export class AuthService {
       throw new Error('Current and new passwords are required')
     }
 
-    if (newPassword.length < 8) {
-      throw new Error('New password must be at least 8 characters long')
-    }
+    this.validatePasswordStrength(newPassword)
 
     try {
       await this.reauthenticate(currentPassword)
@@ -821,6 +854,24 @@ export class AuthService {
       const payload = (await response.json().catch(() => ({}))) as { error?: string }
       const message = typeof payload?.error === 'string' ? payload.error : 'Failed to disconnect provider'
       throw new Error(message)
+    }
+  }
+
+  private validatePasswordStrength(password: string): void {
+    if (password.length < 8) {
+      throw new Error('Password must be at least 8 characters long')
+    }
+    if (!/[A-Z]/.test(password)) {
+      throw new Error('Password must contain at least one uppercase letter')
+    }
+    if (!/[a-z]/.test(password)) {
+      throw new Error('Password must contain at least one lowercase letter')
+    }
+    if (!/[0-9]/.test(password)) {
+      throw new Error('Password must contain at least one number')
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      throw new Error('Password must contain at least one special character')
     }
   }
 }

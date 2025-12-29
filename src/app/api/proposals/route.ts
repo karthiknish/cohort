@@ -4,6 +4,7 @@ import type { Query, DocumentData, DocumentSnapshot } from 'firebase-admin/fires
 import { z } from 'zod'
 
 import { adminDb } from '@/lib/firebase-admin'
+import { toISO } from '@/lib/dates'
 import { createApiHandler, apiSuccess } from '@/lib/api-handler'
 import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
@@ -210,11 +211,11 @@ function serializeTimestamp(value: TimestampLike): string | null {
   }
 
   if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
+    return toISO(value.toDate())
   }
 
   if (value instanceof Date) {
-    return value.toISOString()
+    return toISO(value)
   }
 
   if (typeof value === 'string') {
@@ -223,7 +224,7 @@ function serializeTimestamp(value: TimestampLike): string | null {
 
   if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
     const date = value.toDate()
-    return date instanceof Date ? date.toISOString() : null
+    return date instanceof Date ? toISO(date) : null
   }
 
   return null

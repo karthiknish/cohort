@@ -1,6 +1,7 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
 
+import { formatDate, parseDate, toISO } from '@/lib/dates'
 import { adminDb } from '@/lib/firebase-admin'
 
 export type SyncOptions = {
@@ -26,18 +27,8 @@ export function parseTimestampMillis(value: Timestamp | Date | string | null | u
     return value.toMillis()
   }
 
-  if (value instanceof Date) {
-    return value.getTime()
-  }
-
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.getTime()
-    }
-  }
-
-  return null
+  const parsed = parseDate(value)
+  return parsed.getTime()
 }
 
 type InvoiceWithOptionalTotals = Stripe.Invoice & {
@@ -149,10 +140,8 @@ export async function recordInvoiceRevenue(params: {
   }
 
   const effectiveDate = paidAt ?? new Date()
-  const year = effectiveDate.getUTCFullYear()
-  const month = effectiveDate.getUTCMonth() + 1
-  const period = `${year}-${String(month).padStart(2, '0')}`
-  const label = effectiveDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const period = formatDate(effectiveDate, 'yyyy-MM')
+  const label = formatDate(effectiveDate, 'MMMM yyyy')
   const docId = clientId ? `${period}_${clientId}` : `${period}_workspace`
 
   const revenueRef = adminDb.collection('workspaces').doc(workspaceId).collection('financeRevenue').doc(docId)

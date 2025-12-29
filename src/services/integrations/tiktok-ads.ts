@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/dates'
 import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 import { NormalizedMetric } from '@/types/integrations'
 
@@ -204,10 +205,6 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
-
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
-}
 
 const coerceNumber = (value: unknown): number => coerceNumberNullable(value) ?? 0
 
@@ -561,8 +558,8 @@ export async function fetchTikTokAdsMetrics(options: TikTokMetricsOptions): Prom
       data_level: 'AUCTION_CAMPAIGN',
       dimensions: ['campaign_id', 'campaign_name', 'stat_time_day'],
       metrics: ['spend', 'impressions', 'clicks', 'conversion', 'total_complete_payment'],
-      start_date: formatDate(start),
-      end_date: formatDate(today),
+      start_date: formatDate(start, 'yyyy-MM-dd'),
+      end_date: formatDate(today, 'yyyy-MM-dd'),
       page_size: 200,
       time_granularity: 'STAT_TIME_DAY',
       cursor,
@@ -599,7 +596,7 @@ export async function fetchTikTokAdsMetrics(options: TikTokMetricsOptions): Prom
       const dimensions = row?.dimensions ?? {}
       const metricsBlock = row?.metrics ?? {}
 
-      const date = typeof dimensions?.stat_time_day === 'string' ? dimensions.stat_time_day : formatDate(today)
+      const date = typeof dimensions?.stat_time_day === 'string' ? dimensions.stat_time_day : formatDate(today, 'yyyy-MM-dd')
       const campaignId = typeof dimensions?.campaign_id === 'string' ? dimensions.campaign_id : undefined
       const campaignName = typeof dimensions?.campaign_name === 'string' ? dimensions.campaign_name : undefined
 

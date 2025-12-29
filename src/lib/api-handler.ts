@@ -15,6 +15,7 @@ import {
 } from './rate-limiter'
 import { sanitizeInput } from './utils'
 import { logger } from './logger'
+import { toISO } from './dates'
 
 /**
  * Standard API Response structure
@@ -93,11 +94,22 @@ export function createApiHandler<
 ) {
   return async (req: NextRequest, context: { params: Promise<Record<string, string | string[]>> }) => {
     const requestId = req.headers.get('x-request-id') || uuidv4()
+    const startTime = Date.now()
+    let idempotencyRef: FirebaseFirestore.DocumentReference | null = null
+    let auth: AuthResult = { uid: null, email: null, name: null, claims: {}, isCron: false }
+    let workspace: WorkspaceContext | undefined
     
     try {
       const params = await (context?.params || Promise.resolve({}))
       const authOption = options.auth ?? 'required'
       const workspaceOption = options.workspace ?? 'none'
+
+      logger.info(`API Request: ${req.method} ${req.nextUrl.pathname}`, {
+        type: 'request_start',
+        requestId,
+        method: req.method,
+        path: req.nextUrl.pathname,
+      })
       
       // 0. Rate Limiting (before auth to prevent brute force)
       if (options.rateLimit) {
@@ -128,8 +140,6 @@ export function createApiHandler<
         }
       }
       
-      let auth: AuthResult = { uid: null, email: null, name: null, claims: {}, isCron: false }
-      
       // 1. Authentication
       if (authOption !== 'none') {
         try {
@@ -142,16 +152,44 @@ export function createApiHandler<
       // 1.5 Idempotency Check (for POST/PATCH)
       const idempotencyKey = req.headers.get('x-idempotency-key')
       const isIdempotentMethod = ['POST', 'PATCH'].includes(req.method)
-      let idempotencyRef: FirebaseFirestore.DocumentReference | null = null
 
       if (idempotencyKey && isIdempotentMethod) {
         const key = `${auth.uid || 'anon'}_${idempotencyKey}`
         idempotencyRef = adminDb.collection('_apiIdempotency').doc(key)
-        const existing = await idempotencyRef.get()
         
-        if (existing.exists) {
-          const data = existing.data()
-          return NextResponse.json(data?.response, { status: data?.status || 200 })
+        const result = await adminDb.runTransaction(async (transaction) => {
+          const existing = await transaction.get(idempotencyRef!)
+          if (existing.exists) {
+            const data = existing.data()
+            if (data?.idempotencyStatus === 'pending') {
+              return { type: 'pending' }
+            }
+            return { type: 'completed', data: data?.response, status: data?.status }
+          }
+          
+          // Mark as pending to prevent concurrent processing
+          transaction.set(idempotencyRef!, {
+            idempotencyStatus: 'pending',
+            createdAt: toISO(),
+            requestId,
+          })
+          return { type: 'new' }
+        })
+
+        if (result.type === 'completed') {
+          return NextResponse.json(result.data, { 
+            status: result.status || 200,
+            headers: { 'X-Idempotency-Hit': 'true', 'X-Request-ID': requestId }
+          })
+        }
+        
+        if (result.type === 'pending') {
+          return NextResponse.json({
+            success: false,
+            error: 'Request already in progress',
+            code: 'IDEMPOTENCY_CONFLICT',
+            requestId,
+          }, { status: 409 })
         }
       }
 
@@ -161,7 +199,6 @@ export function createApiHandler<
       }
 
       // 3. Workspace Resolution
-      let workspace: WorkspaceContext | undefined
       if (workspaceOption !== 'none') {
         if (!auth.uid && !auth.isCron && workspaceOption === 'required') {
           throw new AuthenticationError('Authentication required for workspace access', 401)
@@ -210,16 +247,17 @@ export function createApiHandler<
             details: result.error.flatten().fieldErrors 
           }, { status: 400 })
         }
-        query = result.data
+        query = sanitizeBody(result.data)
       }
 
       // 5. Execute Handler
+      const sanitizedParams = sanitizeBody(params || {})
       const result = await handler(req, { 
         auth, 
         workspace, 
         body, 
         query, 
-        params: params || {} 
+        params: sanitizedParams as Record<string, string | string[]>
       })
 
       // 6. Standardize Response
@@ -234,21 +272,45 @@ export function createApiHandler<
         requestId,
       }
       
+      const duration = Date.now() - startTime
+      logger.info(`API Success: ${req.method} ${req.nextUrl.pathname}`, {
+        type: 'request_end',
+        requestId,
+        duration,
+        status: 200,
+        userId: auth.uid,
+        workspaceId: workspace?.workspaceId,
+      })
+
       if (idempotencyRef) {
         await idempotencyRef.set({
           response: successResponse,
           status: 200,
-          createdAt: new Date().toISOString(),
-        })
+          idempotencyStatus: 'completed',
+          updatedAt: toISO(),
+        }, { merge: true })
       }
 
       return NextResponse.json(successResponse, {
         headers: { 'X-Request-ID': requestId }
       })
     } catch (error) {
+      const duration = Date.now() - startTime
+      const logContext = {
+        requestId,
+        duration,
+        userId: auth.uid,
+        workspaceId: workspace?.workspaceId,
+      }
+
       // Handle known API errors
       if (error instanceof ApiError) {
-        logApiError(error, req, { requestId })
+        logApiError(error, req, { ...logContext })
+        
+        if (idempotencyRef) {
+          await idempotencyRef.delete().catch(() => {})
+        }
+
         return NextResponse.json({ 
           success: false,
           error: error.message,
@@ -262,7 +324,12 @@ export function createApiHandler<
       }
 
       if (error instanceof z.ZodError) {
-        logApiError(error, req, { requestId })
+        logApiError(error, req, { ...logContext })
+
+        if (idempotencyRef) {
+          await idempotencyRef.delete().catch(() => {})
+        }
+
         return NextResponse.json({ 
           success: false,
           error: 'Validation failed', 
@@ -277,7 +344,12 @@ export function createApiHandler<
 
       // Log and handle unknown errors
       const isDev = process.env.NODE_ENV === 'development'
-      logApiError(error, req, { includeStack: isDev, requestId })
+      logApiError(error, req, { ...logContext, includeStack: isDev })
+
+      if (idempotencyRef) {
+        await idempotencyRef.delete().catch(() => {})
+      }
+
       return NextResponse.json({ 
         success: false,
         error: options.errorMessage || (isDev && error instanceof Error ? error.message : 'Internal server error'),
@@ -313,7 +385,7 @@ export function apiError(message: string, code?: string, details?: Record<string
   }
 }
 
-function logApiError(error: unknown, req: NextRequest, opts?: { includeStack?: boolean, requestId?: string }) {
+function logApiError(error: unknown, req: NextRequest, opts?: { includeStack?: boolean, requestId?: string, duration?: number, userId?: string | null, workspaceId?: string }) {
   try {
     const requestId = opts?.requestId || req.headers.get('x-request-id') || undefined
     const asApiError = error instanceof ApiError ? error : undefined
@@ -322,9 +394,12 @@ function logApiError(error: unknown, req: NextRequest, opts?: { includeStack?: b
       type: 'api_error',
       path: req.nextUrl.pathname,
       method: req.method,
-      status: asApiError?.status,
-      code: asApiError?.code,
+      status: asApiError?.status || (error instanceof z.ZodError ? 400 : 500),
+      code: asApiError?.code || (error instanceof z.ZodError ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR'),
       requestId,
+      duration: opts?.duration,
+      userId: opts?.userId,
+      workspaceId: opts?.workspaceId,
     }
 
     const message = error instanceof Error ? error.message : String(error)

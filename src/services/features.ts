@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '@/lib/firebase'
+import { validateFile } from '@/lib/utils'
+import { toISO } from '@/lib/dates'
 import type {
   FeatureItem,
   CreateFeatureInput,
@@ -37,8 +39,8 @@ export async function getFeatures(): Promise<FeatureItem[]> {
       priority: data.priority ?? 'medium',
       imageUrl: data.imageUrl ?? null,
       references: data.references ?? [],
-      createdAt: data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
-      updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+      createdAt: data.createdAt?.toDate?.()?.toISOString() ?? toISO(),
+      updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? toISO(),
     } as FeatureItem
   })
 }
@@ -69,8 +71,8 @@ export async function createFeature(input: CreateFeatureInput): Promise<FeatureI
     priority: input.priority,
     imageUrl: input.imageUrl ?? null,
     references: input.references ?? [],
-    createdAt: now.toDate().toISOString(),
-    updatedAt: now.toDate().toISOString(),
+    createdAt: toISO(now.toDate()),
+    updatedAt: toISO(now.toDate()),
   }
 }
 
@@ -111,6 +113,15 @@ export async function uploadFeatureImage(
   featureId: string,
   file: File
 ): Promise<string> {
+  const validation = validateFile(file, {
+    allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    maxSizeMb: 2,
+  })
+
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Invalid file')
+  }
+
   const timestamp = Date.now()
   const fileName = `${timestamp}-${file.name}`
   const storagePath = `features/${featureId}/${fileName}`

@@ -32,3 +32,29 @@ export function decrypt(payload: string): string {
   const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
   return decrypted.toString('utf8')
 }
+
+/**
+ * Generates a random code verifier for PKCE.
+ * A high-entropy cryptographic random string.
+ */
+export function generateCodeVerifier(length = 64): string {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
+  const bytes = randomBytes(length)
+  let result = ''
+  for (let i = 0; i < length; i++) {
+    result += charset[bytes[i] % charset.length]
+  }
+  return result
+}
+
+/**
+ * Generates a code challenge from a code verifier using SHA-256.
+ */
+export function generateCodeChallenge(verifier: string): string {
+  return createHash('sha256')
+    .update(verifier)
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
+}

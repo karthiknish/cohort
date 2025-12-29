@@ -1,11 +1,9 @@
 import { 
   differenceInDays, 
   startOfDay, 
-  parseISO, 
-  isValid, 
-  format,
   subDays
 } from 'date-fns'
+import { parseDate, toISO, formatDate, DATE_FORMATS } from './dates'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
@@ -111,19 +109,19 @@ function isRevenueRecordWithinPeriod(record: { createdAt?: string | null; period
 
 function parsePeriodDate(record: { createdAt?: string | null; period?: string }): number | null {
   if (record.createdAt) {
-    const parsed = parseISO(record.createdAt)
-    if (isValid(parsed)) {
+    const parsed = parseDate(record.createdAt)
+    if (parsed) {
       return parsed.getTime()
     }
   }
   if (record.period) {
-    const parsedPeriod = parseISO(record.period)
-    if (isValid(parsedPeriod)) {
+    const parsedPeriod = parseDate(record.period)
+    if (parsedPeriod) {
       return parsedPeriod.getTime()
     }
     // attempt to parse YYYY-MM strings by appending day
-    const asMonth = parseISO(`${record.period}-01`)
-    if (isValid(asMonth)) {
+    const asMonth = parseDate(`${record.period}-01`)
+    if (asMonth) {
       return asMonth.getTime()
     }
   }
@@ -139,11 +137,8 @@ function isMetricWithinPeriod(record: MetricRecord, cutoff: number): boolean {
 }
 
 function parseDateSafe(value: string | null | undefined): number | null {
-  if (!value) {
-    return null
-  }
-  const parsed = parseISO(value)
-  return isValid(parsed) ? parsed.getTime() : null
+  const parsed = parseDate(value)
+  return parsed ? parsed.getTime() : null
 }
 
 export function formatRoas(value: number): string {
@@ -198,8 +193,8 @@ function deriveDueMetadata(rawDue: string | null | undefined): { label: string; 
     return { label: 'No due date', timestamp: Number.MAX_SAFE_INTEGER }
   }
 
-  const dueDate = parseISO(rawDue)
-  if (!isValid(dueDate)) {
+  const dueDate = parseDate(rawDue)
+  if (!dueDate) {
     return { label: rawDue, timestamp: Number.MAX_SAFE_INTEGER }
   }
 
@@ -230,7 +225,7 @@ function deriveDueMetadata(rawDue: string | null | undefined): { label: string; 
   }
 
   return {
-    label: format(dueDate, 'MMM d'),
+    label: formatDate(dueDate, DATE_FORMATS.SHORT),
     timestamp: dueStart,
   }
 }

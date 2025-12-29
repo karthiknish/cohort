@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { storage } from '@/lib/firebase'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { getAvatarInitials } from './utils'
+import { validateFile } from '@/lib/utils'
 
 interface ProfileCardProps {
   onPhoneChange?: (phone: string) => void
@@ -142,15 +143,13 @@ export function ProfileCard({
         return
       }
 
-      if (!file.type.startsWith('image/')) {
-        setAvatarError('Select an image file (PNG, JPG, or WebP).')
-        event.target.value = ''
-        return
-      }
+      const validation = validateFile(file, {
+        allowedTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+        maxSizeMb: 5,
+      })
 
-      const maxFileSize = 5 * 1024 * 1024
-      if (file.size > maxFileSize) {
-        setAvatarError('Choose an image under 5MB.')
+      if (!validation.valid) {
+        setAvatarError(validation.error || 'Invalid image file.')
         event.target.value = ''
         return
       }

@@ -1,10 +1,11 @@
-import { decrypt, encrypt } from '@/lib/crypto'
+import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
 import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore-integrations-admin'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 
 interface MetaOAuthContext {
   state: string
   redirect?: string
+  codeVerifier?: string
   createdAt: number
 }
 
@@ -33,6 +34,7 @@ type MetaOAuthStatePayload = Omit<MetaOAuthContext, 'createdAt'> & { createdAt?:
 export function createMetaOAuthState(payload: MetaOAuthStatePayload): string {
   const data: MetaOAuthContext = {
     ...payload,
+    codeVerifier: payload.codeVerifier ?? generateCodeVerifier(),
     createdAt: payload.createdAt ?? Date.now(),
   }
   return encodeURIComponent(encrypt(JSON.stringify(data)))
