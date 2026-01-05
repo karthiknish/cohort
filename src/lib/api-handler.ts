@@ -67,6 +67,11 @@ export type ApiHandlerOptions<TBody extends z.ZodTypeAny, TQuery extends z.ZodTy
    * If false (default), automatic deduplication via body hashing will be attempted.
    */
   requireIdempotency?: boolean
+  /**
+   * Whether to skip idempotency checks entirely for this endpoint.
+   * Useful for session management and other non-idempotent-safe operations.
+   */
+  skipIdempotency?: boolean
 }
 
 /**
@@ -208,7 +213,7 @@ export function createApiHandler<
 
       // 3.5 Idempotency Check (Enforced/Automatic)
       const isWriteMethod = ['POST', 'PATCH'].includes(req.method)
-      if (isWriteMethod) {
+      if (isWriteMethod && !options.skipIdempotency) {
         const idempotencyKey = req.headers.get('x-idempotency-key')
         
         if (options.requireIdempotency && !idempotencyKey) {

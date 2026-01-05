@@ -15,6 +15,7 @@ export const POST = createApiHandler(
     auth: 'none',
     rateLimit: 'sensitive',
     bodySchema: SessionSchema,
+    skipIdempotency: true,
   },
   async (request, context) => {
     const { token, role, status } = context.body

@@ -307,7 +307,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
           return false
         }
 
-        console.error('[AuthProvider v5] Failed to sync session cookies. Status:', status)
+        console.error('[AuthProvider] Failed to sync session cookies. Status:', status)
         return false
       }
 
