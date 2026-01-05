@@ -160,11 +160,11 @@ export default function HomePage() {
       if (!redirect && typeof window !== 'undefined') {
         const lastTab = window.localStorage.getItem('cohorts_last_tab')
         if (lastTab && lastTab.startsWith('/dashboard')) {
-          router.replace(lastTab)
+          window.location.href = lastTab
           return
         }
       }
-      router.replace(redirect || "/dashboard")
+      window.location.href = redirect || "/dashboard"
     }
   }, [loading, user, router, searchParams])
 

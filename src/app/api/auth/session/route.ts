@@ -1,11 +1,22 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { createApiHandler } from '@/lib/api-handler'
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { token, role, status } = body
+const SessionSchema = z.object({
+  token: z.string().optional(),
+  role: z.string().optional(),
+  status: z.string().optional(),
+})
 
+export const POST = createApiHandler(
+  {
+    auth: 'none',
+    rateLimit: 'sensitive',
+    bodySchema: SessionSchema,
+  },
+  async (request, context) => {
+    const { token, role, status } = context.body
     const cookieStore = await cookies()
 
     if (!token) {
@@ -13,7 +24,12 @@ export async function POST(request: NextRequest) {
       cookieStore.delete('cohorts_token')
       cookieStore.delete('cohorts_role')
       cookieStore.delete('cohorts_status')
-      return NextResponse.json({ success: true })
+      return NextResponse.json(
+        { success: true },
+        { 
+          headers: { 'Cache-Control': 'no-store, max-age=0' }
+        }
+      )
     }
 
     // Set cookies with security flags
@@ -26,28 +42,37 @@ export async function POST(request: NextRequest) {
       path: '/',
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'strict' as const,
+      sameSite: 'lax' as const, // Changed from strict to lax for better redirect reliability
     }
 
     cookieStore.set('cohorts_token', token, cookieOptions)
-    
-    // Role and status can be non-httpOnly if needed by client, 
-    // but for maximum security we'll make them httpOnly too 
-    // and the client can get them from the user object in context.
     cookieStore.set('cohorts_role', role || 'client', cookieOptions)
     cookieStore.set('cohorts_status', status || 'pending', cookieOptions)
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Session API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { success: true },
+      { 
+        headers: { 'Cache-Control': 'no-store, max-age=0' }
+      }
+    )
   }
-}
+)
 
-export async function DELETE() {
-  const cookieStore = await cookies()
-  cookieStore.delete('cohorts_token')
-  cookieStore.delete('cohorts_role')
-  cookieStore.delete('cohorts_status')
-  return NextResponse.json({ success: true })
-}
+export const DELETE = createApiHandler(
+  {
+    auth: 'none',
+    rateLimit: 'standard',
+  },
+  async () => {
+    const cookieStore = await cookies()
+    cookieStore.delete('cohorts_token')
+    cookieStore.delete('cohorts_role')
+    cookieStore.delete('cohorts_status')
+    return NextResponse.json(
+      { success: true },
+      { 
+        headers: { 'Cache-Control': 'no-store, max-age=0' }
+      }
+    )
+  }
+)

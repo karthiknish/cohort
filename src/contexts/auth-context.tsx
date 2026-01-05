@@ -214,17 +214,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 async function syncSessionCookies(authUser: AuthUser | null) {
   if (typeof window === 'undefined') {
-    return
+    return true
   }
 
   try {
     if (!authUser) {
-      await fetch('/api/auth/session', { method: 'DELETE' })
-      return
+      const response = await fetch('/api/auth/session', { method: 'DELETE' })
+      return response.ok
     }
 
     const token = await authService.getIdToken()
-    await fetch('/api/auth/session', {
+    const response = await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -233,7 +233,15 @@ async function syncSessionCookies(authUser: AuthUser | null) {
         status: authUser.status,
       }),
     })
+
+    if (!response.ok) {
+      console.error('Failed to sync session cookies. Status:', response.status)
+      return false
+    }
+
+    return true
   } catch (error) {
     console.error('Failed to sync auth cookies', error)
+    return false
   }
 }
