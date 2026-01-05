@@ -49,14 +49,11 @@ export async function middleware(request: NextRequest) {
   }
   const token = request.cookies.get(AUTH_COOKIE)?.value
 
-  // Handle auth routes (including root which is now the sign-in page)
+  // Public auth pages should always be reachable.
+  // If a stale/invalid token cookie exists, forcing a redirect from `/` -> `/dashboard`
+  // can create a loop when the client later determines the session is invalid and
+  // navigates back to `/`.
   if (pathname === '/' || pathname.startsWith(AUTH_ROUTE_PREFIX)) {
-    if (token) {
-      const target = request.nextUrl.clone()
-      target.pathname = '/dashboard'
-      target.search = ''
-      return NextResponse.redirect(target)
-    }
     return NextResponse.next()
   }
 
