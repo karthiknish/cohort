@@ -225,7 +225,8 @@ export default function DashboardPage() {
           throw new Error(message)
         }
 
-        const data = (await response.json()) as FinanceSummaryResponse
+        const payload = (await response.json()) as any
+        const data = payload.data || payload
         if (!isCancelled) {
           setFinanceSummary(data)
         }
@@ -266,9 +267,10 @@ export default function DashboardPage() {
           throw new Error(message)
         }
 
-        const data = (await response.json()) as { metrics?: MetricRecord[] }
+        const payload = (await response.json()) as any
+        const data = payload.data || payload
         if (!isCancelled) {
-          const entries = Array.isArray(data?.metrics) ? data.metrics : []
+          const entries = Array.isArray(data?.metrics) ? data.metrics : Array.isArray(data) ? data : []
           setMetrics(entries)
         }
       } catch (error) {
@@ -308,12 +310,14 @@ export default function DashboardPage() {
           throw new Error(message)
         }
 
-        const data = (await response.json()) as { tasks?: TaskRecord[] }
+        const payload = (await response.json()) as any
+        const data = payload.data || payload
         if (!isCancelled) {
-          const entries = Array.isArray(data?.tasks) ? data.tasks : []
-          setRawTasks(entries)
-          setTaskItems(mapTasksForDashboard(entries))
-          setTaskSummary(summarizeTasks(entries))
+          const tasks = Array.isArray(data?.tasks) ? data.tasks : Array.isArray(data) ? data : []
+          setRawTasks(tasks)
+          const entries = mapTasksForDashboard(tasks)
+          setTaskItems(entries)
+          setTaskSummary(summarizeTasks(tasks))
         }
       } catch (error) {
         if (!isCancelled) {
@@ -707,24 +711,29 @@ export default function DashboardPage() {
       })
     })
 
-    const revenueRecords = Array.isArray(financeSummary?.revenue) ? financeSummary.revenue : []
-    revenueRecords.forEach((r) => {
-      let date = ''
-      if (r.period && r.period.length === 7) {
-        // YYYY-MM -> YYYY-MM-01
-        date = `${r.period}-01`
-      } else if (r.createdAt) {
-        date = r.createdAt.split('T')[0]
-      }
+    const revenueRecords = Array.isArray(financeSummary?.revenue) 
+      ? financeSummary.revenue 
+      : []
 
-      if (date) {
-        const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
-        dailyMap.set(date, {
-          ...current,
-          revenue: current.revenue + r.revenue,
-        })
-      }
-    })
+    if (Array.isArray(revenueRecords)) {
+      revenueRecords.forEach((r) => {
+        let date = ''
+        if (r.period && r.period.length === 7) {
+          // YYYY-MM -> YYYY-MM-01
+          date = `${r.period}-01`
+        } else if (r.createdAt) {
+          date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0] : ''
+        }
+  
+        if (date) {
+          const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
+          dailyMap.set(date, {
+            ...current,
+            revenue: current.revenue + (r.revenue || 0),
+          })
+        }
+      })
+    }
 
     return Array.from(dailyMap.entries())
       .map(([date, vals]) => ({ date, ...vals }))
