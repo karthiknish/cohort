@@ -26,6 +26,15 @@ export class ValidationError extends ApiError {
 }
 
 /**
+ * 400 Bad Request - Generic invalid request
+ */
+export class BadRequestError extends ApiError {
+  constructor(message = 'Bad request') {
+    super(message, 400, 'BAD_REQUEST');
+  }
+}
+
+/**
  * 401 Unauthorized - Authentication required
  */
 export class UnauthorizedError extends ApiError {

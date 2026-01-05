@@ -53,7 +53,7 @@ type StoredSyncJob = {
   errorMessage?: string | null
 }
 
-type TimestampInput = Date | string | number | null | undefined
+type TimestampInput = Timestamp | Date | string | number | null | undefined
 
 function toTimestamp(value: TimestampInput): Timestamp | null {
   if (!value && value !== 0) {
@@ -64,12 +64,22 @@ function toTimestamp(value: TimestampInput): Timestamp | null {
     return value
   }
 
-  try {
-    const date = parseDate(value)
-    return Timestamp.fromDate(date)
-  } catch {
-    return null
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : Timestamp.fromDate(value)
   }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return null
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : Timestamp.fromDate(date)
+  }
+
+  if (typeof value === 'string') {
+    const date = parseDate(value)
+    return date ? Timestamp.fromDate(date) : null
+  }
+
+  return null
 }
 
 export async function persistIntegrationTokens(options: {

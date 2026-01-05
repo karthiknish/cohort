@@ -27,8 +27,17 @@ export function parseTimestampMillis(value: Timestamp | Date | string | null | u
     return value.toMillis()
   }
 
+  if (value instanceof Date) {
+    const time = value.getTime()
+    return Number.isNaN(time) ? null : time
+  }
+
+  if (typeof value !== 'string') {
+    return null
+  }
+
   const parsed = parseDate(value)
-  return parsed.getTime()
+  return parsed ? parsed.getTime() : null
 }
 
 type InvoiceWithOptionalTotals = Stripe.Invoice & {

@@ -113,7 +113,9 @@ export class AuthService {
       role,
       status,
       agencyId,
-      createdAt: firebaseUser.metadata.creationTime ? toISO(firebaseUser.metadata.creationTime) : toISO(),
+      createdAt: firebaseUser.metadata.creationTime
+        ? (toISO(firebaseUser.metadata.creationTime) || toISO())
+        : toISO(),
       updatedAt: toISO(),
       notificationPreferences: {
         whatsapp: {

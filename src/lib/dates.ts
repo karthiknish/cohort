@@ -22,8 +22,20 @@ export function formatDate(
  * Formats a date as an ISO string in UTC.
  */
 export function toISO(date: Date | string | number = new Date()): string {
-  const d = typeof date === 'string' ? parseISO(date) : new Date(date)
-  return d.toISOString()
+  // Firebase metadata dates can be non-ISO (e.g., RFC1123 / Date#toUTCString).
+  if (typeof date === 'string') {
+    const trimmed = date.trim()
+    if (!trimmed) return ''
+
+    const isoParsed = parseISO(trimmed)
+    if (isValid(isoParsed)) return isoParsed.toISOString()
+
+    const nativeParsed = new Date(trimmed)
+    return isValid(nativeParsed) ? nativeParsed.toISOString() : ''
+  }
+
+  const d = new Date(date)
+  return isValid(d) ? d.toISOString() : ''
 }
 
 /**
