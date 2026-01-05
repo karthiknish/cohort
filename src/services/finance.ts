@@ -66,8 +66,7 @@ export async function deleteFinanceCost(costId: string): Promise<void> {
     throw new Error('Cost id is required')
   }
 
-  const search = new URLSearchParams({ id: costId })
-  await apiFetch(`/api/finance/costs?${search.toString()}`, {
+  await apiFetch(`/api/finance/costs/${encodeURIComponent(costId)}`, {
     method: 'DELETE',
   })
 }

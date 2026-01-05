@@ -19,9 +19,6 @@ const createClientSchema = z.object({
   billingEmail: z.string().trim().email().optional(),
 })
 
-const deleteClientSchema = z.object({
-  id: z.string().trim().min(1, 'Client id is required'),
-})
 
 const addTeamMemberSchema = z.object({
   action: z.literal('addTeamMember'),
@@ -247,25 +244,3 @@ export const PATCH = createApiHandler(
   }
 )
 
-export const DELETE = createApiHandler(
-  {
-    workspace: 'required',
-    adminOnly: true,
-    bodySchema: deleteClientSchema,
-    rateLimit: 'sensitive',
-  },
-  async (req, { workspace, body }) => {
-    if (!workspace) throw new Error('Workspace context missing')
-    const { id } = body
-    const docRef = workspace.clientsCollection.doc(id)
-    const snapshot = await docRef.get()
-
-    if (!snapshot.exists) {
-      throw new NotFoundError('Client not found')
-    }
-
-    await docRef.delete()
-
-    return { ok: true }
-  }
-)

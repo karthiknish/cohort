@@ -395,13 +395,11 @@ export default function AdminClientsPage() {
     try {
       setDeletingClientId(clientPendingDelete.id)
       const token = await getIdToken()
-      const response = await fetch('/api/clients', {
+      const response = await fetch(`/api/clients/${encodeURIComponent(clientPendingDelete.id)}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id: clientPendingDelete.id }),
       })
 
       const payload = (await response.json().catch(() => null)) as { error?: string } | null

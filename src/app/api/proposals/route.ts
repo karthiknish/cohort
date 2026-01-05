@@ -155,53 +155,6 @@ export const POST = createApiHandler(
   }
 )
 
-export const PATCH = createApiHandler(
-  {
-    workspace: 'required',
-    bodySchema: updateSchema,
-    rateLimit: 'sensitive',
-  },
-  async (req, { workspace, body }) => {
-    if (!workspace) throw new Error('Workspace context missing')
-    const proposalId = extractProposalId(body)
-
-    if (!proposalId) {
-      throw new ValidationError('Proposal id required')
-    }
-
-    const proposalRef = workspace.proposalsCollection.doc(proposalId)
-    await proposalRef.update(sanitizeProposalUpdate(body, FieldValue.serverTimestamp()))
-
-    return { ok: true }
-  }
-)
-
-export const DELETE = createApiHandler(
-  {
-    workspace: 'required',
-    rateLimit: 'sensitive',
-  },
-  async (req, { workspace }) => {
-    if (!workspace) throw new Error('Workspace context missing')
-    const body = (await req.json().catch(() => null)) as { id?: unknown } | null
-    const rawId = body?.id
-    if (typeof rawId !== 'string' || rawId.trim().length === 0) {
-      throw new ValidationError('Proposal id required')
-    }
-
-    const proposalId = rawId.trim()
-    const proposalRef = workspace.proposalsCollection.doc(proposalId)
-    const snapshot = await proposalRef.get()
-
-    if (!snapshot.exists) {
-      throw new NotFoundError('Proposal not found')
-    }
-
-    await proposalRef.delete()
-
-    return { ok: true }
-  }
-)
 
 type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
 

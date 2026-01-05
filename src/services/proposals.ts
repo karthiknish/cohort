@@ -77,9 +77,9 @@ export async function createProposalDraft(body: Partial<ProposalDraft> = {}) {
 }
 
 export async function updateProposalDraft(id: string, body: Partial<ProposalDraft>) {
-  await apiFetch('/api/proposals', {
+  await apiFetch(`/api/proposals/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    body: JSON.stringify({ id, ...body }),
+    body: JSON.stringify(body),
   })
 
   return true
@@ -95,9 +95,8 @@ export async function submitProposalDraft(id: string, delivery: 'summary' | 'sum
 }
 
 export async function deleteProposalDraft(id: string) {
-  await apiFetch('/api/proposals', {
+  await apiFetch(`/api/proposals/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    body: JSON.stringify({ id }),
   })
 
   return true

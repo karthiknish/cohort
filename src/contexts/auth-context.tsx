@@ -212,36 +212,77 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 }
 
+let lastSyncToken: string | null = null
+let syncInProgress: Promise<boolean> | null = null
+
 async function syncSessionCookies(authUser: AuthUser | null) {
   if (typeof window === 'undefined') {
     return true
   }
 
-  try {
-    if (!authUser) {
-      const response = await fetch('/api/auth/session', { method: 'DELETE' })
-      return response.ok
-    }
-
-    const token = await authService.getIdToken()
-    const response = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token,
-        role: authUser.role,
-        status: authUser.status,
-      }),
-    })
-
-    if (!response.ok) {
-      console.error('Failed to sync session cookies. Status:', response.status)
-      return false
-    }
-
-    return true
-  } catch (error) {
-    console.error('Failed to sync auth cookies', error)
+  // If we're offline, don't even try to sync, it will just fail and log errors
+  if (!navigator.onLine) {
     return false
   }
+
+  // If a sync is already in progress, wait for it
+  if (syncInProgress) {
+    return syncInProgress
+  }
+
+  syncInProgress = (async () => {
+    try {
+      if (!authUser) {
+        const response = await fetch('/api/auth/session', { method: 'DELETE' })
+        lastSyncToken = null
+        return response.ok
+      }
+
+      const token = await authService.getIdToken()
+      
+      // Avoid redundant syncs if the token hasn't changed
+      if (token === lastSyncToken) {
+        return true
+      }
+
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          role: authUser.role,
+          status: authUser.status,
+        }),
+      })
+
+      if (!response.ok) {
+        // Only log if it's not a rate limit or other expected error
+        if (response.status !== 429) {
+          console.error('Failed to sync session cookies. Status:', response.status)
+        }
+        return false
+      }
+
+      lastSyncToken = token
+      return true
+    } catch (error) {
+      // Handle network errors gracefully
+      const isNetworkError = 
+        (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
+        (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'auth/network-request-failed')
+
+      if (isNetworkError) {
+        // Silently fail for network errors, as they are expected when offline/flaky
+        // They will be retried on the next auth state change or token refresh
+        return false
+      }
+
+      console.error('Failed to sync auth cookies', error)
+      return false
+    } finally {
+      syncInProgress = null
+    }
+  })()
+
+  return syncInProgress
 }

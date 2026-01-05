@@ -15,7 +15,7 @@ export const GET = createApiHandler(
   {
     auth: 'none',
     querySchema,
-    rateLimit: 'standard',
+    rateLimit: 'sensitive',
   },
   async (req, { query }) => {
     const { code, state } = query

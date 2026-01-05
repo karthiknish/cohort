@@ -228,37 +228,3 @@ export const POST = createApiHandler(
     )
   }
 )
-
-export const DELETE = createApiHandler(
-  {
-    adminOnly: true,
-    rateLimit: 'sensitive',
-  },
-  async (req) => {
-    const searchParams = req.nextUrl.searchParams
-    const invitationId = searchParams.get('id')
-
-    if (!invitationId) {
-      throw new ValidationError('Invitation ID is required')
-    }
-
-    const docRef = adminDb.collection('invitations').doc(invitationId)
-    const doc = await docRef.get()
-
-    if (!doc.exists) {
-      throw new NotFoundError('Invitation not found')
-    }
-
-    const data = doc.data() as StoredInvitation
-    if (data.status !== 'pending') {
-      throw new ValidationError('Only pending invitations can be revoked')
-    }
-
-    await docRef.update({
-      status: 'revoked',
-      updatedAt: Timestamp.now(),
-    })
-
-    return { success: true }
-  }
-)

@@ -84,7 +84,15 @@ export class AuthService {
       try {
         await this.getIdToken(true)
       } catch (error) {
-        console.error('Background token refresh failed:', error)
+        const isNetworkError = 
+          (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
+          (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'auth/network-request-failed')
+
+        if (!isNetworkError) {
+          console.error('Background token refresh failed:', error)
+        }
+        
+        // Retry in 1 minute regardless of error type
         this.refreshTimeout = setTimeout(() => this.scheduleTokenRefresh(firebaseUser), 60000)
       }
     }, delay)
