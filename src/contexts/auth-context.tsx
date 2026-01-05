@@ -43,14 +43,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const applyUser = useCallback((authUser: AuthUser | null) => {
+  const applyUser = useCallback(async (authUser: AuthUser | null) => {
     setUser(authUser)
-    void syncSessionCookies(authUser)
+    await syncSessionCookies(authUser)
   }, [])
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((authUser) => {
-      applyUser(authUser)
+    const unsubscribe = authService.onAuthStateChanged(async (authUser) => {
+      await applyUser(authUser)
       setLoading(false)
     })
 
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       const authUser = await authService.signIn(email, password)
-      applyUser(authUser)
+      await applyUser(authUser)
       return authUser
     } finally {
       setLoading(false)
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       const authUser = await authService.signUp(data)
-      applyUser(authUser)
+      await applyUser(authUser)
       return authUser
     } finally {
       setLoading(false)
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       const authUser = await authService.signInWithGoogle()
-      applyUser(authUser)
+      await applyUser(authUser)
       return authUser
     } finally {
       setLoading(false)
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       await authService.signOut()
-      applyUser(null)
+      await applyUser(null)
     } finally {
       setLoading(false)
     }
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const updateProfile = useCallback(async (data: Partial<AuthUser>): Promise<AuthUser> => {
     const authUser = await authService.updateProfile(data)
-    applyUser(authUser)
+    await applyUser(authUser)
     return authUser
   }, [applyUser])
 
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       await authService.deleteAccount()
-      applyUser(null)
+      await applyUser(null)
     } finally {
       setLoading(false)
     }
