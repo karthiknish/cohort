@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import { useAuth } from '@/contexts/auth-context'
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/constants/currencies'
+import { apiFetch } from '@/lib/api-client'
 
 interface UserPreferences {
   currency: CurrencyCode
@@ -49,19 +50,12 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     try {
       setLoading(true)
       setError(null)
-      const token = await getIdToken()
-
-      const response = await fetch('/api/settings/preferences', {
-        headers: { Authorization: `Bearer ${token}` },
+      
+      const payload = await apiFetch<{ preferences?: UserPreferences }>('/api/settings/preferences', {
+        cache: 'no-store',
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch preferences')
-      }
-
-      const payload = await response.json() as { success?: boolean; data?: { preferences?: UserPreferences }; preferences?: UserPreferences }
-      // Handle both new envelope { success, data: { preferences } } and legacy { preferences }
-      const prefs = payload.data?.preferences ?? payload.preferences
+      const prefs = payload.preferences
       setPreferences({
         currency: prefs?.currency ?? DEFAULT_CURRENCY,
         timezone: prefs?.timezone ?? null,
@@ -76,7 +70,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       setLoading(false)
       setInitialized(true)
     }
-  }, [user, getIdToken])
+  }, [user])
 
   // Fetch preferences on mount and when user changes
   useEffect(() => {
@@ -96,25 +90,13 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
 
       try {
         setError(null)
-        const token = await getIdToken()
-
-        const response = await fetch('/api/settings/preferences', {
+        
+        const payload = await apiFetch<{ preferences?: UserPreferences }>('/api/settings/preferences', {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(updates),
         })
 
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}))
-          throw new Error(payload.error || 'Failed to update preferences')
-        }
-
-        const payload = await response.json() as { success?: boolean; data?: { preferences?: UserPreferences }; preferences?: UserPreferences }
-        // Handle both new envelope { success, data: { preferences } } and legacy { preferences }
-        const prefs = payload.data?.preferences ?? payload.preferences
+        const prefs = payload.preferences
         setPreferences({
           currency: prefs?.currency ?? preferences.currency,
           timezone: prefs?.timezone ?? preferences.timezone,
@@ -126,7 +108,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         throw err
       }
     },
-    [user, getIdToken, preferences]
+    [user, preferences]
   )
 
   const updateCurrency = useCallback(

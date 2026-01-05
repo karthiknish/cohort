@@ -15,54 +15,66 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
     return inFlightRequests.get(cacheKey)
   }
 
-  const executeRequest = async (): Promise<T> => {
-    const token = await authService.getIdToken()
-    const headers = new Headers(init.headers)
-
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`)
-    }
-
-    if (!headers.has('Content-Type') && init.method && init.method !== 'GET') {
-      headers.set('Content-Type', 'application/json')
-    }
-
-    let response: Response
+  const executeRequest = async (attempt = 0): Promise<T> => {
     try {
-      response = await fetch(input, {
-        ...init,
-        headers,
-      })
+      const token = await authService.getIdToken()
+      const headers = new Headers(init.headers)
+
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`)
+      }
+
+      if (!headers.has('Content-Type') && init.method && init.method !== 'GET') {
+        headers.set('Content-Type', 'application/json')
+      }
+
+      let response: Response
+      try {
+        response = await fetch(input, {
+          ...init,
+          headers,
+        })
+      } catch (error) {
+        if (attempt < 2 && isDeduplicatable) {
+          await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000))
+          return executeRequest(attempt + 1)
+        }
+        throw new ApiClientError('Network error', { code: 'NETWORK_ERROR', cause: error })
+      }
+
+      const payload = await response.json().catch(() => ({}))
+      const status = response.status
+      const isEnvelope = payload && typeof payload === 'object' && 'success' in payload
+
+      const mapCodeFromStatus = (value: number) => {
+        if (value === 401) return 'UNAUTHORIZED'
+        if (value === 403) return 'FORBIDDEN'
+        if (value === 404) return 'NOT_FOUND'
+        if (value === 429) return 'RATE_LIMIT_EXCEEDED'
+        if (value >= 500) return 'INTERNAL_ERROR'
+        return undefined
+      }
+
+      if (!response.ok || (isEnvelope && payload.success === false)) {
+        const code = payload?.code || mapCodeFromStatus(status)
+        const message = payload?.error || defaultStatusMessage(status)
+        throw new ApiClientError(message, { status, code, details: payload?.details })
+      }
+
+      // Handle standardized envelope { success: true, data: T }
+      if (isEnvelope && 'data' in payload) {
+        return payload.data as T
+      }
+
+      // Backward compatibility: return payload directly
+      return payload as T
     } catch (error) {
-      throw new ApiClientError('Network error', { code: 'NETWORK_ERROR', cause: error })
+      if (attempt < 2 && (error as any).code === 'NETWORK_ERROR' && isDeduplicatable) {
+        await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000))
+        return executeRequest(attempt + 1)
+      }
+      throw error
     }
-
-    const payload = await response.json().catch(() => ({}))
-    const status = response.status
-    const isEnvelope = payload && typeof payload === 'object' && 'success' in payload
-
-    const mapCodeFromStatus = (value: number) => {
-      if (value === 401) return 'UNAUTHORIZED'
-      if (value === 403) return 'FORBIDDEN'
-      if (value === 404) return 'NOT_FOUND'
-      if (value === 429) return 'RATE_LIMIT_EXCEEDED'
-      if (value >= 500) return 'INTERNAL_ERROR'
-      return undefined
-    }
-
-    if (!response.ok || (isEnvelope && payload.success === false)) {
-      const code = payload?.code || mapCodeFromStatus(status)
-      const message = payload?.error || defaultStatusMessage(status)
-      throw new ApiClientError(message, { status, code, details: payload?.details })
-    }
-
-    // Handle standardized envelope { success: true, data: T }
-    if (isEnvelope && 'data' in payload) {
-      return payload.data as T
-    }
-
-    // Backward compatibility: return payload directly
-    return payload as T
   }
 
   const promise = executeRequest().finally(() => {
