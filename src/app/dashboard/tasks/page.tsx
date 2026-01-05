@@ -207,9 +207,9 @@ export default function TasksPage() {
       Status: task.status,
       Priority: task.priority,
       Client: task.client || 'Internal',
-      'Assigned To': task.assignedTo.join(', '),
+      'Assigned To': (task.assignedTo ?? []).join(', '),
       'Due Date': task.dueDate ? formatDate(task.dueDate) : 'No due date',
-      Tags: task.tags.join(', '),
+      Tags: (task.tags ?? []).join(', '),
       Description: task.description || '',
     }))
 
@@ -294,9 +294,9 @@ export default function TasksPage() {
         description: task.description ?? '',
         status: (overrides.status ?? task.status) as TaskStatus,
         priority: (overrides.priority ?? task.priority) as TaskPriority,
-        assignedTo: overrides.assignedTo ?? task.assignedTo,
+        assignedTo: overrides.assignedTo ?? (task.assignedTo ?? []),
         dueDate: overrides.dueDate === null ? undefined : overrides.dueDate ?? (task.dueDate ?? undefined),
-        tags: overrides.tags ?? task.tags,
+        tags: overrides.tags ?? (task.tags ?? []),
       }
     },
     [],

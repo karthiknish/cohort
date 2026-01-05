@@ -125,7 +125,7 @@ export function useTaskFilters({
       let matchesAssignee = true
       if (activeTab === 'my-tasks') {
         if (userName) {
-          matchesAssignee = task.assignedTo.some(
+          matchesAssignee = (task.assignedTo ?? []).some(
             (a) => a.toLowerCase() === userName.toLowerCase()
           )
         } else {
@@ -134,7 +134,7 @@ export function useTaskFilters({
       } else {
         matchesAssignee =
           selectedAssignee === 'all' ||
-          task.assignedTo.some((a) => a.toLowerCase().includes(selectedAssignee.toLowerCase()))
+          (task.assignedTo ?? []).some((a) => a.toLowerCase().includes(selectedAssignee.toLowerCase()))
       }
 
       return matchesStatus && matchesSearch && matchesAssignee
@@ -204,7 +204,7 @@ export function useTaskFilters({
   const assigneeOptions = useMemo(() => {
     const options = new Set<string>()
     projectScopedTasks.forEach((task) => {
-      task.assignedTo.forEach((member) => {
+      (task.assignedTo ?? []).forEach((member) => {
         if (member && member.trim().length > 0) {
           options.add(member)
         }

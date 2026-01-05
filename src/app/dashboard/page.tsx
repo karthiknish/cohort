@@ -707,7 +707,8 @@ export default function DashboardPage() {
       })
     })
 
-    financeSummary?.revenue.forEach((r) => {
+    const revenueRecords = Array.isArray(financeSummary?.revenue) ? financeSummary.revenue : []
+    revenueRecords.forEach((r) => {
       let date = ''
       if (r.period && r.period.length === 7) {
         // YYYY-MM -> YYYY-MM-01

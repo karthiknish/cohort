@@ -104,7 +104,7 @@ export function TaskRow({
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <User className="h-3.5 w-3.5" />
-              {task.assignedTo.length > 0 ? task.assignedTo.join(', ') : 'Unassigned'}
+              {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}
             </span>
             <span className="inline-flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
@@ -125,9 +125,9 @@ export function TaskRow({
               </Badge>
             )}
           </div>
-          {task.tags.length > 0 && (
+          {(task.tags ?? []).length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              {task.tags.map((tag) => (
+              {(task.tags ?? []).map((tag) => (
                 <Badge key={tag} variant="secondary" className="bg-muted text-muted-foreground">
                   #{tag}
                 </Badge>

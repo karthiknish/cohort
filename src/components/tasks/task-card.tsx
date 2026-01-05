@@ -117,7 +117,7 @@ export function TaskCard({
           <div className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5" />
             <span className="truncate">
-              {task.assignedTo.length > 0 ? task.assignedTo.join(', ') : 'Unassigned'}
+              {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -126,9 +126,9 @@ export function TaskCard({
           </div>
         </div>
 
-        {task.tags.length > 0 && (
+        {(task.tags ?? []).length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {task.tags.slice(0, 3).map((tag) => (
+            {(task.tags ?? []).slice(0, 3).map((tag) => (
               <Badge
                 key={tag}
                 variant="secondary"
@@ -137,8 +137,8 @@ export function TaskCard({
                 #{tag}
               </Badge>
             ))}
-            {task.tags.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">+{task.tags.length - 3}</span>
+            {(task.tags ?? []).length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{(task.tags ?? []).length - 3}</span>
             )}
           </div>
         )}

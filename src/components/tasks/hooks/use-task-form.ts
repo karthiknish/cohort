@@ -155,11 +155,11 @@ export function useTaskForm({
       description: task.description || '',
       status: task.status,
       priority: task.priority,
-      assignedTo: task.assignedTo.join(', '),
+      assignedTo: (task.assignedTo ?? []).join(', '),
       clientId: task.clientId || null,
       clientName: task.client || '',
       dueDate: task.dueDate || '',
-      tags: task.tags.join(', '),
+      tags: (task.tags ?? []).join(', '),
     })
     setUpdateError(null)
     setIsEditOpen(true)

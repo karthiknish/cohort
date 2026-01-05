@@ -32,9 +32,15 @@ export function Toaster() {
           }
         }
 
-        const handleMarkRead = () => {
-          onMarkRead?.()
-          dismiss(id)
+        const handleMarkRead = async () => {
+          if (!onMarkRead) return
+          try {
+            await onMarkRead()
+            dismiss(id)
+          } catch (err) {
+            // Keep toast open if marking as read fails
+            console.error('[toast] mark as read failed', err)
+          }
         }
 
         return (
@@ -84,16 +90,23 @@ export function Toaster() {
                   {undoLabel ?? 'Undo'}
                 </ToastAction>
               )}
-              <ToastAction
-                data-toast-action="true"
-                altText="Mark as read"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  handleMarkRead()
-                }}
-              >
-                Mark as read
-              </ToastAction>
+              {onMarkRead && (
+                <ToastAction
+                  data-toast-action="true"
+                  altText="Mark as read"
+                  onPointerDown={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    void handleMarkRead()
+                  }}
+                >
+                  Mark as read
+                </ToastAction>
+              )}
               <ToastClose data-toast-action="true" onClick={() => dismiss(id)} />
             </div>
           </Toast>
