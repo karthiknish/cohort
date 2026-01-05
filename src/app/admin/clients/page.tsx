@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { apiFetch } from '@/lib/api-client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
@@ -89,24 +90,11 @@ export default function AdminClientsPage() {
     setClientsError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/clients', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const data = await apiFetch<ClientRecord[]>('/api/clients', {
         cache: 'no-store',
       })
 
-      const payload = (await response.json().catch(() => null)) as
-        | { clients?: ClientRecord[]; error?: string }
-        | null
-
-      if (!response.ok || !payload || !Array.isArray(payload.clients)) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load clients'
-        throw new Error(message)
-      }
-
-      const sorted = [...payload.clients].sort((a, b) => a.name.localeCompare(b.name))
+      const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name))
       setClients(sorted)
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to load clients')
@@ -115,7 +103,7 @@ export default function AdminClientsPage() {
     } finally {
       setClientsLoading(false)
     }
-  }, [getIdToken, toast, user?.id])
+  }, [user?.id, toast])
 
   useEffect(() => {
     if (!user?.id) {
@@ -211,26 +199,14 @@ export default function AdminClientsPage() {
 
     try {
       setAddingMember(true)
-      const token = await getIdToken()
-      const response = await fetch('/api/clients', {
+      const teamMembers = await apiFetch<ClientTeamMember[]>('/api/clients', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ action: 'addTeamMember', id: clientPendingMembers.id, name, role }),
       })
 
-      const payload = (await response.json().catch(() => null)) as { teamMembers?: ClientTeamMember[]; error?: string } | null
-
-      if (!response.ok || !payload || !Array.isArray(payload.teamMembers)) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to add teammate'
-        throw new Error(message)
-      }
-
       setClients((prev) =>
         prev.map((client) =>
-          client.id === clientPendingMembers.id ? { ...client, teamMembers: payload.teamMembers ?? [] } : client
+          client.id === clientPendingMembers.id ? { ...client, teamMembers: teamMembers ?? [] } : client
         )
       )
 
@@ -245,7 +221,7 @@ export default function AdminClientsPage() {
     } finally {
       setAddingMember(false)
     }
-  }, [clientPendingMembers, getIdToken, memberName, memberRole, toast])
+  }, [clientPendingMembers, memberName, memberRole, toast])
 
   const handleCreateInvoice = useCallback(async () => {
     if (!clientPendingInvoice) {
@@ -278,33 +254,19 @@ export default function AdminClientsPage() {
     setInvoiceError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/clients/${encodeURIComponent(clientPendingInvoice.id)}/invoice`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amount: amountValue,
-          description: invoiceDescription.trim().length > 0 ? invoiceDescription.trim() : undefined,
-          dueDate: dueDateIso,
-          email: normalizedEmail,
-        }),
-      })
-
-      const payload = (await response.json().catch(() => null)) as {
-        invoice?: {
+      const { invoice, client } = await apiFetch<{
+        invoice: {
           id: string
           number: string | null
           status: string | null
+          amount: number
           currency: string | null
           amountDue: number | null
-          dueDate: string | null
-          hostedInvoiceUrl: string | null
           issuedAt: string | null
+          hostedInvoiceUrl: string | null
         }
-        client?: {
+        client: {
+          id: string
           billingEmail?: string | null
           stripeCustomerId?: string | null
           lastInvoiceStatus?: string | null
@@ -314,15 +276,15 @@ export default function AdminClientsPage() {
           lastInvoiceNumber?: string | null
           lastInvoiceUrl?: string | null
         }
-        error?: string
-      } | null
-
-      if (!response.ok || !payload || !payload.invoice) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to raise invoice'
-        throw new Error(message)
-      }
-
-      const { invoice, client } = payload
+      }>(`/api/clients/${encodeURIComponent(clientPendingInvoice.id)}/invoice`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: amountValue,
+          description: invoiceDescription.trim().length > 0 ? invoiceDescription.trim() : undefined,
+          dueDate: dueDateIso,
+          email: normalizedEmail,
+        }),
+      })
 
       setClients((prev) =>
         prev.map((record) => {
@@ -377,7 +339,6 @@ export default function AdminClientsPage() {
     }
   }, [
     clientPendingInvoice,
-    getIdToken,
     handleInvoiceDialogChange,
     invoiceAmount,
     invoiceDescription,
@@ -394,19 +355,9 @@ export default function AdminClientsPage() {
 
     try {
       setDeletingClientId(clientPendingDelete.id)
-      const token = await getIdToken()
-      const response = await fetch(`/api/clients/${encodeURIComponent(clientPendingDelete.id)}`, {
+      await apiFetch(`/api/clients/${encodeURIComponent(clientPendingDelete.id)}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
-
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to delete client'
-        throw new Error(message)
-      }
 
       setClients((prev) => prev.filter((client) => client.id !== clientPendingDelete.id))
       toast({ title: 'Client deleted', description: `${clientPendingDelete.name} has been removed.` })
@@ -418,7 +369,7 @@ export default function AdminClientsPage() {
     } finally {
       setDeletingClientId(null)
     }
-  }, [clientPendingDelete, getIdToken, toast])
+  }, [clientPendingDelete, toast])
 
   const resetClientForm = () => {
     setClientName('')
@@ -458,27 +409,16 @@ export default function AdminClientsPage() {
     setClientSaving(true)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/clients', {
+      const client = await apiFetch<ClientRecord>('/api/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ name, accountManager, teamMembers }),
       })
 
-      const payload = (await response.json().catch(() => null)) as { client?: ClientRecord; error?: string } | null
-      if (!response.ok || !payload || !payload.client) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to create client'
-        throw new Error(message)
-      }
-
       setClients((prev) => {
-        const next = [...prev, payload.client!]
+        const next = [...prev, client]
         return next.sort((a, b) => a.name.localeCompare(b.name))
       })
-      toast({ title: 'Client created', description: `${payload.client.name} is ready to use.` })
+      toast({ title: 'Client created', description: `${client.name} is ready to use.` })
       resetClientForm()
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to create client')

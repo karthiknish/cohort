@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
-import { authService } from '@/services/auth'
+import { apiFetch } from '@/lib/api-client'
 import {
   RETRY_CONFIG,
   TaskListResponse,
@@ -101,25 +101,17 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
       setRetryCount(attempt)
 
       try {
-        const token = await authService.getIdToken()
         const search = new URLSearchParams()
         if (clientId) {
           search.set('clientId', clientId)
         }
         const queryString = search.toString()
         const url = `/api/tasks${queryString ? `?${queryString}` : ''}`
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
+        const data = await apiFetch<TaskListResponse>(url, {
           cache: 'no-store',
           signal: abortControllerRef.current?.signal,
         })
 
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null
-          throw new Error(payload?.error ?? 'Unable to load tasks')
-        }
-
-        const data = (await response.json()) as TaskListResponse
         const entries = Array.isArray(data?.tasks) ? data.tasks : []
         setTasks(entries)
         setNextCursor(
@@ -127,7 +119,6 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
             ? data.nextCursor
             : null
         )
-        setRetryCount(0)
       } catch (fetchError: unknown) {
         if (fetchError instanceof Error && fetchError.name === 'AbortError') return
 
@@ -169,24 +160,16 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
 
     setLoadingMore(true)
     try {
-      const token = await authService.getIdToken()
       const params = new URLSearchParams()
       if (clientId) {
         params.set('clientId', clientId)
       }
       params.set('after', nextCursor)
       const url = `/api/tasks?${params.toString()}`
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await apiFetch<TaskListResponse>(url, {
         cache: 'no-store',
       })
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null
-        throw new Error(payload?.error ?? 'Unable to load additional tasks')
-      }
-
-      const data = (await response.json()) as TaskListResponse
       const entries = Array.isArray(data?.tasks) ? data.tasks : []
       setTasks((prev) => [...prev, ...entries])
       setNextCursor(
@@ -212,23 +195,15 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
     setError(null)
 
     try {
-      const token = await authService.getIdToken()
       const search = new URLSearchParams()
       if (clientId) {
         search.set('clientId', clientId)
       }
       const url = `/api/tasks?${search.toString()}`
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await apiFetch<TaskListResponse>(url, {
         cache: 'no-store',
       })
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null
-        throw new Error(payload?.error ?? 'Unable to refresh tasks')
-      }
-
-      const data = (await response.json()) as TaskListResponse
       const entries = Array.isArray(data?.tasks) ? data.tasks : []
       setTasks(entries)
       setNextCursor(
@@ -260,22 +235,10 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
       setPendingStatusUpdates((prev) => new Set(prev).add(task.id))
 
       try {
-        const token = await authService.getIdToken()
-        const response = await fetch(`/api/tasks/${task.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        })
-
-        if (!response.ok) {
-          const errorData = (await response.json().catch(() => null)) as { error?: string } | null
-          throw new Error(errorData?.error || 'Unable to update status')
-        }
-
-        const updatedTask = (await response.json()) as TaskRecord
+      const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
         toast({
           title: '🔄 Status updated',
@@ -306,16 +269,9 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
   const handleDeleteTask = useCallback(
     async (task: TaskRecord): Promise<boolean> => {
       try {
-        const token = await authService.getIdToken()
-        const response = await fetch(`/api/tasks/${task.id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        if (!response.ok) {
-          const errorData = (await response.json().catch(() => null)) as { error?: string } | null
-          throw new Error(errorData?.error || 'Unable to delete task')
-        }
+      await apiFetch(`/api/tasks/${task.id}`, {
+        method: 'DELETE',
+      })
 
         setTasks((prev) => prev.filter((t) => t.id !== task.id))
         toast({
@@ -340,30 +296,10 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
   const handleCreateTask = useCallback(
     async (payload: CreateTaskPayload): Promise<TaskRecord | null> => {
       try {
-        const token = await authService.getIdToken()
-        const response = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-
-        const rawBody = await response.text()
-
-        if (!response.ok) {
-          let message = 'Unable to create task'
-          try {
-            const parsed = JSON.parse(rawBody) as { error?: string } | null
-            if (parsed?.error) message = parsed.error
-          } catch {
-            // fallback to generic message
-          }
-          throw new Error(message)
-        }
-
-        const createdTask = JSON.parse(rawBody) as TaskRecord
+      const createdTask = await apiFetch<TaskRecord>('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
         setTasks((prev) => [createdTask, ...prev])
         setError(null)
         toast({
@@ -382,22 +318,10 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
   const handleUpdateTask = useCallback(
     async (taskId: string, payload: UpdateTaskPayload): Promise<TaskRecord | null> => {
       try {
-        const token = await authService.getIdToken()
-        const response = await fetch(`/api/tasks/${taskId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        })
-
-        if (!response.ok) {
-          const errorData = (await response.json().catch(() => null)) as { error?: string } | null
-          throw new Error(errorData?.error || 'Unable to update task')
-        }
-
-        const updatedTask = (await response.json()) as TaskRecord
+      const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
         toast({
           title: '✅ Task updated',

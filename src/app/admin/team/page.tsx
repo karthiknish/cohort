@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { apiFetch } from '@/lib/api-client'
 import {
   Card,
   CardContent,
@@ -87,28 +88,16 @@ export default function AdminTeamPage() {
       }
 
       try {
-        const token = await getIdToken()
         const params = new URLSearchParams()
         params.set('pageSize', '50')
         if (cursor) {
           params.set('cursor', cursor)
         }
 
-        const response = await fetch(`/api/admin/users?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: 'no-store',
-        })
-
-        const payload = (await response.json().catch(() => null)) as
-          | { users?: AdminUserRecord[]; nextCursor?: string | null; error?: string }
-          | null
-
-        if (!response.ok || !payload || !Array.isArray(payload.users)) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load team members'
-          throw new Error(message)
-        }
+        const payload = await apiFetch<{ users: AdminUserRecord[]; nextCursor: string | null }>(
+          `/api/admin/users?${params.toString()}`,
+          { cache: 'no-store' }
+        )
 
         setUsers((prev) => (append ? [...prev, ...payload.users!] : payload.users!))
         setNextCursor(payload.nextCursor ?? null)
@@ -169,21 +158,10 @@ export default function AdminTeamPage() {
     setError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/users', {
+      await apiFetch('/api/admin/users', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ id: userId, role }),
       })
-
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to update team member role'
-        throw new Error(message)
-      }
 
       setUsers((prev) => prev.map((record) => (record.id === userId ? { ...record, role } : record)))
       toast({ title: '✅ Role updated', description: `Member is now a ${role}.` })
@@ -216,21 +194,10 @@ export default function AdminTeamPage() {
     const nextStatus = deriveNextStatus(userRecord.status)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/users', {
+      await apiFetch('/api/admin/users', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ id: userRecord.id, status: nextStatus }),
       })
-
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to update team member status'
-        throw new Error(message)
-      }
 
       setUsers((prev) => prev.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record)))
       toast({

@@ -85,6 +85,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../collaboration/utils'
+import { apiFetch } from '@/lib/api-client'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import { MILESTONE_STATUSES, type MilestoneRecord } from '@/types/milestones'
 
@@ -206,7 +207,6 @@ export default function ProjectsPage() {
     }
 
     try {
-      const token = await getIdToken()
       const params = new URLSearchParams()
       if (selectedClientId) {
         params.set('clientId', selectedClientId)
@@ -219,37 +219,10 @@ export default function ProjectsPage() {
       }
 
       const queryString = params.toString()
-      const response = await fetch(`/api/projects${queryString ? `?${queryString}` : ''}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const data = await apiFetch<ProjectResponse>(`/api/projects${queryString ? `?${queryString}` : ''}`, {
         cache: 'no-store',
         signal: abortControllerRef.current.signal,
       })
-
-      if (!response.ok) {
-        let message = 'Unable to load projects'
-        try {
-          const payload = (await response.json()) as { error?: string }
-          if (payload?.error) {
-            message = payload.error
-          }
-        } catch {
-          // ignore JSON parse errors
-        }
-        
-        // Retry on server errors
-        if (response.status >= 500 && retryAttempt < RETRY_CONFIG.maxRetries) {
-          const delay = calculateBackoffDelay(retryAttempt)
-          console.warn(`[Projects] Server error, retrying in ${delay}ms (attempt ${retryAttempt + 1}/${RETRY_CONFIG.maxRetries})`)
-          await sleep(delay)
-          return loadProjects(retryAttempt + 1)
-        }
-        
-        throw new Error(message)
-      }
-
-      const data = (await response.json()) as ProjectResponse
       setProjects(Array.isArray(data.projects) ? data.projects : [])
       setError(null)
       setRetryCount(0)
@@ -293,27 +266,11 @@ export default function ProjectsPage() {
     setMilestonesLoading(true)
     setMilestonesError(null)
     try {
-      const token = await getIdToken()
       const params = new URLSearchParams()
       params.set('projectIds', projectIds.join(','))
-      const response = await fetch(`/api/projects/milestones?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        let message = 'Unable to load milestones'
-        try {
-          const payload = (await response.json()) as { error?: string }
-          if (payload?.error) message = payload.error
-        } catch {
-          // ignore
-        }
-        throw new Error(message)
-      }
-
-      const data = (await response.json()) as { milestones?: Record<string, MilestoneRecord[]> }
+      const data = await apiFetch<{ milestones: Record<string, MilestoneRecord[]> }>(
+        `/api/projects/milestones?${params.toString()}`
+      )
       setMilestonesByProject(data.milestones ?? {})
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to load milestones'
@@ -384,24 +341,9 @@ export default function ProjectsPage() {
 
     setDeleting(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/projects/${projectToDelete.id}`, {
+      await apiFetch(`/api/projects/${projectToDelete.id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
-
-      if (!response.ok) {
-        let message = 'Failed to delete project'
-        try {
-          const data = await response.json() as { error?: string }
-          if (data.error) message = data.error
-        } catch {
-          // ignore
-        }
-        throw new Error(message)
-      }
 
       setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
       toast({
@@ -432,28 +374,11 @@ export default function ProjectsPage() {
     setPendingStatusUpdates((prev) => new Set(prev).add(project.id))
 
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/projects/${project.id}`, {
+      const data = await apiFetch<{ project: ProjectRecord }>(`/api/projects/${project.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ status: newStatus }),
       })
-
-      if (!response.ok) {
-        let message = 'Failed to update project'
-        try {
-          const data = await response.json() as { error?: string }
-          if (data.error) message = data.error
-        } catch {
-          // ignore
-        }
-        throw new Error(message)
-      }
-
-      const data = await response.json() as { project: ProjectRecord }
+      
       setProjects((prev) => prev.map((p) => p.id === project.id ? data.project : p))
       toast({
         title: '✅ Status updated',

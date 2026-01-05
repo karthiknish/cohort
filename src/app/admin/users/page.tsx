@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertCircle, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { apiFetch } from '@/lib/api-client'
 import {
   Card,
   CardContent,
@@ -86,28 +87,16 @@ export default function AdminUsersPage() {
       }
 
       try {
-        const token = await getIdToken()
         const params = new URLSearchParams()
         params.set('pageSize', '50')
         if (cursor) {
           params.set('cursor', cursor)
         }
 
-        const response = await fetch(`/api/admin/users?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: 'no-store',
-        })
-
-        const payload = (await response.json().catch(() => null)) as
-          | { users?: AdminUserRecord[]; nextCursor?: string | null; error?: string }
-          | null
-
-        if (!response.ok || !payload || !Array.isArray(payload.users)) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load users'
-          throw new Error(message)
-        }
+        const payload = await apiFetch<{ users: AdminUserRecord[]; nextCursor: string | null }>(
+          `/api/admin/users?${params.toString()}`,
+          { cache: 'no-store' }
+        )
 
         setUsers((prev) => (append ? [...prev, ...payload.users!] : payload.users!))
         setNextCursor(payload.nextCursor ?? null)
@@ -244,25 +233,13 @@ export default function AdminUsersPage() {
     
     setInviteSending(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/invitations', {
+      const payload = await apiFetch<any>('/api/admin/invitations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           email: inviteEmail,
           role: inviteRole,
         }),
       })
-
-      const payload = await response.json().catch(() => ({}))
-      
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to send invitation'
-        throw new Error(message)
-      }
 
       const emailSent = payload.emailSent === true
       

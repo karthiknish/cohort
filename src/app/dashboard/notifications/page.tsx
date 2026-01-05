@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { apiFetch } from '@/lib/api-client'
 
 const PAGE_SIZE = 25
 
@@ -62,22 +63,9 @@ export default function NotificationsPage() {
         params.set('unread', 'true')
       }
 
-      const token = await getIdToken()
-
-      const response = await fetch(`/api/notifications?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const payload = await apiFetch<NotificationResponse>(`/api/notifications?${params.toString()}`, {
         cache: 'no-store',
       })
-
-      const payload = (await response.json().catch(() => null)) as NotificationResponse | null
-
-      if (!response.ok || !payload) {
-        const message = payload?.error ?? 'Failed to load notifications'
-        throw new Error(message)
-      }
 
       let items = Array.isArray(payload.notifications) ? payload.notifications : []
 
@@ -105,24 +93,12 @@ export default function NotificationsPage() {
         return
       }
 
-      const token = await getIdToken()
-
       try {
         setAckInFlight(true)
-        const response = await fetch('/api/notifications/ack', {
+        await apiFetch('/api/notifications/ack', {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({ ids, action }),
         })
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null
-          const message = payload?.error ?? 'Failed to update notifications'
-          throw new Error(message)
-        }
 
         setNotifications((prev) => {
           if (action === 'dismiss') {
