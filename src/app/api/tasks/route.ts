@@ -57,6 +57,7 @@ export type StoredTask = {
   tags?: unknown
   createdAt?: unknown
   updatedAt?: unknown
+  deletedAt?: unknown
 }
 
 export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
@@ -78,6 +79,7 @@ export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
     tags: coerceStringArray(data.tags),
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
+    deletedAt: toISO(data.deletedAt),
   }
 }
 
@@ -140,6 +142,9 @@ export const GET = createApiHandler(
 
     const mapped = docs.map((doc) => mapTaskDoc(doc.id, doc.data() as StoredTask))
     const filtered = mapped.filter((task) => {
+      if (task.deletedAt) {
+        return false
+      }
       if (clientIdFilter && task.clientId !== clientIdFilter) {
         return false
       }
@@ -242,6 +247,7 @@ export const POST = createApiHandler(
       createdBy: uid,
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     }
 
     const docRef = await workspace.tasksCollection.add(taskData)

@@ -447,19 +447,20 @@ export default function DashboardPage() {
   }, [clients, comparisonClientIds, comparisonPeriodDays, getIdToken, selectedClientId, user?.id])
 
   const { primaryStats, secondaryStats } = useMemo(() => {
-    const revenueRecords = financeSummary?.revenue ?? []
-    const costs = financeSummary?.costs ?? []
+    const revenueRecords = Array.isArray(financeSummary?.revenue) ? financeSummary.revenue : []
+    const costs = Array.isArray(financeSummary?.costs) ? financeSummary.costs : []
     const payments = financeSummary?.payments
+    const metricsArray = Array.isArray(metrics) ? metrics : []
 
-    const totalRevenue = revenueRecords.reduce((sum, record) => sum + record.revenue, 0)
-    const totalOperatingExpenses = revenueRecords.reduce((sum, record) => sum + record.operatingExpenses, 0)
-    const totalCompanyCosts = costs.reduce((sum, cost) => sum + cost.amount, 0)
-    const totalAdSpend = metrics.reduce((sum, record) => sum + record.spend, 0)
-    const providerCount = metrics.length > 0 ? new Set(metrics.map((record) => record.providerId)).size : 0
+    const totalRevenue = revenueRecords.reduce((sum, record) => sum + (record.revenue || 0), 0)
+    const totalOperatingExpenses = revenueRecords.reduce((sum, record) => sum + (record.operatingExpenses || 0), 0)
+    const totalCompanyCosts = costs.reduce((sum, cost) => sum + (cost.amount || 0), 0)
+    const totalAdSpend = metricsArray.reduce((sum, record) => sum + (record.spend || 0), 0)
+    const providerCount = metricsArray.length > 0 ? new Set(metricsArray.map((record) => record.providerId)).size : 0
     const combinedExpenses = totalOperatingExpenses + totalCompanyCosts + totalAdSpend
     const netMargin = totalRevenue - combinedExpenses
     const roas = totalAdSpend > 0 && totalRevenue > 0 ? totalRevenue / totalAdSpend : null
-    const totalConversions = metrics.reduce((sum, record) => sum + record.conversions, 0)
+    const totalConversions = metricsArray.reduce((sum, record) => sum + (record.conversions || 0), 0)
     const totalOutstanding = sumOutstanding(financeSummary?.payments?.totals ?? [])
     const overdueInvoices = payments?.overdueCount ?? 0
     const openInvoices = payments?.openCount ?? 0
@@ -469,7 +470,7 @@ export default function DashboardPage() {
     const currencies = new Set([
       ...revenueRecords.map((r) => r.currency).filter(Boolean),
       ...costs.map((c) => c.currency).filter(Boolean),
-      ...(payments?.totals ?? []).map((entry) => entry.currency).filter(Boolean),
+      ...(Array.isArray(payments?.totals) ? payments.totals : []).map((entry) => entry.currency).filter(Boolean),
     ])
     const displayCurrency = currencies.size === 1 ? (Array.from(currencies)[0] as string) : 'USD'
 
@@ -702,38 +703,38 @@ export default function DashboardPage() {
   const chartData = useMemo(() => {
     const dailyMap = new Map<string, { revenue: number; spend: number }>()
 
-    metrics.forEach((m) => {
-      const date = m.date.split('T')[0]
-      const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
-      dailyMap.set(date, {
-        ...current,
-        spend: current.spend + m.spend,
+    if (Array.isArray(metrics)) {
+      metrics.forEach((m) => {
+        const date = m.date.split('T')[0]
+        const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
+        dailyMap.set(date, {
+          ...current,
+          spend: current.spend + m.spend,
+        })
       })
-    })
+    }
 
-    const revenueRecords = Array.isArray(financeSummary?.revenue) 
+    const revenueRecords = financeSummary && Array.isArray(financeSummary.revenue) 
       ? financeSummary.revenue 
       : []
 
-    if (Array.isArray(revenueRecords)) {
-      revenueRecords.forEach((r) => {
-        let date = ''
-        if (r.period && r.period.length === 7) {
-          // YYYY-MM -> YYYY-MM-01
-          date = `${r.period}-01`
-        } else if (r.createdAt) {
-          date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0] : ''
-        }
-  
-        if (date) {
-          const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
-          dailyMap.set(date, {
-            ...current,
-            revenue: current.revenue + (r.revenue || 0),
-          })
-        }
-      })
-    }
+    revenueRecords.forEach((r) => {
+      let date = ''
+      if (r.period && r.period.length === 7) {
+        // YYYY-MM -> YYYY-MM-01
+        date = `${r.period}-01`
+      } else if (r.createdAt) {
+        date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0] : ''
+      }
+
+      if (date) {
+        const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
+        dailyMap.set(date, {
+          ...current,
+          revenue: current.revenue + (r.revenue || 0),
+        })
+      }
+    })
 
     return Array.from(dailyMap.entries())
       .map(([date, vals]) => ({ date, ...vals }))

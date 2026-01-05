@@ -161,7 +161,10 @@ export const DELETE = createApiHandler(
       throw new NotFoundError('Task not found')
     }
 
-    await docRef.delete()
+    await docRef.update({
+      deletedAt: new Date().toISOString(),
+      updatedAt: Timestamp.now()
+    })
 
     invalidateTasksCache(workspace.workspaceId)
 

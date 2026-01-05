@@ -15,6 +15,7 @@ import { Toaster as SonnerToaster } from 'sonner'
 import { MotionProvider } from '@/components/providers/motion-provider'
 import { AnalyticsProvider } from '@/components/providers/analytics-provider'
 import { PWAProvider } from '@/components/providers/pwa-provider'
+import { DebugWindow } from '@/components/debug/DebugWindow'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -67,6 +68,7 @@ export default function RootLayout({
                         <SiteFooter />
                       </div>
                       <PWAProvider />
+                      <DebugWindow />
                     </MotionProvider>
                   </AnalyticsProvider>
                 </ProjectProvider>

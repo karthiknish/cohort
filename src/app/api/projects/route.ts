@@ -134,7 +134,7 @@ export const GET = createApiHandler(
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), MAX_PROJECTS)
     const afterCursor = afterParam?.trim() || null
 
-    let baseQuery = workspace.projectsCollection as Query
+    let baseQuery = workspace.projectsCollection.where('deletedAt', '==', null) as Query
 
     if (status) {
       baseQuery = baseQuery.where('status', '==', status)
@@ -228,6 +228,7 @@ export const POST = createApiHandler(
       workspaceId: workspace.workspaceId,
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     })
 
     const createdDoc = await docRef.get()

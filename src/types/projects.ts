@@ -21,6 +21,7 @@ export type ProjectRecord = {
   taskCount: number
   openTaskCount: number
   recentActivityAt: string | null
+  deletedAt?: string | null
 }
 
 export type ProjectDetail = ProjectRecord & {

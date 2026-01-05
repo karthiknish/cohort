@@ -19,4 +19,5 @@ export type TaskRecord = {
   tags: string[]
   createdAt?: string | null
   updatedAt?: string | null
+  deletedAt?: string | null
 }

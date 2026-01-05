@@ -312,8 +312,11 @@ export const DELETE = createApiHandler(
     const snapshot = await ensureProjectAccess(workspace, projectId)
     const projectData = snapshot.data()
 
-    // Delete the project document
-    await snapshot.ref.delete()
+    // Soft delete the project document
+    await snapshot.ref.update({
+      deletedAt: new Date().toISOString(),
+      updatedAt: Timestamp.now()
+    })
 
     await logAuditAction({
       action: 'PROJECT_DELETE',

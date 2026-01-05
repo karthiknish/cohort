@@ -8,6 +8,7 @@ import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
 import { ApiError, RateLimitError } from './api-errors'
 import { 
   checkRateLimit, 
+  checkDistributedRateLimit,
   createRateLimitKey, 
   getClientIdentifier,
   buildRateLimitHeaders,
@@ -126,7 +127,12 @@ export function createApiHandler<
         
         const identifier = getClientIdentifier(req)
         const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, identifier)
-        const result = checkRateLimit(rateLimitKey, config)
+        
+        // Use distributed rate limiting for sensitive/critical operations
+        const isSensitive = options.rateLimit === 'sensitive' || options.rateLimit === 'critical'
+        const result = isSensitive 
+          ? await checkDistributedRateLimit(rateLimitKey, config)
+          : checkRateLimit(rateLimitKey, config)
         
         if (!result.allowed) {
           return NextResponse.json(
@@ -267,7 +273,13 @@ export function createApiHandler<
               error: 'Request already in progress',
               code: 'IDEMPOTENCY_CONFLICT',
               requestId,
-            }, { status: 409 })
+            }, { 
+              status: 409,
+              headers: { 
+                'X-Request-ID': requestId,
+                'Retry-After': '1'
+              }
+            })
           }
         }
       }

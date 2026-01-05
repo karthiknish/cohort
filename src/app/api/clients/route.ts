@@ -137,6 +137,7 @@ export const GET = createApiHandler(
     const afterParam = query.after
 
     let baseQuery = workspace.clientsCollection
+      .where('deletedAt', '==', null)
       .orderBy('name', 'asc')
       .orderBy(FieldPath.documentId(), 'asc')
       .limit(pageSize + 1)
@@ -228,6 +229,7 @@ export const POST = createApiHandler(
         createdBy: auth.uid,
         createdAt: timestamp,
         updatedAt: timestamp,
+        deletedAt: null,
       }
 
       transaction.set(docRef, clientData)
@@ -236,7 +238,7 @@ export const POST = createApiHandler(
 
     await logAuditAction({
       action: 'CLIENT_CREATE',
-      actorId: auth.uid,
+      actorId: auth.uid!,
       targetId: client.id,
       workspaceId: workspace.workspaceId,
       metadata: {

@@ -19,6 +19,7 @@ export interface Client {
   status: 'active' | 'inactive' | 'prospect';
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | string | null;
 }
 
 export interface AdAccount {

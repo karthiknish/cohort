@@ -229,7 +229,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
     return true
   }
 
-  // If we're offline, don't even try to sync, it will just fail and log errors
+  // If we're offline, don't even try to sync
   if (!navigator.onLine) {
     return false
   }
@@ -243,16 +243,18 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
     }
   }
 
-  // If a sync is already in progress, wait for it before trying our sync
-  // This ensures operations happen in order and we don't return early with wrong results
+  // If a sync is already in progress, wait for it
   if (syncInProgress && retryCount === 0) {
     await syncInProgress
-    // After waiting, check again if we still need to sync
+    const currentToken = await getTargetToken()
+    if (currentToken === lastSyncToken) {
+      return true
+    }
   }
 
   const token = await getTargetToken()
   
-  // Dedup if the token hasn't changed since the last successful sync
+  // Dedup
   if (token === lastSyncToken && retryCount === 0) {
     return true
   }
@@ -278,36 +280,47 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
       })
 
       if (!response.ok) {
-        // Handle rate limiting (429)
-        if (response.status === 429 && retryCount < 2) {
+        const status = response.status
+        
+        // Handle rate limiting (429) or idempotency conflicts (409)
+        if ((status === 429 || status === 409) && retryCount < 3) {
+          const isConflict = status === 409
           const retryAfter = Number(response.headers.get('Retry-After') || 1)
-          const delay = Math.min(retryAfter * 1000, 3000) // Max 3s wait
-          console.warn(`[AuthProvider] Rate limited on session sync, retrying in ${delay / 1000}s...`)
+          // Longer delay for conflicts to allow the other request to finish
+          const delay = isConflict ? 1000 * (retryCount + 1) : Math.min(retryAfter * 1000, 3000)
+          
+          console.warn(`[AuthProvider] Session sync ${isConflict ? 'conflict' : 'rate limit'} (attempt ${retryCount + 1}), retrying in ${delay}ms...`)
+          
           await new Promise(resolve => setTimeout(resolve, delay))
           return syncSessionCookies(authUser, retryCount + 1)
         }
 
-        if (response.status !== 429) {
-          console.error('Failed to sync session cookies. Status:', response.status)
+        // If we still get a 409 after all retries, it's likely fine (another request won)
+        if (status === 409) {
+          console.warn('[AuthProvider] Session sync conflict persisted, assuming success.')
+          return true
         }
+
+        // For 429s that exhausted retries, just warn and fail
+        if (status === 429) {
+          console.warn('[AuthProvider] Session sync rate limit persisted, giving up.')
+          return false
+        }
+
+        console.error('[AuthProvider v5] Failed to sync session cookies. Status:', status)
         return false
       }
 
       lastSyncToken = token
       return true
     } catch (error) {
-      // Handle network errors gracefully
       const isNetworkError = 
         (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
         (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'auth/network-request-failed')
 
-      if (isNetworkError) {
-        // Retry networking errors once after a short delay
-        if (retryCount < 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          return syncSessionCookies(authUser, retryCount + 1)
-        }
-        return false
+      if (isNetworkError && retryCount < 2) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        return syncSessionCookies(authUser, retryCount + 1)
       }
 
       console.error('Failed to sync auth cookies', error)

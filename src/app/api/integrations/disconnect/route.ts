@@ -19,11 +19,11 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('User context required')
     }
 
-    await deleteAdIntegration({ userId: auth.uid, providerId: body.providerId })
+    await deleteAdIntegration({ userId: auth.uid!, providerId: body.providerId })
 
     await logAuditAction({
       action: 'INTEGRATION_DISCONNECT',
-      actorId: auth.uid,
+      actorId: auth.uid!,
       targetId: body.providerId,
       metadata: {
         providerId: body.providerId,

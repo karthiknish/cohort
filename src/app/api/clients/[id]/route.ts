@@ -23,11 +23,14 @@ export const DELETE = createApiHandler(
     }
 
     const clientData = snapshot.data()
-    await docRef.delete()
+    await docRef.update({ 
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
 
     await logAuditAction({
       action: 'CLIENT_DELETE',
-      actorId: auth.uid,
+      actorId: auth.uid!,
       targetId: clientId,
       workspaceId: workspace!.workspaceId,
       metadata: {
