@@ -216,11 +216,14 @@ export function createApiHandler<
 
         let effectiveKey: string | null = null
         if (idempotencyKey) {
-          effectiveKey = `key_${auth.uid || 'anon'}_${idempotencyKey}`
+          // Ensure the key doesn't contain slashes which Firestore interprets as subcollections
+          const safeKey = idempotencyKey.replace(/\//g, '_')
+          effectiveKey = `key_${auth.uid || 'anon'}_${safeKey}`
         } else if (rawBody) {
           const bodyHash = createHash('sha256').update(rawBody).digest('hex')
+          const safePath = req.nextUrl.pathname.replace(/\//g, '_')
           // Use path + method + body hash for automatic deduplication
-          effectiveKey = `auto_${auth.uid || 'anon'}_${req.method}_${req.nextUrl.pathname}_${bodyHash}`
+          effectiveKey = `auto_${auth.uid || 'anon'}_${req.method}_${safePath}_${bodyHash}`
         }
 
         if (effectiveKey) {
