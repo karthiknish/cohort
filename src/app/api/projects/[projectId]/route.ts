@@ -14,6 +14,7 @@ import { mapTaskDoc, type StoredTask } from '@/app/api/tasks/route'
 import { mapMessageDoc, type StoredMessage } from '@/app/api/collaboration/messages/route'
 import { AuthenticationError } from '@/lib/server-auth'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
+import { logAuditAction } from '@/lib/audit-logger'
 
 const updateProjectSchema = z
   .object({
@@ -190,7 +191,7 @@ export const GET = createApiHandler(
     const { tasks, recentMessages, milestones } = await loadProjectRelations(workspace, projectId)
     const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages, milestones)
 
-    return { project: projectDetail }
+    return projectDetail
   }
 )
 
@@ -292,7 +293,7 @@ export const PATCH = createApiHandler(
     const { tasks, recentMessages, milestones } = await loadProjectRelations(workspace, projectId)
     const projectDetail = buildDetailResponse(projectRecord, tasks, recentMessages, milestones)
 
-    return { project: projectDetail }
+    return projectDetail
   }
 )
 
@@ -301,7 +302,7 @@ export const DELETE = createApiHandler(
     workspace: 'required',
     rateLimit: 'sensitive',
   },
-  async (req, { workspace, params }) => {
+  async (req, { auth, workspace, params }) => {
     if (!workspace) throw new Error('Workspace context missing')
     const projectId = (params?.projectId as string)?.trim()
     if (!projectId) {
@@ -309,9 +310,20 @@ export const DELETE = createApiHandler(
     }
 
     const snapshot = await ensureProjectAccess(workspace, projectId)
+    const projectData = snapshot.data()
 
     // Delete the project document
     await snapshot.ref.delete()
+
+    await logAuditAction({
+      action: 'PROJECT_DELETE',
+      actorId: auth.uid!,
+      targetId: projectId,
+      workspaceId: workspace.workspaceId,
+      metadata: {
+        name: projectData?.name,
+      },
+    })
 
     return { success: true, message: 'Project deleted successfully' }
   }

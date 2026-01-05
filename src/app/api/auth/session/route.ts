@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
+import { adminAuth } from '@/lib/firebase-admin'
 
 const SessionSchema = z.object({
   token: z.string().optional(),
@@ -42,10 +43,24 @@ export const POST = createApiHandler(
       path: '/',
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax' as const, // Changed from strict to lax for better redirect reliability
+      sameSite: 'lax' as const,
     }
 
-    cookieStore.set('cohorts_token', token, cookieOptions)
+    try {
+      // Exchange the ID token for a session cookie
+      // This provides an encrypted session reference as requested
+      const sessionCookie = await adminAuth.createSessionCookie(token, { 
+        expiresIn: maxAge * 1000 
+      })
+      cookieStore.set('cohorts_token', sessionCookie, cookieOptions)
+    } catch (error) {
+      console.error('[SessionRoute] Failed to create session cookie:', error)
+      return NextResponse.json(
+        { success: false, error: 'Failed to create secure session' },
+        { status: 500 }
+      )
+    }
+
     cookieStore.set('cohorts_role', role || 'client', cookieOptions)
     cookieStore.set('cohorts_status', status || 'pending', cookieOptions)
 

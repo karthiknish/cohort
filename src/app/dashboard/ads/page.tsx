@@ -123,7 +123,7 @@ export default function AdsPage() {
         throw new Error(payload?.error ?? 'Failed to finish Meta Ads setup')
       }
       toast({
-        title: '✅ Meta Ads connected!',
+        title: 'Meta Ads connected!',
         description: payload?.accountName
           ? `Syncing data from ${payload.accountName}.`
           : 'Default ad account linked successfully.',
@@ -132,7 +132,7 @@ export default function AdsPage() {
     } catch (error: unknown) {
       const message = getErrorMessage(error, 'Unable to complete Meta setup')
       setMetaSetupMessage(message)
-      toast({ variant: 'destructive', title: '❌ Meta setup failed', description: message })
+      toast({ variant: 'destructive', title: 'Meta setup failed', description: message })
     } finally {
       setInitializingMeta(false)
     }
@@ -152,7 +152,7 @@ export default function AdsPage() {
         throw new Error(payload?.error ?? 'Failed to finish TikTok Ads setup')
       }
       toast({
-        title: '✅ TikTok Ads connected!',
+        title: 'TikTok Ads connected!',
         description: payload?.accountName
           ? `Syncing data from ${payload.accountName}.`
           : 'Default ad account linked successfully.',
@@ -161,7 +161,7 @@ export default function AdsPage() {
     } catch (error: unknown) {
       const message = getErrorMessage(error, 'Unable to complete TikTok setup')
       setTiktokSetupMessage(message)
-      toast({ variant: 'destructive', title: '❌ TikTok setup failed', description: message })
+      toast({ variant: 'destructive', title: 'TikTok setup failed', description: message })
     } finally {
       setInitializingTikTok(false)
     }
@@ -194,7 +194,7 @@ export default function AdsPage() {
       if (!draft) {
         toast({
           variant: 'destructive',
-          title: '⚠️ No settings to save',
+          title: 'No settings to save',
           description: 'Connect an integration before adjusting automation.',
         })
         return
@@ -202,7 +202,7 @@ export default function AdsPage() {
       if (!user?.id) {
         toast({
           variant: 'destructive',
-          title: '🔒 Session expired',
+          title: 'Session expired',
           description: 'Please sign in again to update your preferences.',
         })
         return
@@ -228,14 +228,14 @@ export default function AdsPage() {
           throw new Error(payload.error ?? 'Failed to update automation settings')
         }
         toast({
-          title: '✅ Automation updated',
+          title: 'Automation updated',
           description: `${formatProviderName(providerId)} sync settings saved.`,
         })
         setRefreshTick((tick) => tick + 1)
       } catch (error: unknown) {
         const message = getErrorMessage(error, 'Unable to update automation settings')
         setSettingsErrors((prev) => ({ ...prev, [providerId]: message }))
-        toast({ variant: 'destructive', title: '❌ Save failed', description: message })
+        toast({ variant: 'destructive', title: 'Save failed', description: message })
       } finally {
         setSavingSettings((prev) => ({ ...prev, [providerId]: false }))
       }

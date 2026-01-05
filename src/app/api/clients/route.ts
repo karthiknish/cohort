@@ -6,6 +6,7 @@ import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { ConflictError, NotFoundError } from '@/lib/api-errors'
 import { coerceNumber, toISO } from '@/lib/utils'
+import { logAuditAction } from '@/lib/audit-logger'
 
 const teamMemberSchema = z.object({
   name: z.string().trim().min(1, 'Team member name is required').max(120),
@@ -169,6 +170,7 @@ export const POST = createApiHandler(
     adminOnly: true,
     bodySchema: createClientSchema,
     rateLimit: 'sensitive',
+    requireIdempotency: true,
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -232,7 +234,18 @@ export const POST = createApiHandler(
       return { id: finalId, ...clientData }
     })
 
-    return { client: mapClientDoc(client.id, client as unknown as StoredClient) }
+    await logAuditAction({
+      action: 'CLIENT_CREATE',
+      actorId: auth.uid,
+      targetId: client.id,
+      workspaceId: workspace.workspaceId,
+      metadata: {
+        name: payload.name,
+        accountManager: payload.accountManager,
+      },
+    })
+
+    return mapClientDoc(client.id, client as unknown as StoredClient)
   }
 )
 
@@ -242,6 +255,7 @@ export const PATCH = createApiHandler(
     adminOnly: true,
     bodySchema: addTeamMemberSchema,
     rateLimit: 'sensitive',
+    requireIdempotency: true,
   },
   async (req, { workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')

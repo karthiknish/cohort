@@ -2,9 +2,9 @@
 
 A comprehensive Next.js application for marketing agencies to manage clients, track ad performance, handle tasks, manage finances, create proposals, and collaborate with teams.
 
-## 🚀 Features
+## Features
 
-### 📊 Client Management & Analytics Dashboard
+### Client Management & Analytics Dashboard
 - Real-time data sync from Google Ads, Meta Ads, TikTok Ads, LinkedIn Ads
 - Display Budget, CPC, Clicks, Conversion Rate, Leads, CPL, Revenue, ROAS
 - Time filters: Daily, Weekly, Monthly
@@ -12,14 +12,14 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - Pie charts for budget allocation
 - KPI summary tables
 
-### ✅ Task & Team Management
+### Task & Team Management
 - Assign and track tasks across teams and clients
 - Integration with Slack, Outlook, WhatsApp
 - Dashboard showing current work assignments
 - AI-powered team productivity summaries
 - Automated follow-ups and smart task suggestions
 
-### 💰 Finance & Billing
+### Finance & Billing
 - Accept payments via Stripe
 - Auto-generate professional invoices
 - Revenue dashboard and analytics
@@ -27,26 +27,26 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - Financial insights and cash flow predictions
 - Self-serve subscription management with Stripe Checkout & Billing Portal
 
-### 📝 Proposal Generator
+### Proposal Generator
 - Dynamic form to collect client information
 - AI-powered proposal content generation
 - PDF document creation and export
 - Automated email sending capabilities
 
-### 💬 Collaboration & Communication
+### Collaboration & Communication
 - Real-time chat and messaging
 - Centralized file storage
 - Multi-channel notifications (Slack/WhatsApp/Email)
 - Meeting summary generation
 - Sentiment analysis on communications
 
-### 🤖 Gemini AI Integration
+### Gemini AI Integration
 - Analyze ad data and generate performance summaries
 - Predictive recommendations for budget optimization
 - Automated insights and weak KPI identification
 - Forecast capabilities and trend analysis
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
@@ -60,7 +60,7 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - **PDF Generation**: jsPDF
 - **Real-time**: Socket.io
 
-## 📦 Installation
+## Installation
 
 1. Install dependencies:
 ```bash
@@ -81,7 +81,7 @@ npm run dev
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 🏗 Project Structure
+## Project Structure
 
 ```
 src/
@@ -111,7 +111,7 @@ src/
 └── utils/                # Helper functions
 ```
 
-## 🔐 Authentication & Security
+## Authentication & Security
 
 - Firebase Authentication integration
 - Role-based access control (Admin, Manager, Member)
@@ -119,7 +119,7 @@ src/
 - Session management and automatic logout
 - Secure API key handling
 
-## 🚀 Deployment
+## Deployment
 
 ### Vercel (Recommended)
 1. Connect your GitHub repository to Vercel
@@ -197,6 +197,6 @@ Sentry is wired into both the client (`sentry.client.config.ts`) and every serve
 
 Tune sample rates per environment—e.g., heavier sampling in staging, lighter in production—simply by adjusting the env vars before releasing.
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License.

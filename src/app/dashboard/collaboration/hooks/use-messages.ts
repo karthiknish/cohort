@@ -43,12 +43,12 @@ export function useSendMessage({
       const channelId = selectedChannelId
 
       if (!trimmedContent && !options?.attachmentPaths?.length) {
-        toast({ title: '✍️ Message required', description: 'Enter a message before sending.', variant: 'destructive' })
+        toast({ title: 'Message required', description: 'Enter a message before sending.', variant: 'destructive' })
         return
       }
 
       if (!channelId || !channels.some((channel) => channel.id === channelId)) {
-        toast({ title: '⚠️ Channel unavailable', description: 'Select a channel and try again.', variant: 'destructive' })
+        toast({ title: 'Channel unavailable', description: 'Select a channel and try again.', variant: 'destructive' })
         return
       }
 

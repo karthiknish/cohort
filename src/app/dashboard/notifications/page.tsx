@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, BellOff, Check, CheckCheck, Loader2, Trash2, Filter } from 'lucide-react'
+import { Bell, BellOff, Check, CheckCheck, Loader2, Trash2, Filter, MessageSquare, DollarSign, BarChart, CheckCircle2, Mail } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
         })
 
         toast({ 
-          title: action === 'dismiss' ? '🗑️ Notifications cleared' : '✅ Marked as read',
+          title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
           description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`
         })
       } catch (error) {
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
     fetchNotifications({ append: true, cursor: nextCursor, filter: activeFilter })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: '⚠️ Loading failed', description: `${message}. Try refreshing the page.`, variant: 'destructive' })
+        toast({ title: 'Loading failed', description: `${message}. Try refreshing the page.`, variant: 'destructive' })
       })
       .finally(() => setLoadingMore(false))
   }, [fetchNotifications, loadingMore, nextCursor, toast, activeFilter])
@@ -179,7 +179,7 @@ export default function NotificationsPage() {
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
     if (unreadIds.length === 0) {
-      toast({ title: '✨ All caught up!', description: 'You have no unread notifications.' })
+      toast({ title: 'All caught up!', description: 'You have no unread notifications.' })
       return
     }
     void updateNotificationStatus(unreadIds, 'read')
@@ -188,7 +188,7 @@ export default function NotificationsPage() {
   const handleClearAll = useCallback(() => {
     const allIds = notifications.map((item) => item.id)
     if (allIds.length === 0) {
-      toast({ title: '📥 Inbox empty', description: 'There are no notifications to clear.' })
+      toast({ title: 'Inbox empty', description: 'There are no notifications to clear.' })
       return
     }
     void updateNotificationStatus(allIds, 'dismiss')
@@ -211,17 +211,17 @@ export default function NotificationsPage() {
   const getNotificationIcon = (kind: WorkspaceNotification['kind']) => {
     switch (kind) {
       case 'collaboration.mention':
-        return '💬'
+        return <MessageSquare className="h-6 w-6" />
       case 'invoice.sent':
       case 'invoice.paid':
-        return '💰'
+        return <DollarSign className="h-6 w-6" />
       case 'proposal.deck.ready':
-        return '📊'
+        return <BarChart className="h-6 w-6" />
       case 'task.created':
       case 'task.updated':
-        return '✅'
+        return <CheckCircle2 className="h-6 w-6" />
       default:
-        return '📬'
+        return <Mail className="h-6 w-6" />
     }
   }
 
@@ -281,7 +281,7 @@ export default function NotificationsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="mentions">
-            <span className="mr-1">💬</span>
+            <MessageSquare className="mr-2 h-4 w-4" />
             Mentions
           </TabsTrigger>
           <TabsTrigger value="system">

@@ -75,7 +75,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault()
     if (!user?.id) {
-      toast({ title: '🔒 Sign in required', description: 'Please sign in to create milestones.', variant: 'destructive' })
+      toast({ title: 'Sign in required', description: 'Please sign in to create milestones.', variant: 'destructive' })
       return
     }
     if (!projectId) {
@@ -118,11 +118,11 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
 
       const data = (await response.json()) as { milestone: MilestoneRecord }
       onCreated?.(data.milestone)
-      toast({ title: '📌 Milestone created', description: `“${data.milestone.title}” added to the timeline.` })
+      toast({ title: 'Milestone created', description: `“${data.milestone.title}” added to the timeline.` })
       setOpen(false)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create milestone'
-      toast({ title: '❌ Could not create', description: message, variant: 'destructive' })
+      toast({ title: 'Could not create', description: message, variant: 'destructive' })
     } finally {
       setLoading(false)
     }

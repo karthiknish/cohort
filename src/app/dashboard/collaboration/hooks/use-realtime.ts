@@ -102,7 +102,7 @@ export function useRealtimeMessages({
         setMessagesError(message)
         setLoadingChannelId((current) => (current === channelId ? null : current))
         toast({
-          title: '⚠️ Connection lost',
+          title: 'Connection lost',
           description: 'Messages may be delayed. Trying to reconnect...',
           variant: 'destructive',
         })

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { toast } from 'sonner'
+import { Folder, CheckCircle, MessageSquare, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { Activity } from '@/types/activity'
@@ -35,28 +36,28 @@ export function useActivityNotifications(activities: Activity[]) {
 
     let shouldNotify = false
     let message = ''
-    let icon = ''
+    let icon: React.ReactNode = null
 
     switch (activity.type) {
       case 'project_updated':
         if (config.showProjectUpdates) {
           shouldNotify = true
           message = `Project "${activity.entityName}" was updated`
-          icon = '📁'
+          icon = <Folder className="h-4 w-4" />
         }
         break
       case 'task_completed':
         if (config.showTaskCompletions) {
           shouldNotify = true
           message = `Task "${activity.entityName}" was completed`
-          icon = '✅'
+          icon = <CheckCircle className="h-4 w-4" />
         }
         break
       case 'message_posted':
         if (config.showNewMessages) {
           shouldNotify = true
           message = `New message in ${activity.entityName}`
-          icon = '💬'
+          icon = <MessageSquare className="h-4 w-4" />
         }
         break
     }
@@ -147,7 +148,7 @@ export function useActivityNotifications(activities: Activity[]) {
           }
 
           toast.success(message, {
-            icon: '🔔',
+            icon: <Bell className="h-4 w-4" />,
             duration: 4000,
           })
 

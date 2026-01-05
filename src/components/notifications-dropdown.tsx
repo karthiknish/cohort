@@ -126,11 +126,11 @@ export function NotificationsDropdown() {
         })
 
         if (!options.silent) {
-          toast({ title: action === 'dismiss' ? '🗑️ Dismissed' : '✅ Marked as read' })
+          toast({ title: action === 'dismiss' ? 'Dismissed' : 'Marked as read' })
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Notification update failed'
-        toast({ title: '❌ Update failed', description: message, variant: 'destructive' })
+        toast({ title: 'Update failed', description: message, variant: 'destructive' })
       } finally {
         setAckInFlight(false)
       }
@@ -146,7 +146,7 @@ export function NotificationsDropdown() {
         fetchNotifications()
           .catch((error) => {
             const message = error instanceof Error ? error.message : 'Unable to load notifications'
-            toast({ title: '⚠️ Loading failed', description: message, variant: 'destructive' })
+            toast({ title: 'Loading failed', description: message, variant: 'destructive' })
           })
           .finally(() => {
             setLoading(false)
@@ -174,7 +174,7 @@ export function NotificationsDropdown() {
     fetchNotifications()
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: '⚠️ Refresh failed', description: message, variant: 'destructive' })
+        toast({ title: 'Refresh failed', description: message, variant: 'destructive' })
       })
       .finally(() => setLoading(false))
   }, [fetchNotifications, toast])
@@ -188,7 +188,7 @@ export function NotificationsDropdown() {
     fetchNotifications({ append: true, cursor: nextCursor })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: '⚠️ Couldn\'t load more', description: message, variant: 'destructive' })
+        toast({ title: "Couldn't load more", description: message, variant: 'destructive' })
       })
       .finally(() => setLoadingMore(false))
   }, [fetchNotifications, loadingMore, nextCursor, toast])

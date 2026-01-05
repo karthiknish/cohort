@@ -38,10 +38,10 @@ async function main() {
         { merge: true },
       )
 
-    console.log(`✅ Set admin role for ${email} (uid: ${userRecord.uid})`)
-    console.log('ℹ️ Users must refresh their session to receive updated privileges.')
+    console.log(`Set admin role for ${email} (uid: ${userRecord.uid})`)
+    console.log('Users must refresh their session to receive updated privileges.')
   } catch (error: unknown) {
-    console.error(`❌ Failed to set admin role for ${email}`)
+    console.error(`Failed to set admin role for ${email}`)
     if (error instanceof Error) {
       console.error(error.message)
     } else {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Plus, Tag, X, AlertCircle } from 'lucide-react'
 
+import { apiFetch } from '@/lib/api-client'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -49,7 +50,7 @@ type UpdateProjectPayload = {
 }
 
 export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdated }: EditProjectDialogProps) {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { clients } = useClientContext()
   const { toast } = useToast()
 
@@ -151,7 +152,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     event.preventDefault()
 
     if (!user?.id || !project) {
-      toast({ title: '🔒 Authentication required', description: 'Please sign in to update the project.', variant: 'destructive' })
+      toast({ title: 'Authentication required', description: 'Please sign in to update the project.', variant: 'destructive' })
       return
     }
 
@@ -168,8 +169,6 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     setError(null)
 
     try {
-      const token = await getIdToken()
-
       const selectedClientData = clients.find((c) => c.id === clientId)
 
       const payload: UpdateProjectPayload = {}
@@ -197,45 +196,26 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
         payload.tags = tags
       }
 
-      const response = await fetch(`/api/projects/${project.id}`, {
+      const updatedProject = await apiFetch<ProjectRecord>(`/api/projects/${project.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) {
-        let message = 'Failed to update project'
-        try {
-          const data = await response.json() as { error?: string }
-          if (data.error) {
-            message = data.error
-          }
-        } catch {
-          // ignore
-        }
-        throw new Error(message)
-      }
-
-      const data = await response.json() as { project: ProjectRecord }
-
       toast({
-        title: '✅ Project updated!',
-        description: `"${data.project.name}" has been saved.`,
+        title: 'Project updated!',
+        description: `"${updatedProject.name}" has been saved.`,
       })
 
-      onProjectUpdated?.(data.project)
+      onProjectUpdated?.(updatedProject)
       onOpenChange(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update project'
       setError(message)
-      toast({ title: '❌ Update failed', description: message, variant: 'destructive' })
+      toast({ title: 'Update failed', description: message, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
-  }, [user?.id, project, name, description, status, clientId, clients, startDate, endDate, tags, hasChanges, validate, getIdToken, toast, onProjectUpdated, onOpenChange])
+  }, [user?.id, project, name, description, status, clientId, clients, startDate, endDate, tags, hasChanges, validate, toast, onProjectUpdated, onOpenChange])
 
   const formatStatusLabel = (value: ProjectStatus): string => {
     return value

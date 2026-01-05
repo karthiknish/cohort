@@ -506,12 +506,12 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       const channelId = selectedChannel?.id
 
       if (!trimmedContent && pendingAttachments.length === 0) {
-        toast({ title: '✍️ Message required', description: 'Enter a message before sending.', variant: 'destructive' })
+        toast({ title: 'Message required', description: 'Enter a message before sending.', variant: 'destructive' })
         return
       }
 
       if (!channelId || !channels.some((c) => c.id === channelId)) {
-        toast({ title: '⚠️ Channel unavailable', description: 'Select a channel and try again.', variant: 'destructive' })
+        toast({ title: 'Channel unavailable', description: 'Select a channel and try again.', variant: 'destructive' })
         return
       }
 

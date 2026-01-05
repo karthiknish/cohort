@@ -8,7 +8,7 @@ const admin = require('firebase-admin');
 const serviceAccountKeyBase64 = process.env.FIREBASE_ADMIN_PRIVATE_KEY_B64;
 
 if (!serviceAccountKeyBase64) {
-  console.error('❌ FIREBASE_ADMIN_PRIVATE_KEY_B64 not found in environment');
+  console.error('FIREBASE_ADMIN_PRIVATE_KEY_B64 not found in environment');
   process.exit(1);
 }
 
@@ -16,9 +16,9 @@ let serviceAccount;
 try {
   const decoded = Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf8');
   serviceAccount = JSON.parse(decoded);
-  console.log('✅ Service account key decoded successfully');
+  console.log('Service account key decoded successfully');
 } catch (error) {
-  console.error('❌ Failed to decode service account key:', error.message);
+  console.error('Failed to decode service account key:', error.message);
   process.exit(1);
 }
 
@@ -28,9 +28,9 @@ try {
     credential: admin.credential.cert(serviceAccount),
     projectId: serviceAccount.project_id
   });
-  console.log('✅ Firebase Admin initialized');
+  console.log('Firebase Admin initialized');
 } catch (error) {
-  console.error('❌ Failed to initialize Firebase Admin:', error.message);
+  console.error('Failed to initialize Firebase Admin:', error.message);
   process.exit(1);
 }
 
@@ -39,10 +39,10 @@ const db = admin.firestore();
 
 async function setAdminRole(email) {
   try {
-    console.log(`🔍 Looking up user: ${email}`);
+    console.log(`Looking up user: ${email}`);
     
     const userRecord = await auth.getUserByEmail(email);
-    console.log(`✅ Found user: ${userRecord.uid}`);
+    console.log(`Found user: ${userRecord.uid}`);
 
     const existingClaims = (userRecord.customClaims ?? {}) || {};
     const nextClaims = {
@@ -51,7 +51,7 @@ async function setAdminRole(email) {
     };
 
     await auth.setCustomUserClaims(userRecord.uid, nextClaims);
-    console.log('✅ Custom claims updated');
+    console.log('Custom claims updated');
 
     await db
       .collection('users')
@@ -64,12 +64,12 @@ async function setAdminRole(email) {
         },
         { merge: true },
       );
-    console.log('✅ Firestore document updated');
+    console.log('Firestore document updated');
 
-    console.log(`✅ Admin role set for ${email} (uid: ${userRecord.uid})`);
-    console.log('ℹ️ Users must refresh their session to receive updated privileges.');
+    console.log(`Admin role set for ${email} (uid: ${userRecord.uid})`);
+    console.log('Users must refresh their session to receive updated privileges.');
   } catch (error) {
-    console.error(`❌ Failed to set admin role for ${email}`);
+    console.error(`Failed to set admin role for ${email}`);
     console.error(error.message);
     process.exit(1);
   }

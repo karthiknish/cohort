@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 AUDIT_AND_IMPROVEMENT_PLAN.md
+
+# Sentry Config File
+.env.sentry-build-plugin

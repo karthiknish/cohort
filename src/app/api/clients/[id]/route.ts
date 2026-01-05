@@ -1,5 +1,6 @@
 import { createApiHandler } from '@/lib/api-handler'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
+import { logAuditAction } from '@/lib/audit-logger'
 
 export const DELETE = createApiHandler(
   { 
@@ -7,7 +8,7 @@ export const DELETE = createApiHandler(
     workspace: 'required',
     rateLimit: 'sensitive'
   },
-  async (req, { workspace, params }) => {
+  async (req, { auth, workspace, params }) => {
     const clientId = (params.id as string)?.trim()
 
     if (!clientId) {
@@ -21,8 +22,19 @@ export const DELETE = createApiHandler(
       throw new NotFoundError('Client not found')
     }
 
+    const clientData = snapshot.data()
     await docRef.delete()
 
-    return { ok: true }
+    await logAuditAction({
+      action: 'CLIENT_DELETE',
+      actorId: auth.uid,
+      targetId: clientId,
+      workspaceId: workspace!.workspaceId,
+      metadata: {
+        name: clientData?.name,
+      },
+    })
+
+    return { success: true }
   }
 )

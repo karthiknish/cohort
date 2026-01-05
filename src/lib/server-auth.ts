@@ -9,6 +9,8 @@ export interface AuthResult {
 }
 
 import { ApiError } from './api-errors'
+import { adminAuth } from './firebase-admin'
+import { DecodedIdToken } from 'firebase-admin/auth'
 
 class AuthenticationError extends ApiError {
   constructor(message: string, status = 401) {
@@ -16,53 +18,56 @@ class AuthenticationError extends ApiError {
   }
 }
 
-async function verifyIdToken(idToken: string): Promise<{ uid: string; email: string | null; name: string | null; claims: Record<string, unknown> }> {
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
-  if (!apiKey) {
-    throw new AuthenticationError('Firebase API key not configured', 500)
+/**
+ * Verifies a Firebase ID token (JWT).
+ * Used for API requests coming from the client with an Authorization header.
+ */
+async function verifyIdToken(idToken: string): Promise<AuthResult> {
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(idToken)
+    return mapDecodedTokenToAuthResult(decodedToken)
+  } catch (error) {
+    console.error('[server-auth] ID token verification failed:', error)
+    throw new AuthenticationError('Invalid or expired authentication token', 401)
   }
-
-  const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-      cache: 'no-store',
-    }
-  )
-
-  if (!response.ok) {
-    throw new AuthenticationError('Invalid or expired token', 401)
-  }
-
-  const payload = await response.json()
-  const users = Array.isArray(payload?.users) ? payload.users : []
-  const user = users[0]
-  const uid = user?.localId as string | undefined
-  const email = typeof user?.email === 'string' ? user.email : null
-  const name = typeof user?.displayName === 'string' ? user.displayName : null
-  let claims: Record<string, unknown> = {}
-
-  if (typeof user?.customAttributes === 'string' && user.customAttributes.trim().length > 0) {
-    try {
-      const parsed = JSON.parse(user.customAttributes) as Record<string, unknown>
-      if (parsed && typeof parsed === 'object') {
-        claims = parsed
-      }
-    } catch (error) {
-      console.warn('[server-auth] failed to parse customAttributes', error)
-    }
-  }
-
-  if (!uid) {
-    throw new AuthenticationError('Unable to verify user identity', 401)
-  }
-
-  return { uid, email, name, claims }
 }
 
+/**
+ * Verifies a Firebase Session Cookie.
+ * Used for server-side rendered pages and middleware using the cohorts_token cookie.
+ */
+async function verifySessionCookie(sessionCookie: string): Promise<AuthResult> {
+  try {
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true)
+    return mapDecodedTokenToAuthResult(decodedToken)
+  } catch (error) {
+    console.error('[server-auth] Session cookie verification failed:', error)
+    throw new AuthenticationError('Invalid or expired session', 401)
+  }
+}
+
+/**
+ * Helper to map Firebase decoded tokens to our internal AuthResult type.
+ */
+function mapDecodedTokenToAuthResult(decodedToken: DecodedIdToken): AuthResult {
+  return {
+    uid: decodedToken.uid,
+    email: decodedToken.email || null,
+    name: (decodedToken.name as string) || null,
+    claims: decodedToken as unknown as Record<string, unknown>,
+    isCron: false,
+  }
+}
+
+/**
+ * Authenticates an incoming request.
+ * Priority:
+ * 1. System Cron Key (header)
+ * 2. ID Token (Authorization header)
+ * 3. Session Cookie (cohorts_token cookie)
+ */
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
+  // 1. Check for Cron Key
   const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
   const cronKey = request.headers.get('x-cron-key')
 
@@ -70,24 +75,32 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     return { uid: null, email: null, name: 'System Cron', claims: {}, isCron: true }
   }
 
+  // 2. Check for Authorization Header (ID Token)
   const authHeader = request.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AuthenticationError('Missing Authorization header', 401)
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    return await verifyIdToken(token)
   }
 
-  const token = authHeader.slice(7)
-  const { uid, email, name, claims } = await verifyIdToken(token)
-  return { uid, email, name, claims, isCron: false }
+  // 3. Check for Cookie (Session Cookie)
+  const sessionCookie = request.cookies.get('cohorts_token')?.value
+  if (sessionCookie) {
+    return await verifySessionCookie(sessionCookie)
+  }
+
+  throw new AuthenticationError('Authentication required', 401)
 }
 
 export function assertAdmin(auth: AuthResult) {
   if (auth.isCron) return
 
+  // Check custom claims
   const role = auth.claims?.role
   if (role === 'admin') {
     return
   }
 
+  // Fallback to email whitelist
   const admins = (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((email) => email.trim().toLowerCase())

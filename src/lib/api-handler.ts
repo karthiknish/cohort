@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
+import { createHash } from 'crypto'
 import { adminDb } from './firebase-admin'
 import { authenticateRequest, AuthenticationError, AuthResult, assertAdmin } from './server-auth'
 import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
@@ -59,6 +60,12 @@ export type ApiHandlerOptions<TBody extends z.ZodTypeAny, TQuery extends z.ZodTy
    * Custom error message for generic 500 errors
    */
   errorMessage?: string
+  /**
+   * Whether to require an idempotency key for POST/PATCH requests.
+   * If true, requests without x-idempotency-key will be rejected.
+   * If false (default), automatic deduplication via body hashing will be attempted.
+   */
+  requireIdempotency?: boolean
 }
 
 /**
@@ -149,50 +156,6 @@ export function createApiHandler<
         }
       }
 
-      // 1.5 Idempotency Check (for POST/PATCH)
-      const idempotencyKey = req.headers.get('x-idempotency-key')
-      const isIdempotentMethod = ['POST', 'PATCH'].includes(req.method)
-
-      if (idempotencyKey && isIdempotentMethod) {
-        const key = `${auth.uid || 'anon'}_${idempotencyKey}`
-        idempotencyRef = adminDb.collection('_apiIdempotency').doc(key)
-        
-        const result = await adminDb.runTransaction(async (transaction) => {
-          const existing = await transaction.get(idempotencyRef!)
-          if (existing.exists) {
-            const data = existing.data()
-            if (data?.idempotencyStatus === 'pending') {
-              return { type: 'pending' }
-            }
-            return { type: 'completed', data: data?.response, status: data?.status }
-          }
-          
-          // Mark as pending to prevent concurrent processing
-          transaction.set(idempotencyRef!, {
-            idempotencyStatus: 'pending',
-            createdAt: toISO(),
-            requestId,
-          })
-          return { type: 'new' }
-        })
-
-        if (result.type === 'completed') {
-          return NextResponse.json(result.data, { 
-            status: result.status || 200,
-            headers: { 'X-Idempotency-Hit': 'true', 'X-Request-ID': requestId }
-          })
-        }
-        
-        if (result.type === 'pending') {
-          return NextResponse.json({
-            success: false,
-            error: 'Request already in progress',
-            code: 'IDEMPOTENCY_CONFLICT',
-            requestId,
-          }, { status: 409 })
-        }
-      }
-
       // 2. Admin Check
       if (options.adminOnly) {
         assertAdmin(auth)
@@ -213,10 +176,12 @@ export function createApiHandler<
 
       // 3. Body Validation
       let body: z.infer<TBody> = {} as z.infer<TBody>
+      let rawBody: string | null = null
       if (options.bodySchema) {
         let json: unknown
         try {
           json = await req.json()
+          rawBody = JSON.stringify(json)
         } catch (e) {
           return NextResponse.json({ 
             success: false,
@@ -233,6 +198,75 @@ export function createApiHandler<
           }, { status: 400 })
         }
         body = sanitizeBody(result.data)
+      }
+
+      // 3.5 Idempotency Check (Enforced/Automatic)
+      const isWriteMethod = ['POST', 'PATCH'].includes(req.method)
+      if (isWriteMethod) {
+        const idempotencyKey = req.headers.get('x-idempotency-key')
+        
+        if (options.requireIdempotency && !idempotencyKey) {
+          return NextResponse.json({
+            success: false,
+            error: 'Idempotency key required for this operation',
+            code: 'IDEMPOTENCY_KEY_REQUIRED',
+            requestId,
+          }, { status: 400 })
+        }
+
+        let effectiveKey: string | null = null
+        if (idempotencyKey) {
+          effectiveKey = `key_${auth.uid || 'anon'}_${idempotencyKey}`
+        } else if (rawBody) {
+          const bodyHash = createHash('sha256').update(rawBody).digest('hex')
+          // Use path + method + body hash for automatic deduplication
+          effectiveKey = `auto_${auth.uid || 'anon'}_${req.method}_${req.nextUrl.pathname}_${bodyHash}`
+        }
+
+        if (effectiveKey) {
+          idempotencyRef = adminDb.collection('_apiIdempotency').doc(effectiveKey)
+          
+          const result = await adminDb.runTransaction(async (transaction) => {
+            const existing = await transaction.get(idempotencyRef!)
+            if (existing.exists) {
+              const data = existing.data()
+              if (data?.idempotencyStatus === 'pending') {
+                return { type: 'pending' }
+              }
+              return { type: 'completed', data: data?.response, status: data?.status }
+            }
+            
+            // Mark as pending to prevent concurrent processing
+            transaction.set(idempotencyRef!, {
+              idempotencyStatus: 'pending',
+              createdAt: toISO(),
+              requestId,
+              method: req.method,
+              path: req.nextUrl.pathname,
+            })
+            return { type: 'new' }
+          })
+
+          if (result.type === 'completed') {
+            return NextResponse.json(result.data, { 
+              status: result.status || 200,
+              headers: { 
+                'X-Idempotency-Hit': 'true', 
+                'X-Idempotency-Key': effectiveKey,
+                'X-Request-ID': requestId 
+              }
+            })
+          }
+          
+          if (result.type === 'pending') {
+            return NextResponse.json({
+              success: false,
+              error: 'Request already in progress',
+              code: 'IDEMPOTENCY_CONFLICT',
+              requestId,
+            }, { status: 409 })
+          }
+        }
       }
 
       // 4. Query Validation

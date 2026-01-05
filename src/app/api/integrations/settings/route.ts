@@ -5,6 +5,7 @@ import {
 } from '@/lib/firestore-integrations-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
+import { logAuditAction } from '@/lib/audit-logger'
 
 const settingsSchema = z.object({
   providerId: z.string().min(1),
@@ -136,7 +137,16 @@ export const PATCH = createApiHandler(
       ? (updates.scheduledTimeframeDays as number | null)
       : undefined,
   })
-
+  await logAuditAction({
+    action: 'INTEGRATION_UPDATE',
+    actorId: auth.uid ?? 'system',
+    targetId: providerId,
+    metadata: {
+      providerId,
+      targetUserId,
+      updates,
+    },
+  })
   const refreshed = await getAdIntegration({ userId: targetUserId, providerId })
   if (!refreshed) {
     throw new ValidationError('Failed to load integration after update')

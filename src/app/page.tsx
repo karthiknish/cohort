@@ -170,7 +170,7 @@ export default function HomePage() {
           if (attemptCount > 3) {
             console.error('[HomePage] Infinite redirect detected for:', destination)
             toast({
-              title: "🔄 Redirect loop detected",
+              title: "Redirect loop detected",
               description: "We're having trouble syncing your session. Please try refreshing the page.",
               variant: "destructive",
             })
@@ -263,7 +263,7 @@ export default function HomePage() {
         // Validate password strength
         if (passwordStrength.score < 2) {
           toast({
-          title: "🔒 Password needs work",
+          title: "Password needs work",
           description: "Create a stronger password with at least 8 characters, including letters and numbers.",
           variant: "destructive",
         })
@@ -273,7 +273,7 @@ export default function HomePage() {
 
         if (signUpData.password !== signUpData.confirmPassword) {
           toast({
-          title: "🔐 Passwords don't match",
+          title: "Passwords don't match",
           description: "Please make sure both passwords are identical.",
           variant: "destructive",
         })
@@ -287,7 +287,7 @@ export default function HomePage() {
           displayName: signUpData.displayName.trim() || undefined,
         })
         toast({
-          title: "🎉 Welcome to Cohorts!",
+          title: "Welcome to Cohorts!",
           description: "Your account has been created. Taking you to your dashboard...",
         })
       } else {
@@ -308,7 +308,7 @@ export default function HomePage() {
         }
         
         toast({
-          title: "👋 Welcome back!",
+          title: "Welcome back!",
           description: "Signed in successfully. Loading your workspace...",
         })
       }
@@ -326,7 +326,7 @@ export default function HomePage() {
     } catch (error) {
       const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
-        title: mode === "signin" ? "❌ Sign in failed" : "❌ Sign up failed",
+        title: mode === "signin" ? "Sign in failed" : "Sign up failed",
         description: errorMessage,
         variant: "destructive",
       })
@@ -340,7 +340,7 @@ export default function HomePage() {
     try {
       await signInWithGoogle()
       toast({
-        title: "👋 Welcome!",
+        title: "Welcome!",
         description: "Signed in with Google. Loading your workspace...",
       })
       const redirect = searchParams.get("redirect")
@@ -356,7 +356,7 @@ export default function HomePage() {
     } catch (error) {
       const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
-        title: "❌ Google sign-in failed",
+        title: "Google sign-in failed",
         description: `${errorMessage}. Please try again.`,
         variant: "destructive",
       })

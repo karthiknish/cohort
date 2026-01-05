@@ -7,6 +7,7 @@ import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
 import { mapProjectDoc, projectStatusSchema, coerceStringArray, toISO } from '@/lib/projects'
 import type { ProjectRecord } from '@/types/projects'
 import { recordProjectCreatedNotification } from '@/lib/notifications'
+import { logAuditAction } from '@/lib/audit-logger'
 
 const MAX_PROJECTS = 100
 
@@ -200,6 +201,7 @@ export const POST = createApiHandler(
     workspace: 'required',
     bodySchema: createProjectSchema,
     rateLimit: 'sensitive',
+    requireIdempotency: true,
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -231,6 +233,17 @@ export const POST = createApiHandler(
     const createdDoc = await docRef.get()
     const project = await buildProjectSummary(workspace, createdDoc.id, createdDoc.data() as Record<string, unknown>)
 
+    await logAuditAction({
+      action: 'PROJECT_CREATE',
+      actorId: auth.uid!,
+      targetId: project.id,
+      workspaceId: workspace.workspaceId,
+      metadata: {
+        name: project.name,
+        clientId: project.clientId,
+      },
+    })
+
     await recordProjectCreatedNotification({
       workspaceId: workspace.workspaceId,
       project,
@@ -238,7 +251,7 @@ export const POST = createApiHandler(
       actorName: auth.name!,
     })
 
-    return { project }
+    return project
   }
 )
 

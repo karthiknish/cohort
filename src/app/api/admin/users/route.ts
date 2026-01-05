@@ -7,6 +7,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { NotFoundError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
+import { logAuditAction } from '@/lib/audit-logger'
 
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'invited', 'pending', 'disabled', 'suspended'])
@@ -148,6 +149,33 @@ export const PATCH = createApiHandler(
 
     if (Object.keys(updatePayload).length > 1) {
       await userRef.update(updatePayload)
+
+      // Log audit actions
+      if (docData?.role !== nextRole) {
+        await logAuditAction({
+          action: 'ADMIN_ROLE_CHANGE',
+          actorId: req.headers.get('x-user-id') ?? 'system',
+          targetId: id,
+          metadata: {
+            oldRole: currentRole,
+            newRole: nextRole,
+            email: docData?.email,
+          },
+        })
+      }
+
+      if (docData?.status !== nextStatus) {
+        await logAuditAction({
+          action: 'USER_STATUS_CHANGE',
+          actorId: req.headers.get('x-user-id') ?? 'system',
+          targetId: id,
+          metadata: {
+            oldStatus: currentStatus,
+            newStatus: nextStatus,
+            email: docData?.email,
+          },
+        })
+      }
     }
 
     const userRecord = await adminAuth.getUser(id).catch(() => null)

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 import { Loader2, Plus, Tag, X } from 'lucide-react'
 
+import { apiFetch } from '@/lib/api-client'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -47,7 +48,7 @@ type CreateProjectPayload = {
 }
 
 export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProjectDialogProps) {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { clients, selectedClient, selectedClientId } = useClientContext()
   const { toast } = useToast()
 
@@ -106,20 +107,18 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     event.preventDefault()
 
     if (!user?.id) {
-      toast({ title: '🔒 Authentication required', description: 'Please sign in to create a project.', variant: 'destructive' })
+      toast({ title: 'Authentication required', description: 'Please sign in to create a project.', variant: 'destructive' })
       return
     }
 
     if (!name.trim()) {
-      toast({ title: '✏️ Name required', description: 'Give your project a name to get started.', variant: 'destructive' })
+      toast({ title: 'Name required', description: 'Give your project a name to get started.', variant: 'destructive' })
       return
     }
 
     setLoading(true)
 
     try {
-      const token = await getIdToken()
-      
       const selectedClientData = clients.find((c) => c.id === clientId)
 
       const payload: CreateProjectPayload = {
@@ -133,45 +132,26 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         tags,
       }
 
-      const response = await fetch('/api/projects', {
+      const createdProject = await apiFetch<ProjectRecord>('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       })
-
-      if (!response.ok) {
-        let message = 'Failed to create project'
-        try {
-          const data = await response.json() as { error?: string }
-          if (data.error) {
-            message = data.error
-          }
-        } catch {
-          // ignore
-        }
-        throw new Error(message)
-      }
-
-      const data = await response.json() as { project: ProjectRecord }
-
+ 
       toast({
-        title: '🎉 Project created!',
-        description: `"${data.project.name}" is ready. Start adding tasks and collaborating.`,
+        title: 'Project created!',
+        description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
       })
-
-      onProjectCreated?.(data.project)
+ 
+      onProjectCreated?.(createdProject)
       setOpen(false)
       resetForm()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create project'
-      toast({ title: '❌ Creation failed', description: message, variant: 'destructive' })
+      toast({ title: 'Creation failed', description: message, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
-  }, [user?.id, name, description, status, clientId, clients, startDate, endDate, tags, getIdToken, toast, onProjectCreated, resetForm])
+  }, [user?.id, name, description, status, clientId, clients, startDate, endDate, tags, toast, onProjectCreated, resetForm])
 
   const formatStatusLabel = (value: ProjectStatus): string => {
     return value

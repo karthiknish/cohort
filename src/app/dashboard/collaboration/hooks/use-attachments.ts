@@ -23,7 +23,7 @@ export function useAttachments({ userId }: UseAttachmentsOptions) {
 
     if (result.errors.length > 0) {
       toast({
-        title: '❌ Some files couldn\'t be attached',
+        title: 'Some files couldn\'t be attached',
         description: result.errors.join('. '),
         variant: 'destructive',
       })

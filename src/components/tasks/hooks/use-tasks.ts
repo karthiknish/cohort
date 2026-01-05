@@ -138,7 +138,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         setTasks([])
         setNextCursor(null)
         toast({
-          title: '❌ Failed to load tasks',
+          title: 'Failed to load tasks',
           description: `${message}. Please check your connection and try again.`,
           variant: 'destructive',
         })
@@ -180,7 +180,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
     } catch (err) {
       console.error('Failed to load additional tasks', err)
       toast({
-        title: "⚠️ Couldn't load more tasks",
+        title: "Couldn't load more tasks",
         description:
           err instanceof Error ? err.message : 'Unable to load more tasks. Try refreshing.',
         variant: 'destructive',
@@ -212,13 +212,13 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         typeof data?.nextCursor === 'string' && data.nextCursor.length > 0 ? data.nextCursor : null
       )
       toast({
-        title: '🔄 Tasks refreshed',
+        title: 'Tasks refreshed',
         description: `${entries.length} task${entries.length !== 1 ? 's' : ''} loaded successfully.`,
       })
     } catch (err) {
       console.error('Failed to refresh tasks', err)
       toast({
-        title: '❌ Refresh failed',
+        title: 'Refresh failed',
         description: err instanceof Error ? err.message : 'Unable to refresh tasks',
         variant: 'destructive',
       })
@@ -243,7 +243,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
       })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
         toast({
-          title: '🔄 Status updated',
+          title: 'Status updated',
           description: `Task moved to "${formatStatusLabel(newStatus)}".`,
         })
       } catch (err) {
@@ -252,7 +252,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         )
         console.error('Failed to update task status', err)
         toast({
-          title: '❌ Status update failed',
+          title: 'Status update failed',
           description:
             err instanceof Error ? err.message : 'Unable to update status. Please try again.',
           variant: 'destructive',
@@ -277,14 +277,14 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
 
         setTasks((prev) => prev.filter((t) => t.id !== task.id))
         toast({
-          title: '🗑️ Task deleted',
+          title: 'Task deleted',
           description: `"${task.title}" has been permanently removed.`,
         })
         return true
       } catch (err) {
         console.error('Failed to delete task', err)
         toast({
-          title: '❌ Deletion failed',
+          title: 'Deletion failed',
           description:
             err instanceof Error ? err.message : 'Unable to delete task. Please try again.',
           variant: 'destructive',
@@ -305,7 +305,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         setTasks((prev) => [createdTask, ...prev])
         setError(null)
         toast({
-          title: '✅ Task created successfully',
+          title: 'Task created successfully',
           description: `"${createdTask.title}" has been added to your task list.`,
         })
         return createdTask
@@ -326,7 +326,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
       })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
         toast({
-          title: '✅ Task updated',
+          title: 'Task updated',
           description: `Changes to "${updatedTask.title}" have been saved.`,
         })
         return updatedTask
@@ -355,14 +355,14 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         }))
 
         toast({
-          title: '✅ Bulk update complete',
+          title: 'Bulk update complete',
           description: data.message,
         })
         return true
       } catch (err) {
         console.error('Failed to perform bulk update', err)
         toast({
-          title: '❌ Bulk update failed',
+          title: 'Bulk update failed',
           description: err instanceof Error ? err.message : 'Unable to update tasks in bulk',
           variant: 'destructive',
         })
@@ -384,14 +384,14 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         setTasks((prev) => prev.filter((t) => !deletedIds.has(t.id)))
 
         toast({
-          title: '🗑️ Bulk deletion complete',
+          title: 'Bulk deletion complete',
           description: data.message,
         })
         return true
       } catch (err) {
         console.error('Failed to perform bulk delete', err)
         toast({
-          title: '❌ Bulk deletion failed',
+          title: 'Bulk deletion failed',
           description: err instanceof Error ? err.message : 'Unable to delete tasks in bulk',
           variant: 'destructive',
         })

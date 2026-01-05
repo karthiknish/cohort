@@ -32,12 +32,12 @@ export function useMessageActions({
     async (channelId: string, messageId: string, nextContent: string) => {
       const trimmedContent = nextContent.trim()
       if (!trimmedContent) {
-        toast({ title: '✏️ Message required', description: 'Enter a message before saving.', variant: 'destructive' })
+        toast({ title: 'Message required', description: 'Enter a message before saving.', variant: 'destructive' })
         return
       }
 
       if (!channels.some((channel) => channel.id === channelId)) {
-        toast({ title: '⚠️ Channel unavailable', description: 'Refresh the page and try editing again.', variant: 'destructive' })
+        toast({ title: 'Channel unavailable', description: 'Refresh the page and try editing again.', variant: 'destructive' })
         return
       }
 

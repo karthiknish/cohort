@@ -137,7 +137,7 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
           ...prev,
           [trimmedId]: message,
         }))
-        toast({ title: '⚠️ Thread loading failed', description: message, variant: 'destructive' })
+        toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })
       } finally {
         setThreadLoadingByRootId((prev) => ({
           ...prev,

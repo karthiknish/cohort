@@ -247,7 +247,7 @@ export default function ProjectsPage() {
       setProjects([])
       setError(message)
       toast({
-        title: '❌ Failed to load projects',
+        title: 'Failed to load projects',
         description: `${message}. Please check your connection and try again.`,
         variant: 'destructive',
       })
@@ -347,12 +347,12 @@ export default function ProjectsPage() {
 
       setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
       toast({
-        title: '🗑️ Project deleted',
+        title: 'Project deleted',
         description: `"${projectToDelete.name}" has been permanently removed.`,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete project'
-      toast({ title: '❌ Deletion failed', description: message, variant: 'destructive' })
+      toast({ title: 'Deletion failed', description: message, variant: 'destructive' })
     } finally {
       setDeleting(false)
       setDeleteDialogOpen(false)
@@ -374,14 +374,14 @@ export default function ProjectsPage() {
     setPendingStatusUpdates((prev) => new Set(prev).add(project.id))
 
     try {
-      const data = await apiFetch<{ project: ProjectRecord }>(`/api/projects/${project.id}`, {
+      const updatedProject = await apiFetch<ProjectRecord>(`/api/projects/${project.id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus }),
       })
       
-      setProjects((prev) => prev.map((p) => p.id === project.id ? data.project : p))
+      setProjects((prev) => prev.map((p) => p.id === project.id ? updatedProject : p))
       toast({
-        title: '✅ Status updated',
+        title: 'Status updated',
         description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
       })
     } catch (error) {
@@ -390,7 +390,7 @@ export default function ProjectsPage() {
         p.id === project.id ? { ...p, status: previousStatus } : p
       ))
       const message = error instanceof Error ? error.message : 'Failed to update project'
-      toast({ title: '❌ Status update failed', description: message, variant: 'destructive' })
+      toast({ title: 'Status update failed', description: message, variant: 'destructive' })
     } finally {
       setPendingStatusUpdates((prev) => {
         const next = new Set(prev)
@@ -548,7 +548,7 @@ export default function ProjectsPage() {
                     void loadProjects().then(() => {
                       if (!error) {
                         toast({
-                          title: '🔄 Projects refreshed',
+                          title: 'Projects refreshed',
                           description: `${projects.length} project${projects.length !== 1 ? 's' : ''} loaded successfully.`,
                         })
                       }

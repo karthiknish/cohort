@@ -110,7 +110,7 @@ export function TaskCreationModal({
       const createdTask = (await response.json()) as TaskRecord
       
       toast({
-        title: '✅ Task created!',
+        title: 'Task created!',
         description: `"${createdTask.title}" has been added and is ready to track.`,
       })
       
@@ -132,7 +132,7 @@ export function TaskCreationModal({
       const message = err instanceof Error ? err.message : 'Unexpected error creating task'
       setError(message)
       toast({
-        title: '❌ Failed to create task',
+        title: 'Failed to create task',
         description: message,
         variant: 'destructive',
       })

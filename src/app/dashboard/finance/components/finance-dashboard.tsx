@@ -101,7 +101,7 @@ export function FinanceDashboard() {
       // Validate data exists before export
       if (!filteredInvoices || !costs) {
         toast({
-          title: '📊 No data to export',
+          title: 'No data to export',
           description: 'Add some invoices or costs first, then try exporting again.',
           variant: 'destructive',
         })
@@ -156,13 +156,13 @@ export function FinanceDashboard() {
 
       // Success feedback
       toast({
-        title: '📥 Export complete!',
+        title: 'Export complete!',
         description: `Downloaded ${filteredInvoices.length} invoice${filteredInvoices.length !== 1 ? 's' : ''} and ${costs.length} cost${costs.length !== 1 ? 's' : ''} to CSV.`,
       })
     } catch (error) {
       console.error('Failed to export finance data:', error)
       toast({
-        title: '❌ Export failed',
+        title: 'Export failed',
         description: 'Unable to generate CSV file. Please try again.',
         variant: 'destructive',
       })

@@ -203,7 +203,7 @@ export function useFinanceData(): FinanceHookReturn {
         
         if (!options?.quiet) {
           toast({ 
-            title: '⏳ Retrying...', 
+            title: 'Retrying...', 
             description: `Attempt ${currentRetry + 1} of ${RETRY_CONFIG.maxAttempts}`,
           })
         }
@@ -219,7 +219,7 @@ export function useFinanceData(): FinanceHookReturn {
       setCostNextCursor(null)
       
       if (!options?.quiet) {
-        toast({ title: '❌ Failed to load finance data', description: `${message}. Please try again.`, variant: 'destructive' })
+        toast({ title: 'Failed to load finance data', description: `${message}. Please try again.`, variant: 'destructive' })
       }
     } finally {
       setIsLoading(false)
@@ -272,7 +272,7 @@ export function useFinanceData(): FinanceHookReturn {
       )
     } catch (error: unknown) {
       toast({
-        title: '⚠️ Couldn\'t load more invoices',
+        title: 'Couldn\'t load more invoices',
         description: extractErrorMessage(error, 'Unable to load additional invoices'),
         variant: 'destructive',
       })
@@ -321,7 +321,7 @@ export function useFinanceData(): FinanceHookReturn {
       )
     } catch (error: unknown) {
       toast({
-        title: '⚠️ Couldn\'t load more costs',
+        title: 'Couldn\'t load more costs',
         description: extractErrorMessage(error, 'Unable to load additional costs'),
         variant: 'destructive',
       })
@@ -532,7 +532,7 @@ export function useFinanceData(): FinanceHookReturn {
       const amountValue = Number(newCost.amount)
       if (!newCost.category.trim() || !Number.isFinite(amountValue) || amountValue <= 0) {
         toast({
-          title: '✏️ Missing information',
+          title: 'Missing information',
           description: 'Please enter a category name and a positive amount.',
           variant: 'destructive',
         })
@@ -558,10 +558,10 @@ export function useFinanceData(): FinanceHookReturn {
           })
         })
         setNewCost(INITIAL_COST_FORM)
-        toast({ title: '✅ Cost added', description: `"${created.category}" has been recorded.` })
+        toast({ title: 'Cost added', description: `"${created.category}" has been recorded.` })
       } catch (error: unknown) {
         toast({
-          title: '❌ Failed to add cost',
+          title: 'Failed to add cost',
           description: extractErrorMessage(error, 'Unable to add cost entry'),
           variant: 'destructive',
         })
@@ -578,10 +578,10 @@ export function useFinanceData(): FinanceHookReturn {
         setRemovingCostId(id)
         await deleteFinanceCost(id)
         setCompanyCosts((prev) => prev.filter((cost) => cost.id !== id))
-        toast({ title: '🗑️ Cost removed', description: 'The cost entry has been deleted.' })
+        toast({ title: 'Cost removed', description: 'The cost entry has been deleted.' })
       } catch (error: unknown) {
         toast({
-          title: '❌ Failed to delete cost',
+          title: 'Failed to delete cost',
           description: extractErrorMessage(error, 'Unable to delete cost entry'),
           variant: 'destructive',
         })
@@ -601,13 +601,13 @@ export function useFinanceData(): FinanceHookReturn {
       setSendingInvoiceId(invoiceId)
       await sendInvoiceReminder(invoiceId)
       toast({
-        title: '📧 Reminder sent!',
+        title: 'Reminder sent!',
         description: 'Payment reminder email will be sent to the client shortly.',
       })
       await loadFinanceSummary({ quiet: true })
     } catch (error: unknown) {
       toast({
-        title: '❌ Reminder failed',
+        title: 'Reminder failed',
         description: extractErrorMessage(error, 'Unable to send invoice reminder'),
         variant: 'destructive',
       })
@@ -625,13 +625,13 @@ export function useFinanceData(): FinanceHookReturn {
       setRefundingInvoiceId(invoiceId)
       const result = await issueInvoiceRefund(invoiceId)
       toast({
-        title: '💸 Refund initiated',
+        title: 'Refund initiated',
         description: `${formatCurrency(result.amount, primaryCurrencyTotals.currency)} refund is being processed.`,
       })
       await loadFinanceSummary({ quiet: true })
     } catch (error: unknown) {
       toast({
-        title: '❌ Refund failed',
+        title: 'Refund failed',
         description: extractErrorMessage(error, 'Unable to issue refund'),
         variant: 'destructive',
       })
