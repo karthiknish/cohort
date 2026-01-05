@@ -1,4 +1,4 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp, FieldPath } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
@@ -25,6 +25,11 @@ const addTeamMemberSchema = z.object({
   id: z.string().trim().min(1, 'Client id is required'),
   name: z.string().trim().min(1, 'Team member name is required').max(120),
   role: z.string().trim().max(120).optional(),
+})
+
+const paginationQuerySchema = z.object({
+  pageSize: z.string().optional(),
+  after: z.string().optional(),
 })
 
 type StoredClient = {
@@ -122,16 +127,39 @@ export const GET = createApiHandler(
   {
     workspace: 'required',
     rateLimit: 'standard',
+    querySchema: paginationQuerySchema,
   },
-  async (req, { workspace }) => {
+  async (req, { workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
-    const snapshot = await workspace.clientsCollection.get()
+    
+    const pageSize = Math.min(Math.max(Number(query.pageSize) || 50, 1), 100)
+    const afterParam = query.after
 
-    const clients = snapshot.docs
-      .map((doc) => mapClientDoc(doc.id, doc.data() as StoredClient))
-      .sort((a, b) => a.name.localeCompare(b.name))
+    let baseQuery = workspace.clientsCollection
+      .orderBy('name', 'asc')
+      .orderBy(FieldPath.documentId(), 'asc')
+      .limit(pageSize + 1)
 
-    return { clients }
+    if (typeof afterParam === 'string' && afterParam.includes('|')) {
+      const [namePart, docId] = afterParam.split('|')
+      baseQuery = baseQuery.startAfter(namePart, docId)
+    }
+
+    const snapshot = await baseQuery.get()
+    const allDocs = snapshot.docs
+    const hasMore = allDocs.length > pageSize
+    const docs = hasMore ? allDocs.slice(0, pageSize) : allDocs
+
+    const clients = docs.map((doc) => mapClientDoc(doc.id, doc.data() as StoredClient))
+
+    let nextCursor: string | null = null
+    if (hasMore && docs.length > 0) {
+      const lastDoc = docs[docs.length - 1]
+      const lastData = lastDoc.data() as StoredClient
+      nextCursor = `${lastData.name ?? ''}|${lastDoc.id}`
+    }
+
+    return { clients, nextCursor }
   }
 )
 

@@ -156,17 +156,48 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading && user) {
       const redirect = searchParams.get("redirect")
+      const destination = redirect || "/dashboard"
+
+      // Prevent infinite redirect loops: check if we've attempted this same redirect too many times recently
+      if (typeof window !== 'undefined') {
+        const now = Date.now()
+        const lastAttemptTime = Number(window.sessionStorage.getItem('cohorts.auth.lastRedirectTime') || 0)
+        const lastAttemptDest = window.sessionStorage.getItem('cohorts.auth.lastRedirectDest')
+        const attemptCount = Number(window.sessionStorage.getItem('cohorts.auth.redirectAttempts') || 0)
+
+        // If we're trying to redirect to the same place within 2 seconds of the last attempt
+        if (lastAttemptDest === destination && now - lastAttemptTime < 2000) {
+          if (attemptCount > 3) {
+            console.error('[HomePage] Infinite redirect detected for:', destination)
+            toast({
+              title: "🔄 Redirect loop detected",
+              description: "We're having trouble syncing your session. Please try refreshing the page.",
+              variant: "destructive",
+            })
+            return
+          }
+          window.sessionStorage.setItem('cohorts.auth.redirectAttempts', String(attemptCount + 1))
+        } else {
+          // Reset attempts if it's a new destination or enough time has passed
+          window.sessionStorage.setItem('cohorts.auth.redirectAttempts', '1')
+        }
+
+        window.sessionStorage.setItem('cohorts.auth.lastRedirectTime', String(now))
+        window.sessionStorage.setItem('cohorts.auth.lastRedirectDest', destination)
+      }
+
       // If no explicit redirect, try to restore last visited dashboard tab
       if (!redirect && typeof window !== 'undefined') {
         const lastTab = window.localStorage.getItem('cohorts_last_tab')
         if (lastTab && lastTab.startsWith('/dashboard')) {
-          window.location.href = lastTab
+          router.replace(lastTab)
           return
         }
       }
-      window.location.href = redirect || "/dashboard"
+      
+      router.replace(destination)
     }
-  }, [loading, user, router, searchParams])
+  }, [loading, user, router, searchParams, toast])
 
   useEffect(() => {
     if (typeof window === "undefined") {

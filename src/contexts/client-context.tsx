@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { useAuth } from '@/contexts/auth-context'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
+import { apiFetch } from '@/lib/api-client'
 
 type ClientContextValue = {
   clients: ClientRecord[]
@@ -93,27 +94,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     setError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/clients', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      // For the dashboard, we start with the first page. 
+      // We can implement recursive loading or a "load more" if needed later.
+      const data = await apiFetch<{ clients: ClientRecord[]; nextCursor: string | null }>('/api/clients', {
         cache: 'no-store',
       })
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}))
-        const message = typeof payload?.error === 'string' ? payload.error : 'Unable to load clients'
-        throw new Error(message)
-      }
-
-      const payload = (await response.json()) as { success?: boolean; data?: { clients?: ClientRecord[] }; clients?: ClientRecord[] }
-      // Handle both new envelope { success, data: { clients } } and legacy { clients }
-      const rawList = payload.data?.clients ?? payload.clients
-      const list = Array.isArray(rawList) ? rawList : []
-      const sorted = [...list].sort((a, b) => a.name.localeCompare(b.name))
-      setClients(sorted)
-      return sorted
+      const list = Array.isArray(data.clients) ? data.clients : []
+      setClients(list)
+      return list
     } catch (fetchError: unknown) {
       const message = parseError(fetchError, 'Unable to load clients')
       setError(message)
@@ -122,7 +111,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [getIdToken, user?.id])
+  }, [user?.id])
 
   useEffect(() => {
     if (authLoading) {
@@ -206,25 +195,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       teamMembers.unshift({ name: accountManager, role: 'Account Manager' })
     }
 
-    const token = await getIdToken()
-    const response = await fetch('/api/clients', {
+    const created = await apiFetch<ClientRecord>('/api/clients', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify({ name, accountManager, teamMembers }),
     })
 
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      const message = typeof payload?.error === 'string' ? payload.error : 'Unable to create client'
-      throw new Error(message)
-    }
-
-    const payload = (await response.json()) as { success?: boolean; data?: { client: ClientRecord }; client?: ClientRecord }
-    // Handle both new envelope { success, data: { client } } and legacy { client }
-    const created = payload.data?.client ?? payload.client
     if (!created) {
       throw new Error('Failed to create client: no client returned')
     }
@@ -236,26 +211,16 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     setSelectedClientId(created.id)
 
     return created
-  }, [getIdToken, user?.id])
+  }, [user?.id])
 
   const removeClient = useCallback(async (clientId: string) => {
     if (!user?.id) {
       throw new Error('You must be signed in to remove a client')
     }
 
-    const token = await getIdToken()
-    const response = await fetch(`/api/clients/${encodeURIComponent(clientId)}`, {
+    await apiFetch(`/api/clients/${encodeURIComponent(clientId)}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     })
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      const message = typeof payload?.error === 'string' ? payload.error : 'Unable to remove client'
-      throw new Error(message)
-    }
 
     setClients((prev) => {
       const next = prev.filter((client) => client.id !== clientId)
@@ -267,7 +232,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       })
       return next
     })
-  }, [getIdToken, user?.id])
+  }, [user?.id])
 
   const selectedClient = useMemo(() => {
     if (!selectedClientId) {

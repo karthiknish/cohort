@@ -58,6 +58,8 @@ export default function AdminClientsPage() {
   const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   const [clientPendingMembers, setClientPendingMembers] = useState<ClientRecord | null>(null)
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false)
@@ -83,6 +85,7 @@ export default function AdminClientsPage() {
   const loadClients = useCallback(async () => {
     if (!user?.id) {
       setClients([])
+      setNextCursor(null)
       return
     }
 
@@ -90,12 +93,12 @@ export default function AdminClientsPage() {
     setClientsError(null)
 
     try {
-      const data = await apiFetch<ClientRecord[]>('/api/clients', {
+      const data = await apiFetch<{ clients: ClientRecord[]; nextCursor: string | null }>('/api/clients', {
         cache: 'no-store',
       })
 
-      const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name))
-      setClients(sorted)
+      setClients(data.clients)
+      setNextCursor(data.nextCursor)
     } catch (err: unknown) {
       const message = extractErrorMessage(err, 'Unable to load clients')
       setClientsError(message)
@@ -104,6 +107,25 @@ export default function AdminClientsPage() {
       setClientsLoading(false)
     }
   }, [user?.id, toast])
+
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return
+
+    setLoadingMore(true)
+    try {
+      const data = await apiFetch<{ clients: ClientRecord[]; nextCursor: string | null }>(`/api/clients?after=${encodeURIComponent(nextCursor)}`, {
+        cache: 'no-store',
+      })
+
+      setClients((prev) => [...prev, ...data.clients])
+      setNextCursor(data.nextCursor)
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, 'Unable to load more clients')
+      toast({ title: 'Load more failed', description: message, variant: 'destructive' })
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [nextCursor, loadingMore, toast])
 
   useEffect(() => {
     if (!user?.id) {
@@ -473,7 +495,7 @@ export default function AdminClientsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{clients.length}</div>
-              <p className="text-xs text-muted-foreground">Sorted alphabetically</p>
+              <p className="text-xs text-muted-foreground">{nextCursor ? 'First page loaded' : 'All clients loaded'}</p>
             </CardContent>
           </Card>
 
@@ -782,6 +804,25 @@ export default function AdminClientsPage() {
                       )}
                     </div>
                   ))}
+
+                  {nextCursor && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="w-full sm:w-auto"
+                      >
+                        {loadingMore ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+                          </>
+                        ) : (
+                          'Load more clients'
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

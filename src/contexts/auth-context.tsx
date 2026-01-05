@@ -215,7 +215,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 let lastSyncToken: string | null = null
 let syncInProgress: Promise<boolean> | null = null
 
-async function syncSessionCookies(authUser: AuthUser | null) {
+async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Promise<boolean> {
   if (typeof window === 'undefined') {
     return true
   }
@@ -226,11 +226,11 @@ async function syncSessionCookies(authUser: AuthUser | null) {
   }
 
   // If a sync is already in progress, wait for it
-  if (syncInProgress) {
+  if (syncInProgress && retryCount === 0) {
     return syncInProgress
   }
 
-  syncInProgress = (async () => {
+  const performSync = async (): Promise<boolean> => {
     try {
       if (!authUser) {
         const response = await fetch('/api/auth/session', { method: 'DELETE' })
@@ -256,7 +256,15 @@ async function syncSessionCookies(authUser: AuthUser | null) {
       })
 
       if (!response.ok) {
-        // Only log if it's not a rate limit or other expected error
+        // Handle rate limiting (429)
+        if (response.status === 429 && retryCount < 2) {
+          const retryAfter = Number(response.headers.get('Retry-After') || 1)
+          const delay = Math.min(retryAfter * 1000, 3000) // Max 3s wait
+          console.warn(`[AuthProvider] Rate limited on session sync, retrying in ${delay / 1000}s...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return syncSessionCookies(authUser, retryCount + 1)
+        }
+
         if (response.status !== 429) {
           console.error('Failed to sync session cookies. Status:', response.status)
         }
@@ -272,17 +280,25 @@ async function syncSessionCookies(authUser: AuthUser | null) {
         (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'auth/network-request-failed')
 
       if (isNetworkError) {
-        // Silently fail for network errors, as they are expected when offline/flaky
-        // They will be retried on the next auth state change or token refresh
+        // Retry networking errors once after a short delay
+        if (retryCount < 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          return syncSessionCookies(authUser, retryCount + 1)
+        }
         return false
       }
 
       console.error('Failed to sync auth cookies', error)
       return false
-    } finally {
-      syncInProgress = null
     }
-  })()
+  }
 
-  return syncInProgress
+  if (retryCount === 0) {
+    syncInProgress = performSync().finally(() => {
+      syncInProgress = null
+    })
+    return syncInProgress
+  }
+
+  return performSync()
 }

@@ -18,6 +18,7 @@ import {
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
+import { apiFetch } from '@/lib/api-client'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
 import {
@@ -122,48 +123,31 @@ function ClientsDashboardContent() {
 
     setStatsLoading(true)
     try {
-      const token = await getIdToken()
-      const headers = { Authorization: `Bearer ${token}` }
-
-      const [projectsRes, tasksRes, proposalsRes] = await Promise.all([
-        fetch(`/api/projects?clientId=${selectedClient.id}&pageSize=100`, { headers }).catch(() => null),
-        fetch(`/api/tasks?clientId=${selectedClient.id}&pageSize=100`, { headers }).catch(() => null),
-        fetch(`/api/proposals?clientId=${selectedClient.id}&pageSize=100`, { headers }).catch(() => null),
+      const [projectsData, tasksData, proposalsData] = await Promise.all([
+        apiFetch<{ projects: any[] }>(`/api/projects?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ projects: [] })),
+        apiFetch<{ tasks: any[] }>(`/api/tasks?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ tasks: [] })),
+        apiFetch<{ proposals: any[] }>(`/api/proposals?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ proposals: [] })),
       ])
 
-      let activeProjects = 0
-      let totalProjects = 0
-      let openTasks = 0
-      let completedTasks = 0
-      let pendingProposals = 0
+      const projects = Array.isArray(projectsData.projects) ? projectsData.projects : []
+      const tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks : []
+      const proposals = Array.isArray(proposalsData.proposals) ? proposalsData.proposals : []
 
-      if (projectsRes?.ok) {
-        const data = await projectsRes.json()
-        const projects = Array.isArray(data.projects) ? data.projects : []
-        totalProjects = projects.length
-        activeProjects = projects.filter((p: { status?: string }) => 
-          p.status === 'active' || p.status === 'in_progress'
-        ).length
-      }
+      const totalProjects = projects.length
+      const activeProjects = projects.filter((p: { status?: string }) => 
+        p.status === 'active' || p.status === 'in_progress'
+      ).length
 
-      if (tasksRes?.ok) {
-        const data = await tasksRes.json()
-        const tasks = Array.isArray(data.tasks) ? data.tasks : []
-        openTasks = tasks.filter((t: { status?: string }) => 
-          t.status === 'todo' || t.status === 'in_progress'
-        ).length
-        completedTasks = tasks.filter((t: { status?: string }) => 
-          t.status === 'done' || t.status === 'completed'
-        ).length
-      }
+      const openTasks = tasks.filter((t: { status?: string }) => 
+        t.status === 'todo' || t.status === 'in_progress'
+      ).length
+      const completedTasks = tasks.filter((t: { status?: string }) => 
+        t.status === 'done' || t.status === 'completed'
+      ).length
 
-      if (proposalsRes?.ok) {
-        const data = await proposalsRes.json()
-        const proposals = Array.isArray(data.proposals) ? data.proposals : []
-        pendingProposals = proposals.filter((p: { status?: string }) => 
-          p.status === 'draft' || p.status === 'pending' || p.status === 'sent'
-        ).length
-      }
+      const pendingProposals = proposals.filter((p: { status?: string }) => 
+        p.status === 'draft' || p.status === 'pending' || p.status === 'sent'
+      ).length
 
       setStats({ activeProjects, totalProjects, openTasks, completedTasks, pendingProposals })
     } catch (error) {
@@ -172,7 +156,7 @@ function ClientsDashboardContent() {
     } finally {
       setStatsLoading(false)
     }
-  }, [selectedClient, getIdToken])
+  }, [selectedClient])
 
   useEffect(() => {
     fetchClientStats()
@@ -187,37 +171,33 @@ function ClientsDashboardContent() {
 
     setInvoiceHistoryLoading(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/finance/summary?clientId=${selectedClient.id}&pageSize=10`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await apiFetch<{ invoices: any[] }>(`/api/finance/summary?clientId=${selectedClient.id}&pageSize=10`, {
+        cache: 'no-store',
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        const invoices = Array.isArray(data.invoices) ? data.invoices : []
-        setInvoiceHistory(invoices.map((inv: Record<string, unknown>) => ({
-          id: inv.id as string || '',
-          number: inv.number as string | null,
-          status: inv.status as string || 'draft',
-          amount: typeof inv.amount === 'number' ? inv.amount : 0,
-          currency: inv.currency as string || 'usd',
-          issuedDate: inv.issuedDate as string | null,
-          dueDate: inv.dueDate as string | null,
-          paidDate: inv.paidDate as string | null,
-          hostedInvoiceUrl: inv.hostedInvoiceUrl as string | null,
-          description: inv.description as string | null,
-          clientName: inv.clientName as string || selectedClient.name,
-          amountPaid: typeof inv.amountPaid === 'number' ? inv.amountPaid : null,
-          amountRefunded: typeof inv.amountRefunded === 'number' ? inv.amountRefunded : null,
-          amountRemaining: typeof inv.amountRemaining === 'number' ? inv.amountRemaining : null,
-        })))
-      }
+      const invoices = Array.isArray(data.invoices) ? data.invoices : []
+      setInvoiceHistory(invoices.map((inv: Record<string, unknown>) => ({
+        id: inv.id as string || '',
+        number: inv.number as string | null,
+        status: inv.status as string || 'draft',
+        amount: typeof inv.amount === 'number' ? inv.amount : 0,
+        currency: inv.currency as string || 'usd',
+        issuedDate: inv.issuedDate as string | null,
+        dueDate: inv.dueDate as string | null,
+        paidDate: inv.paidDate as string | null,
+        hostedInvoiceUrl: inv.hostedInvoiceUrl as string | null,
+        description: inv.description as string | null,
+        clientName: inv.clientName as string || selectedClient.name,
+        amountPaid: typeof inv.amountPaid === 'number' ? inv.amountPaid : null,
+        amountRefunded: typeof inv.amountRefunded === 'number' ? inv.amountRefunded : null,
+        amountRemaining: typeof inv.amountRemaining === 'number' ? inv.amountRemaining : null,
+      })))
     } catch (error) {
       console.error('Failed to fetch invoice history:', error)
     } finally {
       setInvoiceHistoryLoading(false)
     }
-  }, [selectedClient, getIdToken])
+  }, [selectedClient])
 
   // Initialize email from client when opening create invoice dialog
   useEffect(() => {
@@ -301,13 +281,8 @@ function ClientsDashboardContent() {
 
     setCreateInvoiceLoading(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/clients/${selectedClient.id}/invoice`, {
+      const result = await apiFetch<{ invoice?: { number?: string } }>(`/api/clients/${selectedClient.id}/invoice`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           amount,
           email: createInvoiceForm.email.trim(),
@@ -315,13 +290,6 @@ function ClientsDashboardContent() {
           dueDate: createInvoiceForm.dueDate || undefined,
         }),
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to create invoice')
-      }
-
-      const result = await response.json()
 
       toast({
         title: 'Invoice created',
@@ -350,16 +318,9 @@ function ClientsDashboardContent() {
 
     setSendingReminder(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/finance/invoices/${targetInvoiceId}/remind`, {
+      await apiFetch(`/api/finance/invoices/${targetInvoiceId}/remind`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to send reminder')
-      }
 
       toast({
         title: 'Reminder sent',
@@ -384,22 +345,10 @@ function ClientsDashboardContent() {
 
     setRefundLoading(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/finance/invoices/${invoiceId}/refund`, {
+      const result = await apiFetch<{ refund?: { amount?: number; currency?: string } }>(`/api/finance/invoices/${invoiceId}/refund`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({}),
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to issue refund')
-      }
-
-      const result = await response.json()
 
       toast({
         title: 'Refund issued',
