@@ -6,6 +6,7 @@ import { AuthUser, SignUpData, authService } from '@/services/auth'
 interface AuthContextType {
   user: AuthUser | null
   loading: boolean
+  isSyncing: boolean
   signIn: (email: string, password: string) => Promise<AuthUser>
   signInWithGoogle: () => Promise<AuthUser>
   connectGoogleAdsAccount: () => Promise<void>
@@ -42,10 +43,16 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const applyUser = useCallback(async (authUser: AuthUser | null) => {
     setUser(authUser)
-    await syncSessionCookies(authUser)
+    setIsSyncing(true)
+    try {
+      await syncSessionCookies(authUser)
+    } finally {
+      setIsSyncing(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -164,6 +171,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     () => ({
       user,
       loading,
+      isSyncing,
       signIn,
       signInWithGoogle,
       connectGoogleAdsAccount,
@@ -185,6 +193,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [
       user,
       loading,
+      isSyncing,
       signIn,
       signInWithGoogle,
       connectGoogleAdsAccount,
@@ -225,24 +234,37 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
     return false
   }
 
-  // If a sync is already in progress, wait for it
+  const getTargetToken = async () => {
+    if (!authUser) return null
+    try {
+      return await authService.getIdToken()
+    } catch {
+      return null
+    }
+  }
+
+  // If a sync is already in progress, wait for it before trying our sync
+  // This ensures operations happen in order and we don't return early with wrong results
   if (syncInProgress && retryCount === 0) {
-    return syncInProgress
+    await syncInProgress
+    // After waiting, check again if we still need to sync
+  }
+
+  const token = await getTargetToken()
+  
+  // Dedup if the token hasn't changed since the last successful sync
+  if (token === lastSyncToken && retryCount === 0) {
+    return true
   }
 
   const performSync = async (): Promise<boolean> => {
     try {
-      if (!authUser) {
+      if (!token) {
         const response = await fetch('/api/auth/session', { method: 'DELETE' })
-        lastSyncToken = null
+        if (response.ok) {
+          lastSyncToken = null
+        }
         return response.ok
-      }
-
-      const token = await authService.getIdToken()
-      
-      // Avoid redundant syncs if the token hasn't changed
-      if (token === lastSyncToken) {
-        return true
       }
 
       const response = await fetch('/api/auth/session', {
@@ -250,8 +272,8 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          role: authUser.role,
-          status: authUser.status,
+          role: authUser?.role,
+          status: authUser?.status,
         }),
       })
 
@@ -294,10 +316,10 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
   }
 
   if (retryCount === 0) {
-    syncInProgress = performSync().finally(() => {
-      syncInProgress = null
-    })
-    return syncInProgress
+    syncInProgress = performSync()
+    const result = await syncInProgress
+    syncInProgress = null
+    return result
   }
 
   return performSync()

@@ -225,7 +225,8 @@ export const POST = createApiHandler(
       }
     }
 
-    const docRef = await workspace.tasksCollection.add({
+    const now = Timestamp.now()
+    const taskData = {
       title: sanitizeInput(payload.title),
       description: payload.description ? sanitizeInput(payload.description) : null,
       status: payload.status,
@@ -239,12 +240,12 @@ export const POST = createApiHandler(
       tags: normalizedTags,
       workspaceId: workspace.workspaceId,
       createdBy: uid,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    })
+      createdAt: now,
+      updatedAt: now,
+    }
 
-    const createdDoc = await docRef.get()
-    const task = mapTaskDoc(createdDoc.id, createdDoc.data() as StoredTask)
+    const docRef = await workspace.tasksCollection.add(taskData)
+    const task = mapTaskDoc(docRef.id, taskData as StoredTask)
 
     invalidateTasksCache(workspace.workspaceId)
 

@@ -121,7 +121,7 @@ export default function HomePage() {
     confirmPassword: "",
     displayName: "",
   })
-  const { user, signIn, signInWithGoogle, signUp, loading } = useAuth()
+  const { user, signIn, signInWithGoogle, signUp, loading, isSyncing } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -154,7 +154,7 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && !isSyncing && user) {
       const redirect = searchParams.get("redirect")
       const destination = redirect || "/dashboard"
 
@@ -197,7 +197,7 @@ export default function HomePage() {
       
       router.replace(destination)
     }
-  }, [loading, user, router, searchParams, toast])
+  }, [loading, isSyncing, user, router, searchParams, toast])
 
   useEffect(() => {
     if (typeof window === "undefined") {

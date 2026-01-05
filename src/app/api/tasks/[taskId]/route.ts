@@ -99,30 +99,33 @@ export const PATCH = createApiHandler(
 
     invalidateTasksCache(workspace.workspaceId)
 
-    const updatedDoc = await docRef.get()
-    const task = mapTaskDoc(updatedDoc.id, updatedDoc.data() as StoredTask)
+    // Construct final task object manually to avoid a redundant database round-trip
+    const oldData = existingDoc.data() as StoredTask
+    const newData = { ...oldData, ...updates as any }
+    const task = mapTaskDoc(taskId, newData)
 
     // Calculate changes for notification
-    const oldData = existingDoc.data() as StoredTask
-    const newData = updatedDoc.data() as StoredTask
     const changes: string[] = []
 
-    if (newData.status && oldData.status !== newData.status) {
-      changes.push(`Status: ${oldData.status} → ${newData.status}`)
+    if (updates.status && oldData.status !== updates.status) {
+      changes.push(`Status: ${oldData.status} → ${updates.status}`)
     }
 
-    if (newData.priority && oldData.priority !== newData.priority) {
-      changes.push(`Priority: ${oldData.priority} → ${newData.priority}`)
+    if (updates.priority && oldData.priority !== updates.priority) {
+      changes.push(`Priority: ${oldData.priority} → ${updates.priority}`)
     }
 
     // Check for assignment changes
-    const oldAssigned = Array.isArray(oldData.assignedTo) ? oldData.assignedTo.sort().join(',') : ''
-    const newAssigned = Array.isArray(newData.assignedTo) ? newData.assignedTo.sort().join(',') : ''
-    if (oldAssigned !== newAssigned) {
-      const assignedList = Array.isArray(newData.assignedTo) && newData.assignedTo.length > 0 
-        ? newData.assignedTo.join(', ') 
-        : 'Unassigned'
-      changes.push(`Assigned to: ${assignedList}`)
+    if (updates.assignedTo) {
+      const oldAssigned = Array.isArray(oldData.assignedTo) ? oldData.assignedTo.sort().join(',') : ''
+      const newAssigned = Array.isArray(updates.assignedTo) ? (updates.assignedTo as string[]).sort().join(',') : ''
+      
+      if (oldAssigned !== newAssigned) {
+        const assignedList = (updates.assignedTo as string[]).length > 0 
+          ? (updates.assignedTo as string[]).join(', ') 
+          : 'Unassigned'
+        changes.push(`Assigned to: ${assignedList}`)
+      }
     }
 
     if (changes.length > 0) {

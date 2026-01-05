@@ -118,6 +118,8 @@ export default function TasksPage() {
     handleDeleteTask,
     handleCreateTask,
     handleUpdateTask,
+    handleBulkUpdate,
+    handleBulkDelete,
     nextCursor,
     setError,
   } = useTasks({
@@ -337,47 +339,51 @@ export default function TasksPage() {
   )
 
   const handleBulkStatusChange = useCallback(
-    (status: TaskStatus) => {
+    async (status: TaskStatus) => {
       if (!hasSelection) return
-      void runBulkOperation('Updating status', selectedTasks, async (task) => {
-        await handleUpdateTask(task.id, buildUpdatePayload(task, { status }))
-      })
+      const ids = Array.from(selectedTaskIds)
+      setBulkState({ active: true, label: 'Updating status', progress: 0 })
+      await handleBulkUpdate(ids, { status })
+      setBulkState({ active: false, label: '', progress: 0 })
+      setSelectedTaskIds(new Set())
     },
-    [buildUpdatePayload, handleUpdateTask, hasSelection, runBulkOperation, selectedTasks],
+    [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
 
   const handleBulkAssign = useCallback(
-    (assignees: string[]) => {
+    async (assignees: string[]) => {
       if (!hasSelection) return
       const normalized = assignees.map((name) => name.trim()).filter((name) => name.length > 0)
-      void runBulkOperation('Updating assignees', selectedTasks, async (task) => {
-        await handleUpdateTask(task.id, buildUpdatePayload(task, { assignedTo: normalized }))
-      })
+      const ids = Array.from(selectedTaskIds)
+      setBulkState({ active: true, label: 'Updating assignees', progress: 0 })
+      await handleBulkUpdate(ids, { assignedTo: normalized })
+      setBulkState({ active: false, label: '', progress: 0 })
+      setSelectedTaskIds(new Set())
     },
-    [buildUpdatePayload, handleUpdateTask, hasSelection, runBulkOperation, selectedTasks],
+    [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
 
   const handleBulkDueDate = useCallback(
-    (date: string | null) => {
+    async (date: string | null) => {
       if (!hasSelection) return
       const normalized = date && !Number.isNaN(Date.parse(date)) ? date : null
-      void runBulkOperation('Updating due dates', selectedTasks, async (task) => {
-        await handleUpdateTask(task.id, buildUpdatePayload(task, { dueDate: normalized }))
-      })
+      const ids = Array.from(selectedTaskIds)
+      setBulkState({ active: true, label: 'Updating due dates', progress: 0 })
+      await handleBulkUpdate(ids, { dueDate: normalized ?? undefined })
+      setBulkState({ active: false, label: '', progress: 0 })
+      setSelectedTaskIds(new Set())
     },
-    [buildUpdatePayload, handleUpdateTask, hasSelection, runBulkOperation, selectedTasks],
+    [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
 
-  const handleBulkDelete = useCallback(() => {
+  const handleBulkDeleteAction = useCallback(async () => {
     if (!hasSelection) return
-
-    void runBulkOperation('Deleting tasks', selectedTasks, async (task) => {
-      const success = await handleDeleteTask(task)
-      if (!success) {
-        throw new Error('Delete failed')
-      }
-    })
-  }, [handleDeleteTask, hasSelection, runBulkOperation, selectedTasks])
+    const ids = Array.from(selectedTaskIds)
+    setBulkState({ active: true, label: 'Deleting tasks', progress: 0 })
+    await handleBulkDelete(ids)
+    setBulkState({ active: false, label: '', progress: 0 })
+    setSelectedTaskIds(new Set())
+  }, [handleBulkDelete, hasSelection, selectedTaskIds])
 
 
   const initialLoading = loading && tasks.length === 0
@@ -472,7 +478,7 @@ export default function TasksPage() {
                   onBulkStatusChange={handleBulkStatusChange}
                   onBulkAssign={handleBulkAssign}
                   onBulkDueDate={handleBulkDueDate}
-                  onBulkDelete={handleBulkDelete}
+                  onBulkDelete={handleBulkDeleteAction}
                 />
               )}
 

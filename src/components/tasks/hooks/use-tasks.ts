@@ -35,6 +35,8 @@ export type UseTasksReturn = {
   handleDeleteTask: (task: TaskRecord) => Promise<boolean>
   handleCreateTask: (payload: CreateTaskPayload) => Promise<TaskRecord | null>
   handleUpdateTask: (taskId: string, payload: UpdateTaskPayload) => Promise<TaskRecord | null>
+  handleBulkUpdate: (ids: string[], update: Partial<UpdateTaskPayload>) => Promise<boolean>
+  handleBulkDelete: (ids: string[]) => Promise<boolean>
 }
 
 export type CreateTaskPayload = {
@@ -336,6 +338,69 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
     [toast]
   )
 
+  const handleBulkUpdate = useCallback(
+    async (ids: string[], update: Partial<UpdateTaskPayload>): Promise<boolean> => {
+      try {
+        const data = await apiFetch<{ message: string; results: any[]; tasks: TaskRecord[] }>('/api/tasks/bulk', {
+          method: 'PATCH',
+          body: JSON.stringify({ ids, update }),
+        })
+
+        const successfulUpdates = data.tasks || []
+        const updatedIds = new Set(successfulUpdates.map(t => t.id))
+        
+        setTasks((prev) => prev.map((t) => {
+          const updated = successfulUpdates.find(u => u.id === t.id)
+          return updated || t
+        }))
+
+        toast({
+          title: '✅ Bulk update complete',
+          description: data.message,
+        })
+        return true
+      } catch (err) {
+        console.error('Failed to perform bulk update', err)
+        toast({
+          title: '❌ Bulk update failed',
+          description: err instanceof Error ? err.message : 'Unable to update tasks in bulk',
+          variant: 'destructive',
+        })
+        return false
+      }
+    },
+    [toast]
+  )
+
+  const handleBulkDelete = useCallback(
+    async (ids: string[]): Promise<boolean> => {
+      try {
+        const data = await apiFetch<{ message: string; results: any[] }>('/api/tasks/bulk', {
+          method: 'DELETE',
+          body: JSON.stringify({ ids }),
+        })
+
+        const deletedIds = new Set(data.results.filter(r => r.success).map(r => r.id))
+        setTasks((prev) => prev.filter((t) => !deletedIds.has(t.id)))
+
+        toast({
+          title: '🗑️ Bulk deletion complete',
+          description: data.message,
+        })
+        return true
+      } catch (err) {
+        console.error('Failed to perform bulk delete', err)
+        toast({
+          title: '❌ Bulk deletion failed',
+          description: err instanceof Error ? err.message : 'Unable to delete tasks in bulk',
+          variant: 'destructive',
+        })
+        return false
+      }
+    },
+    [toast]
+  )
+
   return {
     tasks,
     setTasks,
@@ -352,5 +417,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
     handleDeleteTask,
     handleCreateTask,
     handleUpdateTask,
+    handleBulkUpdate,
+    handleBulkDelete,
   }
 }

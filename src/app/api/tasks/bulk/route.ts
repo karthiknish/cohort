@@ -38,18 +38,15 @@ export const PATCH = createApiHandler(
     
     const { ids, update } = body
     const now = Timestamp.now()
+    const batch = workspace.tasksCollection.firestore.batch()
     
     // Build update object
     const updateData: Record<string, unknown> = {
       updatedAt: now,
     }
     
-    if (update.status !== undefined) {
-      updateData.status = update.status
-    }
-    if (update.priority !== undefined) {
-      updateData.priority = update.priority
-    }
+    if (update.status !== undefined) updateData.status = update.status
+    if (update.priority !== undefined) updateData.priority = update.priority
     if (update.assignedTo !== undefined) {
       updateData.assignedTo = update.assignedTo.map(s => s.trim()).filter(s => s.length > 0)
     }
@@ -57,29 +54,31 @@ export const PATCH = createApiHandler(
       updateData.tags = update.tags.map(s => s.trim()).filter(s => s.length > 0)
     }
     
-    // Fetch and update tasks
-    const results: { id: string; success: boolean; error?: string }[] = []
-    const updatedTasks = []
+    // Fetch all tasks in one round-trip
+    const docRefs = ids.map(id => workspace.tasksCollection.doc(id))
+    const snapshots = await workspace.tasksCollection.firestore.getAll(...docRefs)
     
-    for (const id of ids) {
-      try {
-        const docRef = workspace.tasksCollection.doc(id)
-        const doc = await docRef.get()
-        
-        if (!doc.exists) {
-          results.push({ id, success: false, error: `Task with ID '${id}' not found` })
-          continue
-        }
-        
-        await docRef.update(updateData)
-        const updatedDoc = await docRef.get()
-        const task = mapTaskDoc(updatedDoc.id, updatedDoc.data() as StoredTask)
-        updatedTasks.push(task)
-        results.push({ id, success: true })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-        results.push({ id, success: false, error: message })
+    const results: { id: string; success: boolean; error?: string }[] = []
+    const updatedTasks: any[] = []
+    
+    for (const snapshot of snapshots) {
+      const id = snapshot.id
+      if (!snapshot.exists) {
+        results.push({ id, success: false, error: `Task with ID '${id}' not found` })
+        continue
       }
+      
+      batch.update(snapshot.ref, updateData)
+      
+      // Construct updated object manually to avoid a redundant post-update GET
+      const existingData = snapshot.data() as StoredTask
+      const task = mapTaskDoc(id, { ...existingData, ...updateData as any })
+      updatedTasks.push(task)
+      results.push({ id, success: true })
+    }
+    
+    if (results.some(r => r.success)) {
+      await batch.commit()
     }
     
     // Invalidate cache
@@ -110,25 +109,27 @@ export const DELETE = createApiHandler(
     if (!workspace) throw new Error('Workspace context missing')
     
     const { ids } = body
+    const batch = workspace.tasksCollection.firestore.batch()
+    
+    // Fetch all tasks in one round-trip to verify existence
+    const docRefs = ids.map(id => workspace.tasksCollection.doc(id))
+    const snapshots = await workspace.tasksCollection.firestore.getAll(...docRefs)
     
     const results: { id: string; success: boolean; error?: string }[] = []
     
-    for (const id of ids) {
-      try {
-        const docRef = workspace.tasksCollection.doc(id)
-        const doc = await docRef.get()
-        
-        if (!doc.exists) {
-          results.push({ id, success: false, error: `Task with ID '${id}' not found` })
-          continue
-        }
-        
-        await docRef.delete()
-        results.push({ id, success: true })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-        results.push({ id, success: false, error: message })
+    for (const snapshot of snapshots) {
+      const id = snapshot.id
+      if (!snapshot.exists) {
+        results.push({ id, success: false, error: `Task with ID '${id}' not found` })
+        continue
       }
+      
+      batch.delete(snapshot.ref)
+      results.push({ id, success: true })
+    }
+    
+    if (results.some(r => r.success)) {
+      await batch.commit()
     }
     
     // Invalidate cache
