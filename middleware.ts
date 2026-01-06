@@ -30,7 +30,10 @@ export async function middleware(request: NextRequest) {
       windowMs: API_RATE_LIMIT_WINDOW_MS,
     })
 
+    console.log(`[Middleware] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`)
+
     if (!rateLimit.allowed) {
+      console.warn(`[Middleware] Rate limit exceeded for ${identifier} on ${pathname}`)
       return NextResponse.json(
         { error: 'Too many requests. Please slow down.' },
         {

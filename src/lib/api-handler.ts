@@ -398,6 +398,10 @@ export function createApiHandler<
 
       // Log and handle unknown errors
       const isDev = process.env.NODE_ENV === 'development'
+      
+      // CRITICAL: Ensure we see the error in the terminal
+      console.error(`[API Error] ${req.method} ${req.nextUrl.pathname}:`, error)
+      
       logApiError(error, req, { ...logContext, includeStack: isDev })
 
       if (idempotencyRef) {

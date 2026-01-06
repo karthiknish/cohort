@@ -401,8 +401,13 @@ export default function DashboardPage() {
           cache: 'no-store',
         }).then((response) => resolveJson(response, 'Unable to load metrics for comparison') as Promise<{ metrics?: MetricRecord[] }>)
 
-        const [financeResponses, metricsPayload] = await Promise.all([Promise.all(financeRequests), metricsPromise])
-        const groupedMetrics = groupMetricsByClient(metricsPayload.metrics ?? [])
+        const [financeEnvelopes, metricsEnvelope] = await Promise.all([Promise.all(financeRequests), metricsPromise])
+        
+        // Extract data from envelopes
+        const financeResponses = financeEnvelopes.map(env => (env as any)?.data || env)
+        const metricsData = (metricsEnvelope as any)?.data || metricsEnvelope
+        
+        const groupedMetrics = groupMetricsByClient(metricsData.metrics ?? [])
 
         const summaries = targets.map((clientId, index) => {
           const financeData = financeResponses[index] ?? null
@@ -705,36 +710,40 @@ export default function DashboardPage() {
 
     if (Array.isArray(metrics)) {
       metrics.forEach((m) => {
+        if (!m || typeof m.date !== 'string') return
         const date = m.date.split('T')[0]
         const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
         dailyMap.set(date, {
           ...current,
-          spend: current.spend + m.spend,
+          spend: current.spend + (Number(m.spend) || 0),
         })
       })
     }
 
-    const revenueRecords = financeSummary && Array.isArray(financeSummary.revenue) 
-      ? financeSummary.revenue 
+    const revenueRecords = Array.isArray(financeSummary?.revenue) 
+      ? financeSummary!.revenue 
       : []
 
-    revenueRecords.forEach((r) => {
-      let date = ''
-      if (r.period && r.period.length === 7) {
-        // YYYY-MM -> YYYY-MM-01
-        date = `${r.period}-01`
-      } else if (r.createdAt) {
-        date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0] : ''
-      }
+    if (Array.isArray(revenueRecords)) {
+      revenueRecords.forEach((r) => {
+        if (!r) return
+        let date = ''
+        if (typeof r.period === 'string' && r.period.length === 7) {
+          // YYYY-MM -> YYYY-MM-01
+          date = `${r.period}-01`
+        } else if (r.createdAt) {
+          date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0] : ''
+        }
 
-      if (date) {
-        const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
-        dailyMap.set(date, {
-          ...current,
-          revenue: current.revenue + (r.revenue || 0),
-        })
-      }
-    })
+        if (date) {
+          const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
+          dailyMap.set(date, {
+            ...current,
+            revenue: current.revenue + (Number(r.revenue) || 0),
+          })
+        }
+      })
+    }
 
     return Array.from(dailyMap.entries())
       .map(([date, vals]) => ({ date, ...vals }))

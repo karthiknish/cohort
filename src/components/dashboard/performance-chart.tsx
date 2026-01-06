@@ -40,7 +40,7 @@ const chartConfig = {
 
 export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
   const chartData = useMemo(() => {
-    if (!metrics.length) return []
+    if (!metrics || !metrics.length) return []
 
     // Aggregate by date
     const map = new Map<string, { date: string; spend: number; revenue: number }>()
