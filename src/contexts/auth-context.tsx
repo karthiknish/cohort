@@ -44,8 +44,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
+  const intentionalSignOutRef = React.useRef(false)
 
-  const applyUser = useCallback(async (authUser: AuthUser | null) => {
+  const applyUser = useCallback(async (authUser: AuthUser | null, isIntentionalSignOut = false) => {
+    // Don't sync null unless it's an intentional sign-out.
+    // This prevents races where onAuthStateChanged fires with null during initialization
+    // or token refresh, which would incorrectly delete the session cookie.
+    if (!authUser && !isIntentionalSignOut) {
+      setUser(null)
+      return
+    }
+
     setUser(authUser)
     setIsSyncing(true)
     try {
@@ -101,7 +110,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       await authService.signOut()
-      await applyUser(null)
+      await applyUser(null, true) // Intentional sign-out - sync the null state
     } finally {
       setLoading(false)
     }
@@ -133,7 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(true)
     try {
       await authService.deleteAccount()
-      await applyUser(null)
+      await applyUser(null, true) // Intentional sign-out - sync the null state
     } finally {
       setLoading(false)
     }
@@ -346,20 +355,6 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
         }
 
         console.error('[AuthProvider] Failed to sync session cookies. Status:', status)
-        return false
-      }
-
-      // Verify the cookie is actually present on the server before proceeding.
-      // This prevents race conditions on live deployments where the cookie may not
-      // be immediately visible to middleware after the POST response.
-      const cookieConfirmed = await waitForServerSessionPresence(true, 5)
-      if (!cookieConfirmed) {
-        console.warn('[AuthProvider] Session cookie not confirmed after sync, retrying...')
-        if (retryCount < 2) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          return syncSessionCookies(authUser, retryCount + 1)
-        }
-        console.error('[AuthProvider] Session cookie verification failed after retries')
         return false
       }
 
