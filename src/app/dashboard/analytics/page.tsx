@@ -48,6 +48,9 @@ import {
 
 import { FeatureTips } from '@/components/dashboard/feature-tips'
 import { Megaphone, CreditCard, FileText } from 'lucide-react'
+import { usePreview } from '@/contexts/preview-context'
+import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
+import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
 
 interface MetricRecord {
   id: string
@@ -114,8 +117,19 @@ const fetcher = async (url: string, token: string) => {
   return response.json()
 }
 
-function useAnalyticsData(token: string | null, periodDays: number, clientId: string | null) {
-  const shouldFetch = Boolean(token)
+function useAnalyticsData(token: string | null, periodDays: number, clientId: string | null, isPreviewMode: boolean) {
+  // If in preview mode, return preview data immediately
+  const previewMetrics = useMemo(() => {
+    if (!isPreviewMode) return null
+    return getPreviewAnalyticsMetrics(clientId) as MetricRecord[]
+  }, [isPreviewMode, clientId])
+  
+  const previewInsights = useMemo(() => {
+    if (!isPreviewMode) return null
+    return getPreviewAnalyticsInsights()
+  }, [isPreviewMode])
+
+  const shouldFetch = Boolean(token) && !isPreviewMode
   const metricsUrl = clientId ? `/api/metrics?clientId=${encodeURIComponent(clientId)}` : '/api/metrics'
   const metricsKey: [string, string] | null = shouldFetch && token ? [metricsUrl, token] : null
 
@@ -150,11 +164,13 @@ function useAnalyticsData(token: string | null, periodDays: number, clientId: st
   )
 
   useEffect(() => {
+    if (isPreviewMode) return
     setMetricsList([])
     setMetricsCursor(null)
-  }, [metricsUrl])
+  }, [metricsUrl, isPreviewMode])
 
   useEffect(() => {
+    if (isPreviewMode) return
     if (!data) {
       return
     }
@@ -163,10 +179,10 @@ function useAnalyticsData(token: string | null, periodDays: number, clientId: st
     const entries = Array.isArray(payload.metrics) ? payload.metrics : []
     setMetricsList(entries)
     setMetricsCursor(typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null)
-  }, [data])
+  }, [data, isPreviewMode])
 
   const loadMoreMetrics = useCallback(async () => {
-    if (!token || !metricsCursor) {
+    if (isPreviewMode || !token || !metricsCursor) {
       return
     }
 
@@ -194,7 +210,27 @@ function useAnalyticsData(token: string | null, periodDays: number, clientId: st
     } finally {
       setMetricsLoadingMore(false)
     }
-  }, [metricsCursor, metricsUrl, token])
+  }, [metricsCursor, metricsUrl, token, isPreviewMode])
+
+  // Return preview data if in preview mode
+  if (isPreviewMode && previewMetrics && previewInsights) {
+    return {
+      metricsData: previewMetrics,
+      metricsNextCursor: null,
+      metricsLoadingMore: false,
+      loadMoreMetrics: async () => {},
+      metricsError: undefined,
+      metricsLoading: false,
+      metricsRefreshing: false,
+      mutateMetrics: async () => undefined,
+      insights: previewInsights.insights as ProviderInsight[],
+      algorithmic: previewInsights.algorithmic as AlgorithmicInsight[],
+      insightsError: undefined,
+      insightsLoading: false,
+      insightsRefreshing: false,
+      mutateInsights: async () => undefined,
+    }
+  }
 
   return {
     metricsData: metricsList,
@@ -255,6 +291,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
 
@@ -295,7 +332,7 @@ export default function AnalyticsPage() {
     insightsLoading,
     insightsRefreshing,
     mutateInsights,
-  } = useAnalyticsData(token, periodDays, selectedClientId ?? null)
+  } = useAnalyticsData(token, periodDays, selectedClientId ?? null, isPreviewMode)
 
   const metrics = metricsData
   const handleLoadMoreMetrics = useCallback(async () => {
@@ -454,6 +491,8 @@ export default function AnalyticsPage() {
           </select>
         </div>
       </div>
+
+      <PreviewDataBanner />
 
       {metricsError && (
         <Alert variant="destructive">

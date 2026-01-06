@@ -6,8 +6,10 @@ import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { FadeIn } from '@/components/ui/animate-in'
 import { useAuth } from '@/contexts/auth-context'
+import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency } from '@/lib/utils'
+import { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 
 import {
   AdsSkeleton,
@@ -48,6 +50,7 @@ export default function AdsPage() {
     disconnectProvider,
     getIdToken,
   } = useAuth()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   // Connection state
@@ -293,6 +296,18 @@ export default function AdsPage() {
 
   // Data loading effects
   useEffect(() => {
+    // In preview mode, use preview data
+    if (isPreviewMode) {
+      const previewStatuses = getPreviewAdsIntegrationStatuses()
+      const previewMetrics = getPreviewAdsMetrics()
+      setIntegrationStatuses({ statuses: previewStatuses })
+      setMetrics(previewMetrics as MetricRecord[])
+      setMetricsLoading(false)
+      setMetricError(null)
+      setNextCursor(null)
+      return
+    }
+
     if (!user?.id) {
       setIntegrationStatuses(null)
       setMetrics([])
@@ -334,7 +349,7 @@ export default function AdsPage() {
     }
     void loadData()
     return () => { isSubscribed = false }
-  }, [user?.id, refreshTick, getIdToken])
+  }, [user?.id, refreshTick, getIdToken, isPreviewMode])
 
   useEffect(() => {
     if (!integrationStatuses) return
@@ -636,55 +651,59 @@ export default function AdsPage() {
         </div>
       </FadeIn>
 
-      {showWorkflow && (
+      {showWorkflow && !isPreviewMode && (
         <FadeIn>
           <WorkflowCard />
         </FadeIn>
       )}
 
-      <FadeIn>
-        <SetupAlerts
-          metaSetupMessage={metaSetupMessage}
-          metaNeedsAccountSelection={metaNeedsAccountSelection}
-          initializingMeta={initializingMeta}
-          onInitializeMeta={() => void initializeMetaIntegration()}
-          tiktokSetupMessage={tiktokSetupMessage}
-          tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
-          initializingTikTok={initializingTikTok}
-          onInitializeTikTok={() => void initializeTikTokIntegration()}
-        />
-      </FadeIn>
+      {!isPreviewMode && (
+        <>
+          <FadeIn>
+            <SetupAlerts
+              metaSetupMessage={metaSetupMessage}
+              metaNeedsAccountSelection={metaNeedsAccountSelection}
+              initializingMeta={initializingMeta}
+              onInitializeMeta={() => void initializeMetaIntegration()}
+              tiktokSetupMessage={tiktokSetupMessage}
+              tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
+              initializingTikTok={initializingTikTok}
+              onInitializeTikTok={() => void initializeTikTokIntegration()}
+            />
+          </FadeIn>
 
-      <FadeIn>
-        <div id="connect-ad-platforms">
-          <AdConnectionsCard
-            providers={adPlatforms}
-            connectedProviders={connectedProviders}
-            connectingProvider={connectingProvider}
-            connectionErrors={connectionErrors}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-            onOauthRedirect={handleOauthRedirect}
-            onRefresh={handleManualRefresh}
-            refreshing={metricsLoading}
-          />
-        </div>
-      </FadeIn>
+          <FadeIn>
+            <div id="connect-ad-platforms">
+              <AdConnectionsCard
+                providers={adPlatforms}
+                connectedProviders={connectedProviders}
+                connectingProvider={connectingProvider}
+                connectionErrors={connectionErrors}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                onOauthRedirect={handleOauthRedirect}
+                onRefresh={handleManualRefresh}
+                refreshing={metricsLoading}
+              />
+            </div>
+          </FadeIn>
 
-      <FadeIn>
-        <AutomationControlsCard
-          automationStatuses={automationStatuses}
-          automationDraft={automationDraft}
-          savingSettings={savingSettings}
-          settingsErrors={settingsErrors}
-          expandedProviders={expandedProviders}
-          syncingProvider={syncingProvider}
-          onUpdateDraft={updateAutomationDraft}
-          onSaveAutomation={(id) => void handleSaveAutomation(id)}
-          onToggleAdvanced={toggleAdvanced}
-          onRunManualSync={(id) => void runManualSync(id)}
-        />
-      </FadeIn>
+          <FadeIn>
+            <AutomationControlsCard
+              automationStatuses={automationStatuses}
+              automationDraft={automationDraft}
+              savingSettings={savingSettings}
+              settingsErrors={settingsErrors}
+              expandedProviders={expandedProviders}
+              syncingProvider={syncingProvider}
+              onUpdateDraft={updateAutomationDraft}
+              onSaveAutomation={(id) => void handleSaveAutomation(id)}
+              onToggleAdvanced={toggleAdvanced}
+              onRunManualSync={(id) => void runManualSync(id)}
+            />
+          </FadeIn>
+        </>
+      )}
 
       <FadeIn>
         <CrossChannelOverviewCard

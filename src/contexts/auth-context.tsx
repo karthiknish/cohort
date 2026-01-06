@@ -304,7 +304,11 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
   const performSync = async (): Promise<boolean> => {
     try {
       if (!token) {
-        const response = await fetch('/api/auth/session', { method: 'DELETE' })
+        const response = await fetch('/api/auth/session', {
+          method: 'DELETE',
+          cache: 'no-store',
+          credentials: 'same-origin',
+        })
         if (response.ok) {
           setStoredSyncToken(null)
         }

@@ -20,6 +20,7 @@ import type { Channel } from '../types'
 import type { ChannelSummary } from '../hooks/types'
 
 import { CheckSquare, FileText } from 'lucide-react'
+import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
 
 export function CollaborationDashboard() {
   const searchParams = useSearchParams()
@@ -136,6 +137,8 @@ export function CollaborationDashboard() {
           </p>
         </div>
       </div>
+
+      <PreviewDataBanner />
 
       {isFeatureEnabled('BIDIRECTIONAL_NAV') && (requestedProjectId || requestedProjectName) && (
         <div className="mx-4 mb-3 flex items-center justify-between rounded-md border border-muted/40 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">

@@ -236,14 +236,7 @@ export default function HomePage() {
     }
 
     redirectInProgressRef.current = true
-
-    // Small delay to ensure the session cookie has been fully processed by the browser
-    // before navigating, preventing race conditions on multi-instance deployments.
-    const timeoutId = setTimeout(() => {
-      router.replace(destination)
-    }, 100)
-
-    return () => clearTimeout(timeoutId)
+    router.replace(destination)
   }, [loading, isSyncing, user, router, searchParams, toast])
 
   // When we're back on the home page without a user, clear any stale redirect-loop tracking.

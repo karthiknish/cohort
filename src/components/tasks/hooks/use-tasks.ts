@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
 import { apiFetch } from '@/lib/api-client'
+import { getPreviewTasks } from '@/lib/preview-data'
 import {
   RETRY_CONFIG,
   TaskListResponse,
@@ -17,6 +18,7 @@ export type UseTasksOptions = {
   userId: string | undefined
   clientId: string | undefined
   authLoading: boolean
+  isPreviewMode?: boolean
 }
 
 export type UseTasksReturn = {
@@ -61,7 +63,7 @@ export type UpdateTaskPayload = {
   tags: string[]
 }
 
-export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): UseTasksReturn {
+export function useTasks({ userId, clientId, authLoading, isPreviewMode = false }: UseTasksOptions): UseTasksReturn {
   const { toast } = useToast()
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -75,6 +77,15 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
 
   // Load tasks effect
   useEffect(() => {
+    // Handle preview mode
+    if (isPreviewMode) {
+      setTasks(getPreviewTasks(clientId ?? null))
+      setNextCursor(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     if (authLoading) return
 
     if (!userId) {
@@ -155,7 +166,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         abortControllerRef.current.abort()
       }
     }
-  }, [authLoading, clientId, userId, toast])
+  }, [authLoading, clientId, userId, toast, isPreviewMode])
 
   const handleLoadMore = useCallback(async () => {
     if (loadingMore || !nextCursor) return
@@ -191,6 +202,19 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
   }, [loadingMore, nextCursor, clientId, toast])
 
   const handleRefresh = useCallback(async () => {
+    // Handle preview mode refresh
+    if (isPreviewMode) {
+      const previewTasks = getPreviewTasks(clientId ?? null)
+      setTasks(previewTasks)
+      setNextCursor(null)
+      setError(null)
+      toast({
+        title: 'Preview refreshed',
+        description: `${previewTasks.length} demo task${previewTasks.length !== 1 ? 's' : ''} loaded.`,
+      })
+      return
+    }
+
     if (!userId || !clientId) return
 
     setLoading(true)
@@ -225,10 +249,20 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
     } finally {
       setLoading(false)
     }
-  }, [userId, clientId, toast])
+  }, [userId, clientId, toast, isPreviewMode])
 
   const handleQuickStatusChange = useCallback(
     async (task: TaskRecord, newStatus: TaskStatus) => {
+      // In preview mode, allow local state changes but show info toast
+      if (isPreviewMode) {
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)))
+        toast({
+          title: 'Preview mode',
+          description: `Status changed to "${formatStatusLabel(newStatus)}" (not saved).`,
+        })
+        return
+      }
+
       if (!userId) return
       if (pendingStatusUpdates.has(task.id)) return
 
@@ -265,11 +299,20 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         })
       }
     },
-    [userId, pendingStatusUpdates, toast]
+    [userId, pendingStatusUpdates, toast, isPreviewMode]
   )
 
   const handleDeleteTask = useCallback(
     async (task: TaskRecord): Promise<boolean> => {
+      // In preview mode, show info toast instead of deleting
+      if (isPreviewMode) {
+        toast({
+          title: 'Preview mode',
+          description: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+        })
+        return true
+      }
+
       try {
       await apiFetch(`/api/tasks/${task.id}`, {
         method: 'DELETE',
@@ -292,11 +335,38 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         return false
       }
     },
-    [toast]
+    [toast, isPreviewMode]
   )
 
   const handleCreateTask = useCallback(
     async (payload: CreateTaskPayload): Promise<TaskRecord | null> => {
+      // In preview mode, create a fake task locally
+      if (isPreviewMode) {
+        const fakeTask: TaskRecord = {
+          id: `preview-task-${Date.now()}`,
+          title: payload.title,
+          description: payload.description ?? null,
+          status: payload.status,
+          priority: payload.priority as TaskRecord['priority'],
+          assignedTo: payload.assignedTo,
+          clientId: payload.clientId,
+          client: payload.client ?? null,
+          projectId: null,
+          projectName: null,
+          dueDate: payload.dueDate ?? null,
+          tags: payload.tags,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+        }
+        setTasks((prev) => [fakeTask, ...prev])
+        toast({
+          title: 'Preview mode',
+          description: `Task created locally (not saved).`,
+        })
+        return fakeTask
+      }
+
       try {
       const createdTask = await apiFetch<TaskRecord>('/api/tasks', {
         method: 'POST',
@@ -314,11 +384,36 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         throw err
       }
     },
-    [toast]
+    [toast, isPreviewMode]
   )
 
   const handleUpdateTask = useCallback(
     async (taskId: string, payload: UpdateTaskPayload): Promise<TaskRecord | null> => {
+      // In preview mode, update local state only
+      if (isPreviewMode) {
+        setTasks((prev) => prev.map((t) => {
+          if (t.id === taskId) {
+            return {
+              ...t,
+              title: payload.title ?? t.title,
+              description: payload.description ?? t.description,
+              status: payload.status ?? t.status,
+              priority: (payload.priority as TaskRecord['priority']) ?? t.priority,
+              assignedTo: payload.assignedTo ?? t.assignedTo,
+              dueDate: payload.dueDate ?? t.dueDate,
+              tags: payload.tags ?? t.tags,
+              updatedAt: new Date().toISOString(),
+            }
+          }
+          return t
+        }))
+        toast({
+          title: 'Preview mode',
+          description: `Task updated locally (not saved).`,
+        })
+        return null
+      }
+
       try {
       const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -335,11 +430,35 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         throw err
       }
     },
-    [toast]
+    [toast, isPreviewMode]
   )
 
   const handleBulkUpdate = useCallback(
     async (ids: string[], update: Partial<UpdateTaskPayload>): Promise<boolean> => {
+      // In preview mode, update local state only
+      if (isPreviewMode) {
+        const idSet = new Set(ids)
+        setTasks((prev) => prev.map((t) => {
+          if (idSet.has(t.id)) {
+            return {
+              ...t,
+              status: update.status ?? t.status,
+              priority: (update.priority as TaskRecord['priority']) ?? t.priority,
+              assignedTo: update.assignedTo ?? t.assignedTo,
+              dueDate: update.dueDate ?? t.dueDate,
+              tags: update.tags ?? t.tags,
+              updatedAt: new Date().toISOString(),
+            }
+          }
+          return t
+        }))
+        toast({
+          title: 'Preview mode',
+          description: `${ids.length} task(s) updated locally (not saved).`,
+        })
+        return true
+      }
+
       try {
         const data = await apiFetch<{ message: string; results: any[]; tasks: TaskRecord[] }>('/api/tasks/bulk', {
           method: 'PATCH',
@@ -369,11 +488,20 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         return false
       }
     },
-    [toast]
+    [toast, isPreviewMode]
   )
 
   const handleBulkDelete = useCallback(
     async (ids: string[]): Promise<boolean> => {
+      // In preview mode, show info toast
+      if (isPreviewMode) {
+        toast({
+          title: 'Preview mode',
+          description: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+        })
+        return true
+      }
+
       try {
         const data = await apiFetch<{ message: string; results: any[] }>('/api/tasks/bulk', {
           method: 'DELETE',
@@ -398,7 +526,7 @@ export function useTasks({ userId, clientId, authLoading }: UseTasksOptions): Us
         return false
       }
     },
-    [toast]
+    [toast, isPreviewMode]
   )
 
   return {

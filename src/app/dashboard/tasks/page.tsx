@@ -17,6 +17,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
+import { usePreview } from '@/contexts/preview-context'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
@@ -76,6 +77,7 @@ export default function TasksPage() {
   const { user, loading: authLoading } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
   const { setProjectContext } = useNavigationContext()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   // Project filter state
@@ -126,6 +128,7 @@ export default function TasksPage() {
     userId: user?.id,
     clientId: selectedClientId ?? undefined,
     authLoading,
+    isPreviewMode,
   })
 
   // Debounced search for filters

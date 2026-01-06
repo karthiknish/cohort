@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
 import { adminAuth } from '@/lib/firebase-admin'
@@ -89,15 +89,18 @@ export const DELETE = createApiHandler(
     rateLimit: 'standard',
   },
   async () => {
-    const cookieStore = await cookies()
-    cookieStore.delete('cohorts_token')
-    cookieStore.delete('cohorts_role')
-    cookieStore.delete('cohorts_status')
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: true },
-      { 
-        headers: { 'Cache-Control': 'no-store, max-age=0' }
+      {
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
       }
     )
+
+    // Delete cookies on the response so the browser receives Set-Cookie expirations.
+    response.cookies.delete('cohorts_token')
+    response.cookies.delete('cohorts_role')
+    response.cookies.delete('cohorts_status')
+
+    return response
   }
 )

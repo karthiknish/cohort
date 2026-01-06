@@ -32,7 +32,9 @@ import {
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
+import { getPreviewProjects } from '@/lib/preview-data'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
@@ -157,6 +159,7 @@ function isNetworkError(error: unknown): boolean {
 export default function ProjectsPage() {
   const { user, getIdToken } = useAuth()
   const { selectedClient, selectedClientId } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -188,6 +191,31 @@ export default function ProjectsPage() {
   const debouncedQuery = useDebouncedValue(searchInput, 350)
 
   const loadProjects = useCallback(async (retryAttempt = 0) => {
+    // Use preview data when in preview mode
+    if (isPreviewMode) {
+      let previewProjects = getPreviewProjects(selectedClientId)
+      
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        previewProjects = previewProjects.filter((p) => p.status === statusFilter)
+      }
+      
+      // Apply search filter
+      if (debouncedQuery.trim().length > 0) {
+        const query = debouncedQuery.trim().toLowerCase()
+        previewProjects = previewProjects.filter((p) =>
+          p.name.toLowerCase().includes(query) ||
+          p.description?.toLowerCase().includes(query) ||
+          p.tags.some((tag) => tag.toLowerCase().includes(query))
+        )
+      }
+      
+      setProjects(previewProjects)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     if (!user?.id) {
       setProjects([])
       setLoading(false)
@@ -254,7 +282,7 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedQuery, getIdToken, selectedClientId, statusFilter, user?.id, toast])
+  }, [debouncedQuery, getIdToken, isPreviewMode, selectedClientId, statusFilter, user?.id, toast])
 
   const loadMilestones = useCallback(async (projectIds: string[]) => {
     if (!user?.id || projectIds.length === 0) {
@@ -337,7 +365,20 @@ export default function ProjectsPage() {
   }, [])
 
   const handleDeleteProject = useCallback(async () => {
-    if (!projectToDelete || !user?.id) return
+    if (!projectToDelete) return
+
+    // In preview mode, show info toast and close dialog
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Changes are not saved in preview mode. Exit preview to make real changes.',
+      })
+      setDeleteDialogOpen(false)
+      setProjectToDelete(null)
+      return
+    }
+
+    if (!user?.id) return
 
     setDeleting(true)
     try {
@@ -358,9 +399,21 @@ export default function ProjectsPage() {
       setDeleteDialogOpen(false)
       setProjectToDelete(null)
     }
-  }, [projectToDelete, user?.id, getIdToken, toast])
+  }, [projectToDelete, isPreviewMode, user?.id, getIdToken, toast])
 
   const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
+    // In preview mode, just update local state (won't persist)
+    if (isPreviewMode) {
+      setProjects((prev) => prev.map((p) => 
+        p.id === project.id ? { ...p, status: newStatus } : p
+      ))
+      toast({
+        title: 'Preview mode',
+        description: `Status changed to ${formatStatusLabel(newStatus)} (not saved).`,
+      })
+      return
+    }
+
     if (!user?.id) return
     
     // Prevent duplicate updates
@@ -398,7 +451,7 @@ export default function ProjectsPage() {
         return next
       })
     }
-  }, [user?.id, getIdToken, toast, pendingStatusUpdates])
+  }, [isPreviewMode, user?.id, getIdToken, toast, pendingStatusUpdates])
 
   const openDeleteDialog = useCallback((project: ProjectRecord) => {
     setProjectToDelete(project)
