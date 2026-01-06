@@ -3,19 +3,11 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import type { FinanceCostEntry } from '@/types/finance'
+import type { StoredFinanceCost } from '@/types/stored-types'
 import { coerceNumber, toISO } from '@/lib/utils'
 import { NotFoundError } from '@/lib/api-errors'
 import { logAuditAction } from '@/lib/audit-logger'
 
-type StoredFinanceCost = {
-  clientId?: unknown
-  category?: unknown
-  amount?: unknown
-  cadence?: unknown
-  currency?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
 
 const amountSchema = z
   .union([z.number(), z.string()])

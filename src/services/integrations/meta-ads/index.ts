@@ -56,8 +56,10 @@ export {
   listMetaCampaigns,
   updateMetaCampaignStatus,
   updateMetaCampaignBudget,
+  updateMetaCampaignBidding,
   removeMetaCampaign,
   fetchMetaAdMetrics,
   fetchMetaCreatives,
   fetchMetaAudienceTargeting,
+  createMetaAudience,
 } from './campaigns'

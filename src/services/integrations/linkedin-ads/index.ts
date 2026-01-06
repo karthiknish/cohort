@@ -29,10 +29,12 @@ export {
   listLinkedInCampaigns,
   updateLinkedInCampaignStatus,
   updateLinkedInCampaignBudget,
+  updateLinkedInCampaignBidding,
   removeLinkedInCampaign,
   fetchLinkedInCreativeMetrics,
   fetchLinkedInCreatives,
   fetchLinkedInAudienceTargeting,
+  createLinkedInAudience,
 } from './campaigns'
 
 

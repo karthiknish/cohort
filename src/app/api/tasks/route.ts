@@ -4,11 +4,15 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
+import type { StoredTask } from '@/types/stored-types'
 import { buildCacheHeaders, serverCache } from '@/lib/cache'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { notifyTaskCreatedWhatsApp, recordTaskNotification } from '@/lib/notifications'
 import { NotFoundError } from '@/lib/api-errors'
 import { coerceStringArray, toISO, sanitizeInput } from '@/lib/utils'
+
+// Re-export StoredTask for backward compatibility
+export type { StoredTask } from '@/types/stored-types'
 
 export const baseTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
@@ -42,23 +46,6 @@ const taskQuerySchema = z.object({
   pageSize: z.string().optional(),
   after: z.string().optional(),
 })
-
-export type StoredTask = {
-  title?: unknown
-  description?: unknown
-  status?: unknown
-  priority?: unknown
-  assignedTo?: unknown
-  client?: unknown
-  clientId?: unknown
-  projectId?: unknown
-  projectName?: unknown
-  dueDate?: unknown
-  tags?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-  deletedAt?: unknown
-}
 
 export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
   const status = (typeof data.status === 'string' ? data.status : 'todo') as TaskStatus

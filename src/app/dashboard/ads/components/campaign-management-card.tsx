@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { Pause, Play, Trash2, DollarSign, RefreshCw } from 'lucide-react'
+import { Pause, Play, Trash2, DollarSign, RefreshCw, Settings2, Calendar, TrendingUp, Clock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +38,17 @@ type Campaign = {
   budget?: number
   budgetType?: string
   objective?: string
+  biddingStrategy?: {
+    type: string
+    targetCpa?: number
+    targetRoas?: number
+    bidCeiling?: number
+  }
+  schedule?: Array<{
+    dayOfWeek: string
+    startHour: number
+    endHour: number
+  }>
 }
 
 type Props = {
@@ -56,8 +67,14 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
+  const [biddingDialogOpen, setBiddingDialogOpen] = useState(false)
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [newBudget, setNewBudget] = useState('')
+  const [newBidding, setNewBidding] = useState({
+    type: '',
+    value: '',
+  })
 
   const fetchCampaigns = useCallback(async () => {
     if (!isConnected) return
@@ -150,6 +167,48 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     }
   }, [selectedCampaign, newBudget, providerId, fetchCampaigns, onRefresh])
 
+  const handleBiddingUpdate = useCallback(async () => {
+    if (!selectedCampaign || !newBidding.type) return
+    
+    setActionLoading(selectedCampaign.id)
+    try {
+      const response = await fetch('/api/integrations/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${selectedCampaign.id}-bidding-${Date.now()}` },
+        body: JSON.stringify({
+          providerId,
+          campaignId: selectedCampaign.id,
+          action: 'updateBidding',
+          biddingType: newBidding.type,
+          biddingValue: parseFloat(newBidding.value || '0'),
+        }),
+      })
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Bidding update failed')
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Bidding strategy updated successfully',
+      })
+      
+      setBiddingDialogOpen(false)
+      setSelectedCampaign(null)
+      fetchCampaigns()
+      onRefresh?.()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update bidding',
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(null)
+    }
+  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh])
+
   const getStatusBadge = (status: string) => {
     const statusLower = status.toLowerCase()
     if (statusLower === 'enabled' || statusLower === 'enable' || statusLower === 'active') {
@@ -196,7 +255,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
         <CardContent>
           {campaigns.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              Click "Load Campaigns" to view and manage your campaigns.
+              Click &quot;Load Campaigns&quot; to view and manage your campaigns.
             </p>
           ) : (
             <Table>
@@ -259,10 +318,39 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                         <DollarSign className="h-4 w-4" />
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCampaign(campaign)
+                          setNewBidding({
+                            type: campaign.biddingStrategy?.type || '',
+                            value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
+                          })
+                          setBiddingDialogOpen(true)
+                        }}
+                        disabled={actionLoading === campaign.id}
+                        title="Bidding Strategy"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCampaign(campaign)
+                          setScheduleDialogOpen(true)
+                        }}
+                        disabled={actionLoading === campaign.id}
+                        title="Ad Schedule"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                      <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => handleAction(campaign.id, 'remove')}
                         disabled={actionLoading === campaign.id}
+                        title="Remove Campaign"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -302,6 +390,90 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
             </Button>
             <Button onClick={handleBudgetUpdate} disabled={actionLoading !== null}>
               Update Budget
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={biddingDialogOpen} onOpenChange={setBiddingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bidding Strategy</DialogTitle>
+            <DialogDescription>
+              Update bidding strategy for {selectedCampaign?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="biddingType">Strategy Type</Label>
+              <Input
+                id="biddingType"
+                value={newBidding.type}
+                onChange={(e) => setNewBidding({ ...newBidding, type: e.target.value })}
+                placeholder="e.g. TARGET_CPA, MAXIMIZE_CONVERSIONS"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="biddingValue">Target Value / Bid Ceiling</Label>
+              <Input
+                id="biddingValue"
+                type="number"
+                step="0.01"
+                value={newBidding.value}
+                onChange={(e) => setNewBidding({ ...newBidding, value: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBiddingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBiddingUpdate} disabled={actionLoading !== null}>
+              Update Bidding
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Ad Schedule</DialogTitle>
+            <DialogDescription>
+              View delivery schedule for {selectedCampaign?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedCampaign?.schedule && selectedCampaign.schedule.length > 0 ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 font-semibold text-sm pb-2 border-b">
+                  <span>Day</span>
+                  <span>Start</span>
+                  <span>End</span>
+                </div>
+                {selectedCampaign.schedule.map((s, i) => (
+                  <div key={i} className="grid grid-cols-3 text-sm py-1 border-b border-muted">
+                    <span className="capitalize">{s.dayOfWeek.toLowerCase()}</span>
+                    <span>{s.startHour}:00</span>
+                    <span>{s.endHour}:00</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center space-y-2">
+                <Clock className="h-8 w-8 text-muted-foreground" />
+                <p className="text-muted-foreground text-sm">No custom schedule configured.<br/>Ad will run 24/7.</p>
+              </div>
+            )}
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg border text-xs text-muted-foreground flex gap-2">
+              <Settings2 className="h-4 w-4 shrink-0" />
+              <p>Schedule modification is currently limited to the native ad platform for safety. Advanced scheduling controls coming soon.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setScheduleDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

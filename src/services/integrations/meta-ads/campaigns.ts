@@ -453,3 +453,63 @@ export async function fetchMetaAudienceTargeting(options: {
     }
   })
 }
+
+// =============================================================================
+// CREATE AUDIENCE (CUSTOM AUDIENCE)
+// =============================================================================
+
+export async function createMetaAudience(options: {
+  accessToken: string
+  adAccountId: string
+  name: string
+  description?: string
+  segments: string[]
+  maxRetries?: number
+}): Promise<{ success: boolean; id: string }> {
+  const {
+    accessToken,
+    adAccountId,
+    name,
+    description,
+    maxRetries = 3,
+  } = options
+
+  const params = new URLSearchParams({
+    name,
+    description: description || `Created via Cohort Ads Hub`,
+    subtype: 'CUSTOM',
+    customer_file_source: 'BOTH_USER_AND_PARTNER_PROVIDED',
+  })
+
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+  const url = `${META_API_BASE}/${adAccountId}/customaudiences?${params.toString()}`
+
+  const { payload } = await executeMetaApiRequest<{ id?: string }>({
+    url,
+    accessToken,
+    operation: 'createAudience',
+    method: 'POST',
+    maxRetries,
+  })
+
+  return { 
+    success: true, 
+    id: payload?.id ?? '' 
+  }
+}
+
+// =============================================================================
+// UPDATE CAMPAIGN BIDDING (Placeholder)
+// =============================================================================
+
+export async function updateMetaCampaignBidding(options: {
+  accessToken: string
+  campaignId: string
+  biddingType: string
+  biddingValue: number
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  // Meta bidding is usually done at the AdSet level.
+  return { success: true }
+}

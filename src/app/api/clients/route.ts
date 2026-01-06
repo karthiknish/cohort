@@ -5,6 +5,7 @@ import { createApiHandler } from '@/lib/api-handler'
 import { adminDb } from '@/lib/firebase-admin'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
+import type { StoredClient } from '@/types/stored-types'
 import { ConflictError, NotFoundError } from '@/lib/api-errors'
 import { coerceNumber, toISO } from '@/lib/utils'
 import { logAuditAction } from '@/lib/audit-logger'
@@ -33,22 +34,6 @@ const paginationQuerySchema = z.object({
   pageSize: z.string().optional(),
   after: z.string().optional(),
 })
-
-type StoredClient = {
-  name?: unknown
-  accountManager?: unknown
-  teamMembers?: unknown
-  billingEmail?: unknown
-  stripeCustomerId?: unknown
-  lastInvoiceStatus?: unknown
-  lastInvoiceAmount?: unknown
-  lastInvoiceCurrency?: unknown
-  lastInvoiceIssuedAt?: unknown
-  lastInvoiceNumber?: unknown
-  lastInvoiceUrl?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
 
 function slugify(value: string): string {
   const base = value
@@ -276,14 +261,14 @@ export const POST = createApiHandler(
     if (!workspace) throw new Error('Workspace context missing')
     const payload = body
 
-    const resolvedTeam = payload.teamMembers
-      .map((member: any) => ({
+    const resolvedTeam: ClientTeamMember[] = payload.teamMembers
+      .map((member) => ({
         name: member.name.trim(),
         role: (member.role ?? '').trim() || 'Contributor',
       }))
-      .filter((member: any) => member.name.length > 0)
+      .filter((member): member is ClientTeamMember => member.name.length > 0)
 
-    if (!resolvedTeam.some((member: any) => member.name.toLowerCase() === payload.accountManager.toLowerCase())) {
+    if (!resolvedTeam.some((member) => member.name.toLowerCase() === payload.accountManager.toLowerCase())) {
       resolvedTeam.unshift({ name: payload.accountManager, role: 'Account Manager' })
     }
 

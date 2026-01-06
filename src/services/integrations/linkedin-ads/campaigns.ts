@@ -543,3 +543,100 @@ export async function fetchLinkedInAudienceTargeting(options: {
     return targeting
   })
 }
+
+// =============================================================================
+// CREATE AUDIENCE (AD SEGMENT)
+// =============================================================================
+
+export async function createLinkedInAudience(options: {
+  accessToken: string
+  accountId: string
+  name: string
+  description?: string
+  segments: string[]
+  maxRetries?: number
+}): Promise<{ success: boolean; id: string }> {
+  const {
+    accessToken,
+    accountId,
+    name,
+    description,
+    maxRetries = 3,
+  } = options
+
+  const url = `https://api.linkedin.com/v2/adSegments`
+
+  const body = {
+    account: `urn:li:sponsoredAccount:${accountId}`,
+    name,
+    description: description || `Created via Cohort Ads Hub`,
+    type: 'MATCHED_AUDIENCE',
+    status: 'ACTIVE'
+  }
+
+  const { payload } = await executeLinkedInApiRequest<any>({
+    url,
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+    },
+    body: JSON.stringify(body),
+    operation: 'createAudience',
+    maxRetries,
+  })
+
+  return { 
+    success: true, 
+    id: payload.id || '' 
+  }
+}
+
+// =============================================================================
+// UPDATE CAMPAIGN BIDDING
+// =============================================================================
+
+export async function updateLinkedInCampaignBidding(options: {
+  accessToken: string
+  campaignId: string
+  biddingType: string
+  biddingValue: number
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  const {
+    accessToken,
+    campaignId,
+    biddingValue,
+    maxRetries = 3,
+  } = options
+
+  const url = `https://api.linkedin.com/v2/adCampaignsV2/urn:li:sponsoredCampaign:${campaignId}`
+
+  // LinkedIn's bidding is often part of the costType and unitCost
+  // For this generic update, we'll assume updating the unitCost amount
+  const patchData = {
+    unitCost: {
+      amount: biddingValue.toString(),
+      currencyCode: 'USD'
+    }
+  }
+
+  const { payload } = await executeLinkedInApiRequest<any>({
+    url,
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+      'X-HTTP-Method-Override': 'PATCH',
+    },
+    body: JSON.stringify({ patch: { $set: patchData } }),
+    operation: 'updateCampaignBidding',
+    maxRetries,
+  })
+
+  return { success: true }
+}

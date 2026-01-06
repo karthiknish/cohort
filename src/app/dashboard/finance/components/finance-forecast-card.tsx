@@ -1,15 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { TrendingUp, Sparkles } from 'lucide-react'
 
 import {
@@ -19,6 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 import { formatCurrency } from '../utils'
 
 interface ForecastDatum {
@@ -39,6 +36,17 @@ export function FinanceForecastCard({ data, currency }: FinanceForecastCardProps
 
   if (isEmpty) return null
 
+  const chartConfig = {
+    revenue: {
+      label: 'Projected Revenue',
+      color: 'hsl(var(--primary))',
+    },
+    profit: {
+      label: 'Projected Profit',
+      color: 'hsl(142.1 76.2% 36.3%)', // Emerald color
+    },
+  } satisfies ChartConfig
+
   return (
     <Card className="border-primary/20 bg-gradient-to-b from-primary/5 to-background shadow-sm">
       <CardHeader className="pb-2">
@@ -57,78 +65,69 @@ export function FinanceForecastCard({ data, currency }: FinanceForecastCardProps
           </div>
         </div>
       </CardHeader>
-      <CardContent className="h-[280px] w-full pt-4">
-        <ResponsiveContainer width="100%" height="100%">
+      <CardContent className="pt-4">
+        <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="forecastRevenueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="forecastProfitGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-profit)" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="var(--color-profit)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.3} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis 
               dataKey="label" 
-              stroke="hsl(var(--muted-foreground))" 
               fontSize={11} 
               tickLine={false} 
               axisLine={false}
-              dy={10}
+              tickMargin={10}
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))" 
               fontSize={11} 
               tickLine={false} 
               axisLine={false}
               tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
               width={45}
             />
-            <Tooltip 
-              content={({ active, payload, label }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="rounded-lg border border-primary/20 bg-background/95 backdrop-blur-sm p-3 shadow-lg">
-                      <p className="mb-2 font-semibold text-foreground text-xs uppercase tracking-wider">{label}</p>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-4 text-sm">
-                          <span className="text-muted-foreground">Projected Revenue</span>
-                          <span className="font-bold text-primary">
-                            {formatCurrency(Number(payload[0].value), resolvedCurrency)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-4 text-sm">
-                          <span className="text-muted-foreground">Projected Profit</span>
-                          <span className="font-bold text-emerald-600">
-                            {formatCurrency(Number(payload[1].value), resolvedCurrency)}
-                          </span>
-                        </div>
-                      </div>
+            <ChartTooltip 
+              content={
+                <ChartTooltipContent 
+                  indicator="dashed"
+                  formatter={(value, name) => (
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        {name === 'revenue' ? 'Projected Revenue' : 'Projected Profit'}
+                      </span>
+                      <span className={`font-bold ${name === 'revenue' ? 'text-primary' : 'text-emerald-600'}`}>
+                        {formatCurrency(Number(value), resolvedCurrency)}
+                      </span>
                     </div>
-                  )
-                }
-                return null
-              }}
+                  )}
+                />
+              }
             />
             <Area 
               type="monotone" 
               dataKey="revenue" 
-              stroke="hsl(var(--primary))" 
+              stroke="var(--color-revenue)" 
               strokeWidth={2} 
               strokeDasharray="5 5"
               fill="url(#forecastRevenueGradient)"
-              name="Projected Revenue" 
             />
             <Area 
               type="monotone" 
               dataKey="profit" 
-              stroke="hsl(var(--emerald-500))" 
+              stroke="var(--color-profit)" 
               strokeWidth={2} 
               strokeDasharray="5 5"
-              fill="transparent"
-              name="Projected Profit" 
+              fill="url(#forecastProfitGradient)"
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   )

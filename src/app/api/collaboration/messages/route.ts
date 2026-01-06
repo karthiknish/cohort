@@ -11,12 +11,16 @@ import type {
   CollaborationMessageFormat,
   CollaborationReaction,
 } from '@/types/collaboration'
+import type { StoredAttachment, StoredMention, StoredReaction, StoredMessage } from '@/types/stored-types'
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
 import { type WorkspaceContext } from '@/lib/workspace'
 import { notifyCollaborationMessageWhatsApp, recordCollaborationNotification } from '@/lib/notifications'
 import { apiSuccess, createApiHandler } from '@/lib/api-handler'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
+
+// Re-export StoredMessage for backward compatibility
+export type { StoredMessage } from '@/types/stored-types'
 
 export const channelTypeSchema = z.enum(['client', 'team', 'project'])
 export const messageFormatSchema = z.enum(['markdown', 'plaintext'])
@@ -108,48 +112,7 @@ const createMessageSchema = z
     }
   })
 
-export type StoredMessage = {
-  channelType?: unknown
-  clientId?: unknown
-  projectId?: unknown
-  senderId?: unknown
-  senderName?: unknown
-  senderRole?: unknown
-  content?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-  deletedAt?: unknown
-  deletedBy?: unknown
-  deleted?: unknown
-  attachments?: unknown
-  format?: unknown
-  mentions?: unknown
-  reactions?: unknown
-  parentMessageId?: unknown
-  threadRootId?: unknown
-  isThreadRoot?: unknown
-  threadReplyCount?: unknown
-  threadLastReplyAt?: unknown
-}
 
-type StoredAttachment = {
-  name?: unknown
-  url?: unknown
-  type?: unknown
-  size?: unknown
-}
-
-type StoredMention = {
-  slug?: unknown
-  name?: unknown
-  role?: unknown
-}
-
-type StoredReaction = {
-  emoji?: unknown
-  count?: unknown
-  userIds?: unknown
-}
 
 function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
   if (!input || typeof input !== 'object') {

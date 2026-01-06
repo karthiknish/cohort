@@ -24,11 +24,13 @@ export {
   updateGoogleCampaignStatus,
   updateGoogleCampaignBudget,
   updateGoogleCampaignBudgetByCampaign,
+  updateGoogleCampaignBidding,
   removeGoogleCampaign,
   fetchGoogleAdGroupMetrics,
   fetchGoogleAdMetrics,
   fetchGoogleCreatives,
   fetchGoogleAudienceTargeting,
+  createGoogleAudience,
 } from './campaigns'
 
 

@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import type { ProposalVersion } from '@/types/proposal-versions'
+import type { StoredVersion } from '@/types/stored-types'
 import { toISO } from '@/lib/utils'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
 
@@ -17,17 +18,7 @@ const createVersionSchema = z.object({
   changeDescription: z.string().trim().max(500).nullable().optional(),
 })
 
-type StoredVersion = {
-  proposalId?: string
-  versionNumber?: number
-  formData?: unknown
-  status?: string
-  stepProgress?: number
-  changeDescription?: string | null
-  createdBy?: string
-  createdByName?: string | null
-  createdAt?: unknown
-}
+
 
 function mapVersionDoc(docId: string, data: StoredVersion): ProposalVersion {
   const rawFormData = data.formData && typeof data.formData === 'object' ? data.formData as Partial<ProposalFormData> : {}

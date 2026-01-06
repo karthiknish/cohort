@@ -69,15 +69,33 @@ interface ProposalGenerationOverlayProps {
 
 export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = false }: ProposalGenerationOverlayProps) {
   const [stageIndex, setStageIndex] = useState(0)
+  const [shouldShowOverlay, setShouldShowOverlay] = useState(false)
+  const [showCompletionState, setShowCompletionState] = useState(false)
 
+  // Track when overlay should be shown (starts when isSubmitting, stays until isPresentationReady)
   useEffect(() => {
-    if (!isSubmitting) {
-      setStageIndex(0)
+    if (isSubmitting) {
+      setShouldShowOverlay(true)
+      setShowCompletionState(false)
     }
   }, [isSubmitting])
 
+  // When presentation is ready, show completion state and then dismiss after delay
   useEffect(() => {
-    if (!isSubmitting) return
+    if (isPresentationReady && shouldShowOverlay) {
+      setShowCompletionState(true)
+      const dismissTimer = setTimeout(() => {
+        setShouldShowOverlay(false)
+        setShowCompletionState(false)
+        setStageIndex(0)
+      }, 1500) // Show success state for 1.5 seconds before dismissing
+      return () => clearTimeout(dismissTimer)
+    }
+  }, [isPresentationReady, shouldShowOverlay])
+
+  // Progress through stages while submitting and overlay is active
+  useEffect(() => {
+    if (!shouldShowOverlay || showCompletionState) return
     const current = generationFlow[stageIndex]
     if (!current || current.duration === null) return
 
@@ -86,15 +104,15 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     }, current.duration)
 
     return () => clearTimeout(id)
-  }, [isSubmitting, stageIndex])
+  }, [shouldShowOverlay, showCompletionState, stageIndex])
 
-  if (!isSubmitting) {
+  if (!shouldShowOverlay) {
     return null
   }
 
   const currentStage = generationFlow[stageIndex]
   const isFinalStage = stageIndex === generationFlow.length - 1
-  const isComplete = isFinalStage && isPresentationReady
+  const isComplete = showCompletionState || (isFinalStage && isPresentationReady)
   const progressPercent = ((stageIndex + (isComplete ? 1 : 0)) / generationFlow.length) * 100
 
   return (

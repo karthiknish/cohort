@@ -1,7 +1,8 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Info, RefreshCw } from 'lucide-react'
+import { Info, RefreshCw, Search, Filter, X } from 'lucide-react'
 
 import {
   Card,
@@ -11,9 +12,19 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -50,9 +61,43 @@ export function MetricsTableCard({
   onRefresh,
   onLoadMore,
 }: MetricsTableCardProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([])
+
+  // Get unique providers from the data
+  const availableProviders = useMemo(() => {
+    const providers = new Set(processedMetrics.map((m) => m.providerId))
+    return Array.from(providers).sort()
+  }, [processedMetrics])
+
+  // Filter metrics based on search and provider selection
+  const filteredMetrics = useMemo(() => {
+    return processedMetrics.filter((metric) => {
+      const providerName = formatProviderName(metric.providerId).toLowerCase()
+      const matchesSearch = !searchQuery || providerName.includes(searchQuery.toLowerCase())
+      const matchesProvider = selectedProviders.length === 0 || selectedProviders.includes(metric.providerId)
+      return matchesSearch && matchesProvider
+    })
+  }, [processedMetrics, searchQuery, selectedProviders])
+
+  const toggleProvider = (providerId: string) => {
+    setSelectedProviders((prev) =>
+      prev.includes(providerId)
+        ? prev.filter((p) => p !== providerId)
+        : [...prev, providerId]
+    )
+  }
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedProviders([])
+  }
+
+  const hasActiveFilters = searchQuery.length > 0 || selectedProviders.length > 0
+
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="text-lg">Latest synced rows</CardTitle>
           <CardDescription>
@@ -72,6 +117,68 @@ export function MetricsTableCard({
         </Button>
       </CardHeader>
       <CardContent>
+        {/* Search and Filter Controls */}
+        {hasMetrics && !initialMetricsLoading && (
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by provider..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Providers
+                    {selectedProviders.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
+                        {selectedProviders.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Filter by Provider</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableProviders.map((providerId) => {
+                    const ProviderIcon = PROVIDER_ICON_MAP[providerId]
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={providerId}
+                        checked={selectedProviders.includes(providerId)}
+                        onCheckedChange={() => toggleProvider(providerId)}
+                      >
+                        <span className="flex items-center gap-2">
+                          {ProviderIcon && <ProviderIcon className="h-4 w-4" />}
+                          {formatProviderName(providerId)}
+                        </span>
+                      </DropdownMenuCheckboxItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                  <X className="h-4 w-4" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Results count when filtering */}
+        {hasActiveFilters && hasMetrics && (
+          <p className="mb-3 text-sm text-muted-foreground">
+            Showing {filteredMetrics.length} of {processedMetrics.length} rows
+          </p>
+        )}
+
         {initialMetricsLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -88,6 +195,13 @@ export function MetricsTableCard({
             <p>No data yet. Once a sync completes, your most recent rows will appear here.</p>
             <Button asChild size="sm" variant="outline">
               <Link href="#connect-ad-platforms">Start a sync</Link>
+            </Button>
+          </div>
+        ) : filteredMetrics.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
+            <p>No rows match your filters.</p>
+            <Button size="sm" variant="outline" onClick={clearFilters}>
+              Clear filters
             </Button>
           </div>
         ) : (
@@ -175,7 +289,7 @@ export function MetricsTableCard({
                 </tr>
               </thead>
               <tbody>
-                {processedMetrics.map((metric) => {
+                {filteredMetrics.map((metric) => {
                   const ProviderIcon = PROVIDER_ICON_MAP[metric.providerId]
                   return (
                     <tr key={metric.id} className="border-b border-muted/40">

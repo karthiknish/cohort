@@ -8,6 +8,11 @@ import type {
   MetricsResponse,
 } from './types'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { retryFetch, ApiError, NetworkError, getRetryableErrorMessage, type RetryOptions } from './retry-fetch'
+
+// Re-export from retry-fetch for convenience
+export { ApiError, NetworkError, retryFetch, getRetryableErrorMessage } from './retry-fetch'
+export type { RetryOptions } from './retry-fetch'
 
 // Constants
 export const METRICS_PAGE_SIZE = 100
@@ -60,30 +65,53 @@ export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 })
 
-// API Functions
+// API Functions with retry support
+interface FetchOptions {
+  /** Callback fired before each retry attempt */
+  onRetry?: RetryOptions['onRetry']
+  /** AbortSignal to cancel the request */
+  signal?: AbortSignal
+}
+
 export async function fetchIntegrationStatuses(
   token: string,
-  userId?: string | null
+  userId?: string | null,
+  options: FetchOptions = {}
 ): Promise<IntegrationStatusResponse> {
   const url = userId
     ? `/api/integrations/status?userId=${encodeURIComponent(userId)}`
     : '/api/integrations/status'
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+
+  const response = await retryFetch(
+    url,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
     },
-    cache: 'no-store',
-  })
-  if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}))
-    throw new Error(errorPayload.error || 'Failed to load integration status')
-  }
+    {
+      maxRetries: 3,
+      onRetry: options.onRetry,
+      signal: options.signal,
+    }
+  )
+
   return response.json()
 }
 
 export async function fetchMetrics(
   token: string,
-  options: { userId?: string | null; cursor?: string | null; pageSize?: number } = {}
+  options: { 
+    userId?: string | null
+    cursor?: string | null
+    pageSize?: number
+    startDate?: string | null
+    endDate?: string | null
+    aggregate?: boolean
+    onRetry?: RetryOptions['onRetry']
+    signal?: AbortSignal
+  } = {}
 ): Promise<MetricsResponse> {
   const params = new URLSearchParams()
   if (options.userId) {
@@ -95,24 +123,41 @@ export async function fetchMetrics(
   if (options.cursor) {
     params.set('after', options.cursor)
   }
+  if (options.startDate) {
+    params.set('startDate', options.startDate)
+  }
+  if (options.endDate) {
+    params.set('endDate', options.endDate)
+  }
+  if (options.aggregate) {
+    params.set('aggregate', 'true')
+  }
 
   const queryString = params.toString()
   const url = queryString.length > 0 ? `/api/metrics?${queryString}` : '/api/metrics'
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const response = await retryFetch(
+    url,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
     },
-    cache: 'no-store',
-  })
+    {
+      maxRetries: 3,
+      onRetry: options.onRetry,
+      signal: options.signal,
+    }
+  )
 
   const payload = (await response.json().catch(() => null)) as
-    | { metrics?: MetricRecord[]; nextCursor?: string | null; error?: string }
+    | { metrics?: MetricRecord[]; nextCursor?: string | null; summary?: any; error?: string }
     | null
 
-  if (!response.ok || !payload || !Array.isArray(payload.metrics)) {
+  if (!payload || !Array.isArray(payload.metrics)) {
     const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load ad metrics'
-    throw new Error(message)
+    throw new ApiError(message, 200)
   }
 
   return {

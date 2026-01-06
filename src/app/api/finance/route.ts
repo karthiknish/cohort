@@ -10,6 +10,7 @@ import type {
   FinanceRevenueRecord,
   FinanceSummaryResponse,
 } from '@/types/finance'
+import type { StoredFinanceRevenue, StoredFinanceInvoice, StoredFinanceCost } from '@/types/stored-types'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import { createApiHandler } from '@/lib/api-handler'
 import { coerceNumber, toISO } from '@/lib/utils'
@@ -28,49 +29,6 @@ const financeQuerySchema = z.object({
   invoicePageSize: z.string().optional(),
   costPageSize: z.string().optional(),
 })
-
-type StoredFinanceRevenue = {
-  clientId?: unknown
-  period?: unknown
-  label?: unknown
-  revenue?: unknown
-  operatingExpenses?: unknown
-  currency?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
-
-type StoredFinanceInvoice = {
-  clientId?: unknown
-  clientName?: unknown
-  amount?: unknown
-  status?: unknown
-  stripeStatus?: unknown
-  issuedDate?: unknown
-  dueDate?: unknown
-  description?: unknown
-  hostedInvoiceUrl?: unknown
-  number?: unknown
-  amountPaid?: unknown
-  amountRemaining?: unknown
-  amountRefunded?: unknown
-  currency?: unknown
-  paidDate?: unknown
-  paymentIntentId?: unknown
-  collectionMethod?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
-
-type StoredFinanceCost = {
-  clientId?: unknown
-  category?: unknown
-  amount?: unknown
-  cadence?: unknown
-  currency?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
 
 function ensureNumber(value: unknown): number {
   const parsed = coerceNumber(value)

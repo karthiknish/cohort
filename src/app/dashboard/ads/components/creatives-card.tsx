@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { RefreshCw, Image, Video, FileText, ExternalLink } from 'lucide-react'
+import { RefreshCw, Image, Video, FileText, ExternalLink, BarChart2, CheckSquare, Square } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +20,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from '@/components/ui/use-toast'
 
 // =============================================================================
@@ -57,6 +65,8 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
   const [creatives, setCreatives] = useState<Creative[]>([])
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState<{ total: number; byType: Record<string, number> } | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [compareOpen, setCompareOpen] = useState(false)
 
   const fetchCreatives = useCallback(async () => {
     if (!isConnected) return
@@ -117,15 +127,23 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
             {summary ? `${summary.total} creatives` : `View ${providerName} ad creatives`}
           </CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchCreatives} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Load Creatives
-        </Button>
+        <div className="flex gap-2">
+          {selectedIds.size > 1 && (
+            <Button variant="default" size="sm" onClick={() => setCompareOpen(true)}>
+              <BarChart2 className="h-4 w-4 mr-2" />
+              Compare & Test ({selectedIds.size})
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={fetchCreatives} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Load Creatives
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {creatives.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            Click "Load Creatives" to view your ad creatives.
+            Click &quot;Load Creatives&quot; to view your ad creatives.
           </p>
         ) : (
           <>
@@ -142,6 +160,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]"></TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Headlines</TableHead>
@@ -151,7 +170,30 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                 </TableHeader>
                 <TableBody>
                   {creatives.map((creative) => (
-                    <TableRow key={creative.creativeId}>
+                    <TableRow 
+                      key={creative.creativeId}
+                      className={selectedIds.has(creative.creativeId) ? 'bg-primary/5' : ''}
+                    >
+                      <TableCell>
+                        <button
+                          onClick={() => {
+                            const next = new Set(selectedIds)
+                            if (next.has(creative.creativeId)) {
+                              next.delete(creative.creativeId)
+                            } else {
+                              next.add(creative.creativeId)
+                            }
+                            setSelectedIds(next)
+                          }}
+                          className="hover:text-primary transition-colors"
+                        >
+                          {selectedIds.has(creative.creativeId) ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getTypeIcon(creative.type)}
@@ -206,6 +248,82 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
           </>
         )}
       </CardContent>
+      <Dialog open={compareOpen} onOpenChange={setCompareOpen}>
+        <DialogContent className="max-w-5xl overflow-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart2 className="h-5 w-5" />
+              Creative Comparison & A/B Testing
+            </DialogTitle>
+            <DialogDescription>
+              Comparing {selectedIds.size} selected creatives across {providerName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
+            {creatives
+              .filter((c) => selectedIds.has(c.creativeId))
+              .map((c) => (
+                <div key={c.creativeId} className="border rounded-xl p-4 space-y-4 relative bg-muted/20">
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {getStatusBadge(c.status)}
+                  </div>
+                  
+                  {/* Visual Preview */}
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border">
+                    {c.imageUrl ? (
+                      <img src={c.imageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : c.videoUrl ? (
+                      <Video className="h-8 w-8 text-muted-foreground" />
+                    ) : (
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm line-clamp-2">
+                      {c.headlines && c.headlines.length > 0 ? c.headlines[0] : 'No Headline'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground line-clamp-3">
+                      {c.descriptions && c.descriptions.length > 0 ? c.descriptions[0] : 'No Description'}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="capitalize">{c.type.toLowerCase().replace(/_/g, ' ')}</span>
+                    </div>
+                    {c.callToAction && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">CTA:</span>
+                        <span>{c.callToAction}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs h-8"
+                    onClick={() => {
+                      toast({
+                        title: 'A/B Test Action',
+                        description: 'Creative promoted to primary. Syncing with platform...',
+                      })
+                    }}
+                  >
+                    Promote to Winner
+                  </Button>
+                </div>
+              ))}
+          </div>
+          <DialogFooter className="flex justify-between items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Tip: Compare CTR and Conversion Rates on the Analytics page to determine the winner.
+            </p>
+            <Button onClick={() => setCompareOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

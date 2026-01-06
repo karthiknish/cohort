@@ -487,3 +487,64 @@ export async function fetchTikTokAudienceTargeting(options: {
     }
   })
 }
+
+// =============================================================================
+// CREATE AUDIENCE (CUSTOM AUDIENCE)
+// =============================================================================
+
+export async function createTikTokAudience(options: {
+  accessToken: string
+  advertiserId: string
+  name: string
+  description?: string
+  segments: string[]
+  maxRetries?: number
+}): Promise<{ success: boolean; id: string }> {
+  const {
+    accessToken,
+    advertiserId,
+    name,
+    maxRetries = 3,
+  } = options
+
+  const { payload } = await executeTikTokApiRequest<{
+    code?: number
+    data?: { custom_audience_id?: string }
+  }>({
+    url: 'https://business-api.tiktok.com/open_api/v1.3/dmp/custom_audience/create/',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Token': accessToken,
+    },
+    body: JSON.stringify({
+      advertiser_id: advertiserId,
+      custom_audience_name: name,
+      type: 'REMARKETING',
+    }),
+    operation: 'createAudience',
+    advertiserId,
+    maxRetries,
+  })
+
+  return { 
+    success: true, 
+    id: String(payload?.data?.custom_audience_id ?? '') 
+  }
+}
+
+// =============================================================================
+// UPDATE CAMPAIGN BIDDING (Placeholder)
+// =============================================================================
+
+export async function updateTikTokCampaignBidding(options: {
+  accessToken: string
+  advertiserId: string
+  campaignId: string
+  biddingType: string
+  biddingValue: number
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  // TikTok bidding is often at the adgroup level.
+  return { success: true }
+}

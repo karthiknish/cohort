@@ -8,6 +8,7 @@ import {
   listGoogleCampaigns,
   updateGoogleCampaignStatus,
   updateGoogleCampaignBudgetByCampaign,
+  updateGoogleCampaignBidding,
   removeGoogleCampaign,
   GoogleCampaign,
 } from '@/services/integrations/google-ads'
@@ -16,6 +17,7 @@ import {
   listTikTokCampaigns,
   updateTikTokCampaignStatus,
   updateTikTokCampaignBudget,
+  updateTikTokCampaignBidding,
   removeTikTokCampaign,
   TikTokCampaign,
 } from '@/services/integrations/tiktok-ads'
@@ -24,6 +26,7 @@ import {
   listLinkedInCampaigns,
   updateLinkedInCampaignStatus,
   updateLinkedInCampaignBudget,
+  updateLinkedInCampaignBidding,
   removeLinkedInCampaign,
   LinkedInCampaign,
 } from '@/services/integrations/linkedin-ads'
@@ -32,6 +35,7 @@ import {
   listMetaCampaigns,
   updateMetaCampaignStatus,
   updateMetaCampaignBudget,
+  updateMetaCampaignBidding,
   removeMetaCampaign,
   MetaCampaign,
 } from '@/services/integrations/meta-ads'
@@ -50,9 +54,11 @@ const getQuerySchema = z.object({
 const postBodySchema = z.object({
   providerId: z.enum(['google', 'tiktok', 'linkedin', 'facebook']),
   campaignId: z.string(),
-  action: z.enum(['enable', 'pause', 'updateBudget', 'remove']),
+  action: z.enum(['enable', 'pause', 'updateBudget', 'updateBidding', 'remove']),
   budget: z.number().optional(),
   budgetMode: z.string().optional(),
+  biddingType: z.string().optional(),
+  biddingValue: z.number().optional(),
 })
 
 
@@ -68,6 +74,16 @@ type NormalizedCampaign = {
   budget?: number
   budgetType?: string
   objective?: string
+  biddingStrategy?: {
+    type: string
+    targetCpa?: number
+    targetRoas?: number
+  }
+  schedule?: Array<{
+    dayOfWeek: string
+    startHour: number
+    endHour: number
+  }>
 }
 
 // =============================================================================
@@ -83,6 +99,12 @@ function normalizeGoogleCampaigns(campaigns: GoogleCampaign[]): NormalizedCampai
     budget: c.budgetAmountMicros ? c.budgetAmountMicros / 1_000_000 : undefined,
     budgetType: c.biddingStrategyType,
     objective: c.advertisingChannelType,
+    biddingStrategy: c.biddingStrategyType ? {
+      type: c.biddingStrategyType,
+      targetCpa: c.biddingStrategyInfo?.targetCpaMicros ? c.biddingStrategyInfo.targetCpaMicros / 1_000_000 : undefined,
+      targetRoas: c.biddingStrategyInfo?.targetRoas,
+    } : undefined,
+    schedule: c.adSchedule,
   }))
 }
 
@@ -221,7 +243,7 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('Authentication required')
     }
 
-    const { providerId, campaignId, action, budget, budgetMode } = body
+    const { providerId, campaignId, action, budget, budgetMode, biddingType, biddingValue } = body
 
     const integration = await getAdIntegration({ userId: auth.uid, providerId })
     if (!integration) {
@@ -252,6 +274,16 @@ export const POST = createApiHandler(
           customerId,
           campaignId,
           amountMicros,
+          loginCustomerId,
+        })
+      } else if (action === 'updateBidding' && biddingType) {
+        await updateGoogleCampaignBidding({
+          accessToken,
+          developerToken,
+          customerId,
+          campaignId,
+          biddingType,
+          biddingValue: body.biddingValue || 0,
           loginCustomerId,
         })
       } else if (action === 'remove') {
@@ -286,6 +318,14 @@ export const POST = createApiHandler(
           budget,
           budgetMode: budgetMode as 'BUDGET_MODE_DAY' | 'BUDGET_MODE_TOTAL' | undefined,
         })
+      } else if (action === 'updateBidding' && biddingType) {
+        await updateTikTokCampaignBidding({
+          accessToken,
+          advertiserId,
+          campaignId,
+          biddingType,
+          biddingValue: biddingValue || 0,
+        })
       } else if (action === 'remove') {
         await removeTikTokCampaign({
           accessToken,
@@ -312,6 +352,13 @@ export const POST = createApiHandler(
           campaignId,
           dailyBudget: budget,
         })
+      } else if (action === 'updateBidding' && biddingType) {
+        await updateLinkedInCampaignBidding({
+          accessToken,
+          campaignId,
+          biddingType,
+          biddingValue: biddingValue || 0,
+        })
       } else if (action === 'remove') {
         await removeLinkedInCampaign({
           accessToken,
@@ -336,6 +383,13 @@ export const POST = createApiHandler(
           accessToken,
           campaignId,
           dailyBudget: budget,
+        })
+      } else if (action === 'updateBidding' && biddingType) {
+        await updateMetaCampaignBidding({
+          accessToken,
+          campaignId,
+          biddingType,
+          biddingValue: biddingValue || 0,
         })
       } else if (action === 'remove') {
         await removeMetaCampaign({

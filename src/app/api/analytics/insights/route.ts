@@ -8,7 +8,7 @@ import { geminiAI } from '@/services/gemini'
 import { formatCurrency, toISO } from '@/lib/utils'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
-import { calculateAlgorithmicInsights, getGlobalBudgetSuggestions, AdMetricsSummary, enrichSummaryWithMetrics } from '@/lib/ad-algorithms'
+import { calculateAlgorithmicInsights, getGlobalBudgetSuggestions, AdMetricsSummary, AlgorithmicInsight, enrichSummaryWithMetrics } from '@/lib/ad-algorithms'
 
 const insightsQuerySchema = z.object({
   userId: z.string().optional(),
@@ -150,7 +150,7 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
 
 async function generateAllInsights(summaries: ProviderSummary[]) {
   const insights = [] as Array<{ providerId: string; summary: string }>
-  const algorithmic = [] as Array<{ providerId: string; suggestions: any[] }>
+  const algorithmic = [] as Array<{ providerId: string; suggestions: AlgorithmicInsight[] }>
   const enrichedSummaries = summaries.map(s => enrichSummaryWithMetrics(s as AdMetricsSummary))
 
   // 1. Generate Algorithmic Insights

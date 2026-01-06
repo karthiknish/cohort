@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { adminDb } from '@/lib/firebase-admin'
 import { apiSuccess, createApiHandler } from '@/lib/api-handler'
 import { ConflictError, NotFoundError, ValidationError } from '@/lib/api-errors'
+import type { StoredInvitation } from '@/types/stored-types'
 import { toISO } from '@/lib/utils'
 
 const ADMIN_USER_ROLES = ['admin', 'team', 'client'] as const
@@ -34,19 +35,7 @@ type InvitationRecord = {
   acceptedAt: string | null
 }
 
-type StoredInvitation = {
-  email?: unknown
-  role?: unknown
-  name?: unknown
-  message?: unknown
-  status?: unknown
-  invitedBy?: unknown
-  invitedByName?: unknown
-  token?: unknown
-  expiresAt?: unknown
-  createdAt?: unknown
-  acceptedAt?: unknown
-}
+
 
 function mapInvitationDoc(docId: string, data: StoredInvitation): InvitationRecord {
   return {

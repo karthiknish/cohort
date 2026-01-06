@@ -67,11 +67,22 @@ export async function middleware(request: NextRequest) {
 
   console.log(`[Middleware] Path: ${pathname} | Token present: ${!!token} (${token?.slice(0, 10)}...) | Role: ${role}`)
 
-  // Public auth pages should always be reachable.
-  // If a stale/invalid token cookie exists, forcing a redirect from `/` -> `/dashboard`
-  // can create a loop when the client later determines the session is invalid and
-  // navigates back to `/`.
-  if (pathname === '/' || pathname.startsWith(AUTH_ROUTE_PREFIX)) {
+  // Public auth pages should always be reachable without redirection.
+  if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
+    return NextResponse.next()
+  }
+
+  // For the home page (/), redirect authenticated users to dashboard
+  // This eliminates the brief flash of home page before client-side redirect
+  if (pathname === '/') {
+    const token = request.cookies.get(AUTH_COOKIE)?.value
+    // Only redirect if we have a valid, non-expired session
+    if (token && !isSessionExpired(request)) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/dashboard'
+      return NextResponse.redirect(redirectUrl)
+    }
+    // No valid session - allow access to home/login page
     return NextResponse.next()
   }
 

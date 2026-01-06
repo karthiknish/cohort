@@ -4,8 +4,9 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
-import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus } from '@/types/tasks'
-import { mapTaskDoc, StoredTask, invalidateTasksCache } from '../route'
+import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
+import { mapTaskDoc, invalidateTasksCache } from '../route'
+import type { StoredTask } from '@/types/stored-types'
 
 const bulkUpdateSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one task ID is required').max(50, 'Maximum 50 tasks per request'),
@@ -59,7 +60,7 @@ export const PATCH = createApiHandler(
     const snapshots = await workspace.tasksCollection.firestore.getAll(...docRefs)
     
     const results: { id: string; success: boolean; error?: string }[] = []
-    const updatedTasks: any[] = []
+    const updatedTasks: TaskRecord[] = []
     
     for (const snapshot of snapshots) {
       const id = snapshot.id
@@ -72,7 +73,7 @@ export const PATCH = createApiHandler(
       
       // Construct updated object manually to avoid a redundant post-update GET
       const existingData = snapshot.data() as StoredTask
-      const task = mapTaskDoc(id, { ...existingData, ...updateData as any })
+      const task = mapTaskDoc(id, { ...existingData, ...updateData } as StoredTask)
       updatedTasks.push(task)
       results.push({ id, success: true })
     }

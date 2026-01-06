@@ -5,6 +5,7 @@ import { createApiHandler } from '@/lib/api-handler'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { adminDb } from '@/lib/firebase-admin'
 import type { ProposalTemplate } from '@/types/proposal-templates'
+import type { StoredTemplate } from '@/types/stored-types'
 import { toISO } from '@/lib/utils'
 
 const createTemplateSchema = z.object({
@@ -16,16 +17,7 @@ const createTemplateSchema = z.object({
   isDefault: z.boolean().optional().default(false),
 })
 
-type StoredTemplate = {
-  name?: unknown
-  description?: unknown
-  formData?: unknown
-  industry?: unknown
-  tags?: unknown
-  isDefault?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
+
 
 function mapTemplateDoc(docId: string, data: StoredTemplate): ProposalTemplate {
   const rawFormData = data.formData && typeof data.formData === 'object' ? data.formData as Partial<ProposalFormData> : {}

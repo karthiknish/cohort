@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { RefreshCw, Users, MapPin, Target, Briefcase, ChevronDown, ChevronUp } from 'lucide-react'
+import { RefreshCw, Users, MapPin, Target, Briefcase, ChevronDown, ChevronUp, Plus, Settings2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/components/ui/use-toast'
+import { AudienceBuilderDialog } from './audience-builder-dialog'
 
 // =============================================================================
 // TYPES
@@ -75,6 +76,7 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
   const [insights, setInsights] = useState<Insights | null>(null)
   const [loading, setLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [builderOpen, setBuilderOpen] = useState(false)
 
   const fetchTargeting = useCallback(async () => {
     if (!isConnected) return
@@ -127,15 +129,21 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
             {insights ? `${insights.totalEntities} targeting configs` : `View ${providerName} audience targeting`}
           </CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchTargeting} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Load Targeting
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)} disabled={loading}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Audience
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchTargeting} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Load Targeting
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {targeting.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            Click "Load Targeting" to view audience targeting data.
+            Click &quot;Load Targeting&quot; to view audience targeting data.
           </p>
         ) : (
           <div className="space-y-4">
@@ -185,7 +193,21 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
                     {expandedId === t.entityId ? (
                       <ChevronUp className="h-4 w-4" />
                     ) : (
-                      <ChevronDown className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 px-2 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle Edit
+                          }}
+                        >
+                          <Settings2 className="h-3.5 w-3.5 mr-1" />
+                          Edit
+                        </Button>
+                        <ChevronDown className="h-4 w-4" />
+                      </div>
                     )}
                   </button>
                   
@@ -274,6 +296,11 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
           </div>
         )}
       </CardContent>
+      <AudienceBuilderDialog 
+        isOpen={builderOpen} 
+        onOpenChange={setBuilderOpen} 
+        providerId={providerId} 
+      />
     </Card>
   )
 }

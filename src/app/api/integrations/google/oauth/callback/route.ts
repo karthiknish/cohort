@@ -27,20 +27,22 @@ export const GET = createApiHandler(
 
       if (error) {
         console.error('[google.oauth.callback] OAuth error from Google:', { error, errorDescription })
-        return NextResponse.redirect(
-          `${appUrl}/dashboard/integrations?error=google_error&message=${encodeURIComponent(errorDescription || error)}`
-        )
+        const errorUrl = new URL('/dashboard/integrations', appUrl)
+        errorUrl.searchParams.set('oauth_error', 'google_error')
+        errorUrl.searchParams.set('provider', 'google')
+        errorUrl.searchParams.set('message', errorDescription || error)
+        return NextResponse.redirect(errorUrl.toString())
       }
 
       if (!code) {
         console.error('[google.oauth.callback] Missing authorization code')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=missing_code`)
+        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=missing_code&provider=google`)
       }
 
       const redirectUri = process.env.GOOGLE_ADS_OAUTH_REDIRECT_URI
       if (!redirectUri) {
         console.error('[google.oauth.callback] GOOGLE_ADS_OAUTH_REDIRECT_URI not configured')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=config_error`)
+        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=config_error&provider=google`)
       }
 
       // Validate state to prevent CSRF attacks
@@ -62,11 +64,17 @@ export const GET = createApiHandler(
 
       console.log(`[google.oauth.callback] Successfully completed OAuth for user ${context.state}`)
 
-      const redirectTarget = context.redirect ?? `${appUrl}/dashboard/integrations`
+      let redirectTarget = context.redirect ?? `${appUrl}/dashboard/integrations`
+
+      // Standardize success signaling via query parameters
+      const url = new URL(redirectTarget, appUrl)
+      url.searchParams.set('oauth_success', 'true')
+      url.searchParams.set('provider', 'google')
+      redirectTarget = url.toString()
 
       // Final safety check on redirect target
       if (!isValidRedirectUrl(redirectTarget)) {
-        return NextResponse.redirect(new URL('/dashboard/integrations', req.url))
+        return NextResponse.redirect(new URL('/dashboard/integrations?oauth_success=true&provider=google', req.url))
       }
 
       return NextResponse.redirect(new URL(redirectTarget, req.url))
@@ -77,11 +85,13 @@ export const GET = createApiHandler(
         stack: error instanceof Error ? error.stack : undefined,
       })
 
-      // Redirect to dashboard with error
-      const encodedError = encodeURIComponent(errorMessage)
-      return NextResponse.redirect(
-        `${appUrl}/dashboard/integrations?error=oauth_failed&message=${encodedError}`
-      )
+      // Redirect to dashboard with error signaling
+      const errorUrl = new URL('/dashboard/integrations', appUrl)
+      errorUrl.searchParams.set('oauth_error', 'oauth_failed')
+      errorUrl.searchParams.set('provider', 'google')
+      errorUrl.searchParams.set('message', errorMessage)
+      
+      return NextResponse.redirect(errorUrl.toString())
     }
   }
 )

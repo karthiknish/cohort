@@ -45,6 +45,11 @@ export async function listGoogleCampaigns(options: {
       campaign.end_date,
       campaign.advertising_channel_type,
       campaign.bidding_strategy_type,
+      campaign.target_cpa.target_cpa_micros,
+      campaign.target_roas.target_roas,
+      campaign.maximize_conversions.target_cpa_micros,
+      campaign.maximize_conversion_value.target_roas,
+      campaign.ad_schedule,
       campaign_budget.amount_micros,
       campaign_budget.id
     FROM campaign
@@ -73,12 +78,44 @@ export async function listGoogleCampaigns(options: {
       endDate?: string
       advertisingChannelType?: string
       biddingStrategyType?: string
+      targetCpa?: { targetCpaMicros?: string }
+      targetRoas?: { targetRoas?: number }
+      maximizeConversions?: { targetCpaMicros?: string }
+      maximizeConversionValue?: { targetRoas?: number }
+      adSchedule?: Array<{
+        dayOfWeek?: string
+        startHour?: number
+        startMinute?: string
+        endHour?: number
+        endMinute?: string
+      }>
     } | undefined
 
     const budget = row.campaignBudget as {
       id?: string
       amountMicros?: string
     } | undefined
+
+    // Extract bidding strategy info
+    const biddingInfo: GoogleCampaign['biddingStrategyInfo'] = {}
+    if (campaign?.targetCpa?.targetCpaMicros) {
+      biddingInfo.targetCpaMicros = parseInt(campaign.targetCpa.targetCpaMicros, 10)
+    } else if (campaign?.maximizeConversions?.targetCpaMicros) {
+      biddingInfo.targetCpaMicros = parseInt(campaign.maximizeConversions.targetCpaMicros, 10)
+    }
+
+    if (campaign?.targetRoas?.targetRoas) {
+      biddingInfo.targetRoas = campaign.targetRoas.targetRoas
+    } else if (campaign?.maximizeConversionValue?.targetRoas) {
+      biddingInfo.targetRoas = campaign.maximizeConversionValue.targetRoas
+    }
+
+    // Extract schedule
+    const schedule = campaign?.adSchedule?.map((s: { dayOfWeek?: string; startHour?: number; endHour?: number }) => ({
+      dayOfWeek: s.dayOfWeek ?? '',
+      startHour: s.startHour ?? 0,
+      endHour: s.endHour ?? 24,
+    }))
 
     return {
       id: campaign?.id ?? '',
@@ -87,6 +124,8 @@ export async function listGoogleCampaigns(options: {
       budgetAmountMicros: budget?.amountMicros ? parseInt(budget.amountMicros, 10) : undefined,
       budgetId: budget?.id,
       biddingStrategyType: campaign?.biddingStrategyType,
+      biddingStrategyInfo: biddingInfo,
+      adSchedule: schedule,
       startDate: campaign?.startDate,
       endDate: campaign?.endDate,
       advertisingChannelType: campaign?.advertisingChannelType,
@@ -310,6 +349,93 @@ export async function updateGoogleCampaignBudgetByCampaign(options: {
     amountMicros,
     loginCustomerId,
   })
+}
+
+// =============================================================================
+// UPDATE CAMPAIGN BIDDING
+// =============================================================================
+
+export async function updateGoogleCampaignBidding(options: {
+  accessToken: string
+  developerToken: string
+  customerId: string
+  campaignId: string
+  biddingType: string
+  biddingValue: number
+  loginCustomerId?: string | null
+}): Promise<{ success: boolean }> {
+  const {
+    accessToken,
+    developerToken,
+    customerId,
+    campaignId,
+    biddingType,
+    biddingValue,
+    loginCustomerId,
+  } = options
+
+  const url = `${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`
+  
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+    'developer-token': developerToken,
+    'Content-Type': 'application/json',
+  }
+
+  if (loginCustomerId) {
+    headers['login-customer-id'] = loginCustomerId
+  }
+
+  const update: any = {
+    resourceName: `customers/${customerId}/campaigns/${campaignId}`,
+  }
+
+  let updateMask = ''
+  const type = biddingType.toUpperCase()
+
+  if (type.includes('TARGET_CPA')) {
+    update.targetCpa = { targetCpaMicros: Math.round(biddingValue * 1_000_000).toString() }
+    updateMask = 'target_cpa.target_cpa_micros'
+  } else if (type.includes('TARGET_ROAS')) {
+    update.targetRoas = { targetRoas: biddingValue }
+    updateMask = 'target_roas.target_roas'
+  } else if (type.includes('MAXIMIZE_CONVERSIONS')) {
+    update.maximizeConversions = { targetCpaMicros: Math.round(biddingValue * 1_000_000).toString() }
+    updateMask = 'maximize_conversions.target_cpa_micros'
+  } else if (type.includes('MAXIMIZE_CONVERSION_VALUE')) {
+    update.maximizeConversionValue = { targetRoas: biddingValue }
+    updateMask = 'maximize_conversion_value.target_roas'
+  } else {
+    throw new GoogleAdsApiError({
+      message: `Bidding strategy type ${biddingType} is not directly adjustable via this tool yet.`,
+      httpStatus: 400,
+      errorCode: 'UNSUPPORTED_ACTION',
+    })
+  }
+
+  const mutation = {
+    operations: [{
+      update,
+      updateMask,
+    }],
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(mutation),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+    throw new GoogleAdsApiError({
+      message: errorData?.error?.message ?? 'Bidding update failed',
+      httpStatus: response.status,
+      errorCode: 'MUTATION_ERROR',
+    })
+  }
+
+  return { success: true }
 }
 
 // =============================================================================
@@ -841,4 +967,76 @@ export async function fetchGoogleAudienceTargeting(options: {
   }
 
   return Array.from(targetingMap.values())
+}
+
+// =============================================================================
+// CREATE AUDIENCE (USER LIST)
+// =============================================================================
+
+export async function createGoogleAudience(options: {
+  accessToken: string
+  developerToken: string
+  customerId: string
+  name: string
+  description?: string
+  segments: string[]
+  loginCustomerId?: string | null
+}): Promise<{ success: boolean; resourceName: string }> {
+  const {
+    accessToken,
+    developerToken,
+    customerId,
+    name,
+    description,
+    loginCustomerId,
+  } = options
+
+  const url = `${GOOGLE_API_BASE}/customers/${customerId}/userLists:mutate`
+  
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+    'developer-token': developerToken,
+    'Content-Type': 'application/json',
+  }
+
+  if (loginCustomerId) {
+    headers['login-customer-id'] = loginCustomerId
+  }
+
+  const mutation = {
+    operations: [{
+      create: {
+        name,
+        description: description || `Created via Cohort Ads Hub`,
+        membershipStatus: 'OPEN',
+        membershipLifeSpan: '30', // Default 30 days
+        crmBasedUserList: {
+          // This creates a basic CRM-based list placeholder
+          // In a real app, you'd add members or rules here
+          appId: 'cohort-app',
+        }
+      }
+    }]
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(mutation),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+    throw new GoogleAdsApiError({
+      message: errorData?.error?.message ?? 'Audience creation failed',
+      httpStatus: response.status,
+      errorCode: 'MUTATION_ERROR',
+    })
+  }
+
+  const result = await response.json()
+  return { 
+    success: true, 
+    resourceName: result.results?.[0]?.resourceName 
+  }
 }

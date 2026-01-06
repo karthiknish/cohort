@@ -23,10 +23,12 @@ export {
   listTikTokCampaigns,
   updateTikTokCampaignStatus,
   updateTikTokCampaignBudget,
+  updateTikTokCampaignBidding,
   removeTikTokCampaign,
   fetchTikTokAdMetrics,
   fetchTikTokCreatives,
   fetchTikTokAudienceTargeting,
+  createTikTokAudience,
 } from './campaigns'
 
 

@@ -11,7 +11,23 @@ export type {
   ProviderAutomationFormState,
   AdPlatform,
   SummaryCard,
+  ApiErrorResponse,
 } from './types'
+
+// Type utilities
+export { parseApiError, extractApiError } from './types'
+
+// Constants
+export {
+  HTTP_NO_CONTENT,
+  DEFAULT_DATE_RANGE_DAYS,
+  PROVIDER_IDS,
+  API_ENDPOINTS,
+  ERROR_MESSAGES,
+  SUCCESS_MESSAGES,
+  TOAST_TITLES,
+} from './constants'
+export type { ProviderId } from './constants'
 
 // Utils and constants
 export {
@@ -36,7 +52,12 @@ export {
   describeTimeframe,
   formatDisplayDate,
   exportMetricsToCsv,
+  ApiError,
+  NetworkError,
 } from './utils'
+
+// Retry utilities
+export { retryFetch, getRetryableErrorMessage } from './retry-fetch'
 
 // Components
 export { AutomationControlsCard } from './automation-controls-card'
@@ -48,4 +69,4 @@ export { SetupAlerts } from './setup-alerts'
 export { CampaignManagementCard } from './campaign-management-card'
 export { CreativesCard } from './creatives-card'
 export { AudienceTargetingCard } from './audience-targeting-card'
-
+export { DateRangePicker, type DateRange } from './date-range-picker'

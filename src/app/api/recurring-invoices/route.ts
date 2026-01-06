@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { AuthenticationError } from '@/lib/server-auth'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
+import type { StoredSchedule } from '@/types/stored-types'
 import { apiSuccess, createApiHandler } from '@/lib/api-handler'
 import { NotFoundError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
@@ -42,26 +43,7 @@ const updateScheduleSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-type StoredSchedule = {
-  clientId?: unknown
-  clientName?: unknown
-  amount?: unknown
-  currency?: unknown
-  description?: unknown
-  frequency?: unknown
-  dayOfMonth?: unknown
-  dayOfWeek?: unknown
-  startDate?: unknown
-  endDate?: unknown
-  nextRunDate?: unknown
-  lastRunDate?: unknown
-  lastInvoiceId?: unknown
-  isActive?: unknown
-  totalInvoicesGenerated?: unknown
-  createdBy?: unknown
-  createdAt?: unknown
-  updatedAt?: unknown
-}
+
 
 function mapScheduleDoc(docId: string, data: StoredSchedule): RecurringInvoiceSchedule {
   const frequency = (typeof data.frequency === 'string' ? data.frequency : 'monthly') as RecurringFrequency

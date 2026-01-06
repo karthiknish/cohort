@@ -114,6 +114,22 @@ export type GoogleAdsResult = {
   campaign?: {
     id?: string
     name?: string
+    status?: string
+    startDate?: string
+    endDate?: string
+    advertisingChannelType?: string
+    biddingStrategyType?: string
+    targetCpa?: { targetCpaMicros?: string }
+    targetRoas?: { targetRoas?: number }
+    maximizeConversions?: { targetCpaMicros?: string }
+    maximizeConversionValue?: { targetRoas?: number }
+    adSchedule?: Array<{
+      dayOfWeek?: string
+      startHour?: number
+      startMinute?: string
+      endHour?: number
+      endMinute?: string
+    }>
   }
   campaignBudget?: {
     id?: string
@@ -185,6 +201,15 @@ export type GoogleCampaign = {
   budgetAmountMicros?: number
   budgetId?: string
   biddingStrategyType?: string
+  biddingStrategyInfo?: {
+    targetCpaMicros?: number
+    targetRoas?: number
+  }
+  adSchedule?: Array<{
+    dayOfWeek: string
+    startHour: number
+    endHour: number
+  }>
   startDate?: string
   endDate?: string
   advertisingChannelType?: string
