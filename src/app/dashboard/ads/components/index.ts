@@ -45,3 +45,7 @@ export { PerformanceSummaryCard } from './performance-summary-card'
 export { MetricsTableCard } from './metrics-table-card'
 export { WorkflowCard } from './workflow-card'
 export { SetupAlerts } from './setup-alerts'
+export { CampaignManagementCard } from './campaign-management-card'
+export { CreativesCard } from './creatives-card'
+export { AudienceTargetingCard } from './audience-targeting-card'
+
