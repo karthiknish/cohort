@@ -1,9 +1,7 @@
 import { FieldValue, type DocumentReference } from 'firebase-admin/firestore'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { mergeProposalForm } from '@/lib/proposals'
 import { recordProposalDeckReadyNotification } from '@/lib/notifications'
-import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import type { ProposalFormData } from '@/lib/proposals'
 import { ForbiddenError, NotFoundError, ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 import { geminiAI } from '@/services/gemini'
@@ -17,19 +15,18 @@ import {
 import { createApiHandler } from '@/lib/api-handler'
 
 export const POST = createApiHandler(
-  { auth: 'required', rateLimit: 'sensitive' },
-  async (req, { auth, params }) => {
+  { workspace: 'required', rateLimit: 'sensitive' },
+  async (req, { auth, params, workspace }) => {
     const { id: proposalId } = params
 
     if (!proposalId) {
       throw new ValidationError('Proposal id is required')
     }
+    if (!workspace) {
+      throw new Error('Workspace context missing')
+    }
 
-    const proposalRef = adminDb
-      .collection('users')
-      .doc(auth.uid!)
-      .collection('proposals')
-      .doc(proposalId as string)
+    const proposalRef = workspace.proposalsCollection.doc(proposalId as string)
     const proposalSnap = await proposalRef.get()
 
     if (!proposalSnap.exists) {
@@ -51,7 +48,7 @@ export const POST = createApiHandler(
       ? proposalData.clientName.trim()
       : null
 
-    const workspaceId = await resolveWorkspaceIdForUser(auth.uid!)
+    const workspaceId = workspace.workspaceId
 
     const formDataRaw = proposalData.formData
     const formData = mergeProposalForm(

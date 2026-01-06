@@ -13,9 +13,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
 } from 'recharts'
 import {
   TrendingUp,
@@ -46,10 +43,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-import { FeatureTips } from '@/components/dashboard/feature-tips'
-import { Megaphone, CreditCard, FileText } from 'lucide-react'
 import { usePreview } from '@/contexts/preview-context'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart'
 
 interface MetricRecord {
   id: string
@@ -262,30 +265,50 @@ const PLATFORM_OPTIONS = [
   { value: 'linkedin', label: 'LinkedIn Ads' },
 ]
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-lg border border-border bg-background p-3 shadow-md">
-        <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
-        {payload.map((entry: any) => (
-          <div key={entry.name} className="flex items-center gap-2 text-sm">
-            <div 
-              className="h-2 w-2 rounded-full" 
-              style={{ backgroundColor: entry.color || entry.fill }}
-            />
-            <span className="text-muted-foreground">{entry.name}:</span>
-            <span className="font-medium text-foreground">
-              {entry.name === 'ROAS' ? `${Number(entry.value).toFixed(2)}x` : 
-               entry.name === 'Clicks' || entry.name === 'Conversions' ? Number(entry.value).toLocaleString() :
-               formatCurrency(entry.value)}
-            </span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-  return null
-}
+// Shadcn chart configurations
+const revenueSpendChartConfig = {
+  revenue: {
+    label: 'Revenue',
+    color: 'hsl(160 84% 39%)', // Emerald-500
+  },
+  spend: {
+    label: 'Spend',
+    color: 'hsl(0 84% 60%)', // Red-500
+  },
+} satisfies ChartConfig
+
+const roasChartConfig = {
+  roas: {
+    label: 'ROAS',
+    color: 'hsl(239 84% 67%)', // Indigo-500
+  },
+} satisfies ChartConfig
+
+const clicksChartConfig = {
+  clicks: {
+    label: 'Clicks',
+    color: 'hsl(38 92% 50%)', // Amber-500
+  },
+} satisfies ChartConfig
+
+const platformChartConfig = {
+  google: {
+    label: 'Google Ads',
+    color: 'hsl(217 91% 60%)', // Blue
+  },
+  facebook: {
+    label: 'Meta Ads',
+    color: 'hsl(214 89% 52%)', // Facebook Blue
+  },
+  linkedin: {
+    label: 'LinkedIn Ads',
+    color: 'hsl(239 84% 67%)', // Indigo
+  },
+  tiktok: {
+    label: 'TikTok Ads',
+    color: 'hsl(339 80% 55%)', // Pink
+  },
+} satisfies ChartConfig
 
 export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
@@ -749,23 +772,63 @@ export default function AnalyticsPage() {
             <CardTitle>Revenue vs spend</CardTitle>
             <CardDescription>Daily totals for the selected period</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent>
             {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
-              <Skeleton className="h-full w-full" />
+              <Skeleton className="h-[300px] w-full" />
             ) : chartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} activeDot={{ r: 6 }} name="Revenue" />
-                  <Line type="monotone" dataKey="spend" stroke="#ef4444" strokeWidth={2} activeDot={{ r: 6 }} name="Spend" />
+              <ChartContainer config={revenueSpendChartConfig} className="h-[300px] w-full">
+                <LineChart data={chartData} accessibilityLayer>
+                  <CartesianGrid vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      const date = new Date(value)
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    }}
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => formatCurrency(value)}
+                  />
+                  <ChartTooltip 
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value, name) => (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">{name}:</span>
+                            <span className="font-medium">{formatCurrency(value as number)}</span>
+                          </div>
+                        )}
+                      />
+                    } 
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="var(--color-revenue)" 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 6 }} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="spend" 
+                    stroke="var(--color-spend)" 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 6 }} 
+                  />
                 </LineChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
@@ -775,22 +838,48 @@ export default function AnalyticsPage() {
             <CardTitle>ROAS performance</CardTitle>
             <CardDescription>Return on ad spend across the selected period</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent>
             {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
-              <Skeleton className="h-full w-full" />
+              <Skeleton className="h-[300px] w-full" />
             ) : chartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">No performance data for the selected filters.</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar dataKey="roas" fill="#6366f1" name="ROAS" />
+              <ChartContainer config={roasChartConfig} className="h-[300px] w-full">
+                <BarChart data={chartData} accessibilityLayer>
+                  <CartesianGrid vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      const date = new Date(value)
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    }}
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => `${value.toFixed(1)}x`}
+                  />
+                  <ChartTooltip 
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value) => (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">ROAS:</span>
+                            <span className="font-medium">{(value as number).toFixed(2)}x</span>
+                          </div>
+                        )}
+                      />
+                    } 
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Bar dataKey="roas" fill="var(--color-roas)" radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
@@ -800,22 +889,44 @@ export default function AnalyticsPage() {
             <CardTitle>Platform budget distribution</CardTitle>
             <CardDescription>Spend share across connected platforms</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent>
             {initialMetricsLoading || (metricsLoading && platformBreakdown.length === 0) ? (
-              <Skeleton className="h-full w-full" />
+              <Skeleton className="h-[300px] w-full" />
             ) : platformBreakdown.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Connect a platform to see spend distribution.</div>
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">Connect a platform to see spend distribution.</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={platformBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+              <ChartContainer config={platformChartConfig} className="h-[300px] w-full">
+                <PieChart accessibilityLayer>
+                  <ChartTooltip 
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value, name) => (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">{name}:</span>
+                            <span className="font-medium">{formatCurrency(value as number)}</span>
+                          </div>
+                        )}
+                      />
+                    } 
+                  />
+                  <Pie 
+                    data={platformBreakdown} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
                     {platformBreakdown.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
-                  <RechartsTooltip formatter={(value: number, _name, props) => [`${formatCurrency(value)}`, props?.payload?.name]} />
                 </PieChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
@@ -825,24 +936,57 @@ export default function AnalyticsPage() {
             <CardTitle>Click performance</CardTitle>
             <CardDescription>Breakdown of daily click volume</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent>
             {initialMetricsLoading || (metricsLoading && chartData.length === 0) ? (
-              <Skeleton className="h-full w-full" />
+              <Skeleton className="h-[300px] w-full" />
             ) : chartData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
                 Welcome! Connect your first ad account to see click performance.
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <RechartsTooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Line type="monotone" dataKey="clicks" stroke="#f59e0b" strokeWidth={2} activeDot={{ r: 6 }} name="Clicks" />
+              <ChartContainer config={clicksChartConfig} className="h-[300px] w-full">
+                <LineChart data={chartData} accessibilityLayer>
+                  <CartesianGrid vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      const date = new Date(value)
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    }}
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => value.toLocaleString()}
+                  />
+                  <ChartTooltip 
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value) => (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Clicks:</span>
+                            <span className="font-medium">{(value as number).toLocaleString()}</span>
+                          </div>
+                        )}
+                      />
+                    } 
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="clicks" 
+                    stroke="var(--color-clicks)" 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 6 }} 
+                  />
                 </LineChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
