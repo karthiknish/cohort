@@ -50,7 +50,6 @@ import { FeatureTips } from '@/components/dashboard/feature-tips'
 import { Megaphone, CreditCard, FileText } from 'lucide-react'
 import { usePreview } from '@/contexts/preview-context'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
-import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
 
 interface MetricRecord {
   id: string
@@ -491,8 +490,6 @@ export default function AnalyticsPage() {
           </select>
         </div>
       </div>
-
-      <PreviewDataBanner />
 
       {metricsError && (
         <Alert variant="destructive">

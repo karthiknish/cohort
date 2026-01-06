@@ -24,7 +24,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useRealtimeActivity } from '@/app/dashboard/activity/hooks/use-realtime-activity'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
-import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
 import type { Activity, ActivityType } from '@/types/activity'
 
 const ACTIVITY_ICONS = {
@@ -141,8 +140,6 @@ export default function ActivityPage() {
           </Button>
         </div>
       </div>
-
-      <PreviewDataBanner />
 
       <Card>
         <CardHeader className="border-b border-muted/40 pb-4">

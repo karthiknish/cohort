@@ -44,7 +44,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
-  const intentionalSignOutRef = React.useRef(false)
 
   const applyUser = useCallback(async (authUser: AuthUser | null, isIntentionalSignOut = false) => {
     // Don't sync null unless it's an intentional sign-out.
@@ -266,6 +265,12 @@ function setStoredSyncToken(token: string | null) {
   }
 }
 
+function getCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|; )cohorts_csrf=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Promise<boolean> {
   if (typeof window === 'undefined') {
     return true
@@ -303,11 +308,15 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
 
   const performSync = async (): Promise<boolean> => {
     try {
+      // Get CSRF token from cookie for double-submit pattern
+      const csrfToken = getCsrfToken()
+
       if (!token) {
         const response = await fetch('/api/auth/session', {
           method: 'DELETE',
           cache: 'no-store',
           credentials: 'same-origin',
+          headers: csrfToken ? { 'x-csrf-token': csrfToken } : undefined,
         })
         if (response.ok) {
           setStoredSyncToken(null)
@@ -315,9 +324,14 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
         return response.ok
       }
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken
+      }
+
       const response = await fetch('/api/auth/session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           token,
           role: authUser?.role,

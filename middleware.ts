@@ -15,9 +15,21 @@ const ADMIN_ONLY_ROUTE_PREFIX = '/admin'
 const AUTH_ROUTE_PREFIX = '/auth'
 const AUTH_COOKIE = 'cohorts_token'
 const ROLE_COOKIE = 'cohorts_role'
+const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_MATCHER.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+}
+
+function isSessionExpired(request: NextRequest): boolean {
+  const expiresAt = request.cookies.get(SESSION_EXPIRES_COOKIE)?.value
+  if (!expiresAt) return false // No expiry cookie means we can't check - let API verify
+  
+  const expiryTime = parseInt(expiresAt, 10)
+  if (isNaN(expiryTime)) return false
+  
+  // Add 30 second buffer to avoid race conditions
+  return Date.now() > (expiryTime - 30000)
 }
 
 export async function middleware(request: NextRequest) {
@@ -67,7 +79,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  if (!token) {
+  // Check if session cookie is missing or expired
+  if (!token || isSessionExpired(request)) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
     // Preserve querystring so users land back exactly where they intended.
