@@ -48,7 +48,7 @@ export async function listMetaCampaigns(options: {
     params.set('effective_status', JSON.stringify(statusFilter))
   }
 
-  appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
 
   const url = `${META_API_BASE}/${adAccountId}/campaigns?${params.toString()}`
 
@@ -103,7 +103,7 @@ export async function updateMetaCampaignStatus(options: {
 
   const params = new URLSearchParams()
   params.set('status', status)
-  appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
 
   const url = `${META_API_BASE}/${campaignId}?${params.toString()}`
 
@@ -147,7 +147,7 @@ export async function updateMetaCampaignBudget(options: {
     params.set('lifetime_budget', String(Math.round(lifetimeBudget * 100)))
   }
 
-  appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
 
   const url = `${META_API_BASE}/${campaignId}?${params.toString()}`
 
@@ -227,7 +227,7 @@ export async function fetchMetaAdMetrics(options: {
     params.set('filtering', JSON.stringify([{ field: 'adset.id', operator: 'EQUAL', value: adSetId }]))
   }
 
-  appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
 
   const url = `${META_API_BASE}/${adAccountId}/insights?${params.toString()}`
 
@@ -311,7 +311,7 @@ export async function fetchMetaCreatives(options: {
     params.set('effective_status', JSON.stringify(statusFilter))
   }
 
-  appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
 
   let url = `${META_API_BASE}/${adAccountId}/ads?${params.toString()}`
   if (campaignId) {
@@ -375,7 +375,7 @@ export async function fetchMetaAudienceTargeting(options: {
     limit: '100',
   })
 
-  appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
 
   let url = `${META_API_BASE}/${adAccountId}/adsets?${params.toString()}`
   if (campaignId) {

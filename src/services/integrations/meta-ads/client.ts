@@ -2,7 +2,8 @@
 // META ADS API CLIENT - Core request execution with retry logic
 // =============================================================================
 
-import { createHmac } from 'node:crypto'
+// Use dynamic import for crypto to avoid Edge Runtime issues
+// Note: appsecret_proof is only computed when running in Node.js environment
 
 import { formatDate } from '@/lib/dates'
 import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
@@ -64,18 +65,37 @@ export function calculateBackoffDelay(
   return Math.min(exponentialDelay + jitter, config.maxDelayMs)
 }
 
-export function appendMetaAuthParams(options: { 
+// Compute HMAC using Web Crypto API (Edge Runtime compatible)
+async function computeHmacSha256(secret: string, data: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(secret)
+  const messageData = encoder.encode(data)
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  
+  const signature = await crypto.subtle.sign('HMAC', key, messageData)
+  const hashArray = Array.from(new Uint8Array(signature))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+export async function appendMetaAuthParams(options: { 
   params: URLSearchParams
   accessToken: string
   appSecret?: string | null 
-}) {
+}): Promise<void> {
   const { params, accessToken, appSecret } = options
   params.set('access_token', accessToken)
 
   if (!appSecret) return
 
   try {
-    const proof = createHmac('sha256', appSecret).update(accessToken).digest('hex')
+    const proof = await computeHmacSha256(appSecret, accessToken)
     params.set('appsecret_proof', proof)
   } catch (error) {
     console.warn('[Meta API] Failed to compute appsecret_proof', error)

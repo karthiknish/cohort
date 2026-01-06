@@ -50,7 +50,7 @@ export async function fetchMetaAdAccounts(options: {
     limit: String(limit),
   })
 
-  appendMetaAuthParams({ params, accessToken, appSecret })
+  await appendMetaAuthParams({ params, accessToken, appSecret })
 
   const url = `${META_API_BASE}/me/adaccounts?${params.toString()}`
   
@@ -136,7 +136,7 @@ export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<Norm
       limit: '500',
     })
 
-    appendMetaAuthParams({ params, accessToken: activeAccessToken, appSecret })
+    await appendMetaAuthParams({ params, accessToken: activeAccessToken, appSecret })
 
     if (paging?.after) {
       params.set('after', paging.after)
