@@ -9,7 +9,7 @@ import {
   CardContent,
   CardHeader,
 } from '@/components/ui/card'
-import { createProposalDraft, deleteProposalDraft, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalPresentationDeck } from '@/services/proposals'
+import { createProposalDraft, deleteProposalDraft, getProposalById, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalPresentationDeck } from '@/services/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
@@ -73,6 +73,7 @@ export default function ProposalsPage() {
   const [aiSuggestions, setAiSuggestions] = useState<string | null>(null)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
+  const [isPresentationReady, setIsPresentationReady] = useState(false)
   const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
   const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null)
   const [deckProgressStage, setDeckProgressStage] = useState<DeckProgressStage | null>(null)
@@ -670,6 +671,7 @@ export default function ProposalsPage() {
   const submitProposal = async () => {
     try {
       setIsSubmitting(true)
+      setIsPresentationReady(false)
       clearErrors(stepErrorPaths.value)
       setAiSuggestions(null)
       let activeDraftId = draftId
@@ -718,10 +720,41 @@ export default function ProposalsPage() {
         trackAiGenerationFailed(activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch(console.error)
       }
 
+      // Poll for presentation deck if AI summary is ready but deck isn't
+      let finalPptUrl = response.pptUrl ?? response.presentationDeck?.storageUrl ?? null
+      let finalDeck = response.presentationDeck ?? null
+
+      if (isReady && !finalPptUrl) {
+        // Poll for the presentation deck (Gamma generates it asynchronously)
+        const maxAttempts = 30 // Poll for up to ~60 seconds
+        const pollInterval = 2000 // 2 seconds between attempts
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval))
+          
+          try {
+            const refreshedProposal = await getProposalById(activeDraftId)
+            const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
+            
+            if (deckUrl) {
+              finalPptUrl = deckUrl
+              finalDeck = refreshedProposal.presentationDeck ?? null
+              console.log('[ProposalWizard] Presentation deck ready after polling:', deckUrl)
+              break
+            }
+          } catch (pollError) {
+            console.warn('[ProposalWizard] Polling for deck failed:', pollError)
+            // Continue polling even if one request fails
+          }
+        }
+      }
+
+      // Mark presentation as ready (either we have it or we've polled enough)
+      setIsPresentationReady(true)
+
       setSubmitted(isReady)
-      setPresentationDeck(response.presentationDeck ? { ...response.presentationDeck, storageUrl: response.pptUrl ?? response.presentationDeck.storageUrl ?? null } : null)
+      setPresentationDeck(finalDeck ? { ...finalDeck, storageUrl: finalPptUrl ?? finalDeck.storageUrl ?? null } : null)
       setAiSuggestions(response.aiSuggestions ?? null)
-      const storedPptUrl = response.pptUrl ?? response.presentationDeck?.storageUrl ?? null
 
       if (isReady) {
         const formSnapshot = structuredClone(formState) as ProposalFormData
@@ -741,15 +774,15 @@ export default function ProposalsPage() {
         setAutosaveStatus('idle')
       }
 
-      if (storedPptUrl) {
+      if (finalPptUrl) {
         toast({
           title: 'Presentation ready',
           description: 'We saved the presentation in Firebase storage for instant download.',
         })
       } else {
         toast({
-          title: 'Presentation queued',
-          description: 'We are generating the presentation deck in the background. Check back in a few moments.',
+          title: 'Presentation still generating',
+          description: 'The presentation is taking longer than expected. You can download it from the proposal history once ready.',
         })
       }
 
@@ -961,7 +994,7 @@ export default function ProposalsPage() {
           }
         }}
       />
-      <ProposalGenerationOverlay isSubmitting={isSubmitting} />
+      <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
 
     </div>

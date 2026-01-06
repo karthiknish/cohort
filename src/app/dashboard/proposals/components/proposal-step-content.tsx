@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 
 import type { ProposalFormData } from '@/lib/proposals'
+import { GAMMA_PRESENTATION_THEMES } from '@/lib/gamma-themes'
 
 const marketingPlatforms = ['Google Ads', 'Meta Ads', 'LinkedIn Ads', 'TikTok Ads', 'Other'] as const
 const socialHandles = ['Facebook', 'Instagram', 'LinkedIn', 'TikTok', 'X / Twitter', 'YouTube'] as const
@@ -417,6 +418,27 @@ function ProposalStepContentComponent({
               value={formState.value.additionalNotes}
               onChange={(event) => onUpdateField(['value', 'additionalNotes'], event.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="presentationTheme" className="text-base">Presentation theme</Label>
+            <p className="text-sm text-muted-foreground">Choose a style for your AI-generated presentation deck.</p>
+            <Select
+              value={formState.value.presentationTheme || ''}
+              onValueChange={(value) => onUpdateField(['value', 'presentationTheme'], value)}
+            >
+              <SelectTrigger id="presentationTheme" className="w-full max-w-xs">
+                <SelectValue placeholder="Select a theme" />
+              </SelectTrigger>
+              <SelectContent>
+                {GAMMA_PRESENTATION_THEMES.map((theme) => (
+                  <SelectItem key={theme.id} value={theme.id || 'default'}>
+                    <span className="font-medium">{theme.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">{theme.description}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Card className="border-dashed border-primary/20 bg-primary/5">

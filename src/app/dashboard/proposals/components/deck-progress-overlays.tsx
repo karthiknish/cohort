@@ -32,31 +32,36 @@ const generationFlow: { label: string; helper: string; duration: number | null }
   {
     label: "Analyzing your input...",
     helper: "Reviewing your responses and goals to set the brief.",
-    duration: 2000,
+    duration: 3000,
   },
   {
     label: "Gathering market insights...",
     helper: "Pulling benchmarks, comps, and audience signals.",
-    duration: 3000,
+    duration: 4000,
   },
   {
     label: "Drafting strategy...",
     helper: "Writing tailored recommendations and messaging.",
-    duration: 5000,
+    duration: 6000,
   },
   {
     label: "Formatting sections...",
     helper: "Structuring slides, pricing, and CTA blocks.",
-    duration: 2000,
+    duration: 8000,
   },
   {
-    label: "Ready for review!",
-    helper: "We have a complete draft waiting for you.",
-    duration: null,
+    label: "Generating presentation...",
+    helper: "Gamma is creating your presentation slides. This may take a moment.",
+    duration: null, // This stage waits for actual completion
   },
 ]
 
-export function ProposalGenerationOverlay({ isSubmitting }: { isSubmitting: boolean }) {
+interface ProposalGenerationOverlayProps {
+  isSubmitting: boolean
+  isPresentationReady?: boolean
+}
+
+export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = false }: ProposalGenerationOverlayProps) {
   const [stageIndex, setStageIndex] = useState(0)
 
   useEffect(() => {
@@ -77,12 +82,20 @@ export function ProposalGenerationOverlay({ isSubmitting }: { isSubmitting: bool
     return () => clearTimeout(id)
   }, [isSubmitting, stageIndex])
 
+  // When presentation is ready, show completion
+  useEffect(() => {
+    if (isPresentationReady && stageIndex === generationFlow.length - 1) {
+      // Presentation is ready, we can close the overlay shortly
+    }
+  }, [isPresentationReady, stageIndex])
+
   if (!isSubmitting) {
     return null
   }
 
   const currentStage = generationFlow[stageIndex]
   const isFinalStage = stageIndex === generationFlow.length - 1
+  const isComplete = isFinalStage && isPresentationReady
 
   return (
     <div
@@ -91,21 +104,25 @@ export function ProposalGenerationOverlay({ isSubmitting }: { isSubmitting: bool
       aria-live="polite"
     >
       <div className="flex flex-col items-center gap-3 text-center">
-        {isFinalStage ? (
+        {isComplete ? (
           <CheckCircle2 className="h-10 w-10 text-emerald-500" />
         ) : (
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
         )}
         <div>
-          <p className="text-lg font-semibold text-foreground">{currentStage.label}</p>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">{currentStage.helper}</p>
+          <p className="text-lg font-semibold text-foreground">
+            {isComplete ? "Ready for review!" : currentStage.label}
+          </p>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            {isComplete ? "We have a complete proposal with presentation waiting for you." : currentStage.helper}
+          </p>
         </div>
         <div className="mt-2 w-72 rounded-md border border-muted/60 bg-muted/30 p-3 text-left text-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress</p>
           <div className="mt-2 space-y-1">
             {generationFlow.map((stage, index) => {
-              const isActive = index === stageIndex
-              const isDone = index < stageIndex
+              const isActive = index === stageIndex && !isComplete
+              const isDone = index < stageIndex || isComplete
               const indicatorClass = `h-2.5 w-2.5 rounded-full ${
                 isDone ? "bg-emerald-500" : isActive ? "bg-primary" : "bg-muted-foreground/60"
               }`

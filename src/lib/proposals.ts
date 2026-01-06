@@ -33,6 +33,7 @@ export const proposalFormSchema = z.object({
     proposalSize: z.string().default(''),
     engagementType: z.string().default(''),
     additionalNotes: z.string().default(''),
+    presentationTheme: z.string().default(''),
   }),
 })
 
@@ -76,6 +77,7 @@ const DEFAULT_PROPOSAL_FORM: ProposalFormData = {
     proposalSize: '',
     engagementType: '',
     additionalNotes: '',
+    presentationTheme: '',
   },
 }
 

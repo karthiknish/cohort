@@ -702,10 +702,10 @@ export const GAMMA_RECOMMENDED_MODELS = {
 }
 
 /**
- * Common theme presets (from Gamma's standard themes)
+ * Common theme presets
+ * NOTE: Theme availability varies by account. Use listThemes() to get available themes.
  */
 export const GAMMA_STANDARD_THEMES = [
-    'Oasis',
     'Prism',
     'Chisel',
     'Standard Dark',

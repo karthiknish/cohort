@@ -34,12 +34,12 @@ export interface EnsureProposalGammaDeckArgs {
   existingDeck?: GammaDeckPayload | null
   existingStorageUrl?: string | null
   instructions?: string | null
+  themeId?: string | null
   logContext?: string
 }
 
 const FALLBACK_GAMMA_INSTRUCTIONS = `Slide 1: Executive Summary\nSlide 2: Objectives & KPIs\nSlide 3: Strategy Overview\nSlide 4: Budget Allocation (distribute 100% across channels and note any testing allowance)\nSlide 5: Execution Roadmap\nSlide 6: Optimization & Testing\nSlide 7: Next Steps & Call-to-Action`
 
-const DEFAULT_GAMMA_THEME = 'Oasis'
 const DEFAULT_IMAGE_SOURCE = 'unsplash'
 
 export async function downloadGammaPresentation(url: string, retries = 3, backoffMs = 2000): Promise<Buffer> {
@@ -251,6 +251,7 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     existingDeck,
     existingStorageUrl,
     instructions,
+    themeId,
     logContext = '[GammaPipeline]'
   } = args
 
@@ -317,7 +318,8 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     textMode: 'generate',
     numCards: estimateGammaSlideCount(formData),
     exportAs: 'pptx',
-    themeId: DEFAULT_GAMMA_THEME,
+    // Pass selected theme if provided, otherwise use Gamma's default
+    ...(themeId && themeId.trim() && themeId !== 'default' ? { themeId } : {}),
     cardOptions: {
       dimensions: '16x9',
     },

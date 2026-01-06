@@ -179,6 +179,9 @@ async function queueGammaDeckGeneration(args: {
   } = args
 
   try {
+    // Extract selected theme from form data
+    const selectedTheme = formData.value?.presentationTheme ?? null
+    
     const gammaDeckResult: GammaDeckProcessResult = await ensureProposalGammaDeck({
       userId,
       proposalId,
@@ -186,6 +189,7 @@ async function queueGammaDeckGeneration(args: {
       summary,
       existingDeck: previousGammaDeck ?? undefined,
       existingStorageUrl: previousPptUrl ?? previousGammaDeck?.storageUrl ?? null,
+      themeId: selectedTheme,
       logContext: '[ProposalSubmit-Async]',
     })
 

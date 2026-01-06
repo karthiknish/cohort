@@ -17,8 +17,10 @@ import {
 
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
+import { getPreviewProjects, getPreviewTasks, getPreviewProposals, getPreviewFinanceSummary } from '@/lib/preview-data'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
 import {
@@ -79,6 +81,7 @@ export default function ClientsDashboardPage() {
 function ClientsDashboardContent() {
   const searchParams = useSearchParams()
   const { selectedClient, refreshClients, clients, selectClient, selectedClientId, loading } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { getIdToken } = useAuth()
   const { toast } = useToast()
 
@@ -123,15 +126,26 @@ function ClientsDashboardContent() {
 
     setStatsLoading(true)
     try {
-      const [projectsData, tasksData, proposalsData] = await Promise.all([
-        apiFetch<{ projects: any[] }>(`/api/projects?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ projects: [] })),
-        apiFetch<{ tasks: any[] }>(`/api/tasks?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ tasks: [] })),
-        apiFetch<{ proposals: any[] }>(`/api/proposals?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ proposals: [] })),
-      ])
+      let projects: { status?: string }[] = []
+      let tasks: { status?: string }[] = []
+      let proposals: { status?: string }[] = []
 
-      const projects = Array.isArray(projectsData.projects) ? projectsData.projects : []
-      const tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks : []
-      const proposals = Array.isArray(proposalsData.proposals) ? proposalsData.proposals : []
+      if (isPreviewMode) {
+        // Use preview data functions
+        projects = getPreviewProjects(selectedClient.id)
+        tasks = getPreviewTasks(selectedClient.id)
+        proposals = getPreviewProposals(selectedClient.id)
+      } else {
+        const [projectsData, tasksData, proposalsData] = await Promise.all([
+          apiFetch<{ projects: any[] }>(`/api/projects?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ projects: [] })),
+          apiFetch<{ tasks: any[] }>(`/api/tasks?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ tasks: [] })),
+          apiFetch<{ proposals: any[] }>(`/api/proposals?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ proposals: [] })),
+        ])
+
+        projects = Array.isArray(projectsData.projects) ? projectsData.projects : []
+        tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks : []
+        proposals = Array.isArray(proposalsData.proposals) ? proposalsData.proposals : []
+      }
 
       const totalProjects = projects.length
       const activeProjects = projects.filter((p: { status?: string }) => 
@@ -139,7 +153,7 @@ function ClientsDashboardContent() {
       ).length
 
       const openTasks = tasks.filter((t: { status?: string }) => 
-        t.status === 'todo' || t.status === 'in_progress'
+        t.status === 'todo' || t.status === 'in-progress'
       ).length
       const completedTasks = tasks.filter((t: { status?: string }) => 
         t.status === 'done' || t.status === 'completed'
@@ -156,7 +170,7 @@ function ClientsDashboardContent() {
     } finally {
       setStatsLoading(false)
     }
-  }, [selectedClient])
+  }, [selectedClient, isPreviewMode])
 
   useEffect(() => {
     fetchClientStats()
@@ -171,11 +185,19 @@ function ClientsDashboardContent() {
 
     setInvoiceHistoryLoading(true)
     try {
-      const data = await apiFetch<{ invoices: any[] }>(`/api/finance/summary?clientId=${selectedClient.id}&pageSize=10`, {
-        cache: 'no-store',
-      })
+      let invoices: any[] = []
 
-      const invoices = Array.isArray(data.invoices) ? data.invoices : []
+      if (isPreviewMode) {
+        // Use preview finance data
+        const previewFinance = getPreviewFinanceSummary(selectedClient.id)
+        invoices = previewFinance.invoices ?? []
+      } else {
+        const data = await apiFetch<{ invoices: any[] }>(`/api/finance/summary?clientId=${selectedClient.id}&pageSize=10`, {
+          cache: 'no-store',
+        })
+        invoices = Array.isArray(data.invoices) ? data.invoices : []
+      }
+
       setInvoiceHistory(invoices.map((inv: Record<string, unknown>) => ({
         id: inv.id as string || '',
         number: inv.number as string | null,
@@ -197,7 +219,7 @@ function ClientsDashboardContent() {
     } finally {
       setInvoiceHistoryLoading(false)
     }
-  }, [selectedClient])
+  }, [selectedClient, isPreviewMode])
 
   // Initialize email from client when opening create invoice dialog
   useEffect(() => {
