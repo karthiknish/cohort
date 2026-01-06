@@ -73,6 +73,15 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
     <>
       <button
         onClick={() => setOpen(true)}
+        className="inline-flex items-center justify-center rounded-md border border-input bg-background p-2 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground sm:hidden"
+        aria-label="Open quick navigation"
+        type="button"
+      >
+        <Search className="h-4 w-4" />
+      </button>
+
+      <button
+        onClick={() => setOpen(true)}
         className="hidden sm:inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
         <Search className="h-4 w-4" />

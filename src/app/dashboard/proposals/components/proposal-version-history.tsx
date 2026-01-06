@@ -25,6 +25,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import type { ProposalVersion } from '@/types/proposal-versions'
 import type { ProposalFormData } from '@/lib/proposals'
+import { isPreviewModeEnabled } from '@/lib/preview-data'
 import {
   fetchProposalVersions,
   createProposalVersion,
@@ -89,6 +90,11 @@ export function ProposalVersionHistory({
   const loadVersions = useCallback(async () => {
     if (!proposalId) return
 
+    if (typeof window !== 'undefined' && isPreviewModeEnabled()) {
+      setVersions([])
+      return
+    }
+
     try {
       setLoading(true)
       await getIdToken()
@@ -123,6 +129,14 @@ export function ProposalVersionHistory({
       return
     }
 
+    if (typeof window !== 'undefined' && isPreviewModeEnabled()) {
+      toast({
+        title: 'Not available in preview mode',
+        description: 'Version history is disabled for preview/demo proposals.',
+      })
+      return
+    }
+
     try {
       setSaving(true)
       await getIdToken()
@@ -149,6 +163,15 @@ export function ProposalVersionHistory({
 
   const handleRestoreVersion = useCallback(async () => {
     if (!proposalId || !restoreConfirmVersion) return
+
+    if (typeof window !== 'undefined' && isPreviewModeEnabled()) {
+      toast({
+        title: 'Not available in preview mode',
+        description: 'Restoring versions is disabled for preview/demo proposals.',
+      })
+      setRestoreConfirmVersion(null)
+      return
+    }
 
     try {
       setRestoring(true)

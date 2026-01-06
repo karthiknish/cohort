@@ -316,48 +316,52 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="lg:hidden">
-              <Sheet open={open} onOpenChange={setOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Toggle navigation</span>
+      <header className="sticky top-0 z-40 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
+          {/* Mobile menu button */}
+          <div className="lg:hidden">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0" aria-label="Open navigation">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle navigation</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[280px] p-0">
+                <SheetHeader className="border-b px-4 py-3">
+                  <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
+                </SheetHeader>
+                <div className="p-4">
+                  <NavigationList onNavigate={() => setOpen(false)} />
+                  <Button
+                    variant="ghost"
+                    className="mt-6 w-full justify-start gap-2 text-sm font-medium"
+                    onClick={() => {
+                      setOpen(false)
+                      signOut()
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
                   </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[260px] p-0">
-                  <SheetHeader className="border-b px-4 py-3">
-                    <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
-                  </SheetHeader>
-                  <div className="p-4">
-                    <NavigationList onNavigate={() => setOpen(false)} />
-                    <Button
-                      variant="ghost"
-                      className="mt-6 w-full justify-start gap-2 text-sm font-medium"
-                      onClick={() => {
-                        setOpen(false)
-                        signOut()
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </Button>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            <div className="hidden text-sm font-semibold text-primary lg:block">Cohorts</div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
 
-          <div className="flex w-full flex-1 flex-col gap-3 lg:ml-8 lg:flex-row lg:items-center">
-            <ClientWorkspaceSelector className="w-full lg:w-[260px]" />
+          {/* Workspace selector - grows to fill space */}
+          <div className="min-w-0 flex-1 sm:max-w-[260px]">
+            <ClientWorkspaceSelector className="w-full" />
+          </div>
+
+          {/* Search / Command menu - desktop only */}
+          <div className="hidden sm:block sm:flex-1 sm:max-w-md">
             <CommandMenu onOpenHelp={() => setHelpOpen(true)} />
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right side actions */}
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -384,15 +388,15 @@ export function Header() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{initials}</AvatarFallback>
+                <Button variant="ghost" size="icon" className="sm:h-auto sm:w-auto sm:px-2 sm:py-1.5">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                    <AvatarFallback className="text-xs sm:text-sm">{initials}</AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-sm font-medium sm:inline">
-                    {user?.name ?? 'Account User'}
+                  <span className="hidden text-sm font-medium sm:ml-2 sm:inline">
+                    {user?.name ?? 'Account'}
                   </span>
                   {roleLabel && (
-                    <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="hidden sm:inline-flex text-[10px] px-1.5 py-0">
+                    <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0">
                       {roleLabel}
                     </Badge>
                   )}

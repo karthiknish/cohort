@@ -17,6 +17,7 @@ export type GammaDeckPayload = {
   pdfUrl: string | null
   generatedFiles: Array<{ fileType: string; fileUrl: string }>
   storageUrl: string | null
+  pdfStorageUrl: string | null
 }
 
 export type GammaDeckProcessResult = {
@@ -137,13 +138,48 @@ export async function storeGammaPresentation(userId: string, proposalId: string,
 
   const encodedPath = encodeURIComponent(filePath)
   const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`
-  
+
   console.log('[GammaUtils] Successfully stored file with public URL:', {
     filePath,
     downloadToken,
     publicUrl: publicUrl.substring(0, 100) + '...'
   })
-  
+
+  return publicUrl
+}
+
+export async function storeGammaPdf(userId: string, proposalId: string, pdfBuffer: Buffer): Promise<string> {
+  console.log('[GammaUtils] Starting PDF storage for proposal:', {
+    userId,
+    proposalId,
+    bufferSize: pdfBuffer.length
+  })
+
+  const bucket = adminStorage.bucket()
+  const filePath = `proposals/${userId}/${proposalId}.pdf`
+  const file = bucket.file(filePath)
+  const downloadToken = randomUUID()
+
+  console.log('[GammaUtils] Saving PDF file to Firebase Storage:', filePath)
+  await file.save(pdfBuffer, {
+    resumable: false,
+    contentType: 'application/pdf',
+    metadata: {
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
+    },
+  })
+
+  const encodedPath = encodeURIComponent(filePath)
+  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`
+
+  console.log('[GammaUtils] Successfully stored PDF with public URL:', {
+    filePath,
+    downloadToken,
+    publicUrl: publicUrl.substring(0, 100) + '...'
+  })
+
   return publicUrl
 }
 
@@ -275,18 +311,36 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
   const resolvedInstructions = await resolveGammaInstructions(formData, instructions ?? existingDeck?.instructions, logContext)
 
   if (existingDeck?.pptxUrl) {
-    console.log(`${logContext} Attempting to store existing Gamma deck PPT`, {
+    console.log(`${logContext} Attempting to store existing Gamma deck files`, {
       proposalId,
       generationId: existingDeck.generationId,
       pptxUrl: existingDeck.pptxUrl,
+      pdfUrl: existingDeck.pdfUrl,
     })
     try {
       const buffer = await downloadGammaPresentation(existingDeck.pptxUrl)
       const storedUrl = await storeGammaPresentation(userId, proposalId, buffer)
+
+      // Also store PDF if available
+      let pdfStorageUrl: string | null = null
+      if (existingDeck.pdfUrl) {
+        try {
+          const pdfBuffer = await downloadGammaPresentation(existingDeck.pdfUrl)
+          pdfStorageUrl = await storeGammaPdf(userId, proposalId, pdfBuffer)
+          console.log(`${logContext} Stored PDF from existing Gamma deck`, {
+            proposalId,
+            pdfStorageUrl: pdfStorageUrl.substring(0, 96),
+          })
+        } catch (pdfErr) {
+          console.warn(`${logContext} Failed to store PDF from existing deck, continuing`, pdfErr)
+        }
+      }
+
       const deckWithStorage: GammaDeckPayload = {
         ...existingDeck,
         instructions: resolvedInstructions,
         storageUrl: storedUrl,
+        pdfStorageUrl,
       }
       console.log(`${logContext} Stored PPT from existing Gamma deck`, {
         proposalId,
@@ -317,7 +371,7 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     format: 'presentation',
     textMode: 'generate',
     numCards: estimateGammaSlideCount(formData),
-    exportAs: 'pptx',
+    exportAs: ['pptx', 'pdf'],
     // Pass selected theme if provided, otherwise use Gamma's default
     ...(themeId && themeId.trim() && themeId !== 'default' ? { themeId } : {}),
     cardOptions: {
@@ -327,7 +381,7 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
       source: DEFAULT_IMAGE_SOURCE,
     },
   }, {
-    timeoutMs: 360000, // 6 minutes for complex presentations
+    timeoutMs: 420000, // 7 minutes for complex presentations with dual export
     pollIntervalMs: 8000, // Slightly longer intervals for export processing
   })
 
@@ -356,16 +410,18 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     }
   }
 
-  console.log(`${logContext} Downloading newly generated Gamma PPT`, {
+  console.log(`${logContext} Downloading newly generated Gamma files`, {
     proposalId,
     generationId: gammaDeck.generationId,
     pptxUrl: gammaDeck.pptxUrl,
+    pdfUrl: gammaDeck.pdfUrl,
   })
   const pptSource = gammaDeck.pptxUrl
   if (!pptSource) {
     throw new Error(`${logContext} Gamma deck is missing a PPT URL after validation`)
   }
 
+  // Download and store PPT
   const pptBuffer = await downloadGammaPresentation(pptSource)
 
   console.log(`${logContext} Storing Gamma PPT to Firebase Storage`, {
@@ -380,9 +436,45 @@ export async function ensureProposalGammaDeck(args: EnsureProposalGammaDeckArgs)
     storedUrl: storedUrl.substring(0, 96),
   })
 
+  // Download and store PDF if available
+  let pdfStorageUrl: string | null = null
+  if (gammaDeck.pdfUrl) {
+    try {
+      console.log(`${logContext} Downloading Gamma PDF`, {
+        proposalId,
+        generationId: gammaDeck.generationId,
+        pdfUrl: gammaDeck.pdfUrl,
+      })
+      const pdfBuffer = await downloadGammaPresentation(gammaDeck.pdfUrl)
+
+      console.log(`${logContext} Storing Gamma PDF to Firebase Storage`, {
+        proposalId,
+        generationId: gammaDeck.generationId,
+        bufferSize: pdfBuffer.length,
+      })
+      pdfStorageUrl = await storeGammaPdf(userId, proposalId, pdfBuffer)
+
+      console.log(`${logContext} Stored Gamma PDF`, {
+        proposalId,
+        pdfStorageUrl: pdfStorageUrl.substring(0, 96),
+      })
+    } catch (pdfError) {
+      console.warn(`${logContext} Failed to store PDF, continuing with PPT only`, {
+        proposalId,
+        error: pdfError instanceof Error ? pdfError.message : String(pdfError),
+      })
+    }
+  } else {
+    console.log(`${logContext} No PDF URL available from Gamma generation`, {
+      proposalId,
+      generationId: gammaDeck.generationId,
+    })
+  }
+
   const deckWithStorage: GammaDeckPayload = {
     ...gammaDeck,
     storageUrl: storedUrl,
+    pdfStorageUrl,
   }
 
   return {
@@ -477,6 +569,7 @@ export function mapGammaDeckPayload(result: GammaGenerationStatus, instructions:
     pdfUrl: pdf ?? null,
     generatedFiles: result.generatedFiles,
     storageUrl: null,
+    pdfStorageUrl: null,
   }
 }
 
@@ -518,6 +611,7 @@ export function parseGammaDeckPayload(input: unknown): GammaDeckPayload | null {
     pdfUrl: typeof record.pdfUrl === 'string' ? record.pdfUrl : null,
     generatedFiles,
     storageUrl: typeof record.storageUrl === 'string' ? record.storageUrl : null,
+    pdfStorageUrl: typeof record.pdfStorageUrl === 'string' ? record.pdfStorageUrl : null,
   }
 }
 

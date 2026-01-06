@@ -13,6 +13,7 @@ export interface ProposalPresentationDeck {
   pdfUrl: string | null
   generatedFiles: Array<{ fileType: string; fileUrl: string }>
   storageUrl: string | null
+  pdfStorageUrl?: string | null
 }
 
 /** @deprecated Use ProposalPresentationDeck instead */
