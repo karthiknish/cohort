@@ -14,11 +14,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, loading, signOut } = useAuth()
+  const { user, loading, isSyncing, signOut } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (loading) return
+    if (loading || isSyncing) return
 
     if (!user) {
       router.push('/')
@@ -32,7 +32,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     if (requiredRole && !hasRequiredRole(user.role, requiredRole)) {
       router.push('/dashboard')
     }
-  }, [user, loading, router, requiredRole])
+  }, [user, loading, isSyncing, router, requiredRole])
 
   const handleBlockedSignOut = useCallback(async () => {
     try {
@@ -42,11 +42,15 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     }
   }, [signOut, router])
 
-  if (loading) {
+  if (loading || isSyncing) {
     return (
       <AccessOverlay
-        title="Loading your workspace"
-        message="Just a moment while we check your account permissions."
+        title={isSyncing ? 'Syncing your session' : 'Loading your workspace'}
+        message={
+          isSyncing
+            ? 'Just a moment while we sync your secure session cookies.'
+            : 'Just a moment while we check your account permissions.'
+        }
         showSpinner
       />
     )

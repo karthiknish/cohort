@@ -224,6 +224,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 let syncInProgress: Promise<boolean> | null = null
 const LAST_SYNC_TOKEN_KEY = 'cohorts.auth.lastSyncToken'
 
+async function waitForServerSessionPresence(expected: boolean, maxAttempts = 5): Promise<boolean> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch('/api/auth/session', { method: 'GET', cache: 'no-store' })
+      const data = (await res.json()) as any
+      const hasSession = Boolean(data?.hasSession)
+      if (hasSession === expected) {
+        return true
+      }
+    } catch {
+      // ignore and retry
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200 + attempt * 200))
+  }
+
+  return false
+}
+
 function getStoredSyncToken(): string | null {
   if (typeof window === 'undefined') return null
   return window.sessionStorage.getItem(LAST_SYNC_TOKEN_KEY)
@@ -311,8 +330,13 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
 
         // If we still get a 409 after all retries, it's likely fine (another request won)
         if (status === 409) {
-          console.warn('[AuthProvider] Session sync conflict persisted, assuming success.')
-          return true
+          // Don't assume success: wait until the server observes the session cookie.
+          console.warn('[AuthProvider] Session sync conflict persisted, waiting for session cookie...')
+          const ok = await waitForServerSessionPresence(true, 5)
+          if (ok) {
+            setStoredSyncToken(token)
+          }
+          return ok
         }
 
         // For 429s that exhausted retries, just warn and fail

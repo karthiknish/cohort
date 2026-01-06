@@ -5,13 +5,20 @@ import Link from 'next/link'
 import { Loader2, RefreshCcw } from 'lucide-react'
 
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ClientWorkspaceSelector } from '@/components/client-workspace-selector'
 
 export function ClientAccessGate({ children }: PropsWithChildren) {
   const { loading, error, clients, selectedClientId, refreshClients } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const [refreshing, setRefreshing] = useState(false)
+
+  // In preview mode, bypass all access gates and show children directly
+  if (isPreviewMode) {
+    return <>{children}</>
+  }
 
   if (loading && clients.length === 0) {
     return (

@@ -126,6 +126,47 @@ export default function HomePage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
 
+  const redirectInProgressRef = (globalThis as any).__cohortsRedirectInProgressRef ?? { current: false }
+  ;(globalThis as any).__cohortsRedirectInProgressRef = redirectInProgressRef
+
+  const REDIRECT_STATE_KEY = "cohorts.auth.redirectState"
+  const REDIRECT_STATE_STALE_MS = 30_000
+
+  type RedirectState = { dest: string; count: number; ts: number }
+
+  const readRedirectState = (): RedirectState | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = window.sessionStorage.getItem(REDIRECT_STATE_KEY)
+      if (!raw) return null
+      const parsed = JSON.parse(raw) as Partial<RedirectState> | null
+      if (!parsed || typeof parsed.dest !== 'string' || typeof parsed.count !== 'number' || typeof parsed.ts !== 'number') {
+        return null
+      }
+      return { dest: parsed.dest, count: parsed.count, ts: parsed.ts }
+    } catch {
+      return null
+    }
+  }
+
+  const writeRedirectState = (state: { dest: string; count: number; ts: number }) => {
+    if (typeof window === 'undefined') return
+    try {
+      window.sessionStorage.setItem(REDIRECT_STATE_KEY, JSON.stringify(state))
+    } catch {
+      // ignore
+    }
+  }
+
+  const clearRedirectState = () => {
+    if (typeof window === 'undefined') return
+    try {
+      window.sessionStorage.removeItem(REDIRECT_STATE_KEY)
+    } catch {
+      // ignore
+    }
+  }
+
   // Fix hydration mismatch: track whether component has mounted on client
   const [hasMounted, setHasMounted] = useState(false)
   useEffect(() => {
@@ -154,50 +195,57 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    if (!loading && !isSyncing && user) {
-      const redirect = searchParams.get("redirect")
-      const destination = redirect || "/dashboard"
+    if (loading || isSyncing || !user) return
+    if (redirectInProgressRef.current) return
 
-      // Prevent infinite redirect loops: check if we've attempted this same redirect too many times recently
-      if (typeof window !== 'undefined') {
-        const now = Date.now()
-        const lastAttemptTime = Number(window.sessionStorage.getItem('cohorts.auth.lastRedirectTime') || 0)
-        const lastAttemptDest = window.sessionStorage.getItem('cohorts.auth.lastRedirectDest')
-        const attemptCount = Number(window.sessionStorage.getItem('cohorts.auth.redirectAttempts') || 0)
+    const redirect = searchParams.get("redirect")
+    let destination = redirect || "/dashboard"
 
-        // If we're trying to redirect to the same place within 2 seconds of the last attempt
-        if (lastAttemptDest === destination && now - lastAttemptTime < 2000) {
-          if (attemptCount > 3) {
-            console.error('[HomePage] Infinite redirect detected for:', destination)
-            toast({
-              title: "Redirect loop detected",
-              description: "We're having trouble syncing your session. Please try refreshing the page.",
-              variant: "destructive",
-            })
-            return
-          }
-          window.sessionStorage.setItem('cohorts.auth.redirectAttempts', String(attemptCount + 1))
-        } else {
-          // Reset attempts if it's a new destination or enough time has passed
-          window.sessionStorage.setItem('cohorts.auth.redirectAttempts', '1')
-        }
+    // If no explicit redirect, try to restore last visited dashboard tab
+    if (!redirect && typeof window !== 'undefined') {
+      const lastTab = window.localStorage.getItem('cohorts_last_tab')
+      if (lastTab && lastTab.startsWith('/dashboard')) {
+        destination = lastTab
+      }
+    }
 
-        window.sessionStorage.setItem('cohorts.auth.lastRedirectTime', String(now))
-        window.sessionStorage.setItem('cohorts.auth.lastRedirectDest', destination)
+    // Cleanup stale tracking so refreshes don't cause false positives.
+    if (typeof window !== 'undefined') {
+      const now = Date.now()
+      const state = readRedirectState()
+      if (state && now - state.ts > REDIRECT_STATE_STALE_MS) {
+        clearRedirectState()
       }
 
-      // If no explicit redirect, try to restore last visited dashboard tab
-      if (!redirect && typeof window !== 'undefined') {
-        const lastTab = window.localStorage.getItem('cohorts_last_tab')
-        if (lastTab && lastTab.startsWith('/dashboard')) {
-          router.replace(lastTab)
+      // Prevent infinite redirect loops: detect rapid repeats to the same destination.
+      const next = readRedirectState()
+      if (next && next.dest === destination && now - next.ts < 2000) {
+        if (next.count >= 3) {
+          console.error('[HomePage] Infinite redirect detected for:', destination)
+          toast({
+            title: "Redirect loop detected",
+            description: "We're having trouble syncing your session. Please try refreshing the page.",
+            variant: "destructive",
+          })
           return
         }
+        writeRedirectState({ dest: destination, count: next.count + 1, ts: now })
+      } else {
+        writeRedirectState({ dest: destination, count: 1, ts: now })
       }
-      
-      router.replace(destination)
     }
+
+    redirectInProgressRef.current = true
+    router.replace(destination)
   }, [loading, isSyncing, user, router, searchParams, toast])
+
+  // When we're back on the home page without a user, clear any stale redirect-loop tracking.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!user) {
+      clearRedirectState()
+    }
+  }, [user])
 
   useEffect(() => {
     if (typeof window === "undefined") {

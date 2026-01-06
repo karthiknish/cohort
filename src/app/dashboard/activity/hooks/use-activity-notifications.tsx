@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Folder, CheckCircle, MessageSquare, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
@@ -15,6 +16,7 @@ interface NotificationConfig {
 }
 
 export function useActivityNotifications(activities: Activity[]) {
+  const router = useRouter()
   const { user } = useAuth()
   const { selectedClient } = useClientContext()
   const previousActivitiesRef = useRef<Activity[]>([])
@@ -71,12 +73,23 @@ export function useActivityNotifications(activities: Activity[]) {
         action: activity.navigationUrl ? {
           label: 'View',
           onClick: () => {
-            window.location.href = activity.navigationUrl
+            const target = activity.navigationUrl
+            if (!target) return
+
+            // Prefer Next router for same-origin navigation to keep auth/app state consistent.
+            if (target.startsWith('/')) {
+              router.push(target)
+              return
+            }
+
+            if (typeof window !== 'undefined') {
+              window.location.assign(target)
+            }
           },
         } : undefined,
       })
     }
-  }, [config, user])
+  }, [config, user, router])
 
   // Initialize broadcast channel for cross-tab sync
   useEffect(() => {

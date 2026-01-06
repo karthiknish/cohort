@@ -165,6 +165,19 @@ h6 {
     }
   }
 
+  @keyframes shimmer {
+    0% {
+      background-position: -250% 0;
+    }
+    100% {
+      background-position: 250% 0;
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s infinite linear;
+  }
+
   .animate-fade-in {
     animation: fade-in 0.3s ease-out;
   }

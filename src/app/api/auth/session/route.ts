@@ -10,6 +10,25 @@ const SessionSchema = z.object({
   status: z.string().optional(),
 })
 
+export const GET = async () => {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('cohorts_token')?.value
+  const role = cookieStore.get('cohorts_role')?.value ?? null
+  const status = cookieStore.get('cohorts_status')?.value ?? null
+
+  return NextResponse.json(
+    {
+      success: true,
+      hasSession: Boolean(token),
+      role,
+      status,
+    },
+    {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    }
+  )
+}
+
 export const POST = createApiHandler(
   {
     auth: 'none',

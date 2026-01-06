@@ -70,7 +70,8 @@ export async function middleware(request: NextRequest) {
   if (!token) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
-    redirectUrl.searchParams.set('redirect', pathname)
+    // Preserve querystring so users land back exactly where they intended.
+    redirectUrl.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(redirectUrl)
   }
 

@@ -288,13 +288,113 @@ export class AuthService {
         return
       }
 
-      const lock = localStorage.getItem(lockKey)
-      if (lock && Date.now() - parseInt(lock, 10) < 10000) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        return this.ensureUserBootstrap(firebaseUser, name)
+      type BootstrapLock = { ownerId: string; expiresAt: number }
+      const LOCK_TTL_MS = 60_000
+      const MAX_WAIT_MS = 15_000
+      const HEARTBEAT_MS = 10_000
+
+      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+      const ownerId = (() => {
+        try {
+          const key = 'cohorts_bootstrap_owner'
+          const existing = sessionStorage.getItem(key)
+          if (existing) return existing
+          const next = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2)
+          sessionStorage.setItem(key, next)
+          return next
+        } catch {
+          return Math.random().toString(36).slice(2)
+        }
+      })()
+
+      const readLock = (): BootstrapLock | null => {
+        try {
+          const raw = localStorage.getItem(lockKey)
+          if (!raw) return null
+          const parsed = JSON.parse(raw) as Partial<BootstrapLock> | null
+          if (!parsed || typeof parsed.ownerId !== 'string' || typeof parsed.expiresAt !== 'number') {
+            return null
+          }
+          return { ownerId: parsed.ownerId, expiresAt: parsed.expiresAt }
+        } catch {
+          return null
+        }
       }
 
-      localStorage.setItem(lockKey, Date.now().toString())
+      const writeLock = (lock: BootstrapLock) => {
+        localStorage.setItem(lockKey, JSON.stringify(lock))
+      }
+
+      const clearLockIfOwned = () => {
+        try {
+          const lock = readLock()
+          if (lock?.ownerId === ownerId) {
+            localStorage.removeItem(lockKey)
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const waitForLockChange = async (timeoutMs: number) => {
+        if (typeof window === 'undefined') {
+          await sleep(timeoutMs)
+          return
+        }
+
+        await new Promise<void>((resolve) => {
+          let settled = false
+          const onStorage = (event: StorageEvent) => {
+            if (event.key !== lockKey) return
+            if (settled) return
+            settled = true
+            window.removeEventListener('storage', onStorage)
+            resolve()
+          }
+
+          window.addEventListener('storage', onStorage)
+          setTimeout(() => {
+            if (settled) return
+            settled = true
+            window.removeEventListener('storage', onStorage)
+            resolve()
+          }, timeoutMs)
+        })
+      }
+
+      // Acquire a cross-tab lock to avoid multiple bootstraps racing.
+      // If another tab is already bootstrapping, prefer waiting briefly and then skipping.
+      const startWait = Date.now()
+      while (true) {
+        const now = Date.now()
+        const lock = readLock()
+        if (!lock || lock.expiresAt <= now || lock.ownerId === ownerId) {
+          writeLock({ ownerId, expiresAt: now + LOCK_TTL_MS })
+          break
+        }
+
+        if (now - startWait > MAX_WAIT_MS) {
+          // Another tab likely completed bootstrap; avoid starting a parallel one.
+          return
+        }
+
+        // Wait for either the lock to change (storage event) or a small timeout.
+        await waitForLockChange(1000)
+      }
+
+      const heartbeat = setInterval(() => {
+        try {
+          const lock = readLock()
+          if (lock?.ownerId === ownerId) {
+            writeLock({ ownerId, expiresAt: Date.now() + LOCK_TTL_MS })
+          }
+        } catch {
+          // ignore
+        }
+      }, HEARTBEAT_MS)
 
       try {
         const idToken = await this.fetchAndCacheIdToken(firebaseUser, false)
@@ -331,7 +431,8 @@ export class AuthService {
           await this.fetchAndCacheIdToken(firebaseUser, true)
         }
       } finally {
-        localStorage.removeItem(lockKey)
+        clearInterval(heartbeat)
+        clearLockIfOwned()
       }
     })()
       .finally(() => {

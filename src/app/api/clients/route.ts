@@ -2,6 +2,7 @@ import { FieldValue, Timestamp, FieldPath } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
+import { adminDb } from '@/lib/firebase-admin'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { ConflictError, NotFoundError } from '@/lib/api-errors'
@@ -130,7 +131,7 @@ export const GET = createApiHandler(
     rateLimit: 'standard',
     querySchema: paginationQuerySchema,
   },
-  async (req, { workspace, query }) => {
+  async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
     
     const pageSize = Math.min(Math.max(Number(query.pageSize) || 50, 1), 100)
@@ -147,7 +148,107 @@ export const GET = createApiHandler(
       baseQuery = baseQuery.startAfter(namePart, docId)
     }
 
-    const snapshot = await baseQuery.get()
+    let snapshot = await baseQuery.get()
+
+    // One-time compatibility bridge: if this workspace has no clients, but the legacy
+    // per-user subcollection has data, migrate it into the workspace-scoped collection.
+    // This prevents "No clients available" after switching to workspace-scoped paths.
+    if (snapshot.empty) {
+      try {
+        const workspaceSnap = await workspace.workspaceRef.get()
+        const workspaceData = (workspaceSnap.data() ?? {}) as Record<string, unknown>
+        const migrations = (workspaceData.migrations ?? {}) as Record<string, unknown>
+        const clientsFromUser = (migrations.clientsFromUser ?? {}) as Record<string, unknown>
+        const alreadyMigrated = clientsFromUser.completedAt != null
+
+        if (!alreadyMigrated) {
+          const legacyUserId = auth.uid
+
+          if (legacyUserId) {
+            const legacySnapshot = await adminDb.collection('users').doc(legacyUserId).collection('clients').get()
+
+            if (!legacySnapshot.empty) {
+              const batch = adminDb.batch()
+              let migratedCount = 0
+
+              legacySnapshot.docs.forEach((doc) => {
+                const data = (doc.data() ?? {}) as Record<string, unknown>
+                const deletedAt = data.deletedAt ?? null
+
+                // Skip legacy soft-deleted clients (if the field exists and is not null).
+                if (deletedAt !== null) {
+                  return
+                }
+
+                migratedCount += 1
+                const targetRef = workspace.clientsCollection.doc(doc.id)
+                batch.set(
+                  targetRef,
+                  {
+                    ...data,
+                    workspaceId: workspace.workspaceId,
+                    deletedAt: null,
+                    migratedFromUser: legacyUserId,
+                    migratedAt: FieldValue.serverTimestamp(),
+                    updatedAt: FieldValue.serverTimestamp(),
+                  },
+                  { merge: true }
+                )
+              })
+
+              if (migratedCount > 0) {
+                batch.set(
+                  workspace.workspaceRef,
+                  {
+                    migrations: {
+                      clientsFromUser: {
+                        completedAt: FieldValue.serverTimestamp(),
+                        sourceUserId: legacyUserId,
+                        migratedCount,
+                      },
+                    },
+                  },
+                  { merge: true }
+                )
+                await batch.commit()
+
+                // Re-run the original query after migration.
+                snapshot = await baseQuery.get()
+              } else {
+                await workspace.workspaceRef.set(
+                  {
+                    migrations: {
+                      clientsFromUser: {
+                        completedAt: FieldValue.serverTimestamp(),
+                        sourceUserId: legacyUserId,
+                        migratedCount: 0,
+                      },
+                    },
+                  },
+                  { merge: true }
+                )
+              }
+            } else {
+              await workspace.workspaceRef.set(
+                {
+                  migrations: {
+                    clientsFromUser: {
+                      completedAt: FieldValue.serverTimestamp(),
+                      sourceUserId: legacyUserId,
+                      migratedCount: 0,
+                    },
+                  },
+                },
+                { merge: true }
+              )
+            }
+          }
+        }
+      } catch {
+        // Best-effort only; falling back to empty list is fine.
+      }
+    }
+
     const allDocs = snapshot.docs
     const hasMore = allDocs.length > pageSize
     const docs = hasMore ? allDocs.slice(0, pageSize) : allDocs
