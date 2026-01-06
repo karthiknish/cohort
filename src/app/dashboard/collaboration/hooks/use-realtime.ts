@@ -47,21 +47,34 @@ export function useRealtimeMessages({
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const channelUnsubscribeRef = useRef<(() => void) | null>(null)
+  
+  // Store channel in ref for use in error callback without adding to deps
+  const channelRef = useRef(selectedChannel)
+  channelRef.current = selectedChannel
+  
+  // Store onError in ref to avoid it affecting deps
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
+  
+  // Extract stable channel properties to use in deps instead of full object
+  const channelId = selectedChannel?.id ?? null
+  const channelType = selectedChannel?.type ?? null
+  const channelClientId = selectedChannel?.clientId ?? null
+  const channelProjectId = selectedChannel?.projectId ?? null
 
   useEffect(() => {
     channelUnsubscribeRef.current?.()
     channelUnsubscribeRef.current = null
 
-    if (!selectedChannel) {
+    if (!channelId || !channelType) {
       return
     }
 
     // Handle preview mode
     if (isPreviewMode) {
-      const channelId = selectedChannel.id
       const previewMessages = getPreviewCollaborationMessages(
-        selectedChannel.clientId,
-        selectedChannel.projectId
+        channelClientId,
+        channelProjectId
       )
       setMessagesByChannel((prev) => ({
         ...prev,
@@ -80,29 +93,28 @@ export function useRealtimeMessages({
       return
     }
 
-    const channelId = selectedChannel.id
     setLoadingChannelId(channelId)
     setMessagesError(null)
 
     const baseCollection = collection(db, 'workspaces', workspaceId, 'collaborationMessages')
-    const constraints: QueryConstraint[] = [where('channelType', '==', selectedChannel.type)]
+    const constraints: QueryConstraint[] = [where('channelType', '==', channelType)]
 
-    if (selectedChannel.type === 'client') {
-      if (!selectedChannel.clientId) {
+    if (channelType === 'client') {
+      if (!channelClientId) {
         setMessagesError('Client channel is missing an identifier')
         setLoadingChannelId((current) => (current === channelId ? null : current))
         return
       }
-      constraints.push(where('clientId', '==', selectedChannel.clientId))
+      constraints.push(where('clientId', '==', channelClientId))
     }
 
-    if (selectedChannel.type === 'project') {
-      if (!selectedChannel.projectId) {
+    if (channelType === 'project') {
+      if (!channelProjectId) {
         setMessagesError('Project channel is missing an identifier')
         setLoadingChannelId((current) => (current === channelId ? null : current))
         return
       }
-      constraints.push(where('projectId', '==', selectedChannel.projectId))
+      constraints.push(where('projectId', '==', channelProjectId))
     }
 
     constraints.push(orderBy('createdAt', 'asc'), limit(REALTIME_MESSAGE_LIMIT))
@@ -133,7 +145,10 @@ export function useRealtimeMessages({
           description: 'Messages may be delayed. Trying to reconnect...',
           variant: 'destructive',
         })
-        onError(selectedChannel)
+        // Use refs for callback and channel to avoid dep issues
+        if (channelRef.current) {
+          onErrorRef.current(channelRef.current)
+        }
       }
     )
 
@@ -145,8 +160,10 @@ export function useRealtimeMessages({
         channelUnsubscribeRef.current = null
       }
     }
-  }, [isPreviewMode, onError, selectedChannel, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, workspaceId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelId, channelType, channelClientId, channelProjectId, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, workspaceId])
 }
+
 
 interface UseRealtimeTypingOptions {
   userId: string | null
@@ -160,14 +177,17 @@ export function useRealtimeTyping({
   selectedChannel,
 }: UseRealtimeTypingOptions) {
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([])
+  
+  // Extract stable channel id to use in deps
+  const channelId = selectedChannel?.id ?? null
 
   useEffect(() => {
-    if (!userId || !workspaceId || !selectedChannel) {
+    if (!userId || !workspaceId || !channelId) {
       setTypingParticipants([])
       return
     }
 
-    const typingDocRef = doc(db, 'workspaces', workspaceId, 'collaborationTyping', selectedChannel.id)
+    const typingDocRef = doc(db, 'workspaces', workspaceId, 'collaborationTyping', channelId)
 
     const unsubscribe = onSnapshot(
       typingDocRef,
@@ -228,7 +248,7 @@ export function useRealtimeTyping({
     return () => {
       unsubscribe()
     }
-  }, [selectedChannel, userId, workspaceId])
+  }, [channelId, userId, workspaceId])
 
   return { typingParticipants }
 }

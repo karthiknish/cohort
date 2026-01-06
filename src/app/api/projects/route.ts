@@ -8,8 +8,10 @@ import { mapProjectDoc, projectStatusSchema, coerceStringArray, toISO } from '@/
 import type { ProjectRecord } from '@/types/projects'
 import { recordProjectCreatedNotification } from '@/lib/notifications'
 import { logAuditAction } from '@/lib/audit-logger'
+import { serverCache } from '@/lib/cache'
 
 const MAX_PROJECTS = 100
+const STATS_CACHE_TTL_MS = 30_000 // 30 seconds
 
 const createProjectSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
@@ -38,6 +40,7 @@ const projectQuerySchema = z.object({
   query: z.string().optional(),
   pageSize: z.string().optional(),
   after: z.string().optional(),
+  includeStats: z.enum(['true', 'false']).optional(),
 })
 
 type ProjectListResponse = {
@@ -57,6 +60,13 @@ export async function calculateProjectStats(
   projectId: string,
   baselineActivity: string | null
 ): Promise<ProjectStats> {
+  // Check cache first
+  const cacheKey = `project-stats:${workspace.workspaceId}:${projectId}`
+  const cached = serverCache.get<ProjectStats>(cacheKey)
+  if (cached) {
+    return cached
+  }
+
   let latestActivity: Date | null = baselineActivity ? new Date(baselineActivity) : null
   let taskCount = 0
   let openTaskCount = 0
@@ -98,11 +108,16 @@ export async function calculateProjectStats(
 
   const recentActivityAt = latestActivity ? latestActivity.toISOString() : baselineActivity
 
-  return {
+  const stats: ProjectStats = {
     taskCount,
     openTaskCount,
     recentActivityAt,
   }
+
+  // Cache the result
+  serverCache.set(cacheKey, stats, STATS_CACHE_TTL_MS)
+
+  return stats
 }
 
 export async function buildProjectSummary(
@@ -129,9 +144,10 @@ export const GET = createApiHandler(
   async (req, { workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
 
-    const { status, clientId, query: queryParam, pageSize: pageSizeParam, after: afterParam } = query
+    const { status, clientId, query: queryParam, pageSize: pageSizeParam, after: afterParam, includeStats: includeStatsParam } = query
     const normalizedQuery = queryParam?.trim().toLowerCase() ?? null
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), MAX_PROJECTS)
+    const includeStats = includeStatsParam === 'true'
     const afterCursor = afterParam?.trim() || null
 
     let baseQuery = workspace.projectsCollection.where('deletedAt', '==', null) as Query
@@ -172,9 +188,19 @@ export const GET = createApiHandler(
 
     const mapped: ProjectRecord[] = []
 
-    for (const doc of docs.slice(0, pageSize)) {
-      const record = await buildProjectSummary(workspace, doc.id, doc.data() as Record<string, unknown>)
-      mapped.push(record)
+    if (includeStats) {
+      // Parallel stats calculation for better performance
+      const statsPromises = docs.slice(0, pageSize).map(async (doc) => {
+        return buildProjectSummary(workspace, doc.id, doc.data() as Record<string, unknown>)
+      })
+      const results = await Promise.all(statsPromises)
+      mapped.push(...results)
+    } else {
+      // Fast path: skip stats calculation
+      for (const doc of docs.slice(0, pageSize)) {
+        const base = mapProjectDoc(doc.id, doc.data() as Record<string, unknown>)
+        mapped.push(base)
+      }
     }
 
     const filtered = normalizedQuery

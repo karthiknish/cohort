@@ -74,6 +74,7 @@ export default function ProposalsPage() {
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [isPresentationReady, setIsPresentationReady] = useState(false)
+  const [isRecheckingDeck, setIsRecheckingDeck] = useState(false)
   const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
   const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null)
   const [deckProgressStage, setDeckProgressStage] = useState<DeckProgressStage | null>(null)
@@ -540,6 +541,73 @@ export default function ProposalsPage() {
     }
   }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast])
 
+  const handleRecheckDeck = useCallback(async () => {
+    const proposalId = lastSubmissionSnapshot?.draftId ?? draftId
+    if (!proposalId) {
+      toast({
+        title: 'No proposal selected',
+        description: 'Cannot check deck status without an active proposal.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsRecheckingDeck(true)
+    try {
+      // First, try to fetch the latest proposal data from Firebase
+      const refreshedProposal = await getProposalById(proposalId)
+      const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
+
+      if (deckUrl) {
+        // Deck is ready in Firebase
+        setPresentationDeck(
+          refreshedProposal.presentationDeck
+            ? { ...refreshedProposal.presentationDeck, storageUrl: deckUrl }
+            : presentationDeck
+              ? { ...presentationDeck, storageUrl: deckUrl, status: 'ready' }
+              : null
+        )
+        await refreshProposals()
+        toast({
+          title: 'Presentation ready!',
+          description: 'Your slide deck has been generated and is ready for download.',
+        })
+        return
+      }
+
+      // If not in Firebase yet, try to trigger Gamma to check/generate
+      const result = await prepareProposalDeck(proposalId)
+      const newDeckUrl = result.storageUrl ?? result.presentationDeck?.storageUrl ?? result.presentationDeck?.pptxUrl ?? null
+
+      if (newDeckUrl) {
+        setPresentationDeck(
+          result.presentationDeck
+            ? { ...result.presentationDeck, storageUrl: newDeckUrl }
+            : presentationDeck
+              ? { ...presentationDeck, storageUrl: newDeckUrl, status: 'ready' }
+              : null
+        )
+        await refreshProposals()
+        toast({
+          title: 'Presentation ready!',
+          description: 'Your slide deck has been generated and saved.',
+        })
+      } else {
+        // Still pending
+        toast({
+          title: 'Still processing',
+          description: 'The presentation is still being generated. Please try again in a few moments.',
+        })
+      }
+    } catch (error: unknown) {
+      console.error('[ProposalWizard] recheck deck failed', error)
+      const message = getErrorMessage(error, 'Failed to check presentation status')
+      toast({ title: 'Unable to check status', description: message, variant: 'destructive' })
+    } finally {
+      setIsRecheckingDeck(false)
+    }
+  }, [draftId, lastSubmissionSnapshot, presentationDeck, refreshProposals, toast])
+
   const ensureDraftId = useCallback(async () => {
     if (draftId) {
       return draftId
@@ -950,6 +1018,8 @@ export default function ProposalsPage() {
               canResumeSubmission={canResumeSubmission}
               onResumeSubmission={handleContinueEditingFromSnapshot}
               isSubmitting={isSubmitting}
+              onRecheckDeck={handleRecheckDeck}
+              isRecheckingDeck={isRecheckingDeck}
             />
           ) : (
             <ProposalDraftPanel

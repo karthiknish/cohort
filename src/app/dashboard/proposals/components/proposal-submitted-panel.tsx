@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Copy, Sparkles } from "lucide-react"
+import { Copy, Sparkles, RefreshCw, Loader2 } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,8 @@ interface ProposalSubmittedPanelProps {
   activeProposalIdForDeck: string | null
   canResumeSubmission: boolean
   onResumeSubmission: () => void
+  onRecheckDeck?: () => Promise<void>
+  isRecheckingDeck?: boolean
   isSubmitting: boolean
 }
 
@@ -28,6 +30,8 @@ export function ProposalSubmittedPanel({
   activeProposalIdForDeck,
   canResumeSubmission,
   onResumeSubmission,
+  onRecheckDeck,
+  isRecheckingDeck = false,
   isSubmitting,
 }: ProposalSubmittedPanelProps) {
   const { toast } = useToast()
@@ -157,9 +161,27 @@ Timeline: ${summary.timelines.startTime}
               
               <div className="flex items-center justify-between border-t pt-4">
                 <span className="text-xs text-muted-foreground">Status</span>
-                <Badge variant="outline" className="uppercase tracking-wide">
-                  {presentationDeck.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {(presentationDeck.status === 'pending' || presentationDeck.status === 'processing') && onRecheckDeck && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onRecheckDeck}
+                      disabled={isRecheckingDeck}
+                      className="h-6 px-2 text-xs"
+                    >
+                      {isRecheckingDeck ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-1 h-3 w-3" />
+                      )}
+                      Recheck
+                    </Button>
+                  )}
+                  <Badge variant="outline" className="uppercase tracking-wide">
+                    {presentationDeck.status}
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>

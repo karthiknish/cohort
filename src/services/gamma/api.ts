@@ -398,58 +398,78 @@ export class GammaService {
     // ==========================================================================
 
     /**
-     * Get the status of a generation
+     * Get the status of a generation with retry for network failures
      */
-    async getGeneration(generationId: string): Promise<GammaGenerationStatus> {
+    async getGeneration(generationId: string, retries = 3): Promise<GammaGenerationStatus> {
         const headers = this.ensureRequestHeaders()
+        let lastError: unknown = null
 
-        const response = await fetch(`${GAMMA_BASE_URL}/generations/${encodeURIComponent(generationId)}`, {
-            headers,
-            method: 'GET',
-        })
-
-        if (!response.ok) {
-            const details = await response.text().catch(() => '')
-            throw new Error(`Gamma API status failed (${response.status}): ${details || 'Unknown error'}`)
-        }
-
-        const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
-        const status = typeof payload.status === 'string' ? payload.status : 'unknown'
-
-        const generatedFiles = Array.isArray(payload.generatedFiles)
-            ? (payload.generatedFiles as Array<Record<string, unknown>>)
-                .map((entry) => {
-                    const fileType = typeof entry.fileType === 'string' ? entry.fileType : typeof entry.type === 'string' ? entry.type : 'unknown'
-                    const fileUrl = typeof entry.fileUrl === 'string' ? entry.fileUrl : typeof entry.url === 'string' ? entry.url : ''
-                    return fileUrl ? { fileType, fileUrl } : null
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const response = await fetch(`${GAMMA_BASE_URL}/generations/${encodeURIComponent(generationId)}`, {
+                    headers,
+                    method: 'GET',
                 })
-                .filter((value): value is GammaGeneratedFile => Boolean(value))
-            : []
 
-        // Handle legacy exportUrl field (single export URL returned as string instead of array)
-        if (generatedFiles.length === 0 && typeof payload.exportUrl === 'string' && payload.exportUrl) {
-            const exportUrl = payload.exportUrl
-            const fileType = exportUrl.includes('.pptx') ? 'pptx' : exportUrl.includes('.pdf') ? 'pdf' : 'unknown'
-            generatedFiles.push({ fileType, fileUrl: exportUrl })
+                if (!response.ok) {
+                    const details = await response.text().catch(() => '')
+                    throw new Error(`Gamma API status failed (${response.status}): ${details || 'Unknown error'}`)
+                }
+
+                const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
+                const status = typeof payload.status === 'string' ? payload.status : 'unknown'
+
+                const generatedFiles = Array.isArray(payload.generatedFiles)
+                    ? (payload.generatedFiles as Array<Record<string, unknown>>)
+                        .map((entry) => {
+                            const fileType = typeof entry.fileType === 'string' ? entry.fileType : typeof entry.type === 'string' ? entry.type : 'unknown'
+                            const fileUrl = typeof entry.fileUrl === 'string' ? entry.fileUrl : typeof entry.url === 'string' ? entry.url : ''
+                            return fileUrl ? { fileType, fileUrl } : null
+                        })
+                        .filter((value): value is GammaGeneratedFile => Boolean(value))
+                    : []
+
+                // Handle legacy exportUrl field (single export URL returned as string instead of array)
+                if (generatedFiles.length === 0 && typeof payload.exportUrl === 'string' && payload.exportUrl) {
+                    const exportUrl = payload.exportUrl
+                    const fileType = exportUrl.includes('.pptx') ? 'pptx' : exportUrl.includes('.pdf') ? 'pdf' : 'unknown'
+                    generatedFiles.push({ fileType, fileUrl: exportUrl })
+                }
+
+                const webAppUrl = typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.webUrl === 'string' ? payload.webUrl : typeof payload.gammaUrl === 'string' ? payload.gammaUrl : null
+                const shareUrl = typeof payload.shareUrl === 'string' ? payload.shareUrl : typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.gammaUrl === 'string' ? payload.gammaUrl : null
+
+                // Extract warnings if present
+                const warnings = Array.isArray(payload.warnings)
+                    ? (payload.warnings as unknown[]).filter((w): w is string => typeof w === 'string')
+                    : undefined
+
+                return {
+                    generationId,
+                    status,
+                    webAppUrl,
+                    shareUrl,
+                    generatedFiles,
+                    warnings,
+                    raw: payload,
+                }
+            } catch (error: unknown) {
+                lastError = error
+                const isNetworkError = error instanceof TypeError && 
+                    (error.message.includes('fetch failed') || error.message.includes('network'))
+                
+                if (isNetworkError && attempt < retries) {
+                    const backoffMs = 2000 * attempt
+                    console.warn(`[GammaService] Network error on getGeneration attempt ${attempt}, retrying in ${backoffMs}ms...`, error)
+                    await wait(backoffMs)
+                    continue
+                }
+                
+                throw error
+            }
         }
 
-        const webAppUrl = typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.webUrl === 'string' ? payload.webUrl : typeof payload.gammaUrl === 'string' ? payload.gammaUrl : null
-        const shareUrl = typeof payload.shareUrl === 'string' ? payload.shareUrl : typeof payload.webAppUrl === 'string' ? payload.webAppUrl : typeof payload.gammaUrl === 'string' ? payload.gammaUrl : null
-
-        // Extract warnings if present
-        const warnings = Array.isArray(payload.warnings)
-            ? (payload.warnings as unknown[]).filter((w): w is string => typeof w === 'string')
-            : undefined
-
-        return {
-            generationId,
-            status,
-            webAppUrl,
-            shareUrl,
-            generatedFiles,
-            warnings,
-            raw: payload,
-        }
+        throw lastError
     }
 
     // ==========================================================================

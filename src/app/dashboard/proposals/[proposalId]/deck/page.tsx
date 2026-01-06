@@ -3,11 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react'
-import dynamic from 'next/dynamic'
-
-const DocViewer = dynamic(() => import('react-doc-viewer'), { ssr: false })
-import { DocViewerRenderers } from 'react-doc-viewer'
+import { ArrowLeft, Download, ExternalLink, FileText, Loader2, Presentation, AlertCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,7 +13,21 @@ import { getProposalById } from '@/services/proposals'
 
 type ViewerSource = 
   | { type: 'gamma'; url: string }
-  | { type: 'document'; url: string; fileType?: string }
+  | { type: 'pdf'; url: string }
+  | { type: 'office'; embedUrl: string; downloadUrl: string }
+
+/**
+ * Creates a Microsoft Office Online viewer URL for a PPTX file
+ * Uses our proxy endpoint to make authenticated URLs accessible
+ */
+function createOfficeViewerUrl(pptxUrl: string): string {
+  // Create the proxy URL for this PPTX file
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const proxyUrl = `${baseUrl}/api/files/proxy?url=${encodeURIComponent(pptxUrl)}`
+  
+  // Microsoft Office Online viewer
+  return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(proxyUrl)}`
+}
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
@@ -25,6 +35,7 @@ export default function ProposalDeckPage() {
   const [proposal, setProposal] = useState<ProposalDraft | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewerError, setViewerError] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -80,7 +91,7 @@ export default function ProposalDeckPage() {
   const viewerSource = useMemo<ViewerSource | null>(() => {
     if (!proposal) return null
 
-    // 1. Gamma Web URL (Best experience)
+    // 1. Gamma Web URL (Best experience - Gamma's native viewer)
     if (proposal.gammaDeck?.webUrl || proposal.gammaDeck?.shareUrl) {
       return {
         type: 'gamma',
@@ -88,21 +99,21 @@ export default function ProposalDeckPage() {
       }
     }
 
-    // 2. Document URL (PDF or PPTX)
-    const fileUrl = proposal.pdfUrl ?? proposal.gammaDeck?.pdfUrl ?? proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl
-    
-    if (fileUrl) {
-      let fileType: string | undefined = undefined
-      if (proposal.pdfUrl || proposal.gammaDeck?.pdfUrl) {
-        fileType = 'pdf'
-      } else if (proposal.pptUrl || proposal.gammaDeck?.pptxUrl) {
-        fileType = 'pptx'
-      }
-      
+    // 2. PDF viewer (works with browser's native viewer)
+    if (proposal.pdfUrl || proposal.gammaDeck?.pdfUrl) {
       return {
-        type: 'document',
-        url: fileUrl,
-        fileType
+        type: 'pdf',
+        url: (proposal.pdfUrl ?? proposal.gammaDeck?.pdfUrl) as string
+      }
+    }
+
+    // 3. PPTX - use Microsoft Office Online viewer with proxy
+    const pptxUrl = proposal.pptUrl ?? proposal.gammaDeck?.storageUrl ?? proposal.gammaDeck?.pptxUrl
+    if (pptxUrl) {
+      return {
+        type: 'office',
+        embedUrl: createOfficeViewerUrl(pptxUrl),
+        downloadUrl: pptxUrl
       }
     }
 
@@ -184,7 +195,8 @@ export default function ProposalDeckPage() {
               <div className="flex flex-wrap gap-3">
                 {presentationUrl && (
                   <Button asChild>
-                    <a href={presentationUrl} target="_blank" rel="noreferrer">
+                    <a href={presentationUrl} download>
+                      <Download className="mr-2 h-4 w-4" />
                       Download PPT
                     </a>
                   </Button>
@@ -192,13 +204,15 @@ export default function ProposalDeckPage() {
                 {shareUrl && (
                   <Button variant="outline" asChild>
                     <a href={shareUrl} target="_blank" rel="noreferrer">
-                      Open online
+                      Open in Gamma
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
                   </Button>
                 )}
               </div>
-              {viewerSource?.type === 'gamma' ? (
+              
+              {/* Gamma iframe viewer (best experience) */}
+              {viewerSource?.type === 'gamma' && (
                 <div className="rounded-lg border bg-muted/30">
                   <iframe
                     title="Proposal presentation preview"
@@ -207,22 +221,66 @@ export default function ProposalDeckPage() {
                     allowFullScreen
                   />
                 </div>
-              ) : viewerSource?.type === 'document' ? (
+              )}
+              
+              {/* PDF viewer using browser's native PDF support */}
+              {viewerSource?.type === 'pdf' && (
                 <div className="h-[70vh] overflow-hidden rounded-lg border bg-muted/30">
-                  <DocViewer
-                    documents={[{ uri: viewerSource.url, fileType: viewerSource.fileType }]}
-                    pluginRenderers={DocViewerRenderers}
-                    style={{ height: '100%' }}
-                    config={{
-                      header: {
-                        disableHeader: true,
-                        disableFileName: true,
-                        retainURLParams: true,
-                      },
-                    }}
+                  <iframe
+                    title="PDF preview"
+                    src={viewerSource.url}
+                    className="h-full w-full"
                   />
                 </div>
-              ) : (
+              )}
+              
+              {/* Microsoft Office Online viewer for PPTX */}
+              {viewerSource?.type === 'office' && !viewerError && (
+                <div className="h-[70vh] overflow-hidden rounded-lg border bg-muted/30">
+                  <iframe
+                    title="PowerPoint presentation preview"
+                    src={viewerSource.embedUrl}
+                    className="h-full w-full"
+                    onError={() => setViewerError(true)}
+                  />
+                </div>
+              )}
+
+              {/* Fallback when Office viewer fails */}
+              {viewerSource?.type === 'office' && viewerError && (
+                <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-8">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="rounded-full bg-amber-100 p-4 mb-4">
+                      <AlertCircle className="h-10 w-10 text-amber-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Preview temporarily unavailable
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-6 max-w-md">
+                      The online viewer couldn't load. Download the presentation to view it locally.
+                    </p>
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <Button asChild size="lg">
+                        <a href={viewerSource.downloadUrl} download>
+                          <Download className="mr-2 h-5 w-5" />
+                          Download PPTX
+                        </a>
+                      </Button>
+                      {shareUrl && (
+                        <Button variant="outline" size="lg" asChild>
+                          <a href={shareUrl} target="_blank" rel="noreferrer">
+                            View in Gamma
+                            <ExternalLink className="ml-2 h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* No viewer available */}
+              {!viewerSource && (
                 <div className="rounded-md border border-dashed border-muted p-6 text-center text-sm text-muted-foreground">
                   <p className="mb-2">Preview unavailable for this file type.</p>
                   {presentationUrl && (

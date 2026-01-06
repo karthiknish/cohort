@@ -236,7 +236,18 @@ export default function HomePage() {
     }
 
     redirectInProgressRef.current = true
+    
+    // Try Next.js router first
     router.replace(destination)
+    
+    // Fallback: if router doesn't navigate within 3 seconds, force hard navigation
+    const fallbackTimeout = setTimeout(() => {
+      console.warn('[HomePage] Router navigation timeout, using fallback')
+      window.location.href = destination
+    }, 3000)
+    
+    // Clean up timeout if component unmounts (navigation succeeded)
+    return () => clearTimeout(fallbackTimeout)
   }, [loading, isSyncing, user, router, searchParams, toast])
 
   // When we're back on the home page without a user, clear any stale redirect-loop tracking.
@@ -287,8 +298,21 @@ export default function HomePage() {
   if (!loading && user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
-        <div className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-sm">
-          Redirecting to your dashboard…
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-sm">
+            Redirecting to your dashboard…
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              // Force a hard navigation if stuck
+              window.location.href = '/dashboard'
+            }}
+            className="text-xs text-primary hover:underline"
+          >
+            Click here if not redirected automatically
+          </button>
         </div>
       </div>
     )

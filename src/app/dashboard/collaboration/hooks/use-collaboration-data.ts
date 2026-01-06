@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
+import { apiFetch } from '@/lib/api-client'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { ProjectRecord } from '@/types/projects'
@@ -30,6 +32,7 @@ import { useMessageActions } from './use-message-actions'
 export function useCollaborationData(): UseCollaborationDataReturn {
   const { user, getIdToken } = useAuth()
   const { clients, selectedClient, loading: clientsLoading } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -318,7 +321,8 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       })
 
     return () => controller.abort()
-  }, [normalizedMessageSearch, parseSearchQuery, selectedChannel])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalizedMessageSearch, parseSearchQuery, selectedChannelId])
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
     const result = new Map<string, ChannelSummary>()
@@ -357,7 +361,8 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     }
 
     return Array.from(map.values())
-  }, [fallbackDisplayName, fallbackRole, selectedChannel])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fallbackDisplayName, fallbackRole, selectedChannelId])
 
   const sharedFiles = useMemo(() => {
     const attachmentGroups = channelMessages
@@ -653,30 +658,19 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // Fetch projects
   // ─────────────────────────────────────────────────────────────────────────────
   const fetchProjects = useCallback(async () => {
-    if (!user) return
+    // Allow preview mode even without user
+    if (!user && !isPreviewMode) return
 
     setProjectsLoading(true)
     try {
-      const token = await ensureSessionToken()
-      const response = await fetch('/api/projects', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      const payload = (await response.json().catch(() => null)) as
-        | { projects?: ProjectRecord[]; error?: string }
-        | null
-
-      if (!response.ok || !payload) {
-        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Unable to load projects')
-      }
-
+      const payload = await apiFetch<{ projects?: ProjectRecord[] }>('/api/projects')
       setProjects(Array.isArray(payload.projects) ? payload.projects : [])
     } catch (error) {
       console.error('[collaboration] failed to fetch projects', error)
     } finally {
       setProjectsLoading(false)
     }
-  }, [ensureSessionToken, user])
+  }, [isPreviewMode, user])
 
   useEffect(() => {
     void fetchProjects()
@@ -686,11 +680,17 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // Auto-select sender when channel changes
   // ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!senderSelection || !channelParticipants.some((member) => member.name === senderSelection)) {
-      const fallback = channelParticipants[0]?.name ?? fallbackDisplayName
-      setSenderSelection(fallback)
-    }
-  }, [channelParticipants, fallbackDisplayName, selectedChannel, senderSelection])
+    // Only set sender if not already valid for current channel
+    // Use selectedChannelId (stable string) instead of selectedChannel object to avoid loops
+    if (!selectedChannelId) return
+    
+    setSenderSelection((current) => {
+      if (current && channelParticipants.some((member) => member.name === current)) {
+        return current // Keep current selection if valid
+      }
+      return channelParticipants[0]?.name ?? fallbackDisplayName
+    })
+  }, [selectedChannelId, channelParticipants.length, fallbackDisplayName])
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Message input with typing notification

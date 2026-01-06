@@ -15,6 +15,25 @@ import {
 
 const inFlightRequests = new Map<string, Promise<any>>()
 
+// Short-lived response cache to prevent identical rapid-fire requests
+type CachedResponse = { data: any; expiresAt: number }
+const responseCache = new Map<string, CachedResponse>()
+const RESPONSE_CACHE_TTL_MS = 2000 // 2 seconds
+
+function getCachedResponse<T>(key: string): T | null {
+  const entry = responseCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    responseCache.delete(key)
+    return null
+  }
+  return entry.data as T
+}
+
+function setCachedResponse<T>(key: string, data: T): void {
+  responseCache.set(key, { data, expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS })
+}
+
 export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
   const method = init.method || 'GET'
   const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
@@ -74,7 +93,17 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
   
   // Only deduplicate GET requests to avoid side-effect issues
   const isDeduplicatable = method.toUpperCase() === 'GET'
-  const cacheKey = `${method}:${url}`
+  // Include preview mode state in cache key to prevent stale data when mode changes
+  const previewSuffix = typeof window !== 'undefined' && isPreviewModeEnabled() ? ':preview' : ''
+  const cacheKey = `${method}:${url}${previewSuffix}`
+
+  // Check response cache first (for rapid-fire identical requests)
+  if (isDeduplicatable) {
+    const cached = getCachedResponse<T>(cacheKey)
+    if (cached !== null) {
+      return cached
+    }
+  }
 
   if (isDeduplicatable && inFlightRequests.has(cacheKey)) {
     return inFlightRequests.get(cacheKey)
@@ -128,10 +157,13 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
 
       // Handle standardized envelope { success: true, data: T }
       if (isEnvelope && 'data' in payload) {
-        return payload.data as T
+        const result = payload.data as T
+        if (isDeduplicatable) setCachedResponse(cacheKey, result)
+        return result
       }
 
       // Backward compatibility: return payload directly
+      if (isDeduplicatable) setCachedResponse(cacheKey, payload as T)
       return payload as T
     } catch (error) {
       if (attempt < 2 && (error as any).code === 'NETWORK_ERROR' && isDeduplicatable) {

@@ -7,6 +7,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import {
   createFinanceCost,
   deleteFinanceCost,
@@ -118,6 +119,7 @@ type FinanceHookReturn = {
 
 export function useFinanceData(): FinanceHookReturn {
   const { clients, selectedClientId } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const [selectedPeriod, setSelectedPeriod] = useState('6m')
@@ -225,7 +227,7 @@ export function useFinanceData(): FinanceHookReturn {
       setIsLoading(false)
       setHasAttemptedLoad(true)
     }
-  }, [selectedClientId, toast, retryCount])
+  }, [isPreviewMode, selectedClientId, toast, retryCount])
 
   useEffect(() => {
     void loadFinanceSummary({ quiet: true })

@@ -58,13 +58,22 @@ function generateCsrfToken(): string {
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-function validateCsrfToken(request: Request, cookieStore: Awaited<ReturnType<typeof cookies>>): boolean {
+function validateCsrfToken(request: Request, cookieStore: Awaited<ReturnType<typeof cookies>>, isCreatingSession: boolean): boolean {
   const headerToken = request.headers.get(CSRF_HEADER)
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value
 
   // If no cookie exists yet (first session creation), allow the request
   // This handles the initial auth flow where no CSRF cookie exists
   if (!cookieToken) {
+    return true
+  }
+
+  // When creating a new session (login), be more lenient:
+  // - If header is provided and matches, great
+  // - If header is not provided but we're creating a fresh session, allow it
+  //   (the old CSRF token from a previous session shouldn't block new logins)
+  if (isCreatingSession && !headerToken) {
+    console.log('[SessionRoute] Allowing session creation without CSRF header (new login)')
     return true
   }
 
@@ -81,9 +90,14 @@ export const POST = createApiHandler(
   },
   async (request, context) => {
     const cookieStore = await cookies()
+    const { token, role, status } = context.body
+    
+    // Check if this is a new session creation (has token) vs clearing session (no token)
+    const isCreatingSession = Boolean(token)
 
     // Validate CSRF token (double-submit cookie pattern)
-    if (!validateCsrfToken(request, cookieStore)) {
+    // Be more lenient for new session creation (login flow)
+    if (!validateCsrfToken(request, cookieStore, isCreatingSession)) {
       console.warn('[SessionRoute] CSRF validation failed')
       return NextResponse.json(
         { success: false, error: 'Invalid CSRF token' },
@@ -91,7 +105,6 @@ export const POST = createApiHandler(
       )
     }
 
-    const { token, role, status } = context.body
     const response = NextResponse.json(
       { success: true },
       { 
@@ -172,8 +185,8 @@ export const DELETE = createApiHandler(
   async (request) => {
     const cookieStore = await cookies()
 
-    // Validate CSRF token for logout as well
-    if (!validateCsrfToken(request, cookieStore)) {
+    // Validate CSRF token for logout (not creating session, so stricter validation)
+    if (!validateCsrfToken(request, cookieStore, false)) {
       console.warn('[SessionRoute] CSRF validation failed on DELETE')
       return NextResponse.json(
         { success: false, error: 'Invalid CSRF token' },

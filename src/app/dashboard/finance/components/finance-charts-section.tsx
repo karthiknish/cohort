@@ -5,11 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
   Area,
@@ -25,6 +21,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart'
 
 import { formatCurrency } from '../utils'
 
@@ -43,37 +47,6 @@ interface FinanceChartsSectionProps {
   currency?: string
 }
 
-interface CustomTooltipProps {
-  active?: boolean
-  payload?: { value: number; name: string; color: string; dataKey?: string }[]
-  label?: string
-  currency: string
-}
-
-function CustomTooltip({ active, payload, label, currency }: CustomTooltipProps) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-sm p-4 shadow-xl ring-1 ring-black/5">
-        <p className="mb-3 font-semibold text-foreground border-b pb-2">{label}</p>
-        <div className="space-y-2">
-          {payload.map((entry, index) => (
-            <div key={index} className="flex items-center justify-between gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
-                <span className="text-muted-foreground">{entry.name}</span>
-              </div>
-              <span className="font-semibold text-foreground tabular-nums">
-                {formatCurrency(Number(entry.value), currency)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-  return null
-}
-
 function EmptyChartState() {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center p-8">
@@ -87,6 +60,34 @@ function EmptyChartState() {
     </div>
   )
 }
+
+// Chart configuration for Revenue vs Expenses chart
+const revenueExpensesConfig = {
+  revenue: {
+    label: "Revenue",
+    color: "hsl(var(--primary))",
+  },
+  totalExpenses: {
+    label: "Expenses",
+    color: "hsl(var(--destructive))",
+  },
+  profit: {
+    label: "Profit",
+    color: "#8b5cf6",
+  },
+} satisfies ChartConfig
+
+// Chart configuration for Expense Breakdown chart
+const expenseBreakdownConfig = {
+  operatingExpenses: {
+    label: "Campaign Spend",
+    color: "#8b5cf6",
+  },
+  companyCosts: {
+    label: "Company Costs",
+    color: "#f59e0b",
+  },
+} satisfies ChartConfig
 
 export function FinanceChartsSection({ data, currency }: FinanceChartsSectionProps) {
   const resolvedCurrency = currency ?? 'USD'
@@ -183,132 +184,147 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        {/* Revenue vs Expenses Chart */}
         <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">Revenue vs Expenses</CardTitle>
             <CardDescription>Monthly comparison with profit trend overlay.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[320px] w-full pt-4">
+          <CardContent className="pt-4">
             {isEmpty ? (
-              <EmptyChartState />
+              <div className="h-[320px]">
+                <EmptyChartState />
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer config={revenueExpensesConfig} className="h-[320px] w-full">
                 <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--color-totalExpenses)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="var(--color-totalExpenses)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.3} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis 
                     dataKey="label" 
-                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
-                    dy={10}
+                    tickMargin={10}
                   />
                   <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
                     tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                     width={45}
                   />
-                  <Tooltip content={<CustomTooltip currency={resolvedCurrency} />} />
-                  <Legend 
-                    wrapperStyle={{ paddingTop: '16px' }} 
-                    iconType="circle"
-                    iconSize={8}
+                  <ChartTooltip 
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value, name) => (
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">{name}</span>
+                            <span className="font-semibold tabular-nums">
+                              {formatCurrency(Number(value), resolvedCurrency)}
+                            </span>
+                          </div>
+                        )}
+                      />
+                    } 
                   />
+                  <ChartLegend content={<ChartLegendContent />} />
                   <Area 
                     type="monotone" 
                     dataKey="revenue" 
-                    stroke="hsl(var(--primary))" 
+                    stroke="var(--color-revenue)" 
                     strokeWidth={2.5} 
                     fill="url(#revenueGradient)"
-                    name="Revenue" 
                   />
                   <Area 
                     type="monotone" 
                     dataKey="totalExpenses" 
-                    stroke="hsl(var(--destructive))" 
+                    stroke="var(--color-totalExpenses)" 
                     strokeWidth={2.5} 
                     fill="url(#expenseGradient)"
-                    name="Expenses" 
                   />
                   <Line 
                     type="monotone" 
                     dataKey="profit" 
-                    stroke="#8b5cf6" 
+                    stroke="var(--color-profit)" 
                     strokeWidth={2.5} 
                     strokeDasharray="5 5"
-                    dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }}
+                    dot={{ r: 3, fill: 'var(--color-profit)', strokeWidth: 0 }}
                     activeDot={{ r: 5, strokeWidth: 0 }}
-                    name="Profit" 
                   />
                 </AreaChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
 
+        {/* Expense Breakdown Chart */}
         <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">Expense Breakdown</CardTitle>
             <CardDescription>Campaign spend vs company operating costs.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[320px] w-full pt-4">
+          <CardContent className="pt-4">
             {isEmpty ? (
-              <EmptyChartState />
+              <div className="h-[320px]">
+                <EmptyChartState />
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer config={expenseBreakdownConfig} className="h-[320px] w-full">
                 <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.3} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis 
                     dataKey="label" 
-                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
-                    dy={10}
+                    tickMargin={10}
                   />
                   <YAxis 
-                    stroke="hsl(var(--muted-foreground))" 
                     fontSize={11} 
                     tickLine={false} 
                     axisLine={false}
                     tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                     width={45}
                   />
-                  <Tooltip content={<CustomTooltip currency={resolvedCurrency} />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15, radius: 4 }} />
-                  <Legend 
-                    wrapperStyle={{ paddingTop: '16px' }} 
-                    iconType="circle"
-                    iconSize={8}
+                  <ChartTooltip 
+                    content={
+                      <ChartTooltipContent 
+                        formatter={(value, name) => (
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">{name}</span>
+                            <span className="font-semibold tabular-nums">
+                              {formatCurrency(Number(value), resolvedCurrency)}
+                            </span>
+                          </div>
+                        )}
+                      />
+                    } 
                   />
+                  <ChartLegend content={<ChartLegendContent />} />
                   <Bar 
                     dataKey="operatingExpenses" 
                     stackId="expenses" 
-                    fill="#8b5cf6" 
-                    name="Campaign Spend" 
+                    fill="var(--color-operatingExpenses)" 
                     radius={[0, 0, 4, 4]}
                   />
                   <Bar 
                     dataKey="companyCosts" 
                     stackId="expenses" 
-                    fill="#f59e0b" 
-                    name="Company Costs" 
+                    fill="var(--color-companyCosts)" 
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
