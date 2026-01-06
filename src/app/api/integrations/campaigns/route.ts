@@ -215,7 +215,6 @@ export const POST = createApiHandler(
   {
     bodySchema: postBodySchema,
     rateLimit: 'standard',
-    requireIdempotency: true,
   },
   async (req, { auth, body }) => {
     if (!auth.uid) {

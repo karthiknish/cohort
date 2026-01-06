@@ -201,7 +201,6 @@ export const POST = createApiHandler(
     workspace: 'required',
     bodySchema: createProjectSchema,
     rateLimit: 'sensitive',
-    requireIdempotency: true,
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')

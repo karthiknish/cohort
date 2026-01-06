@@ -138,18 +138,25 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
 
     setSelectedClientId((current) => {
+      // If we already have a valid selection from the current client list, stick with it
       if (current && clients.some((client) => client.id === current)) {
         return current
       }
 
+      // Try to recover from local storage
       const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY_SELECTED) : null
       if (stored && clients.some((client) => client.id === stored)) {
+        // If the stored value matches what we already have (null -> null cases), don't trigger update
+        if (stored === current) return current
         return stored
       }
 
-      return clients[0]?.id ?? null
+      // Default to the first client
+      const firstId = clients[0]?.id ?? null
+      if (firstId === current) return current
+      return firstId
     })
-  }, [clients, selectedClientId])
+  }, [clients])
 
   const refreshClients = useCallback(async () => {
     return await fetchClients()

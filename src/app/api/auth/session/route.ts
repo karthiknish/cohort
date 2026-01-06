@@ -13,7 +13,7 @@ const SessionSchema = z.object({
 export const POST = createApiHandler(
   {
     auth: 'none',
-    rateLimit: 'sensitive',
+    rateLimit: 'standard',
     bodySchema: SessionSchema,
     skipIdempotency: true,
   },

@@ -171,7 +171,6 @@ export const POST = createApiHandler(
     adminOnly: true,
     bodySchema: createClientSchema,
     rateLimit: 'sensitive',
-    requireIdempotency: true,
   },
   async (req, { auth, workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -257,7 +256,6 @@ export const PATCH = createApiHandler(
     adminOnly: true,
     bodySchema: addTeamMemberSchema,
     rateLimit: 'sensitive',
-    requireIdempotency: true,
   },
   async (req, { workspace, body }) => {
     if (!workspace) throw new Error('Workspace context missing')
