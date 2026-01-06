@@ -8,13 +8,13 @@ import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
 import { ApiError, RateLimitError } from './api-errors'
 import { 
   checkRateLimit, 
-  checkDistributedRateLimit,
   createRateLimitKey, 
   getClientIdentifier,
   buildRateLimitHeaders,
   RATE_LIMITS, 
   RateLimitPreset 
 } from './rate-limiter'
+import { checkDistributedRateLimit } from './rate-limiter-distributed'
 import { sanitizeInput } from './utils'
 import { logger } from './logger'
 import { toISO } from './dates'
