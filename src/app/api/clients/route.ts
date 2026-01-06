@@ -168,17 +168,24 @@ export const GET = createApiHandler(
             const legacySnapshot = await adminDb.collection('users').doc(legacyUserId).collection('clients').get()
 
             if (!legacySnapshot.empty) {
-              const batch = adminDb.batch()
               let migratedCount = 0
 
-              legacySnapshot.docs.forEach((doc) => {
+              let batch = adminDb.batch()
+              let pendingOps = 0
+              const commitIfNeeded = async () => {
+                if (pendingOps > 0) {
+                  await batch.commit()
+                  batch = adminDb.batch()
+                  pendingOps = 0
+                }
+              }
+
+              for (const doc of legacySnapshot.docs) {
                 const data = (doc.data() ?? {}) as Record<string, unknown>
                 const deletedAt = data.deletedAt ?? null
 
                 // Skip legacy soft-deleted clients (if the field exists and is not null).
-                if (deletedAt !== null) {
-                  return
-                }
+                if (deletedAt !== null) continue
 
                 migratedCount += 1
                 const targetRef = workspace.clientsCollection.doc(doc.id)
@@ -194,39 +201,31 @@ export const GET = createApiHandler(
                   },
                   { merge: true }
                 )
-              })
+                pendingOps += 1
+
+                // Keep well under Firestore's 500 operations per batch.
+                if (pendingOps >= 400) {
+                  await commitIfNeeded()
+                }
+              }
+
+              await commitIfNeeded()
+              await workspace.workspaceRef.set(
+                {
+                  migrations: {
+                    clientsFromUser: {
+                      completedAt: FieldValue.serverTimestamp(),
+                      sourceUserId: legacyUserId,
+                      migratedCount,
+                    },
+                  },
+                },
+                { merge: true }
+              )
 
               if (migratedCount > 0) {
-                batch.set(
-                  workspace.workspaceRef,
-                  {
-                    migrations: {
-                      clientsFromUser: {
-                        completedAt: FieldValue.serverTimestamp(),
-                        sourceUserId: legacyUserId,
-                        migratedCount,
-                      },
-                    },
-                  },
-                  { merge: true }
-                )
-                await batch.commit()
-
                 // Re-run the original query after migration.
                 snapshot = await baseQuery.get()
-              } else {
-                await workspace.workspaceRef.set(
-                  {
-                    migrations: {
-                      clientsFromUser: {
-                        completedAt: FieldValue.serverTimestamp(),
-                        sourceUserId: legacyUserId,
-                        migratedCount: 0,
-                      },
-                    },
-                  },
-                  { merge: true }
-                )
               }
             } else {
               await workspace.workspaceRef.set(

@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from '@/contexts/auth-context'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { apiFetch } from '@/lib/api-client'
+import { getPreviewClients, isPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data'
 
 type ClientContextValue = {
   clients: ClientRecord[]
@@ -45,6 +46,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(false)
+  const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
+  const selectionBeforePreviewRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (mountedRef.current) {
@@ -67,7 +70,56 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const syncPreview = () => {
+      setPreviewEnabled(isPreviewModeEnabled())
+    }
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === PREVIEW_MODE_STORAGE_KEY) {
+        syncPreview()
+      }
+    }
+
+    const onPreviewEvent = () => {
+      syncPreview()
+    }
+
+    window.addEventListener('storage', onStorage)
+    window.addEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener)
+    syncPreview()
+
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!previewEnabled) {
+      return
+    }
+
+    // Entering preview mode: snapshot selection and inject demo clients.
+    if (selectionBeforePreviewRef.current === null) {
+      selectionBeforePreviewRef.current = selectedClientId
+    }
+
+    const previewClients = getPreviewClients()
+    setClients(previewClients)
+    setSelectedClientId(previewClients[0]?.id ?? null)
+    setError(null)
+    setLoading(false)
+  }, [previewEnabled, selectedClientId])
+
+  useEffect(() => {
     if (typeof window === 'undefined') {
+      return
+    }
+
+    // In preview mode, don't persist selection (avoid overwriting the real workspace selection).
+    if (previewEnabled) {
       return
     }
 
@@ -84,6 +136,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [selectedClientId])
 
   const fetchClients = useCallback(async (): Promise<ClientRecord[]> => {
+    if (previewEnabled) {
+      const previewClients = getPreviewClients()
+      setClients(previewClients)
+      setSelectedClientId(previewClients[0]?.id ?? null)
+      setError(null)
+      setLoading(false)
+      return previewClients
+    }
+
     if (!user?.id) {
       setClients([])
       setSelectedClientId(null)
@@ -111,10 +172,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [previewEnabled, user?.id])
 
   useEffect(() => {
     if (authLoading) {
+      return
+    }
+
+    if (previewEnabled) {
+      void fetchClients()
       return
     }
 
@@ -127,7 +193,24 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
 
     void fetchClients()
-  }, [authLoading, user?.id, fetchClients])
+  }, [authLoading, user?.id, fetchClients, previewEnabled])
+
+  useEffect(() => {
+    if (previewEnabled) {
+      return
+    }
+
+    // Leaving preview mode: restore prior selection if possible and refresh from API.
+    if (selectionBeforePreviewRef.current !== null) {
+      const previousSelection = selectionBeforePreviewRef.current
+      selectionBeforePreviewRef.current = null
+      setSelectedClientId(previousSelection)
+    }
+
+    if (!authLoading && user?.id) {
+      void fetchClients()
+    }
+  }, [previewEnabled])
 
   useEffect(() => {
     if (clients.length === 0) {

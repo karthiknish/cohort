@@ -349,6 +349,20 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
         return false
       }
 
+      // Verify the cookie is actually present on the server before proceeding.
+      // This prevents race conditions on live deployments where the cookie may not
+      // be immediately visible to middleware after the POST response.
+      const cookieConfirmed = await waitForServerSessionPresence(true, 5)
+      if (!cookieConfirmed) {
+        console.warn('[AuthProvider] Session cookie not confirmed after sync, retrying...')
+        if (retryCount < 2) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          return syncSessionCookies(authUser, retryCount + 1)
+        }
+        console.error('[AuthProvider] Session cookie verification failed after retries')
+        return false
+      }
+
       setStoredSyncToken(token)
       return true
     } catch (error) {

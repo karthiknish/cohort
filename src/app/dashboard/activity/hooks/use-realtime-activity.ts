@@ -12,7 +12,9 @@ import {
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import { db } from '@/lib/firebase'
+import { getPreviewActivity } from '@/lib/preview-data'
 import type { Activity } from '@/types/activity'
 
 type FirestoreTimestampLike =
@@ -55,12 +57,24 @@ function readString(value: unknown, fallback: string): string {
 export function useRealtimeActivity(limitCount = 20) {
   const { user } = useAuth()
   const { selectedClient } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const unsubscribeRefs = useRef<Array<() => void>>([])
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Handle preview mode
+  useEffect(() => {
+    if (isPreviewMode) {
+      const previewActivities = getPreviewActivity(selectedClient?.id ?? null)
+      setActivities(previewActivities.slice(0, limitCount))
+      setLoading(false)
+      setError(null)
+    }
+  }, [isPreviewMode, selectedClient?.id, limitCount])
+
   const setupRealtimeListeners = useCallback(() => {
+    if (isPreviewMode) return
     if (!selectedClient?.id || !user) return
 
     const clientId = selectedClient.id
@@ -169,7 +183,7 @@ export function useRealtimeActivity(limitCount = 20) {
       setError('Failed to set up real-time sync')
       setLoading(false)
     }
-  }, [selectedClient?.id, user, limitCount])
+  }, [isPreviewMode, selectedClient?.id, user, limitCount])
 
   useEffect(() => {
     setupRealtimeListeners()

@@ -16,7 +16,9 @@ import {
 } from 'firebase/firestore'
 
 import { useToast } from '@/components/ui/use-toast'
+import { usePreview } from '@/contexts/preview-context'
 import { db } from '@/lib/firebase'
+import { getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { Channel } from '../types'
 import type { MessagesByChannelState, TypingParticipant } from './types'
@@ -43,13 +45,38 @@ export function useRealtimeMessages({
   onError,
 }: UseRealtimeMessagesOptions) {
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   const channelUnsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     channelUnsubscribeRef.current?.()
     channelUnsubscribeRef.current = null
 
-    if (!selectedChannel || !workspaceId) {
+    if (!selectedChannel) {
+      return
+    }
+
+    // Handle preview mode
+    if (isPreviewMode) {
+      const channelId = selectedChannel.id
+      const previewMessages = getPreviewCollaborationMessages(
+        selectedChannel.clientId,
+        selectedChannel.projectId
+      )
+      setMessagesByChannel((prev) => ({
+        ...prev,
+        [channelId]: previewMessages,
+      }))
+      setNextCursorByChannel((prev) => ({
+        ...prev,
+        [channelId]: null,
+      }))
+      setLoadingChannelId(null)
+      setMessagesError(null)
+      return
+    }
+
+    if (!workspaceId) {
       return
     }
 
@@ -118,7 +145,7 @@ export function useRealtimeMessages({
         channelUnsubscribeRef.current = null
       }
     }
-  }, [onError, selectedChannel, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, workspaceId])
+  }, [isPreviewMode, onError, selectedChannel, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, workspaceId])
 }
 
 interface UseRealtimeTypingOptions {

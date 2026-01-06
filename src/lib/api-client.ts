@@ -1,11 +1,76 @@
 import { authService } from '@/services/auth'
 import { ApiClientError } from './user-friendly-error'
+import {
+  getPreviewClients,
+  getPreviewFinanceSummary,
+  getPreviewMetrics,
+  getPreviewTasks,
+  getPreviewProjects,
+  getPreviewProposals,
+  getPreviewActivity,
+  getPreviewNotifications,
+  getPreviewCollaborationMessages,
+  isPreviewModeEnabled,
+} from '@/lib/preview-data'
 
 const inFlightRequests = new Map<string, Promise<any>>()
 
 export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
   const method = init.method || 'GET'
   const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+  // Preview mode: short-circuit certain read endpoints with demo data.
+  // This keeps preview mode fast and avoids requiring seeded Firestore data.
+  if (method.toUpperCase() === 'GET' && typeof window !== 'undefined' && isPreviewModeEnabled()) {
+    try {
+      const resolved = new URL(url, window.location.origin)
+      const path = resolved.pathname
+      const clientId = resolved.searchParams.get('clientId')
+      const clientIds = resolved.searchParams.get('clientIds')
+
+      if (path === '/api/clients') {
+        return { clients: getPreviewClients(), nextCursor: null } as T
+      }
+
+      if (path === '/api/finance') {
+        return getPreviewFinanceSummary(clientId) as T
+      }
+
+      if (path === '/api/metrics') {
+        // Support either single clientId or the server's clientIds CSV param.
+        const resolvedClientId = clientId || (clientIds && clientIds.split(',').map((v) => v.trim()).filter(Boolean)[0]) || null
+        return { metrics: getPreviewMetrics(resolvedClientId), nextCursor: null } as T
+      }
+
+      if (path === '/api/tasks') {
+        return { tasks: getPreviewTasks(clientId), nextCursor: null } as T
+      }
+
+      if (path === '/api/projects') {
+        return { projects: getPreviewProjects(clientId) } as T
+      }
+
+      if (path === '/api/proposals') {
+        return { proposals: getPreviewProposals(clientId) } as T
+      }
+
+      if (path === '/api/activity') {
+        const activities = getPreviewActivity(clientId)
+        return { activities, hasMore: false, total: activities.length } as T
+      }
+
+      if (path === '/api/notifications') {
+        return { notifications: getPreviewNotifications(), nextCursor: null } as T
+      }
+
+      if (path === '/api/collaboration/messages') {
+        const projectId = resolved.searchParams.get('projectId')
+        return { messages: getPreviewCollaborationMessages(clientId, projectId), nextCursor: null } as T
+      }
+    } catch {
+      // Fall through to live fetch.
+    }
+  }
   
   // Only deduplicate GET requests to avoid side-effect issues
   const isDeduplicatable = method.toUpperCase() === 'GET'

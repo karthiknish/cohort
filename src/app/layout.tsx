@@ -6,6 +6,7 @@ import './globals.css'
 import { cn } from '@/lib/utils'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ClientProvider } from '@/contexts/client-context'
+import { PreviewProvider } from '@/contexts/preview-context'
 import { ProjectProvider } from '@/contexts/project-context'
 import { PreferencesProvider } from '@/contexts/preferences-context'
 import { SiteHeader } from '@/components/site/site-header'
@@ -57,23 +58,25 @@ export default function RootLayout({
       >
         <AuthProvider>
           <ClientProvider>
-            <PreferencesProvider>
-              <Suspense fallback={null}>
-                <ProjectProvider>
-                  <AnalyticsProvider>
-                    <MotionProvider>
-                      <div className="flex min-h-screen flex-col">
-                        <SiteHeader />
-                        <main className="flex-1">{children}</main>
-                        <SiteFooter />
-                      </div>
-                      <PWAProvider />
-                      <DebugWindow />
-                    </MotionProvider>
-                  </AnalyticsProvider>
-                </ProjectProvider>
-              </Suspense>
-            </PreferencesProvider>
+            <PreviewProvider>
+              <PreferencesProvider>
+                <Suspense fallback={null}>
+                  <ProjectProvider>
+                    <AnalyticsProvider>
+                      <MotionProvider>
+                        <div className="flex min-h-screen flex-col">
+                          <SiteHeader />
+                          <main className="flex-1">{children}</main>
+                          <SiteFooter />
+                        </div>
+                        <PWAProvider />
+                        <DebugWindow />
+                      </MotionProvider>
+                    </AnalyticsProvider>
+                  </ProjectProvider>
+                </Suspense>
+              </PreferencesProvider>
+            </PreviewProvider>
           </ClientProvider>
         </AuthProvider>
         <Toaster />

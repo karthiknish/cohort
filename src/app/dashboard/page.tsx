@@ -38,6 +38,8 @@ import { ActivityWidget } from '@/components/activity/activity-widget'
 import { DashboardFilterBar } from '@/components/dashboard/dashboard-filter-bar'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
+import { usePreview } from '@/contexts/preview-context'
+import { getPreviewFinanceSummary, getPreviewMetrics, getPreviewTasks } from '@/lib/preview-data'
 
 // New components
 import { OnboardingCard } from '@/components/dashboard/onboarding-card'
@@ -116,6 +118,7 @@ const DAY_IN_MS = 24 * 60 * 60 * 1000
 export default function DashboardPage() {
   const { clients, selectedClient, selectedClientId } = useClientContext()
   const { user, getIdToken } = useAuth()
+  const { isPreviewMode } = usePreview()
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
   const [financeLoading, setFinanceLoading] = useState(true)
   const [financeError, setFinanceError] = useState<string | null>(null)
@@ -193,6 +196,32 @@ export default function DashboardPage() {
       setTaskSummary(DEFAULT_TASK_SUMMARY)
       setTasksError(null)
       setTasksLoading(false)
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    if (isPreviewMode) {
+      const previewFinance = getPreviewFinanceSummary(selectedClientId ?? null)
+      const previewMetrics = getPreviewMetrics(selectedClientId ?? null)
+      const previewTasks = getPreviewTasks(selectedClientId ?? null)
+
+      setFinanceSummary(previewFinance)
+      setFinanceError(null)
+      setFinanceLoading(false)
+
+      setMetrics(previewMetrics)
+      setMetricsError(null)
+      setMetricsLoading(false)
+
+      setRawTasks(previewTasks)
+      setTaskItems(mapTasksForDashboard(previewTasks))
+      setTaskSummary(summarizeTasks(previewTasks))
+      setTasksError(null)
+      setTasksLoading(false)
+
+      setLastRefreshed(new Date())
+
       return () => {
         isCancelled = true
       }
@@ -344,7 +373,7 @@ export default function DashboardPage() {
     return () => {
       isCancelled = true
     }
-  }, [user?.id, selectedClientId, getIdToken, refreshKey])
+  }, [user?.id, selectedClientId, getIdToken, refreshKey, isPreviewMode])
 
   useEffect(() => {
     let isCancelled = false
@@ -353,6 +382,50 @@ export default function DashboardPage() {
       setComparisonSummaries([])
       setComparisonError(null)
       setComparisonLoading(false)
+      return () => {
+        isCancelled = true
+      }
+    }
+
+    if (isPreviewMode) {
+      const targets = comparisonClientIds.length > 0 ? comparisonClientIds : selectedClientId ? [selectedClientId] : []
+
+      if (targets.length === 0) {
+        setComparisonSummaries([])
+        setComparisonError(null)
+        setComparisonLoading(false)
+        return () => {
+          isCancelled = true
+        }
+      }
+
+      setComparisonLoading(true)
+      setComparisonError(null)
+
+      try {
+        const summaries = targets.map((clientId) => {
+          const name = clients.find((c) => c.id === clientId)?.name ?? 'Client'
+          return buildClientComparisonSummary({
+            clientId,
+            clientName: name,
+            finance: getPreviewFinanceSummary(clientId),
+            metrics: getPreviewMetrics(clientId),
+            periodDays: comparisonPeriodDays,
+          })
+        })
+
+        if (!isCancelled) {
+          setComparisonSummaries(summaries)
+          setComparisonLoading(false)
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setComparisonSummaries([])
+          setComparisonError(getErrorMessage(error, 'Unable to load comparison'))
+          setComparisonLoading(false)
+        }
+      }
+
       return () => {
         isCancelled = true
       }
@@ -449,7 +522,7 @@ export default function DashboardPage() {
     return () => {
       isCancelled = true
     }
-  }, [clients, comparisonClientIds, comparisonPeriodDays, getIdToken, selectedClientId, user?.id])
+  }, [clients, comparisonClientIds, comparisonPeriodDays, getIdToken, selectedClientId, user?.id, isPreviewMode])
 
   const { primaryStats, secondaryStats } = useMemo(() => {
     const revenueRecords = Array.isArray(financeSummary?.revenue) ? financeSummary.revenue : []

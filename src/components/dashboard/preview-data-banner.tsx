@@ -58,11 +58,13 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
         <div className="flex items-center gap-2">
           <Button
             size="sm"
-            variant={isPreviewMode ? 'secondary' : 'default'}
+            variant={isPreviewMode ? 'outline' : 'default'}
             onClick={togglePreviewMode}
             className={cn(
               'gap-2 transition-all',
-              !isPreviewMode && 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0'
+              isPreviewMode
+                ? 'border-primary/40 text-primary hover:bg-primary/10 hover:text-primary'
+                : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0'
             )}
           >
             <Eye className="h-3.5 w-3.5" />
