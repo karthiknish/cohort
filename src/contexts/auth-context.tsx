@@ -221,8 +221,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   )
 }
 
-let lastSyncToken: string | null = null
 let syncInProgress: Promise<boolean> | null = null
+const LAST_SYNC_TOKEN_KEY = 'cohorts.auth.lastSyncToken'
+
+function getStoredSyncToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return window.sessionStorage.getItem(LAST_SYNC_TOKEN_KEY)
+}
+
+function setStoredSyncToken(token: string | null) {
+  if (typeof window === 'undefined') return
+  if (token) {
+    window.sessionStorage.setItem(LAST_SYNC_TOKEN_KEY, token)
+  } else {
+    window.sessionStorage.removeItem(LAST_SYNC_TOKEN_KEY)
+  }
+}
 
 async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Promise<boolean> {
   if (typeof window === 'undefined') {
@@ -247,7 +261,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
   if (syncInProgress && retryCount === 0) {
     await syncInProgress
     const currentToken = await getTargetToken()
-    if (currentToken === lastSyncToken) {
+    if (currentToken === getStoredSyncToken()) {
       return true
     }
   }
@@ -255,7 +269,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
   const token = await getTargetToken()
   
   // Dedup
-  if (token === lastSyncToken && retryCount === 0) {
+  if (token === getStoredSyncToken() && retryCount === 0) {
     return true
   }
 
@@ -264,7 +278,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
       if (!token) {
         const response = await fetch('/api/auth/session', { method: 'DELETE' })
         if (response.ok) {
-          lastSyncToken = null
+          setStoredSyncToken(null)
         }
         return response.ok
       }
@@ -311,7 +325,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
         return false
       }
 
-      lastSyncToken = token
+      setStoredSyncToken(token)
       return true
     } catch (error) {
       const isNetworkError = 

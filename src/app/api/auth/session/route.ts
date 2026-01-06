@@ -19,26 +19,15 @@ export const POST = createApiHandler(
   },
   async (request, context) => {
     const { token, role, status } = context.body
-    const cookieStore = await cookies()
+    const response = NextResponse.json(
+      { success: true },
+      { 
+        headers: { 'Cache-Control': 'no-store, max-age=0' }
+      }
+    )
 
-    if (!token) {
-      // Clear cookies
-      cookieStore.delete('cohorts_token')
-      cookieStore.delete('cohorts_role')
-      cookieStore.delete('cohorts_status')
-      return NextResponse.json(
-        { success: true },
-        { 
-          headers: { 'Cache-Control': 'no-store, max-age=0' }
-        }
-      )
-    }
-
-    // Set cookies with security flags
-    // 2 hours expiration instead of 14 days
-    const maxAge = 2 * 60 * 60 
     const isProduction = process.env.NODE_ENV === 'production'
-
+    const maxAge = 2 * 60 * 60 
     const cookieOptions = {
       maxAge,
       path: '/',
@@ -47,13 +36,19 @@ export const POST = createApiHandler(
       sameSite: 'lax' as const,
     }
 
+    if (!token) {
+      response.cookies.delete('cohorts_token')
+      response.cookies.delete('cohorts_role')
+      response.cookies.delete('cohorts_status')
+      return response
+    }
+
     try {
       // Exchange the ID token for a session cookie
-      // This provides an encrypted session reference as requested
       const sessionCookie = await adminAuth.createSessionCookie(token, { 
         expiresIn: maxAge * 1000 
       })
-      cookieStore.set('cohorts_token', sessionCookie, cookieOptions)
+      response.cookies.set('cohorts_token', sessionCookie, cookieOptions)
     } catch (error) {
       console.error('[SessionRoute] Failed to create session cookie:', error)
       return NextResponse.json(
@@ -62,15 +57,10 @@ export const POST = createApiHandler(
       )
     }
 
-    cookieStore.set('cohorts_role', role || 'client', cookieOptions)
-    cookieStore.set('cohorts_status', status || 'pending', cookieOptions)
+    response.cookies.set('cohorts_role', role || 'client', cookieOptions)
+    response.cookies.set('cohorts_status', status || 'pending', cookieOptions)
 
-    return NextResponse.json(
-      { success: true },
-      { 
-        headers: { 'Cache-Control': 'no-store, max-age=0' }
-      }
-    )
+    return response
   }
 )
 

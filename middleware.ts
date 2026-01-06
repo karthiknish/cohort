@@ -51,6 +51,9 @@ export async function middleware(request: NextRequest) {
     return response
   }
   const token = request.cookies.get(AUTH_COOKIE)?.value
+  const role = request.cookies.get(ROLE_COOKIE)?.value
+
+  console.log(`[Middleware] Path: ${pathname} | Token present: ${!!token} (${token?.slice(0, 10)}...) | Role: ${role}`)
 
   // Public auth pages should always be reachable.
   // If a stale/invalid token cookie exists, forcing a redirect from `/` -> `/dashboard`
