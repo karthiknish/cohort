@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +29,7 @@ export function InvoiceHistorySection({
   const loadingView = (
     <div className="flex min-h-[320px] items-center justify-center">
       <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="h-4 w-4 animate-spin" />
         Loading billing details...
       </div>
     </div>

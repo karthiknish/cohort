@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 
 export type TaskResultsCountProps = {
   sortedCount: number
@@ -19,7 +19,7 @@ export function TaskResultsCount({ sortedCount, totalCount, loading }: TaskResul
       </span>
       {loading && (
         <span className="flex items-center gap-1">
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <LoaderCircle className="h-3 w-3 animate-spin" />
           Updating...
         </span>
       )}

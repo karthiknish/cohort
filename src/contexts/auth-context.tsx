@@ -231,6 +231,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 let syncInProgress: Promise<boolean> | null = null
 const LAST_SYNC_TOKEN_KEY = 'cohorts.auth.lastSyncToken'
+const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
+// Refresh the server session cookie when it is close to expiring.
+// This avoids re-posting the session cookie on every reload while still keeping the session alive.
+const SESSION_SYNC_BUFFER_MS = 15 * 60 * 1000
 
 async function waitForServerSessionPresence(expected: boolean, maxAttempts = 5): Promise<boolean> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -271,6 +275,20 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+function getSessionExpiresAt(): number | null {
+  const raw = getCookieValue(SESSION_EXPIRES_COOKIE)
+  if (!raw) return null
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return null
+  return parsed
+}
+
 async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Promise<boolean> {
   if (typeof window === 'undefined') {
     return true
@@ -279,6 +297,18 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
   // If we're offline, don't even try to sync
   if (!navigator.onLine) {
     return false
+  }
+
+  // If a server session already exists and is still fresh, avoid re-syncing on reload.
+  // This prevents an auth-session POST on every hard refresh.
+  const existingSessionExpiresAt = getSessionExpiresAt()
+  const hasFreshServerSession =
+    authUser &&
+    typeof existingSessionExpiresAt === 'number' &&
+    Date.now() < existingSessionExpiresAt - SESSION_SYNC_BUFFER_MS
+
+  if (hasFreshServerSession && retryCount === 0) {
+    return true
   }
 
   const getTargetToken = async () => {
@@ -301,7 +331,7 @@ async function syncSessionCookies(authUser: AuthUser | null, retryCount = 0): Pr
 
   const token = await getTargetToken()
   
-  // Dedup
+  // Dedup (when we actually intend to sync)
   if (token === getStoredSyncToken() && retryCount === 0) {
     return true
   }

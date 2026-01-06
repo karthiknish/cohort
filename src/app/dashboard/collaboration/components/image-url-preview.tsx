@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AlertCircle, Loader2, ZoomIn } from "lucide-react"
+import { CircleAlert, LoaderCircle, ZoomIn } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { LazyImage } from "@/components/ui/lazy-image"
@@ -35,7 +35,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline"
       >
-        <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
+        <CircleAlert className="h-3.5 w-3.5 text-muted-foreground" />
         {fileName}
       </a>
     )
@@ -53,7 +53,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
         <div className="relative overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-muted/20">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
           <LazyImage

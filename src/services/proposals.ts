@@ -1,4 +1,4 @@
-import { ProposalFormData } from '@/lib/proposals'
+import { ProposalFormData, mergeProposalForm } from '@/lib/proposals'
 import { authService } from '@/services/auth'
 
 export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'sent'
@@ -39,6 +39,15 @@ export interface ProposalDraft {
 
 import { apiFetch } from '@/lib/api-client'
 
+function normalizeProposalDraft(input: ProposalDraft): ProposalDraft {
+  // The API payload may contain partial/missing formData depending on legacy docs.
+  // Normalise to the full shape so consumers can safely read nested fields.
+  return {
+    ...input,
+    formData: mergeProposalForm((input as any)?.formData ?? null),
+  }
+}
+
 export async function listProposals(params: { status?: ProposalStatus; clientId?: string } = {}) {
   const search = new URLSearchParams()
   if (params.status) {
@@ -52,7 +61,7 @@ export async function listProposals(params: { status?: ProposalStatus; clientId?
     cache: 'no-store',
   })
 
-  return payload.proposals.map(resolveProposalDeck)
+  return payload.proposals.map((proposal) => resolveProposalDeck(normalizeProposalDraft(proposal)))
 }
 
 export async function getProposalById(id: string) {
@@ -64,7 +73,7 @@ export async function getProposalById(id: string) {
     throw new Error('Proposal not found')
   }
 
-  return resolveProposalDeck(payload.proposal)
+  return resolveProposalDeck(normalizeProposalDraft(payload.proposal))
 }
 
 export async function createProposalDraft(body: Partial<ProposalDraft> = {}) {
@@ -91,7 +100,7 @@ export async function submitProposalDraft(id: string, delivery: 'summary' | 'sum
     body: JSON.stringify({ delivery }),
   })
 
-  return resolveProposalDeck(payload)
+  return resolveProposalDeck(normalizeProposalDraft(payload as ProposalDraft))
 }
 
 export async function deleteProposalDraft(id: string) {
@@ -107,7 +116,7 @@ export async function prepareProposalDeck(id: string) {
     method: 'POST',
   })
 
-  return resolveProposalDeck(payload)
+  return resolveProposalDeck(normalizeProposalDraft(payload as ProposalDraft))
 }
 
 function resolveProposalDeck<T extends { pptUrl?: string | null; presentationDeck?: ProposalPresentationDeck | null; gammaDeck?: ProposalPresentationDeck | null; aiSuggestions?: string | null }>(payload: T): T & { presentationDeck?: ProposalPresentationDeck | null } {

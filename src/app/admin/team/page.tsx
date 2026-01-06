@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AlertCircle,
-  Loader2,
+  CircleAlert,
+  LoaderCircle,
   RefreshCw,
   ShieldCheck,
   UserCheck,
@@ -505,7 +505,7 @@ export default function AdminTeamPage() {
                             className="inline-flex items-center gap-2"
                           >
                             {savingId === record.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
                             ) : (
                               <ActionIcon status={record.status} />
                             )}
@@ -528,7 +528,7 @@ export default function AdminTeamPage() {
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"
                 >
-                  {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {loadingMore ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   {loadingMore ? 'Loading…' : 'Load more'}
                 </Button>
               </div>
@@ -612,5 +612,5 @@ function ActionIcon({ status }: { status: UserStatus }) {
   if (status === 'disabled' || status === 'suspended') {
     return <UserCheck className="h-4 w-4" />
   }
-  return <AlertCircle className="h-4 w-4" />
+  return <CircleAlert className="h-4 w-4" />
 }

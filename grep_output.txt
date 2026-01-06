@@ -1,0 +1,15 @@
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/utils/form-steps.ts:  value: ['value.proposalSize', 'value.engagementType'],
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/utils/form-steps.ts:      return form.value.proposalSize.trim().length > 0 && form.value.engagementType.trim().length > 0
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/utils/form-steps.ts:      if (!form.value.proposalSize.trim()) {
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/utils/form-steps.ts:        errors['value.proposalSize'] = 'Select an expected proposal value.'
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/utils/form-steps.ts:  if (form.value.proposalSize.trim().length > 0 && form.value.engagementType.trim().length > 0) {
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/components/proposal-metrics.tsx:    // Estimate total value from proposalSize strings (e.g., "$10k - $25k")
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/components/proposal-metrics.tsx:      const sizeStr = p?.formData?.value?.proposalSize || ""
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/components/proposal-step-content.tsx:                const isSelected = formState.value.proposalSize === option
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/components/proposal-step-content.tsx:                    onClick={() => onUpdateField(['value', 'proposalSize'], option)}
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/components/proposal-step-content.tsx:            {validationErrors['value.proposalSize'] && (
+/Users/karthik/React-projects/cohort/src/app/dashboard/proposals/components/proposal-step-content.tsx:                {validationErrors['value.proposalSize']}
+/Users/karthik/React-projects/cohort/src/app/api/proposals/utils/gamma.ts:    `Scope & Value:\n- Requested Services: ${scope.services.length ? scope.services.join(', ') : 'Not specified'}\n- Extra Services: ${scope.otherService || 'None'}\n- Proposal Value: ${value.proposalSize || 'Not specified'}\n- Engagement Type: ${value.engagementType || 'Not specified'}\n- Additional Notes: ${value.additionalNotes || 'None'}`
+/Users/karthik/React-projects/cohort/src/app/api/proposals/[id]/submit/route.ts:- Expected value: ${value.proposalSize || 'Not specified'}
+/Users/karthik/React-projects/cohort/src/lib/proposals.ts:    proposalSize: z.string().default(''),
+/Users/karthik/React-projects/cohort/src/lib/proposals.ts:    proposalSize: '',

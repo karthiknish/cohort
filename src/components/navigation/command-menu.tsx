@@ -15,7 +15,7 @@ import {
   Users,
   Search,
   Settings,
-  HelpCircle,
+  CircleHelp,
   Keyboard,
   Plus,
 } from 'lucide-react'
@@ -128,7 +128,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
             </CommandItem>
             {onOpenHelp && (
               <CommandItem onSelect={() => runCommand(onOpenHelp)}>
-                <HelpCircle className="mr-2 h-4 w-4" />
+                <CircleHelp className="mr-2 h-4 w-4" />
                 <span>Help & Shortcuts</span>
                 <CommandShortcut>?</CommandShortcut>
               </CommandItem>

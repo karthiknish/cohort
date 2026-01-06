@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, SmilePlus, Reply, MoreHorizontal, Trash2 } from 'lucide-react'
+import { LoaderCircle, SmilePlus, Reply, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -293,7 +293,7 @@ export function MessageEditForm({
           onClick={onConfirm}
           disabled={isUpdating || value.trim().length === 0}
         >
-          {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isUpdating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
           Save changes
         </Button>
         <Button
@@ -378,7 +378,7 @@ export function DeletingOverlay({ isDeleting }: DeletingOverlayProps) {
   return (
     <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2 text-xs text-destructive">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="h-4 w-4 animate-spin" />
         <span>Removing message…</span>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Clock, CheckCircle, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter } from 'lucide-react'
+import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ import type { Activity } from '@/types/activity'
 
 const ACTIVITY_ICONS = {
   project_updated: Briefcase,
-  task_completed: CheckCircle,
+  task_completed: CircleCheck,
   message_posted: MessageSquare,
 }
 

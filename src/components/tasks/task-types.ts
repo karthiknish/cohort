@@ -1,4 +1,4 @@
-import { Clock, ListTodo, PlayCircle, Eye, CheckCircle2 } from 'lucide-react'
+import { Clock, ListTodo, CirclePlay, Eye, CircleCheck } from 'lucide-react'
 import { TaskStatus, TaskPriority, TaskRecord } from '@/types/tasks'
 
 // Retry configuration for network resilience
@@ -36,9 +36,9 @@ export const priorityColors: Record<TaskPriority, string> = {
 
 export const STATUS_ICONS: Record<TaskStatus, typeof Clock> = {
   todo: ListTodo,
-  'in-progress': PlayCircle,
+  'in-progress': CirclePlay,
   review: Eye,
-  completed: CheckCircle2,
+  completed: CircleCheck,
 }
 
 export const PRIORITY_ORDER: Record<TaskPriority, number> = {

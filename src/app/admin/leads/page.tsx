@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AlertCircle,
+  CircleAlert,
   ArrowUpDown,
-  CheckCircle2,
+  CircleCheck,
   Clock,
   ExternalLink,
   Filter,
   Inbox,
-  Loader2,
+  LoaderCircle,
   Mail,
   MoreHorizontal,
   RefreshCw,
@@ -86,7 +86,7 @@ const STATUS_CONFIG = {
   resolved: {
     label: 'Resolved',
     color: 'bg-emerald-100 text-emerald-700',
-    icon: CheckCircle2,
+    icon: CircleCheck,
   },
 }
 
@@ -367,7 +367,7 @@ export default function AdminLeadsPage() {
                 )}
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                <CircleCheck className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
           </CardContent>
@@ -400,7 +400,7 @@ export default function AdminLeadsPage() {
                       <span className="flex items-center gap-2">
                         {status === 'new' && <Inbox className="h-3 w-3" />}
                         {status === 'in_progress' && <Clock className="h-3 w-3" />}
-                        {status === 'resolved' && <CheckCircle2 className="h-3 w-3" />}
+                        {status === 'resolved' && <CircleCheck className="h-3 w-3" />}
                         {STATUS_CONFIG[status].label}
                       </span>
                     </SelectItem>
@@ -505,7 +505,7 @@ export default function AdminLeadsPage() {
                                   >
                                     {status === 'new' && <Inbox className="mr-2 h-4 w-4" />}
                                     {status === 'in_progress' && <Clock className="mr-2 h-4 w-4" />}
-                                    {status === 'resolved' && <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                    {status === 'resolved' && <CircleCheck className="mr-2 h-4 w-4" />}
                                     Mark as {STATUS_CONFIG[status].label}
                                   </DropdownMenuItem>
                                 ))}
@@ -537,7 +537,7 @@ export default function AdminLeadsPage() {
               >
                 {isLoadingMore ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                     Loading...
                   </>
                 ) : (
@@ -600,7 +600,7 @@ export default function AdminLeadsPage() {
                       disabled={savingId === selectedLead.id}
                     >
                       {savingId === selectedLead.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
                       ) : (
                         STATUS_CONFIG[status].label
                       )}

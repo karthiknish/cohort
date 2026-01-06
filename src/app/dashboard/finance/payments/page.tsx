@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CreditCard, Loader2, RefreshCw } from 'lucide-react'
+import { CreditCard, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -132,7 +132,7 @@ export default function FinancePaymentsPage() {
             disabled={openingPortal || !selectedClientId}
             className="inline-flex items-center gap-2"
           >
-            {openingPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            {openingPortal ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
             Open billing portal
           </Button>
         </div>

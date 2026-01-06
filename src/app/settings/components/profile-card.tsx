@@ -1,7 +1,7 @@
 'use client'
 
 import { ChangeEvent, FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
-import { Loader2, ImagePlus, Trash2 } from 'lucide-react'
+import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -254,7 +254,7 @@ export function ProfileCard({
                   disabled={avatarUploading}
                 >
                   {avatarUploading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <ImagePlus className="mr-2 h-4 w-4" />
                   )}
@@ -314,7 +314,7 @@ export function ProfileCard({
               We use this information across proposals, invoices, and automated notifications.
             </p>
             <Button type="submit" disabled={!canSaveProfile}>
-              {savingProfile ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {savingProfile ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
               Save changes
             </Button>
           </div>

@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
@@ -563,11 +562,11 @@ export function CollaborationMessagePane({
         isActive={isSearchActive}
       />
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <div className="space-y-4 p-4">
           {isLoading && (
             <div className="flex justify-center py-6 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <LoaderCircle className="h-5 w-5 animate-spin" />
             </div>
           )}
 
@@ -618,7 +617,7 @@ export function CollaborationMessagePane({
 
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       <MessageComposer
         channel={channel}

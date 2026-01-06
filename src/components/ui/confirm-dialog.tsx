@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Loader2, AlertTriangle, Trash2, CheckCircle2 } from 'lucide-react'
+import { LoaderCircle, TriangleAlert, Trash2, CircleCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface ConfirmDialogProps {
@@ -30,7 +30,7 @@ export interface ConfirmDialogProps {
 
 const variantConfig = {
   default: {
-    icon: CheckCircle2,
+    icon: CircleCheck,
     iconClass: 'text-primary',
     bgClass: 'bg-primary/10',
     buttonVariant: 'default' as const,
@@ -42,7 +42,7 @@ const variantConfig = {
     buttonVariant: 'destructive' as const,
   },
   warning: {
-    icon: AlertTriangle,
+    icon: TriangleAlert,
     iconClass: 'text-amber-600',
     bgClass: 'bg-amber-100',
     buttonVariant: 'default' as const,
@@ -103,7 +103,7 @@ export function ConfirmDialog({
               onClick={handleConfirm}
               disabled={isLoading}
             >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               {confirmLabel}
             </Button>
           </AlertDialogAction>

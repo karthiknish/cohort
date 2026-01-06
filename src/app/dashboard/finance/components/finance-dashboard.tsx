@@ -22,7 +22,7 @@ import { RecurringInvoicesCard } from './recurring-invoices-card'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
-import { BarChart3, FileText, Users, Megaphone, RefreshCw, AlertCircle } from 'lucide-react'
+import { BarChart3, FileText, Users, Megaphone, RefreshCw, CircleAlert } from 'lucide-react'
 
 export function FinanceDashboard() {
   const { user } = useAuth()
@@ -181,7 +181,7 @@ export function FinanceDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="rounded-full bg-destructive/10 p-4 mb-4">
-          <AlertCircle className="h-8 w-8 text-destructive" />
+          <CircleAlert className="h-8 w-8 text-destructive" />
         </div>
         <h2 className="text-xl font-semibold text-foreground mb-2">Unable to load finance data</h2>
         <p className="text-muted-foreground text-center max-w-md mb-6">{loadError}</p>
@@ -197,7 +197,7 @@ export function FinanceDashboard() {
     <div className="space-y-6">
       {loadError && (
         <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
-          <AlertCircle className="h-4 w-4" />
+          <CircleAlert className="h-4 w-4" />
           <AlertTitle>Finance data partially unavailable</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>{loadError}</span>

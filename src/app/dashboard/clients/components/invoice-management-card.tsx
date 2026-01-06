@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import {
-  AlertTriangle,
+  TriangleAlert,
   BellRing,
   Calendar,
   Check,
@@ -15,14 +15,14 @@ import {
   ExternalLink,
   FileText,
   History,
-  Loader2,
+  LoaderCircle,
   Mail,
   MoreHorizontal,
   Plus,
   Receipt,
   RotateCcw,
   Send,
-  XCircle,
+  CircleX,
 } from 'lucide-react'
 
 import { cn, formatCurrency } from '@/lib/utils'
@@ -170,7 +170,7 @@ export function InvoiceStatusIcon({ status }: { status: string }) {
     case 'uncollectible':
       return (
         <div className={cn(iconClasses, 'bg-red-100 text-red-600')}>
-          <AlertTriangle className="h-full w-full" />
+          <TriangleAlert className="h-full w-full" />
         </div>
       )
     default:
@@ -397,7 +397,7 @@ export function InvoiceManagementCard({
               >
                 {createInvoiceLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
                     Creating...
                   </>
                 ) : (
@@ -527,7 +527,7 @@ export function InvoiceManagementCard({
                               className="h-8 w-8 text-muted-foreground hover:text-destructive"
                               onClick={() => handleRemoveLineItem(item.id)}
                             >
-                              <XCircle className="h-4 w-4" />
+                              <CircleX className="h-4 w-4" />
                               <span className="sr-only">Remove</span>
                             </Button>
                           </div>
@@ -684,7 +684,7 @@ export function InvoiceManagementCard({
                 >
                   {sendingReminder ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
                       Sending...
                     </>
                   ) : (
@@ -728,7 +728,7 @@ export function InvoiceManagementCard({
                         >
                           {refundLoading ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                               Processing...
                             </>
                           ) : (
@@ -745,7 +745,7 @@ export function InvoiceManagementCard({
             {/* Outstanding Warning */}
             {invoiceSummary.isOutstanding && (
               <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                   <p className="font-medium">Payment Outstanding</p>
                   <p className="mt-0.5 text-amber-700">
@@ -780,7 +780,7 @@ export function InvoiceManagementCard({
               <div className="space-y-2">
                 {invoiceHistoryLoading ? (
                   <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : invoiceHistory.length === 0 ? (
                   <p className="py-3 text-center text-xs text-muted-foreground">

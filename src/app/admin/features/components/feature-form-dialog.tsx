@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Plus, Sparkles, X } from 'lucide-react'
+import { LoaderCircle, Plus, Sparkles, X } from 'lucide-react'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -270,7 +270,7 @@ export function FeatureFormDialog({
                 disabled={isSubmitting || isGeneratingTitle}
               >
                 {isGeneratingTitle ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
@@ -299,7 +299,7 @@ export function FeatureFormDialog({
                 disabled={isSubmitting || isGeneratingDescription}
               >
                 {isGeneratingDescription ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
@@ -439,7 +439,7 @@ export function FeatureFormDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? 'Save Changes' : 'Add Feature'}
             </Button>
           </DialogFooter>

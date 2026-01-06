@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState, Suspense } from 'react'
 import {
-  AlertTriangle,
+  TriangleAlert,
   ArrowUpRight,
   BarChart3,
   Clock3,
@@ -608,7 +608,7 @@ export default function DashboardPage() {
         label: 'Overdue invoices',
         value: overdueInvoices.toString(),
         helper: overdueInvoices > 0 ? 'Follow up on late payments' : 'All invoices on track',
-        icon: AlertTriangle,
+        icon: TriangleAlert,
         emphasis: overdueInvoices > 0 ? 'negative' : 'neutral',
         urgency: overdueInvoices > 0 ? 'high' : 'low',
       },
@@ -724,7 +724,7 @@ export default function DashboardPage() {
         highlight: cpaRisk.clientName,
         body: `${formatCpa(cpaRisk.cpa, cpaRisk.currency)} per conversion`,
         tone: 'warning',
-        icon: AlertTriangle,
+        icon: TriangleAlert,
       })
     }
 

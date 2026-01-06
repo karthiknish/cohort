@@ -7,7 +7,7 @@ import {
   Filter, 
   Search, 
   Briefcase, 
-  CheckCircle, 
+  CircleCheck, 
   MessageSquare, 
   Calendar,
   ArrowUpRight
@@ -28,7 +28,7 @@ import type { Activity, ActivityType } from '@/types/activity'
 
 const ACTIVITY_ICONS = {
   project_updated: Briefcase,
-  task_completed: CheckCircle,
+  task_completed: CircleCheck,
   message_posted: MessageSquare,
 }
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, BellOff, Check, CheckCheck, Loader2, Trash2, Filter, MessageSquare, DollarSign, BarChart, CheckCircle2, Mail } from 'lucide-react'
+import { Bell, BellOff, Check, CheckCheck, LoaderCircle, Trash2, Filter, MessageSquare, DollarSign, BarChart, CircleCheck, Mail } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -219,7 +219,7 @@ export default function NotificationsPage() {
         return <BarChart className="h-6 w-6" />
       case 'task.created':
       case 'task.updated':
-        return <CheckCircle2 className="h-6 w-6" />
+        return <CircleCheck className="h-6 w-6" />
       default:
         return <Mail className="h-6 w-6" />
     }
@@ -241,7 +241,7 @@ export default function NotificationsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight}>
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
             <CardContent>
               {loading ? (
                 <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Loading notifications…
+                  <LoaderCircle className="h-5 w-5 animate-spin" /> Loading notifications…
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -417,7 +417,7 @@ export default function NotificationsPage() {
                     onClick={handleLoadMore}
                     disabled={loadingMore}
                   >
-                    {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {loadingMore ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Load more
                   </Button>
                 </div>

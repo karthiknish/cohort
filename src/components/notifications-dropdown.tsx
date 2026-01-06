@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, Check, Loader2, Trash2, ExternalLink } from 'lucide-react'
+import { Bell, Check, LoaderCircle, Trash2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -250,7 +250,7 @@ export function NotificationsDropdown() {
         <ScrollArea className="max-h-80">
           {loading && notifications.length === 0 ? (
             <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading notifications…
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Loading notifications…
             </div>
           ) : notifications.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">No notifications yet.</div>
@@ -302,7 +302,7 @@ export function NotificationsDropdown() {
               onClick={handleLoadMore}
               disabled={loadingMore || !nextCursor}
             >
-              {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loadingMore ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
               Load more
             </Button>
             <Link href="/dashboard/notifications">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
+import { CircleAlert, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
@@ -357,7 +357,7 @@ export default function AdminUsersPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending approval</CardTitle>
-              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <CircleAlert className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{summary.pending}</div>

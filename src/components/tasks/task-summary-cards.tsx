@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, CheckCircle, AlertCircle, Eye as EyeIcon } from 'lucide-react'
+import { Clock, CircleCheck, CircleAlert, Eye as EyeIcon } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -29,7 +29,7 @@ const summaryCards: SummaryCardConfig[] = [
   {
     status: 'in-progress',
     label: 'In progress',
-    icon: AlertCircle,
+    icon: CircleAlert,
     iconClass: 'bg-muted/80 text-muted-foreground',
   },
   {
@@ -41,7 +41,7 @@ const summaryCards: SummaryCardConfig[] = [
   {
     status: 'completed',
     label: 'Completed',
-    icon: CheckCircle,
+    icon: CircleCheck,
     iconClass: 'bg-muted/80 text-muted-foreground',
   },
 ]

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles, ArrowRight, CheckCircle } from 'lucide-react'
+import { Sparkles, ArrowRight, CircleCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -83,7 +83,7 @@ export function OnboardingCard() {
         </div>
         
         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <CheckCircle className="h-3.5 w-3.5" />
+          <CircleCheck className="h-3.5 w-3.5" />
           <span>Tip: Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd> anytime to quickly navigate between pages</span>
         </div>
       </CardContent>

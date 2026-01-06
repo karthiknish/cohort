@@ -7,7 +7,7 @@ import {
   Pause,
   Play,
   Trash2,
-  Loader2,
+  LoaderCircle,
   RefreshCw,
   DollarSign,
   Calendar,
@@ -306,7 +306,7 @@ export function RecurringInvoicesCard() {
         <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+              <LoaderCircle className="h-8 w-8 animate-spin text-primary/60" />
             </div>
           ) : schedules.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-muted/60 bg-muted/5 p-10 text-center">
@@ -375,7 +375,7 @@ export function RecurringInvoicesCard() {
                         disabled={!schedule.isActive || generatingId === schedule.id}
                       >
                         {generatingId === schedule.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
                           <RefreshCw className="mr-2 h-4 w-4" />
                         )}
@@ -555,7 +555,7 @@ export function RecurringInvoicesCard() {
             <Button onClick={handleCreate} disabled={creating}>
               {creating ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (

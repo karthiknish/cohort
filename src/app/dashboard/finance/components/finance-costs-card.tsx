@@ -2,7 +2,7 @@
 
 import { type FormEvent, useState } from 'react'
 
-import { Loader2, Plus, Search, Trash } from 'lucide-react'
+import { LoaderCircle, Plus, Search, Trash } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -155,7 +155,7 @@ export function FinanceCostsCard({
             <Button type="submit" className="w-full shadow-sm hover:shadow transition-shadow" disabled={submitting}>
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Saving…
                 </>
               ) : (
                 <>
@@ -205,7 +205,7 @@ export function FinanceCostsCard({
                           disabled={removingCostId === cost.id}
                         >
                           {removingCostId === cost.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
                           ) : (
                             <Trash className="h-4 w-4" />
                           )}
@@ -231,7 +231,7 @@ export function FinanceCostsCard({
               >
                 {loadingMore ? (
                   <span className="inline-flex items-center gap-2 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Loading more
+                    <LoaderCircle className="h-4 w-4 animate-spin" /> Loading more
                   </span>
                 ) : (
                   'Load more costs'

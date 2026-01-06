@@ -6,7 +6,6 @@ import type { ChangeEvent } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
@@ -46,7 +45,7 @@ export function CollaborationChannelList({
         </div>
       </div>
       <Separator className="lg:hidden" />
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         {channels.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">Add a client to create your first collaboration channel.</p>
         ) : filteredChannels.length === 0 ? (
@@ -93,7 +92,7 @@ export function CollaborationChannelList({
             })}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   )
 }

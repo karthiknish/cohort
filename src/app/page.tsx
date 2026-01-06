@@ -3,8 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle2, Eye, EyeOff, Lock, Mail, User, AlertCircle, Check, X, Shield, Loader2 } from "lucide-react"
-
+import { CircleCheck, Eye, EyeOff, Lock, Mail, User, CircleAlert, Check, X, Shield, LoaderCircle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
 import { Button } from "@/components/ui/button"
@@ -299,7 +298,7 @@ export default function HomePage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
           <div className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-sm">
             Redirecting to your dashboard…
           </div>
@@ -487,7 +486,7 @@ export default function HomePage() {
                 className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm transition-all hover:border-primary/20 hover:bg-background hover:shadow-md"
               >
                 <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <CheckCircle2 className="h-5 w-5" />
+                  <CircleCheck className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
                   <p className="font-semibold text-foreground">{item.title}</p>
@@ -538,7 +537,7 @@ export default function HomePage() {
                       </div>
                       {emailError && activeTab === "signin" && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
+                          <CircleAlert className="h-3 w-3" />
                           {emailError}
                         </p>
                       )}
@@ -601,7 +600,7 @@ export default function HomePage() {
                     <Button className="w-full" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                           Signing in...
                         </>
                       ) : (
@@ -653,7 +652,7 @@ export default function HomePage() {
                       </div>
                       {emailError && activeTab === "signup" && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
+                          <CircleAlert className="h-3 w-3" />
                           {emailError}
                         </p>
                       )}
@@ -785,7 +784,7 @@ export default function HomePage() {
                     <Button className="w-full" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                           Creating account...
                         </>
                       ) : (
@@ -814,7 +813,7 @@ export default function HomePage() {
                   className="w-full"
                 >
                   {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

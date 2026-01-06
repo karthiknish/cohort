@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -52,7 +52,7 @@ export function MessageReactions({
                 >
                   <span className="flex items-center gap-1.5">
                     {isPendingReaction ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <LoaderCircle className="h-3 w-3 animate-spin" />
                     ) : (
                       <span className="text-base leading-none">{reaction.emoji}</span>
                     )}

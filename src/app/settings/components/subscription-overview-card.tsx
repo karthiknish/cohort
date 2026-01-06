@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, CreditCard } from 'lucide-react'
+import { LoaderCircle, CreditCard } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,7 +31,7 @@ export function SubscriptionOverviewCard({
   const loadingView = (
     <div className="flex min-h-[320px] items-center justify-center">
       <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="h-4 w-4 animate-spin" />
         Loading billing details...
       </div>
     </div>
@@ -71,7 +71,7 @@ export function SubscriptionOverviewCard({
             disabled={actionState === 'portal'}
           >
             {actionState === 'portal' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <CreditCard className="mr-2 h-4 w-4" />
             )}

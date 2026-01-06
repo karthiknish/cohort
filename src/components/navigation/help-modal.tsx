@@ -16,7 +16,7 @@ import {
   Keyboard,
   ArrowRight,
   Sparkles,
-  HelpCircle,
+  CircleHelp,
   X,
 } from 'lucide-react'
 
@@ -157,7 +157,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
       <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5 text-primary" />
+            <CircleHelp className="h-5 w-5 text-primary" />
             {showWelcome ? 'Welcome to Cohorts' : 'Help & Navigation'}
           </DialogTitle>
           <DialogDescription>

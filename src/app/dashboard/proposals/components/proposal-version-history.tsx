@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { History, RotateCcw, Eye, ChevronDown, Clock, User, Loader2, Save, AlertCircle } from 'lucide-react'
+import { History, RotateCcw, Eye, ChevronDown, Clock, User, LoaderCircle, Save, CircleAlert } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -213,7 +213,7 @@ export function ProposalVersionHistory({
               className="h-7 gap-1 text-xs"
             >
               {saving ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <LoaderCircle className="h-3 w-3 animate-spin" />
               ) : (
                 <Save className="h-3 w-3" />
               )}
@@ -224,7 +224,7 @@ export function ProposalVersionHistory({
           
           {loading ? (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : versions.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
@@ -347,7 +347,7 @@ export function ProposalVersionHistory({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <CircleAlert className="h-5 w-5 text-amber-500" />
               Restore Version {restoreConfirmVersion?.versionNumber}?
             </DialogTitle>
             <DialogDescription>
@@ -367,7 +367,7 @@ export function ProposalVersionHistory({
             <Button onClick={handleRestoreVersion} disabled={restoring}>
               {restoring ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                   Restoring...
                 </>
               ) : (

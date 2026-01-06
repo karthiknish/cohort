@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, RefreshCw } from 'lucide-react'
+import { LoaderCircle, RefreshCw } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -161,7 +161,7 @@ export function SchedulerEventsTable({ state }: SchedulerEventsTableProps) {
 
         {isLoading && !hasEvents ? (
           <div className="flex h-40 items-center justify-center text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <LoaderCircle className="h-5 w-5 animate-spin" />
             <span className="ml-2 text-sm">Loading scheduler activity…</span>
           </div>
         ) : errorMessage ? (
@@ -225,7 +225,7 @@ export function SchedulerEventsTable({ state }: SchedulerEventsTableProps) {
         {hasEvents && !isEndReached && (
           <div className="flex justify-center">
             <Button type="button" size="sm" variant="ghost" onClick={fetchMore} disabled={isRefreshing}>
-              {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isRefreshing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isRefreshing ? 'Loading…' : 'Load more'}
             </Button>
           </div>

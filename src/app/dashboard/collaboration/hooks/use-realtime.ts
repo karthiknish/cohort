@@ -76,14 +76,29 @@ export function useRealtimeMessages({
         channelClientId,
         channelProjectId
       )
-      setMessagesByChannel((prev) => ({
-        ...prev,
-        [channelId]: previewMessages,
-      }))
-      setNextCursorByChannel((prev) => ({
-        ...prev,
-        [channelId]: null,
-      }))
+      // Only update state if not already set for this channel to prevent loops
+      setMessagesByChannel((prev) => {
+        const existing = prev[channelId]
+        // Skip update if we already have preview data for this channel
+        if (existing && existing.length > 0 && existing === previewMessages) {
+          return prev
+        }
+        // Also skip if lengths match (preview data is stable)
+        if (existing && existing.length === previewMessages.length) {
+          return prev
+        }
+        return {
+          ...prev,
+          [channelId]: previewMessages,
+        }
+      })
+      setNextCursorByChannel((prev) => {
+        if (prev[channelId] === null) return prev
+        return {
+          ...prev,
+          [channelId]: null,
+        }
+      })
       setLoadingChannelId(null)
       setMessagesError(null)
       return

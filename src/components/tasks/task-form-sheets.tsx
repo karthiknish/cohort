@@ -1,7 +1,7 @@
 'use client'
 
 import type { FormEvent, Dispatch, SetStateAction } from 'react'
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -338,7 +338,7 @@ export function EditTaskSheet({
             <Button type="submit" disabled={updating}>
               {updating ? (
                 <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                  <LoaderCircle className="h-4 w-4 animate-spin" /> Saving…
                 </span>
               ) : (
                 'Save changes'

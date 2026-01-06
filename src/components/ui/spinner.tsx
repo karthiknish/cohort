@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 
 export interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
@@ -26,7 +26,7 @@ const variantClasses = {
 export function Spinner({ className, size = 'md', variant = 'default', ...props }: SpinnerProps) {
   return (
     <div role="status" aria-label="Loading" {...props}>
-      <Loader2
+      <LoaderCircle
         className={cn(
           'animate-spin',
           sizeClasses[size],
@@ -84,7 +84,7 @@ export function LoadingContent({
   if (isLoading) {
     return (
       <>
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="h-4 w-4 animate-spin" />
         <span>{loadingText}</span>
       </>
     )

@@ -3,18 +3,18 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { 
-  AlertTriangle,
+  TriangleAlert,
   ArrowDown,
   ArrowUp,
   Briefcase, 
   Calendar, 
-  CheckCircle2,
+  CircleCheck,
   Clock, 
   FolderKanban,
   LayoutGrid, 
   List, 
   ListChecks, 
-  Loader2, 
+  LoaderCircle, 
   MessageSquare, 
   MoreHorizontal, 
   PauseCircle,
@@ -25,7 +25,7 @@ import {
   Tag, 
   Trash2, 
   Users,
-  XCircle,
+  CircleX,
   ChartGantt,
   Columns3,
 } from 'lucide-react'
@@ -111,9 +111,9 @@ const STATUS_CLASSES: Record<ProjectStatus, string> = {
 
 const STATUS_ICONS: Record<ProjectStatus, React.ComponentType<{ className?: string }>> = {
   planning: FolderKanban,
-  active: CheckCircle2,
-  on_hold: AlertTriangle,
-  completed: CheckCircle2,
+  active: CircleCheck,
+  on_hold: TriangleAlert,
+  completed: CircleCheck,
 }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
@@ -611,7 +611,7 @@ export default function ProjectsPage() {
                   disabled={loading}
                   aria-label="Refresh projects"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   <span className="hidden sm:inline">Refresh</span>
                 </Button>
               </TooltipTrigger>
@@ -634,7 +634,7 @@ export default function ProjectsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-destructive" />
+                <CircleX className="h-5 w-5 text-destructive" />
                 Delete project?
               </AlertDialogTitle>
               <AlertDialogDescription>
@@ -649,7 +649,7 @@ export default function ProjectsPage() {
                 disabled={deleting}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {deleting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -679,7 +679,7 @@ export default function ProjectsPage() {
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completion rate</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <CircleCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold text-foreground">{completionRate}%</div>
@@ -778,7 +778,7 @@ export default function ProjectsPage() {
 
                 {!initialLoading && error && (
                   <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
-                    <AlertTriangle className="mx-auto h-10 w-10 text-destructive/60" />
+                    <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
                     <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
                     <Button
                       variant="outline"
@@ -787,7 +787,7 @@ export default function ProjectsPage() {
                       onClick={() => void loadProjects()}
                       disabled={loading}
                     >
-                      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                      {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                       Try again
                     </Button>
                   </div>
@@ -861,7 +861,7 @@ export default function ProjectsPage() {
                     </span>
                     {loading && (
                       <span className="flex items-center gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <LoaderCircle className="h-3 w-3 animate-spin" />
                         Updating...
                       </span>
                     )}
@@ -915,7 +915,7 @@ function ProjectCard({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdat
               <TooltipTrigger asChild>
                 <Badge variant="secondary" className={cn(STATUS_CLASSES[project.status], "gap-1")}>
                   {isPendingUpdate ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <LoaderCircle className="h-3 w-3 animate-spin" />
                   ) : (
                     <StatusIcon className="h-3 w-3" />
                   )}
@@ -1041,7 +1041,7 @@ function ProjectRow({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate
               <DropdownMenuTrigger asChild>
                 <Badge variant="secondary" className={cn(STATUS_CLASSES[project.status], "cursor-pointer hover:opacity-80 gap-1")}>
                   {isPendingUpdate ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <LoaderCircle className="h-3 w-3 animate-spin" />
                   ) : (
                     <StatusIcon className="h-3 w-3" />
                   )}
@@ -1324,7 +1324,7 @@ function GanttView({ projects, milestones, loading, error, onRefresh, onMileston
   if (error) {
     return (
       <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
-        <AlertTriangle className="mx-auto h-10 w-10 text-destructive/60" />
+        <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
         <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
         <Button
           variant="outline"

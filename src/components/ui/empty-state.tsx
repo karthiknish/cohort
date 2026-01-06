@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
-import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, AlertCircle, Plus } from 'lucide-react'
+import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus } from 'lucide-react'
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon
@@ -26,7 +26,7 @@ const iconMap: Record<string, LucideIcon> = {
   search: FileSearch,
   users: Users,
   folder: FolderOpen,
-  alert: AlertCircle,
+  alert: CircleAlert,
 }
 
 export function EmptyState({
@@ -131,7 +131,7 @@ export function NoResultsEmptyState(props: Partial<EmptyStateProps>) {
 export function NoAccessEmptyState(props: Partial<EmptyStateProps>) {
   return (
     <EmptyState
-      icon={AlertCircle}
+      icon={CircleAlert}
       title="Access restricted"
       description="You don't have permission to view this content."
       {...props}

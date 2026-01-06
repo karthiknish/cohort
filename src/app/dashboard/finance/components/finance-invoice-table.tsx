@@ -7,7 +7,7 @@ import {
   Download,
   Eye,
   FileDown,
-  Loader2,
+  LoaderCircle,
   MoreHorizontal,
   RotateCcw,
   Search,
@@ -321,7 +321,7 @@ export function FinanceInvoiceTable({
             >
               {loadingMore ? (
                 <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading more
+                  <LoaderCircle className="h-4 w-4 animate-spin" /> Loading more
                 </span>
               ) : (
                 'Load more invoices'

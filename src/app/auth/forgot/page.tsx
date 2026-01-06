@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Mail, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Mail, CircleCheck, LoaderCircle } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -112,7 +112,7 @@ export default function ForgotPasswordPage() {
                 <Button type="submit" className="w-full" disabled={submitting}>
                   {submitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                       Sending reset link…
                     </>
                   ) : (
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
           <FadeIn as="div" className="space-y-6">
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 mb-4">
-                <CheckCircle className="h-6 w-6 text-emerald-600" />
+                <CircleCheck className="h-6 w-6 text-emerald-600" />
               </div>
               <h3 className="font-semibold text-foreground mb-1">Check your email</h3>
               <p className="text-sm text-muted-foreground mb-4">

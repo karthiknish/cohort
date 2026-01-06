@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,7 @@ export function SetupAlerts({
       {metaSetupMessage && (
         <Alert className="border-amber-300 bg-amber-50 text-amber-900">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <AlertCircle className="h-4 w-4" /> Meta setup required
+            <CircleAlert className="h-4 w-4" /> Meta setup required
           </AlertTitle>
           <AlertDescription className="mt-1 text-xs leading-relaxed">
             {metaSetupMessage}
@@ -45,7 +45,7 @@ export function SetupAlerts({
         <Alert className="border-primary/40 bg-primary/5">
           <AlertTitle className="flex items-center justify-between gap-3 text-sm font-semibold">
             <span className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-primary" /> Meta account selection
+              <CircleAlert className="h-4 w-4 text-primary" /> Meta account selection
               pending
             </span>
             <Button size="sm" onClick={onInitializeMeta} disabled={initializingMeta}>
@@ -61,7 +61,7 @@ export function SetupAlerts({
       {tiktokSetupMessage && (
         <Alert className="border-amber-300 bg-amber-50 text-amber-900">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <AlertCircle className="h-4 w-4" /> TikTok setup required
+            <CircleAlert className="h-4 w-4" /> TikTok setup required
           </AlertTitle>
           <AlertDescription className="mt-1 text-xs leading-relaxed">
             {tiktokSetupMessage}
@@ -73,7 +73,7 @@ export function SetupAlerts({
         <Alert className="border-primary/40 bg-primary/5">
           <AlertTitle className="flex items-center justify-between gap-3 text-sm font-semibold">
             <span className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-primary" /> TikTok account selection
+              <CircleAlert className="h-4 w-4 text-primary" /> TikTok account selection
               pending
             </span>
             <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>

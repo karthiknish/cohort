@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, Check } from 'lucide-react'
+import { LoaderCircle, Check } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,7 +26,7 @@ export function PlanSelectionSection({
   const loadingView = (
     <div className="flex min-h-[320px] items-center justify-center">
       <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="h-4 w-4 animate-spin" />
         Loading billing details...
       </div>
     </div>
@@ -97,7 +97,7 @@ export function PlanSelectionSection({
                   >
                     {isCurrentPlan ? 'Current plan' : 'Choose plan'}
                     {actionState === `checkout:${plan.id}` ? (
-                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      <LoaderCircle className="ml-2 h-4 w-4 animate-spin" />
                     ) : null}
                   </Button>
                 </CardFooter>

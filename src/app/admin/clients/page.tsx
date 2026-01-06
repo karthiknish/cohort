@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, Loader2, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
+import { FileText, LoaderCircle, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -482,7 +482,7 @@ export default function AdminClientsPage() {
               <Link href="/admin">Admin home</Link>
             </Button>
             <Button variant="outline" size="sm" onClick={() => void loadClients()} disabled={clientsLoading} className="inline-flex items-center gap-2">
-              <Loader2 className={`h-4 w-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
+              <LoaderCircle className={`h-4 w-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
             </Button>
           </div>
         </div>
@@ -684,7 +684,7 @@ export default function AdminClientsPage() {
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={clientSaving}>
-                  {clientSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {clientSaving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
                   Create client
                 </Button>
               </div>
@@ -698,7 +698,7 @@ export default function AdminClientsPage() {
               </div>
               {clientsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading clients…
+                  <LoaderCircle className="h-4 w-4 animate-spin" /> Loading clients…
                 </div>
               ) : clientsError ? (
                 <p className="text-sm text-destructive">{clientsError}</p>
@@ -739,7 +739,7 @@ export default function AdminClientsPage() {
                           >
                             {deletingClientId === client.id ? (
                               <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Deleting…
                               </>
                             ) : (
                               <>
@@ -815,7 +815,7 @@ export default function AdminClientsPage() {
                       >
                         {loadingMore ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Loading…
                           </>
                         ) : (
                           'Load more clients'
@@ -852,7 +852,7 @@ export default function AdminClientsPage() {
               onClick={() => void handleDeleteClient()}
               disabled={Boolean(deletingClientId)}
             >
-              {deletingClientId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {deletingClientId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
               {deletingClientId ? 'Deleting…' : 'Delete client'}
             </Button>
           </DialogFooter>
@@ -894,7 +894,7 @@ export default function AdminClientsPage() {
               Cancel
             </Button>
             <Button type="button" onClick={() => void handleAddTeamMember()} disabled={addingMember}>
-              {addingMember && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {addingMember && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Add teammate
             </Button>
           </DialogFooter>
@@ -999,7 +999,7 @@ export default function AdminClientsPage() {
               Cancel
             </Button>
             <Button type="button" onClick={() => void handleCreateInvoice()} disabled={creatingInvoice}>
-              {creatingInvoice && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {creatingInvoice && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Send invoice
             </Button>
           </DialogFooter>

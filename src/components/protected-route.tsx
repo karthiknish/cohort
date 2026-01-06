@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
@@ -158,7 +158,7 @@ function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayPro
       <div className="w-full max-w-md rounded-lg border border-border bg-background p-8 text-center shadow-sm">
         {showSpinner && (
           <div className="mb-4 flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
           </div>
         )}
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>

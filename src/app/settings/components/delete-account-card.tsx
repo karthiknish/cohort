@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Trash2 } from 'lucide-react'
+import { LoaderCircle, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -148,7 +148,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             onClick={() => void handleAccountDeletion()}
             disabled={deleteConfirm.trim().toLowerCase() !== 'delete' || deleteAccountLoading}
           >
-            {deleteAccountLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {deleteAccountLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
             Delete account
           </Button>
         </DialogFooter>

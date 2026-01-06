@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Plus, Tag, X, AlertCircle } from 'lucide-react'
+import { LoaderCircle, Plus, Tag, X, CircleAlert } from 'lucide-react'
 
 import { apiFetch } from '@/lib/api-client'
 import { useAuth } from '@/contexts/auth-context'
@@ -248,7 +248,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
 
           {error && (
             <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
+              <CircleAlert className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -413,7 +413,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !name.trim() || !hasChanges}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               {hasChanges ? 'Save changes' : 'No changes'}
             </Button>
           </DialogFooter>

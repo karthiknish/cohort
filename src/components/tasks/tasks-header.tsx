@@ -1,6 +1,6 @@
 'use client'
 
-import { Plus, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, LoaderCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetTrigger } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -43,7 +43,7 @@ export function TasksHeader({
               aria-label="Refresh tasks"
             >
               {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LoaderCircle className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}

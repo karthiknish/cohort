@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, RefreshCw } from 'lucide-react'
+import { LoaderCircle, RefreshCw } from 'lucide-react'
 
 import {
   Card,
@@ -215,7 +215,7 @@ export function AutomationControlsCard({
                       disabled={saving}
                     >
                       {saving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
                       ) : (
                         <RefreshCw className="h-4 w-4" />
                       )}

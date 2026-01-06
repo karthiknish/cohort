@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
 import {
   BarChart3,
-  CheckCircle2,
+  CircleCheck,
   Clock,
   FileText,
-  Loader2,
+  LoaderCircle,
   RefreshCw,
   Send,
   TrendingUp,
-  XCircle,
-  AlertTriangle,
+  CircleX,
+  TriangleAlert,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -153,7 +153,7 @@ export function ProposalAnalyticsCard() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     )
@@ -214,7 +214,7 @@ export function ProposalAnalyticsCard() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CircleCheck className="h-5 w-5 text-green-500" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{summary.totalSubmitted}</p>
@@ -271,7 +271,7 @@ export function ProposalAnalyticsCard() {
                 </span>
                 {summary.aiGenerationsFailed > 0 && (
                   <Badge variant="destructive" className="gap-1">
-                    <XCircle className="h-3 w-3" />
+                    <CircleX className="h-3 w-3" />
                     {summary.aiGenerationsFailed} failed
                   </Badge>
                 )}
@@ -279,7 +279,7 @@ export function ProposalAnalyticsCard() {
               <Progress value={summary.successRate} className="h-2" />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  <CircleCheck className="h-3 w-3 text-green-500" />
                   {summary.aiGenerationsSucceeded} succeeded
                 </span>
                 <span className="flex items-center gap-1">
@@ -304,7 +304,7 @@ export function ProposalAnalyticsCard() {
                 </span>
                 {summary.deckGenerationsFailed > 0 && (
                   <Badge variant="destructive" className="gap-1">
-                    <XCircle className="h-3 w-3" />
+                    <CircleX className="h-3 w-3" />
                     {summary.deckGenerationsFailed} failed
                   </Badge>
                 )}
@@ -312,7 +312,7 @@ export function ProposalAnalyticsCard() {
               <Progress value={summary.deckSuccessRate} className="h-2" />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  <CircleCheck className="h-3 w-3 text-green-500" />
                   {summary.deckGenerationsSucceeded} succeeded
                 </span>
                 <span className="flex items-center gap-1">
@@ -434,7 +434,7 @@ export function ProposalAnalyticsCard() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-4 rounded-full bg-muted/30 p-4">
-              <AlertTriangle className="h-8 w-8 text-muted-foreground/50" />
+              <TriangleAlert className="h-8 w-8 text-muted-foreground/50" />
             </div>
             <h3 className="mb-2 text-lg font-semibold">No Analytics Data</h3>
             <p className="max-w-sm text-sm text-muted-foreground">

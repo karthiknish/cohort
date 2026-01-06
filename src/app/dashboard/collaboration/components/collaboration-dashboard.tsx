@@ -86,7 +86,7 @@ export function CollaborationDashboard() {
 
   useEffect(() => {
     clearThreadReplies()
-  }, [clearThreadReplies, selectedChannel?.id])
+  }, [selectedChannel?.id])
 
   useEffect(() => {
     if (!requestedProjectId) {

@@ -35,6 +35,8 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
+  const userId = user?.id ?? null
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Projects state
   // ─────────────────────────────────────────────────────────────────────────────
@@ -309,7 +311,12 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         setSearchHighlights(payload.highlights ?? parsed.highlights)
       })
       .catch((error) => {
+        // Aborts are expected when query/channel changes quickly, on navigation,
+        // and in React dev StrictMode (effects mount/unmount twice).
         if (controller.signal.aborted) return
+        if (error && typeof error === 'object' && 'name' in error && (error as any).name === 'AbortError') {
+          return
+        }
         const message = error instanceof Error ? error.message : 'Unable to search messages'
         setSearchError(message)
         setSearchResults([])
@@ -659,7 +666,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // ─────────────────────────────────────────────────────────────────────────────
   const fetchProjects = useCallback(async () => {
     // Allow preview mode even without user
-    if (!user && !isPreviewMode) return
+    if (!userId && !isPreviewMode) return
 
     setProjectsLoading(true)
     try {
@@ -670,7 +677,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     } finally {
       setProjectsLoading(false)
     }
-  }, [isPreviewMode, user])
+  }, [isPreviewMode, userId])
 
   useEffect(() => {
     void fetchProjects()

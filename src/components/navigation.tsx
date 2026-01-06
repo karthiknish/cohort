@@ -21,7 +21,7 @@ import {
   ChevronRight,
   Activity,
   Users,
-  HelpCircle,
+  CircleHelp,
   Shield,
 } from 'lucide-react'
 
@@ -367,7 +367,7 @@ export function Header() {
                     onClick={() => setHelpOpen(true)}
                     className="hidden sm:inline-flex"
                   >
-                    <HelpCircle className="h-4 w-4" />
+                    <CircleHelp className="h-4 w-4" />
                     <span className="sr-only">Help</span>
                   </Button>
                 </TooltipTrigger>

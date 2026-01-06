@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { AlertTriangle, Loader2, RefreshCw, ListTodo } from 'lucide-react'
+import { TriangleAlert, LoaderCircle, RefreshCw, ListTodo } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -89,7 +89,7 @@ export function TaskList({
   const renderError = (
     <div className={viewMode === 'grid' ? 'col-span-full' : ''}>
       <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center mx-4 my-4">
-        <AlertTriangle className="mx-auto h-10 w-10 text-destructive/60" />
+        <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
         <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
         <Button
           variant="outline"
@@ -99,7 +99,7 @@ export function TaskList({
           disabled={loading}
         >
           {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
@@ -132,7 +132,7 @@ export function TaskList({
       <Button variant="outline" onClick={onLoadMore} disabled={loadingMore}>
         {loadingMore ? (
           <span className="inline-flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LoaderCircle className="h-4 w-4 animate-spin" />
             Loading…
           </span>
         ) : (

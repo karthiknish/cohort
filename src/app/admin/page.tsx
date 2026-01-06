@@ -6,13 +6,13 @@ import {
   ArrowRight,
   ArrowUpRight,
   Activity,
-  AlertCircle,
+  CircleAlert,
   BarChart3,
   Bell,
-  CheckCircle2,
+  CircleCheck,
   Clock,
   Inbox,
-  Loader2,
+  LoaderCircle,
   Megaphone,
   RefreshCw,
   Settings,
@@ -368,19 +368,19 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2">
                     {stats?.schedulerHealth === 'healthy' && (
                       <>
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        <CircleCheck className="h-5 w-5 text-emerald-500" />
                         <span className="text-2xl font-bold text-emerald-600">Healthy</span>
                       </>
                     )}
                     {stats?.schedulerHealth === 'warning' && (
                       <>
-                        <AlertCircle className="h-5 w-5 text-amber-500" />
+                        <CircleAlert className="h-5 w-5 text-amber-500" />
                         <span className="text-2xl font-bold text-amber-600">Warning</span>
                       </>
                     )}
                     {stats?.schedulerHealth === 'error' && (
                       <>
-                        <AlertCircle className="h-5 w-5 text-red-500" />
+                        <CircleAlert className="h-5 w-5 text-red-500" />
                         <span className="text-2xl font-bold text-red-600">Issues</span>
                       </>
                     )}
@@ -507,7 +507,7 @@ export default function AdminPage() {
                           {activity.type === 'user_joined' && <Users className="h-4 w-4" />}
                           {activity.type === 'client_created' && <ShieldCheck className="h-4 w-4" />}
                           {activity.type === 'new_user_signup' && <Bell className="h-4 w-4" />}
-                          {activity.type === 'error' && <AlertCircle className="h-4 w-4" />}
+                          {activity.type === 'error' && <CircleAlert className="h-4 w-4" />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground">{activity.title}</p>

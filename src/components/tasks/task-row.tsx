@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { ChangeEvent } from 'react'
-import { Calendar, User, MoreHorizontal, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -76,7 +76,7 @@ export function TaskRow({
                   )}
                 >
                   {isPendingUpdate ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <LoaderCircle className="h-3 w-3 animate-spin" />
                   ) : (
                     <StatusIcon className="h-3 w-3" />
                   )}

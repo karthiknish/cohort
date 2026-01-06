@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Folder, CheckCircle, MessageSquare, Bell } from 'lucide-react'
+import { Folder, CircleCheck, MessageSquare, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { Activity } from '@/types/activity'
@@ -52,7 +52,7 @@ export function useActivityNotifications(activities: Activity[]) {
         if (config.showTaskCompletions) {
           shouldNotify = true
           message = `Task "${activity.entityName}" was completed`
-          icon = <CheckCircle className="h-4 w-4" />
+          icon = <CircleCheck className="h-4 w-4" />
         }
         break
       case 'message_posted':

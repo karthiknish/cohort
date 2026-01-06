@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, Circle, Loader2 } from 'lucide-react'
+import { CircleCheck, Circle, LoaderCircle } from 'lucide-react'
 
 import { Progress } from '@/components/ui/progress'
 import {
@@ -46,7 +46,7 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
 
         <div className="space-y-2">
           {items.map((item) => {
-            const Icon = item.loading ? Loader2 : item.done ? CheckCircle2 : Circle
+            const Icon = item.loading ? LoaderCircle : item.done ? CircleCheck : Circle
             return (
               <div
                 key={item.id}

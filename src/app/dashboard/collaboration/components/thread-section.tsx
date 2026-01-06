@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, ChevronRight, Loader2, MessageSquare, RefreshCw, Reply } from 'lucide-react'
+import { ChevronDown, ChevronRight, LoaderCircle, MessageSquare, RefreshCw, Reply } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
@@ -36,7 +36,7 @@ export function ThreadToggleButton({
       disabled={isLoading && !isOpen && !hasRepliesLoaded}
     >
       {isLoading && !isOpen && !hasRepliesLoaded ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
       ) : isOpen ? (
         <ChevronDown className="h-3.5 w-3.5" />
       ) : (
@@ -85,7 +85,7 @@ export interface ThreadLoadingProps {
 export function ThreadLoading({ hasReplies }: ThreadLoadingProps) {
   return (
     <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
       <span>{hasReplies ? 'Loading more replies…' : 'Loading replies…'}</span>
     </div>
   )

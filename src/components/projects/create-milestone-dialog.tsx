@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Calendar, Loader2, Plus } from 'lucide-react'
+import { Calendar, LoaderCircle, Plus } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -238,7 +238,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !projectId || !title.trim()}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Add milestone
             </Button>
           </DialogFooter>

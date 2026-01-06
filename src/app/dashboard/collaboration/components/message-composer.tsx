@@ -1,7 +1,7 @@
 'use client'
 
 import type { ChangeEvent, RefObject, ClipboardEvent } from 'react'
-import { FileText, Image as ImageIcon, Loader2, Reply, Send, X } from 'lucide-react'
+import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -71,7 +71,7 @@ export function PendingAttachmentsList({
         <span>Attachments ready to upload</span>
         {uploading && (
           <span className="inline-flex items-center gap-1">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Uploading…
           </span>
         )}
       </div>
@@ -244,7 +244,7 @@ export function MessageComposer({
               className="inline-flex h-8 items-center gap-2 text-xs"
             >
               {sending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Send className="h-3.5 w-3.5" />
               )}

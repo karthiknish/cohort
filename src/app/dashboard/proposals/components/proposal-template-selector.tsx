@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, ChevronDown, FileText, Loader2, Plus, Save, Star, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, FileText, LoaderCircle, Plus, Save, Star, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -185,7 +185,7 @@ export function ProposalTemplateSelector({
         <DropdownMenuContent align="end" className="w-72">
           <DropdownMenuLabel className="flex items-center justify-between">
             <span>Proposal Templates</span>
-            {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+            {loading && <LoaderCircle className="h-3 w-3 animate-spin" />}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
@@ -242,7 +242,7 @@ export function ProposalTemplateSelector({
                 }}
               >
                 {deleting === template.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <LoaderCircle className="h-3 w-3 animate-spin" />
                 ) : (
                   <Trash2 className="h-3 w-3" />
                 )}
@@ -330,7 +330,7 @@ export function ProposalTemplateSelector({
             <Button onClick={handleSaveAsTemplate} disabled={saving || !templateName.trim()}>
               {saving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : (

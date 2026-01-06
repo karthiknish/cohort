@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState, ChangeEvent, DragEvent } from 'react'
-import { ImagePlus, Loader2, Trash2, Upload } from 'lucide-react'
+import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { LazyImage } from '@/components/ui/lazy-image'
@@ -155,7 +155,7 @@ export function ImageUploader({
             />
             {isUploading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
               </div>
             )}
           </div>
@@ -202,7 +202,7 @@ export function ImageUploader({
           )}
         >
           {isUploading ? (
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
           ) : (
             <Upload className="h-8 w-8 text-muted-foreground" />
           )}

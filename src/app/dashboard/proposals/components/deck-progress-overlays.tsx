@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertTriangle, CheckCircle2, Loader2, Sparkles } from "lucide-react"
+import { TriangleAlert, CircleCheck, LoaderCircle, Sparkles } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export type DeckProgressStage = "initializing" | "polling" | "launching" | "queued" | "error"
 
@@ -28,30 +29,35 @@ const deckStageMessages: Record<DeckProgressStage, { title: string; description:
   },
 }
 
-const generationFlow: { label: string; helper: string; duration: number | null }[] = [
+const generationFlow: { label: string; helper: string; icon: any; duration: number | null }[] = [
   {
     label: "Analyzing your input...",
     helper: "Reviewing your responses and goals to set the brief.",
+    icon: Sparkles,
     duration: 3000,
   },
   {
     label: "Gathering market insights...",
     helper: "Pulling benchmarks, comps, and audience signals.",
+    icon: LoaderCircle,
     duration: 4000,
   },
   {
     label: "Drafting strategy...",
     helper: "Writing tailored recommendations and messaging.",
+    icon: Sparkles,
     duration: 6000,
   },
   {
     label: "Formatting sections...",
     helper: "Structuring slides, pricing, and CTA blocks.",
+    icon: LoaderCircle,
     duration: 8000,
   },
   {
     label: "Generating presentation...",
     helper: "Gamma is creating your presentation slides. This may take a moment.",
+    icon: Sparkles,
     duration: null, // This stage waits for actual completion
   },
 ]
@@ -82,13 +88,6 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     return () => clearTimeout(id)
   }, [isSubmitting, stageIndex])
 
-  // When presentation is ready, show completion
-  useEffect(() => {
-    if (isPresentationReady && stageIndex === generationFlow.length - 1) {
-      // Presentation is ready, we can close the overlay shortly
-    }
-  }, [isPresentationReady, stageIndex])
-
   if (!isSubmitting) {
     return null
   }
@@ -96,52 +95,77 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
   const currentStage = generationFlow[stageIndex]
   const isFinalStage = stageIndex === generationFlow.length - 1
   const isComplete = isFinalStage && isPresentationReady
+  const progressPercent = ((stageIndex + (isComplete ? 1 : 0)) / generationFlow.length) * 100
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/40 backdrop-blur-xl animate-in fade-in duration-500"
       role="status"
       aria-live="polite"
     >
-      <div className="flex flex-col items-center gap-3 text-center">
-        {isComplete ? (
-          <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-        ) : (
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        )}
-        <div>
-          <p className="text-lg font-semibold text-foreground">
-            {isComplete ? "Ready for review!" : currentStage.label}
-          </p>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            {isComplete ? "We have a complete proposal with presentation waiting for you." : currentStage.helper}
-          </p>
-        </div>
-        <div className="mt-2 w-72 rounded-md border border-muted/60 bg-muted/30 p-3 text-left text-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress</p>
-          <div className="mt-2 space-y-1">
-            {generationFlow.map((stage, index) => {
-              const isActive = index === stageIndex && !isComplete
-              const isDone = index < stageIndex || isComplete
-              const indicatorClass = `h-2.5 w-2.5 rounded-full ${
-                isDone ? "bg-emerald-500" : isActive ? "bg-primary" : "bg-muted-foreground/60"
-              }`
-              const textClass = isActive
-                ? "text-foreground"
-                : isDone
-                  ? "text-emerald-600"
-                  : "text-muted-foreground"
-
-              return (
-                <div key={stage.label} className="flex items-center gap-2">
-                  <span className={indicatorClass} aria-hidden />
-                  <span className={`flex-1 truncate text-sm font-medium ${textClass}`}>{stage.label}</span>
-                  {isDone && <CheckCircle2 className="h-4 w-4 text-emerald-500" aria-hidden />}
-                </div>
-              )
-            })}
+      <div className="relative w-full max-w-lg mx-auto p-8 flex flex-col items-center gap-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+          <div className="relative h-24 w-24 rounded-full bg-background border-4 border-primary/20 flex items-center justify-center shadow-xl">
+            {isComplete ? (
+              <div className="animate-in zoom-in duration-500 fill-mode-forwards text-emerald-500">
+                <CircleCheck className="h-12 w-12" />
+              </div>
+            ) : (
+              <div className="relative">
+                <LoaderCircle className="h-12 w-12 animate-[spin_3s_linear_infinite] text-primary" />
+                <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-primary animate-pulse" />
+              </div>
+            )}
           </div>
         </div>
+
+        <div className="flex flex-col items-center gap-4 text-center z-10">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              {isComplete ? "Proposal Generated!" : currentStage.label}
+            </h3>
+            <p className="text-sm text-muted-foreground/80 font-medium max-w-sm">
+              {isComplete ? "Your strategy and presentation deck are ready for review." : currentStage.helper}
+            </p>
+          </div>
+
+          <div className="w-full mt-4 space-y-3">
+            <div className="h-2 w-full bg-muted/30 rounded-full overflow-hidden border border-muted/20">
+              <div 
+                className="h-full bg-primary transition-all duration-1000 ease-out relative"
+                style={{ width: `${progressPercent}%` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" />
+              </div>
+            </div>
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                Processing Strategy
+              </span>
+              <span className="text-[10px] font-bold text-primary">
+                {Math.round(progressPercent)}%
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-2 w-full mt-4">
+            {generationFlow.map((_, index) => (
+              <div 
+                key={index}
+                className={cn(
+                  "h-1 rounded-full transition-all duration-500",
+                  index <= stageIndex ? "bg-primary" : "bg-muted/40",
+                  index === stageIndex && !isComplete && "animate-pulse"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Floating elements for visual interest */}
+        <div className="absolute top-1/4 -left-8 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-pulse" />
+        <div className="absolute bottom-1/4 -right-8 w-20 h-20 bg-primary/10 rounded-full blur-2xl animate-pulse delay-700" />
       </div>
     </div>
   )
@@ -169,9 +193,9 @@ export function DeckProgressOverlay({ stage, isVisible }: DeckProgressOverlayPro
         {stage === "launching" ? (
           <Sparkles className="h-10 w-10 text-primary" />
         ) : stage === "error" ? (
-          <AlertTriangle className="h-10 w-10 text-destructive" />
+          <TriangleAlert className="h-10 w-10 text-destructive" />
         ) : (
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
         )}
         <div>
           <p className="text-lg font-semibold text-foreground">{copy.title}</p>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Plus, Trash } from 'lucide-react'
+import { LoaderCircle, Plus, Trash } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -224,7 +224,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                             disabled={clients.length === 1 || removingId === client.id || saving}
                           >
                             {removingId === client.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
                             ) : (
                               <Trash className="h-4 w-4" />
                             )}
@@ -240,7 +240,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
               </div>
               <SheetFooter className="sm:flex-row-reverse">
                 <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
                   Save client
                 </Button>
                 <SheetClose asChild>

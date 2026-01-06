@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import {
   FileText,
-  CheckCircle,
+  CircleCheck,
   User,
   Key,
   LayoutDashboard,
   CreditCard,
   Copyright,
   LogOut,
-  AlertTriangle,
+  TriangleAlert,
   FileEdit,
   ArrowLeft,
 } from 'lucide-react'
@@ -29,7 +29,7 @@ import { FadeIn, FadeInStagger, FadeInItem } from '@/components/ui/animate-in'
 const sections = [
   {
     title: 'Acceptance of Terms',
-    icon: CheckCircle,
+    icon: CircleCheck,
     description:
       'By accessing or using the Cohorts platform, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, you may not access or use the platform.',
   },
@@ -71,7 +71,7 @@ const sections = [
   },
   {
     title: 'Limitation of Liability',
-    icon: AlertTriangle,
+    icon: TriangleAlert,
     description:
       'To the fullest extent permitted by law, Cohorts is not liable for any indirect, incidental, or consequential damages arising from your use of the platform. Your sole remedy is to discontinue use.',
   },

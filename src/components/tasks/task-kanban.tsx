@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from 'react'
-import { AlertTriangle, Columns3, Loader2, ListTodo, RefreshCw } from 'lucide-react'
+import { TriangleAlert, Columns3, LoaderCircle, ListTodo, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -71,7 +71,7 @@ export function TaskKanban({
   if (error) {
     return (
       <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
-        <AlertTriangle className="mx-auto h-10 w-10 text-destructive/60" />
+        <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
         <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
         <Button
           variant="outline"
@@ -154,7 +154,7 @@ export function TaskKanban({
           <Button variant="outline" onClick={onLoadMore} disabled={loadingMore || loading}>
             {loadingMore ? (
               <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <LoaderCircle className="h-4 w-4 animate-spin" />
                 Loading…
               </span>
             ) : (

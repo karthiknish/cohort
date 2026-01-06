@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 
 import {
   AlertDialog,
@@ -47,7 +47,7 @@ export function DeleteTaskDialog({
           >
             {deleting ? (
               <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
+                <LoaderCircle className="h-4 w-4 animate-spin" /> Deleting…
               </span>
             ) : (
               'Delete'

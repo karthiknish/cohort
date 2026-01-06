@@ -20,11 +20,11 @@ import {
   Users,
   Target,
   RefreshCw,
-  Loader2,
+  LoaderCircle,
   Info,
   Lightbulb,
-  AlertTriangle,
-  CheckCircle2,
+  TriangleAlert,
+  CircleCheck,
   ArrowRight,
 } from 'lucide-react'
 
@@ -533,7 +533,7 @@ export default function AnalyticsPage() {
             >
               {metricsLoadingMore ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                   Loading more
                 </>
               ) : (
@@ -1026,9 +1026,9 @@ export default function AnalyticsPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          {suggestion.level === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-                          {suggestion.level === 'warning' && <AlertTriangle className="h-4 w-4 text-amber-600" />}
-                          {suggestion.level === 'critical' && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                          {suggestion.level === 'success' && <CircleCheck className="h-4 w-4 text-emerald-600" />}
+                          {suggestion.level === 'warning' && <TriangleAlert className="h-4 w-4 text-amber-600" />}
+                          {suggestion.level === 'critical' && <TriangleAlert className="h-4 w-4 text-red-600" />}
                           {suggestion.level === 'info' && <Info className="h-4 w-4 text-blue-600" />}
                           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             {group.providerId === 'global' ? 'Strategy' : PROVIDER_LABELS[group.providerId] ?? group.providerId}

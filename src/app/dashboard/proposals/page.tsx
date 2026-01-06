@@ -25,6 +25,7 @@ import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage 
 import { ProposalTemplateSelector } from './components/proposal-template-selector'
 import { ProposalVersionHistory } from './components/proposal-version-history'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { ProposalMetrics } from './components/proposal-metrics'
 
 import { BarChart3, CreditCard, Users, FileText } from 'lucide-react'
 import {
@@ -405,13 +406,13 @@ export default function ProposalsPage() {
       const result = await prepareProposalDeck(proposal.id)
       const deckDuration = Date.now() - deckStartTime
       console.log('[ProposalDownload] Deck preparation result:', {
-        storageUrl: result.storageUrl,
+        pptUrl: result.pptUrl,
         deckStorageUrl: result.presentationDeck?.storageUrl,
         deckPptxUrl: result.presentationDeck?.pptxUrl,
         deckShareUrl: result.presentationDeck?.shareUrl
       })
       
-      const deckUrl = result.storageUrl
+      const deckUrl = result.pptUrl
         ?? result.presentationDeck?.storageUrl
         ?? result.presentationDeck?.pptxUrl
         ?? result.presentationDeck?.shareUrl
@@ -577,7 +578,7 @@ export default function ProposalsPage() {
 
       // If not in Firebase yet, try to trigger Gamma to check/generate
       const result = await prepareProposalDeck(proposalId)
-      const newDeckUrl = result.storageUrl ?? result.presentationDeck?.storageUrl ?? result.presentationDeck?.pptxUrl ?? null
+      const newDeckUrl = result.pptUrl ?? result.presentationDeck?.storageUrl ?? result.presentationDeck?.pptxUrl ?? null
 
       if (newDeckUrl) {
         setPresentationDeck(
@@ -978,9 +979,9 @@ export default function ProposalsPage() {
 
   return (
     <div ref={wizardRef} className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <ProposalWizardHeader />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <ProposalTemplateSelector
             currentFormData={formState}
             onApplyTemplate={handleSelectTemplate}
@@ -994,13 +995,15 @@ export default function ProposalsPage() {
           <Button 
             onClick={handleCreateNewProposal} 
             disabled={!selectedClientId || isCreatingDraft}
-            className="shrink-0"
+            className="shrink-0 shadow-sm transition-all hover:shadow-md"
           >
             <Plus className="mr-2 h-4 w-4" />
             New Proposal
           </Button>
         </div>
       </div>
+
+      <ProposalMetrics proposals={proposals} isLoading={isLoadingProposals} />
 
       <Card className="border-muted/60 bg-background">
         <CardHeader>

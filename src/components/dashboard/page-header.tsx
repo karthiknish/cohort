@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, HelpCircle } from 'lucide-react'
+import { ArrowLeft, CircleHelp } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -71,7 +71,7 @@ export function PageHeader({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground">
-                          <HelpCircle className="h-4 w-4" />
+                          <CircleHelp className="h-4 w-4" />
                           <span className="sr-only">Help</span>
                         </button>
                       </TooltipTrigger>

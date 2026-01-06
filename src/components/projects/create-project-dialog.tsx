@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { Loader2, Plus, Tag, X } from 'lucide-react'
+import { LoaderCircle, Plus, Tag, X } from 'lucide-react'
 
 import { apiFetch } from '@/lib/api-client'
 import { useAuth } from '@/contexts/auth-context'
@@ -322,7 +322,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !name.trim()}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Create project
             </Button>
           </DialogFooter>

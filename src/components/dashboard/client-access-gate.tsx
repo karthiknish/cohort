@@ -2,7 +2,7 @@
 
 import { PropsWithChildren, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, RefreshCcw } from 'lucide-react'
+import { LoaderCircle, RefreshCcw } from 'lucide-react'
 
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
@@ -23,7 +23,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
   if (loading && clients.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
+        <LoaderCircle className="h-5 w-5 animate-spin" />
         <p>Loading client workspaces…</p>
       </div>
     )
@@ -48,7 +48,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button onClick={handleRetry} disabled={refreshing}>
-            {refreshing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {refreshing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Try again
           </Button>
           <Button asChild variant="outline" className="gap-2">

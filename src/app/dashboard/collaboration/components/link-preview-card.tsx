@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import useSWR from "swr"
-import { ExternalLink, Image as ImageIcon, Loader2 } from "lucide-react"
+import { ExternalLink, Image as ImageIcon, LoaderCircle } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { LazyImage } from "@/components/ui/lazy-image"
@@ -68,7 +68,7 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
         >
           {isLoading ? (
             <div className="flex h-full w-full items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : imageUrl ? (
             <LazyImage

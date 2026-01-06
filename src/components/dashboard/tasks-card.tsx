@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CheckCircle2, Calendar } from 'lucide-react'
+import { CircleCheck, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -45,7 +45,7 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-8 text-center text-sm text-muted-foreground">
-            <CheckCircle2 className="h-8 w-8 text-muted-foreground/50" />
+            <CircleCheck className="h-8 w-8 text-muted-foreground/50" />
             <div className="space-y-1">
               <p className="font-medium text-foreground">All caught up!</p>
               <p>No pending tasks on your radar.</p>
