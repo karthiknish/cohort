@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
-  const [selectedPeriod, setSelectedPeriod] = useState(PERIOD_OPTIONS[0].value)
+  const [selectedPeriod, setSelectedPeriod] = useState<typeof PERIOD_OPTIONS[number]['value']>(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
 
   const [token, setToken] = useState<string | null>(null)
@@ -304,7 +304,7 @@ export default function AnalyticsPage() {
           </select>
           <select
             value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
+            onChange={(e) => setSelectedPeriod(e.target.value as typeof PERIOD_OPTIONS[number]['value'])}
             className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             {PERIOD_OPTIONS.map((option) => (

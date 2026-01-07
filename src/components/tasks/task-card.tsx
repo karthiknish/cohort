@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { ChangeEvent } from 'react'
+import { memo, type ChangeEvent } from 'react'
 import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,7 @@ export type TaskCardProps = {
   onSelectToggle?: (taskId: string, checked: boolean) => void
 }
 
-export function TaskCard({
+function TaskCardComponent({
   task,
   isPendingUpdate,
   onEdit,
@@ -179,3 +179,6 @@ export function TaskCard({
     </div>
   )
 }
+
+export const TaskCard = memo(TaskCardComponent)
+TaskCard.displayName = 'TaskCard'

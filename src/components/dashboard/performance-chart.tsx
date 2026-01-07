@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import Link from 'next/link'
 
@@ -38,7 +38,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
+export const PerformanceChart = memo(function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
   const chartData = useMemo(() => {
     if (!metrics || !metrics.length) return []
 
@@ -178,4 +178,4 @@ export function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
       </CardContent>
     </Card>
   )
-}
+})

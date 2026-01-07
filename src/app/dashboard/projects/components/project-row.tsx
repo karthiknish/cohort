@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import {
   Calendar,
@@ -33,7 +34,7 @@ export interface ProjectRowProps {
   isPendingUpdate?: boolean
 }
 
-export function ProjectRow({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectRowProps) {
+function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectRowProps) {
   const tasksQuery = new URLSearchParams({
     projectId: project.id,
     projectName: project.name,
@@ -157,3 +158,6 @@ export function ProjectRow({ project, onDelete, onEdit, onUpdateStatus, isPendin
     </div>
   )
 }
+
+export const ProjectRow = memo(ProjectRowComponent)
+ProjectRow.displayName = 'ProjectRow'

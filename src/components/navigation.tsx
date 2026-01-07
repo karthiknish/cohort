@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -76,7 +76,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
-  const prefetchRoute = (href: string) => {
+  const prefetchRoute = useCallback((href: string) => {
     if (!href) return
     const target = href.split('?')[0]
     if (target && target !== pathname) {
@@ -86,7 +86,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
         // ignore prefetch failures
       }
     }
-  }
+  }, [pathname, router])
   
   // Persist last visited dashboard tab
   useEffect(() => {

@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Link from 'next/link'
 import {
   ListChecks,
@@ -39,7 +40,7 @@ export interface ProjectCardProps {
   isPendingUpdate?: boolean
 }
 
-export function ProjectCard({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectCardProps) {
+function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectCardProps) {
   const tasksQuery = new URLSearchParams({
     projectId: project.id,
     projectName: project.name,
@@ -158,3 +159,6 @@ export function ProjectCard({ project, onDelete, onEdit, onUpdateStatus, isPendi
     </div>
   )
 }
+
+export const ProjectCard = memo(ProjectCardComponent)
+ProjectCard.displayName = 'ProjectCard'

@@ -1,5 +1,7 @@
 'use client'
 
+import { memo } from 'react'
+
 import { Clock, CircleCheck, CircleAlert, Eye as EyeIcon } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
@@ -46,7 +48,7 @@ const summaryCards: SummaryCardConfig[] = [
   },
 ]
 
-export function TaskSummaryCards({ taskCounts, completionRate }: TaskSummaryCardsProps) {
+export const TaskSummaryCards = memo(function TaskSummaryCards({ taskCounts, completionRate }: TaskSummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {summaryCards.map((card) => (
@@ -78,4 +80,4 @@ export function TaskSummaryCards({ taskCounts, completionRate }: TaskSummaryCard
       </Card>
     </div>
   )
-}
+})

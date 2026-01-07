@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 
 import { Card, CardContent, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -57,7 +57,7 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
   )
 }
 
-function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
+const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
   const Icon = stat.icon
   const valueClasses = cn(
     'text-3xl font-bold tracking-tight',
@@ -92,7 +92,7 @@ function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
       </CardContent>
     </Card>
   )
-}
+})
 
 function getUrgencyDotClass(level: SummaryStat['urgency']): string {
   switch (level) {
