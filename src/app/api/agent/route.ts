@@ -3,6 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { createApiHandler } from '@/lib/api-handler'
 import { geminiAI } from '@/services/gemini'
 import { buildRoutesForPrompt } from '@/lib/navigation-intents'
+import { executeAgentAction, getOperationsDocumentation } from '@/services/agent/action-executor'
 
 const agentRequestSchema = z.object({
   message: z.string().min(1).max(500),
@@ -15,33 +16,69 @@ const agentRequestSchema = z.object({
   }).optional(),
 })
 
-const SYSTEM_PROMPT = `You are a friendly navigation assistant for "Cohorts", a marketing agency dashboard.
-Your job is to help users find what they need quickly. Be warm, helpful, and concise.
+const SYSTEM_PROMPT = `You are a friendly AI assistant for "Cohorts", a marketing agency dashboard.
+You can help users NAVIGATE to pages AND EXECUTE actions like adding expenses or creating tasks.
 
 ## Available Dashboard Pages:
 ${buildRoutesForPrompt()}
+
+${getOperationsDocumentation()}
 
 ## How to Respond
 
 **When user wants to navigate somewhere**, respond with JSON:
 {"action": "navigate", "route": "/dashboard/analytics", "message": "Taking you to Analytics..."}
 
+**When user wants to CREATE/ADD something** (expenses, tasks, etc.), respond with:
+{"action": "execute", "operation": "createCost", "params": {"category": "Ad Spend", "amount": 1000}, "message": "Done! I've added $1,000..."}
+
 **When you need clarification**, ask a brief question:
-{"action": "clarify", "message": "Would you like to see your invoices or track expenses?"}
+{"action": "clarify", "message": "How much would you like to add? And what category?"}
 
 **For greetings or general questions**, be friendly:
-{"action": "chat", "message": "Hey! I can help you navigate. What are you looking for?"}
+{"action": "chat", "message": "Hey! I can help you navigate or add data. What do you need?"}
 
 ## Tips for Understanding Users
-- "check my numbers" or "see performance" → Analytics
-- "money stuff", "billing", "send invoice" → Finance  
-- "team chat", "message someone" → Collaboration
-- "what's new", "recent updates" → Activity
-- "marketing campaigns", "ad spend" → Ads Hub
-- "to-do", "assignments", "what should I do" → Tasks
-- "pitch", "quote for client" → Proposals
+- "add X in ad spend/marketing" → EXECUTE createCost
+- "create a task to..." or "remind me to..." → EXECUTE createTask
+- "check my numbers" or "see performance" → navigate to Analytics
+- "money stuff", "billing", "invoices" → navigate to Finance
+- "show tasks", "my to-do list" → navigate to Tasks
 
 **Always respond with valid JSON only. Be brief but friendly.**`
+
+function fallbackTitleFromMessage(message: string): string {
+  const cleaned = message
+    .replace(/\s+/g, ' ')
+    .replace(/[\r\n\t]+/g, ' ')
+    .trim()
+  if (!cleaned) return 'New chat'
+  return cleaned.length > 60 ? `${cleaned.slice(0, 57)}...` : cleaned
+}
+
+async function generateConversationTitle(message: string): Promise<string> {
+  const prompt = `Generate a short title for this user request.
+
+Rules:
+- 2 to 7 words
+- Title Case
+- No quotes
+- No trailing punctuation
+
+Request: ${JSON.stringify(message)}
+
+Title:`
+
+  const raw = await geminiAI.generateContent(prompt)
+  const cleaned = raw
+    .replace(/"/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[\.!:;,-]+$/g, '')
+
+  const safe = cleaned.length > 0 ? cleaned : fallbackTitleFromMessage(message)
+  return safe.length > 60 ? `${safe.slice(0, 57)}...` : safe
+}
 
 export const POST = createApiHandler(
   {
@@ -78,11 +115,19 @@ export const POST = createApiHandler(
 
     // Update conversation metadata
     if (isNewConversation) {
+      let title = fallbackTitleFromMessage(message)
+      try {
+        title = await generateConversationTitle(message)
+      } catch (error) {
+        console.warn('[agent] Failed to generate title, using fallback:', error)
+      }
+
       await convRef.set({
         userId: auth.uid,
         startedAt: FieldValue.serverTimestamp(),
         lastMessageAt: FieldValue.serverTimestamp(),
         messageCount: 1,
+        title,
       })
     } else {
       await convRef.update({
@@ -106,23 +151,36 @@ export const POST = createApiHandler(
     let agentAction: string
     let agentRoute: string | null = null
     let agentMessage: string
+    let agentOperation: string | null = null
+    let agentParams: Record<string, unknown> | null = null
+    let executeResult: { success: boolean; data?: Record<string, unknown> } | null = null
 
     try {
       const response = await geminiAI.generateContent(prompt)
-      
+
       // Try to parse the JSON response
-      let parsed: { action: string; route?: string; message: string }
-      
+      let parsed: {
+        action: string
+        route?: string
+        message: string
+        operation?: string
+        params?: Record<string, unknown>
+      }
+
       try {
         // Clean up any markdown formatting that might have slipped in
         const cleanedResponse = response
           .replace(/```json\n?/g, '')
           .replace(/```\n?/g, '')
           .trim()
-        
+
         parsed = JSON.parse(cleanedResponse)
+
+        // Debug: log what Gemini returned
+        console.log('[agent] Gemini parsed response:', JSON.stringify(parsed, null, 2))
       } catch {
         // If JSON parsing fails, treat as a chat message
+        console.warn('[agent] Failed to parse JSON, raw response:', response.slice(0, 300))
         parsed = {
           action: 'chat',
           message: response.slice(0, 200), // Limit length
@@ -131,13 +189,47 @@ export const POST = createApiHandler(
 
       agentAction = parsed.action || 'chat'
       agentRoute = parsed.route || null
-      agentMessage = parsed.message || 'I didn\'t quite understand that. Try saying "Go to Analytics" or "Show me Tasks".'
+      agentOperation = parsed.operation || null
+      agentParams = parsed.params || null
+
+      // Debug: log action detection
+      console.log('[agent] Detected action:', agentAction, 'operation:', agentOperation, 'params:', agentParams)
+
+      // Handle execute actions
+      if (agentAction === 'execute' && agentOperation && agentParams) {
+        const result = await executeAgentAction(
+          agentOperation,
+          agentParams,
+          {
+            auth: { uid: auth.uid!, email: auth.email, name: auth.name },
+            workspace: {
+              workspaceId: workspace.workspaceId,
+              financeCostsCollection: workspace.financeCostsCollection,
+              tasksCollection: workspace.tasksCollection,
+              projectsCollection: workspace.projectsCollection,
+              proposalsCollection: workspace.proposalsCollection,
+              messagesCollection: workspace.collaborationCollection,
+              clientsCollection: workspace.clientsCollection,
+            },
+          }
+        )
+
+        agentMessage = result.message
+        executeResult = { success: result.success, data: result.data }
+
+        if (!result.success) {
+          // If execution failed, change action to chat so frontend doesn't try to do anything special
+          agentAction = 'chat'
+        }
+      } else {
+        agentMessage = parsed.message || 'I didn\'t quite understand that. Try saying "Go to Analytics" or "Add 1000 in ad spend".'
+      }
     } catch (error) {
       console.error('[agent] Gemini API error:', error)
-      
+
       // Fallback to basic keyword matching if Gemini fails
       const lowerMessage = message.toLowerCase()
-      
+
       const fallbackRoutes: Record<string, { route: string; name: string }> = {
         'dashboard': { route: '/dashboard', name: 'Dashboard' },
         'analytics': { route: '/dashboard/analytics', name: 'Analytics' },
@@ -153,7 +245,7 @@ export const POST = createApiHandler(
       }
 
       agentAction = 'chat'
-      agentMessage = 'I\'m having trouble understanding. Try saying "Go to Analytics" or "Show me Tasks".'
+      agentMessage = 'I\'m having trouble understanding. Try saying "Go to Analytics" or "Add 500 in marketing spend".'
 
       for (const [keyword, info] of Object.entries(fallbackRoutes)) {
         if (lowerMessage.includes(keyword)) {
@@ -172,6 +264,9 @@ export const POST = createApiHandler(
       content: agentMessage,
       action: agentAction,
       route: agentRoute,
+      operation: agentOperation,
+      params: agentParams,
+      executeResult,
       createdAt: FieldValue.serverTimestamp(),
     })
 
@@ -186,6 +281,8 @@ export const POST = createApiHandler(
       action: agentAction,
       route: agentRoute,
       message: agentMessage,
+      operation: agentOperation,
+      executeResult,
     }
   }
 )

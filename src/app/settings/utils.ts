@@ -1,13 +1,5 @@
-export function formatDate(value: string | null | undefined): string {
-    if (!value) return 'Date unavailable'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) {
-        return 'Date unavailable'
-    }
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 
-    return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    })
+export function formatDate(value: string | null | undefined): string {
+  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, 'Date unavailable')
 }

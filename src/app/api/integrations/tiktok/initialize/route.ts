@@ -1,7 +1,7 @@
 import {
   getAdIntegration,
   updateIntegrationCredentials,
-} from '@/lib/firestore-integrations-admin'
+} from '@/lib/firestore/admin'
 import {
   ensureTikTokAccessToken,
   IntegrationTokenError,

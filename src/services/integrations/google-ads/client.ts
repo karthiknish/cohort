@@ -13,16 +13,19 @@ import {
 } from './types'
 import { GoogleAdsApiError } from './errors'
 
+import {
+  calculateBackoffDelay,
+  DEFAULT_RETRY_CONFIG,
+  isRetryableStatus,
+  parseRetryAfterMs,
+  sleep,
+} from '../shared/retry'
+
 // =============================================================================
 // RETRY CONFIGURATION
 // =============================================================================
 
-export const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelayMs: 1000,
-  maxDelayMs: 30000,
-  jitterFactor: 0.3,
-}
+export { DEFAULT_RETRY_CONFIG }
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -45,26 +48,6 @@ export function extractNumber(value: unknown): number | null {
   return null
 }
 
-function isRetryableStatus(status: number): boolean {
-  return status === 429 || (status >= 500 && status < 600)
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-function calculateBackoffDelay(
-  attempt: number,
-  config: RetryConfig = DEFAULT_RETRY_CONFIG,
-  rateLimitRetryAfter?: number
-): number {
-  if (rateLimitRetryAfter && rateLimitRetryAfter > 0) {
-    return Math.min(rateLimitRetryAfter, config.maxDelayMs)
-  }
-  const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt)
-  const jitter = exponentialDelay * config.jitterFactor * Math.random()
-  return Math.min(exponentialDelay + jitter, config.maxDelayMs)
-}
 
 function parseGoogleAdsApiError(
   response: Response,
@@ -99,10 +82,7 @@ function parseGoogleAdsApiError(
     }
   }
 
-  const retryAfterHeader = response.headers.get('Retry-After')
-  const retryAfterMs = retryAfterHeader 
-    ? parseInt(retryAfterHeader, 10) * 1000 
-    : undefined
+  const retryAfterMs = parseRetryAfterMs(response.headers)
 
   return new GoogleAdsApiError({
     message: error.message ?? `Google Ads API error (${response.status})`,

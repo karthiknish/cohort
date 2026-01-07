@@ -23,6 +23,7 @@ import { apiFetch } from '@/lib/api-client'
 import { getPreviewProjects, getPreviewTasks, getPreviewProposals, getPreviewFinanceSummary } from '@/lib/preview-data'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import {
   Card,
   CardDescription,
@@ -816,14 +817,7 @@ function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelineBoardP
 
 // Utility Functions
 function formatDate(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—')
 }
 
 function getRelativeTimeString(date: Date): string {

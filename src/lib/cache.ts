@@ -1,10 +1,17 @@
 type CacheEntry<T> = {
   value: T
   expiresAt: number
+  touchedAt: number
 }
 
 export class TtlCache {
   private store = new Map<string, CacheEntry<unknown>>()
+  private readonly maxEntries: number
+
+  constructor(options?: { maxEntries?: number }) {
+    const parsed = Number(options?.maxEntries)
+    this.maxEntries = Number.isFinite(parsed) && parsed > 0 ? Math.min(Math.floor(parsed), 5000) : 500
+  }
 
   get<T>(key: string): T | null {
     const entry = this.store.get(key)
@@ -17,6 +24,8 @@ export class TtlCache {
       return null
     }
 
+    entry.touchedAt = Date.now()
+
     return entry.value as T
   }
 
@@ -28,7 +37,8 @@ export class TtlCache {
       return
     }
 
-    this.store.set(key, { value, expiresAt })
+    this.store.set(key, { value, expiresAt, touchedAt: Date.now() })
+    this.evictIfNeeded()
   }
 
   delete(key: string): void {
@@ -51,9 +61,58 @@ export class TtlCache {
   clear(): void {
     this.store.clear()
   }
+
+  private evictIfNeeded(): void {
+    if (this.store.size <= this.maxEntries) return
+
+    const entries = Array.from(this.store.entries())
+    entries.sort((a, b) => a[1].touchedAt - b[1].touchedAt)
+    const excess = this.store.size - this.maxEntries
+    for (let i = 0; i < excess; i += 1) {
+      this.store.delete(entries[i][0])
+    }
+  }
 }
 
-export const serverCache = new TtlCache()
+// =============================================================================
+// Distributed cache manager (Firestore-backed by default)
+// =============================================================================
+
+import { adminDb } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
+import { CacheManager, workspaceCacheKey, type CacheBackend } from '@/lib/cache/cache-manager'
+import { MemoryCacheBackend } from '@/lib/cache/memory-backend'
+import { FirestoreCacheBackend } from '@/lib/cache/firebase-backend'
+
+function createServerCacheBackend(): { backend: CacheBackend; name: string } {
+  const selection = (process.env.CACHE_BACKEND || 'firestore').toLowerCase()
+
+  if (selection === 'memory') {
+    return { backend: new MemoryCacheBackend({ maxEntries: 1000 }), name: 'memory' }
+  }
+
+  // Default: Firestore-backed cache for cross-instance consistency
+  try {
+    return { backend: new FirestoreCacheBackend(adminDb), name: 'firestore' }
+  } catch (error) {
+    logger.warn('[cache] Failed to initialize Firestore cache backend, falling back to memory', { error })
+    return { backend: new MemoryCacheBackend({ maxEntries: 1000 }), name: 'memory' }
+  }
+}
+
+const { backend: serverBackend, name: serverBackendName } = createServerCacheBackend()
+
+export const serverCache = new CacheManager(serverBackend, {
+  backendName: serverBackendName,
+  onEvent: (event) => {
+    if (event.type === 'error') {
+      logger.warn('[cache] backend error', { key: event.key, backend: event.backend })
+    }
+  },
+})
+
+export { CacheManager, workspaceCacheKey }
+export type { CacheBackend }
 
 export function buildCacheHeaders(options: {
   scope?: 'public' | 'private'

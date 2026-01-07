@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, NotFoundError, UnauthorizedError } from '@/lib/api-errors'
-import { getAdIntegration } from '@/lib/firestore-integrations-admin'
+import { getAdIntegration } from '@/lib/firestore/admin'
 import { ensureGoogleAccessToken } from '@/lib/integration-token-refresh'
 
 import {

@@ -1,5 +1,7 @@
 import { Clock, ListTodo, CirclePlay, Eye, CircleCheck } from 'lucide-react'
 import { TaskStatus, TaskPriority, TaskRecord } from '@/types/tasks'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils'
 
 // Retry configuration for network resilience
 export const RETRY_CONFIG = {
@@ -90,12 +92,15 @@ export const buildInitialFormState = (client?: { id: string | null; name: string
 })
 
 // Utility functions
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+export const sleep = sleepLib
 
 export function calculateBackoffDelay(attempt: number): number {
-  const delay = RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt)
-  const jitter = Math.random() * 0.3 * delay
-  return Math.min(delay + jitter, RETRY_CONFIG.maxDelayMs)
+  return calculateBackoffDelayLib(attempt, {
+    maxRetries: RETRY_CONFIG.maxRetries,
+    baseDelayMs: RETRY_CONFIG.baseDelayMs,
+    maxDelayMs: RETRY_CONFIG.maxDelayMs,
+    jitterFactor: 0.3,
+  })
 }
 
 export function isNetworkError(error: unknown): boolean {
@@ -108,20 +113,10 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 export function formatDate(value: string | null | undefined): string {
-  if (!value) {
-    return 'No due date'
-  }
+  if (!value) return 'No due date'
 
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date)
+  const formatted = formatDateLib(value, DATE_FORMATS.SHORT, undefined, '')
+  return formatted || value
 }
 
 export function formatStatusLabel(status: TaskStatus): string {

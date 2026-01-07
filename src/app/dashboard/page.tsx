@@ -218,6 +218,7 @@ export default function DashboardPage() {
     }
 
     const query = selectedClientId ? `?clientId=${encodeURIComponent(selectedClientId)}` : ''
+    const tasksQuery = query ? `${query}&includeSummary=1` : '?includeSummary=1'
 
     const loadFinance = async () => {
       setFinanceLoading(true)
@@ -309,7 +310,7 @@ export default function DashboardPage() {
       setTasksError(null)
       try {
         const token = await getIdToken()
-        const response = await fetch(`/api/tasks${query}`, {
+        const response = await fetch(`/api/tasks${tasksQuery}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -333,10 +334,22 @@ export default function DashboardPage() {
         const data = payload.data || payload
         if (!isCancelled) {
           const tasks = Array.isArray(data?.tasks) ? data.tasks : Array.isArray(data) ? data : []
+          const summary = data?.summary
           setRawTasks(tasks)
           const entries = mapTasksForDashboard(tasks)
           setTaskItems(entries)
-          setTaskSummary(summarizeTasks(tasks))
+
+          if (
+            summary &&
+            typeof summary.total === 'number' &&
+            typeof summary.overdue === 'number' &&
+            typeof summary.dueSoon === 'number' &&
+            typeof summary.highPriority === 'number'
+          ) {
+            setTaskSummary(summary)
+          } else {
+            setTaskSummary(summarizeTasks(tasks))
+          }
         }
       } catch (error) {
         if (!isCancelled) {

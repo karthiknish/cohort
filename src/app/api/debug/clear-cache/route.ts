@@ -6,7 +6,7 @@ export async function POST() {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
-  serverCache.clear()
+  await serverCache.clearAll()
   console.log('Server cache cleared via debug endpoint')
   
   return NextResponse.json({ success: true, message: 'Cache cleared' })

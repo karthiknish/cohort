@@ -1,5 +1,7 @@
 // Notification configuration and utility functions
 
+import { calculateBackoffDelay as calculateBackoffDelayLib, parseRetryAfterMs, sleep } from '@/lib/retry-utils'
+
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -22,20 +24,18 @@ export const RETRY_CONFIG = {
 // UTILITY FUNCTIONS
 // =============================================================================
 
-/**
- * Sleep for a specified number of milliseconds
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+export { sleep }
 
 /**
  * Calculate exponential backoff delay with decorrelated jitter
  */
 export function calculateBackoffDelay(attempt: number): number {
-  const baseDelay = RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt)
-  const jitter = Math.random() * Math.min(RETRY_CONFIG.maxDelayMs, baseDelay)
-  return Math.min(RETRY_CONFIG.maxDelayMs, baseDelay + jitter)
+  return calculateBackoffDelayLib(attempt, {
+    maxRetries: RETRY_CONFIG.maxRetries,
+    baseDelayMs: RETRY_CONFIG.baseDelayMs,
+    maxDelayMs: RETRY_CONFIG.maxDelayMs,
+    jitterFactor: 1,
+  })
 }
 
 /**
@@ -44,19 +44,8 @@ export function calculateBackoffDelay(attempt: number): number {
 export function parseRetryAfter(header: string | null): number | null {
   if (!header) return null
 
-  // Try parsing as seconds
-  const seconds = parseInt(header, 10)
-  if (!isNaN(seconds)) {
-    return seconds * 1000
-  }
-
-  // Try parsing as HTTP date
-  const date = new Date(header)
-  if (!isNaN(date.getTime())) {
-    return Math.max(0, date.getTime() - Date.now())
-  }
-
-  return null
+  const headers = new Headers({ 'Retry-After': header })
+  return parseRetryAfterMs(headers) ?? null
 }
 
 /**

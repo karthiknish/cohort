@@ -1,7 +1,8 @@
 import { Timestamp } from 'firebase/firestore'
 
-import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
+import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore/admin'
 import { logger } from '@/lib/logger'
+import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 
 interface RefreshParams {
   userId: string
@@ -51,15 +52,13 @@ function computeExpiry(expiresInSeconds?: number): Date | null {
   return expiresAt
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 function calculateBackoffDelay(attempt: number): number {
-  const { baseDelayMs, maxDelayMs } = TOKEN_REFRESH_CONFIG
-  const exponentialDelay = baseDelayMs * Math.pow(2, attempt)
-  const jitter = exponentialDelay * 0.3 * Math.random()
-  return Math.min(exponentialDelay + jitter, maxDelayMs)
+  return calculateBackoffDelayLib(attempt, {
+    maxRetries: TOKEN_REFRESH_CONFIG.maxRetries,
+    baseDelayMs: TOKEN_REFRESH_CONFIG.baseDelayMs,
+    maxDelayMs: TOKEN_REFRESH_CONFIG.maxDelayMs,
+    jitterFactor: 0.3,
+  })
 }
 
 export class IntegrationTokenError extends Error {
@@ -69,9 +68,9 @@ export class IntegrationTokenError extends Error {
   httpStatus?: number
 
   constructor(
-    message: string, 
-    providerId?: string, 
-    userId?: string, 
+    message: string,
+    providerId?: string,
+    userId?: string,
     options?: { isRetryable?: boolean; httpStatus?: number }
   ) {
     super(message)
@@ -151,7 +150,7 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
       if (!response.ok) {
         const errorPayload = await response.text()
         let parsedError: { error?: string; error_description?: string } = {}
-        
+
         try {
           parsedError = JSON.parse(errorPayload)
         } catch {
@@ -159,10 +158,10 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
         }
 
         const errorMessage = parsedError.error_description ?? parsedError.error ?? errorPayload
-        
+
         // Check if error is retryable (5xx errors)
         const isRetryable = response.status >= 500 || response.status === 429
-        
+
         if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
           logger.warn(`[Google Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId })
           lastError = new IntegrationTokenError(
@@ -222,10 +221,10 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
       if (error instanceof IntegrationTokenError) {
         throw error
       }
-      
+
       // Network errors are retryable
       lastError = error instanceof Error ? error : new Error('Unknown error')
-      
+
       if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
         console.warn(`[Google Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
         await sleep(calculateBackoffDelay(attempt))
@@ -259,7 +258,7 @@ export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshPa
   })
 
   let lastError: Error | null = null
-  
+
   for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
     try {
       const response = await fetch(`${META_TOKEN_ENDPOINT}?${params.toString()}`)
@@ -267,7 +266,7 @@ export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshPa
       if (!response.ok) {
         const errorPayload = await response.text()
         let parsedError: { error?: { message?: string; code?: number } } = {}
-        
+
         try {
           parsedError = JSON.parse(errorPayload)
         } catch {
@@ -276,10 +275,10 @@ export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshPa
 
         const errorMessage = parsedError?.error?.message ?? errorPayload
         const errorCode = parsedError?.error?.code ?? response.status
-        
+
         // Check if error is retryable (5xx errors or specific Meta error codes)
         const isRetryable = response.status >= 500 || response.status === 429
-        
+
         if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
           console.warn(`[Meta Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`)
           lastError = new IntegrationTokenError(
@@ -327,10 +326,10 @@ export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshPa
       if (error instanceof IntegrationTokenError) {
         throw error
       }
-      
+
       // Network errors are retryable
       lastError = error instanceof Error ? error : new Error('Unknown error')
-      
+
       if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
         console.warn(`[Meta Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
         await sleep(calculateBackoffDelay(attempt))
@@ -386,19 +385,19 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
 
         // Check for retryable status codes (5xx, rate limits)
         const isRetryable = response.status >= 500 || response.status === 429
-        
+
         if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
           // Check for Retry-After header
           const retryAfter = response.headers.get('Retry-After')
           let delayMs = calculateBackoffDelay(attempt)
-          
+
           if (retryAfter) {
             const retryAfterSeconds = parseInt(retryAfter, 10)
             if (!isNaN(retryAfterSeconds)) {
               delayMs = Math.max(delayMs, retryAfterSeconds * 1000)
             }
           }
-          
+
           console.warn(`[TikTok Token Refresh] Server error ${response.status} on attempt ${attempt + 1}, retrying in ${delayMs}ms...`)
           await sleep(delayMs)
           continue
@@ -437,7 +436,7 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
       if (payload.code && payload.code !== 0) {
         // Check for retryable TikTok error codes (40100 = rate limited)
         const isRetryableCode = payload.code === 40100
-        
+
         if (isRetryableCode && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
           console.warn(`[TikTok Token Refresh] TikTok error code ${payload.code} on attempt ${attempt + 1}, retrying...`)
           await sleep(calculateBackoffDelay(attempt))
@@ -542,7 +541,7 @@ export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshPar
       // Force refresh if requested or token is expiring soon
       // Use a 10-minute buffer for pre-emptive refresh
       const PRE_EMPTIVE_REFRESH_BUFFER_MS = 10 * 60 * 1000
-      
+
       if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
         console.log(`[Meta Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
         return await refreshMetaAccessToken({ userId })

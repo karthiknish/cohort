@@ -31,7 +31,10 @@ async function fetchWithAuth(url: string, token: string) {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error('Failed to fetch')
-  return res.json()
+  const payload = await res.json()
+  // Most API routes return `{ success: true, data: ... }`.
+  // Some legacy endpoints may return the data directly.
+  return (payload && typeof payload === 'object' && 'data' in payload) ? (payload as any).data : payload
 }
 
 export function useMentionData() {

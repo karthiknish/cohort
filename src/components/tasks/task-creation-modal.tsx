@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Calendar as CalendarIcon } from 'lucide-react'
+import { format, parseISO, isValid } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 import { useSmartDefaults, createTaskWithDefaults } from '@/hooks/use-smart-defaults'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -52,7 +60,7 @@ export function TaskCreationModal({
   const { taskDefaults, contextInfo } = useSmartDefaults()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Form state with smart defaults
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -78,7 +86,7 @@ export function TaskCreationModal({
 
     try {
       const token = await authService.getIdToken()
-      
+
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
@@ -108,15 +116,15 @@ export function TaskCreationModal({
       }
 
       const createdTask = (await response.json()) as TaskRecord
-      
+
       toast({
         title: 'Task created!',
         description: `"${createdTask.title}" has been added and is ready to track.`,
       })
-      
+
       onTaskCreated?.(createdTask)
       onClose()
-      
+
       // Reset form
       setFormData({
         title: '',
@@ -141,9 +149,17 @@ export function TaskCreationModal({
     }
   }
 
-  const formatDueDate = (dateString: string) => {
-    if (!dateString) return ''
-    return new Date(dateString).toISOString().split('T')[0]
+  const handleDateSelect = (date: Date | undefined) => {
+    setFormData(prev => ({
+      ...prev,
+      dueDate: date ? format(date, 'yyyy-MM-dd') : ''
+    }))
+  }
+
+  const getSelectedDate = () => {
+    if (!formData.dueDate) return undefined
+    const date = parseISO(formData.dueDate)
+    return isValid(date) ? date : undefined
   }
 
   return (
@@ -207,12 +223,32 @@ export function TaskCreationModal({
 
             <div className="space-y-2">
               <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={formatDueDate(formData.dueDate)}
-                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !formData.dueDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.dueDate ? (
+                      format(parseISO(formData.dueDate), 'PPP')
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={getSelectedDate()}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

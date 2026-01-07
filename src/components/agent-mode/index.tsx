@@ -19,6 +19,13 @@ export function AgentMode() {
     isProcessing,
     processInput,
     clearMessages,
+    conversationId,
+    history,
+    isHistoryLoading,
+    fetchHistory,
+    loadConversation,
+    updateConversationTitle,
+    deleteConversation,
   } = useAgentMode()
 
   return (
@@ -31,6 +38,13 @@ export function AgentMode() {
         isProcessing={isProcessing}
         onSendMessage={processInput}
         onClear={clearMessages}
+        conversationId={conversationId}
+        history={history}
+        isHistoryLoading={isHistoryLoading}
+        onOpenHistory={fetchHistory}
+        onSelectConversation={loadConversation}
+        onUpdateConversationTitle={updateConversationTitle}
+        onDeleteConversation={deleteConversation}
       />
     </>
   )

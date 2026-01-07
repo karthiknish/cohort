@@ -23,9 +23,12 @@ import {
   RotateCcw,
   Send,
   CircleX,
+  Calendar as CalendarIcon,
 } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
 
 import { cn, formatCurrency } from '@/lib/utils'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -55,6 +58,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar as ShadcnCalendar } from '@/components/ui/calendar'
 
 // Types
 export interface InvoiceData {
@@ -118,14 +127,7 @@ interface InvoiceManagementCardProps {
 
 // Utility function
 function formatDate(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—')
 }
 
 // Invoice Status Badge Component
@@ -464,20 +466,39 @@ export function InvoiceManagementCard({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="invoice-due-date" className="text-sm font-medium">
-                      Due date
-                    </Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="invoice-due-date"
-                        type="date"
-                        min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                        value={createInvoiceForm.dueDate}
-                        onChange={(e) => onCreateInvoiceFormChange({ ...createInvoiceForm, dueDate: e.target.value })}
-                        className="pl-9"
-                      />
-                    </div>
+                    <Label>Due date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full justify-start text-left font-normal',
+                            !createInvoiceForm.dueDate && 'text-muted-foreground'
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {createInvoiceForm.dueDate ? (
+                            format(parseISO(createInvoiceForm.dueDate), 'PPP')
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <ShadcnCalendar
+                          mode="single"
+                          selected={createInvoiceForm.dueDate ? parseISO(createInvoiceForm.dueDate) : undefined}
+                          onSelect={(date) =>
+                            onCreateInvoiceFormChange({
+                              ...createInvoiceForm,
+                              dueDate: date ? format(date, 'yyyy-MM-dd') : '',
+                            })
+                          }
+                          initialFocus
+                          disabled={(date) => date < new Date()}
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <p className="text-xs text-muted-foreground">Leave blank for 14-day default payment terms.</p>
                   </div>
                 </div>

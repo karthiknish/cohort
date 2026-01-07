@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { toErrorMessage } from '@/lib/error-utils'
 import {
   Card,
   CardContent,
@@ -151,7 +152,7 @@ export default function AdminLeadsPage() {
         setMessages((prev) => (append ? [...prev, ...payload.messages!] : payload.messages!))
         setNextCursor(payload.nextCursor ?? null)
       } catch (err: unknown) {
-        const message = extractErrorMessage(err, 'Unable to fetch leads')
+        const message = toErrorMessage(err, 'Unable to fetch leads')
         setError(message)
         toast({ title: 'Error', description: message, variant: 'destructive' })
       } finally {
@@ -225,7 +226,7 @@ export default function AdminLeadsPage() {
         setSelectedLead((prev) => prev ? { ...prev, status: nextStatus } : null)
       }
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to update lead')
+      const message = toErrorMessage(err, 'Unable to update lead')
       toast({ title: 'Error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
@@ -541,7 +542,7 @@ export default function AdminLeadsPage() {
                     Loading...
                   </>
                 ) : (
-                  'Load more leads'
+                  'Load more'
                 )}
               </Button>
             </div>
@@ -621,20 +622,6 @@ export default function AdminLeadsPage() {
     </div>
   )
 }
-
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
-}
-
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()

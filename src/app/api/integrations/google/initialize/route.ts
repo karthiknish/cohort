@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
+import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore/admin'
 import { ensureGoogleAccessToken, IntegrationTokenError } from '@/lib/integration-token-refresh'
 import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
 import { createApiHandler } from '@/lib/api-handler'

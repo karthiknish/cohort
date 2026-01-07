@@ -70,6 +70,7 @@ const allNavigation: NavItem[] = [
   { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] },
   { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },
+  { name: 'Manage Clients', href: '/admin/clients', icon: Shield, description: 'Admin client portal', roles: ['admin'] },
 ]
 
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
@@ -87,14 +88,14 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
       }
     }
   }, [pathname, router])
-  
+
   // Persist last visited dashboard tab
   useEffect(() => {
     if (pathname.startsWith('/dashboard')) {
       localStorage.setItem('cohorts_last_tab', pathname)
     }
   }, [pathname])
-  
+
   // Filter navigation items based on user role
   const navigation = useMemo(() => {
     const userRole = user?.role ?? 'client'
@@ -114,7 +115,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
               const isActive = isDashboardRoot
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(`${item.href}/`)
-              
+
               const navButton = (
                 <Button
                   key={item.name}
@@ -204,7 +205,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
               </Button>
             )
           )}
-          
+
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -290,10 +291,10 @@ export function Header() {
 
   const initials = user?.name
     ? user.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
     : 'US'
 
   const roleLabel = useMemo(() => {
@@ -443,7 +444,7 @@ export function Header() {
           </div>
         </div>
       </header>
-      
+
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} showWelcome={showWelcome} />
     </>
   )

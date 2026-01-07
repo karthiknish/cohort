@@ -2,7 +2,7 @@ import { z } from 'zod'
 import {
   getAdIntegration,
   updateIntegrationPreferences,
-} from '@/lib/firestore-integrations-admin'
+} from '@/lib/firestore/admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
 import { logAuditAction } from '@/lib/audit-logger'

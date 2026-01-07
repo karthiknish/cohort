@@ -6,7 +6,7 @@ import {
   getAdIntegration,
   updateIntegrationStatus,
   writeMetricsBatch,
-} from '@/lib/firestore-integrations-admin'
+} from '@/lib/firestore/admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'

@@ -181,6 +181,7 @@ export default function ProjectsPage() {
 
     try {
       const params = new URLSearchParams()
+      params.set('includeStats', 'true')
       if (selectedClientId) {
         params.set('clientId', selectedClientId)
       }

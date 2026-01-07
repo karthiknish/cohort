@@ -1,18 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { format, subDays, startOfDay, endOfDay, isValid, parseISO } from 'date-fns'
+import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import { CalendarIcon, ChevronDown } from 'lucide-react'
+import { DateRange as DayPickerRange } from 'react-day-picker'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 
 export interface DateRange {
@@ -45,131 +44,77 @@ function formatDateRange(range: DateRange): string {
   return `${startStr} – ${endStr}`
 }
 
-function getMatchingPreset(range: DateRange): number | null {
-  const today = endOfDay(new Date())
-  const diffDays = Math.round((today.getTime() - startOfDay(range.start).getTime()) / (1000 * 60 * 60 * 24)) + 1
-  const isEndToday = format(range.end, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-  
-  if (!isEndToday) return null
-  
-  const match = PRESETS.find(p => p.days === diffDays)
-  return match?.days ?? null
-}
-
 export function DateRangePicker({ value, onChange, className }: DateRangePickerProps) {
-  const [isCustomOpen, setIsCustomOpen] = useState(false)
-  const [customStart, setCustomStart] = useState('')
-  const [customEnd, setCustomEnd] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
 
-  const matchingPreset = useMemo(() => getMatchingPreset(value), [value])
+  const dateRange: DayPickerRange = {
+    from: value.start,
+    to: value.end,
+  }
+
+  const handleSelect = (range: DayPickerRange | undefined) => {
+    if (range?.from && range?.to) {
+      onChange({
+        start: startOfDay(range.from),
+        end: endOfDay(range.to),
+      })
+    }
+  }
 
   const handlePresetSelect = (days: number) => {
     onChange(getPresetRange(days))
-    setIsCustomOpen(false)
-    setError(null)
-  }
-
-  const handleCustomOpen = () => {
-    setCustomStart(format(value.start, 'yyyy-MM-dd'))
-    setCustomEnd(format(value.end, 'yyyy-MM-dd'))
-    setIsCustomOpen(true)
-    setError(null)
-  }
-
-  const handleApplyCustom = () => {
-    const start = parseISO(customStart)
-    const end = parseISO(customEnd)
-
-    if (!isValid(start) || !isValid(end)) {
-      setError('Please enter valid dates')
-      return
-    }
-
-    if (start > end) {
-      setError('Start date must be before end date')
-      return
-    }
-
-    if (end > new Date()) {
-      setError('End date cannot be in the future')
-      return
-    }
-
-    onChange({ start: startOfDay(start), end: endOfDay(end) })
-    setIsCustomOpen(false)
-    setError(null)
+    setOpen(false)
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn('justify-start text-left font-normal', className)}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          <span className="truncate">{formatDateRange(value)}</span>
-          <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[280px]">
-        {PRESETS.map((preset) => (
-          <DropdownMenuItem
-            key={preset.days}
-            onClick={() => handlePresetSelect(preset.days)}
+    <div className={cn('grid gap-2', className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id="date"
+            variant="outline"
             className={cn(
-              'cursor-pointer',
-              matchingPreset === preset.days && 'bg-accent'
+              'w-fit justify-start text-left font-normal',
+              !value && 'text-muted-foreground'
             )}
           >
-            {preset.label}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        {!isCustomOpen ? (
-          <DropdownMenuItem onClick={handleCustomOpen} className="cursor-pointer">
-            Custom range...
-          </DropdownMenuItem>
-        ) : (
-          <div className="p-2 space-y-3">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Start Date</label>
-              <Input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                max={format(new Date(), 'yyyy-MM-dd')}
-                className="h-8"
-              />
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {formatDateRange(value)}
+            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="end">
+          <div className="flex flex-col sm:flex-row">
+            <div className="flex flex-col gap-1 border-b p-3 sm:border-b-0 sm:border-r">
+              <span className="mb-2 px-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Presets
+              </span>
+              {PRESETS.map((preset) => (
+                <Button
+                  key={preset.days}
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start font-normal"
+                  onClick={() => handlePresetSelect(preset.days)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">End Date</label>
-              <Input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                max={format(new Date(), 'yyyy-MM-dd')}
-                className="h-8"
+            <div className="p-1">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange.from}
+                selected={dateRange}
+                onSelect={handleSelect}
+                numberOfMonths={2}
+                disabled={(date) => date > new Date()}
               />
-            </div>
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsCustomOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleApplyCustom} className="flex-1">
-                Apply
-              </Button>
             </div>
           </div>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }

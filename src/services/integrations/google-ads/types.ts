@@ -91,12 +91,7 @@ export interface GoogleAdsOptions {
   onTokenRefresh?: () => void
 }
 
-export interface RetryConfig {
-  maxRetries: number
-  baseDelayMs: number
-  maxDelayMs: number
-  jitterFactor: number
-}
+export type { RetryConfig } from '../shared/retry'
 
 export type GoogleAdsResult = {
   segments?: {

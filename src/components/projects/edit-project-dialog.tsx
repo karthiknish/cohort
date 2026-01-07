@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { LoaderCircle, Plus, Tag, X, CircleAlert } from 'lucide-react'
+import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X, CircleAlert } from 'lucide-react'
+import { format, parseISO, isValid } from 'date-fns'
 
 import { apiFetch } from '@/lib/api-client'
 import { useAuth } from '@/contexts/auth-context'
@@ -28,8 +29,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
 
 type EditProjectDialogProps = {
   project: ProjectRecord | null
@@ -63,8 +71,8 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<ProjectStatus>('planning')
   const [clientId, setClientId] = useState<string>('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
 
@@ -78,8 +86,8 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       setDescription(project.description ?? '')
       setStatus(project.status)
       setClientId(project.clientId ?? '')
-      setStartDate(project.startDate?.split('T')[0] ?? '')
-      setEndDate(project.endDate?.split('T')[0] ?? '')
+      setStartDate(project.startDate ? parseISO(project.startDate) : undefined)
+      setEndDate(project.endDate ? parseISO(project.endDate) : undefined)
       setTags(project.tags ?? [])
       setTagInput('')
       setError(null)
@@ -97,8 +105,8 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       description !== (project.description ?? '') ||
       status !== project.status ||
       clientId !== (project.clientId ?? '') ||
-      startDate !== (project.startDate?.split('T')[0] ?? '') ||
-      endDate !== (project.endDate?.split('T')[0] ?? '') ||
+      (startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '') ||
+      (endDate ? format(endDate, 'yyyy-MM-dd') : '') !== (project.endDate?.split('T')[0] ?? '') ||
       JSON.stringify(tags) !== JSON.stringify(project.tags ?? [])
 
     setHasChanges(changed)
@@ -118,9 +126,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     }
 
     if (startDate && endDate) {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      if (end < start) {
+      if (endDate < startDate) {
         errors.endDate = 'End date cannot be before start date'
       }
     }
@@ -186,11 +192,11 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
         payload.clientId = clientId || null
         payload.clientName = selectedClientData?.name || null
       }
-      if (startDate !== (project.startDate?.split('T')[0] ?? '')) {
-        payload.startDate = startDate || null
+      if ((startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '')) {
+        payload.startDate = startDate ? format(startDate, 'yyyy-MM-dd') : null
       }
-      if (endDate !== (project.endDate?.split('T')[0] ?? '')) {
-        payload.endDate = endDate || null
+      if ((endDate ? format(endDate, 'yyyy-MM-dd') : '') !== (project.endDate?.split('T')[0] ?? '')) {
+        payload.endDate = endDate ? format(endDate, 'yyyy-MM-dd') : null
       }
       if (JSON.stringify(tags) !== JSON.stringify(project.tags ?? [])) {
         payload.tags = tags
@@ -333,27 +339,62 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-project-start-date">Start date</Label>
-                <Input
-                  id="edit-project-start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  disabled={loading}
-                />
+                <Label>Start date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !startDate && 'text-muted-foreground'
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                      disabled={(date) => date < new Date('1900-01-01')}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-project-end-date">End date</Label>
-                <Input
-                  id="edit-project-end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || undefined}
-                  disabled={loading}
-                  aria-invalid={!!validationErrors.endDate}
-                />
+                <Label>End date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !endDate && 'text-muted-foreground',
+                        validationErrors.endDate && 'border-destructive text-destructive'
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                      disabled={(date) =>
+                        (startDate ? date < startDate : false) || date < new Date('1900-01-01')
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
                 {validationErrors.endDate && (
                   <p className="text-xs text-destructive">{validationErrors.endDate}</p>
                 )}

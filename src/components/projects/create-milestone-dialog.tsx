@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Calendar, LoaderCircle, Plus } from 'lucide-react'
+import { Calendar as CalendarIcon, LoaderCircle, Plus } from 'lucide-react'
+import { format } from 'date-fns'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -24,7 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import type { MilestoneRecord, MilestoneStatus } from '@/types/milestones'
 import type { ProjectRecord } from '@/types/projects'
 import { MILESTONE_STATUSES } from '@/types/milestones'
@@ -53,8 +61,8 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
   const [projectId, setProjectId] = useState(defaultProjectId ?? '')
   const [title, setTitle] = useState('')
   const [status, setStatus] = useState<MilestoneStatus>('planned')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [description, setDescription] = useState('')
 
   useEffect(() => {
@@ -62,8 +70,8 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
       setProjectId(defaultProjectId ?? '')
       setTitle('')
       setStatus('planned')
-      setStartDate('')
-      setEndDate('')
+      setStartDate(undefined)
+      setEndDate(undefined)
       setDescription('')
     }
   }, [open, defaultProjectId])
@@ -99,8 +107,8 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
         body: JSON.stringify({
           title: title.trim(),
           status,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
+          startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
+          endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
           description: description.trim() || undefined,
         }),
       })
@@ -176,31 +184,60 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="milestone-start">Start</Label>
-                <div className="relative">
-                  <Input
-                    id="milestone-start"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    disabled={loading}
-                  />
-                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                </div>
+                <Label>Start</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !startDate && 'text-muted-foreground'
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                      disabled={(date) => date < new Date('1900-01-01')}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="milestone-end">End</Label>
-                <div className="relative">
-                  <Input
-                    id="milestone-end"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || undefined}
-                    disabled={loading}
-                  />
-                  <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                </div>
+                <Label>End</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !endDate && 'text-muted-foreground'
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                      disabled={(date) =>
+                        (startDate ? date < startDate : false) || date < new Date('1900-01-01')
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 

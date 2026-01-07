@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+
 interface ClientDetailsCardProps {
   billingEmail: string | null
   clientIndex: number
@@ -18,14 +20,7 @@ interface ClientDetailsCardProps {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—')
 }
 
 export function ClientDetailsCard({

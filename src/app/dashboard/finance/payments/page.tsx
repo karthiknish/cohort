@@ -6,6 +6,7 @@ import { CreditCard, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { toErrorMessage } from '@/lib/error-utils'
 import {
   Card,
   CardContent,
@@ -59,7 +60,7 @@ export default function FinancePaymentsPage() {
     } catch (error: unknown) {
       toast({
         title: 'Portal unavailable',
-        description: extractErrorMessage(error, 'Unable to open the Stripe billing portal'),
+        description: toErrorMessage(error, 'Unable to open the Stripe billing portal'),
         variant: 'destructive',
       })
     } finally {
@@ -229,17 +230,4 @@ export default function FinancePaymentsPage() {
       </div>
     </div>
   )
-}
-
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
 }

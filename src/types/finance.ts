@@ -1,4 +1,4 @@
-export type FinanceCostCadence = 'monthly' | 'quarterly' | 'annual'
+export type FinanceCostCadence = 'one-off' | 'monthly' | 'quarterly' | 'annual'
 
 export type ExpenseCategory =
   | 'people'

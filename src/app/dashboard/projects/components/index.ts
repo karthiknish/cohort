@@ -14,3 +14,7 @@ export { GanttView } from './gantt-view'
 export type { GanttViewProps } from './gantt-view'
 
 export * from './utils'
+
+// Back-compat re-exports for ProjectsPage
+export { sleep } from '@/lib/retry-utils'
+export { useDebouncedValue } from '@/hooks/use-debounce'

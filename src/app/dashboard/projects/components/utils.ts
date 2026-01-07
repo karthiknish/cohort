@@ -1,9 +1,11 @@
 import type { ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import type { ProjectRecord } from '@/types/projects'
-import { useEffect, useState } from 'react'
 import { FolderKanban, CircleCheck, TriangleAlert } from 'lucide-react'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
+import { getErrorMessage as getErrorMessageLib } from '@/lib/error-utils'
+import { useDebouncedValue } from '@/hooks/use-debounce'
 
 export type StatusFilter = 'all' | ProjectStatus
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount'
@@ -40,14 +42,13 @@ export const RETRY_CONFIG = {
   maxDelayMs: 10000,
 }
 
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 export function calculateBackoffDelay(attempt: number): number {
-  const delay = RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt)
-  const jitter = Math.random() * delay * 0.3
-  return Math.min(delay + jitter, RETRY_CONFIG.maxDelayMs)
+  return calculateBackoffDelayLib(attempt, {
+    maxRetries: RETRY_CONFIG.maxRetries,
+    baseDelayMs: RETRY_CONFIG.baseDelayMs,
+    maxDelayMs: RETRY_CONFIG.maxDelayMs,
+    jitterFactor: 0.3,
+  })
 }
 
 export function isNetworkError(error: unknown): boolean {
@@ -87,18 +88,7 @@ export function formatTaskSummary(open: number, total: number): string {
 }
 
 export function formatDate(value: string | null): string {
-  if (!value) {
-    return '—'
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '—'
-  }
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date)
+  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, '—')
 }
 
 export function formatDateRange(start: string | null, end: string | null): string {
@@ -116,19 +106,8 @@ export function formatDateRange(start: string | null, end: string | null): strin
   return `${startLabel} – ${endLabel}`
 }
 
-export function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs)
-    return () => clearTimeout(timer)
-  }, [value, delayMs])
-
-  return debounced
-}
-
 export function getErrorMessage(error: unknown, fallback: string): string {
-  return formatUserFacingErrorMessage(error, fallback)
+  return getErrorMessageLib(error, fallback)
 }
 
 export function parseDate(value: string | null | undefined): Date | null {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
 import { apiFetch } from '@/lib/api-client'
+import { ApiClientError } from '@/lib/user-friendly-error'
 import { getPreviewTasks } from '@/lib/preview-data'
 import {
   RETRY_CONFIG,
@@ -133,7 +134,9 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
             : null
         )
       } catch (fetchError: unknown) {
+        // Ignore aborted requests
         if (fetchError instanceof Error && fetchError.name === 'AbortError') return
+        if (fetchError instanceof ApiClientError && (fetchError as any).cause?.name === 'AbortError') return
 
         console.error('Failed to fetch tasks', fetchError)
 
@@ -271,10 +274,10 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
       setPendingStatusUpdates((prev) => new Set(prev).add(task.id))
 
       try {
-      const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${task.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-      })
+        const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: newStatus }),
+        })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
         toast({
           title: 'Status updated',
@@ -314,9 +317,9 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
       }
 
       try {
-      await apiFetch(`/api/tasks/${task.id}`, {
-        method: 'DELETE',
-      })
+        await apiFetch(`/api/tasks/${task.id}`, {
+          method: 'DELETE',
+        })
 
         setTasks((prev) => prev.filter((t) => t.id !== task.id))
         toast({
@@ -368,10 +371,10 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
       }
 
       try {
-      const createdTask = await apiFetch<TaskRecord>('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
+        const createdTask = await apiFetch<TaskRecord>('/api/tasks', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
         setTasks((prev) => [createdTask, ...prev])
         setError(null)
         toast({
@@ -415,10 +418,10 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
       }
 
       try {
-      const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
-      })
+        const updatedTask = await apiFetch<TaskRecord>(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
         toast({
           title: 'Task updated',
@@ -467,7 +470,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
 
         const successfulUpdates = data.tasks || []
         const updatedIds = new Set(successfulUpdates.map(t => t.id))
-        
+
         setTasks((prev) => prev.map((t) => {
           const updated = successfulUpdates.find(u => u.id === t.id)
           return updated || t

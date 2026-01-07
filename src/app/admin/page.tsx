@@ -89,13 +89,13 @@ export default function AdminPage() {
         fetch('/api/admin/users?pageSize=1', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/clients', {
+        fetch('/api/clients?pageSize=1&includeTotals=true', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/admin/contact-messages?pageSize=50', {
+        fetch('/api/admin/contact-messages?pageSize=10&includeTotals=true', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('/api/admin/scheduler/events?pageSize=10', {
+        fetch('/api/admin/scheduler/events?limit=10', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('/api/admin/notifications?limit=10', {
@@ -107,18 +107,24 @@ export default function AdminPage() {
       let totalUsers = 0
       let activeUsers = 0
       if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
-        const data = await usersRes.value.json()
-        totalUsers = data.total ?? data.users?.length ?? 0
-        activeUsers = data.users?.filter((u: { status: string }) => u.status === 'active')?.length ?? 0
+        const payload = await usersRes.value.json()
+        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
+        totalUsers = typeof data.total === 'number' ? data.total : data.users?.length ?? 0
+        activeUsers =
+          typeof data.activeTotal === 'number'
+            ? data.activeTotal
+            : data.users?.filter((u: { status: string }) => u.status === 'active')?.length ?? 0
       }
 
       // Process clients
       let totalClients = 0
       let activeClients = 0
       if (clientsRes.status === 'fulfilled' && clientsRes.value.ok) {
-        const data = await clientsRes.value.json()
-        totalClients = data.clients?.length ?? 0
-        activeClients = data.clients?.filter((c: { status: string }) => c.status === 'active')?.length ?? 0
+        const payload = await clientsRes.value.json()
+        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
+        totalClients = typeof data.total === 'number' ? data.total : data.clients?.length ?? 0
+        // Client records do not currently include a `status` field; treat all as active.
+        activeClients = totalClients
       }
 
       // Process leads
@@ -126,13 +132,21 @@ export default function AdminPage() {
       let newLeadsToday = 0
       const recentActivities: RecentActivity[] = []
       if (leadsRes.status === 'fulfilled' && leadsRes.value.ok) {
-        const data = await leadsRes.value.json()
+        const payload = await leadsRes.value.json()
+        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
         const messages = data.messages ?? []
-        pendingLeads = messages.filter((m: { status: string }) => m.status === 'new').length
-        const today = new Date().toDateString()
-        newLeadsToday = messages.filter((m: { createdAt: string }) =>
-          m.createdAt && new Date(m.createdAt).toDateString() === today
-        ).length
+        pendingLeads = typeof data.pendingTotal === 'number'
+          ? data.pendingTotal
+          : messages.filter((m: { status: string }) => m.status === 'new').length
+
+        newLeadsToday = typeof data.todayTotal === 'number'
+          ? data.todayTotal
+          : (() => {
+              const today = new Date().toDateString()
+              return messages.filter((m: { createdAt: string }) =>
+                m.createdAt && new Date(m.createdAt).toDateString() === today
+              ).length
+            })()
 
         // Add recent leads to activities
         messages.slice(0, 3).forEach((m: { id: string; name: string; company: string | null; createdAt: string }) => {
@@ -151,7 +165,8 @@ export default function AdminPage() {
       let lastSyncTime: string | null = null
       let recentErrors = 0
       if (schedulerRes.status === 'fulfilled' && schedulerRes.value.ok) {
-        const data = await schedulerRes.value.json()
+        const payload = await schedulerRes.value.json()
+        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
         const events = data.events ?? []
         recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
         if (recentErrors > 5) schedulerHealth = 'error'
@@ -165,7 +180,8 @@ export default function AdminPage() {
 
       // Process admin notifications (new signups)
       if (notificationsRes.status === 'fulfilled' && notificationsRes.value.ok) {
-        const data = await notificationsRes.value.json()
+        const payload = await notificationsRes.value.json()
+        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
         const notifications = data.notifications ?? []
         notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
           if (n.type === 'new_user_signup') {

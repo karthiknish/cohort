@@ -1,5 +1,5 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore-integrations-admin'
+import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
 
 // =============================================================================
 // GOOGLE OAUTH CONFIGURATION
@@ -62,12 +62,6 @@ interface GoogleErrorResponse {
 
 const STATE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
-const OAUTH_RETRY_CONFIG = {
-  maxRetries: 3,
-  baseDelayMs: 500,
-  maxDelayMs: 5000,
-}
-
 // =============================================================================
 // ERROR CLASS
 // =============================================================================
@@ -98,21 +92,6 @@ export class GoogleOAuthError extends Error {
     this.code = code
     this.isRetryable = isRetryable
   }
-}
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-function calculateBackoffDelay(attempt: number): number {
-  const { baseDelayMs, maxDelayMs } = OAUTH_RETRY_CONFIG
-  const exponentialDelay = baseDelayMs * Math.pow(2, attempt)
-  const jitter = exponentialDelay * 0.2 * Math.random()
-  return Math.min(exponentialDelay + jitter, maxDelayMs)
 }
 
 // =============================================================================

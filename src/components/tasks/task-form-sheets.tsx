@@ -1,7 +1,8 @@
 'use client'
 
 import type { FormEvent, Dispatch, SetStateAction } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { LoaderCircle, Calendar as CalendarIcon } from 'lucide-react'
+import { format, parseISO, isValid } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 import { TaskPriority, TaskStatus } from '@/types/tasks'
 import { TaskFormState } from './task-types'
 
@@ -153,15 +161,39 @@ export function CreateTaskSheet({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="task-due-date">Due date</Label>
-                <Input
-                  id="task-due-date"
-                  type="date"
-                  value={formState.dueDate}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
-                  }
-                  disabled={creating}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="task-due-date"
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !formState.dueDate && 'text-muted-foreground'
+                      )}
+                      disabled={creating}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formState.dueDate ? (
+                        format(parseISO(formState.dueDate), 'PPP')
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
+                      onSelect={(date) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          dueDate: date ? format(date, 'yyyy-MM-dd') : '',
+                        }))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="space-y-2">
@@ -305,15 +337,39 @@ export function EditTaskSheet({
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-task-due-date">Due date</Label>
-              <Input
-                id="edit-task-due-date"
-                type="date"
-                value={formState.dueDate}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
-                }
-                disabled={updating}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="edit-task-due-date"
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !formState.dueDate && 'text-muted-foreground'
+                    )}
+                    disabled={updating}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formState.dueDate ? (
+                      format(parseISO(formState.dueDate), 'PPP')
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
+                    onSelect={(date) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        dueDate: date ? format(date, 'yyyy-MM-dd') : '',
+                      }))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-task-tags">Tags</Label>

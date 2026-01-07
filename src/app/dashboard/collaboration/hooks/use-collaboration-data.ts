@@ -328,7 +328,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       })
 
     return () => controller.abort()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedMessageSearch, parseSearchQuery, selectedChannelId])
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
@@ -368,7 +368,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     }
 
     return Array.from(map.values())
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fallbackDisplayName, fallbackRole, selectedChannelId])
 
   const sharedFiles = useMemo(() => {
@@ -464,7 +464,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     setNextCursorByChannel,
     setLoadingChannelId,
     setMessagesError,
-    onError: () => {},
+    onError: () => { },
   })
 
   // Realtime typing subscription
@@ -544,10 +544,8 @@ export function useCollaborationData(): UseCollaborationDataReturn {
           return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
         })
 
-        const token = await ensureSessionToken()
-        const response = await fetch('/api/collaboration/messages', {
+        const serverMessage = await apiFetch<CollaborationMessage>('/api/collaboration/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             channelType: selectedChannel.type,
             clientId: selectedChannel.clientId,
@@ -561,17 +559,6 @@ export function useCollaborationData(): UseCollaborationDataReturn {
             parentMessageId: options?.parentMessageId,
           }),
         })
-
-        const payload = (await response.json().catch(() => null)) as
-          | { message?: CollaborationMessage; error?: string }
-          | null
-
-        if (!response.ok || !payload?.message) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to send message'
-          throw new Error(message)
-        }
-
-        const serverMessage = payload.message
 
         mutateChannelMessages(channelId, (messages) => {
           if (messages.some((m) => m.id === serverMessage.id)) return messages
@@ -616,7 +603,6 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       setLoadingMoreChannelId(channelId)
 
       try {
-        const token = await ensureSessionToken()
         const channel = channels.find((c) => c.id === channelId)
         if (!channel) throw new Error('Channel not found')
 
@@ -629,17 +615,9 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         if (channel.clientId) params.set('clientId', channel.clientId)
         if (channel.projectId) params.set('projectId', channel.projectId)
 
-        const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        const payload = (await response.json().catch(() => null)) as
-          | { messages?: CollaborationMessage[]; nextCursor?: string | null; error?: string }
-          | null
-
-        if (!response.ok || !payload) {
-          throw new Error(typeof payload?.error === 'string' ? payload.error : 'Unable to load older messages')
-        }
+        const payload = await apiFetch<{ messages: CollaborationMessage[]; nextCursor: string | null }>(
+          `/api/collaboration/messages?${params.toString()}`
+        )
 
         const messages = Array.isArray(payload.messages) ? payload.messages : []
         const newCursor = payload.nextCursor ?? null
@@ -690,7 +668,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     // Only set sender if not already valid for current channel
     // Use selectedChannelId (stable string) instead of selectedChannel object to avoid loops
     if (!selectedChannelId) return
-    
+
     setSenderSelection((current) => {
       if (current && channelParticipants.some((member) => member.name === current)) {
         return current // Keep current selection if valid

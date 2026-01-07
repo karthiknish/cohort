@@ -42,7 +42,11 @@ export const GET = createApiHandler(
         }
       }
     }
-    const snapshot = await usersQuery.get()
+    const [snapshot, totalsAgg, activeAgg] = await Promise.all([
+      usersQuery.get(),
+      adminDb.collection('users').count().get(),
+      adminDb.collection('users').where('status', '==', 'active').count().get(),
+    ])
 
     const records = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>
@@ -97,7 +101,10 @@ export const GET = createApiHandler(
       }
     }
 
-    return { users: filtered, nextCursor }
+    const total = typeof totalsAgg.data().count === 'number' ? totalsAgg.data().count : 0
+    const activeTotal = typeof activeAgg.data().count === 'number' ? activeAgg.data().count : 0
+
+    return { users: filtered, nextCursor, total, activeTotal }
   }
 )
 

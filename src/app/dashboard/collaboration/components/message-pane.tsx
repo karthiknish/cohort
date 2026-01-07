@@ -285,17 +285,21 @@ export function CollaborationMessagePane({
     const normalizedId = threadRootId.trim()
     if (!normalizedId) return
 
+    const isCurrentlyOpen = Boolean(expandedThreadIds[normalizedId])
+
+    // Update expansion state
     setExpandedThreadIds((prev) => {
-      const isOpen = Boolean(prev[normalizedId])
       const next = { ...prev }
-
-      if (isOpen) {
+      if (isCurrentlyOpen) {
         delete next[normalizedId]
-        return next
+      } else {
+        next[normalizedId] = true
       }
+      return next
+    })
 
-      next[normalizedId] = true
-
+    // Side-effect: Load replies if opening and not loaded/loading
+    if (!isCurrentlyOpen) {
       const existingReplies = threadMessagesByRootId[normalizedId]
       const hasRepliesLoaded = Array.isArray(existingReplies) && existingReplies.length > 0
       const hasError = Boolean(threadErrorsByRootId[normalizedId])
@@ -304,9 +308,7 @@ export function CollaborationMessagePane({
       if ((!hasRepliesLoaded || hasError) && !isLoadingReplies) {
         void onLoadThreadReplies(normalizedId)
       }
-
-      return next
-    })
+    }
   }
 
   const handleRetryThreadLoad = (threadRootId: string) => {

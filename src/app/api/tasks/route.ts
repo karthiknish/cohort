@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
 import type { StoredTask } from '@/types/stored-types'
-import { buildCacheHeaders, serverCache } from '@/lib/cache'
-import { resolveWorkspaceContext } from '@/lib/workspace'
+import { buildCacheHeaders, serverCache, workspaceCacheKey } from '@/lib/cache'
+import type { WorkspaceContext } from '@/lib/workspace'
 import { notifyTaskCreatedWhatsApp, recordTaskNotification } from '@/lib/notifications'
 import { NotFoundError } from '@/lib/api-errors'
 import { coerceStringArray, toISO, sanitizeInput } from '@/lib/utils'
@@ -45,6 +45,7 @@ const taskQuerySchema = z.object({
   projectId: z.string().optional(),
   pageSize: z.string().optional(),
   after: z.string().optional(),
+  includeSummary: z.string().optional(),
 })
 
 export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
@@ -87,10 +88,13 @@ export const GET = createApiHandler(
       projectId: projectIdFilter,
       pageSize: pageSizeParam,
       after: afterParam,
+      includeSummary: includeSummaryParam,
     } = query
 
     const queryFilter = queryParam ? queryParam.trim().toLowerCase() : null
     const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), 100)
+
+    const includeSummary = includeSummaryParam === '1' || includeSummaryParam === 'true'
 
     const cacheKey = buildTasksCacheKey(workspace.workspaceId, {
       statusFilter: statusFilter ?? null,
@@ -100,79 +104,94 @@ export const GET = createApiHandler(
       projectIdFilter: projectIdFilter ?? null,
       pageSize,
       after: afterParam ?? null,
+      includeSummary,
     })
 
-    const cached = serverCache.get<TaskListResponse>(cacheKey)
-    if (cached) {
-      return NextResponse.json(cached, {
-        headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
-      })
-    }
+    const payload = await serverCache.getOrFetch<TaskListResponse & { summary?: TaskSummary }>(
+      cacheKey,
+      async () => {
+        let baseQuery = workspace.tasksCollection
+          .orderBy('createdAt', 'desc')
+          .orderBy(FieldPath.documentId(), 'desc')
+          .limit(pageSize + 1)
 
-    let baseQuery = workspace.tasksCollection
-      .orderBy('createdAt', 'desc')
-      .orderBy(FieldPath.documentId(), 'desc')
-      .limit(pageSize + 1)
-
-    if (afterParam) {
-      const [timestamp, docId] = afterParam.split('|')
-      if (timestamp && docId) {
-        const afterDate = new Date(timestamp)
-        if (!Number.isNaN(afterDate.getTime())) {
-          baseQuery = baseQuery.startAfter(Timestamp.fromDate(afterDate), docId)
+        if (afterParam) {
+          const [timestamp, docId] = afterParam.split('|')
+          if (timestamp && docId) {
+            const afterDate = new Date(timestamp)
+            if (!Number.isNaN(afterDate.getTime())) {
+              baseQuery = baseQuery.startAfter(Timestamp.fromDate(afterDate), docId)
+            }
+          }
         }
-      }
-    }
 
-    const snapshot = await baseQuery.get()
-    const docs = snapshot.docs
+        const snapshot = await baseQuery.get()
+        const docs = snapshot.docs
 
-    const mapped = docs.map((doc) => mapTaskDoc(doc.id, doc.data() as StoredTask))
-    const filtered = mapped.filter((task) => {
-      if (task.deletedAt) {
-        return false
-      }
-      if (clientIdFilter && task.clientId !== clientIdFilter) {
-        return false
-      }
-      if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) {
-        return false
-      }
-      if (assigneeFilter && assigneeFilter !== 'all') {
-        const normalizedAssignee = assigneeFilter.toLowerCase()
-        const matchesAssignee = task.assignedTo.some((member) => member.toLowerCase().includes(normalizedAssignee))
-        if (!matchesAssignee) {
-          return false
+        const mapped = docs.map((doc) => mapTaskDoc(doc.id, doc.data() as StoredTask))
+        const filtered = mapped.filter((task) => {
+          if (task.deletedAt) {
+            return false
+          }
+          if (clientIdFilter && task.clientId !== clientIdFilter) {
+            return false
+          }
+          if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) {
+            return false
+          }
+          if (assigneeFilter && assigneeFilter !== 'all') {
+            const normalizedAssignee = assigneeFilter.toLowerCase()
+            const matchesAssignee = task.assignedTo.some((member) => member.toLowerCase().includes(normalizedAssignee))
+            if (!matchesAssignee) {
+              return false
+            }
+          }
+          if (projectIdFilter && task.projectId !== projectIdFilter) {
+            return false
+          }
+
+          if (queryFilter && queryFilter.length > 0) {
+            const haystack = `${task.title} ${task.description ?? ''}`.toLowerCase()
+            if (!haystack.includes(queryFilter)) {
+              return false
+            }
+          }
+          return true
+        })
+
+        const tasks = filtered.slice(0, pageSize)
+        const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
+        const nextCursor = nextCursorDoc
+          ? (() => {
+              const createdAt = toISO(nextCursorDoc.get('createdAt'))
+              return createdAt ? `${createdAt}|${nextCursorDoc.id}` : null
+            })()
+          : null
+
+        const computed: TaskListResponse & { summary?: TaskSummary } = {
+          tasks,
+          nextCursor,
         }
-      }
-      if (projectIdFilter && task.projectId !== projectIdFilter) {
-        return false
-      }
 
-      if (queryFilter && queryFilter.length > 0) {
-        const haystack = `${task.title} ${task.description ?? ''}`.toLowerCase()
-        if (!haystack.includes(queryFilter)) {
-          return false
+        if (includeSummary) {
+          const summary = await tryBuildTaskSummary({
+            workspace,
+            statusFilter: statusFilter ?? null,
+            clientIdFilter: clientIdFilter ?? null,
+            projectIdFilter: projectIdFilter ?? null,
+            assigneeFilter: assigneeFilter ?? null,
+            queryFilter,
+          })
+
+          if (summary) {
+            computed.summary = summary
+          }
         }
-      }
-      return true
-    })
 
-    const tasks = filtered.slice(0, pageSize)
-    const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
-    const nextCursor = nextCursorDoc
-      ? (() => {
-          const createdAt = toISO(nextCursorDoc.get('createdAt'))
-          return createdAt ? `${createdAt}|${nextCursorDoc.id}` : null
-        })()
-      : null
-
-    const payload: TaskListResponse = {
-      tasks,
-      nextCursor,
-    }
-
-    serverCache.set(cacheKey, payload, TASKS_CACHE_TTL_MS)
+        return computed
+      },
+      TASKS_CACHE_TTL_MS
+    )
 
     return NextResponse.json(payload, {
       headers: buildCacheHeaders({ scope: 'private', maxAgeSeconds: 30, staleWhileRevalidateSeconds: 60 }),
@@ -240,7 +259,7 @@ export const POST = createApiHandler(
     const docRef = await workspace.tasksCollection.add(taskData)
     const task = mapTaskDoc(docRef.id, taskData as StoredTask)
 
-    invalidateTasksCache(workspace.workspaceId)
+    void invalidateTasksCache(workspace.workspaceId)
 
     const actorName = typeof auth.claims?.name === 'string'
       ? (auth.claims.name as string)
@@ -277,6 +296,7 @@ export type TaskCacheKeyInput = {
   projectIdFilter: string | null
   pageSize: number
   after: string | null
+  includeSummary: boolean
 }
 
 type TaskListResponse = {
@@ -284,22 +304,90 @@ type TaskListResponse = {
   nextCursor: string | null
 }
 
-export function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInput): string {
-  const parts = [
-    'tasks',
-    workspaceId,
-    filters.clientIdFilter ?? '*',
-    filters.projectIdFilter ?? '*',
-    filters.statusFilter ?? '*',
-    filters.assigneeFilter ?? '*',
-    filters.queryFilter ?? '*',
-    `${filters.pageSize}`,
-    filters.after ?? '*',
-  ]
-
-  return parts.map((part) => encodeURIComponent(part)).join('::')
+export type TaskSummary = {
+  total: number
+  overdue: number
+  dueSoon: number
+  highPriority: number
 }
 
-export function invalidateTasksCache(workspaceId: string): void {
-  serverCache.invalidatePrefix(`tasks::${encodeURIComponent(workspaceId)}`)
+async function tryBuildTaskSummary(input: {
+  workspace: WorkspaceContext
+  statusFilter: string | null
+  clientIdFilter: string | null
+  projectIdFilter: string | null
+  assigneeFilter: string | null
+  queryFilter: string | null
+}): Promise<TaskSummary | null> {
+  const { workspace, statusFilter, clientIdFilter, projectIdFilter, assigneeFilter, queryFilter } = input
+
+  // We can only compute accurate summary counts for filters that are representable in Firestore.
+  // - Text search is implemented client-side (string contains), so skip.
+  // - Assignee matching is substring-based, so skip unless it's unset or 'all'.
+  if (queryFilter) return null
+  if (assigneeFilter && assigneeFilter !== 'all') return null
+
+  const openStatuses: TaskStatus[] = ['todo', 'in-progress', 'review']
+  const now = Timestamp.now()
+  const soonCutoff = Timestamp.fromDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000))
+
+  try {
+    let base = workspace.tasksCollection.where('deletedAt', '==', null)
+
+    if (clientIdFilter) {
+      base = base.where('clientId', '==', clientIdFilter)
+    }
+
+    if (projectIdFilter) {
+      base = base.where('projectId', '==', projectIdFilter)
+    }
+
+    if (statusFilter && statusFilter !== 'all') {
+      // If the caller explicitly filters status, the summary should reflect that.
+      base = base.where('status', '==', statusFilter)
+    } else {
+      // Default dashboard expectation: “open tasks” excludes completed.
+      base = base.where('status', 'in', openStatuses)
+    }
+
+    const [totalSnap, overdueSnap, dueSoonSnap, highPriorityHighSnap, highPriorityUrgentSnap] = await Promise.all([
+      base.count().get(),
+      base.where('dueDate', '<', now).count().get(),
+      base.where('dueDate', '>=', now).where('dueDate', '<=', soonCutoff).count().get(),
+      base.where('priority', '==', 'high').count().get(),
+      base.where('priority', '==', 'urgent').count().get(),
+    ])
+
+    return {
+      total: totalSnap.data().count,
+      overdue: overdueSnap.data().count,
+      dueSoon: dueSoonSnap.data().count,
+      highPriority: highPriorityHighSnap.data().count + highPriorityUrgentSnap.data().count,
+    }
+  } catch (error) {
+    console.warn('[tasks] unable to compute summary counts', error)
+    return null
+  }
+}
+
+export function buildTasksCacheKey(workspaceId: string, filters: TaskCacheKeyInput): string {
+  // Keep key generation consistent across backends (and cheap to invalidate via prefix).
+  const signature = JSON.stringify({
+    clientId: filters.clientIdFilter,
+    projectId: filters.projectIdFilter,
+    status: filters.statusFilter,
+    assignee: filters.assigneeFilter,
+    query: filters.queryFilter,
+    pageSize: filters.pageSize,
+    after: filters.after,
+    includeSummary: filters.includeSummary,
+  })
+
+  return workspaceCacheKey(workspaceId, 'tasks', 'list', signature)
+}
+
+export async function invalidateTasksCache(workspaceId: string): Promise<void> {
+  // Tasks impact task lists and also project stats in /api/projects when includeStats=true.
+  await serverCache.invalidate(`${workspaceCacheKey(workspaceId, 'tasks')}:*`)
+  await serverCache.invalidate(`${workspaceCacheKey(workspaceId, 'projects', 'stats')}:*`)
 }

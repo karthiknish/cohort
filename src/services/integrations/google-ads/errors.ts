@@ -4,16 +4,14 @@
 
 import { GOOGLE_ADS_ERROR_CODES, GoogleAdsErrorDetail } from './types'
 
-export class GoogleAdsApiError extends Error {
+import { IntegrationApiErrorBase } from '../shared/api-error-base'
+
+export class GoogleAdsApiError extends IntegrationApiErrorBase {
   readonly httpStatus: number
   readonly grpcStatus?: string
   readonly errorCode?: string
   readonly requestId?: string
   readonly details?: GoogleAdsErrorDetail[]
-  readonly isRetryable: boolean
-  readonly isAuthError: boolean
-  readonly isRateLimitError: boolean
-  readonly retryAfterMs?: number
 
   constructor(options: {
     message: string
@@ -24,21 +22,6 @@ export class GoogleAdsApiError extends Error {
     details?: GoogleAdsErrorDetail[]
     retryAfterMs?: number
   }) {
-    super(options.message)
-    this.name = 'GoogleAdsApiError'
-    this.httpStatus = options.httpStatus
-    this.grpcStatus = options.grpcStatus
-    this.errorCode = options.errorCode
-    this.requestId = options.requestId
-    this.details = options.details
-    this.retryAfterMs = options.retryAfterMs
-
-    this.isAuthError = this.checkIsAuthError()
-    this.isRateLimitError = this.checkIsRateLimitError()
-    this.isRetryable = this.checkIsRetryable()
-  }
-
-  private checkIsAuthError(): boolean {
     const authErrors: string[] = [
       GOOGLE_ADS_ERROR_CODES.AUTHENTICATION_ERROR,
       GOOGLE_ADS_ERROR_CODES.AUTHORIZATION_ERROR,
@@ -47,45 +30,50 @@ export class GoogleAdsApiError extends Error {
       GOOGLE_ADS_ERROR_CODES.OAUTH_TOKEN_REVOKED,
       GOOGLE_ADS_ERROR_CODES.USER_PERMISSION_DENIED,
     ]
-    return this.httpStatus === 401 || 
-           this.httpStatus === 403 || 
-           (this.errorCode !== undefined && authErrors.includes(this.errorCode))
-  }
 
-  private checkIsRateLimitError(): boolean {
+    const isAuthError =
+      options.httpStatus === 401 ||
+      options.httpStatus === 403 ||
+      (options.errorCode !== undefined && authErrors.includes(options.errorCode))
+
     const rateLimitErrors: string[] = [
       GOOGLE_ADS_ERROR_CODES.RATE_EXCEEDED,
       GOOGLE_ADS_ERROR_CODES.RESOURCE_EXHAUSTED,
       GOOGLE_ADS_ERROR_CODES.RESOURCE_TEMPORARILY_EXHAUSTED,
     ]
-    return this.httpStatus === 429 || 
-           this.grpcStatus === 'RESOURCE_EXHAUSTED' ||
-           (this.errorCode !== undefined && rateLimitErrors.includes(this.errorCode))
-  }
+    const isRateLimitError =
+      options.httpStatus === 429 ||
+      options.grpcStatus === 'RESOURCE_EXHAUSTED' ||
+      (options.errorCode !== undefined && rateLimitErrors.includes(options.errorCode))
 
-  private checkIsRetryable(): boolean {
-    if (this.isRateLimitError) return true
-    if (this.httpStatus >= 500 && this.httpStatus < 600) return true
-    if (this.errorCode === GOOGLE_ADS_ERROR_CODES.TRANSIENT_ERROR ||
-        this.errorCode === GOOGLE_ADS_ERROR_CODES.INTERNAL_ERROR) {
-      return true
-    }
-    if (this.isAuthError) return false
-    return false
+    const isRetryable =
+      isRateLimitError ||
+      (options.httpStatus >= 500 && options.httpStatus < 600) ||
+      options.errorCode === GOOGLE_ADS_ERROR_CODES.TRANSIENT_ERROR ||
+      options.errorCode === GOOGLE_ADS_ERROR_CODES.INTERNAL_ERROR
+
+    super({
+      name: 'GoogleAdsApiError',
+      message: options.message,
+      isRetryable: isAuthError ? false : isRetryable,
+      isAuthError,
+      isRateLimitError,
+      retryAfterMs: options.retryAfterMs,
+    })
+
+    this.httpStatus = options.httpStatus
+    this.grpcStatus = options.grpcStatus
+    this.errorCode = options.errorCode
+    this.requestId = options.requestId
+    this.details = options.details
   }
 
   toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
+    return this.toJSONBase({
       httpStatus: this.httpStatus,
       grpcStatus: this.grpcStatus,
       errorCode: this.errorCode,
       requestId: this.requestId,
-      isRetryable: this.isRetryable,
-      isAuthError: this.isAuthError,
-      isRateLimitError: this.isRateLimitError,
-      retryAfterMs: this.retryAfterMs,
-    }
+    })
   }
 }

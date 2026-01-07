@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { LoaderCircle, Plus, Tag, X } from 'lucide-react'
+import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X } from 'lucide-react'
+import { format } from 'date-fns'
 
 import { apiFetch } from '@/lib/api-client'
 import { useAuth } from '@/contexts/auth-context'
@@ -29,7 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 
 type CreateProjectDialogProps = {
   onProjectCreated?: (project: ProjectRecord) => void
@@ -60,8 +68,8 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<ProjectStatus>('planning')
   const [clientId, setClientId] = useState<string>(selectedClientId ?? '')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
 
@@ -70,8 +78,8 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     setDescription('')
     setStatus('planning')
     setClientId(selectedClientId ?? '')
-    setStartDate('')
-    setEndDate('')
+    setStartDate(undefined)
+    setEndDate(undefined)
     setTags([])
     setTagInput('')
   }, [selectedClientId])
@@ -127,8 +135,8 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         status,
         clientId: clientId || undefined,
         clientName: selectedClientData?.name || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
+        endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
         tags,
       }
 
@@ -136,12 +144,12 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         method: 'POST',
         body: JSON.stringify(payload),
       })
- 
+
       toast({
         title: 'Project created!',
         description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
       })
- 
+
       onProjectCreated?.(createdProject)
       setOpen(false)
       resetForm()
@@ -248,26 +256,61 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="project-start-date">Start date</Label>
-                <Input
-                  id="project-start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  disabled={loading}
-                />
+                <Label>Start date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !startDate && 'text-muted-foreground'
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                      disabled={(date) => date < new Date('1900-01-01')}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="project-end-date">End date</Label>
-                <Input
-                  id="project-end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || undefined}
-                  disabled={loading}
-                />
+                <Label>End date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !endDate && 'text-muted-foreground'
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                      disabled={(date) =>
+                        (startDate ? date < startDate : false) || date < new Date('1900-01-01')
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 

@@ -29,6 +29,11 @@ export function summarizeTasks(tasks: TaskRecord[]): TaskSummary {
     return DEFAULT_TASK_SUMMARY
   }
 
+  const openTasks = tasks.filter((task) => task && task.status !== 'completed')
+  if (openTasks.length === 0) {
+    return DEFAULT_TASK_SUMMARY
+  }
+
   const now = Date.now()
   const soonCutoff = now + 3 * DAY_IN_MS
 
@@ -36,7 +41,7 @@ export function summarizeTasks(tasks: TaskRecord[]): TaskSummary {
   let dueSoon = 0
   let highPriority = 0
 
-  tasks.forEach((task) => {
+  openTasks.forEach((task) => {
     if (task.priority === 'high' || task.priority === 'urgent') {
       highPriority += 1
     }
@@ -55,7 +60,7 @@ export function summarizeTasks(tasks: TaskRecord[]): TaskSummary {
   })
 
   return {
-    total: tasks.length,
+    total: openTasks.length,
     overdue,
     dueSoon,
     highPriority,

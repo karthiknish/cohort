@@ -4,6 +4,15 @@ import { formatDate, toISO } from '@/lib/dates'
 import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 import { NormalizedMetric } from '@/types/integrations'
 
+import {
+  calculateBackoffDelay,
+  DEFAULT_RETRY_CONFIG,
+  isRetryableStatus,
+  parseRetryAfterMs,
+  sleep,
+  type RetryConfig,
+} from './shared/retry'
+
 // =============================================================================
 // META API ERROR CODES
 // Reference: https://developers.facebook.com/docs/marketing-api/error-reference
@@ -153,13 +162,6 @@ interface MetaAdsOptions {
   onTokenRefresh?: () => void
 }
 
-interface RetryConfig {
-  maxRetries: number
-  baseDelayMs: number
-  maxDelayMs: number
-  jitterFactor: number
-}
-
 type MetaInsightAction = {
   action_type?: string
   value?: unknown
@@ -233,13 +235,6 @@ type MetaAdsListResponse = {
 // UTILITY FUNCTIONS
 // =============================================================================
 
-const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelayMs: 1000,
-  maxDelayMs: 30000,
-  jitterFactor: 0.3,
-}
-
 function buildTimeRange(timeframeDays: number) {
   const today = new Date()
   const since = new Date(today)
@@ -258,38 +253,6 @@ type MetaPagingState = {
 
 const coerceNumber = (value: unknown): number => coerceNumberNullable(value) ?? 0
 
-function isRetryableStatus(status: number): boolean {
-  return status === 429 || (status >= 500 && status < 600)
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-/**
- * Calculate exponential backoff delay with jitter
- * Uses decorrelated jitter for better distribution
- */
-function calculateBackoffDelay(
-  attempt: number,
-  config: RetryConfig = DEFAULT_RETRY_CONFIG,
-  rateLimitRetryAfter?: number
-): number {
-  // If rate limit provides specific retry-after, use it
-  if (rateLimitRetryAfter && rateLimitRetryAfter > 0) {
-    return Math.min(rateLimitRetryAfter, config.maxDelayMs)
-  }
-
-  // Exponential backoff: base * 2^attempt
-  const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt)
-  
-  // Add jitter (randomization) to prevent thundering herd
-  const jitter = exponentialDelay * config.jitterFactor * Math.random()
-  
-  // Cap at max delay
-  return Math.min(exponentialDelay + jitter, config.maxDelayMs)
-}
-
 /**
  * Parse Meta API error response and create a typed error
  */
@@ -304,10 +267,7 @@ function parseMetaApiError(
   const error = errorData?.error ?? {}
   
   // Check for Retry-After header (in seconds)
-  const retryAfterHeader = response.headers.get('Retry-After')
-  const retryAfterMs = retryAfterHeader 
-    ? parseInt(retryAfterHeader, 10) * 1000 
-    : undefined
+  const retryAfterMs = parseRetryAfterMs(response.headers)
 
   return new MetaApiError({
     message: error.message ?? `Meta API error (${response.status})`,

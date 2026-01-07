@@ -15,6 +15,8 @@ import {
 
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { toErrorMessage } from '@/lib/error-utils'
 import {
   Card,
   CardContent,
@@ -102,7 +104,7 @@ export default function AdminTeamPage() {
         setUsers((prev) => (append ? [...prev, ...payload.users!] : payload.users!))
         setNextCursor(payload.nextCursor ?? null)
       } catch (err: unknown) {
-        const message = extractErrorMessage(err, 'Unable to fetch team members')
+        const message = toErrorMessage(err, 'Unable to fetch team members')
         setError(message)
         toast({ title: 'Failed to load team', description: message, variant: 'destructive' })
       } finally {
@@ -166,7 +168,7 @@ export default function AdminTeamPage() {
       setUsers((prev) => prev.map((record) => (record.id === userId ? { ...record, role } : record)))
       toast({ title: 'Role updated', description: `Member is now a ${role}.` })
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to update role')
+      const message = toErrorMessage(err, 'Unable to update role')
       setError(message)
       toast({ title: 'Role update failed', description: message, variant: 'destructive' })
     } finally {
@@ -205,7 +207,7 @@ export default function AdminTeamPage() {
         description: `Member is now ${nextStatus.replace('_', ' ')}.`,
       })
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to update status')
+      const message = toErrorMessage(err, 'Unable to update status')
       setError(message)
       toast({ title: 'Status update failed', description: message, variant: 'destructive' })
     } finally {
@@ -250,7 +252,7 @@ export default function AdminTeamPage() {
       setInviteEmail('')
       setInviteRole('team')
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to send invitation')
+      const message = toErrorMessage(err, 'Unable to send invitation')
       toast({ title: 'Invitation failed', description: message, variant: 'destructive' })
     } finally {
       setInviteSending(false)
@@ -582,27 +584,7 @@ function statusToVariant(status: UserStatus) {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) {
-    return '—'
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '—'
-  }
-  return date.toLocaleString()
-}
-
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
+  return formatDateLib(value, DATE_FORMATS.WITH_TIME, undefined, '—')
 }
 
 function ActionIcon({ status }: { status: UserStatus }) {

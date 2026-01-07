@@ -6,18 +6,18 @@ import {
   getAdIntegration,
   hasPendingSyncJob,
   markIntegrationSyncRequested,
-} from '@/lib/firestore-integrations-admin'
+} from '@/lib/firestore/admin'
 
 const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60 // every 6 hours
 const DEFAULT_TIMEFRAME_DAYS = 90
 
 function minutesSince(date: Date | null | undefined): number | null {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return null
-  
+
   const now = new Date()
   // Prevent future dates from bypassing rate limits
   if (date.getTime() > now.getTime()) return 0
-  
+
   return differenceInMinutes(now, date)
 }
 

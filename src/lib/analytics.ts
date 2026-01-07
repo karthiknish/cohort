@@ -1,4 +1,5 @@
 import type { Analytics } from 'firebase/analytics'
+import posthog from 'posthog-js'
 
 import { app } from './firebase'
 
@@ -54,6 +55,11 @@ export async function logAnalyticsEvent(eventName: string, parameters?: Analytic
 
   const { logEvent } = await import('firebase/analytics')
   logEvent(instance, eventName, parameters)
+
+  // PostHog integration
+  if (typeof window !== 'undefined') {
+    posthog.capture(eventName, parameters)
+  }
 }
 
 export async function logPageView(path: string, parameters?: AnalyticsParams): Promise<void> {
@@ -73,6 +79,14 @@ export async function logPageView(path: string, parameters?: AnalyticsParams): P
     ...defaultParams,
     ...parameters,
   })
+
+  // PostHog integration
+  if (typeof window !== 'undefined') {
+    posthog.capture('$pageview', {
+      ...defaultParams,
+      ...parameters,
+    })
+  }
 }
 
 export async function setAnalyticsUserId(userId: string | null): Promise<void> {
@@ -83,6 +97,15 @@ export async function setAnalyticsUserId(userId: string | null): Promise<void> {
 
   const { setUserId } = await import('firebase/analytics')
   setUserId(instance, userId ?? null)
+
+  // PostHog integration
+  if (typeof window !== 'undefined') {
+    if (userId) {
+      posthog.identify(userId)
+    } else {
+      posthog.reset()
+    }
+  }
 }
 
 export async function setAnalyticsUserProperties(properties: Record<string, string | number | null | undefined>): Promise<void> {

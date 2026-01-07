@@ -5,6 +5,8 @@ import { CircleAlert, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, Use
 
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { toErrorMessage } from '@/lib/error-utils'
 import {
   Card,
   CardContent,
@@ -101,7 +103,7 @@ export default function AdminUsersPage() {
         setUsers((prev) => (append ? [...prev, ...payload.users!] : payload.users!))
         setNextCursor(payload.nextCursor ?? null)
       } catch (err: unknown) {
-        const message = extractErrorMessage(err, 'Unable to load users')
+        const message = toErrorMessage(err, 'Unable to load users')
         setError(message)
         toast({ title: 'Admin error', description: message, variant: 'destructive' })
       } finally {
@@ -181,7 +183,7 @@ export default function AdminUsersPage() {
       setUsers((prev) => prev.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord)))
       toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` })
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to update role')
+      const message = toErrorMessage(err, 'Unable to update role')
       toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
@@ -221,7 +223,7 @@ export default function AdminUsersPage() {
       toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
       setRevokeOpen(false)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to update status')
+      const message = toErrorMessage(err, 'Unable to update status')
       toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
       setSavingId(null)
@@ -253,7 +255,7 @@ export default function AdminUsersPage() {
       setInviteEmail('')
       setInviteRole('team')
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to send invitation')
+      const message = toErrorMessage(err, 'Unable to send invitation')
       toast({ title: 'Invitation error', description: message, variant: 'destructive' })
     } finally {
       setInviteSending(false)
@@ -603,25 +605,5 @@ function statusToVariant(status: AdminUserStatus) {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) {
-    return '—'
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '—'
-  }
-  return date.toLocaleString()
-}
-
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
+  return formatDateLib(value, DATE_FORMATS.WITH_TIME, undefined, '—')
 }

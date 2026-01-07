@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageSquare } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -33,7 +33,7 @@ export function AgentModeButton({ onClick, isOpen, className }: AgentModeButtonP
             )}
             aria-label={isOpen ? 'Close Agent Mode' : 'Open Agent Mode'}
           >
-            <MessageSquare className={cn('h-6 w-6 transition-transform', isOpen && 'rotate-45')} />
+            <Sparkles className={cn('h-6 w-6 transition-transform', isOpen && 'rotate-45')} />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">

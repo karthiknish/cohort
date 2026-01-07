@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from 'sonner'
 import { MotionProvider } from '@/components/providers/motion-provider'
 import { AnalyticsProvider } from '@/components/providers/analytics-provider'
+import { PostHogProvider } from '@/components/providers/posthog-provider'
 import { PWAProvider } from '@/components/providers/pwa-provider'
 
 const geistSans = Geist({
@@ -62,14 +63,16 @@ export default function RootLayout({
                 <Suspense fallback={null}>
                   <ProjectProvider>
                     <AnalyticsProvider>
-                      <MotionProvider>
-                        <div className="flex min-h-screen flex-col">
-                          <SiteHeader />
-                          <main className="flex-1">{children}</main>
-                          <SiteFooter />
-                        </div>
-                        <PWAProvider />
-                      </MotionProvider>
+                      <PostHogProvider>
+                        <MotionProvider>
+                          <div className="flex min-h-screen flex-col">
+                            <SiteHeader />
+                            <main className="flex-1">{children}</main>
+                            <SiteFooter />
+                          </div>
+                          <PWAProvider />
+                        </MotionProvider>
+                      </PostHogProvider>
                     </AnalyticsProvider>
                   </ProjectProvider>
                 </Suspense>

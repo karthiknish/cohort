@@ -23,7 +23,7 @@ const amountSchema = z
 const createCostSchema = z.object({
   category: z.string().trim().min(1, 'Category is required').max(200),
   amount: amountSchema,
-  cadence: z.enum(['monthly', 'quarterly', 'annual']),
+  cadence: z.enum(['one-off', 'monthly', 'quarterly', 'annual']),
   currency: z.string().trim().min(3).max(3).toUpperCase().default('USD'),
   clientId: z
     .union([z.string().trim().min(1), z.null(), z.undefined()])
@@ -37,7 +37,7 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     category: typeof data.category === 'string' ? data.category : 'Uncategorized',
     amount: coerceNumber(data.amount) ?? 0,
-    cadence: cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
+    cadence: cadence === 'one-off' || cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
     currency: typeof data.currency === 'string' ? data.currency.toUpperCase() : 'USD',
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
@@ -45,7 +45,7 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
 }
 
 export const POST = createApiHandler(
-  { 
+  {
     adminOnly: true,
     workspace: 'required',
     bodySchema: createCostSchema,

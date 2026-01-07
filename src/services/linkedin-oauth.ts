@@ -1,5 +1,5 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore-integrations-admin'
+import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
 
 // =============================================================================
 // LINKEDIN OAUTH CONFIGURATION

@@ -1,5 +1,7 @@
 import { authService } from '@/services/auth'
 import { ApiClientError } from './user-friendly-error'
+import { CacheManager } from '@/lib/cache/cache-manager'
+import { MemoryCacheBackend } from '@/lib/cache/memory-backend'
 import {
   getPreviewClients,
   getPreviewFinanceSummary,
@@ -16,23 +18,10 @@ import {
 const inFlightRequests = new Map<string, Promise<any>>()
 
 // Short-lived response cache to prevent identical rapid-fire requests
-type CachedResponse = { data: any; expiresAt: number }
-const responseCache = new Map<string, CachedResponse>()
 const RESPONSE_CACHE_TTL_MS = 2000 // 2 seconds
-
-function getCachedResponse<T>(key: string): T | null {
-  const entry = responseCache.get(key)
-  if (!entry) return null
-  if (Date.now() > entry.expiresAt) {
-    responseCache.delete(key)
-    return null
-  }
-  return entry.data as T
-}
-
-function setCachedResponse<T>(key: string, data: T): void {
-  responseCache.set(key, { data, expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS })
-}
+const responseCache = new CacheManager(new MemoryCacheBackend({ maxEntries: 300 }), {
+  backendName: 'memory',
+})
 
 export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
   const method = init.method || 'GET'
@@ -96,7 +85,7 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
       // Fall through to live fetch.
     }
   }
-  
+
   // Only deduplicate GET requests to avoid side-effect issues
   const isDeduplicatable = method.toUpperCase() === 'GET'
   // Include preview mode state in cache key to prevent stale data when mode changes
@@ -105,7 +94,7 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
 
   // Check response cache first (for rapid-fire identical requests)
   if (isDeduplicatable) {
-    const cached = getCachedResponse<T>(cacheKey)
+    const cached = await responseCache.get<T>(cacheKey)
     if (cached !== null) {
       return cached
     }
@@ -135,6 +124,10 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
           headers,
         })
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw error
+        }
+
         if (attempt < 2 && isDeduplicatable) {
           await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000))
           return executeRequest(attempt + 1)
@@ -164,12 +157,12 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
       // Handle standardized envelope { success: true, data: T }
       if (isEnvelope && 'data' in payload) {
         const result = payload.data as T
-        if (isDeduplicatable) setCachedResponse(cacheKey, result)
+        if (isDeduplicatable) void responseCache.set(cacheKey, result, RESPONSE_CACHE_TTL_MS)
         return result
       }
 
       // Backward compatibility: return payload directly
-      if (isDeduplicatable) setCachedResponse(cacheKey, payload as T)
+      if (isDeduplicatable) void responseCache.set(cacheKey, payload as T, RESPONSE_CACHE_TTL_MS)
       return payload as T
     } catch (error) {
       if (attempt < 2 && (error as any).code === 'NETWORK_ERROR' && isDeduplicatable) {

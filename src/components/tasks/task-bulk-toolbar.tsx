@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { CalendarClock, CheckSquare, Filter, ListChecks, Trash2 } from 'lucide-react'
+import { CalendarClock, CheckSquare, Filter, ListChecks, Trash2, Calendar as CalendarIcon } from 'lucide-react'
+import { format, parseISO, isValid } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
 import { TaskStatus, TASK_STATUSES } from '@/types/tasks'
 
 export type TaskBulkToolbarProps = {
@@ -58,7 +66,7 @@ export function TaskBulkToolbar({
   onBulkDelete,
 }: TaskBulkToolbarProps) {
   const [assignInput, setAssignInput] = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
   const masterRef = useRef<HTMLInputElement | null>(null)
 
   const selectAllLabel = useMemo(() => {
@@ -148,21 +156,47 @@ export function TaskBulkToolbar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Label htmlFor="bulk-due" className="text-xs text-muted-foreground">
+          <Label className="text-xs text-muted-foreground whitespace-nowrap">
             Due date
           </Label>
-          <Input
-            id="bulk-due"
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            className="h-9 w-[160px]"
-            disabled={!hasSelection || bulkActive}
-          />
-          <Button size="sm" variant="outline" onClick={() => onBulkDueDate(dueDate || null)} disabled={!hasSelection || bulkActive}>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'w-[160px] h-9 justify-start text-left font-normal',
+                  !dueDate && 'text-muted-foreground'
+                )}
+                disabled={!hasSelection || bulkActive}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dueDate ? format(dueDate, 'PP') : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dueDate}
+                onSelect={setDueDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onBulkDueDate(dueDate ? format(dueDate, 'yyyy-MM-dd') : null)}
+            disabled={!hasSelection || bulkActive || !dueDate}
+          >
             Update
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => { setDueDate(''); onBulkDueDate(null) }} disabled={!hasSelection || bulkActive}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setDueDate(undefined); onBulkDueDate(null) }}
+            disabled={!hasSelection || bulkActive}
+          >
             Clear date
           </Button>
         </div>

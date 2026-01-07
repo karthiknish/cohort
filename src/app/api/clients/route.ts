@@ -33,6 +33,7 @@ const addTeamMemberSchema = z.object({
 const paginationQuerySchema = z.object({
   pageSize: z.string().optional(),
   after: z.string().optional(),
+  includeTotals: z.string().optional(),
 })
 
 function slugify(value: string): string {
@@ -121,6 +122,7 @@ export const GET = createApiHandler(
     
     const pageSize = Math.min(Math.max(Number(query.pageSize) || 50, 1), 100)
     const afterParam = query.after
+    const includeTotals = query.includeTotals === 'true' || query.includeTotals === '1'
 
     let baseQuery = workspace.clientsCollection
       .where('deletedAt', '==', null)
@@ -246,7 +248,17 @@ export const GET = createApiHandler(
       nextCursor = `${lastData.name ?? ''}|${lastDoc.id}`
     }
 
-    return { clients, nextCursor }
+    const totalsAgg = includeTotals
+      ? await workspace.clientsCollection.where('deletedAt', '==', null).count().get()
+      : null
+
+    const total = includeTotals
+      ? typeof totalsAgg?.data().count === 'number'
+        ? totalsAgg.data().count
+        : 0
+      : undefined
+
+    return { clients, nextCursor, ...(includeTotals ? { total } : {}) }
   }
 )
 

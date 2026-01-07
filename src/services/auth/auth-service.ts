@@ -1,5 +1,5 @@
 import { auth, db } from '@/lib/firebase'
-import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore-integrations'
+import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore/client'
 import { doc, getDoc } from 'firebase/firestore'
 import {
   signInWithEmailAndPassword,
@@ -33,6 +33,7 @@ import {
 import { getFriendlyAuthErrorMessage } from './error-utils'
 import { isValidRedirectUrl } from '@/lib/utils'
 import { toISO } from '@/lib/dates'
+import { sleep } from '@/lib/retry-utils'
 
 export class AuthService {
   private static instance: AuthService
@@ -84,14 +85,14 @@ export class AuthService {
       try {
         await this.getIdToken(true)
       } catch (error) {
-        const isNetworkError = 
+        const isNetworkError =
           (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
           (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'auth/network-request-failed')
 
         if (!isNetworkError) {
           console.error('Background token refresh failed:', error)
         }
-        
+
         // Retry in 1 minute regardless of error type
         this.refreshTimeout = setTimeout(() => this.scheduleTokenRefresh(firebaseUser), 60000)
       }
@@ -292,8 +293,6 @@ export class AuthService {
       const LOCK_TTL_MS = 60_000
       const MAX_WAIT_MS = 15_000
       const HEARTBEAT_MS = 10_000
-
-      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
       const ownerId = (() => {
         try {
@@ -807,7 +806,7 @@ export class AuthService {
 
       const normalizedEmail = email.trim().toLowerCase()
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
-      const actionCodeSettings = { 
+      const actionCodeSettings = {
         url: `${appUrl}/auth/reset`,
         handleCodeInApp: true
       }

@@ -1,6 +1,7 @@
 import { decrypt, encrypt } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore-integrations-admin'
+import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
+import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 
 interface MetaOAuthContext {
   state: string
@@ -15,17 +16,11 @@ const OAUTH_RETRY_CONFIG = {
   maxRetries: 3,
   baseDelayMs: 500,
   maxDelayMs: 5000,
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  jitterFactor: 0.2,
 }
 
 function calculateBackoffDelay(attempt: number): number {
-  const { baseDelayMs, maxDelayMs } = OAUTH_RETRY_CONFIG
-  const exponentialDelay = baseDelayMs * Math.pow(2, attempt)
-  const jitter = exponentialDelay * 0.2 * Math.random()
-  return Math.min(exponentialDelay + jitter, maxDelayMs)
+  return calculateBackoffDelayLib(attempt, OAUTH_RETRY_CONFIG)
 }
 
 type MetaOAuthStatePayload = Omit<MetaOAuthContext, 'createdAt'> & { createdAt?: number }
@@ -125,7 +120,7 @@ export async function completeMetaOAuthFlow(options: {
       if (!longLivedResponse.ok) {
         const errorPayload = await longLivedResponse.text()
         let parsedError: { error?: { message?: string; code?: number } } = {}
-        
+
         try {
           parsedError = JSON.parse(errorPayload)
         } catch {
@@ -134,36 +129,36 @@ export async function completeMetaOAuthFlow(options: {
 
         const errorMessage = parsedError?.error?.message ?? errorPayload
         const isRetryable = longLivedResponse.status >= 500 || longLivedResponse.status === 429
-        
+
         if (isRetryable && attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
           console.warn(`[Meta OAuth] Long-lived token exchange attempt ${attempt + 1} failed (${longLivedResponse.status}), retrying...`)
           await sleep(calculateBackoffDelay(attempt))
           continue
         }
-        
+
         // If we can't get long-lived token, we can still proceed with short-lived
         console.warn(`[Meta OAuth] Failed to get long-lived token, using short-lived: ${errorMessage}`)
         break
       }
 
       const extended = (await longLivedResponse.json()) as { access_token?: string; expires_in?: number }
-      
+
       if (extended.access_token) {
         longLivedToken = extended.access_token
         expiresIn = extended.expires_in
         console.log(`[Meta OAuth] Successfully obtained long-lived token, expires in ${expiresIn} seconds`)
       }
-      
+
       break
     } catch (networkError) {
       const message = networkError instanceof Error ? networkError.message : 'Network error'
       console.warn(`[Meta OAuth] Network error on attempt ${attempt + 1}: ${message}`)
-      
+
       if (attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
         await sleep(calculateBackoffDelay(attempt))
         continue
       }
-      
+
       // Use short-lived token if long-lived exchange fails
       console.warn('[Meta OAuth] All attempts to get long-lived token failed, using short-lived token')
       break

@@ -3,6 +3,8 @@
  * Distinguishes network errors from API errors for better UX.
  */
 
+import { sleepWithSignal } from '@/lib/retry-utils'
+
 // =============================================================================
 // ERROR TYPES
 // =============================================================================
@@ -92,24 +94,7 @@ function calculateDelay(attempt: number, baseDelay: number, maxDelay: number): n
   return Math.min(jitter, maxDelay)
 }
 
-/**
- * Sleep for a specified duration, respecting abort signal.
- */
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException('Aborted', 'AbortError'))
-      return
-    }
 
-    const timeoutId = setTimeout(resolve, ms)
-
-    signal?.addEventListener('abort', () => {
-      clearTimeout(timeoutId)
-      reject(new DOMException('Aborted', 'AbortError'))
-    }, { once: true })
-  })
-}
 
 /**
  * Check if an error is a network error (fetch failed entirely).
@@ -217,7 +202,7 @@ export async function retryFetch(
       // Calculate delay and wait before retry
       const delayMs = calculateDelay(attempt, baseDelayMs, maxDelayMs)
       onRetry?.(attempt + 1, apiError, delayMs)
-      await sleep(delayMs, signal)
+      await sleepWithSignal(delayMs, signal)
 
     } catch (error) {
       // Check if it's an abort
@@ -241,7 +226,7 @@ export async function retryFetch(
         // Wait before retry
         const delayMs = calculateDelay(attempt, baseDelayMs, maxDelayMs)
         onRetry?.(attempt + 1, networkError, delayMs)
-        await sleep(delayMs, signal)
+        await sleepWithSignal(delayMs, signal)
         continue
       }
 

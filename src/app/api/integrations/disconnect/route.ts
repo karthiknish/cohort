@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { deleteAdIntegration } from '@/lib/firestore-integrations-admin'
+import { deleteAdIntegration } from '@/lib/firestore/admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError } from '@/lib/api-errors'
 import { logAuditAction } from '@/lib/audit-logger'

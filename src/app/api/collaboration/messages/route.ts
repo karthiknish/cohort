@@ -61,16 +61,18 @@ const createMessageSchema = z
       .trim()
       .min(1)
       .max(120)
+      .nullable()
       .optional(),
     projectId: z
       .string()
       .trim()
       .min(1)
       .max(120)
+      .nullable()
       .optional(),
     // senderName and senderRole are now derived from auth context - ignored if sent
-    senderName: z.string().trim().max(120).optional(),
-    senderRole: z.string().trim().max(120).optional(),
+    senderName: z.string().trim().max(120).nullable().optional(),
+    senderRole: z.string().trim().max(120).nullable().optional(),
     content: z.string().trim().min(1).max(2000),
     attachments: z.array(attachmentSchema).max(5).optional(),
     format: messageFormatSchema.optional(),
@@ -87,7 +89,10 @@ const createMessageSchema = z
       return
     }
 
-    if (value.channelType === 'client' && !value.clientId) {
+    const hasClientId = typeof value.clientId === 'string' && value.clientId.length > 0
+    const hasProjectId = typeof value.projectId === 'string' && value.projectId.length > 0
+
+    if (value.channelType === 'client' && !hasClientId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'clientId is required for client channels',
@@ -96,14 +101,14 @@ const createMessageSchema = z
     }
 
     if (value.channelType === 'project') {
-      if (!value.projectId) {
+      if (!hasProjectId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'projectId is required for project channels',
           path: ['projectId'],
         })
       }
-    } else if (value.projectId) {
+    } else if (hasProjectId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'projectId is only allowed for project channels',
@@ -190,8 +195,8 @@ export function mapMessageDoc(docId: string, data: StoredMessage): Collaboration
 
   const attachments = Array.isArray(data.attachments)
     ? data.attachments
-        .map((item) => sanitizeAttachment(item))
-        .filter((item): item is CollaborationAttachment => Boolean(item))
+      .map((item) => sanitizeAttachment(item))
+      .filter((item): item is CollaborationAttachment => Boolean(item))
     : undefined
 
   const deletedAt = toISO(data.deletedAt)
@@ -228,13 +233,13 @@ export function mapMessageDoc(docId: string, data: StoredMessage): Collaboration
     format: parseMessageFormat(data.format),
     mentions: Array.isArray(data.mentions)
       ? data.mentions
-          .map((entry) => sanitizeMention(entry))
-          .filter((entry): entry is CollaborationMention => Boolean(entry))
+        .map((entry) => sanitizeMention(entry))
+        .filter((entry): entry is CollaborationMention => Boolean(entry))
       : undefined,
     reactions: Array.isArray(data.reactions)
       ? data.reactions
-          .map((entry) => sanitizeReaction(entry))
-          .filter((entry): entry is CollaborationReaction => Boolean(entry))
+        .map((entry) => sanitizeReaction(entry))
+        .filter((entry): entry is CollaborationReaction => Boolean(entry))
       : undefined,
     parentMessageId,
     threadRootId,
@@ -306,9 +311,9 @@ export const GET = createApiHandler(
       const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
       const nextCursor = nextCursorDoc
         ? (() => {
-            const rawCreated = toISO(nextCursorDoc.get('createdAt'))
-            return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
-          })()
+          const rawCreated = toISO(nextCursorDoc.get('createdAt'))
+          return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
+        })()
         : null
 
       return { messages, nextCursor }
@@ -366,9 +371,9 @@ export const GET = createApiHandler(
     const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
     const nextCursor = nextCursorDoc
       ? (() => {
-          const rawCreated = toISO(nextCursorDoc.get('createdAt'))
-          return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
-        })()
+        const rawCreated = toISO(nextCursorDoc.get('createdAt'))
+        return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
+      })()
       : null
 
     return { messages, nextCursor }
@@ -380,6 +385,7 @@ export const POST = createApiHandler(
     workspace: 'required',
     bodySchema: createMessageSchema,
     rateLimit: { maxRequests: 10, windowMs: 10_000 },
+    skipIdempotency: true,
   },
   async (req, { auth, workspace, body: payload }) => {
     if (!workspace) throw new Error('Workspace context missing')
@@ -455,6 +461,8 @@ export const POST = createApiHandler(
       threadLastReplyAt: null,
     })
 
+    console.log('[collaboration.POST] Message created successfully:', docRef.id)
+
     if (!isThreadRoot && threadRootId) {
       try {
         await workspace.collaborationCollection.doc(threadRootId).update({
@@ -486,6 +494,35 @@ export const POST = createApiHandler(
       })
     } catch (notificationError) {
       console.error('[collaboration/messages] workspace notification failed', notificationError)
+    }
+
+    // Send Brevo email notifications for @mentions
+    if (message.mentions && message.mentions.length > 0) {
+      try {
+        const { notifyMentionEmail } = await import('@/lib/notifications')
+        const snippet = message.content.length > 150 ? `${message.content.slice(0, 147)}…` : message.content
+
+        for (const mention of message.mentions) {
+          // Try to find user email from the mention slug (which could be a userId)
+          const { adminDb } = await import('@/lib/firebase-admin')
+          const userDoc = await adminDb.collection('users').doc(mention.slug).get()
+          const userData = userDoc.data()
+          const userEmail = typeof userData?.email === 'string' ? userData.email : null
+
+          if (userEmail) {
+            await notifyMentionEmail({
+              recipientEmail: userEmail,
+              recipientName: mention.name,
+              mentionedBy: actorName ?? 'Someone',
+              messageSnippet: snippet,
+              channelType: message.channelType,
+              clientName: resolvedClientId ? payload.clientId ?? null : null,
+            })
+          }
+        }
+      } catch (emailError) {
+        console.error('[collaboration/messages] Brevo mention email failed', emailError)
+      }
     }
 
     return NextResponse.json(apiSuccess({ message }), { status: 201 })

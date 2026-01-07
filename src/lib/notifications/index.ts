@@ -60,3 +60,20 @@ export {
 
 // Health check
 export { checkNotificationHealth } from './health'
+
+// Brevo email notifications
+export {
+  BREVO_API_KEY,
+  BREVO_SENDER_EMAIL,
+  BREVO_SENDER_NAME,
+  sendTransactionalEmail,
+  notifyInvoicePaidEmail,
+  notifyInvoiceSentEmail,
+  notifyProjectCreatedEmail,
+  notifyTaskAssignedEmail,
+  notifyMentionEmail,
+  notifyProposalReadyEmail,
+  checkBrevoHealth,
+  type BrevoEmailResult,
+  type BrevoSendOptions,
+} from './brevo'

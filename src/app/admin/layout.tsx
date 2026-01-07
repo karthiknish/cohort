@@ -14,8 +14,9 @@ import {
   Users,
 } from 'lucide-react'
 
-import { AuthProvider } from '@/contexts/auth-context'
 import { ProtectedRoute } from '@/components/protected-route'
+import { NavigationProvider } from '@/contexts/navigation-context'
+import { AgentMode } from '@/components/agent-mode'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -98,14 +99,14 @@ function AdminNav() {
 
 function AdminBreadcrumb() {
   const pathname = usePathname()
-  
+
   const getBreadcrumbs = () => {
     const segments = pathname.split('/').filter(Boolean)
     const breadcrumbs: { title: string; href: string }[] = []
-    
+
     if (segments[0] === 'admin') {
       breadcrumbs.push({ title: 'Admin', href: '/admin' })
-      
+
       if (segments[1]) {
         const navItem = adminNavItems.find(item => item.href === `/admin/${segments[1]}`)
         if (navItem) {
@@ -113,12 +114,12 @@ function AdminBreadcrumb() {
         }
       }
     }
-    
+
     return breadcrumbs
   }
 
   const breadcrumbs = getBreadcrumbs()
-  
+
   if (breadcrumbs.length <= 1) return null
 
   return (
@@ -149,16 +150,17 @@ function AdminBreadcrumb() {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
-      <ProtectedRoute requiredRole="admin">
-        <div className="min-h-screen bg-background">
-          <AdminNav />
-          <AdminBreadcrumb />
-          <main className="pb-8">
-            {children}
+    <ProtectedRoute requiredRole="admin">
+      <NavigationProvider>
+        <div className="relative min-h-screen bg-background">
+          <main className="min-h-screen">
+            <AdminNav />
+            <AdminBreadcrumb />
+            <div className="px-6 py-6">{children}</div>
           </main>
+          <AgentMode />
         </div>
-      </ProtectedRoute>
-    </AuthProvider>
+      </NavigationProvider>
+    </ProtectedRoute>
   )
 }

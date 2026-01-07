@@ -3,7 +3,7 @@ import { z } from 'zod'
 import {
   getAdIntegration,
   updateIntegrationCredentials,
-} from '@/lib/firestore-integrations-admin'
+} from '@/lib/firestore/admin'
 import {
   ensureMetaAccessToken,
   IntegrationTokenError,

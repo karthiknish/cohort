@@ -1,11 +1,9 @@
 import { formatDistanceToNow } from 'date-fns'
 
 import { DISPLAY_DATE_FORMATTER, FREQUENCY_OPTIONS, TIMEFRAME_OPTIONS } from './constants'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { getErrorMessage } from '@/lib/error-utils'
 
-export function getErrorMessage(error: unknown, fallback: string): string {
-    return formatUserFacingErrorMessage(error, fallback)
-}
+export { getErrorMessage }
 
 export function formatRelativeTimestamp(iso?: string | null): string {
     if (!iso) {

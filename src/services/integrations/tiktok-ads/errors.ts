@@ -4,14 +4,12 @@
 
 import { TIKTOK_ERROR_CODES } from './types'
 
-export class TikTokApiError extends Error {
+import { IntegrationApiErrorBase } from '../shared/api-error-base'
+
+export class TikTokApiError extends IntegrationApiErrorBase {
   readonly httpStatus: number
   readonly errorCode: number
   readonly requestId?: string
-  readonly isRetryable: boolean
-  readonly isAuthError: boolean
-  readonly isRateLimitError: boolean
-  readonly retryAfterMs?: number
 
   constructor(options: {
     message: string
@@ -20,66 +18,53 @@ export class TikTokApiError extends Error {
     requestId?: string
     retryAfterMs?: number
   }) {
-    super(options.message)
-    this.name = 'TikTokApiError'
-    this.httpStatus = options.httpStatus
-    this.errorCode = options.errorCode
-    this.requestId = options.requestId
-    this.retryAfterMs = options.retryAfterMs
-
-    this.isAuthError = this.checkIsAuthError()
-    this.isRateLimitError = this.checkIsRateLimitError()
-    this.isRetryable = this.checkIsRetryable()
-  }
-
-  private checkIsAuthError(): boolean {
     const authErrors: number[] = [
       TIKTOK_ERROR_CODES.UNAUTHORIZED,
       TIKTOK_ERROR_CODES.ACCESS_TOKEN_INVALID,
       TIKTOK_ERROR_CODES.ACCESS_TOKEN_EXPIRED,
       TIKTOK_ERROR_CODES.TOKEN_REVOKED,
     ]
-    return this.httpStatus === 401 || 
-           this.httpStatus === 403 || 
-           (this.errorCode !== undefined && authErrors.includes(this.errorCode))
-  }
+    const isAuthError =
+      options.httpStatus === 401 ||
+      options.httpStatus === 403 ||
+      authErrors.includes(options.errorCode)
 
-  private checkIsRateLimitError(): boolean {
     const rateLimitErrors: number[] = [
       TIKTOK_ERROR_CODES.RATE_LIMIT_EXCEEDED,
       TIKTOK_ERROR_CODES.QPS_LIMIT,
       TIKTOK_ERROR_CODES.DAILY_LIMIT,
     ]
-    return this.httpStatus === 429 || 
-           (this.errorCode !== undefined && rateLimitErrors.includes(this.errorCode))
-  }
+    const isRateLimitError = options.httpStatus === 429 || rateLimitErrors.includes(options.errorCode)
 
-  private checkIsRetryable(): boolean {
-    if (this.isRateLimitError) return true
-    if (this.httpStatus >= 500 && this.httpStatus < 600) return true
-    
     const serverErrors: number[] = [
       TIKTOK_ERROR_CODES.INTERNAL_ERROR,
       TIKTOK_ERROR_CODES.SERVICE_UNAVAILABLE,
       TIKTOK_ERROR_CODES.GATEWAY_TIMEOUT,
     ]
-    if (this.errorCode !== undefined && serverErrors.includes(this.errorCode)) return true
-    if (this.isAuthError) return false
-    
-    return false
+    const isRetryable =
+      isRateLimitError ||
+      (options.httpStatus >= 500 && options.httpStatus < 600) ||
+      serverErrors.includes(options.errorCode)
+
+    super({
+      name: 'TikTokApiError',
+      message: options.message,
+      isRetryable: isAuthError ? false : isRetryable,
+      isAuthError,
+      isRateLimitError,
+      retryAfterMs: options.retryAfterMs,
+    })
+
+    this.httpStatus = options.httpStatus
+    this.errorCode = options.errorCode
+    this.requestId = options.requestId
   }
 
   toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
+    return this.toJSONBase({
       httpStatus: this.httpStatus,
       errorCode: this.errorCode,
       requestId: this.requestId,
-      isRetryable: this.isRetryable,
-      isAuthError: this.isAuthError,
-      isRateLimitError: this.isRateLimitError,
-      retryAfterMs: this.retryAfterMs,
-    }
+    })
   }
 }

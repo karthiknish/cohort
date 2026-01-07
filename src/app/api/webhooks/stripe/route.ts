@@ -48,7 +48,7 @@ export const POST = createApiHandler({ auth: 'none', rateLimit: 'standard' }, as
   // Idempotency check: ensure we haven't processed this event before
   const processedRef = adminDb.collection('_stripeWebhookEvents').doc(event.id)
   const processedSnap = await processedRef.get()
-  
+
   if (processedSnap.exists) {
     // Already processed this event, return success to prevent retries
     console.log(`[stripe-webhook] Event ${event.id} already processed, skipping`)
@@ -146,6 +146,32 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, eventType: string) {
     currency,
     invoiceNumber: invoice.number,
   })
+
+  // Send Brevo email notification to admin
+  try {
+    const { notifyInvoicePaidEmail } = await import('@/lib/notifications')
+    // Get admin email from workspace or use fallback
+    const workspaceDoc = await adminDb.collection('workspaces').doc(workspaceId).get()
+    const workspaceData = workspaceDoc.data()
+    const adminEmail = typeof workspaceData?.adminEmail === 'string' ? workspaceData.adminEmail : null
+
+    if (adminEmail) {
+      const formattedAmount = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency.toUpperCase(),
+      }).format(amountPaid / 100)
+
+      await notifyInvoicePaidEmail({
+        recipientEmail: adminEmail,
+        clientName,
+        amount: formattedAmount,
+        invoiceNumber: invoice.number,
+        paidAt: new Date().toLocaleDateString(),
+      })
+    }
+  } catch (emailError) {
+    console.error('[stripe-webhook] Failed to send Brevo email for invoice paid', emailError)
+  }
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, eventType: string) {

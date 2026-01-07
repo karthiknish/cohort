@@ -21,6 +21,8 @@ export const GET = createApiHandler(
     const sizeParam = url.searchParams.get('pageSize')
     const pageSize = Math.min(Math.max(Number(sizeParam) || 20, 1), 100)
     const afterParam = url.searchParams.get('after') ?? url.searchParams.get('cursor')
+    const includeTotalsParam = url.searchParams.get('includeTotals')
+    const includeTotals = includeTotalsParam === 'true' || includeTotalsParam === '1'
 
     let messagesQuery = adminDb
       .collection('contactMessages')
@@ -47,7 +49,22 @@ export const GET = createApiHandler(
       }
     }
 
-    const snapshot = await messagesQuery.get()
+    const startOfTodayUtc = (() => {
+      const now = new Date()
+      now.setUTCHours(0, 0, 0, 0)
+      return Timestamp.fromDate(now)
+    })()
+
+    const [snapshot, totalsAgg, pendingAgg, todayAgg] = await Promise.all([
+      messagesQuery.get(),
+      includeTotals ? adminDb.collection('contactMessages').count().get() : Promise.resolve(null),
+      includeTotals
+        ? adminDb.collection('contactMessages').where('status', '==', 'new').count().get()
+        : Promise.resolve(null),
+      includeTotals
+        ? adminDb.collection('contactMessages').where('createdAt', '>=', startOfTodayUtc).count().get()
+        : Promise.resolve(null),
+    ])
 
     const results = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>
@@ -74,7 +91,15 @@ export const GET = createApiHandler(
       }
     }
 
-    return { messages: results, nextCursor }
+    if (!includeTotals) {
+      return { messages: results, nextCursor }
+    }
+
+    const total = typeof totalsAgg?.data().count === 'number' ? totalsAgg.data().count : 0
+    const pendingTotal = typeof pendingAgg?.data().count === 'number' ? pendingAgg.data().count : 0
+    const todayTotal = typeof todayAgg?.data().count === 'number' ? todayAgg.data().count : 0
+
+    return { messages: results, nextCursor, total, pendingTotal, todayTotal }
   }
 )
 

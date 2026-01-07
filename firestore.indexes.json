@@ -367,10 +367,6 @@
         {
           "fieldPath": "updatedAt",
           "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "DESCENDING"
         }
       ]
     },
@@ -385,9 +381,23 @@
         {
           "fieldPath": "updatedAt",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "__name__",
+          "fieldPath": "clientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
           "order": "DESCENDING"
         }
       ]
@@ -396,6 +406,28 @@
       "collectionGroup": "projects",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "clientId",
           "order": "ASCENDING"
@@ -406,10 +438,6 @@
         },
         {
           "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
       ]
@@ -471,6 +499,94 @@
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -712,6 +828,20 @@
         },
         {
           "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "agentConversations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastMessageAt",
           "order": "DESCENDING"
         }
       ]

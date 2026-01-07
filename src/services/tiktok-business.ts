@@ -1,5 +1,5 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
-import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore-integrations-admin'
+import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/firestore/admin'
 import { fetchTikTokAdAccounts, TikTokAdAccount } from '@/services/integrations/tiktok-ads'
 
 const STATE_TTL_MS = 5 * 60 * 1000
@@ -113,8 +113,8 @@ export async function exchangeTikTokCodeForToken(options: {
   const scopesArray = Array.isArray(data.scope)
     ? data.scope
     : typeof data.scope === 'string'
-    ? data.scope.split(',').map((scope) => scope.trim()).filter(Boolean)
-    : []
+      ? data.scope.split(',').map((scope) => scope.trim()).filter(Boolean)
+      : []
 
   return {
     accessToken: data.access_token,

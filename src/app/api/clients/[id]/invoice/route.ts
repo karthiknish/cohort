@@ -80,7 +80,7 @@ function resolveInvoiceDueDate(invoice: StripeInvoiceLike, fallbackIso: string |
 }
 
 export const POST = createApiHandler(
-  { 
+  {
     adminOnly: true,
     workspace: 'required',
     bodySchema: invoiceSchema,
@@ -281,6 +281,25 @@ export const POST = createApiHandler(
           invoiceNumber: invoice.number,
           invoiceUrl: invoice.hosted_invoice_url ?? null,
         })
+
+        // Send Brevo email notification to admin
+        const { notifyInvoiceSentEmail } = await import('@/lib/notifications')
+        const adminEmail = auth.email
+        if (adminEmail) {
+          const formattedAmount = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: (invoice.currency ?? 'usd').toUpperCase(),
+          }).format(amountDueCents / 100)
+          await notifyInvoiceSentEmail({
+            recipientEmail: adminEmail,
+            recipientName: typeof auth.claims?.name === 'string' ? auth.claims.name : undefined,
+            clientName,
+            amount: formattedAmount,
+            invoiceNumber: invoice.number,
+            dueDate: responseDueDate ? new Date(responseDueDate).toLocaleDateString() : null,
+            invoiceUrl: invoice.hosted_invoice_url ?? null,
+          })
+        }
       } catch (notifyError) {
         console.error('[clients] Failed to send invoice notifications', notifyError)
       }

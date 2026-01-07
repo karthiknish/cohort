@@ -9,11 +9,22 @@ const DEFAULT_TIMEZONE = process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'UTC'
 export function formatDate(
   date: Date | string | number | null | undefined,
   formatStr = 'PPP',
-  timeZone = DEFAULT_TIMEZONE
+  timeZone = DEFAULT_TIMEZONE,
+  fallback = ''
 ): string {
-  if (!date) return ''
-  const d = typeof date === 'string' ? parseISO(date) : new Date(date)
-  if (!isValid(d)) return ''
+  if (!date) return fallback
+  const d = typeof date === 'string'
+    ? (() => {
+        const trimmed = date.trim()
+        if (!trimmed) return new Date('')
+
+        const isoParsed = parseISO(trimmed)
+        if (isValid(isoParsed)) return isoParsed
+
+        return new Date(trimmed)
+      })()
+    : new Date(date)
+  if (!isValid(d)) return fallback
   
   return formatInTimeZone(d, timeZone, formatStr)
 }

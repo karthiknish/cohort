@@ -13,7 +13,12 @@ import {
   Calendar,
   Receipt,
   MoreHorizontal,
+  Calendar as CalendarIcon,
 } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { toErrorMessage } from '@/lib/error-utils'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,7 +53,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar as ShadcnCalendar } from '@/components/ui/calendar'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -86,12 +98,7 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
 }
 
 function formatDate(dateString: string | null): string {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return formatDateLib(dateString, DATE_FORMATS.SHORT, undefined, 'N/A')
 }
 
 export function RecurringInvoicesCard() {
@@ -115,7 +122,7 @@ export function RecurringInvoicesCard() {
   const [frequency, setFrequency] = useState<RecurringFrequency>('monthly')
   const [dayOfMonth, setDayOfMonth] = useState('1')
   const [dayOfWeek, setDayOfWeek] = useState('1')
-  const [startDate, setStartDate] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
 
   const loadSchedules = useCallback(async () => {
     try {
@@ -127,7 +134,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to load schedules:', error)
       toast({
         title: 'Failed to load recurring invoices',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: toErrorMessage(error, 'An error occurred'),
         variant: 'destructive',
       })
     } finally {
@@ -147,7 +154,7 @@ export function RecurringInvoicesCard() {
     setFrequency('monthly')
     setDayOfMonth('1')
     setDayOfWeek('1')
-    setStartDate('')
+    setStartDate(undefined)
   }
 
   const handleCreate = useCallback(async () => {
@@ -174,7 +181,7 @@ export function RecurringInvoicesCard() {
         frequency,
         dayOfMonth: frequency !== 'weekly' ? parseInt(dayOfMonth) : null,
         dayOfWeek: frequency === 'weekly' ? parseInt(dayOfWeek) : null,
-        startDate,
+        startDate: startDate ? format(startDate, 'yyyy-MM-dd') : '',
       })
 
       setSchedules((prev) => [schedule, ...prev])
@@ -189,7 +196,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to create schedule:', error)
       toast({
         title: 'Failed to create schedule',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: toErrorMessage(error, 'An error occurred'),
         variant: 'destructive',
       })
     } finally {
@@ -216,7 +223,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to update schedule:', error)
       toast({
         title: 'Failed to update schedule',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: toErrorMessage(error, 'An error occurred'),
         variant: 'destructive',
       })
     }
@@ -241,7 +248,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to delete schedule:', error)
       toast({
         title: 'Failed to delete schedule',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: toErrorMessage(error, 'An error occurred'),
         variant: 'destructive',
       })
     }
@@ -257,12 +264,12 @@ export function RecurringInvoicesCard() {
         prev.map((s) =>
           s.id === schedule.id
             ? {
-                ...s,
-                lastRunDate: new Date().toISOString(),
-                lastInvoiceId: result.invoiceId,
-                nextRunDate: result.nextRunDate,
-                totalInvoicesGenerated: s.totalInvoicesGenerated + 1,
-              }
+              ...s,
+              lastRunDate: new Date().toISOString(),
+              lastInvoiceId: result.invoiceId,
+              nextRunDate: result.nextRunDate,
+              totalInvoicesGenerated: s.totalInvoicesGenerated + 1,
+            }
             : s
         )
       )
@@ -275,7 +282,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to generate invoice:', error)
       toast({
         title: 'Failed to generate invoice',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: toErrorMessage(error, 'An error occurred'),
         variant: 'destructive',
       })
     } finally {
@@ -337,7 +344,7 @@ export function RecurringInvoicesCard() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="font-semibold text-foreground truncate">{schedule.clientName}</span>
-                      <Badge 
+                      <Badge
                         variant={schedule.isActive ? 'default' : 'secondary'}
                         className={schedule.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200' : ''}
                       >
@@ -520,13 +527,29 @@ export function RecurringInvoicesCard() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date *</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+              <Label>Start Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !startDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <ShadcnCalendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">

@@ -217,7 +217,7 @@ export function MentionDropdown({
         </div>
 
         {/* Items list */}
-        <ScrollArea className="max-h-[200px]">
+        <ScrollArea className="max-h-[280px] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -282,7 +282,7 @@ export function MentionPill({ item }: { item: MentionItem }) {
 
 // Format mention for display in input
 export function formatMention(item: MentionItem): string {
-  return `@[${item.name}](${item.type}:${item.id})`
+  return `@${item.name}`
 }
 
 // Parse mentions from text

@@ -8,10 +8,139 @@ import { mapProjectDoc, projectStatusSchema, coerceStringArray, toISO } from '@/
 import type { ProjectRecord } from '@/types/projects'
 import { recordProjectCreatedNotification } from '@/lib/notifications'
 import { logAuditAction } from '@/lib/audit-logger'
-import { serverCache } from '@/lib/cache'
+import { serverCache, workspaceCacheKey } from '@/lib/cache'
 
 const MAX_PROJECTS = 100
 const STATS_CACHE_TTL_MS = 30_000 // 30 seconds
+const FIRESTORE_IN_QUERY_LIMIT = 10
+
+function chunkArray<T>(values: T[], chunkSize: number): T[][] {
+  if (chunkSize <= 0) {
+    throw new Error('chunkSize must be positive')
+  }
+
+  const chunks: T[][] = []
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize))
+  }
+  return chunks
+}
+
+function parseISODate(value: string | null): Date | null {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+async function calculateProjectStatsBatch(
+  workspace: WorkspaceContext,
+  baselines: Array<{ projectId: string; baselineActivity: string | null }>
+): Promise<Map<string, ProjectStats>> {
+  const statsByProjectId = new Map<string, ProjectStats>()
+  const pending: Array<{ projectId: string; baselineActivity: string | null }> = []
+
+  for (const baseline of baselines) {
+    const cacheKey = workspaceCacheKey(workspace.workspaceId, 'projects', 'stats', baseline.projectId)
+    const cached = await serverCache.get<ProjectStats>(cacheKey)
+    if (cached) {
+      statsByProjectId.set(baseline.projectId, cached)
+      continue
+    }
+    pending.push(baseline)
+  }
+
+  if (pending.length === 0) {
+    return statsByProjectId
+  }
+
+  const accumulator = new Map<
+    string,
+    { taskCount: number; openTaskCount: number; latestActivity: Date | null; baselineActivity: string | null }
+  >()
+
+  for (const { projectId, baselineActivity } of pending) {
+    accumulator.set(projectId, {
+      taskCount: 0,
+      openTaskCount: 0,
+      latestActivity: parseISODate(baselineActivity),
+      baselineActivity,
+    })
+  }
+
+  const projectIds = pending.map((item) => item.projectId)
+  const chunks = chunkArray(projectIds, FIRESTORE_IN_QUERY_LIMIT)
+
+  const taskSnapshots = await Promise.all(chunks.map((chunk) => workspace.tasksCollection.where('projectId', 'in', chunk).get()))
+  for (const snapshot of taskSnapshots) {
+    snapshot.forEach((doc) => {
+      const data = doc.data() as Record<string, unknown>
+      const projectId = typeof data.projectId === 'string' ? data.projectId : null
+      if (!projectId) return
+
+      const state = accumulator.get(projectId)
+      if (!state) return
+
+      state.taskCount += 1
+
+      const status = typeof data.status === 'string' ? data.status : 'todo'
+      if (status !== 'completed') {
+        state.openTaskCount += 1
+      }
+
+      const candidate = toISO(data.updatedAt ?? data.createdAt)
+      if (!candidate) return
+      const date = new Date(candidate)
+      if (Number.isNaN(date.getTime())) return
+      if (!state.latestActivity || date > state.latestActivity) {
+        state.latestActivity = date
+      }
+    })
+  }
+
+  const messageSnapshots = await Promise.all(
+    chunks.map((chunk) =>
+      workspace.collaborationCollection
+        .where('channelType', '==', 'project')
+        .where('projectId', 'in', chunk)
+        .select('projectId', 'createdAt')
+        .get()
+    )
+  )
+
+  for (const snapshot of messageSnapshots) {
+    snapshot.forEach((doc) => {
+      const projectId = doc.get('projectId')
+      if (typeof projectId !== 'string' || !projectId) return
+
+      const state = accumulator.get(projectId)
+      if (!state) return
+
+      const candidate = toISO(doc.get('createdAt'))
+      if (!candidate) return
+      const date = new Date(candidate)
+      if (Number.isNaN(date.getTime())) return
+      if (!state.latestActivity || date > state.latestActivity) {
+        state.latestActivity = date
+      }
+    })
+  }
+
+  for (const [projectId, state] of accumulator.entries()) {
+    const recentActivityAt = state.latestActivity ? state.latestActivity.toISOString() : state.baselineActivity
+    const stats: ProjectStats = {
+      taskCount: state.taskCount,
+      openTaskCount: state.openTaskCount,
+      recentActivityAt,
+    }
+
+    const cacheKey = workspaceCacheKey(workspace.workspaceId, 'projects', 'stats', projectId)
+    void serverCache.set(cacheKey, stats, STATS_CACHE_TTL_MS)
+
+    statsByProjectId.set(projectId, stats)
+  }
+
+  return statsByProjectId
+}
 
 const createProjectSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
@@ -61,8 +190,8 @@ export async function calculateProjectStats(
   baselineActivity: string | null
 ): Promise<ProjectStats> {
   // Check cache first
-  const cacheKey = `project-stats:${workspace.workspaceId}:${projectId}`
-  const cached = serverCache.get<ProjectStats>(cacheKey)
+  const cacheKey = workspaceCacheKey(workspace.workspaceId, 'projects', 'stats', projectId)
+  const cached = await serverCache.get<ProjectStats>(cacheKey)
   if (cached) {
     return cached
   }
@@ -115,7 +244,7 @@ export async function calculateProjectStats(
   }
 
   // Cache the result
-  serverCache.set(cacheKey, stats, STATS_CACHE_TTL_MS)
+  void serverCache.set(cacheKey, stats, STATS_CACHE_TTL_MS)
 
   return stats
 }
@@ -189,12 +318,27 @@ export const GET = createApiHandler(
     const mapped: ProjectRecord[] = []
 
     if (includeStats) {
-      // Parallel stats calculation for better performance
-      const statsPromises = docs.slice(0, pageSize).map(async (doc) => {
-        return buildProjectSummary(workspace, doc.id, doc.data() as Record<string, unknown>)
-      })
-      const results = await Promise.all(statsPromises)
-      mapped.push(...results)
+      const pageDocs = docs.slice(0, pageSize)
+      const baseProjects = pageDocs.map((doc) => mapProjectDoc(doc.id, doc.data() as Record<string, unknown>))
+      const statsByProjectId = await calculateProjectStatsBatch(
+        workspace,
+        baseProjects.map((project) => ({ projectId: project.id, baselineActivity: project.recentActivityAt }))
+      )
+
+      for (const base of baseProjects) {
+        const stats = statsByProjectId.get(base.id) ?? {
+          taskCount: 0,
+          openTaskCount: 0,
+          recentActivityAt: base.recentActivityAt,
+        }
+
+        mapped.push({
+          ...base,
+          taskCount: stats.taskCount,
+          openTaskCount: stats.openTaskCount,
+          recentActivityAt: stats.recentActivityAt,
+        })
+      }
     } else {
       // Fast path: skip stats calculation
       for (const doc of docs.slice(0, pageSize)) {
@@ -205,17 +349,17 @@ export const GET = createApiHandler(
 
     const filtered = normalizedQuery
       ? mapped.filter((project) => {
-          const haystack = `${project.name} ${project.description ?? ''}`.toLowerCase()
-          return haystack.includes(normalizedQuery)
-        })
+        const haystack = `${project.name} ${project.description ?? ''}`.toLowerCase()
+        return haystack.includes(normalizedQuery)
+      })
       : mapped
 
     const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
     const nextCursor = nextCursorDoc
       ? (() => {
-          const iso = toISO(nextCursorDoc.get('updatedAt') ?? nextCursorDoc.get('createdAt'))
-          return iso ? `${iso}|${nextCursorDoc.id}` : null
-        })()
+        const iso = toISO(nextCursorDoc.get('updatedAt') ?? nextCursorDoc.get('createdAt'))
+        return iso ? `${iso}|${nextCursorDoc.id}` : null
+      })()
       : null
 
     return { projects: filtered, nextCursor }
@@ -276,6 +420,23 @@ export const POST = createApiHandler(
       actorId: auth.uid!,
       actorName: auth.name!,
     })
+
+    // Send Brevo email notification for new project
+    try {
+      const { notifyProjectCreatedEmail } = await import('@/lib/notifications')
+      const creatorEmail = auth.email
+      if (creatorEmail) {
+        await notifyProjectCreatedEmail({
+          recipientEmail: creatorEmail,
+          recipientName: auth.name ?? undefined,
+          projectName: project.name,
+          clientName: project.clientName,
+          createdBy: auth.name ?? null,
+        })
+      }
+    } catch (emailError) {
+      console.error('[projects] Brevo project creation email failed', emailError)
+    }
 
     return project
   }

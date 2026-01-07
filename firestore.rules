@@ -152,6 +152,12 @@ service cloud.firestore {
         allow delete: if isAdmin();
       }
 
+      // Collaboration typing indicators within workspace
+      match /collaborationTyping/{channelId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow write: if isAdminOrAgencyMember(workspaceId);
+      }
+
       // Notifications within workspace
       match /notifications/{notificationId} {
         allow read: if isAdminOrAgencyMember(workspaceId);

@@ -1,5 +1,7 @@
 // Settings page utility functions and constants
 
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+
 export const subscriptionStatusStyles: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700',
   trialing: 'bg-blue-100 text-blue-700',
@@ -15,17 +17,7 @@ export const subscriptionStatusStyles: Record<string, string> = {
  * Format a date string for display.
  */
 export function formatDate(value: string | null | undefined): string {
-  if (!value) return 'Date unavailable'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return 'Date unavailable'
-  }
-
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateLib(value, DATE_FORMATS.SHORT, undefined, 'Date unavailable')
 }
 
 /**

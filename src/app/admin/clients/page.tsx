@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, LoaderCircle, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { toErrorMessage } from '@/lib/error-utils'
 import {
   Card,
   CardContent,
@@ -34,6 +34,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
+import { format, parseISO, isValid } from 'date-fns'
+import { Calendar as CalendarIcon, FileText, LoaderCircle, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
 interface TeamMemberField extends ClientTeamMember {
@@ -76,7 +85,7 @@ export default function AdminClientsPage() {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
   const [invoiceAmount, setInvoiceAmount] = useState('')
   const [invoiceDescription, setInvoiceDescription] = useState('')
-  const [invoiceDueDate, setInvoiceDueDate] = useState('')
+  const [invoiceDueDate, setInvoiceDueDate] = useState<Date | undefined>(undefined)
   const [invoiceEmail, setInvoiceEmail] = useState('')
   const [creatingInvoice, setCreatingInvoice] = useState(false)
   const [invoiceError, setInvoiceError] = useState<string | null>(null)
@@ -100,7 +109,7 @@ export default function AdminClientsPage() {
       setClients(data.clients)
       setNextCursor(data.nextCursor)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to load clients')
+      const message = toErrorMessage(err, 'Unable to load clients')
       setClientsError(message)
       toast({ title: 'Client load failed', description: message, variant: 'destructive' })
     } finally {
@@ -120,7 +129,7 @@ export default function AdminClientsPage() {
       setClients((prev) => [...prev, ...data.clients])
       setNextCursor(data.nextCursor)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to load more clients')
+      const message = toErrorMessage(err, 'Unable to load more clients')
       toast({ title: 'Load more failed', description: message, variant: 'destructive' })
     } finally {
       setLoadingMore(false)
@@ -175,7 +184,7 @@ export default function AdminClientsPage() {
     setClientPendingInvoice(client)
     setInvoiceAmount('')
     setInvoiceDescription('')
-    setInvoiceDueDate('')
+    setInvoiceDueDate(undefined)
     setInvoiceEmail(client.billingEmail ?? '')
     setInvoiceError(null)
     setIsInvoiceDialogOpen(true)
@@ -200,7 +209,7 @@ export default function AdminClientsPage() {
       setClientPendingInvoice(null)
       setInvoiceAmount('')
       setInvoiceDescription('')
-      setInvoiceDueDate('')
+      setInvoiceDueDate(undefined)
       setInvoiceEmail('')
       setInvoiceError(null)
     }
@@ -238,7 +247,7 @@ export default function AdminClientsPage() {
       setIsTeamDialogOpen(false)
       setClientPendingMembers(null)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to add teammate')
+      const message = toErrorMessage(err, 'Unable to add teammate')
       toast({ title: 'Add teammate failed', description: message, variant: 'destructive' })
     } finally {
       setAddingMember(false)
@@ -263,13 +272,8 @@ export default function AdminClientsPage() {
     }
 
     let dueDateIso: string | undefined
-    if (invoiceDueDate.trim().length > 0) {
-      const dueDate = new Date(invoiceDueDate)
-      if (Number.isNaN(dueDate.getTime())) {
-        setInvoiceError('Provide a valid due date.')
-        return
-      }
-      dueDateIso = dueDate.toISOString()
+    if (invoiceDueDate) {
+      dueDateIso = invoiceDueDate.toISOString()
     }
 
     setCreatingInvoice(true)
@@ -353,7 +357,7 @@ export default function AdminClientsPage() {
 
       handleInvoiceDialogChange(false)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to send invoice')
+      const message = toErrorMessage(err, 'Unable to send invoice')
       setInvoiceError(message)
       toast({ title: 'Invoice error', description: message, variant: 'destructive' })
     } finally {
@@ -386,7 +390,7 @@ export default function AdminClientsPage() {
       setClientPendingDelete(null)
       setIsDeleteDialogOpen(false)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to delete client')
+      const message = toErrorMessage(err, 'Unable to delete client')
       toast({ title: 'Client delete failed', description: message, variant: 'destructive' })
     } finally {
       setDeletingClientId(null)
@@ -443,7 +447,7 @@ export default function AdminClientsPage() {
       toast({ title: 'Client created', description: `${client.name} is ready to use.` })
       resetClientForm()
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, 'Unable to create client')
+      const message = toErrorMessage(err, 'Unable to create client')
       toast({ title: 'Client create failed', description: message, variant: 'destructive' })
     } finally {
       setClientSaving(false)
@@ -934,14 +938,31 @@ export default function AdminClientsPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="invoice-due-date-input">Due date (optional)</Label>
-                <Input
-                  id="invoice-due-date-input"
-                  type="date"
-                  value={invoiceDueDate}
-                  onChange={(event) => setInvoiceDueDate(event.target.value)}
-                  disabled={creatingInvoice}
-                />
+                <Label>Due date (optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !invoiceDueDate && 'text-muted-foreground'
+                      )}
+                      disabled={creatingInvoice}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {invoiceDueDate ? format(invoiceDueDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={invoiceDueDate}
+                      onSelect={setInvoiceDueDate}
+                      initialFocus
+                      disabled={(date) => date < new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="invoice-email-input">Billing email</Label>
@@ -1007,17 +1028,4 @@ export default function AdminClientsPage() {
       </Dialog>
     </div>
   )
-}
-
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
 }

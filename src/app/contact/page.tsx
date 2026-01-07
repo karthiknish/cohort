@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { useToast } from '@/components/ui/use-toast'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { getErrorMessage } from '@/lib/error-utils'
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your name.' }).max(80),
@@ -184,6 +184,4 @@ export default function ContactPage() {
   )
 }
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  return formatUserFacingErrorMessage(error, fallback)
-}
+

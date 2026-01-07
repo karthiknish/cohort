@@ -8,6 +8,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
+import { toErrorMessage } from '@/lib/error-utils'
 import {
   createFinanceCost,
   deleteFinanceCost,
@@ -188,7 +189,7 @@ export function useFinanceData(): FinanceHookReturn {
       setLoadError(null)
       setRetryCount(0)
     } catch (error: unknown) {
-      const message = extractErrorMessage(error, 'Failed to load finance data')
+      const message = toErrorMessage(error, 'Failed to load finance data')
       
       // Implement retry logic
       const currentRetry = retryCount + 1
@@ -275,7 +276,7 @@ export function useFinanceData(): FinanceHookReturn {
     } catch (error: unknown) {
       toast({
         title: 'Couldn\'t load more invoices',
-        description: extractErrorMessage(error, 'Unable to load additional invoices'),
+        description: toErrorMessage(error, 'Unable to load additional invoices'),
         variant: 'destructive',
       })
     } finally {
@@ -324,7 +325,7 @@ export function useFinanceData(): FinanceHookReturn {
     } catch (error: unknown) {
       toast({
         title: 'Couldn\'t load more costs',
-        description: extractErrorMessage(error, 'Unable to load additional costs'),
+        description: toErrorMessage(error, 'Unable to load additional costs'),
         variant: 'destructive',
       })
     } finally {
@@ -564,7 +565,7 @@ export function useFinanceData(): FinanceHookReturn {
       } catch (error: unknown) {
         toast({
           title: 'Failed to add cost',
-          description: extractErrorMessage(error, 'Unable to add cost entry'),
+          description: toErrorMessage(error, 'Unable to add cost entry'),
           variant: 'destructive',
         })
       } finally {
@@ -584,7 +585,7 @@ export function useFinanceData(): FinanceHookReturn {
       } catch (error: unknown) {
         toast({
           title: 'Failed to delete cost',
-          description: extractErrorMessage(error, 'Unable to delete cost entry'),
+          description: toErrorMessage(error, 'Unable to delete cost entry'),
           variant: 'destructive',
         })
       } finally {
@@ -610,7 +611,7 @@ export function useFinanceData(): FinanceHookReturn {
     } catch (error: unknown) {
       toast({
         title: 'Reminder failed',
-        description: extractErrorMessage(error, 'Unable to send invoice reminder'),
+        description: toErrorMessage(error, 'Unable to send invoice reminder'),
         variant: 'destructive',
       })
     } finally {
@@ -634,7 +635,7 @@ export function useFinanceData(): FinanceHookReturn {
     } catch (error: unknown) {
       toast({
         title: 'Refund failed',
-        description: extractErrorMessage(error, 'Unable to issue refund'),
+        description: toErrorMessage(error, 'Unable to issue refund'),
         variant: 'destructive',
       })
     } finally {
@@ -819,17 +820,4 @@ export function calculatePaymentSummary(invoices: FinanceInvoice[]): FinancePaym
     nextDueAt,
     lastPaymentAt,
   }
-}
-
-function extractErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-  return fallback
 }

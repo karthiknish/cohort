@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore-integrations-admin'
+import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore/admin'
 import { fetchLinkedInAdAccounts } from '@/services/integrations/linkedin-ads'
 import { createApiHandler } from '@/lib/api-handler'
 import { NotFoundError, UnauthorizedError, ValidationError } from '@/lib/api-errors'

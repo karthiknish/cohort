@@ -194,7 +194,7 @@ function mapCostDoc(docId: string, data: StoredFinanceCost): FinanceCostEntry {
     clientId: typeof data.clientId === 'string' ? data.clientId : null,
     category: typeof data.category === 'string' ? data.category : 'Uncategorized',
     amount: ensureNumber(data.amount),
-    cadence: cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
+    cadence: cadence === 'one-off' || cadence === 'monthly' || cadence === 'quarterly' || cadence === 'annual' ? cadence : 'monthly',
     currency: typeof data.currency === 'string' ? data.currency : null,
     createdAt: toISO(data.createdAt),
     updatedAt: toISO(data.updatedAt),
@@ -232,14 +232,14 @@ export const GET = createApiHandler(
 
     let invoiceQuery = clientId
       ? workspace.financeInvoicesCollection
-          .where('clientId', '==', clientId)
-          .orderBy('createdAt', 'desc')
-          .orderBy(FieldPath.documentId(), 'desc')
-          .limit(invoicePageSize + 1)
+        .where('clientId', '==', clientId)
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+        .limit(invoicePageSize + 1)
       : workspace.financeInvoicesCollection
-          .orderBy('createdAt', 'desc')
-          .orderBy(FieldPath.documentId(), 'desc')
-          .limit(invoicePageSize + 1)
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+        .limit(invoicePageSize + 1)
 
     if (invoiceAfterParam) {
       const [timestamp, docId] = invoiceAfterParam.split('|')
@@ -253,14 +253,14 @@ export const GET = createApiHandler(
 
     let costQuery = clientId
       ? workspace.financeCostsCollection
-          .where('clientId', 'in', [clientId, null])
-          .orderBy('createdAt', 'desc')
-          .orderBy(FieldPath.documentId(), 'desc')
-          .limit(costPageSize + 1)
+        .where('clientId', 'in', [clientId, null])
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+        .limit(costPageSize + 1)
       : workspace.financeCostsCollection
-          .orderBy('createdAt', 'desc')
-          .orderBy(FieldPath.documentId(), 'desc')
-          .limit(costPageSize + 1)
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+        .limit(costPageSize + 1)
 
     if (costAfterParam) {
       const [timestamp, docId] = costAfterParam.split('|')
@@ -293,17 +293,17 @@ export const GET = createApiHandler(
     const invoiceNextCursorDoc = invoiceDocs.length > invoicePageSize ? invoiceDocs[invoicePageSize] : null
     const invoiceNextCursor = invoiceNextCursorDoc
       ? (() => {
-          const createdAt = toISO(invoiceNextCursorDoc.get('createdAt'))
-          return createdAt ? `${createdAt}|${invoiceNextCursorDoc.id}` : null
-        })()
+        const createdAt = toISO(invoiceNextCursorDoc.get('createdAt'))
+        return createdAt ? `${createdAt}|${invoiceNextCursorDoc.id}` : null
+      })()
       : null
 
     const costNextCursorDoc = costDocs.length > costPageSize ? costDocs[costPageSize] : null
     const costNextCursor = costNextCursorDoc
       ? (() => {
-          const createdAt = toISO(costNextCursorDoc.get('createdAt'))
-          return createdAt ? `${createdAt}|${costNextCursorDoc.id}` : null
-        })()
+        const createdAt = toISO(costNextCursorDoc.get('createdAt'))
+        return createdAt ? `${createdAt}|${costNextCursorDoc.id}` : null
+      })()
       : null
 
     const payload: FinanceSummaryResponse = {
