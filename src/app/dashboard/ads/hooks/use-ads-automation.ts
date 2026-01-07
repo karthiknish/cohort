@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -72,9 +72,24 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null)
 
   // Sync automation draft with server state
+  // Use JSON key to avoid infinite loops when automationStatuses array reference changes
+  const automationStatusesKey = useMemo(
+    () => JSON.stringify(automationStatuses.map(s => ({
+      id: s.providerId,
+      enabled: s.autoSyncEnabled,
+      freq: s.syncFrequencyMinutes,
+      days: s.scheduledTimeframeDays,
+    }))),
+    [automationStatuses]
+  )
+
   useEffect(() => {
     if (automationStatuses.length === 0) {
-      setAutomationDraft({})
+      setAutomationDraft(prev => {
+        // Only update if not already empty
+        if (Object.keys(prev).length === 0) return prev
+        return {}
+      })
       return
     }
     const nextDraft: Record<string, ProviderAutomationFormState> = {}
@@ -86,7 +101,8 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
       }
     })
     setAutomationDraft(nextDraft)
-  }, [automationStatuses])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [automationStatusesKey])
 
   // Handlers
   const updateAutomationDraft = useCallback(

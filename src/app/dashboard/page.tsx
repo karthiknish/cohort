@@ -31,7 +31,6 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
-import { TASK_STATUSES } from '@/types/tasks'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ActivityWidget } from '@/components/activity/activity-widget'
@@ -68,6 +67,20 @@ import {
   getErrorMessage,
 } from '@/lib/dashboard-utils'
 
+// Local page components and utilities
+import {
+  MiniTaskKanban,
+  TaskSummary,
+  DEFAULT_TASK_SUMMARY,
+  ROLE_PRIORITY,
+  summarizeTasks,
+  sumOutstanding,
+  formatNextDueLabel,
+  selectTopStatsByRole,
+} from './components'
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000
+
 const DEFAULT_TASKS: DashboardTaskItem[] = [
   {
     id: 'default-task-1',
@@ -91,29 +104,6 @@ const DEFAULT_TASKS: DashboardTaskItem[] = [
     clientName: 'Retail Store',
   },
 ]
-
-type TaskSummary = {
-  total: number
-  overdue: number
-  dueSoon: number
-  highPriority: number
-}
-
-const DEFAULT_TASK_SUMMARY: TaskSummary = {
-  total: 0,
-  overdue: 0,
-  dueSoon: 0,
-  highPriority: 0,
-}
-
-const ROLE_PRIORITY: Record<'admin' | 'team' | 'client' | 'default', string[]> = {
-  admin: ['net-margin', 'outstanding', 'roas', 'total-revenue', 'overdue-invoices', 'ad-spend', 'open-tasks', 'conversions'],
-  team: ['due-soon', 'high-priority-tasks', 'open-tasks', 'ad-spend', 'roas', 'conversions', 'net-margin', 'total-revenue'],
-  client: ['ad-spend', 'outstanding', 'next-due', 'roas', 'open-tasks', 'due-soon', 'net-margin', 'total-revenue'],
-  default: ['total-revenue', 'net-margin', 'roas', 'ad-spend', 'open-tasks', 'conversions', 'outstanding', 'due-soon'],
-}
-
-const DAY_IN_MS = 24 * 60 * 60 * 1000
 
 export default function DashboardPage() {
   const { clients, selectedClient, selectedClientId } = useClientContext()
@@ -1065,187 +1055,3 @@ export default function DashboardPage() {
     </TooltipProvider>
   )
 }
-
-type MiniTaskKanbanProps = {
-  tasks: TaskRecord[]
-  loading: boolean
-}
-
-function MiniTaskKanban({ tasks, loading }: MiniTaskKanbanProps) {
-  const columns = TASK_STATUSES.map((status) => ({
-    status,
-    items: tasks.filter((task) => task.status === status).slice(0, 6),
-  }))
-
-  const formatDue = (value?: string | null) => {
-    if (!value) return 'No due date'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return 'No due date'
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  }
-
-  return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-base">Task board (compact)</CardTitle>
-        <CardDescription>Quick glance across todo, in-progress, review, and completed.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <Skeleton className="h-28 w-full" />
-            <Skeleton className="h-28 w-full" />
-          </div>
-        ) : tasks.length === 0 ? (
-          <div className="rounded-md border border-dashed border-muted/50 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-            No tasks available. Create tasks to populate the board.
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {columns.map(({ status, items }) => (
-              <div key={status} className="flex flex-col gap-2 rounded-md border border-muted/50 bg-muted/10 p-3">
-                <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                  <span className="capitalize">{status.replace('-', ' ')}</span>
-                  <Badge variant="outline" className="bg-background text-xs">{items.length}</Badge>
-                </div>
-                {items.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-muted/40 bg-background px-3 py-4 text-center text-xs text-muted-foreground">
-                    Empty lane
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {items.map((task) => (
-                      <Link
-                        key={task.id}
-                        href={`/dashboard/tasks?taskId=${task.id}`}
-                        className="block rounded-md border border-muted/40 bg-background p-2 text-sm shadow-sm transition hover:border-primary/40 hover:shadow"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-medium" title={task.title}>{task.title}</span>
-                          <Badge variant="secondary" className="text-[10px] capitalize">{task.priority}</Badge>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span>{task.client || 'Internal'}</span>
-                          <span>{formatDue(task.dueDate)}</span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-function summarizeTasks(tasks: TaskRecord[]): TaskSummary {
-  if (!Array.isArray(tasks) || tasks.length === 0) {
-    return DEFAULT_TASK_SUMMARY
-  }
-
-  const now = Date.now()
-  const soonCutoff = now + 3 * DAY_IN_MS
-
-  let overdue = 0
-  let dueSoon = 0
-  let highPriority = 0
-
-  tasks.forEach((task) => {
-    if (task.priority === 'high' || task.priority === 'urgent') {
-      highPriority += 1
-    }
-
-    const dueTimestamp = task.dueDate ? Date.parse(task.dueDate) : Number.NaN
-    if (Number.isNaN(dueTimestamp)) {
-      return
-    }
-    if (dueTimestamp < now) {
-      overdue += 1
-      return
-    }
-    if (dueTimestamp <= soonCutoff) {
-      dueSoon += 1
-    }
-  })
-
-  return {
-    total: tasks.length,
-    overdue,
-    dueSoon,
-    highPriority,
-  }
-}
-
-function sumOutstanding(totals: { totalOutstanding: number }[]): number {
-  if (!Array.isArray(totals) || totals.length === 0) {
-    return 0
-  }
-  return totals.reduce((sum, entry) => sum + (Number.isFinite(entry.totalOutstanding) ? entry.totalOutstanding : 0), 0)
-}
-
-function formatNextDueLabel(nextDueAt: string | null | undefined): string | null {
-  if (!nextDueAt) {
-    return null
-  }
-
-  const target = new Date(nextDueAt)
-  if (Number.isNaN(target.getTime())) {
-    return null
-  }
-
-  const todayStart = startOfDay(new Date())
-  const targetStart = startOfDay(target)
-  const diffDays = Math.round((targetStart.getTime() - todayStart.getTime()) / DAY_IN_MS)
-
-  if (diffDays === 0) {
-    return 'Due today'
-  }
-  if (diffDays === 1) {
-    return 'Due tomorrow'
-  }
-  if (diffDays < 0) {
-    const daysOverdue = Math.abs(diffDays)
-    return `${daysOverdue} day${daysOverdue === 1 ? '' : 's'} overdue`
-  }
-  return `Due in ${diffDays} day${diffDays === 1 ? '' : 's'}`
-}
-
-function startOfDay(date: Date): Date {
-  const copy = new Date(date)
-  copy.setHours(0, 0, 0, 0)
-  return copy
-}
-
-function selectTopStatsByRole(stats: SummaryStat[], role?: string | null): { primary: SummaryStat[]; secondary: SummaryStat[] } {
-  if (!Array.isArray(stats) || stats.length === 0) {
-    return { primary: [], secondary: [] }
-  }
-
-  const key = role === 'admin' || role === 'team' || role === 'client' ? role : 'default'
-  const priorityOrder = ROLE_PRIORITY[key]
-
-  const statMap = new Map(stats.map((stat) => [stat.id, stat]))
-  const ordered: SummaryStat[] = []
-
-  priorityOrder.forEach((id) => {
-    const item = statMap.get(id)
-    if (item && !ordered.some((stat) => stat.id === item.id)) {
-      ordered.push(item)
-    }
-  })
-
-  stats.forEach((stat) => {
-    if (!ordered.some((item) => item.id === stat.id)) {
-      ordered.push(stat)
-    }
-  })
-
-  const primary = ordered.slice(0, 4)
-  const secondary = ordered.slice(4)
-
-  return { primary, secondary }
-}
-

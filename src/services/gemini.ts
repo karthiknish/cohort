@@ -13,24 +13,28 @@ export interface GeminiPrompt {
 
 export class GeminiAIService {
   private apiKey: string
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+  private model: string
+  private baseUrl: string
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
+    this.model = this.resolveModel()
+    this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`
   }
 
   async generateContent(prompt: string): Promise<string> {
     const apiKey = this.resolveApiKey()
 
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is not configured')
+      throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured')
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}?key=${apiKey}`, {
+      const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
           contents: [{
@@ -113,7 +117,10 @@ export class GeminiAIService {
     }
 
     const processEnv = typeof process !== 'undefined' ? process.env : undefined
-    const candidate = processEnv?.GEMINI_API_KEY || processEnv?.NEXT_PUBLIC_GEMINI_API_KEY
+    const candidate =
+      processEnv?.GEMINI_API_KEY ||
+      processEnv?.GOOGLE_API_KEY ||
+      processEnv?.NEXT_PUBLIC_GEMINI_API_KEY
 
     if (candidate) {
       this.apiKey = candidate
@@ -121,6 +128,16 @@ export class GeminiAIService {
     }
 
     return ''
+  }
+
+  private resolveModel(): string {
+    const processEnv = typeof process !== 'undefined' ? process.env : undefined
+    const model = processEnv?.GEMINI_MODEL?.trim()
+    if (model) {
+      return model
+    }
+
+    return 'gemini-3-flash-preview'
   }
 
   async analyzePerformance(context: GeminiPrompt['context']): Promise<AIAnalysis> {

@@ -6,6 +6,7 @@ import { NavigationBreadcrumbs } from '@/components/navigation/breadcrumbs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
+import { AgentMode } from '@/components/agent-mode'
 
 export default function DashboardLayout({
   children,
@@ -31,6 +32,7 @@ export default function DashboardLayout({
               </ScrollArea>
             </div>
           </div>
+          <AgentMode />
         </div>
       </NavigationProvider>
     </ProtectedRoute>

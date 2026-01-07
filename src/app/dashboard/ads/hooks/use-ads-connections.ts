@@ -255,7 +255,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
   // Sync connected providers from statuses
   useEffect(() => {
-    if (!integrationStatuses) return
+    if (!integrationStatuses?.statuses) return
     const updatedConnected: Record<string, boolean> = {}
     integrationStatuses.statuses.forEach((status) => {
       updatedConnected[status.providerId] = status.status === 'success'

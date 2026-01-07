@@ -1,11 +1,10 @@
-import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
+import { decrypt, encrypt } from '@/lib/crypto'
 import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore-integrations-admin'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 
 interface MetaOAuthContext {
   state: string
   redirect?: string
-  codeVerifier?: string
   createdAt: number
 }
 
@@ -31,10 +30,13 @@ function calculateBackoffDelay(attempt: number): number {
 
 type MetaOAuthStatePayload = Omit<MetaOAuthContext, 'createdAt'> & { createdAt?: number }
 
+/**
+ * Create an encrypted OAuth state for Meta Business Login.
+ * Note: Meta Business Login does NOT support PKCE, so we don't generate a code verifier.
+ */
 export function createMetaOAuthState(payload: MetaOAuthStatePayload): string {
   const data: MetaOAuthContext = {
     ...payload,
-    codeVerifier: payload.codeVerifier ?? generateCodeVerifier(),
     createdAt: payload.createdAt ?? Date.now(),
   }
   return encodeURIComponent(encrypt(JSON.stringify(data)))

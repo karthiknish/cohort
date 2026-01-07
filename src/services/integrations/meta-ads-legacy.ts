@@ -781,7 +781,10 @@ function appendMetaAuthParams(options: { params: URLSearchParams; accessToken: s
     const proof = createHmac('sha256', appSecret).update(accessToken).digest('hex')
     params.set('appsecret_proof', proof)
   } catch (error) {
-    console.warn('[Meta API] Failed to compute appsecret_proof', error)
+    // Log the error with more context for debugging
+    console.error('[Meta API] Failed to compute appsecret_proof - API requests will proceed without proof', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
   }
 }
 

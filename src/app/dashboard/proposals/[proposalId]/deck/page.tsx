@@ -8,7 +8,6 @@ import { ArrowLeft, Download, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { PptViewer } from '@/components/ppt-viewer'
 import type { ProposalDraft } from '@/services/proposals'
 import { getProposalById } from '@/services/proposals'
 
@@ -54,17 +53,6 @@ export default function ProposalDeckPage() {
     }
   }, [proposalId])
 
-  const presentationUrl = useMemo(() => {
-    if (!proposal) return null
-    return (
-      proposal.pptUrl ??
-      proposal.presentationDeck?.storageUrl ??
-      proposal.presentationDeck?.pptxUrl ??
-      proposal.gammaDeck?.storageUrl ??
-      proposal.gammaDeck?.pptxUrl ??
-      null
-    )
-  }, [proposal])
 
   // PDF storage URL from Firebase (preferred for viewing)
   const pdfStorageUrl = useMemo(() => {
@@ -161,16 +149,8 @@ export default function ProposalDeckPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {presentationUrl && (
-                  <Button asChild>
-                    <a href={presentationUrl} target="_blank" rel="noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download PPT
-                    </a>
-                  </Button>
-                )}
                 {pdfDownloadUrl && (
-                  <Button variant="outline" asChild>
+                  <Button asChild>
                     <a href={pdfDownloadUrl} target="_blank" rel="noreferrer">
                       <Download className="mr-2 h-4 w-4" />
                       Download PDF
@@ -187,14 +167,9 @@ export default function ProposalDeckPage() {
                     className="h-full w-full"
                   />
                 </div>
-              ) : presentationUrl ? (
-                <PptViewer
-                  url={presentationUrl}
-                  title={proposal.clientName ? `${proposal.clientName} Presentation` : 'Presentation'}
-                />
               ) : (
                 <div className="rounded-md border border-dashed border-muted p-6 text-center text-sm text-muted-foreground">
-                  <p>No presentation file available for this proposal.</p>
+                  <p>No PDF file available for this proposal.</p>
                 </div>
               )}
             </CardContent>

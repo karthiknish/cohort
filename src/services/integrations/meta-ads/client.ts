@@ -98,7 +98,13 @@ export async function appendMetaAuthParams(options: {
     const proof = await computeHmacSha256(appSecret, accessToken)
     params.set('appsecret_proof', proof)
   } catch (error) {
-    console.warn('[Meta API] Failed to compute appsecret_proof', error)
+    // Log the error with more context for debugging
+    // This can happen in environments where crypto.subtle is unavailable
+    console.error('[Meta API] Failed to compute appsecret_proof - API requests will proceed without proof', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      // Security note: Without appsecret_proof, the request is less secure
+      // and may be subject to stricter rate limits from Meta
+    })
   }
 }
 

@@ -215,6 +215,23 @@ service cloud.firestore {
       match /syncJobs/{jobId} {
         allow read, write: if isAdminOrAgencyMember(workspaceId);
       }
+
+      // Agent Mode Conversations within workspace
+      match /agentConversations/{conversationId} {
+        allow read: if isAdminOrAgencyMember(workspaceId) && 
+          resource.data.userId == request.auth.uid;
+        allow create: if isAdminOrAgencyMember(workspaceId);
+        allow update: if isAdminOrAgencyMember(workspaceId) && 
+          resource.data.userId == request.auth.uid;
+        allow delete: if isAdmin();
+
+        // Messages within conversation
+        match /messages/{messageId} {
+          allow read: if isAdminOrAgencyMember(workspaceId);
+          allow create: if isAdminOrAgencyMember(workspaceId);
+          allow update, delete: if isAdmin();
+        }
+      }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

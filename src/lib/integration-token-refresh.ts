@@ -14,12 +14,32 @@ const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/o
 
 // Promise deduplication map
 const refreshPromises = new Map<string, Promise<string>>()
+// Track when each promise was created for TTL-based cleanup
+const refreshPromiseTimestamps = new Map<string, number>()
 
 // Retry configuration for token refresh operations
 const TOKEN_REFRESH_CONFIG = {
   maxRetries: 3,
   baseDelayMs: 1000,
   maxDelayMs: 10000,
+}
+
+// TTL for stale promise cleanup (5 minutes)
+const PROMISE_TTL_MS = 5 * 60 * 1000
+
+/**
+ * Clean up stale promise entries that may have been orphaned due to
+ * network hangs or other issues preventing the finally block from running.
+ */
+function cleanupStalePromises(): void {
+  const now = Date.now()
+  for (const [key, timestamp] of refreshPromiseTimestamps.entries()) {
+    if (now - timestamp > PROMISE_TTL_MS) {
+      refreshPromises.delete(key)
+      refreshPromiseTimestamps.delete(key)
+      console.warn(`[Token Refresh] Cleaned up stale promise for ${key}`)
+    }
+  }
 }
 
 function computeExpiry(expiresInSeconds?: number): Date | null {
@@ -473,6 +493,7 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
 }
 
 export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
+  cleanupStalePromises()
   const promiseKey = `google:${userId}`
   const existingPromise = refreshPromises.get(promiseKey)
   if (existingPromise) return existingPromise
@@ -496,14 +517,17 @@ export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshP
       return integration.accessToken
     } finally {
       refreshPromises.delete(promiseKey)
+      refreshPromiseTimestamps.delete(promiseKey)
     }
   })()
 
   refreshPromises.set(promiseKey, refreshPromise)
+  refreshPromiseTimestamps.set(promiseKey, Date.now())
   return refreshPromise
 }
 
 export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
+  cleanupStalePromises()
   const promiseKey = `facebook:${userId}`
   const existingPromise = refreshPromises.get(promiseKey)
   if (existingPromise) return existingPromise
@@ -527,14 +551,17 @@ export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshPar
       return integration.accessToken
     } finally {
       refreshPromises.delete(promiseKey)
+      refreshPromiseTimestamps.delete(promiseKey)
     }
   })()
 
   refreshPromises.set(promiseKey, refreshPromise)
+  refreshPromiseTimestamps.set(promiseKey, Date.now())
   return refreshPromise
 }
 
 export async function ensureTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
+  cleanupStalePromises()
   const promiseKey = `tiktok:${userId}`
   const existingPromise = refreshPromises.get(promiseKey)
   if (existingPromise) return existingPromise
@@ -554,9 +581,11 @@ export async function ensureTikTokAccessToken({ userId }: RefreshParams): Promis
       return integration.accessToken
     } finally {
       refreshPromises.delete(promiseKey)
+      refreshPromiseTimestamps.delete(promiseKey)
     }
   })()
 
   refreshPromises.set(promiseKey, refreshPromise)
+  refreshPromiseTimestamps.set(promiseKey, Date.now())
   return refreshPromise
 }
