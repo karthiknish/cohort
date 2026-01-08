@@ -369,6 +369,9 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         console.log('[Meta OAuth Debug] Redirect target:', redirectTarget)
         const { url } = await startMetaOauth(redirectTarget)
         console.log('[Meta OAuth Debug] Received OAuth URL:', url)
+        if (typeof url !== 'string' || url.length === 0) {
+          throw new Error('Meta OAuth did not return a URL. Check server logs and environment variables.')
+        }
         console.log('[Meta OAuth Debug] URL parsed:', {
           origin: new URL(url).origin,
           pathname: new URL(url).pathname,

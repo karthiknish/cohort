@@ -222,13 +222,34 @@ export class AuthService {
       },
     })
 
+    const payload = (await response.json().catch(() => ({}))) as unknown
+
+    // Most endpoints in this codebase use createApiHandler which wraps responses
+    // in { success, data, error }. Support both wrapped and legacy shapes.
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      const record = payload as { success: boolean; data?: unknown; error?: unknown }
+      if (!record.success) {
+        const message = typeof record.error === 'string' ? record.error : 'Failed to start Meta OAuth'
+        throw new Error(message)
+      }
+
+      const data = record.data as { url?: unknown } | undefined
+      if (typeof data?.url === 'string' && data.url.length > 0) {
+        return { url: data.url }
+      }
+
+      throw new Error('Meta OAuth did not return a URL')
+    }
+
     if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as { error?: string }
-      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to start Meta OAuth'
+      const record = payload as { error?: unknown }
+      const message = typeof record?.error === 'string' ? record.error : 'Failed to start Meta OAuth'
       throw new Error(message)
     }
 
-    return (await response.json()) as { url: string }
+    const legacy = payload as { url?: unknown }
+    if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
+    throw new Error('Meta OAuth did not return a URL')
   }
 
   async startTikTokOauth(redirect?: string): Promise<{ url: string }> {
@@ -245,13 +266,32 @@ export class AuthService {
       },
     })
 
+    const payload = (await response.json().catch(() => ({}))) as unknown
+
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      const record = payload as { success: boolean; data?: unknown; error?: unknown }
+      if (!record.success) {
+        const message = typeof record.error === 'string' ? record.error : 'Failed to start TikTok OAuth'
+        throw new Error(message)
+      }
+
+      const data = record.data as { url?: unknown } | undefined
+      if (typeof data?.url === 'string' && data.url.length > 0) {
+        return { url: data.url }
+      }
+
+      throw new Error('TikTok OAuth did not return a URL')
+    }
+
     if (!response.ok) {
-      const payload = (await response.json().catch(() => ({}))) as { error?: string }
-      const message = typeof payload?.error === 'string' ? payload.error : 'Failed to start TikTok OAuth'
+      const record = payload as { error?: unknown }
+      const message = typeof record?.error === 'string' ? record.error : 'Failed to start TikTok OAuth'
       throw new Error(message)
     }
 
-    return (await response.json()) as { url: string }
+    const legacy = payload as { url?: unknown }
+    if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
+    throw new Error('TikTok OAuth did not return a URL')
   }
 
   /**
