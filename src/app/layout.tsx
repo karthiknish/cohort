@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
+import { Suspense } from 'react'
 import './globals.css'
 
 import { cn } from '@/lib/utils'
@@ -48,14 +49,16 @@ export default function RootLayout({
           'min-h-screen bg-background font-sans antialiased text-foreground'
         )}
       >
-        <AppProviders>
-          <div className="flex min-h-screen flex-col">
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-          </div>
-          <PWAProvider />
-        </AppProviders>
+        <Suspense fallback={null}>
+          <AppProviders>
+            <div className="flex min-h-screen flex-col">
+              <SiteHeader />
+              <main className="flex-1">{children}</main>
+              <SiteFooter />
+            </div>
+            <PWAProvider />
+          </AppProviders>
+        </Suspense>
         <Toaster />
         <SonnerToaster />
       </body>
