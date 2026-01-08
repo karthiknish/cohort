@@ -1,6 +1,5 @@
-import { memo, useMemo, useRef, useCallback } from 'react'
+import { memo, useMemo } from 'react'
 import Link from 'next/link'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { CircleCheck, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,21 +14,7 @@ interface TasksCardProps {
   loading: boolean
 }
 
-const TASK_ITEM_HEIGHT = 56 // Estimated height per task item
-
 export function TasksCard({ tasks, loading }: TasksCardProps) {
-  const parentRef = useRef<HTMLDivElement>(null)
-
-  const virtualizer = useVirtualizer({
-    count: tasks.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => TASK_ITEM_HEIGHT,
-    overscan: 5,
-    getItemKey: (index) => tasks[index]?.id ?? index,
-  })
-
-  const virtualItems = virtualizer.getVirtualItems()
-
   return (
     <Card className="shadow-sm h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -44,7 +29,7 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
           </Link>
         </Button>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden">
+      <CardContent className="flex-1">
         {loading ? (
           <div className="space-y-4">
             <Skeleton className="h-12 w-full" />
@@ -52,37 +37,12 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
             <Skeleton className="h-12 w-full" />
           </div>
         ) : tasks.length > 0 ? (
-          <div
-            ref={parentRef}
-            className="h-full max-h-[320px] overflow-auto"
-          >
-            <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {virtualItems.map((virtualItem) => {
-                const task = tasks[virtualItem.index]
-                return (
-                  <div
-                    key={virtualItem.key}
-                    data-index={virtualItem.index}
-                    ref={virtualizer.measureElement}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <TaskItem task={task} />
-                  </div>
-                )
-              })}
-            </div>
+          <div className="space-y-1 max-h-[320px] overflow-auto">
+            {tasks.map((task) => (
+              <FadeInItem key={task.id}>
+                <TaskItem task={task} />
+              </FadeInItem>
+            ))}
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-8 text-center text-sm text-muted-foreground">
