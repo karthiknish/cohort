@@ -82,6 +82,16 @@ export default function AdsPage() {
     onRefresh: triggerMetricsRefresh,
   })
 
+  const hasAnyAdIntegration =
+    !isPreviewMode &&
+    Boolean(
+      integrationStatuses?.statuses?.some(
+        (s) => s.status === 'success' || Boolean(s.linkedAt)
+      )
+    )
+
+  const suppressMetricsErrors = !isPreviewMode && !hasAnyAdIntegration
+
   // 3. Manage automation settings and manual sync triggers
   const {
     automationDraft,
@@ -101,8 +111,7 @@ export default function AdsPage() {
   // Surface notable errors as toasts once
   useEffect(() => {
     const errors: string[] = [
-      metricError ?? '',
-      loadMoreError ?? '',
+      ...(suppressMetricsErrors ? [] : [metricError ?? '', loadMoreError ?? '']),
       ...Object.values(connectionErrors ?? {}),
     ].filter(Boolean)
 
@@ -115,7 +124,7 @@ export default function AdsPage() {
       })
       shownErrorsRef.current.add(error)
     })
-  }, [connectionErrors, loadMoreError, metricError, toast])
+  }, [connectionErrors, loadMoreError, metricError, suppressMetricsErrors, toast])
 
   // Loading state
   const isInitialLoading = initialMetricsLoading && !integrationStatuses
@@ -232,7 +241,7 @@ export default function AdsPage() {
           hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
-          metricError={metricError}
+          metricError={suppressMetricsErrors ? null : metricError}
           onRefresh={handleManualRefresh}
           onExport={handleExport}
         />
@@ -244,10 +253,10 @@ export default function AdsPage() {
           hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
-          metricError={metricError}
+          metricError={suppressMetricsErrors ? null : metricError}
           nextCursor={nextCursor}
           loadingMore={loadingMore}
-          loadMoreError={loadMoreError}
+          loadMoreError={suppressMetricsErrors ? null : loadMoreError}
           onRefresh={handleManualRefresh}
           onLoadMore={() => void handleLoadMore()}
         />

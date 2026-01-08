@@ -361,7 +361,9 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
 
     try {
-      const redirectTarget = `${window.location.origin}${window.location.pathname}`
+      // Use a relative redirect path so it is always valid/safe across environments
+      // (and passes `isValidRedirectUrl` which allows relative paths).
+      const redirectTarget = `${window.location.pathname}${window.location.search}`
       if (providerId === PROVIDER_IDS.FACEBOOK) {
         console.log('[Meta OAuth Debug] Starting Meta OAuth flow...')
         console.log('[Meta OAuth Debug] Redirect target:', redirectTarget)
