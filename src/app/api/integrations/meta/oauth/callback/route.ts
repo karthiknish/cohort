@@ -64,7 +64,12 @@ export const GET = createApiHandler(
       }
 
       // Complete the OAuth flow
-      await completeMetaOAuthFlow({ code, userId: context.state, redirectUri })
+      await completeMetaOAuthFlow({
+        code,
+        userId: context.state,
+        clientId: context.clientId ?? null,
+        redirectUri,
+      })
 
       console.log(`[meta.oauth.callback] Successfully completed OAuth for user ${context.state}`)
 
@@ -74,6 +79,9 @@ export const GET = createApiHandler(
       const url = new URL(redirectTarget, appUrl)
       url.searchParams.set('oauth_success', 'true')
       url.searchParams.set('provider', 'facebook')
+      if (context.clientId) {
+        url.searchParams.set('clientId', context.clientId)
+      }
       redirectTarget = url.toString()
 
       // Final safety check on redirect target

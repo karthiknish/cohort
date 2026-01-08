@@ -19,6 +19,7 @@ import {
   refreshGoogleAccessToken,
   refreshMetaAccessToken,
   refreshTikTokAccessToken,
+  refreshLinkedInAccessToken,
 } from '@/lib/integration-token-refresh'
 import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 
@@ -67,11 +68,15 @@ export const POST = createApiHandler(
 
       activeJob = job
 
-      const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId })
+      const clientId = typeof job.clientId === 'string' && job.clientId.trim().length > 0
+        ? job.clientId.trim()
+        : null
+
+      const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId, clientId })
 
       if (!integration || !integration.accessToken) {
         await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' })
-        await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'error', message: 'Missing credentials' })
+        await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'error', message: 'Missing credentials' })
         throw new ValidationError('Integration credentials missing')
       }
 
@@ -92,7 +97,7 @@ export const POST = createApiHandler(
 
         let googleAccessToken = integration.accessToken
         if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
-          googleAccessToken = await refreshGoogleAccessToken({ userId: targetUserId })
+          googleAccessToken = await refreshGoogleAccessToken({ userId: targetUserId, clientId })
         }
 
         metrics = await fetchGoogleAdsMetrics({
@@ -103,7 +108,7 @@ export const POST = createApiHandler(
           managerCustomerId,
           timeframeDays: job.timeframeDays,
           refreshAccessToken: async () => {
-            const refreshed = await refreshGoogleAccessToken({ userId: targetUserId })
+            const refreshed = await refreshGoogleAccessToken({ userId: targetUserId, clientId })
             googleAccessToken = refreshed
             return refreshed
           },
@@ -115,7 +120,7 @@ export const POST = createApiHandler(
 
         let metaAccessToken = integration.accessToken
         if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
-          metaAccessToken = await refreshMetaAccessToken({ userId: targetUserId })
+          metaAccessToken = await refreshMetaAccessToken({ userId: targetUserId, clientId })
         }
 
         metrics = await fetchMetaAdsMetrics({
@@ -123,7 +128,7 @@ export const POST = createApiHandler(
           adAccountId: accountId,
           timeframeDays: job.timeframeDays,
           refreshAccessToken: async () => {
-            const refreshed = await refreshMetaAccessToken({ userId: targetUserId })
+            const refreshed = await refreshMetaAccessToken({ userId: targetUserId, clientId })
             metaAccessToken = refreshed
             return refreshed
           },
@@ -132,14 +137,26 @@ export const POST = createApiHandler(
       }
       case 'linkedin': {
         const accountId = ensureString(integration.accountId, 'LinkedIn Ads accountId must be stored on the integration')
-        
-        // Note: LinkedIn doesn't support automatic token refresh like OAuth 2.0
-        // Tokens are long-lived (60 days) and require re-authorization when expired
+
+        // LinkedIn tokens expire after 60 days but support refresh tokens
+        // Use a 1-day buffer for pre-emptive refresh to avoid sync failures
+        const LINKEDIN_REFRESH_BUFFER_MS = 24 * 60 * 60 * 1000 // 1 day
+        let linkedInAccessToken = integration.accessToken
+
+        if (isTokenExpiringSoon(integration.accessTokenExpiresAt, LINKEDIN_REFRESH_BUFFER_MS)) {
+          linkedInAccessToken = await refreshLinkedInAccessToken({ userId: targetUserId, clientId })
+        }
+
         metrics = await fetchLinkedInAdsMetrics({
-          accessToken: integration.accessToken,
+          accessToken: linkedInAccessToken,
           accountId,
           timeframeDays: job.timeframeDays,
           maxRetries: 3,
+          refreshAccessToken: async () => {
+            const refreshed = await refreshLinkedInAccessToken({ userId: targetUserId, clientId })
+            linkedInAccessToken = refreshed
+            return refreshed
+          },
         })
         break
       }
@@ -151,7 +168,7 @@ export const POST = createApiHandler(
 
         let tiktokAccessToken = integration.accessToken
         if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
-          tiktokAccessToken = await refreshTikTokAccessToken({ userId: targetUserId })
+          tiktokAccessToken = await refreshTikTokAccessToken({ userId: targetUserId, clientId })
         }
 
         metrics = await fetchTikTokAdsMetrics({
@@ -159,7 +176,7 @@ export const POST = createApiHandler(
           advertiserId,
           timeframeDays: job.timeframeDays,
           refreshAccessToken: async () => {
-            const refreshed = await refreshTikTokAccessToken({ userId: targetUserId })
+            const refreshed = await refreshTikTokAccessToken({ userId: targetUserId, clientId })
             tiktokAccessToken = refreshed
             return refreshed
           },
@@ -173,9 +190,9 @@ export const POST = createApiHandler(
       }
     }
 
-    await writeMetricsBatch({ userId: targetUserId, metrics })
+    await writeMetricsBatch({ userId: targetUserId, clientId, metrics })
     await completeSyncJob({ userId: targetUserId, jobId: job.id })
-    await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, status: 'success', message: null })
+    await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'success', message: null })
 
       return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
     } catch (error: unknown) {
@@ -188,7 +205,7 @@ export const POST = createApiHandler(
           jobFailed = true
         }
         if (userId && providerId) {
-          await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Token refresh failed' })
+          await updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Token refresh failed' })
         }
         throw new ValidationError(message ?? 'Token refresh failed')
       }
@@ -201,13 +218,13 @@ export const POST = createApiHandler(
       }
 
       if (userId && providerId) {
-        await updateIntegrationStatus({ userId, providerId, status: 'error', message: message ?? 'Sync failed' })
+        await updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' })
       }
 
       if (resolvedUserId && activeJob && !jobFailed) {
         await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' })
         jobFailed = true
-        await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, status: 'error', message: message ?? 'Sync failed' })
+        await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, clientId: activeJob.clientId ?? null, status: 'error', message: message ?? 'Sync failed' })
       }
 
       throw new ApiError(message ?? 'Failed to process sync job', 500)

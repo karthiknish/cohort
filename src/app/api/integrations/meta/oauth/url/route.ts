@@ -7,6 +7,7 @@ import { isValidRedirectUrl } from '@/lib/utils'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
+  clientId: z.string().optional(),
 })
 
 export const POST = createApiHandler(
@@ -35,7 +36,11 @@ export const POST = createApiHandler(
       throw new BadRequestError('Invalid redirect URL')
     }
 
-    const statePayload = createMetaOAuthState({ state: auth.uid, redirect })
+    const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
+
+    const statePayload = createMetaOAuthState({ state: auth.uid, redirect, clientId })
     const loginUrl = buildMetaBusinessLoginUrl({
       businessConfigId,
       appId,
@@ -51,6 +56,7 @@ export const POST = createApiHandler(
       GENERATED_LOGIN_URL: loginUrl,
       USER_ID: auth.uid,
       REDIRECT_AFTER_AUTH: redirect,
+      CLIENT_ID: clientId,
     })
 
     return { url: loginUrl }

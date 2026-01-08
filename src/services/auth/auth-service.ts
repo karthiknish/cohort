@@ -193,27 +193,30 @@ export class AuthService {
    * AD ACCOUNT CONNECTIONS
    */
 
-  async connectGoogleAdsAccount(): Promise<void> {
+  async connectGoogleAdsAccount(clientId?: string | null): Promise<void> {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectGoogleAdsViaPopup({ currentUser, authUser: this.currentUser })
+    await connectGoogleAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
   }
 
-  async connectFacebookAdsAccount(): Promise<void> {
+  async connectFacebookAdsAccount(clientId?: string | null): Promise<void> {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectFacebookAdsViaPopup({ currentUser, authUser: this.currentUser })
+    await connectFacebookAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
   }
 
-  async connectLinkedInAdsAccount(): Promise<void> {
+  async connectLinkedInAdsAccount(clientId?: string | null): Promise<void> {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectLinkedInAdsViaPopup({ currentUser, authUser: this.currentUser })
+    await connectLinkedInAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
   }
 
-  async startMetaOauth(redirect?: string): Promise<{ url: string }> {
+  async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new Error('Invalid redirect URL')
     }
     const idToken = await this.getIdToken()
-    const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
+    const params = new URLSearchParams()
+    if (redirect) params.set('redirect', redirect)
+    if (clientId) params.set('clientId', clientId)
+    const search = params.toString() ? `?${params.toString()}` : ''
     const response = await fetch(`/api/integrations/meta/oauth/url${search}`, {
       method: 'POST',
       headers: {
@@ -252,12 +255,15 @@ export class AuthService {
     throw new Error('Meta OAuth did not return a URL')
   }
 
-  async startTikTokOauth(redirect?: string): Promise<{ url: string }> {
+  async startTikTokOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new Error('Invalid redirect URL')
     }
     const idToken = await this.getIdToken()
-    const search = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
+    const params = new URLSearchParams()
+    if (redirect) params.set('redirect', redirect)
+    if (clientId) params.set('clientId', clientId)
+    const search = params.toString() ? `?${params.toString()}` : ''
     const response = await fetch(`/api/integrations/tiktok/oauth/url${search}`, {
       method: 'POST',
       headers: {
@@ -404,8 +410,8 @@ export class AuthService {
     )
   }
 
-  async disconnectProvider(providerId: string): Promise<void> {
-    await disconnectProviderOp(() => this.getIdToken(), providerId)
+  async disconnectProvider(providerId: string, clientId?: string | null): Promise<void> {
+    await disconnectProviderOp(() => this.getIdToken(), providerId, clientId)
   }
 
   /**

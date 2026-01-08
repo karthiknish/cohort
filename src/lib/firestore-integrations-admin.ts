@@ -47,9 +47,33 @@ async function getWorkspaceRef(userId: string) {
   return adminDb.collection('workspaces').doc(workspaceId)
 }
 
+function getClientIntegrationsRef(
+  workspaceRef: FirebaseFirestore.DocumentReference,
+  clientId: string
+): FirebaseFirestore.CollectionReference {
+  return workspaceRef.collection('clients').doc(clientId).collection('adIntegrations')
+}
+
+async function getIntegrationsCollectionRef(options: {
+  userId: string
+  clientId?: string | null
+}): Promise<FirebaseFirestore.CollectionReference> {
+  const workspaceRef = await getWorkspaceRef(options.userId)
+  const clientId = typeof options.clientId === 'string' && options.clientId.trim().length > 0
+    ? options.clientId.trim()
+    : null
+
+  if (clientId) {
+    return getClientIntegrationsRef(workspaceRef, clientId)
+  }
+
+  return workspaceRef.collection('adIntegrations')
+}
+
 export async function persistIntegrationTokens(options: {
   userId: string
   providerId: string
+  clientId?: string | null
   accessToken: string | null
   idToken?: string | null
   scopes?: string[]
@@ -65,13 +89,12 @@ export async function persistIntegrationTokens(options: {
   const {
     userId,
     providerId,
+    clientId,
     ...payloadOptions
   } = options
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  const integrationRef = workspaceRef
-    .collection('adIntegrations')
-    .doc(providerId)
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
+  const integrationRef = integrationsCollection.doc(providerId)
 
   const payload = buildIntegrationPersistPayload(payloadOptions, timestampHelpers)
   await integrationRef.set(payload, { merge: true })
@@ -80,6 +103,7 @@ export async function persistIntegrationTokens(options: {
 export async function updateIntegrationCredentials(options: {
   userId: string
   providerId: string
+  clientId?: string | null
   accessToken?: string | null
   refreshToken?: string | null
   idToken?: string | null
@@ -93,13 +117,12 @@ export async function updateIntegrationCredentials(options: {
   const {
     userId,
     providerId,
+    clientId,
     ...payloadOptions
   } = options
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  const integrationRef = workspaceRef
-    .collection('adIntegrations')
-    .doc(providerId)
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
+  const integrationRef = integrationsCollection.doc(providerId)
 
   const updatePayload = buildIntegrationUpdatePayload(payloadOptions, timestampHelpers)
   await integrationRef.set(updatePayload, { merge: true })
@@ -108,28 +131,27 @@ export async function updateIntegrationCredentials(options: {
 export async function enqueueSyncJob(options: {
   userId: string
   providerId: string
+  clientId?: string | null
   jobType?: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
   timeframeDays?: number
 }): Promise<void> {
-  const { userId, providerId, jobType = 'initial-backfill', timeframeDays = 90 } = options
+  const { userId, providerId, clientId = null, jobType = 'initial-backfill', timeframeDays = 90 } = options
 
   const workspaceRef = await getWorkspaceRef(userId)
   await workspaceRef
     .collection('syncJobs')
-    .add(buildSyncJobPayload({ providerId, jobType, timeframeDays }, timestampHelpers))
+    .add(buildSyncJobPayload({ providerId, clientId, jobType, timeframeDays }, timestampHelpers))
 }
 
 export async function getAdIntegration(options: {
   userId: string
   providerId: string
+  clientId?: string | null
 }): Promise<AdIntegration | null> {
-  const { userId, providerId } = options
+  const { userId, providerId, clientId } = options
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  const snapshot = await workspaceRef
-    .collection('adIntegrations')
-    .doc(providerId)
-    .get()
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
+  const snapshot = await integrationsCollection.doc(providerId).get()
 
   if (!snapshot.exists) {
     return null
@@ -187,14 +209,14 @@ export async function failSyncJob(options: {
 export async function updateIntegrationStatus(options: {
   userId: string
   providerId: string
+  clientId?: string | null
   status: 'pending' | 'success' | 'error'
   message?: string | null
 }): Promise<void> {
-  const { userId, providerId } = options
+  const { userId, providerId, clientId } = options
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  await workspaceRef
-    .collection('adIntegrations')
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
+  await integrationsCollection
     .doc(providerId)
     .update(buildIntegrationStatusUpdate(options, timestampHelpers))
 }
@@ -202,16 +224,21 @@ export async function updateIntegrationStatus(options: {
 export async function hasPendingSyncJob(options: {
   userId: string
   providerId: string
+  clientId?: string | null
 }): Promise<boolean> {
-  const { userId, providerId } = options
+  const { userId, providerId, clientId } = options
 
   const workspaceRef = await getWorkspaceRef(userId)
   const jobsRef = workspaceRef.collection('syncJobs')
-  const snapshot = await jobsRef
+  let query = jobsRef
     .where('providerId', '==', providerId)
-    .where('status', 'in', ['queued', 'running'])
-    .limit(1)
-    .get()
+    .where('status', 'in', ['queued', 'running']) as FirebaseFirestore.Query
+
+  if (typeof clientId === 'string' && clientId.trim().length > 0) {
+    query = query.where('clientId', '==', clientId.trim())
+  }
+
+  const snapshot = await query.limit(1).get()
 
   return !snapshot.empty
 }
@@ -219,13 +246,13 @@ export async function hasPendingSyncJob(options: {
 export async function markIntegrationSyncRequested(options: {
   userId: string
   providerId: string
+  clientId?: string | null
   status?: 'pending' | 'never' | 'error' | 'success'
 }): Promise<void> {
-  const { userId, providerId, status = 'pending' } = options
+  const { userId, providerId, clientId, status = 'pending' } = options
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  await workspaceRef
-    .collection('adIntegrations')
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
+  await integrationsCollection
     .doc(providerId)
     .set(
       {
@@ -240,6 +267,7 @@ export async function markIntegrationSyncRequested(options: {
 type IntegrationPreferenceOptions = {
   userId: string
   providerId: string
+  clientId?: string | null
   autoSyncEnabled?: boolean | null
   syncFrequencyMinutes?: number | null
   scheduledTimeframeDays?: number | null
@@ -264,15 +292,15 @@ export async function updateIntegrationPreferences(options: IntegrationPreferenc
     payload.scheduledTimeframeDays = options.scheduledTimeframeDays ?? null
   }
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  await workspaceRef
-    .collection('adIntegrations')
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId: options.clientId })
+  await integrationsCollection
     .doc(providerId)
     .set(payload, { merge: true })
 }
 
 export async function writeMetricsBatch(options: {
   userId: string
+  clientId?: string | null
   metrics: NormalizedMetric[]
 }): Promise<void> {
   const { userId, metrics } = options
@@ -282,9 +310,16 @@ export async function writeMetricsBatch(options: {
   const workspaceRef = await getWorkspaceRef(userId)
   const metricsCollection = workspaceRef.collection('adMetrics')
 
+  const resolvedClientId = typeof options.clientId === 'string' && options.clientId.trim().length > 0
+    ? options.clientId.trim()
+    : null
+
   prepareMetricsBatch(metrics, timestampHelpers).forEach((metric) => {
     const metricRef = metricsCollection.doc()
-    batch.set(metricRef, metric)
+    batch.set(metricRef, {
+      ...metric,
+      clientId: resolvedClientId,
+    })
   })
 
   await batch.commit()
@@ -293,12 +328,10 @@ export async function writeMetricsBatch(options: {
 export async function deleteAdIntegration(options: {
   userId: string
   providerId: string
+  clientId?: string | null
 }): Promise<void> {
-  const { userId, providerId } = options
+  const { userId, providerId, clientId } = options
 
-  const workspaceRef = await getWorkspaceRef(userId)
-  await workspaceRef
-    .collection('adIntegrations')
-    .doc(providerId)
-    .delete()
+  const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
+  await integrationsCollection.doc(providerId).delete()
 }

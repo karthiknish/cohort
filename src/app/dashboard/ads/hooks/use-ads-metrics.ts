@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { subDays, startOfDay, endOfDay } from 'date-fns'
 
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
@@ -68,6 +69,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const { refreshTick: externalRefreshTick = 0 } = options
   
   const { user, getIdToken } = useAuth()
+  const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
@@ -175,6 +177,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
         const token = await getIdToken()
         const metricResponse = await fetchMetrics(token, { 
           userId: user.id, 
+          clientId: selectedClientId ?? null,
           pageSize: METRICS_PAGE_SIZE,
           startDate: dateRange.start.toISOString().split('T')[0],
           endDate: dateRange.end.toISOString().split('T')[0],
@@ -200,7 +203,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     void loadData()
     return () => { isSubscribed = false }
-  }, [user?.id, refreshTick, getIdToken, isPreviewMode, dateRange.start.toISOString(), dateRange.end.toISOString()])
+  }, [user?.id, refreshTick, getIdToken, isPreviewMode, dateRange.start.toISOString(), dateRange.end.toISOString(), selectedClientId])
 
   // Handlers
   const handleManualRefresh = useCallback(() => {
@@ -221,6 +224,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       const token = await getIdToken()
       const response = await fetchMetrics(token, { 
         userId: user.id, 
+        clientId: selectedClientId ?? null,
         cursor: nextCursor, 
         pageSize: METRICS_PAGE_SIZE,
         startDate: dateRange.start.toISOString().split('T')[0],
@@ -233,7 +237,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     } finally {
       setLoadingMore(false)
     }
-  }, [getIdToken, loadingMore, metricsLoading, nextCursor, user?.id, dateRange.start, dateRange.end])
+  }, [getIdToken, loadingMore, metricsLoading, nextCursor, user?.id, dateRange.start, dateRange.end, selectedClientId])
 
   const handleExport = useCallback(() => {
     exportMetricsToCsv(processedMetrics)

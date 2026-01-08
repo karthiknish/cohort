@@ -22,6 +22,7 @@ const LINKEDIN_ADS_SCOPES = [
 interface LinkedInOAuthContext {
   state: string
   redirect?: string
+  clientId?: string | null
   codeVerifier?: string
   createdAt: number
 }
@@ -247,13 +248,14 @@ export async function exchangeLinkedInCodeForTokens(
 export async function completeLinkedInOAuthFlow(options: {
   code: string
   userId: string
+  clientId?: string | null
   redirectUri: string
 }): Promise<void> {
-  const { code, userId, redirectUri } = options
-  const clientId = process.env.LINKEDIN_CLIENT_ID
-  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET
+  const { code, userId, clientId: integrationClientId, redirectUri } = options
+  const linkedInClientId = process.env.LINKEDIN_CLIENT_ID
+  const linkedInClientSecret = process.env.LINKEDIN_CLIENT_SECRET
 
-  if (!clientId || !clientSecret) {
+  if (!linkedInClientId || !linkedInClientSecret) {
     throw new LinkedInOAuthError('LinkedIn OAuth credentials are not configured')
   }
 
@@ -261,8 +263,8 @@ export async function completeLinkedInOAuthFlow(options: {
   let tokenResponse: LinkedInTokenResponse
   try {
     tokenResponse = await exchangeLinkedInCodeForTokens({
-      clientId,
-      clientSecret,
+      clientId: linkedInClientId,
+      clientSecret: linkedInClientSecret,
       redirectUri,
       code,
     })
@@ -290,6 +292,7 @@ export async function completeLinkedInOAuthFlow(options: {
   await persistIntegrationTokens({
     userId,
     providerId: 'linkedin',
+    clientId: integrationClientId ?? null,
     accessToken: tokenResponse.access_token,
     refreshToken: tokenResponse.refresh_token ?? null,
     scopes: LINKEDIN_ADS_SCOPES,
@@ -300,5 +303,10 @@ export async function completeLinkedInOAuthFlow(options: {
   console.log(`[LinkedIn OAuth] Successfully persisted integration for user ${userId}`)
 
   // Enqueue initial sync job
-  await enqueueSyncJob({ userId, providerId: 'linkedin', jobType: 'initial-backfill' })
+  await enqueueSyncJob({
+    userId,
+    providerId: 'linkedin',
+    jobType: 'initial-backfill',
+    clientId: integrationClientId ?? null,
+  })
 }

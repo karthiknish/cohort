@@ -10,12 +10,12 @@ interface AuthContextType {
   isSyncing: boolean
   signIn: (email: string, password: string) => Promise<AuthUser>
   signInWithGoogle: () => Promise<AuthUser>
-  connectGoogleAdsAccount: () => Promise<void>
-  connectFacebookAdsAccount: () => Promise<void>
-  connectLinkedInAdsAccount: () => Promise<void>
-  startMetaOauth: (redirect?: string) => Promise<{ url: string }>
-  startTikTokOauth: (redirect?: string) => Promise<{ url: string }>
-  disconnectProvider: (providerId: string) => Promise<void>
+  connectGoogleAdsAccount: (clientId?: string | null) => Promise<void>
+  connectFacebookAdsAccount: (clientId?: string | null) => Promise<void>
+  connectLinkedInAdsAccount: (clientId?: string | null) => Promise<void>
+  startMetaOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
+  startTikTokOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
+  disconnectProvider: (providerId: string, clientId?: string | null) => Promise<void>
   getIdToken: () => Promise<string>
   signUp: (data: SignUpData) => Promise<AuthUser>
   signOut: () => Promise<void>
@@ -146,28 +146,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [applyUser])
 
-  const connectGoogleAdsAccount = useCallback(async () => {
-    await authService.connectGoogleAdsAccount()
+  const connectGoogleAdsAccount = useCallback(async (clientId?: string | null) => {
+    await authService.connectGoogleAdsAccount(clientId)
   }, [])
 
-  const connectFacebookAdsAccount = useCallback(async () => {
-    await authService.connectFacebookAdsAccount()
+  const connectFacebookAdsAccount = useCallback(async (clientId?: string | null) => {
+    await authService.connectFacebookAdsAccount(clientId)
   }, [])
 
-  const connectLinkedInAdsAccount = useCallback(async () => {
-    await authService.connectLinkedInAdsAccount()
+  const connectLinkedInAdsAccount = useCallback(async (clientId?: string | null) => {
+    await authService.connectLinkedInAdsAccount(clientId)
   }, [])
 
-  const startMetaOauth = useCallback(async (redirect?: string) => {
-    return await authService.startMetaOauth(redirect)
+  const startMetaOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
+    return await authService.startMetaOauth(redirect, clientId)
   }, [])
 
-  const startTikTokOauth = useCallback(async (redirect?: string) => {
-    return await authService.startTikTokOauth(redirect)
+  const startTikTokOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
+    return await authService.startTikTokOauth(redirect, clientId)
   }, [])
 
-  const disconnectProvider = useCallback(async (providerId: string) => {
-    await authService.disconnectProvider(providerId)
+  const disconnectProvider = useCallback(async (providerId: string, clientId?: string | null) => {
+    await authService.disconnectProvider(providerId, clientId)
   }, [])
 
   const getIdToken = useCallback(async () => {

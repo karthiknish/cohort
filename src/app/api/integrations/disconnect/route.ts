@@ -7,6 +7,7 @@ import { logAuditAction } from '@/lib/audit-logger'
 
 const disconnectSchema = z.object({
   providerId: z.string().min(1),
+  clientId: z.string().optional(),
 })
 
 export const POST = createApiHandler(
@@ -19,7 +20,11 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('User context required')
     }
 
-    await deleteAdIntegration({ userId: auth.uid!, providerId: body.providerId })
+    const clientId = typeof body.clientId === 'string' && body.clientId.trim().length > 0
+      ? body.clientId.trim()
+      : null
+
+    await deleteAdIntegration({ userId: auth.uid!, providerId: body.providerId, clientId })
 
     await logAuditAction({
       action: 'INTEGRATION_DISCONNECT',
@@ -27,6 +32,7 @@ export const POST = createApiHandler(
       targetId: body.providerId,
       metadata: {
         providerId: body.providerId,
+        clientId,
       },
     })
 

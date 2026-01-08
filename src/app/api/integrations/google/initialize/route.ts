@@ -6,20 +6,27 @@ import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
 import { createApiHandler } from '@/lib/api-handler'
 import { ValidationError, NotFoundError } from '@/lib/api-errors'
 
+const querySchema = z.object({
+  clientId: z.string().optional(),
+})
+
 const bodySchema = z.object({}).strict()
 
-export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, async (req, { auth }) => {
+export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sensitive' }, async (req, { auth, query }) => {
   if (!auth.uid) {
     throw new ValidationError('User context is required')
   }
 
   try {
-    const integration = await getAdIntegration({ userId: auth.uid, providerId: 'google' })
+    const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
+    const integration = await getAdIntegration({ userId: auth.uid, providerId: 'google', clientId })
     if (!integration) {
       throw new NotFoundError('Google Ads integration not found')
     }
 
-    const accessToken = await ensureGoogleAccessToken({ userId: auth.uid })
+    const accessToken = await ensureGoogleAccessToken({ userId: auth.uid, clientId })
     const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? null
 
     const accounts = await fetchGoogleAdAccounts({
@@ -40,6 +47,7 @@ export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, asy
     await updateIntegrationCredentials({
       userId: auth.uid,
       providerId: 'google',
+      clientId,
       accountId,
       loginCustomerId: loginCustomerId ?? undefined,
       managerCustomerId: managerCustomerId ?? undefined,

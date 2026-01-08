@@ -65,6 +65,7 @@ export default function AdsPage() {
     connectingProvider,
     connectionErrors,
     integrationStatuses,
+    integrationStatusMap,
     automationStatuses,
     metaSetupMessage,
     tiktokSetupMessage,
@@ -175,6 +176,7 @@ export default function AdsPage() {
                 connectedProviders={connectedProviders}
                 connectingProvider={connectingProvider}
                 connectionErrors={connectionErrors}
+                integrationStatuses={integrationStatusMap}
                 onConnect={handleConnect}
                 onDisconnect={handleDisconnect}
                 onOauthRedirect={handleOauthRedirect}

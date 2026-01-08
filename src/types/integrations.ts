@@ -9,6 +9,8 @@ export type SyncJobType = 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
 export interface SyncJob {
   id: string
   providerId: string
+  /** Optional client scope for this job (selected client in dashboard). */
+  clientId?: string | null
   jobType: SyncJobType
   timeframeDays: number
   status: SyncJobStatus
@@ -43,6 +45,8 @@ export interface AdIntegration {
 
 export interface NormalizedMetric {
   providerId: string
+  /** Optional client scope for this metric record. */
+  clientId?: string | null
   date: string
   spend: number
   impressions: number

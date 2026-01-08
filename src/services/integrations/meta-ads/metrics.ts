@@ -32,12 +32,14 @@ export async function fetchMetaAdAccounts(options: {
   accessToken: string
   appSecret?: string | null
   limit?: number
+  maxPages?: number
   maxRetries?: number
 }): Promise<MetaAdAccount[]> {
-  const { 
-    accessToken, 
-    appSecret = process.env.META_APP_SECRET, 
-    limit = 25,
+  const {
+    accessToken,
+    appSecret = process.env.META_APP_SECRET,
+    limit = 100, // Increased from 25 to fetch more accounts per page
+    maxPages = 10, // Limit total pages to prevent runaway pagination
     maxRetries = DEFAULT_RETRY_CONFIG.maxRetries,
   } = options
 
@@ -45,48 +47,74 @@ export async function fetchMetaAdAccounts(options: {
     throw new Error('Missing Meta access token')
   }
 
-  const params = new URLSearchParams({
-    fields: ['id', 'name', 'account_status', 'currency'].join(','),
-    limit: String(limit),
-  })
+  const allAccounts: MetaAdAccount[] = []
+  let nextUrl: string | null = null
 
-  await appendMetaAuthParams({ params, accessToken, appSecret })
+  for (let page = 0; page < maxPages; page++) {
+    let url: string
 
-  const url = `${META_API_BASE}/me/adaccounts?${params.toString()}`
-  
-  const { payload } = await metaAdsClient.executeRequest<{
-    data?: Array<{
-      id?: unknown
-      name?: unknown
-      account_status?: unknown
-      currency?: unknown
-    }>
-  }>({
-    url,
-    operation: 'fetchAdAccounts',
-    maxRetries,
-  })
+    if (page === 0) {
+      const params = new URLSearchParams({
+        fields: ['id', 'name', 'account_status', 'currency'].join(','),
+        limit: String(limit),
+      })
 
-  const accounts = Array.isArray(payload?.data) ? payload.data : []
+      await appendMetaAuthParams({ params, accessToken, appSecret })
+      url = `${META_API_BASE}/me/adaccounts?${params.toString()}`
+    } else if (nextUrl) {
+      url = nextUrl
+    } else {
+      break
+    }
 
-  return (accounts ?? [])
-    .map((candidate): MetaAdAccount | null => {
-      const id = typeof candidate?.id === 'string' ? candidate.id : null
-      const name = typeof candidate?.name === 'string' ? candidate.name : 'Meta ad account'
-      const accountStatusRaw = candidate?.account_status
-      const accountStatus = typeof accountStatusRaw === 'number' ? accountStatusRaw : Number(accountStatusRaw)
-      const currency = typeof candidate?.currency === 'string' ? candidate.currency : undefined
-
-      if (!id) return null
-
-      return {
-        id,
-        name,
-        account_status: Number.isFinite(accountStatus) ? Number(accountStatus) : undefined,
-        currency,
-      } satisfies MetaAdAccount
+    const { payload } = await metaAdsClient.executeRequest<{
+      data?: Array<{
+        id?: unknown
+        name?: unknown
+        account_status?: unknown
+        currency?: unknown
+      }>
+      paging?: {
+        next?: string
+        cursors?: {
+          after?: string
+        }
+      }
+    }>({
+      url,
+      operation: `fetchAdAccounts:page${page}`,
+      maxRetries,
     })
-    .filter((account): account is MetaAdAccount => Boolean(account))
+
+    const accounts = Array.isArray(payload?.data) ? payload.data : []
+
+    const parsedAccounts = accounts
+      .map((candidate): MetaAdAccount | null => {
+        const id = typeof candidate?.id === 'string' ? candidate.id : null
+        const name = typeof candidate?.name === 'string' ? candidate.name : 'Meta ad account'
+        const accountStatusRaw = candidate?.account_status
+        const accountStatus = typeof accountStatusRaw === 'number' ? accountStatusRaw : Number(accountStatusRaw)
+        const currency = typeof candidate?.currency === 'string' ? candidate.currency : undefined
+
+        if (!id) return null
+
+        return {
+          id,
+          name,
+          account_status: Number.isFinite(accountStatus) ? Number(accountStatus) : undefined,
+          currency,
+        } satisfies MetaAdAccount
+      })
+      .filter((account): account is MetaAdAccount => Boolean(account))
+
+    allAccounts.push(...parsedAccounts)
+
+    // Check if there's a next page
+    nextUrl = payload?.paging?.next ?? null
+    if (!nextUrl) break
+  }
+
+  return allAccounts
 }
 
 // =============================================================================

@@ -6,6 +6,7 @@ import { isValidRedirectUrl } from '@/lib/utils'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
+  clientId: z.string().optional(),
 })
 
 export const POST = createApiHandler(
@@ -18,11 +19,11 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('Authentication required')
     }
 
-    const clientId = process.env.LINKEDIN_CLIENT_ID
+    const linkedInClientId = process.env.LINKEDIN_CLIENT_ID
     const redirectUri = process.env.LINKEDIN_OAUTH_REDIRECT_URI
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-    if (!clientId || !redirectUri) {
+    if (!linkedInClientId || !redirectUri) {
       throw new ServiceUnavailableError('LinkedIn Ads OAuth is not configured')
     }
 
@@ -33,9 +34,17 @@ export const POST = createApiHandler(
       throw new BadRequestError('Invalid redirect URL')
     }
 
-    const statePayload = createLinkedInOAuthState({ state: auth.uid, redirect })
+    const integrationClientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
+
+    const statePayload = createLinkedInOAuthState({
+      state: auth.uid,
+      redirect,
+      clientId: integrationClientId,
+    })
     const loginUrl = buildLinkedInOAuthUrl({
-      clientId,
+      clientId: linkedInClientId,
       redirectUri,
       state: statePayload,
     })

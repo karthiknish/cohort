@@ -6,6 +6,7 @@ import { isValidRedirectUrl } from '@/lib/utils'
 
 const querySchema = z.object({
   redirect: z.string().optional(),
+  clientId: z.string().optional(),
 })
 
 export const POST = createApiHandler(
@@ -33,9 +34,14 @@ export const POST = createApiHandler(
       throw new BadRequestError('Invalid redirect URL')
     }
 
-    const state = createTikTokOAuthState({ state: auth.uid, redirect })
-  const scopes = process.env.TIKTOK_OAUTH_SCOPES?.split(',').map((scope) => scope.trim()).filter(Boolean)
-  const url = buildTikTokOAuthUrl({ clientKey, redirectUri, state, scopes })
+    const state = createTikTokOAuthState({
+      state: auth.uid,
+      redirect,
+      clientId: query.clientId ?? null,
+    })
+    const scopes = process.env.TIKTOK_OAUTH_SCOPES?.split(',').map((scope) => scope.trim()).filter(Boolean)
+    const url = buildTikTokOAuthUrl({ clientKey, redirectUri, state, scopes })
 
-  return { url }
-})
+    return { url }
+  }
+)

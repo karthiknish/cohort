@@ -11,21 +11,28 @@ import { createApiHandler } from '@/lib/api-handler'
 import { z } from 'zod'
 import { ValidationError, NotFoundError } from '@/lib/api-errors'
 
+const querySchema = z.object({
+  clientId: z.string().optional(),
+})
+
 const bodySchema = z.object({}).strict()
 
-export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, async (req, { auth }) => {
+export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sensitive' }, async (req, { auth, query }) => {
   if (!auth.uid) {
     throw new ValidationError('User context is required')
   }
 
   try {
-    const integration = await getAdIntegration({ userId: auth.uid, providerId: 'tiktok' })
+    const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
+    const integration = await getAdIntegration({ userId: auth.uid, providerId: 'tiktok', clientId })
 
     if (!integration) {
       throw new NotFoundError('TikTok integration not found')
     }
 
-    const accessToken = await ensureTikTokAccessToken({ userId: auth.uid })
+    const accessToken = await ensureTikTokAccessToken({ userId: auth.uid, clientId })
 
     const accounts = await fetchTikTokAdAccounts({
       accessToken,
@@ -41,6 +48,7 @@ export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, asy
     await updateIntegrationCredentials({
       userId: auth.uid,
       providerId: 'tiktok',
+      clientId,
       accountId: preferredAccount.id,
     })
 

@@ -6,6 +6,7 @@ import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/
 interface MetaOAuthContext {
   state: string
   redirect?: string
+  clientId?: string | null
   createdAt: number
 }
 
@@ -76,9 +77,10 @@ export class MetaOAuthError extends Error {
 export async function completeMetaOAuthFlow(options: {
   code: string
   userId: string
+  clientId?: string | null
   redirectUri: string
 }): Promise<void> {
-  const { code, userId, redirectUri } = options
+  const { code, userId, clientId, redirectUri } = options
   const appId = process.env.META_APP_ID
   const appSecret = process.env.META_APP_SECRET
 
@@ -169,6 +171,7 @@ export async function completeMetaOAuthFlow(options: {
   await persistIntegrationTokens({
     userId,
     providerId: 'facebook',
+    clientId: clientId ?? null,
     accessToken: longLivedToken,
     scopes: ['ads_management', 'ads_read', 'business_management'],
     accessTokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
@@ -177,5 +180,5 @@ export async function completeMetaOAuthFlow(options: {
   console.log(`[Meta OAuth] Successfully persisted integration for user ${userId}`)
 
   // Enqueue initial sync job
-  await enqueueSyncJob({ userId, providerId: 'facebook', jobType: 'initial-backfill' })
+  await enqueueSyncJob({ userId, providerId: 'facebook', clientId: clientId ?? null, jobType: 'initial-backfill' })
 }

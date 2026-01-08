@@ -21,6 +21,7 @@ import type { AuthUser } from './types'
 export interface OAuthConnectionOptions {
     currentUser: FirebaseUser
     authUser: AuthUser | null
+    clientId?: string | null
 }
 
 export interface OAuthSignInResult {
@@ -32,7 +33,7 @@ export interface OAuthSignInResult {
  * Connect Google Ads account via OAuth popup
  */
 export async function connectGoogleAdsViaPopup(options: OAuthConnectionOptions): Promise<void> {
-    const { currentUser, authUser } = options
+    const { currentUser, authUser, clientId: integrationClientId } = options
     const provider = new GoogleAuthProvider()
     provider.addScope('https://www.googleapis.com/auth/adwords')
     provider.addScope('email')
@@ -65,13 +66,18 @@ export async function connectGoogleAdsViaPopup(options: OAuthConnectionOptions):
         await persistIntegrationTokens({
             workspaceId: authUser?.agencyId ?? currentUser.uid,
             providerId: 'google',
+            clientId: integrationClientId ?? null,
             accessToken: resolvedAccessToken,
             idToken: credential?.idToken ?? null,
             scopes: ['https://www.googleapis.com/auth/adwords', 'email'],
             refreshToken,
             accessTokenExpiresAt,
         })
-        await enqueueSyncJob({ workspaceId: authUser?.agencyId ?? currentUser.uid, providerId: 'google' })
+        await enqueueSyncJob({
+            workspaceId: authUser?.agencyId ?? currentUser.uid,
+            providerId: 'google',
+            clientId: integrationClientId ?? null,
+        })
     } catch (error: unknown) {
         console.error('Google Ads connection error:', error)
         if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
@@ -85,7 +91,7 @@ export async function connectGoogleAdsViaPopup(options: OAuthConnectionOptions):
  * Connect Facebook Ads account via OAuth popup
  */
 export async function connectFacebookAdsViaPopup(options: OAuthConnectionOptions): Promise<void> {
-    const { currentUser, authUser } = options
+    const { currentUser, authUser, clientId: integrationClientId } = options
     const provider = new FacebookAuthProvider()
     provider.addScope('ads_management')
     provider.addScope('ads_read')
@@ -112,12 +118,17 @@ export async function connectFacebookAdsViaPopup(options: OAuthConnectionOptions
         await persistIntegrationTokens({
             workspaceId: authUser?.agencyId ?? currentUser.uid,
             providerId: 'facebook',
+            clientId: integrationClientId ?? null,
             accessToken: resolvedAccessToken,
             scopes: ['ads_management', 'ads_read', 'business_management'],
             accessTokenExpiresAt,
         })
 
-        await enqueueSyncJob({ workspaceId: authUser?.agencyId ?? currentUser.uid, providerId: 'facebook' })
+        await enqueueSyncJob({
+            workspaceId: authUser?.agencyId ?? currentUser.uid,
+            providerId: 'facebook',
+            clientId: integrationClientId ?? null,
+        })
     } catch (error: unknown) {
         console.error('Facebook Ads connection error:', error)
         if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
@@ -131,7 +142,7 @@ export async function connectFacebookAdsViaPopup(options: OAuthConnectionOptions
  * Connect LinkedIn Ads account via OAuth popup
  */
 export async function connectLinkedInAdsViaPopup(options: OAuthConnectionOptions): Promise<void> {
-    const { currentUser, authUser } = options
+    const { currentUser, authUser, clientId: integrationClientId } = options
     const provider = new OAuthProvider('linkedin.com')
     provider.addScope('r_ads')
     provider.addScope('rw_ads')
@@ -143,11 +154,16 @@ export async function connectLinkedInAdsViaPopup(options: OAuthConnectionOptions
         await persistIntegrationTokens({
             workspaceId: authUser?.agencyId ?? currentUser.uid,
             providerId: 'linkedin',
+            clientId: integrationClientId ?? null,
             accessToken: credential?.accessToken ?? null,
             idToken: credential?.idToken ?? null,
             scopes: ['r_ads', 'rw_ads'],
         })
-        await enqueueSyncJob({ workspaceId: authUser?.agencyId ?? currentUser.uid, providerId: 'linkedin' })
+        await enqueueSyncJob({
+            workspaceId: authUser?.agencyId ?? currentUser.uid,
+            providerId: 'linkedin',
+            clientId: integrationClientId ?? null,
+        })
     } catch (error: unknown) {
         console.error('LinkedIn Ads connection error:', error)
         if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {

@@ -60,7 +60,12 @@ export const GET = createApiHandler(
       }
 
       // Complete the OAuth flow
-      await completeGoogleOAuthFlow({ code, userId: context.state, redirectUri })
+      await completeGoogleOAuthFlow({
+        code,
+        userId: context.state,
+        redirectUri,
+        clientId: context.clientId ?? null,
+      })
 
       console.log(`[google.oauth.callback] Successfully completed OAuth for user ${context.state}`)
 
@@ -70,6 +75,9 @@ export const GET = createApiHandler(
       const url = new URL(redirectTarget, appUrl)
       url.searchParams.set('oauth_success', 'true')
       url.searchParams.set('provider', 'google')
+      if (context.clientId) {
+        url.searchParams.set('clientId', context.clientId)
+      }
       redirectTarget = url.toString()
 
       // Final safety check on redirect target

@@ -10,6 +10,7 @@ import { toISO } from '@/lib/utils'
 
 const statusQuerySchema = z.object({
   userId: z.string().optional(),
+  clientId: z.string().optional(),
 })
 
 export const GET = createApiHandler(
@@ -18,10 +19,18 @@ export const GET = createApiHandler(
     querySchema: statusQuerySchema,
     rateLimit: 'standard',
   },
-  async (req, { workspace }) => {
+  async (req, { workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
 
-    const snapshot = await workspace.integrationsCollection.get()
+    const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
+
+    const integrationsCollection = clientId
+      ? workspace.workspaceRef.collection('clients').doc(clientId).collection('adIntegrations')
+      : workspace.integrationsCollection
+
+    const snapshot = await integrationsCollection.get()
 
     const statuses = snapshot.docs.map((docSnap) => {
       const data = docSnap.data() as Record<string, unknown>

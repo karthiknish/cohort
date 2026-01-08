@@ -1,7 +1,7 @@
 'use client'
 
-import { memo, useCallback, useMemo } from 'react'
-import { type LucideIcon, RefreshCw } from 'lucide-react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { type LucideIcon, RefreshCw, Check, Clock, AlertTriangle, Loader2, Unlink } from 'lucide-react'
 
 import {
   Card,
@@ -14,7 +14,23 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import {
+  ConnectionDialog,
+  DisconnectDialog,
+  type ConnectionStep
+} from '@/app/dashboard/ads/components/connection-dialog'
+import { PROVIDER_INFO } from '@/app/dashboard/ads/components/constants'
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 interface ProviderConfig {
   id: string
@@ -25,11 +41,19 @@ interface ProviderConfig {
   mode?: 'direct' | 'oauth'
 }
 
+interface IntegrationStatusInfo {
+  lastSyncedAt?: string | null
+  lastSyncRequestedAt?: string | null
+  status?: string
+  accountId?: string | null
+}
+
 interface AdConnectionsCardProps {
   providers: ProviderConfig[]
   connectedProviders: Record<string, boolean>
   connectingProvider: string | null
   connectionErrors: Record<string, string>
+  integrationStatuses?: Record<string, IntegrationStatusInfo>
   onConnect: (providerId: string, connect: () => Promise<void>) => Promise<void> | void
   onDisconnect: (providerId: string) => Promise<void> | void
   onOauthRedirect?: (providerId: string) => Promise<void> | void
@@ -37,17 +61,65 @@ interface AdConnectionsCardProps {
   refreshing: boolean
 }
 
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function formatLastSync(dateString: string | null | undefined): string {
+  if (!dateString) return 'Never synced'
+
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+
+  return date.toLocaleDateString()
+}
+
+function getStatusBadgeVariant(status: string | undefined, isConnected: boolean): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (!isConnected) return 'outline'
+  if (status === 'error') return 'destructive'
+  if (status === 'pending') return 'secondary'
+  return 'default'
+}
+
+function getStatusLabel(status: string | undefined, isConnected: boolean): string {
+  if (!isConnected) return 'Not connected'
+  if (status === 'error') return 'Sync failed'
+  if (status === 'pending') return 'Syncing...'
+  return 'Connected'
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export function AdConnectionsCard({
   providers,
   connectedProviders,
   connectingProvider,
   connectionErrors,
+  integrationStatuses = {},
   onConnect,
   onDisconnect,
   onOauthRedirect,
   onRefresh,
   refreshing,
 }: AdConnectionsCardProps) {
+  // Dialog state
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false)
+  const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<ProviderConfig | null>(null)
+  const [connectionStep, setConnectionStep] = useState<ConnectionStep>('idle')
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
+
   const providerStates = useMemo(
     () =>
       providers.map((provider) => ({
@@ -55,176 +127,335 @@ export function AdConnectionsCard({
         isConnecting: connectingProvider === provider.id,
         isConnected: Boolean(connectedProviders[provider.id]),
         error: connectionErrors[provider.id],
+        statusInfo: integrationStatuses[provider.id],
       })),
-    [connectedProviders, connectionErrors, connectingProvider, providers]
+    [connectedProviders, connectionErrors, connectingProvider, providers, integrationStatuses]
   )
 
-  const handlePrimaryAction = useCallback(
-    (provider: ProviderConfig, isConnected: boolean) => {
-      if (isConnected) {
-        if (provider.mode === 'oauth') {
-          void onOauthRedirect?.(provider.id)
-          return
-        }
-        if (provider.connect) {
-          void onConnect(provider.id, provider.connect)
-        }
-        return
-      }
+  // Handle opening connection dialog
+  const handleOpenConnectDialog = useCallback((provider: ProviderConfig) => {
+    setSelectedProvider(provider)
+    setConnectionStep('idle')
+    setConnectDialogOpen(true)
+  }, [])
 
+  // Handle connection from dialog
+  const handleDialogConnect = useCallback(async () => {
+    if (!selectedProvider) return
+
+    setConnectionStep('redirecting')
+
+    try {
+      if (selectedProvider.mode === 'oauth') {
+        // For OAuth redirect flow, we just need to start the redirect
+        await onOauthRedirect?.(selectedProvider.id)
+        // The page will redirect, so we don't need to update state
+      } else if (selectedProvider.connect) {
+        // For popup flow, show progress
+        setConnectionStep('authenticating')
+        await onConnect(selectedProvider.id, selectedProvider.connect)
+        setConnectionStep('complete')
+      }
+    } catch {
+      setConnectionStep('error')
+    }
+  }, [selectedProvider, onConnect, onOauthRedirect])
+
+  // Handle retry
+  const handleRetry = useCallback(() => {
+    setConnectionStep('idle')
+  }, [])
+
+  // Handle opening disconnect dialog
+  const handleOpenDisconnectDialog = useCallback((provider: ProviderConfig) => {
+    setSelectedProvider(provider)
+    setDisconnectDialogOpen(true)
+  }, [])
+
+  // Handle disconnect confirmation
+  const handleConfirmDisconnect = useCallback(async () => {
+    if (!selectedProvider) return
+
+    setIsDisconnecting(true)
+    try {
+      await onDisconnect(selectedProvider.id)
+    } finally {
+      setIsDisconnecting(false)
+      setDisconnectDialogOpen(false)
+      setSelectedProvider(null)
+    }
+  }, [selectedProvider, onDisconnect])
+
+  // Handle quick reconnect (no dialog)
+  const handleQuickReconnect = useCallback(
+    (provider: ProviderConfig) => {
       if (provider.mode === 'oauth') {
         void onOauthRedirect?.(provider.id)
-        return
+      } else if (provider.connect) {
+        void onConnect(provider.id, provider.connect)
       }
-
-      if (!provider.connect) {
-        return
-      }
-
-      void onConnect(provider.id, provider.connect)
     },
     [onConnect, onOauthRedirect]
   )
 
-  const handleDisconnect = useCallback(
-    (providerId: string) => {
-      void onDisconnect(providerId)
-    },
-    [onDisconnect]
-  )
-
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="flex flex-col gap-1">
-          <CardTitle className="text-lg">Ad platform connections</CardTitle>
-          <CardDescription>
-            Connect your paid media accounts to import spend, conversions, and creative performance into Cohorts.
-          </CardDescription>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2"
-        >
-          <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} /> Refresh status
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {providerStates.map((state) => (
-            <ProviderCard
-              key={state.provider.id}
-              state={state}
-              onPrimaryAction={handlePrimaryAction}
-              onDisconnect={handleDisconnect}
-            />
-          ))}
-        </div>
+    <>
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col gap-1">
+            <CardTitle className="text-lg">Ad platform connections</CardTitle>
+            <CardDescription>
+              Connect your paid media accounts to import spend, conversions, and creative performance.
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2"
+          >
+            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+            Refresh
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {providerStates.map((state) => (
+              <ProviderCard
+                key={state.provider.id}
+                state={state}
+                onConnect={handleOpenConnectDialog}
+                onReconnect={handleQuickReconnect}
+                onDisconnect={handleOpenDisconnectDialog}
+              />
+            ))}
+          </div>
 
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <Separator />
-          <p>
-            After connecting, Cohorts will queue an initial data sync covering the last 90 days of performance. You can
-            review sync status from the Integrations settings page.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <Separator />
+            <p>
+              After connecting, we&apos;ll sync your last 90 days of performance data automatically.
+              Future syncs happen daily to keep your data fresh.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Connection Dialog */}
+      <ConnectionDialog
+        open={connectDialogOpen}
+        onOpenChange={setConnectDialogOpen}
+        providerId={selectedProvider?.id ?? null}
+        providerIcon={selectedProvider?.icon}
+        onConnect={handleDialogConnect}
+        isConnecting={connectingProvider === selectedProvider?.id}
+        connectionStep={connectionStep}
+        error={selectedProvider ? connectionErrors[selectedProvider.id] : null}
+        onRetry={handleRetry}
+      />
+
+      {/* Disconnect Confirmation Dialog */}
+      <DisconnectDialog
+        open={disconnectDialogOpen}
+        onOpenChange={setDisconnectDialogOpen}
+        providerName={selectedProvider?.name ?? ''}
+        onConfirm={handleConfirmDisconnect}
+        isDisconnecting={isDisconnecting}
+      />
+    </>
   )
 }
+
+// =============================================================================
+// PROVIDER CARD COMPONENT
+// =============================================================================
 
 type ProviderState = {
   provider: ProviderConfig
   isConnected: boolean
   isConnecting: boolean
   error?: string
+  statusInfo?: IntegrationStatusInfo
 }
 
 const ProviderCard = memo(function ProviderCard({
   state,
-  onPrimaryAction,
+  onConnect,
+  onReconnect,
   onDisconnect,
 }: {
   state: ProviderState
-  onPrimaryAction: (provider: ProviderConfig, isConnected: boolean) => void
-  onDisconnect: (providerId: string) => void
+  onConnect: (provider: ProviderConfig) => void
+  onReconnect: (provider: ProviderConfig) => void
+  onDisconnect: (provider: ProviderConfig) => void
 }) {
-  const { provider, isConnected, isConnecting, error } = state
+  const { provider, isConnected, isConnecting, error, statusInfo } = state
   const Icon = provider.icon
+  const providerInfo = PROVIDER_INFO[provider.id as keyof typeof PROVIDER_INFO]
 
-  const handlePrimaryClick = useCallback(() => {
-    onPrimaryAction(provider, isConnected)
-  }, [isConnected, onPrimaryAction, provider])
+  const handleConnectClick = useCallback(() => {
+    onConnect(provider)
+  }, [onConnect, provider])
+
+  const handleReconnectClick = useCallback(() => {
+    onReconnect(provider)
+  }, [onReconnect, provider])
 
   const handleDisconnectClick = useCallback(() => {
-    onDisconnect(provider.id)
-  }, [onDisconnect, provider.id])
+    onDisconnect(provider)
+  }, [onDisconnect, provider])
+
+  const statusVariant = getStatusBadgeVariant(statusInfo?.status, isConnected)
+  const statusLabel = getStatusLabel(statusInfo?.status, isConnected)
+  const lastSyncLabel = formatLastSync(statusInfo?.lastSyncedAt)
 
   return (
-    <Card className="border-muted/70 bg-background shadow-sm">
-      <CardHeader className="space-y-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" />
-        </span>
+    <Card className={cn(
+      'relative overflow-hidden border-muted/70 bg-background shadow-sm transition-all',
+      isConnected && 'border-primary/20',
+      error && 'border-destructive/30'
+    )}>
+      {/* Status indicator bar */}
+      {isConnected && (
+        <div className={cn(
+          'absolute left-0 top-0 h-1 w-full',
+          statusInfo?.status === 'error' && 'bg-destructive',
+          statusInfo?.status === 'pending' && 'bg-amber-400',
+          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && 'bg-primary'
+        )} />
+      )}
+
+      <CardHeader className="space-y-3 pb-3">
+        <div className="flex items-start justify-between">
+          <span className={cn(
+            'flex h-10 w-10 items-center justify-center rounded-full',
+            isConnected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+          )}>
+            <Icon className="h-5 w-5" />
+          </span>
+          {isConnecting && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+        </div>
         <div>
           <CardTitle className="text-base">{provider.name}</CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
-            {provider.description}
+          <CardDescription className="mt-1 line-clamp-2 text-xs">
+            {providerInfo?.description ?? provider.description}
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-2 text-xs">
-          <Badge variant={isConnected ? 'default' : 'outline'} className="rounded-full">
-            {isConnected ? 'Connected' : 'Not connected'}
+
+      <CardContent className="space-y-3 pt-0">
+        {/* Status badge and last sync */}
+        <div className="flex items-center justify-between">
+          <Badge variant={statusVariant} className="rounded-full text-xs">
+            {statusInfo?.status === 'pending' && (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            )}
+            {statusInfo?.status === 'error' && (
+              <AlertTriangle className="mr-1 h-3 w-3" />
+            )}
+            {isConnected && statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && (
+              <Check className="mr-1 h-3 w-3" />
+            )}
+            {statusLabel}
           </Badge>
-          {isConnecting && <span className="text-muted-foreground">Connecting…</span>}
+          {isConnected && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {lastSyncLabel}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Last successful sync</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
+
+        {/* Error message */}
         {error && (
-          <Alert variant="destructive" className="text-xs">
-            <AlertTitle>Connection failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Sync error message from status */}
+        {statusInfo?.status === 'error' && !error && (
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              Last sync failed. Click reconnect to retry.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Action buttons */}
         <div className="flex gap-2">
-          <Button
-            type="button"
-            className="flex-1"
-            variant={isConnected ? 'outline' : 'default'}
-            disabled={isConnecting}
-            onClick={handlePrimaryClick}
-          >
-            {isConnected ? 'Reconnect' : `Connect ${provider.name}`}
-          </Button>
-          {isConnected && (
+          {!isConnected ? (
             <Button
               type="button"
-              variant="destructive"
-              size="icon"
+              className="flex-1"
+              size="sm"
               disabled={isConnecting}
-              onClick={handleDisconnectClick}
-              title="Disconnect account"
+              onClick={handleConnectClick}
             >
-              <span className="sr-only">Disconnect</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
+              {isConnecting ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect'
+              )}
             </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                disabled={isConnecting}
+                onClick={handleReconnectClick}
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  'Reconnect'
+                )}
+              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      disabled={isConnecting}
+                      onClick={handleDisconnectClick}
+                    >
+                      <Unlink className="h-4 w-4" />
+                      <span className="sr-only">Disconnect</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Disconnect {provider.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
           )}
         </div>
       </CardContent>

@@ -6,12 +6,14 @@ import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/
 
 interface RefreshParams {
   userId: string
+  clientId?: string | null
   forceRefresh?: boolean
 }
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v18.0/oauth/access_token'
 const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
+const LINKEDIN_TOKEN_ENDPOINT = 'https://www.linkedin.com/oauth/v2/accessToken'
 
 // Promise deduplication map
 const refreshPromises = new Map<string, Promise<string>>()
@@ -114,23 +116,23 @@ export function isTokenExpiringSoon(expiresAt?: AnyTimestamp | null | string, bu
   return Date.now() + bufferMs >= expiryMs
 }
 
-export async function refreshGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
-  const integration = await getAdIntegration({ userId, providerId: 'google' })
+export async function refreshGoogleAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
+  const integration = await getAdIntegration({ userId, providerId: 'google', clientId })
 
   if (!integration?.refreshToken) {
     throw new IntegrationTokenError('No Google Ads refresh token available', 'google', userId)
   }
 
-  const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
+  const googleClientId = process.env.GOOGLE_ADS_CLIENT_ID
+  const googleClientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
 
-  if (!clientId || !clientSecret) {
+  if (!googleClientId || !googleClientSecret) {
     throw new IntegrationTokenError('Google Ads client credentials are not configured', 'google', userId)
   }
 
   const params = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
+    client_id: googleClientId,
+    client_secret: googleClientSecret,
     grant_type: 'refresh_token',
     refresh_token: integration.refreshToken,
   })
@@ -208,6 +210,7 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
       await updateIntegrationCredentials({
         userId,
         providerId: 'google',
+        clientId,
         accessToken: tokenPayload.access_token,
         accessTokenExpiresAt: expiresAt ?? undefined,
         refreshToken: tokenPayload.refresh_token ?? undefined,
@@ -236,8 +239,8 @@ export async function refreshGoogleAccessToken({ userId, forceRefresh }: Refresh
   throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', 'google', userId)
 }
 
-export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
-  const integration = await getAdIntegration({ userId, providerId: 'facebook' })
+export async function refreshMetaAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
+  const integration = await getAdIntegration({ userId, providerId: 'facebook', clientId })
 
   if (!integration?.accessToken) {
     throw new IntegrationTokenError('No Meta Ads access token available', 'facebook', userId)
@@ -315,6 +318,7 @@ export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshPa
       await updateIntegrationCredentials({
         userId,
         providerId: 'facebook',
+        clientId,
         accessToken: tokenPayload.access_token,
         accessTokenExpiresAt: expiresAt ?? undefined,
       })
@@ -341,8 +345,8 @@ export async function refreshMetaAccessToken({ userId, forceRefresh }: RefreshPa
   throw lastError ?? new IntegrationTokenError('Meta token refresh failed after all retries', 'facebook', userId)
 }
 
-export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
-  const integration = await getAdIntegration({ userId, providerId: 'tiktok' })
+export async function refreshTikTokAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
+  const integration = await getAdIntegration({ userId, providerId: 'tiktok', clientId })
 
   if (!integration?.refreshToken) {
     throw new IntegrationTokenError('No TikTok refresh token available', 'tiktok', userId)
@@ -463,6 +467,7 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
       await updateIntegrationCredentials({
         userId,
         providerId: 'tiktok',
+        clientId,
         accessToken: data.access_token,
         refreshToken: data.refresh_token ?? undefined,
         accessTokenExpiresAt: accessTokenExpiresAt ?? undefined,
@@ -491,15 +496,15 @@ export async function refreshTikTokAccessToken({ userId }: RefreshParams): Promi
   throw lastError ?? new IntegrationTokenError('TikTok token refresh failed after all retries', 'tiktok', userId)
 }
 
-export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
+export async function ensureGoogleAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
   cleanupStalePromises()
-  const promiseKey = `google:${userId}`
+  const promiseKey = `google:${userId}:${clientId ?? 'workspace'}`
   const existingPromise = refreshPromises.get(promiseKey)
   if (existingPromise) return existingPromise
 
   const refreshPromise = (async () => {
     try {
-      const integration = await getAdIntegration({ userId, providerId: 'google' })
+      const integration = await getAdIntegration({ userId, providerId: 'google', clientId })
       if (!integration?.accessToken) {
         throw new IntegrationTokenError('Google Ads integration missing access token', 'google', userId)
       }
@@ -510,7 +515,7 @@ export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshP
 
       if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
         console.log(`[Google Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
-        return await refreshGoogleAccessToken({ userId })
+        return await refreshGoogleAccessToken({ userId, clientId })
       }
 
       return integration.accessToken
@@ -525,15 +530,15 @@ export async function ensureGoogleAccessToken({ userId, forceRefresh }: RefreshP
   return refreshPromise
 }
 
-export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshParams): Promise<string> {
+export async function ensureMetaAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
   cleanupStalePromises()
-  const promiseKey = `facebook:${userId}`
+  const promiseKey = `facebook:${userId}:${clientId ?? 'workspace'}`
   const existingPromise = refreshPromises.get(promiseKey)
   if (existingPromise) return existingPromise
 
   const refreshPromise = (async () => {
     try {
-      const integration = await getAdIntegration({ userId, providerId: 'facebook' })
+      const integration = await getAdIntegration({ userId, providerId: 'facebook', clientId })
       if (!integration?.accessToken) {
         throw new IntegrationTokenError('Meta Ads integration missing access token', 'facebook', userId)
       }
@@ -544,7 +549,7 @@ export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshPar
 
       if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
         console.log(`[Meta Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
-        return await refreshMetaAccessToken({ userId })
+        return await refreshMetaAccessToken({ userId, clientId })
       }
 
       return integration.accessToken
@@ -559,22 +564,201 @@ export async function ensureMetaAccessToken({ userId, forceRefresh }: RefreshPar
   return refreshPromise
 }
 
-export async function ensureTikTokAccessToken({ userId }: RefreshParams): Promise<string> {
+export async function ensureTikTokAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
   cleanupStalePromises()
-  const promiseKey = `tiktok:${userId}`
+  const promiseKey = `tiktok:${userId}:${clientId ?? 'workspace'}`
   const existingPromise = refreshPromises.get(promiseKey)
   if (existingPromise) return existingPromise
 
   const refreshPromise = (async () => {
     try {
-      const integration = await getAdIntegration({ userId, providerId: 'tiktok' })
+      const integration = await getAdIntegration({ userId, providerId: 'tiktok', clientId })
 
       if (!integration?.accessToken) {
         throw new IntegrationTokenError('TikTok integration missing access token', 'tiktok', userId)
       }
 
       if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
-        return await refreshTikTokAccessToken({ userId })
+        return await refreshTikTokAccessToken({ userId, clientId })
+      }
+
+      return integration.accessToken
+    } finally {
+      refreshPromises.delete(promiseKey)
+      refreshPromiseTimestamps.delete(promiseKey)
+    }
+  })()
+
+  refreshPromises.set(promiseKey, refreshPromise)
+  refreshPromiseTimestamps.set(promiseKey, Date.now())
+  return refreshPromise
+}
+
+// =============================================================================
+// LINKEDIN TOKEN REFRESH
+// =============================================================================
+
+export async function refreshLinkedInAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
+  const integration = await getAdIntegration({ userId, providerId: 'linkedin', clientId })
+
+  if (!integration?.refreshToken) {
+    throw new IntegrationTokenError(
+      'No LinkedIn refresh token available. LinkedIn tokens expire after 60 days - please reconnect your account.',
+      'linkedin',
+      userId,
+      { isRetryable: false }
+    )
+  }
+
+  const linkedInClientId = process.env.LINKEDIN_CLIENT_ID
+  const linkedInClientSecret = process.env.LINKEDIN_CLIENT_SECRET
+
+  if (!linkedInClientId || !linkedInClientSecret) {
+    throw new IntegrationTokenError('LinkedIn client credentials are not configured', 'linkedin', userId)
+  }
+
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: integration.refreshToken,
+    client_id: linkedInClientId,
+    client_secret: linkedInClientSecret,
+  })
+
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
+    try {
+      console.log(`[LinkedIn Token Refresh] Attempt ${attempt + 1}/${TOKEN_REFRESH_CONFIG.maxRetries} for user ${userId}`)
+
+      const response = await fetch(LINKEDIN_TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      })
+
+      if (!response.ok) {
+        const errorPayload = await response.text()
+        let parsedError: { error?: string; error_description?: string } = {}
+
+        try {
+          parsedError = JSON.parse(errorPayload)
+        } catch {
+          // Not JSON
+        }
+
+        const errorMessage = parsedError.error_description ?? parsedError.error ?? errorPayload
+
+        // Check if error is retryable (5xx errors or rate limiting)
+        const isRetryable = response.status >= 500 || response.status === 429
+
+        if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+          logger.warn(`[LinkedIn Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`, { userId })
+          lastError = new IntegrationTokenError(
+            `Failed to refresh LinkedIn token (${response.status}): ${errorMessage}`,
+            'linkedin',
+            userId,
+            { isRetryable: true, httpStatus: response.status }
+          )
+          await sleep(calculateBackoffDelay(attempt))
+          continue
+        }
+
+        // Check for invalid_grant (token revoked or expired)
+        if (parsedError.error === 'invalid_grant') {
+          throw new IntegrationTokenError(
+            'LinkedIn refresh token has expired or been revoked. Please reconnect your LinkedIn Ads account.',
+            'linkedin',
+            userId,
+            { isRetryable: false, httpStatus: response.status }
+          )
+        }
+
+        throw new IntegrationTokenError(
+          `Failed to refresh LinkedIn token (${response.status}): ${errorMessage}`,
+          'linkedin',
+          userId,
+          { isRetryable: false, httpStatus: response.status }
+        )
+      }
+
+      const tokenPayload = (await response.json()) as {
+        access_token?: string
+        expires_in?: number
+        refresh_token?: string
+        refresh_token_expires_in?: number
+      }
+
+      if (!tokenPayload.access_token) {
+        throw new IntegrationTokenError('LinkedIn token response missing access_token', 'linkedin', userId)
+      }
+
+      const accessTokenExpiresAt = computeExpiry(tokenPayload.expires_in)
+      const refreshTokenExpiresAt = computeExpiry(tokenPayload.refresh_token_expires_in)
+
+      await updateIntegrationCredentials({
+        userId,
+        providerId: 'linkedin',
+        clientId,
+        accessToken: tokenPayload.access_token,
+        refreshToken: tokenPayload.refresh_token ?? undefined,
+        accessTokenExpiresAt: accessTokenExpiresAt ?? undefined,
+        refreshTokenExpiresAt: refreshTokenExpiresAt ?? undefined,
+      })
+
+      logger.info(`[LinkedIn Token Refresh] Successfully refreshed token for user ${userId}`, { expiresIn: tokenPayload.expires_in })
+
+      return tokenPayload.access_token
+    } catch (error) {
+      if (error instanceof IntegrationTokenError) {
+        throw error
+      }
+
+      // Network errors are retryable
+      lastError = error instanceof Error ? error : new Error('Unknown error')
+
+      if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
+        console.warn(`[LinkedIn Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
+        await sleep(calculateBackoffDelay(attempt))
+        continue
+      }
+    }
+  }
+
+  throw lastError ?? new IntegrationTokenError('LinkedIn token refresh failed after all retries', 'linkedin', userId)
+}
+
+export async function ensureLinkedInAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
+  cleanupStalePromises()
+  const promiseKey = `linkedin:${userId}:${clientId ?? 'workspace'}`
+  const existingPromise = refreshPromises.get(promiseKey)
+  if (existingPromise) return existingPromise
+
+  const refreshPromise = (async () => {
+    try {
+      const integration = await getAdIntegration({ userId, providerId: 'linkedin', clientId })
+
+      if (!integration?.accessToken) {
+        throw new IntegrationTokenError('LinkedIn integration missing access token', 'linkedin', userId)
+      }
+
+      // LinkedIn tokens have a 60-day lifespan. Check if refresh is needed.
+      // Use a 1-day buffer for pre-emptive refresh to avoid sync failures
+      const PRE_EMPTIVE_REFRESH_BUFFER_MS = 24 * 60 * 60 * 1000 // 1 day
+
+      if (forceRefresh || isTokenExpiringSoon(integration.accessTokenExpiresAt, PRE_EMPTIVE_REFRESH_BUFFER_MS)) {
+        // Check if we have a refresh token
+        if (!integration.refreshToken) {
+          throw new IntegrationTokenError(
+            'LinkedIn access token is expiring and no refresh token is available. Please reconnect your LinkedIn Ads account.',
+            'linkedin',
+            userId,
+            { isRetryable: false }
+          )
+        }
+        console.log(`[LinkedIn Token] Token expiring soon or force refresh requested for user ${userId}, refreshing...`)
+        return await refreshLinkedInAccessToken({ userId, clientId })
       }
 
       return integration.accessToken

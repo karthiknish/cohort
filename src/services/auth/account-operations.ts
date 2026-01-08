@@ -207,7 +207,8 @@ export async function deleteAccount(
  */
 export async function disconnectProvider(
     getIdToken: () => Promise<string>,
-    providerId: string
+    providerId: string,
+    clientId?: string | null
 ): Promise<void> {
     const token = await getIdToken()
     const response = await fetch('/api/integrations/disconnect', {
@@ -216,7 +217,7 @@ export async function disconnectProvider(
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ providerId }),
+        body: JSON.stringify({ providerId, clientId: clientId ?? null }),
     })
 
     if (!response.ok) {

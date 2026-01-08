@@ -76,6 +76,7 @@ type UpdateCredentialsOptions = {
 
 type SyncJobOptions = {
   providerId: string
+  clientId?: string | null
   jobType?: SyncJob['jobType']
   timeframeDays?: number
 }
@@ -156,9 +157,10 @@ export function buildSyncJobPayload<TTimestamp>(
   options: SyncJobOptions,
   helpers: TimestampHelpers<TTimestamp>
 ) {
-  const { providerId, jobType = 'initial-backfill', timeframeDays = 90 } = options
+  const { providerId, clientId = null, jobType = 'initial-backfill', timeframeDays = 90 } = options
   return {
     providerId,
+    clientId,
     jobType,
     status: 'queued' as const,
     timeframeDays,
@@ -211,6 +213,7 @@ export function mapSyncJobSnapshot<TTimestamp>(
   return {
     id: docId,
     providerId: (data.providerId as string | undefined) ?? docId,
+    clientId: typeof data.clientId === 'string' ? data.clientId : null,
     jobType: (data.jobType as SyncJob['jobType']) ?? 'initial-backfill',
     timeframeDays: (data.timeframeDays as number | undefined) ?? 90,
     status: (data.status as SyncJob['status']) ?? 'queued',

@@ -73,14 +73,41 @@ interface FetchOptions {
   signal?: AbortSignal
 }
 
+type ApiEnvelope<T> = {
+  success?: boolean
+  data?: T
+  error?: string
+}
+
+function unwrapApiData<T>(payload: unknown): { data: T | null; error: string | null } {
+  if (!payload || typeof payload !== 'object') {
+    return { data: null, error: 'Invalid server response' }
+  }
+
+  const record = payload as ApiEnvelope<T> & Record<string, unknown>
+
+  if (typeof record.success === 'boolean') {
+    if (record.success) {
+      return { data: (record.data as T | undefined) ?? null, error: null }
+    }
+    return { data: null, error: typeof record.error === 'string' ? record.error : 'Request failed' }
+  }
+
+  // Backward compatibility: some callers might receive unwrapped payloads.
+  return { data: payload as T, error: null }
+}
+
 export async function fetchIntegrationStatuses(
   token: string,
   userId?: string | null,
+  clientId?: string | null,
   options: FetchOptions = {}
 ): Promise<IntegrationStatusResponse> {
-  const url = userId
-    ? `/api/integrations/status?userId=${encodeURIComponent(userId)}`
-    : '/api/integrations/status'
+  const params = new URLSearchParams()
+  if (userId) params.set('userId', userId)
+  if (clientId) params.set('clientId', clientId)
+  const queryString = params.toString()
+  const url = queryString.length > 0 ? `/api/integrations/status?${queryString}` : '/api/integrations/status'
 
   const response = await retryFetch(
     url,
@@ -97,13 +124,21 @@ export async function fetchIntegrationStatuses(
     }
   )
 
-  return response.json()
+  const payload = await response.json().catch(() => null)
+  const { data, error } = unwrapApiData<IntegrationStatusResponse>(payload)
+
+  if (!data || !Array.isArray((data as IntegrationStatusResponse).statuses)) {
+    throw new ApiError(error ?? 'Failed to load integration status', 200)
+  }
+
+  return data
 }
 
 export async function fetchMetrics(
   token: string,
   options: { 
     userId?: string | null
+    clientId?: string | null
     cursor?: string | null
     pageSize?: number
     startDate?: string | null
@@ -116,6 +151,10 @@ export async function fetchMetrics(
   const params = new URLSearchParams()
   if (options.userId) {
     params.set('userId', options.userId)
+  }
+  if (options.clientId) {
+    // Server supports `clientIds` (comma-separated). For a single selected client, send one.
+    params.set('clientIds', options.clientId)
   }
   if (typeof options.pageSize === 'number') {
     params.set('pageSize', String(options.pageSize))
@@ -151,21 +190,21 @@ export async function fetchMetrics(
     }
   )
 
-  const payload = (await response.json().catch(() => null)) as
-    | { metrics?: MetricRecord[]; nextCursor?: string | null; summary?: any; error?: string }
-    | null
+  const raw = await response.json().catch(() => null)
+  const { data, error } = unwrapApiData<{
+    metrics?: MetricRecord[]
+    nextCursor?: string | null
+    summary?: any
+  }>(raw)
 
-  if (!payload || !Array.isArray(payload.metrics)) {
-    const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load ad metrics'
-    throw new ApiError(message, 200)
+  if (!data || !Array.isArray(data.metrics)) {
+    throw new ApiError(error ?? 'Failed to load ad metrics', 200)
   }
 
   return {
-    metrics: payload.metrics,
-    nextCursor:
-      typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0
-        ? payload.nextCursor
-        : null,
+    metrics: data.metrics,
+    nextCursor: typeof data.nextCursor === 'string' && data.nextCursor.length > 0 ? data.nextCursor : null,
+    summary: data.summary,
   }
 }
 

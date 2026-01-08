@@ -48,9 +48,22 @@ const timestampHelpers: TimestampHelpers<Timestamp> = {
   serverTimestamp: () => serverTimestamp(),
 }
 
+function getIntegrationDocRef(workspaceId: string, providerId: string, clientId?: string | null) {
+  const resolvedClientId = typeof clientId === 'string' && clientId.trim().length > 0
+    ? clientId.trim()
+    : null
+
+  if (resolvedClientId) {
+    return doc(db, 'workspaces', workspaceId, 'clients', resolvedClientId, 'adIntegrations', providerId)
+  }
+
+  return doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
+}
+
 export async function persistIntegrationTokens(options: {
   workspaceId: string
   providerId: string
+  clientId?: string | null
   accessToken: string | null
   idToken?: string | null
   scopes?: string[]
@@ -66,9 +79,10 @@ export async function persistIntegrationTokens(options: {
   const {
     workspaceId,
     providerId,
+    clientId,
     ...payloadOptions
   } = options
-  const integrationRef = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
+  const integrationRef = getIntegrationDocRef(workspaceId, providerId, clientId)
 
   const payload = buildIntegrationPersistPayload(payloadOptions, timestampHelpers)
   await setDoc(integrationRef, payload, { merge: true })
@@ -102,13 +116,14 @@ export async function updateIntegrationCredentials(options: {
 export async function enqueueSyncJob(options: {
   workspaceId: string
   providerId: string
+  clientId?: string | null
   jobType?: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
   timeframeDays?: number
 }): Promise<void> {
-  const { workspaceId, providerId, jobType = 'initial-backfill', timeframeDays = 90 } = options
+  const { workspaceId, providerId, clientId = null, jobType = 'initial-backfill', timeframeDays = 90 } = options
   await addDoc(
     collection(db, 'workspaces', workspaceId, 'syncJobs'),
-    buildSyncJobPayload({ providerId, jobType, timeframeDays }, timestampHelpers)
+    buildSyncJobPayload({ providerId, clientId, jobType, timeframeDays }, timestampHelpers)
   )
 }
 

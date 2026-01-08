@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
@@ -28,12 +29,20 @@ export interface UseAdsConnectionsOptions {
   onRefresh?: () => void
 }
 
+export interface IntegrationStatusInfo {
+  lastSyncedAt?: string | null
+  lastSyncRequestedAt?: string | null
+  status?: string
+  accountId?: string | null
+}
+
 export interface UseAdsConnectionsReturn {
   // State
   connectedProviders: Record<string, boolean>
   connectingProvider: string | null
   connectionErrors: Record<string, string>
   integrationStatuses: IntegrationStatusResponse | null
+  integrationStatusMap: Record<string, IntegrationStatusInfo>
   automationStatuses: IntegrationStatus[]
 
   // Setup messages
@@ -48,8 +57,8 @@ export interface UseAdsConnectionsReturn {
   handleConnect: (providerId: string, action: () => Promise<void>) => Promise<void>
   handleDisconnect: (providerId: string) => Promise<void>
   handleOauthRedirect: (providerId: string) => Promise<void>
-  initializeMetaIntegration: () => Promise<void>
-  initializeTikTokIntegration: () => Promise<void>
+  initializeMetaIntegration: (clientIdOverride?: string | null) => Promise<void>
+  initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>
 
   // Platform definitions
   adPlatforms: AdPlatform[]
@@ -74,6 +83,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     disconnectProvider,
     getIdToken,
   } = useAuth()
+  const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
@@ -95,20 +105,31 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   // Derived state
   const automationStatuses = integrationStatuses?.statuses ?? []
 
+  // Create a map of provider status info for easier access
+  const integrationStatusMap: Record<string, IntegrationStatusInfo> = {}
+  automationStatuses.forEach((status) => {
+    integrationStatusMap[status.providerId] = {
+      lastSyncedAt: status.lastSyncedAt,
+      lastSyncRequestedAt: status.lastSyncRequestedAt,
+      status: status.status,
+      accountId: status.accountId,
+    }
+  })
+
   const metaStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.FACEBOOK)
   const metaNeedsAccountSelection = Boolean(metaStatus?.linkedAt && !metaStatus.accountId)
 
   const tiktokStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.TIKTOK)
   const tiktokNeedsAccountSelection = Boolean(tiktokStatus?.linkedAt && !tiktokStatus.accountId)
 
-  // Platform definitions
+  // Platform definitions with clientId passed to connect functions
   const adPlatforms: AdPlatform[] = [
     {
       id: PROVIDER_IDS.GOOGLE,
       name: 'Google Ads',
       description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
       icon: Search,
-      connect: connectGoogleAdsAccount,
+      connect: () => connectGoogleAdsAccount(selectedClientId ?? null),
     },
     {
       id: PROVIDER_IDS.FACEBOOK,
@@ -122,7 +143,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       name: 'LinkedIn Ads',
       description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
       icon: Linkedin,
-      connect: connectLinkedInAdsAccount,
+      connect: () => connectLinkedInAdsAccount(selectedClientId ?? null),
     },
     {
       id: PROVIDER_IDS.TIKTOK,
@@ -160,12 +181,19 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     return response.json()
   }, [getIdToken])
 
-  const initializeMetaIntegration = useCallback(async () => {
+  const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setMetaSetupMessage(null)
     setInitializingMeta(true)
     try {
       const token = await getIdToken()
-      const response = await fetch(API_ENDPOINTS.INTEGRATIONS.META_INIT, {
+      const params = new URLSearchParams()
+      const effectiveClientId = clientIdOverride ?? selectedClientId ?? null
+      if (effectiveClientId) params.set('clientId', effectiveClientId)
+      const url = params.toString().length > 0
+        ? `${API_ENDPOINTS.INTEGRATIONS.META_INIT}?${params.toString()}`
+        : API_ENDPOINTS.INTEGRATIONS.META_INIT
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -187,14 +215,21 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setInitializingMeta(false)
     }
-  }, [getIdToken, toast])
+  }, [getIdToken, toast, selectedClientId])
 
-  const initializeTikTokIntegration = useCallback(async () => {
+  const initializeTikTokIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setTiktokSetupMessage(null)
     setInitializingTikTok(true)
     try {
       const token = await getIdToken()
-      const response = await fetch(API_ENDPOINTS.INTEGRATIONS.TIKTOK_INIT, {
+      const effectiveClientId = clientIdOverride ?? selectedClientId ?? null
+      const params = new URLSearchParams()
+      if (effectiveClientId) params.set('clientId', effectiveClientId)
+      const url = params.toString().length > 0
+        ? `${API_ENDPOINTS.INTEGRATIONS.TIKTOK_INIT}?${params.toString()}`
+        : API_ENDPOINTS.INTEGRATIONS.TIKTOK_INIT
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -216,7 +251,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setInitializingTikTok(false)
     }
-  }, [getIdToken, toast])
+  }, [getIdToken, toast, selectedClientId])
 
   // Trigger refresh
   const triggerRefresh = useCallback(() => {
@@ -241,7 +276,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     const loadStatuses = async () => {
       try {
         const token = await getIdToken()
-        const statusResponse = await fetchIntegrationStatuses(token, user.id)
+        const statusResponse = await fetchIntegrationStatuses(token, user.id, selectedClientId ?? null)
         if (isSubscribed) {
           setIntegrationStatuses(statusResponse)
         }
@@ -251,7 +286,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     }
     void loadStatuses()
     return () => { isSubscribed = false }
-  }, [user?.id, refreshTick, getIdToken, isPreviewMode])
+  }, [user?.id, refreshTick, getIdToken, isPreviewMode, selectedClientId])
 
   // Sync connected providers from statuses
   useEffect(() => {
@@ -275,6 +310,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     const oauthError = searchParams.get('oauth_error')
     const provider = searchParams.get('provider')
     const message = searchParams.get('message')
+    const oauthClientId = searchParams.get('clientId')
 
     if (!oauthSuccess && !oauthError) return
 
@@ -284,14 +320,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     newUrl.searchParams.delete('oauth_error')
     newUrl.searchParams.delete('provider')
     newUrl.searchParams.delete('message')
+    newUrl.searchParams.delete('clientId')
     window.history.replaceState({}, '', newUrl.toString())
 
     if (oauthSuccess && provider) {
       console.log(`[useAdsConnections] Detected OAuth success for ${provider}`)
       if (provider === PROVIDER_IDS.FACEBOOK) {
-        void initializeMetaIntegration()
+        void initializeMetaIntegration(oauthClientId)
       } else if (provider === PROVIDER_IDS.TIKTOK) {
-        void initializeTikTokIntegration()
+        void initializeTikTokIntegration(oauthClientId)
       } else if (provider === PROVIDER_IDS.GOOGLE) {
         void initializeGoogleIntegration().then(() => {
           toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Default account linked successfully.' })
@@ -329,7 +366,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         setConnectionErrors((prev) => ({ ...prev, [provider]: errorMessage }))
       }
     }
-  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast])
+  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast, initializeGoogleIntegration, initializeLinkedInIntegration])
 
   // Handlers
   const handleConnect = useCallback(async (providerId: string, action: () => Promise<void>) => {
@@ -370,7 +407,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       if (providerId === PROVIDER_IDS.FACEBOOK) {
         console.log('[Meta OAuth Debug] Starting Meta OAuth flow...')
         console.log('[Meta OAuth Debug] Redirect target:', redirectTarget)
-        const { url } = await startMetaOauth(redirectTarget)
+        const { url } = await startMetaOauth(redirectTarget, selectedClientId ?? null)
         console.log('[Meta OAuth Debug] Received OAuth URL:', url)
         if (typeof url !== 'string' || url.length === 0) {
           throw new Error('Meta OAuth did not return a URL. Check server logs and environment variables.')
@@ -384,7 +421,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         return
       }
       if (providerId === PROVIDER_IDS.TIKTOK) {
-        const { url } = await startTikTokOauth(redirectTarget)
+        const { url } = await startTikTokOauth(redirectTarget, selectedClientId ?? null)
         window.location.href = url
         return
       }
@@ -426,16 +463,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [startMetaOauth, startTikTokOauth, toast])
+  }, [startMetaOauth, startTikTokOauth, toast, selectedClientId])
 
   const handleDisconnect = useCallback(async (providerId: string) => {
     const providerName = formatProviderName(providerId)
-    if (!confirm(`Are you sure you want to disconnect ${providerName}? This will stop all future syncs.`)) return
 
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
-      await disconnectProvider(providerId)
+      await disconnectProvider(providerId, selectedClientId ?? null)
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
       toast({ title: TOAST_TITLES.DISCONNECTED, description: SUCCESS_MESSAGES.DISCONNECTED(providerName) })
       triggerRefresh()
@@ -446,7 +482,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [disconnectProvider, toast, triggerRefresh])
+  }, [disconnectProvider, toast, triggerRefresh, selectedClientId])
 
   return {
     // State
@@ -454,6 +490,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     connectingProvider,
     connectionErrors,
     integrationStatuses,
+    integrationStatusMap,
     automationStatuses,
 
     // Setup messages

@@ -14,18 +14,26 @@ import { ValidationError, NotFoundError } from '@/lib/api-errors'
 
 const bodySchema = z.object({}).strict()
 
-export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, async (req, { auth }) => {
+const querySchema = z.object({
+  clientId: z.string().optional(),
+})
+
+export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sensitive' }, async (req, { auth, query }) => {
   if (!auth.uid) {
     throw new ValidationError('User context is required')
   }
 
+  const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+    ? query.clientId.trim()
+    : null
+
   try {
-    const integration = await getAdIntegration({ userId: auth.uid, providerId: 'facebook' })
+    const integration = await getAdIntegration({ userId: auth.uid, providerId: 'facebook', clientId })
     if (!integration) {
       throw new NotFoundError('Meta integration not found')
     }
 
-    const accessToken = await ensureMetaAccessToken({ userId: auth.uid })
+    const accessToken = await ensureMetaAccessToken({ userId: auth.uid, clientId })
     const accounts = await fetchMetaAdAccounts({ accessToken })
 
     if (!accounts.length) {
@@ -38,6 +46,7 @@ export const POST = createApiHandler({ bodySchema, rateLimit: 'sensitive' }, asy
     await updateIntegrationCredentials({
       userId: auth.uid,
       providerId: 'facebook',
+      clientId,
       accountId: preferredAccount.id,
     })
 

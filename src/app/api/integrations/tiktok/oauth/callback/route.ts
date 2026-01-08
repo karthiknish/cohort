@@ -37,7 +37,12 @@ export const GET = createApiHandler(
         throw new ValidationError('Invalid OAuth state')
       }
 
-      await completeTikTokOAuthFlow({ code, userId: context.state, redirectUri })
+      await completeTikTokOAuthFlow({
+        code,
+        userId: context.state,
+        redirectUri,
+        clientId: context.clientId ?? null,
+      })
 
       let redirectTarget = context.redirect ?? '/dashboard'
 
@@ -45,6 +50,9 @@ export const GET = createApiHandler(
       const url = new URL(redirectTarget, appUrl)
       url.searchParams.set('oauth_success', 'true')
       url.searchParams.set('provider', 'tiktok')
+      if (context.clientId) {
+        url.searchParams.set('clientId', context.clientId)
+      }
       redirectTarget = url.toString()
 
       // Final safety check on redirect target

@@ -6,6 +6,7 @@ const STATE_TTL_MS = 5 * 60 * 1000
 
 interface TikTokOAuthContext {
   state: string
+  clientId?: string | null
   redirect?: string
   codeVerifier?: string
   createdAt: number
@@ -138,8 +139,9 @@ export async function completeTikTokOAuthFlow(options: {
   code: string
   userId: string
   redirectUri: string
+  clientId?: string | null
 }): Promise<{ account: TikTokAdAccount | null }> {
-  const { code, userId, redirectUri } = options
+  const { code, userId, redirectUri, clientId } = options
 
   const clientKey = process.env.TIKTOK_CLIENT_KEY
   const clientSecret = process.env.TIKTOK_CLIENT_SECRET
@@ -179,6 +181,7 @@ export async function completeTikTokOAuthFlow(options: {
   await persistIntegrationTokens({
     userId,
     providerId: 'tiktok',
+    clientId: clientId ?? null,
     accessToken: tokenResult.accessToken,
     refreshToken: tokenResult.refreshToken ?? null,
     scopes: tokenResult.scopes ?? [],
@@ -187,7 +190,7 @@ export async function completeTikTokOAuthFlow(options: {
     refreshTokenExpiresAt,
   })
 
-  await enqueueSyncJob({ userId, providerId: 'tiktok', jobType: 'initial-backfill' })
+  await enqueueSyncJob({ userId, providerId: 'tiktok', jobType: 'initial-backfill', clientId: clientId ?? null })
 
   return { account: selectedAccount }
 }
