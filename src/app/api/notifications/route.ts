@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { FieldPath, Timestamp } from 'firebase-admin/firestore'
+import { FieldPath } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { AuthenticationError } from '@/lib/server-auth'
@@ -7,6 +6,7 @@ import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole } from '@/types/notifications'
 import { createApiHandler } from '@/lib/api-handler'
 import { toISO } from '@/lib/utils'
+import { decodeTimestampIdCursor, encodeTimestampIdCursor, parsePageSize } from '@/lib/pagination'
 
 const PAGE_SIZE_DEFAULT = 25
 const PAGE_SIZE_MAX = 100
@@ -94,7 +94,7 @@ export const GET = createApiHandler(
     } = query
 
     const unreadOnly = unreadParam === 'true'
-    const pageSize = Math.min(Math.max(Number(pageSizeParam) || PAGE_SIZE_DEFAULT, 1), PAGE_SIZE_MAX)
+    const pageSize = parsePageSize(pageSizeParam, { defaultValue: PAGE_SIZE_DEFAULT, max: PAGE_SIZE_MAX })
 
     let notificationsQuery = workspace.workspaceRef
       .collection('notifications')
@@ -110,14 +110,9 @@ export const GET = createApiHandler(
       notificationsQuery = notificationsQuery.where('recipients.clientId', '==', clientIdParam)
     }
 
-    if (afterParam) {
-      const [timestamp, docId] = afterParam.split('|')
-      if (timestamp && docId) {
-        const afterDate = new Date(timestamp)
-        if (!Number.isNaN(afterDate.getTime())) {
-          notificationsQuery = notificationsQuery.startAfter(Timestamp.fromDate(afterDate), docId)
-        }
-      }
+    const decodedCursor = decodeTimestampIdCursor(afterParam)
+    if (decodedCursor) {
+      notificationsQuery = notificationsQuery.startAfter(decodedCursor.time, decodedCursor.id)
     }
 
     const snapshot = await notificationsQuery.get()
@@ -129,7 +124,7 @@ export const GET = createApiHandler(
     const nextCursor = nextCursorDoc
       ? (() => {
           const createdAt = toISO(nextCursorDoc.get('createdAt'))
-          return createdAt ? `${createdAt}|${nextCursorDoc.id}` : null
+          return createdAt ? encodeTimestampIdCursor(createdAt, nextCursorDoc.id) : null
         })()
       : null
 

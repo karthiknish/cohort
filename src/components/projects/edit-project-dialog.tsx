@@ -85,7 +85,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       setName(project.name)
       setDescription(project.description ?? '')
       setStatus(project.status)
-      setClientId(project.clientId ?? '')
+      setClientId(project.clientId ?? 'none')
       setStartDate(project.startDate ? parseISO(project.startDate) : undefined)
       setEndDate(project.endDate ? parseISO(project.endDate) : undefined)
       setTags(project.tags ?? [])
@@ -104,7 +104,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       name !== project.name ||
       description !== (project.description ?? '') ||
       status !== project.status ||
-      clientId !== (project.clientId ?? '') ||
+      clientId !== (project.clientId ?? 'none') ||
       (startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '') ||
       (endDate ? format(endDate, 'yyyy-MM-dd') : '') !== (project.endDate?.split('T')[0] ?? '') ||
       JSON.stringify(tags) !== JSON.stringify(project.tags ?? [])
@@ -188,8 +188,8 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       if (status !== project.status) {
         payload.status = status
       }
-      if (clientId !== (project.clientId ?? '')) {
-        payload.clientId = clientId || null
+      if (clientId !== (project.clientId ?? 'none')) {
+        payload.clientId = (clientId && clientId !== 'none') ? clientId : null
         payload.clientName = selectedClientData?.name || null
       }
       if ((startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '')) {
@@ -325,7 +325,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No client</SelectItem>
+                    <SelectItem value="none">No client</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}

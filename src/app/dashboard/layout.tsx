@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
 import { AgentMode } from '@/components/agent-mode'
+import { WorkspaceProviders } from '@/components/providers/workspace-providers'
 
 export default function DashboardLayout({
   children,
@@ -15,26 +16,28 @@ export default function DashboardLayout({
 }) {
   return (
     <ProtectedRoute>
-      <NavigationProvider>
-        <div className="relative flex min-h-screen bg-background">
-          <div className="flex h-full w-full">
-            <Sidebar />
-            <div className="flex flex-1 flex-col bg-muted/20">
-              <Header />
-              <ScrollArea className="flex-1">
-                <main className="min-h-full px-6 py-6">
-                  <NavigationBreadcrumbs />
-                  <PreviewDataBanner className="mb-6" />
-                  <ClientAccessGate>
-                    {children}
-                  </ClientAccessGate>
-                </main>
-              </ScrollArea>
+      <WorkspaceProviders enablePreview enableProject>
+        <NavigationProvider>
+          <div className="relative flex min-h-screen bg-background">
+            <div className="flex h-full w-full">
+              <Sidebar />
+              <div className="flex flex-1 flex-col bg-muted/20">
+                <Header />
+                <ScrollArea className="flex-1">
+                  <main className="min-h-full px-6 py-6">
+                    <NavigationBreadcrumbs />
+                    <PreviewDataBanner className="mb-6" />
+                    <ClientAccessGate>
+                      {children}
+                    </ClientAccessGate>
+                  </main>
+                </ScrollArea>
+              </div>
             </div>
+            <AgentMode />
           </div>
-          <AgentMode />
-        </div>
-      </NavigationProvider>
+        </NavigationProvider>
+      </WorkspaceProviders>
     </ProtectedRoute>
   )
 }

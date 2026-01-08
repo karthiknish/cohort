@@ -1,8 +1,11 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
+
 import { FadeIn } from '@/components/ui/animate-in'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { usePreview } from '@/contexts/preview-context'
+import { useToast } from '@/components/ui/use-toast'
 
 import {
   AdsSkeleton,
@@ -33,6 +36,8 @@ import {
  */
 export default function AdsPage() {
   const { isPreviewMode } = usePreview()
+  const { toast } = useToast()
+  const shownErrorsRef = useRef<Set<string>>(new Set())
 
   // 1. Manage metrics, filters, and data loading
   const {
@@ -92,6 +97,25 @@ export default function AdsPage() {
     automationStatuses,
     onRefresh: triggerMetricsRefresh,
   })
+
+  // Surface notable errors as toasts once
+  useEffect(() => {
+    const errors: string[] = [
+      metricError ?? '',
+      loadMoreError ?? '',
+      ...Object.values(connectionErrors ?? {}),
+    ].filter(Boolean)
+
+    errors.forEach((error) => {
+      if (shownErrorsRef.current.has(error)) return
+      toast({
+        variant: 'destructive',
+        title: 'Ads error',
+        description: error,
+      })
+      shownErrorsRef.current.add(error)
+    })
+  }, [connectionErrors, loadMoreError, metricError, toast])
 
   // Loading state
   const isInitialLoading = initialMetricsLoading && !integrationStatuses

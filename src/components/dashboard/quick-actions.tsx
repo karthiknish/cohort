@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { BarChart3, CreditCard, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase, Users } from 'lucide-react'
 
+import { useMemo } from 'react'
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -105,20 +107,15 @@ export function QuickActions({ compact }: QuickActionsProps) {
   const { user } = useAuth()
   const userRole = user?.role ?? 'client'
   
-  // Choose quick links based on role
-  const quickLinks = userRole === 'client' ? clientQuickLinks : adminQuickLinks
-  
-  // Filter create actions based on role
-  const filteredCreateActions = createActions.filter(action => {
-    if (!action.roles) return true
-    return action.roles.includes(userRole as 'admin' | 'team' | 'client')
-  })
-  
-  // Filter quick links based on role
-  const filteredQuickLinks = quickLinks.filter(link => {
-    if (!link.roles) return true
-    return link.roles.includes(userRole as 'admin' | 'team' | 'client')
-  })
+  // Choose and filter quick links/actions based on role (memoized to avoid recreating arrays each render)
+  const { filteredQuickLinks, filteredCreateActions } = useMemo(() => {
+    const quickLinks = userRole === 'client' ? clientQuickLinks : adminQuickLinks
+
+    return {
+      filteredQuickLinks: quickLinks.filter((link) => !link.roles || link.roles.includes(userRole as 'admin' | 'team' | 'client')),
+      filteredCreateActions: createActions.filter((action) => !action.roles || action.roles.includes(userRole as 'admin' | 'team' | 'client')),
+    }
+  }, [userRole])
 
   return (
     <Card className="shadow-sm">

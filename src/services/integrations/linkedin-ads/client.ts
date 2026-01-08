@@ -3,22 +3,12 @@
 // =============================================================================
 
 import { formatDate, toISO } from '@/lib/dates'
-import { RetryConfig, LinkedInApiErrorResponse } from './types'
-import { LinkedInApiError } from './errors'
+import { LinkedInApiErrorResponse } from './types'
 
-import {
-  calculateBackoffDelay,
-  DEFAULT_RETRY_CONFIG,
-  isRetryableStatus,
-  parseRetryAfterMs,
-  sleep,
-} from '../shared/retry'
+import { linkedinAdsClient } from '../shared/base-client'
+import { executeIntegrationRequest } from '../shared/execute-integration-request'
 
-// =============================================================================
-// RETRY CONFIGURATION
-// =============================================================================
-
-export { DEFAULT_RETRY_CONFIG }
+export { DEFAULT_RETRY_CONFIG } from '../shared/retry'
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -70,55 +60,6 @@ export function coerceNumber(value: unknown): number {
   return 0
 }
 
-
-function parseLinkedInApiError(
-  response: Response,
-  payload: LinkedInApiErrorResponse | string
-): LinkedInApiError {
-  const errorData = typeof payload === 'string' 
-    ? { message: payload, status: response.status }
-    : payload
-
-  const retryAfterMs = parseRetryAfterMs(response.headers)
-
-  return new LinkedInApiError({
-    message: errorData?.message ?? `LinkedIn API error (${response.status})`,
-    httpStatus: errorData?.status ?? response.status,
-    errorCode: errorData?.code,
-    serviceErrorCode: errorData?.serviceErrorCode,
-    retryAfterMs,
-  })
-}
-
-function logLinkedInApiRequest(context: {
-  operation: string
-  accountId?: string
-  attempt: number
-  maxRetries: number
-  duration?: number
-  error?: LinkedInApiError | Error
-  statusCode?: number
-}) {
-  const { operation, accountId, attempt, maxRetries, duration, error, statusCode } = context
-
-  if (error) {
-    console.error(`[LinkedIn API] ${operation} failed`, {
-      accountId,
-      attempt: `${attempt + 1}/${maxRetries}`,
-      statusCode,
-      duration: duration ? `${duration}ms` : undefined,
-      error: error instanceof LinkedInApiError ? error.toJSON() : { message: error.message },
-    })
-  } else {
-    console.log(`[LinkedIn API] ${operation} completed`, {
-      accountId,
-      attempt: `${attempt + 1}/${maxRetries}`,
-      statusCode,
-      duration: duration ? `${duration}ms` : undefined,
-    })
-  }
-}
-
 // =============================================================================
 // EXECUTE LINKEDIN API REQUEST WITH RETRY LOGIC
 // =============================================================================
@@ -129,7 +70,6 @@ interface ExecuteRequestOptions<T> {
   headers: Record<string, string>
   body?: string
   operation: string
-  accountId?: string
   maxRetries?: number
   onAuthError?: () => Promise<{ retry: boolean; newToken?: string }>
   onRateLimitHit?: (retryAfterMs: number) => void
@@ -138,125 +78,7 @@ interface ExecuteRequestOptions<T> {
 export async function executeLinkedInApiRequest<T>(
   options: ExecuteRequestOptions<T>
 ): Promise<{ response: Response; payload: T }> {
-  const {
-    url,
-    method,
-    headers: initialHeaders,
-    body,
-    operation,
-    accountId,
-    maxRetries = DEFAULT_RETRY_CONFIG.maxRetries,
-    onAuthError,
-    onRateLimitHit,
-  } = options
-
-  let headers = { ...initialHeaders }
-  let lastError: LinkedInApiError | Error | null = null
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const startTime = Date.now()
-    let response: Response
-
-    try {
-      response = await fetch(url, {
-        method,
-        headers,
-        ...(body && { body }),
-      })
-    } catch (networkError) {
-      lastError = networkError instanceof Error 
-        ? networkError 
-        : new Error('Network request failed')
-      
-      logLinkedInApiRequest({
-        operation,
-        accountId,
-        attempt,
-        maxRetries,
-        duration: Date.now() - startTime,
-        error: lastError,
-      })
-
-      if (attempt < maxRetries - 1) {
-        const delay = calculateBackoffDelay(attempt)
-        await sleep(delay)
-        continue
-      }
-      throw lastError
-    }
-
-    const duration = Date.now() - startTime
-
-    if (response.ok) {
-      let payload: T
-      try {
-        payload = await response.json() as T
-      } catch {
-        payload = {} as T
-      }
-      logLinkedInApiRequest({
-        operation,
-        accountId,
-        attempt,
-        maxRetries,
-        duration,
-        statusCode: response.status,
-      })
-      return { response, payload }
-    }
-
-    let errorPayload: LinkedInApiErrorResponse | string
-    try {
-      errorPayload = await response.json() as LinkedInApiErrorResponse
-    } catch {
-      errorPayload = await response.text()
-    }
-
-    const linkedInError = parseLinkedInApiError(response, errorPayload)
-    lastError = linkedInError
-
-    logLinkedInApiRequest({
-      operation,
-      accountId,
-      attempt,
-      maxRetries,
-      duration,
-      statusCode: response.status,
-      error: linkedInError,
-    })
-
-    if (linkedInError.isAuthError && onAuthError) {
-      const result = await onAuthError()
-      if (result.retry && result.newToken) {
-        headers = { ...headers, Authorization: `Bearer ${result.newToken}` }
-        attempt = -1
-        continue
-      }
-      throw linkedInError
-    }
-
-    if (linkedInError.isRateLimitError) {
-      const retryAfterMs = linkedInError.retryAfterMs ?? calculateBackoffDelay(attempt)
-      onRateLimitHit?.(retryAfterMs)
-      
-      if (attempt < maxRetries - 1) {
-        console.warn(`[LinkedIn API] Rate limited, waiting ${retryAfterMs}ms before retry`)
-        await sleep(retryAfterMs)
-        continue
-      }
-      throw linkedInError
-    }
-
-    if ((linkedInError.isRetryable || isRetryableStatus(response.status)) && attempt < maxRetries - 1) {
-      const delay = calculateBackoffDelay(attempt)
-      await sleep(delay)
-      continue
-    }
-
-    throw linkedInError
-  }
-
-  throw lastError ?? new Error('LinkedIn API request failed after all retries')
+  return executeIntegrationRequest<T>(linkedinAdsClient, options)
 }
 
 // Re-export formatDate for metrics module

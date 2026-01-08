@@ -3,12 +3,8 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
-import {
-  mapMessageDoc,
-  mentionSchema,
-  messageFormatSchema,
-  type StoredMessage,
-} from '@/app/api/collaboration/messages/route'
+import { mapMessageDoc, type StoredMessage } from '@/lib/firestore/mappers'
+import { mentionSchema, messageFormatSchema } from '@/lib/schemas/collaboration-messages'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@/lib/api-errors'
 
 const updateSchema = z.object({

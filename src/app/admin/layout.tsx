@@ -19,6 +19,7 @@ import { NavigationProvider } from '@/contexts/navigation-context'
 import { AgentMode } from '@/components/agent-mode'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { WorkspaceProviders } from '@/components/providers/workspace-providers'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -55,8 +56,8 @@ const adminNavItems = [
     icon: Lightbulb,
   },
   {
-    title: 'Scheduler',
-    href: '/admin/scheduler',
+    title: 'Health',
+    href: '/admin/health',
     icon: Activity,
   },
 ]
@@ -151,16 +152,18 @@ function AdminBreadcrumb() {
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute requiredRole="admin">
-      <NavigationProvider>
-        <div className="relative min-h-screen bg-background">
-          <main className="min-h-screen">
-            <AdminNav />
-            <AdminBreadcrumb />
-            <div className="px-6 py-6">{children}</div>
-          </main>
-          <AgentMode />
-        </div>
-      </NavigationProvider>
+      <WorkspaceProviders>
+        <NavigationProvider>
+          <div className="relative min-h-screen bg-background">
+            <main className="min-h-screen">
+              <AdminNav />
+              <AdminBreadcrumb />
+              <div className="px-6 py-6">{children}</div>
+            </main>
+            <AgentMode />
+          </div>
+        </NavigationProvider>
+      </WorkspaceProviders>
     </ProtectedRoute>
   )
 }

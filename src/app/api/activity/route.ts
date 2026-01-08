@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { AuthenticationError } from '@/lib/server-auth'
-import { resolveWorkspaceContext, type WorkspaceContext } from '@/lib/workspace'
+import { type WorkspaceContext } from '@/lib/workspace'
 import { toISO } from '@/lib/projects'
 import type { Activity, ActivityResponse } from '@/types/activity'
 import { createApiHandler } from '@/lib/api-handler'
+import { parsePageSize } from '@/lib/pagination'
 
 const MAX_ACTIVITIES = 50
 
@@ -16,11 +15,23 @@ const activityQuerySchema = z.object({
   after: z.string().optional(),
 })
 
+function parseAfterTimestamp(after?: string): Timestamp | null {
+  if (!after) return null
+
+  // Back-compat: accept both `timestamp` and `timestamp|docId`.
+  const rawTimestamp = after.includes('|') ? after.split('|')[0] : after
+  if (!rawTimestamp) return null
+
+  const afterDate = new Date(rawTimestamp)
+  if (Number.isNaN(afterDate.getTime())) return null
+  return Timestamp.fromDate(afterDate)
+}
+
 async function createProjectActivity(
   workspace: WorkspaceContext,
   clientId: string,
   limit: number,
-  after?: string
+  after?: Timestamp | null
 ): Promise<Activity[]> {
   const activities: Activity[] = []
   
@@ -30,10 +41,7 @@ async function createProjectActivity(
     .orderBy('updatedAt', 'desc')
 
   if (after) {
-    const afterDate = new Date(after)
-    if (!Number.isNaN(afterDate.getTime())) {
-      projectsQuery = projectsQuery.startAfter(Timestamp.fromDate(afterDate))
-    }
+    projectsQuery = projectsQuery.startAfter(after)
   }
 
   projectsQuery = projectsQuery.limit(limit)
@@ -61,7 +69,7 @@ async function createTaskActivity(
   workspace: WorkspaceContext,
   clientId: string,
   limit: number,
-  after?: string
+  after?: Timestamp | null
 ): Promise<Activity[]> {
   const activities: Activity[] = []
   
@@ -73,10 +81,7 @@ async function createTaskActivity(
     .orderBy('updatedAt', 'desc')
 
   if (after) {
-    const afterDate = new Date(after)
-    if (!Number.isNaN(afterDate.getTime())) {
-      tasksQuery = tasksQuery.startAfter(Timestamp.fromDate(afterDate))
-    }
+    tasksQuery = tasksQuery.startAfter(after)
   }
 
   tasksQuery = tasksQuery.limit(limit)
@@ -116,7 +121,7 @@ async function createMessageActivity(
   workspace: WorkspaceContext,
   clientId: string,
   limit: number,
-  after?: string
+  after?: Timestamp | null
 ): Promise<Activity[]> {
   const activities: Activity[] = []
   
@@ -128,10 +133,7 @@ async function createMessageActivity(
     .orderBy('createdAt', 'desc')
 
   if (after) {
-    const afterDate = new Date(after)
-    if (!Number.isNaN(afterDate.getTime())) {
-      messagesQuery = messagesQuery.startAfter(Timestamp.fromDate(afterDate))
-    }
+    messagesQuery = messagesQuery.startAfter(after)
   }
 
   messagesQuery = messagesQuery.limit(limit)
@@ -175,14 +177,17 @@ export const GET = createApiHandler(
   },
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
+    const pageSize = parsePageSize(query.pageSize, { defaultValue: 20, max: MAX_ACTIVITIES })
+    const afterTimestamp = parseAfterTimestamp(query.after)
+
     // Fetch activities from different sources
     // Fetch one extra to determine if there's more
-    const limitPerType = Math.ceil(query.pageSize / 3) + 1
+    const limitPerType = Math.ceil(pageSize / 3) + 1
 
     const [projectActivities, taskActivities, messageActivities] = await Promise.all([
-      createProjectActivity(workspace, query.clientId, limitPerType, query.after),
-      createTaskActivity(workspace, query.clientId, limitPerType, query.after),
-      createMessageActivity(workspace, query.clientId, limitPerType, query.after),
+      createProjectActivity(workspace, query.clientId, limitPerType, afterTimestamp),
+      createTaskActivity(workspace, query.clientId, limitPerType, afterTimestamp),
+      createMessageActivity(workspace, query.clientId, limitPerType, afterTimestamp),
     ])
 
     // Combine and sort all activities by timestamp (most recent first)
@@ -191,8 +196,8 @@ export const GET = createApiHandler(
     )
 
     // Apply pagination
-    const paginatedActivities = allActivities.slice(0, query.pageSize)
-    const hasMore = allActivities.length > query.pageSize
+    const paginatedActivities = allActivities.slice(0, pageSize)
+    const hasMore = allActivities.length > pageSize
     
     const nextCursor = paginatedActivities.length > 0 
       ? paginatedActivities[paginatedActivities.length - 1].timestamp 

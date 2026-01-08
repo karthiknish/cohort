@@ -116,7 +116,7 @@ export class IntegrationApiClient {
             onRateLimitHit,
         } = options
 
-        const fullUrl = url.startsWith('http') ? url : `${this.baseUrl}${url}`
+        let currentUrl = url.startsWith('http') ? url : `${this.baseUrl}${url}`
         let currentHeaders = { ...this.defaultHeaders, ...requestHeaders }
         let lastError: Error | null = null
 
@@ -125,7 +125,7 @@ export class IntegrationApiClient {
             let response: Response
 
             try {
-                response = await fetch(fullUrl, {
+                response = await fetch(currentUrl, {
                     method,
                     headers: currentHeaders,
                     ...(body && {
@@ -140,7 +140,7 @@ export class IntegrationApiClient {
                 logRequest({
                     platform: this.platform,
                     operation,
-                    url: fullUrl,
+                    url: currentUrl,
                     attempt,
                     maxRetries,
                     duration: Date.now() - startTime,
@@ -174,7 +174,7 @@ export class IntegrationApiClient {
                 logRequest({
                     platform: this.platform,
                     operation,
-                    url: fullUrl,
+                    url: currentUrl,
                     attempt,
                     maxRetries,
                     duration,
@@ -190,7 +190,7 @@ export class IntegrationApiClient {
             logRequest({
                 platform: this.platform,
                 operation,
-                url: fullUrl,
+                url: currentUrl,
                 attempt,
                 maxRetries,
                 duration,
@@ -204,6 +204,8 @@ export class IntegrationApiClient {
                 if (result.retry && result.newToken) {
                     // Update auth header - platform specific
                     currentHeaders = this.updateAuthHeader(currentHeaders, result.newToken)
+                    // Also update URL token params where applicable (e.g. Meta access_token)
+                    currentUrl = this.updateAuthInUrl(currentUrl, result.newToken)
                     attempt = -1 // Reset to retry with new token
                     continue
                 }
@@ -258,6 +260,27 @@ export class IntegrationApiClient {
         }
 
         return updated
+    }
+
+    /**
+     * Update auth token embedded in URLs for platforms that use query param auth.
+     */
+    private updateAuthInUrl(url: string, newToken: string): string {
+        try {
+            const urlObj = new URL(url)
+
+            if (urlObj.searchParams.has('access_token')) {
+                urlObj.searchParams.set('access_token', newToken)
+            }
+
+            if (urlObj.searchParams.has('token')) {
+                urlObj.searchParams.set('token', newToken)
+            }
+
+            return urlObj.toString()
+        } catch {
+            return url
+        }
     }
 
     /**

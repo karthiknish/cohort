@@ -1,18 +1,14 @@
-/**
- * Base class for all API errors
- */
-export class ApiError extends Error {
-  public readonly status: number;
-  public readonly code: string;
-  public readonly details?: Record<string, string[]>;
+import { UnifiedError } from '@/lib/errors/unified-error'
 
+/**
+ * Base class for all API errors (legacy name)
+ *
+ * Backed by UnifiedError to keep one error system.
+ */
+export class ApiError extends UnifiedError {
   constructor(message: string, status: number, code = 'INTERNAL_ERROR', details?: Record<string, string[]>) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+    super({ message, status, code, details })
+    this.name = new.target.name
   }
 }
 

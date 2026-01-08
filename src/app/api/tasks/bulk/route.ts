@@ -5,8 +5,8 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { createApiHandler } from '@/lib/api-handler'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
 import { TASK_PRIORITIES, TASK_STATUSES, TaskPriority, TaskStatus, TaskRecord } from '@/types/tasks'
-import { mapTaskDoc, invalidateTasksCache } from '../route'
-import type { StoredTask } from '@/types/stored-types'
+import { invalidateTasksCache } from '../route'
+import { mapTaskDoc, type StoredTask } from '@/lib/firestore/mappers'
 
 const bulkUpdateSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one task ID is required').max(50, 'Maximum 50 tasks per request'),

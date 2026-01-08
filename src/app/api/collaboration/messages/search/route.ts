@@ -5,7 +5,8 @@ import { createApiHandler } from '@/lib/api-handler'
 import { ValidationError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
 import { type WorkspaceContext } from '@/lib/workspace'
-import { channelTypeSchema, mapMessageDoc, type StoredMessage } from '../route'
+import { mapMessageDoc, type StoredMessage } from '@/lib/firestore/mappers'
+import { channelTypeSchema } from '@/lib/schemas/collaboration-messages'
 
 const searchQuerySchema = z.object({
   q: z.string().trim().max(400).optional(),

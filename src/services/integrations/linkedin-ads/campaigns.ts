@@ -3,13 +3,13 @@
 // =============================================================================
 
 import {
-  executeLinkedInApiRequest,
   normalizeCurrency,
   coerceNumber,
   buildTimeRange,
   formatDate,
   DEFAULT_RETRY_CONFIG,
 } from './client'
+import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
 import { LinkedInApiError } from './errors'
 import {
   LinkedInCampaign,
@@ -46,7 +46,7 @@ export async function listLinkedInCampaigns(options: {
 
   const url = `https://api.linkedin.com/v2/adCampaignsV2?${params.toString()}`
 
-  const { payload } = await executeLinkedInApiRequest<{
+  const { payload } = await linkedinAdsClient.executeRequest<{
     elements?: Array<{
       id?: string
       name?: string
@@ -65,7 +65,6 @@ export async function listLinkedInCampaigns(options: {
       'Linkedin-Version': '202310',
     },
     operation: 'listCampaigns',
-    accountId,
     maxRetries,
   })
 
@@ -105,7 +104,7 @@ export async function updateLinkedInCampaignStatus(options: {
 
   const url = `https://api.linkedin.com/v2/adCampaignsV2/urn:li:sponsoredCampaign:${campaignId}`
 
-  const { payload } = await executeLinkedInApiRequest<LinkedInApiErrorResponse>({
+  const { payload } = await linkedinAdsClient.executeRequest<LinkedInApiErrorResponse>({
     url,
     method: 'POST',
     headers: {
@@ -161,7 +160,7 @@ export async function updateLinkedInCampaignBudget(options: {
     patchData.totalBudget = { amount: totalBudget.toString(), currencyCode }
   }
 
-  const { payload } = await executeLinkedInApiRequest<LinkedInApiErrorResponse>({
+  const { payload } = await linkedinAdsClient.executeRequest<LinkedInApiErrorResponse>({
     url,
     method: 'POST',
     headers: {
@@ -237,7 +236,7 @@ export async function fetchLinkedInCreativeMetrics(options: {
 
   const url = `https://api.linkedin.com/v2/adAnalytics?${params.toString()}`
 
-  const { payload } = await executeLinkedInApiRequest<{
+  const { payload } = await linkedinAdsClient.executeRequest<{
     elements?: Array<{
       creative?: string
       campaignGroup?: string
@@ -257,7 +256,6 @@ export async function fetchLinkedInCreativeMetrics(options: {
       'X-Restli-Protocol-Version': '2.0.0',
     },
     operation: 'fetchCreativeMetrics',
-    accountId,
     maxRetries,
   })
 
@@ -320,7 +318,7 @@ export async function fetchLinkedInCreatives(options: {
 
   const url = `https://api.linkedin.com/v2/adCreativesV2?${params.toString()}`
 
-  const { payload } = await executeLinkedInApiRequest<{
+  const { payload } = await linkedinAdsClient.executeRequest<{
     elements?: Array<{
       id?: string
       campaign?: string
@@ -357,7 +355,6 @@ export async function fetchLinkedInCreatives(options: {
       'LinkedIn-Version': '202310',
     },
     operation: 'fetchCreatives',
-    accountId,
     maxRetries,
   })
 
@@ -440,7 +437,7 @@ export async function fetchLinkedInAudienceTargeting(options: {
 
   const url = `https://api.linkedin.com/v2/adCampaignsV2?${params.toString()}`
 
-  const { payload } = await executeLinkedInApiRequest<{
+  const { payload } = await linkedinAdsClient.executeRequest<{
     elements?: Array<{
       id?: string
       name?: string
@@ -464,7 +461,6 @@ export async function fetchLinkedInAudienceTargeting(options: {
       'LinkedIn-Version': '202310',
     },
     operation: 'fetchAudienceTargeting',
-    accountId,
     maxRetries,
   })
 
@@ -574,7 +570,7 @@ export async function createLinkedInAudience(options: {
     status: 'ACTIVE'
   }
 
-  const { payload } = await executeLinkedInApiRequest<any>({
+  const { payload } = await linkedinAdsClient.executeRequest<any>({
     url,
     method: 'POST',
     headers: {
@@ -623,7 +619,7 @@ export async function updateLinkedInCampaignBidding(options: {
     }
   }
 
-  const { payload } = await executeLinkedInApiRequest<any>({
+  const { payload } = await linkedinAdsClient.executeRequest<any>({
     url,
     method: 'POST',
     headers: {

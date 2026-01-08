@@ -4,40 +4,38 @@ import { FieldValue, Timestamp, WriteBatch } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase-admin'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import {
-  AdIntegration,
-  NormalizedMetric,
-  SyncJob,
-} from '@/types/integrations'
-import { coerceStringArray } from '@/lib/utils'
+  buildIntegrationPersistPayload,
+  buildIntegrationStatusUpdate,
+  buildIntegrationUpdatePayload,
+  buildSyncJobClaimUpdate,
+  buildSyncJobCompleteUpdate,
+  buildSyncJobFailUpdate,
+  buildSyncJobPayload,
+  createToTimestamp,
+  mapIntegrationSnapshot,
+  mapSyncJobSnapshot,
+  prepareMetricsBatch,
+  type TimestampHelpers,
+} from '@/lib/firestore-integrations-shared'
+import type { AdIntegration, NormalizedMetric, SyncJob } from '@/types/integrations'
 
 type TimestampInput = Date | string | number | Timestamp | null | undefined
 
-function toTimestamp(value: TimestampInput): AdminTimestamp | null {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (value instanceof Timestamp) {
-    return value as AdminTimestamp
-  }
-
-  if (value instanceof Date) {
-    return Timestamp.fromDate(value) as AdminTimestamp
-  }
-
-  if (typeof value === 'string') {
+const toTimestamp = createToTimestamp<AdminTimestamp>({
+  factory: {
+    isTimestamp: (value: unknown): value is AdminTimestamp => value instanceof Timestamp,
+    fromDate: (date) => Timestamp.fromDate(date) as AdminTimestamp,
+    fromMillis: (millis) => Timestamp.fromMillis(millis) as AdminTimestamp,
+  },
+  parseString: (value) => {
     const parsed = Date.parse(value)
-    if (!Number.isNaN(parsed)) {
-      return Timestamp.fromMillis(parsed) as AdminTimestamp
-    }
-    return null
-  }
+    return Number.isNaN(parsed) ? null : new Date(parsed)
+  },
+})
 
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return Timestamp.fromMillis(value) as AdminTimestamp
-  }
-
-  return null
+const timestampHelpers: TimestampHelpers<AdminTimestamp> = {
+  toTimestamp,
+  serverTimestamp: () => serverTimestamp(),
 }
 
 function serverTimestamp() {
@@ -67,17 +65,7 @@ export async function persistIntegrationTokens(options: {
   const {
     userId,
     providerId,
-    accessToken,
-    idToken,
-    scopes = [],
-    status = 'pending',
-    refreshToken = null,
-    accountId = null,
-    developerToken = null,
-    loginCustomerId = null,
-    managerCustomerId = null,
-    accessTokenExpiresAt = null,
-    refreshTokenExpiresAt = null,
+    ...payloadOptions
   } = options
 
   const workspaceRef = await getWorkspaceRef(userId)
@@ -85,23 +73,7 @@ export async function persistIntegrationTokens(options: {
     .collection('adIntegrations')
     .doc(providerId)
 
-  const payload: Record<string, unknown> = {
-    accessToken,
-    idToken: idToken ?? null,
-    refreshToken,
-    scopes,
-    linkedAt: serverTimestamp(),
-    lastSyncStatus: status,
-    lastSyncRequestedAt: serverTimestamp(),
-    accountId,
-    developerToken,
-    loginCustomerId,
-    managerCustomerId,
-  }
-
-  payload.accessTokenExpiresAt = toTimestamp(accessTokenExpiresAt)
-  payload.refreshTokenExpiresAt = toTimestamp(refreshTokenExpiresAt)
-
+  const payload = buildIntegrationPersistPayload(payloadOptions, timestampHelpers)
   await integrationRef.set(payload, { merge: true })
 }
 
@@ -121,15 +93,7 @@ export async function updateIntegrationCredentials(options: {
   const {
     userId,
     providerId,
-    accessToken,
-    refreshToken,
-    idToken,
-    accessTokenExpiresAt,
-    refreshTokenExpiresAt,
-    developerToken,
-    loginCustomerId,
-    managerCustomerId,
-    accountId,
+    ...payloadOptions
   } = options
 
   const workspaceRef = await getWorkspaceRef(userId)
@@ -137,20 +101,7 @@ export async function updateIntegrationCredentials(options: {
     .collection('adIntegrations')
     .doc(providerId)
 
-  const updatePayload: Record<string, unknown> = {
-    lastSyncRequestedAt: serverTimestamp(),
-  }
-
-  if (accessToken !== undefined) updatePayload.accessToken = accessToken
-  if (refreshToken !== undefined) updatePayload.refreshToken = refreshToken
-  if (idToken !== undefined) updatePayload.idToken = idToken
-  if (developerToken !== undefined) updatePayload.developerToken = developerToken
-  if (loginCustomerId !== undefined) updatePayload.loginCustomerId = loginCustomerId
-  if (managerCustomerId !== undefined) updatePayload.managerCustomerId = managerCustomerId
-  if (accountId !== undefined) updatePayload.accountId = accountId
-  if (accessTokenExpiresAt !== undefined) updatePayload.accessTokenExpiresAt = toTimestamp(accessTokenExpiresAt)
-  if (refreshTokenExpiresAt !== undefined) updatePayload.refreshTokenExpiresAt = toTimestamp(refreshTokenExpiresAt)
-
+  const updatePayload = buildIntegrationUpdatePayload(payloadOptions, timestampHelpers)
   await integrationRef.set(updatePayload, { merge: true })
 }
 
@@ -165,16 +116,7 @@ export async function enqueueSyncJob(options: {
   const workspaceRef = await getWorkspaceRef(userId)
   await workspaceRef
     .collection('syncJobs')
-    .add({
-      providerId,
-      jobType,
-      status: 'queued',
-      timeframeDays,
-      createdAt: serverTimestamp(),
-      startedAt: null,
-      processedAt: null,
-      errorMessage: null,
-    })
+    .add(buildSyncJobPayload({ providerId, jobType, timeframeDays }, timestampHelpers))
 }
 
 export async function getAdIntegration(options: {
@@ -193,36 +135,7 @@ export async function getAdIntegration(options: {
     return null
   }
 
-  const data = snapshot.data() as Record<string, unknown>
-
-  return {
-    id: snapshot.id,
-    providerId,
-    accessToken: (data.accessToken as string | null) ?? null,
-    idToken: (data.idToken as string | null) ?? null,
-    refreshToken: (data.refreshToken as string | null) ?? null,
-    scopes: coerceStringArray(data.scopes),
-    accountId: (data.accountId as string | undefined) ?? null,
-    developerToken: (data.developerToken as string | undefined) ?? null,
-    loginCustomerId: (data.loginCustomerId as string | undefined) ?? null,
-    managerCustomerId: (data.managerCustomerId as string | undefined) ?? null,
-    accessTokenExpiresAt: (data.accessTokenExpiresAt as AdminTimestamp | null | undefined) ?? null,
-    refreshTokenExpiresAt: (data.refreshTokenExpiresAt as AdminTimestamp | null | undefined) ?? null,
-    lastSyncStatus: (data.lastSyncStatus as AdIntegration['lastSyncStatus']) ?? 'never',
-    lastSyncMessage: (data.lastSyncMessage as string | undefined) ?? null,
-    lastSyncedAt: (data.lastSyncedAt as Timestamp | null | undefined) ?? null,
-    lastSyncRequestedAt: (data.lastSyncRequestedAt as Timestamp | null | undefined) ?? null,
-    linkedAt: (data.linkedAt as Timestamp | null | undefined) ?? null,
-    autoSyncEnabled: typeof data.autoSyncEnabled === 'boolean' ? data.autoSyncEnabled : null,
-    syncFrequencyMinutes:
-      typeof data.syncFrequencyMinutes === 'number' && Number.isFinite(data.syncFrequencyMinutes)
-        ? data.syncFrequencyMinutes
-        : null,
-    scheduledTimeframeDays:
-      typeof data.scheduledTimeframeDays === 'number' && Number.isFinite(data.scheduledTimeframeDays)
-        ? data.scheduledTimeframeDays
-        : null,
-  }
+  return mapIntegrationSnapshot(providerId, snapshot.id, snapshot.data() as Record<string, unknown>)
 }
 
 export async function claimNextSyncJob(options: {
@@ -243,24 +156,10 @@ export async function claimNextSyncJob(options: {
   }
 
   const jobDoc = snapshot.docs[0]
-  await jobDoc.ref.update({
-    status: 'running',
-    startedAt: serverTimestamp(),
-    errorMessage: null,
-  })
+  await jobDoc.ref.update(buildSyncJobClaimUpdate(timestampHelpers))
 
   const data = jobDoc.data() as Record<string, unknown>
-  return {
-    id: jobDoc.id,
-    providerId: (data.providerId as string | undefined) ?? jobDoc.id,
-    jobType: (data.jobType as SyncJob['jobType']) ?? 'initial-backfill',
-    timeframeDays: (data.timeframeDays as number | undefined) ?? 90,
-    status: 'running',
-    createdAt: (data.createdAt as Timestamp | null | undefined) ?? null,
-    startedAt: (data.startedAt as Timestamp | null | undefined) ?? null,
-    processedAt: (data.processedAt as Timestamp | null | undefined) ?? null,
-    errorMessage: (data.errorMessage as string | undefined) ?? null,
-  }
+  return { ...mapSyncJobSnapshot(jobDoc.id, data), status: 'running' }
 }
 
 export async function completeSyncJob(options: { userId: string; jobId: string }): Promise<void> {
@@ -269,10 +168,7 @@ export async function completeSyncJob(options: { userId: string; jobId: string }
   await workspaceRef
     .collection('syncJobs')
     .doc(jobId)
-    .update({
-      status: 'success',
-      processedAt: serverTimestamp(),
-    })
+    .update(buildSyncJobCompleteUpdate(timestampHelpers))
 }
 
 export async function failSyncJob(options: {
@@ -285,11 +181,7 @@ export async function failSyncJob(options: {
   await workspaceRef
     .collection('syncJobs')
     .doc(jobId)
-    .update({
-      status: 'error',
-      processedAt: serverTimestamp(),
-      errorMessage: message,
-    })
+    .update(buildSyncJobFailUpdate(message, timestampHelpers))
 }
 
 export async function updateIntegrationStatus(options: {
@@ -298,17 +190,13 @@ export async function updateIntegrationStatus(options: {
   status: 'pending' | 'success' | 'error'
   message?: string | null
 }): Promise<void> {
-  const { userId, providerId, status, message = null } = options
+  const { userId, providerId } = options
 
   const workspaceRef = await getWorkspaceRef(userId)
   await workspaceRef
     .collection('adIntegrations')
     .doc(providerId)
-    .update({
-      lastSyncStatus: status,
-      lastSyncMessage: message,
-      lastSyncedAt: status === 'success' ? serverTimestamp() : null,
-    })
+    .update(buildIntegrationStatusUpdate(options, timestampHelpers))
 }
 
 export async function hasPendingSyncJob(options: {
@@ -394,12 +282,9 @@ export async function writeMetricsBatch(options: {
   const workspaceRef = await getWorkspaceRef(userId)
   const metricsCollection = workspaceRef.collection('adMetrics')
 
-  metrics.forEach((metric) => {
+  prepareMetricsBatch(metrics, timestampHelpers).forEach((metric) => {
     const metricRef = metricsCollection.doc()
-    batch.set(metricRef, {
-      ...metric,
-      createdAt: serverTimestamp(),
-    })
+    batch.set(metricRef, metric)
   })
 
   await batch.commit()

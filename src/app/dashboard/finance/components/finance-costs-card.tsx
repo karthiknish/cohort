@@ -145,6 +145,7 @@ export function FinanceCostsCard({
                 <SelectValue placeholder="Monthly" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="one-off">One-off</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
                 <SelectItem value="quarterly">Quarterly</SelectItem>
                 <SelectItem value="annual">Annual</SelectItem>

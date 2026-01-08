@@ -3,15 +3,13 @@
 // =============================================================================
 
 import {
-  executeMetaApiRequest,
   appendMetaAuthParams,
   buildTimeRange,
   coerceNumber,
   DEFAULT_RETRY_CONFIG,
   META_API_BASE,
-  sleep,
 } from './client'
-import { MetaApiError } from './errors'
+import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import {
   MetaCampaign,
   MetaAdMetric,
@@ -52,7 +50,7 @@ export async function listMetaCampaigns(options: {
 
   const url = `${META_API_BASE}/${adAccountId}/campaigns?${params.toString()}`
 
-  const { payload } = await executeMetaApiRequest<{
+  const { payload } = await metaAdsClient.executeRequest<{
     data?: Array<{
       id?: string
       name?: string
@@ -65,7 +63,6 @@ export async function listMetaCampaigns(options: {
     }>
   }>({
     url,
-    accessToken,
     operation: 'listCampaigns',
     maxRetries,
   })
@@ -107,9 +104,8 @@ export async function updateMetaCampaignStatus(options: {
 
   const url = `${META_API_BASE}/${campaignId}?${params.toString()}`
 
-  const { payload } = await executeMetaApiRequest<{ success?: boolean }>({
+  const { payload } = await metaAdsClient.executeRequest<{ success?: boolean }>({
     url,
-    accessToken,
     operation: 'updateCampaignStatus',
     method: 'POST',
     maxRetries,
@@ -151,9 +147,8 @@ export async function updateMetaCampaignBudget(options: {
 
   const url = `${META_API_BASE}/${campaignId}?${params.toString()}`
 
-  const { payload } = await executeMetaApiRequest<{ success?: boolean }>({
+  const { payload } = await metaAdsClient.executeRequest<{ success?: boolean }>({
     url,
-    accessToken,
     operation: 'updateCampaignBudget',
     method: 'POST',
     maxRetries,
@@ -231,9 +226,8 @@ export async function fetchMetaAdMetrics(options: {
 
   const url = `${META_API_BASE}/${adAccountId}/insights?${params.toString()}`
 
-  const { payload } = await executeMetaApiRequest<MetaInsightsResponse>({
+  const { payload } = await metaAdsClient.executeRequest<MetaInsightsResponse>({
     url,
-    accessToken,
     operation: 'fetchAdMetrics',
     maxRetries,
   })
@@ -318,9 +312,8 @@ export async function fetchMetaCreatives(options: {
     url = `${META_API_BASE}/${campaignId}/ads?${params.toString()}`
   }
 
-  const { payload } = await executeMetaApiRequest<MetaAdsListResponse>({
+  const { payload } = await metaAdsClient.executeRequest<MetaAdsListResponse>({
     url,
-    accessToken,
     operation: 'fetchCreatives',
     maxRetries,
   })
@@ -382,7 +375,7 @@ export async function fetchMetaAudienceTargeting(options: {
     url = `${META_API_BASE}/${campaignId}/adsets?${params.toString()}`
   }
 
-  const { payload } = await executeMetaApiRequest<{
+  const { payload } = await metaAdsClient.executeRequest<{
     data?: Array<{
       id?: string
       name?: string
@@ -409,7 +402,6 @@ export async function fetchMetaAudienceTargeting(options: {
     }>
   }>({
     url,
-    accessToken,
     operation: 'fetchAudienceTargeting',
     maxRetries,
   })
@@ -485,9 +477,8 @@ export async function createMetaAudience(options: {
 
   const url = `${META_API_BASE}/${adAccountId}/customaudiences?${params.toString()}`
 
-  const { payload } = await executeMetaApiRequest<{ id?: string }>({
+  const { payload } = await metaAdsClient.executeRequest<{ id?: string }>({
     url,
-    accessToken,
     operation: 'createAudience',
     method: 'POST',
     maxRetries,

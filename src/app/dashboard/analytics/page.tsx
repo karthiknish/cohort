@@ -1,19 +1,8 @@
 'use client'
 
 import useSWR from 'swr'
+import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts'
 import {
   TrendingUp,
   DollarSign,
@@ -45,14 +34,7 @@ import {
 
 import { usePreview } from '@/contexts/preview-context'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from '@/components/ui/chart'
+import type { ChartConfig } from '@/components/ui/chart'
 
 // Extracted hooks and types
 import {
@@ -65,6 +47,72 @@ import {
   PERIOD_OPTIONS,
   PLATFORM_OPTIONS,
 } from './hooks'
+
+const ChartPlaceholder = () => (
+  <div className="h-[320px] w-full animate-pulse rounded-lg bg-muted/40" />
+)
+
+const ChartContainer = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartContainer), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const ChartTooltip = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartTooltip), {
+  ssr: false,
+  loading: () => null,
+})
+const ChartTooltipContent = dynamic(
+  () => import('@/components/ui/chart').then((m) => m.ChartTooltipContent),
+  { ssr: false, loading: () => null }
+)
+const ChartLegend = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartLegend), {
+  ssr: false,
+  loading: () => null,
+})
+const ChartLegendContent = dynamic(
+  () => import('@/components/ui/chart').then((m) => m.ChartLegendContent),
+  { ssr: false, loading: () => null }
+)
+
+const LineChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.LineChart), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const Line = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Line), {
+  ssr: false,
+  loading: () => null,
+})
+const BarChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.BarChart), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const Bar = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Bar), {
+  ssr: false,
+  loading: () => null,
+})
+const PieChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.PieChart), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const Pie = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Pie), {
+  ssr: false,
+  loading: () => null,
+})
+const Cell = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Cell), {
+  ssr: false,
+  loading: () => null,
+})
+const XAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.XAxis), {
+  ssr: false,
+  loading: () => null,
+})
+const YAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.YAxis), {
+  ssr: false,
+  loading: () => null,
+})
+const CartesianGrid = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.CartesianGrid), {
+  ssr: false,
+  loading: () => null,
+})
 
 
 // Shadcn chart configurations

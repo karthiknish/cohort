@@ -133,7 +133,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         name: name.trim(),
         description: description.trim() || undefined,
         status,
-        clientId: clientId || undefined,
+        clientId: (clientId && clientId !== 'none') ? clientId : undefined,
         clientName: selectedClientData?.name || undefined,
         startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
         endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
@@ -242,7 +242,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No client</SelectItem>
+                    <SelectItem value="none">No client</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import dynamic from 'next/dynamic'
 import { TrendingUp, Sparkles } from 'lucide-react'
 
 import {
@@ -10,12 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart'
+import type { ChartConfig } from '@/components/ui/chart'
 import { formatCurrency } from '../utils'
 
 interface ForecastDatum {
@@ -28,6 +23,35 @@ interface FinanceForecastCardProps {
   data: ForecastDatum[]
   currency?: string
 }
+
+const ChartPlaceholder = () => (
+  <div className="h-[280px] w-full animate-pulse rounded-lg bg-muted/40" />
+)
+
+const ChartContainer = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartContainer), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const ChartTooltip = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartTooltip), {
+  ssr: false,
+  loading: () => null,
+})
+const ChartTooltipContent = dynamic(
+  () => import('@/components/ui/chart').then((m) => m.ChartTooltipContent),
+  { ssr: false, loading: () => null }
+)
+
+const AreaChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.AreaChart), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const Area = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Area), { ssr: false, loading: () => null })
+const CartesianGrid = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.CartesianGrid), {
+  ssr: false,
+  loading: () => null,
+})
+const XAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.XAxis), { ssr: false, loading: () => null })
+const YAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.YAxis), { ssr: false, loading: () => null })
 
 export function FinanceForecastCard({ data, currency }: FinanceForecastCardProps) {
   const resolvedCurrency = currency ?? 'USD'

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Download, FileText, FileVideo, MonitorPlay, Play, Video } from 'lucide-react'
 import type { CollaborationAttachment } from '@/types/collaboration'
@@ -171,6 +171,9 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{activePdf?.name || 'PDF preview'}</DialogTitle>
+            <DialogDescription>
+              Preview of the attached PDF document.
+            </DialogDescription>
           </DialogHeader>
           {activePdf && (
             <div className="h-[70vh] overflow-hidden rounded-md border">

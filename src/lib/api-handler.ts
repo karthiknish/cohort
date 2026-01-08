@@ -5,9 +5,9 @@ import { createHash } from 'crypto'
 import { adminDb } from './firebase-admin'
 import { authenticateRequest, AuthenticationError, AuthResult, assertAdmin } from './server-auth'
 import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
-import { ApiError, RateLimitError } from './api-errors'
+import { UnifiedError } from '@/lib/errors'
+import { ApiError } from './api-errors'
 import { 
-  checkRateLimit, 
   createRateLimitKey, 
   getClientIdentifier,
   buildRateLimitHeaders,
@@ -29,6 +29,14 @@ export type ApiResponse<T = unknown> = {
   details?: Record<string, string[]>
   code?: string
   requestId?: string
+}
+
+function isApiResponseLike(value: unknown): value is ApiResponse {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  if (typeof record.success !== 'boolean') return false
+  // Reduce the odds of colliding with business payloads that happen to contain `success`.
+  return 'data' in record || 'error' in record || 'code' in record || 'details' in record
 }
 
 /**
@@ -133,11 +141,8 @@ export function createApiHandler<
         const identifier = getClientIdentifier(req)
         const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, identifier)
         
-        // Use distributed rate limiting for sensitive/critical operations
-        const isSensitive = options.rateLimit === 'sensitive' || options.rateLimit === 'critical'
-        const result = isSensitive 
-          ? await checkDistributedRateLimit(rateLimitKey, config)
-          : checkRateLimit(rateLimitKey, config)
+        // Always prefer distributed Redis-backed rate limiting (falls back to in-memory if Redis unavailable)
+        const result = await checkDistributedRateLimit(rateLimitKey, config)
         
         if (!result.allowed) {
           return NextResponse.json(
@@ -320,6 +325,46 @@ export function createApiHandler<
         return result
       }
 
+      if (isApiResponseLike(result)) {
+        const payload: ApiResponse = {
+          ...result,
+          requestId,
+        }
+
+        const status = payload.success ? 200 : 400
+
+        const duration = Date.now() - startTime
+        logger.info(`API ${payload.success ? 'Success' : 'Handled Error'}: ${req.method} ${req.nextUrl.pathname}`, {
+          type: 'request_end',
+          requestId,
+          duration,
+          status,
+          userId: auth.uid,
+          workspaceId: workspace?.workspaceId,
+        })
+
+        if (!payload.success && idempotencyRef) {
+          await idempotencyRef.delete().catch(() => {})
+        }
+
+        if (payload.success && idempotencyRef) {
+          await idempotencyRef.set(
+            {
+              response: payload,
+              status,
+              idempotencyStatus: 'completed',
+              updatedAt: toISO(),
+            },
+            { merge: true }
+          )
+        }
+
+        return NextResponse.json(payload, {
+          status,
+          headers: { 'X-Request-ID': requestId },
+        })
+      }
+
       // Return a standardized success envelope
       const successResponse = {
         ...apiSuccess(result),
@@ -358,6 +403,26 @@ export function createApiHandler<
       }
 
       // Handle known API errors
+      if (error instanceof UnifiedError) {
+        logApiError(error, req, { ...logContext })
+
+        if (idempotencyRef) {
+          await idempotencyRef.delete().catch(() => {})
+        }
+
+        const status = typeof error.status === 'number' ? error.status : 500
+        const payload = {
+          success: false,
+          ...(error.toJSON() as Record<string, unknown>),
+          requestId,
+        }
+
+        return NextResponse.json(payload, {
+          status,
+          headers: { 'X-Request-ID': requestId },
+        })
+      }
+
       if (error instanceof ApiError) {
         logApiError(error, req, { ...logContext })
         

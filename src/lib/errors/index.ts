@@ -41,24 +41,4 @@ export {
     parseResponseError,
 } from './integration-parser'
 
-// Re-export legacy classes for backward compatibility
-export {
-    ApiError,
-    ValidationError,
-    BadRequestError,
-    UnauthorizedError,
-    ForbiddenError,
-    NotFoundError,
-    ConflictError,
-    RateLimitError,
-    ServiceUnavailableError,
-} from '@/lib/api-errors'
-
-export {
-    ApiClientError,
-    buildUserFacingError,
-    formatUserFacingErrorMessage,
-    type UserFacingError,
-} from '@/lib/user-friendly-error'
-
 export { IntegrationApiErrorBase } from '@/lib/error-utils'

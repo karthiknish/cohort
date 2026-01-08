@@ -3,27 +3,18 @@ import { FieldPath, FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { AuthenticationError } from '@/lib/server-auth'
-import type {
-  CollaborationAttachment,
-  CollaborationChannelType,
-  CollaborationMention,
-  CollaborationMessage,
-  CollaborationMessageFormat,
-  CollaborationReaction,
-} from '@/types/collaboration'
-import type { StoredAttachment, StoredMention, StoredReaction, StoredMessage } from '@/types/stored-types'
-import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
+import type { StoredMessage } from '@/lib/firestore/mappers'
 import { type WorkspaceContext } from '@/lib/workspace'
 import { notifyCollaborationMessageWhatsApp, recordCollaborationNotification } from '@/lib/notifications'
 import { apiSuccess, createApiHandler } from '@/lib/api-handler'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
 import { toISO } from '@/lib/utils'
+import { mapMessageDoc } from '@/lib/firestore/mappers'
+import { decodeTimestampIdCursor, encodeTimestampIdCursor, parsePageSize } from '@/lib/pagination'
+import { channelTypeSchema, mentionSchema, messageFormatSchema } from '@/lib/schemas/collaboration-messages'
 
 // Re-export StoredMessage for backward compatibility
-export type { StoredMessage } from '@/types/stored-types'
-
-export const channelTypeSchema = z.enum(['client', 'team', 'project'])
-export const messageFormatSchema = z.enum(['markdown', 'plaintext'])
+export type { StoredMessage } from '@/lib/firestore/mappers'
 
 const messageQuerySchema = z.object({
   pageSize: z.string().optional(),
@@ -40,17 +31,6 @@ const attachmentSchema = z.object({
   url: z.string().trim().url(),
   type: z.string().trim().max(60).optional(),
   size: z.string().trim().max(40).optional(),
-})
-
-export const mentionSchema = z.object({
-  slug: z.string().trim().min(1).max(160),
-  name: z.string().trim().min(1).max(160),
-  role: z
-    .string()
-    .trim()
-    .max(120)
-    .nullable()
-    .optional(),
 })
 
 const createMessageSchema = z
@@ -118,136 +98,6 @@ const createMessageSchema = z
   })
 
 
-
-function sanitizeAttachment(input: unknown): CollaborationAttachment | null {
-  if (!input || typeof input !== 'object') {
-    return null
-  }
-
-  const data = input as StoredAttachment
-  const name = typeof data.name === 'string' ? data.name : null
-  const url = typeof data.url === 'string' ? data.url : null
-
-  if (!name || !url) {
-    return null
-  }
-
-  return {
-    name,
-    url,
-    type: typeof data.type === 'string' ? data.type : null,
-    size: typeof data.size === 'string' ? data.size : null,
-  }
-}
-
-function sanitizeMention(input: unknown): CollaborationMention | null {
-  if (!input || typeof input !== 'object') {
-    return null
-  }
-
-  const data = input as StoredMention
-  const slug = typeof data.slug === 'string' ? data.slug.trim() : null
-  const name = typeof data.name === 'string' ? data.name.trim() : null
-
-  if (!slug || !name) {
-    return null
-  }
-
-  return {
-    slug,
-    name,
-    role: typeof data.role === 'string' ? data.role : null,
-  }
-}
-
-function parseMessageFormat(value: unknown): CollaborationMessageFormat {
-  if (value === 'plaintext' || value === 'markdown') {
-    return value
-  }
-  return 'markdown'
-}
-
-export function sanitizeReaction(input: unknown): CollaborationReaction | null {
-  if (!input || typeof input !== 'object') {
-    return null
-  }
-
-  const data = input as StoredReaction
-  const emoji = typeof data.emoji === 'string' ? data.emoji : null
-  const count = typeof data.count === 'number' ? data.count : Array.isArray(data.userIds) ? data.userIds.length : null
-  const userIds = Array.isArray(data.userIds)
-    ? data.userIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-    : []
-
-  if (!emoji || !COLLABORATION_REACTION_SET.has(emoji) || count === null) {
-    return null
-  }
-
-  return {
-    emoji,
-    count: count >= 0 ? count : 0,
-    userIds,
-  }
-}
-
-export function mapMessageDoc(docId: string, data: StoredMessage): CollaborationMessage {
-  const channelType = (typeof data.channelType === 'string' ? data.channelType : 'team') as CollaborationChannelType
-
-  const attachments = Array.isArray(data.attachments)
-    ? data.attachments
-      .map((item) => sanitizeAttachment(item))
-      .filter((item): item is CollaborationAttachment => Boolean(item))
-    : undefined
-
-  const deletedAt = toISO(data.deletedAt)
-  const deletedBy = typeof data.deletedBy === 'string' ? data.deletedBy : null
-  const isDeleted = Boolean(deletedAt) || data.deleted === true
-  const updatedAt = toISO(data.updatedAt)
-  const createdAt = toISO(data.createdAt)
-  const threadLastReplyAt = toISO(data.threadLastReplyAt)
-
-  const content = typeof data.content === 'string' ? data.content : ''
-  const resolvedContent = isDeleted ? '' : content
-
-  const parentMessageId = typeof data.parentMessageId === 'string' ? data.parentMessageId : null
-  const threadRootId = typeof data.threadRootId === 'string' ? data.threadRootId : null
-  const threadReplyCountRaw = typeof data.threadReplyCount === 'number' ? data.threadReplyCount : null
-  const threadReplyCount = threadReplyCountRaw !== null ? Math.max(0, Math.trunc(threadReplyCountRaw)) : undefined
-
-  return {
-    id: docId,
-    channelType,
-    clientId: typeof data.clientId === 'string' ? data.clientId : null,
-    projectId: typeof data.projectId === 'string' ? data.projectId : null,
-    senderId: typeof data.senderId === 'string' ? data.senderId : null,
-    senderName: typeof data.senderName === 'string' ? data.senderName : 'Unknown teammate',
-    senderRole: typeof data.senderRole === 'string' ? data.senderRole : null,
-    content: resolvedContent,
-    createdAt,
-    updatedAt,
-    isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
-    deletedAt,
-    deletedBy,
-    isDeleted,
-    attachments,
-    format: parseMessageFormat(data.format),
-    mentions: Array.isArray(data.mentions)
-      ? data.mentions
-        .map((entry) => sanitizeMention(entry))
-        .filter((entry): entry is CollaborationMention => Boolean(entry))
-      : undefined,
-    reactions: Array.isArray(data.reactions)
-      ? data.reactions
-        .map((entry) => sanitizeReaction(entry))
-        .filter((entry): entry is CollaborationReaction => Boolean(entry))
-      : undefined,
-    parentMessageId,
-    threadRootId,
-    threadReplyCount,
-    threadLastReplyAt,
-  }
-}
-
 async function ensureClientOwnership(workspace: WorkspaceContext, clientId: string) {
   const clientDoc = await workspace.clientsCollection.doc(clientId).get()
   if (!clientDoc.exists) {
@@ -281,7 +131,7 @@ export const GET = createApiHandler(
     } = query
 
     const threadRootId = threadRootIdRaw?.trim()
-    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 100, 1), 200)
+    const pageSize = parsePageSize(pageSizeParam, { defaultValue: 100, max: 200 })
     const afterCursor = afterParam ?? cursorParam ?? null
 
     if (threadRootIdRaw !== undefined) {
@@ -295,14 +145,9 @@ export const GET = createApiHandler(
         .orderBy('createdAt', 'asc')
         .orderBy(FieldPath.documentId(), 'asc')
 
-      if (afterCursor) {
-        const [cursorTime, cursorId] = afterCursor.split('|')
-        if (cursorTime && cursorId) {
-          const cursorDate = new Date(cursorTime)
-          if (!Number.isNaN(cursorDate.getTime())) {
-            threadQuery = threadQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
-          }
-        }
+      const decodedCursor = decodeTimestampIdCursor(afterCursor)
+      if (decodedCursor) {
+        threadQuery = threadQuery.startAfter(decodedCursor.time, decodedCursor.id)
       }
 
       const threadSnapshot = await threadQuery.limit(pageSize + 1).get()
@@ -311,9 +156,9 @@ export const GET = createApiHandler(
       const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
       const nextCursor = nextCursorDoc
         ? (() => {
-          const rawCreated = toISO(nextCursorDoc.get('createdAt'))
-          return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
-        })()
+            const rawCreated = toISO(nextCursorDoc.get('createdAt'))
+            return rawCreated ? encodeTimestampIdCursor(rawCreated, nextCursorDoc.id) : null
+          })()
         : null
 
       return { messages, nextCursor }
@@ -354,14 +199,9 @@ export const GET = createApiHandler(
     }
     messagesQuery = messagesQuery.orderBy('createdAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 
-    if (afterCursor) {
-      const [cursorTime, cursorId] = afterCursor.split('|')
-      if (cursorTime && cursorId) {
-        const cursorDate = new Date(cursorTime)
-        if (!Number.isNaN(cursorDate.getTime())) {
-          messagesQuery = messagesQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
-        }
-      }
+    const decodedCursor = decodeTimestampIdCursor(afterCursor)
+    if (decodedCursor) {
+      messagesQuery = messagesQuery.startAfter(decodedCursor.time, decodedCursor.id)
     }
 
     const snapshot = await messagesQuery.limit(pageSize + 1).get()
@@ -371,9 +211,9 @@ export const GET = createApiHandler(
     const nextCursorDoc = docs.length > pageSize ? docs[pageSize] : null
     const nextCursor = nextCursorDoc
       ? (() => {
-        const rawCreated = toISO(nextCursorDoc.get('createdAt'))
-        return rawCreated ? `${rawCreated}|${nextCursorDoc.id}` : null
-      })()
+          const rawCreated = toISO(nextCursorDoc.get('createdAt'))
+          return rawCreated ? encodeTimestampIdCursor(rawCreated, nextCursorDoc.id) : null
+        })()
       : null
 
     return { messages, nextCursor }

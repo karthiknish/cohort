@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { apiFetch } from '@/lib/api-client'
 import { toErrorMessage } from '@/lib/error-utils'
 import {
   Card,
@@ -121,7 +122,6 @@ export default function AdminLeadsPage() {
       }
 
       try {
-        const token = await getIdToken()
         const params = new URLSearchParams()
         if (statusFilter !== 'all') {
           params.set('status', statusFilter)
@@ -133,23 +133,13 @@ export default function AdminLeadsPage() {
 
         const query = params.toString()
         const url = query ? `/api/admin/contact-messages?${query}` : '/api/admin/contact-messages'
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: 'no-store',
-        })
 
-        const payload = (await response.json().catch(() => null)) as
-          | { messages?: ContactMessage[]; nextCursor?: string | null; error?: string }
-          | null
+        const payload = await apiFetch<{
+          messages: ContactMessage[]
+          nextCursor: string | null
+        }>(url, { cache: 'no-store' })
 
-        if (!response.ok || !payload || !Array.isArray(payload.messages)) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Failed to load contact leads'
-          throw new Error(message)
-        }
-
-        setMessages((prev) => (append ? [...prev, ...payload.messages!] : payload.messages!))
+        setMessages((prev) => (append ? [...prev, ...payload.messages] : payload.messages))
         setNextCursor(payload.nextCursor ?? null)
       } catch (err: unknown) {
         const message = toErrorMessage(err, 'Unable to fetch leads')
@@ -199,21 +189,10 @@ export default function AdminLeadsPage() {
     setError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/contact-messages', {
+      await apiFetch('/api/admin/contact-messages', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({ id, status: nextStatus }),
       })
-
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to update lead'
-        throw new Error(message)
-      }
 
       setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, status: nextStatus } : msg)))
       toast({

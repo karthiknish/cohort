@@ -7,32 +7,23 @@ export type UserFacingError = {
   isValidation?: boolean
 }
 
-export class ApiClientError extends Error {
-  status?: number
-  code?: string
-  details?: Record<string, string[]>
+import { getSuggestedActions, getUserFriendlyMessage, isValidationStatus } from '@/lib/errors/messages'
+import { UnifiedError } from '@/lib/errors/unified-error'
 
-  constructor(message: string, options: { status?: number; code?: string; details?: Record<string, string[]>; cause?: unknown } = {}) {
-    super(message || 'Request failed')
+export class ApiClientError extends UnifiedError {
+  constructor(
+    message: string,
+    options: { status?: number; code?: string; details?: Record<string, string[]>; cause?: unknown } = {}
+  ) {
+    super({
+      message: message || getUserFriendlyMessage(options.status ?? 500),
+      status: options.status,
+      code: options.code,
+      details: options.details,
+      cause: options.cause,
+    })
     this.name = 'ApiClientError'
-    this.status = options.status
-    this.code = options.code
-    this.details = options.details
-    if (options.cause) {
-      // Preserve underlying error for debugging without leaking toasts
-      ;(this as any).cause = options.cause
-    }
   }
-}
-
-function defaultStatusMessage(status?: number): string {
-  if (!status) return 'Something went wrong.'
-  if (status === 401) return 'Please sign in and try again.'
-  if (status === 403) return "You don't have permission to do that."
-  if (status === 404) return 'We could not find what you were looking for.'
-  if (status === 429) return 'Too many requests. Please wait and try again.'
-  if (status >= 500) return 'Something went wrong on our side. Please try again.'
-  return 'Request failed. Please try again.'
 }
 
 function isNetworkError(error: unknown): boolean {
@@ -50,7 +41,7 @@ function isUnauthorized(status?: number, code?: string): boolean {
 }
 
 function isValidationError(status?: number, code?: string, details?: Record<string, string[]>): boolean {
-  return code === 'VALIDATION_ERROR' || status === 400 || status === 422 || !!details
+  return code === 'VALIDATION_ERROR' || isValidationStatus(status ?? 0) || !!details
 }
 
 function isRateLimit(status?: number, code?: string): boolean {
@@ -59,27 +50,26 @@ function isRateLimit(status?: number, code?: string): boolean {
 
 export function buildUserFacingError(error: unknown, fallback: string): UserFacingError {
   const baseActions = ['Try again', 'Contact support', 'Report bug']
-
-  const apiError = error instanceof ApiClientError ? error : undefined
-  const status = apiError?.status
-  const code = apiError?.code
-  const details = apiError?.details
+  const unified = UnifiedError.from(error, { message: fallback || 'Something went wrong.' })
+  const status = unified.status
+  const code = unified.code
+  const details = unified.details
 
   if (isNetworkError(error)) {
     return {
       message: 'We could not reach the server. Check your connection, then try again.',
       actions: ['Check your connection', 'Try again', 'Contact support'],
-      code: code ?? 'NETWORK_ERROR',
-      status,
+      code: code || 'NETWORK_ERROR',
+      status: status || undefined,
       details,
     }
   }
 
   if (isPermissionError(status, code)) {
     return {
-      message: "You don't have permission to do that.",
+      message: getUserFriendlyMessage(403),
       actions: ['Contact your admin', 'Request access', 'Contact support'],
-      code: code ?? 'FORBIDDEN',
+      code: code || 'FORBIDDEN',
       status,
       details,
     }
@@ -87,9 +77,9 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isUnauthorized(status, code)) {
     return {
-      message: 'Please sign in to continue.',
+      message: getUserFriendlyMessage(401),
       actions: ['Sign in', 'Contact support'],
-      code: code ?? 'UNAUTHORIZED',
+      code: code || 'UNAUTHORIZED',
       status,
       details,
     }
@@ -97,9 +87,9 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isRateLimit(status, code)) {
     return {
-      message: 'You are sending requests too quickly. Please wait and try again.',
-      actions: ['Wait a moment', 'Try again', 'Contact support'],
-      code: code ?? 'RATE_LIMIT_EXCEEDED',
+      message: getUserFriendlyMessage(429),
+      actions: getSuggestedActions(429),
+      code: code || 'RATE_LIMIT_EXCEEDED',
       status,
       details,
     }
@@ -107,25 +97,20 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isValidationError(status, code, details)) {
     return {
-      message: 'Some fields need attention. Please correct the highlighted fields.',
+      message: getUserFriendlyMessage(422),
       actions: ['Review highlighted fields', 'Try again'],
-      code: code ?? 'VALIDATION_ERROR',
+      code: code || 'VALIDATION_ERROR',
       status,
       details,
       isValidation: true,
     }
   }
 
-  const fallbackMessage = fallback || 'Something went wrong.'
-  const rawMessage = error instanceof Error ? error.message?.trim() : ''
-  const message = rawMessage && !/^error\b/i.test(rawMessage) && rawMessage.toLowerCase() !== 'internal server error'
-    ? rawMessage
-    : fallbackMessage
-
+  const message = status ? getUserFriendlyMessage(status) : fallback || 'Something went wrong.'
   return {
     message,
-    actions: baseActions,
-    code: code ?? (status ? String(status) : undefined),
+    actions: status ? getSuggestedActions(status) : baseActions,
+    code: code || (status ? String(status) : undefined),
     status,
     details,
   }

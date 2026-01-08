@@ -342,10 +342,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       const message = getErrorMessage(error, ERROR_MESSAGES.CONNECTION_FAILED)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
+      toast({
+        variant: 'destructive',
+        title: TOAST_TITLES.CONNECTION_FAILED,
+        description: message,
+      })
     } finally {
       setConnectingProvider(null)
     }
-  }, [initializeGoogleIntegration, initializeLinkedInIntegration, triggerRefresh])
+  }, [initializeGoogleIntegration, initializeLinkedInIntegration, triggerRefresh, toast])
 
   const handleOauthRedirect = useCallback(async (providerId: string) => {
     if (typeof window === 'undefined') return
@@ -384,10 +389,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       if (providerId === PROVIDER_IDS.TIKTOK && message.toLowerCase().includes('tiktok oauth is not configured')) {
         setTiktokSetupMessage('TikTok OAuth is not configured. Add TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, and TIKTOK_OAUTH_REDIRECT_URI environment variables.')
       }
+      toast({
+        variant: 'destructive',
+        title: TOAST_TITLES.CONNECTION_FAILED,
+        description: message,
+      })
     } finally {
       setConnectingProvider(null)
     }
-  }, [startMetaOauth, startTikTokOauth])
+  }, [startMetaOauth, startTikTokOauth, toast])
 
   const handleDisconnect = useCallback(async (providerId: string) => {
     const providerName = formatProviderName(providerId)

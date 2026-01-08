@@ -9,7 +9,9 @@ import { buildCacheHeaders, serverCache, workspaceCacheKey } from '@/lib/cache'
 import type { WorkspaceContext } from '@/lib/workspace'
 import { notifyTaskCreatedWhatsApp, recordTaskNotification } from '@/lib/notifications'
 import { NotFoundError } from '@/lib/api-errors'
+import { mapTaskDoc } from '@/lib/firestore/mappers'
 import { coerceStringArray, toISO, sanitizeInput } from '@/lib/utils'
+import { decodeTimestampIdCursor, encodeTimestampIdCursor, parsePageSize } from '@/lib/pagination'
 
 // Re-export StoredTask for backward compatibility
 export type { StoredTask } from '@/types/stored-types'
@@ -48,29 +50,6 @@ const taskQuerySchema = z.object({
   includeSummary: z.string().optional(),
 })
 
-export function mapTaskDoc(docId: string, data: StoredTask): TaskRecord {
-  const status = (typeof data.status === 'string' ? data.status : 'todo') as TaskStatus
-  const priority = (typeof data.priority === 'string' ? data.priority : 'medium') as TaskPriority
-
-  return {
-    id: docId,
-    title: typeof data.title === 'string' ? data.title : 'Untitled task',
-    description: typeof data.description === 'string' ? data.description : null,
-    status: TASK_STATUSES.includes(status) ? status : 'todo',
-    priority: TASK_PRIORITIES.includes(priority) ? priority : 'medium',
-    assignedTo: coerceStringArray(data.assignedTo),
-    clientId: typeof data.clientId === 'string' ? data.clientId : null,
-    client: typeof data.client === 'string' ? data.client : null,
-    projectId: typeof data.projectId === 'string' ? data.projectId : null,
-    projectName: typeof data.projectName === 'string' ? data.projectName : null,
-    dueDate: toISO(data.dueDate),
-    tags: coerceStringArray(data.tags),
-    createdAt: toISO(data.createdAt),
-    updatedAt: toISO(data.updatedAt),
-    deletedAt: toISO(data.deletedAt),
-  }
-}
-
 export const GET = createApiHandler(
   {
     workspace: 'required',
@@ -92,7 +71,7 @@ export const GET = createApiHandler(
     } = query
 
     const queryFilter = queryParam ? queryParam.trim().toLowerCase() : null
-    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), 100)
+    const pageSize = parsePageSize(pageSizeParam, { defaultValue: 50, max: 100 })
 
     const includeSummary = includeSummaryParam === '1' || includeSummaryParam === 'true'
 
@@ -115,14 +94,9 @@ export const GET = createApiHandler(
           .orderBy(FieldPath.documentId(), 'desc')
           .limit(pageSize + 1)
 
-        if (afterParam) {
-          const [timestamp, docId] = afterParam.split('|')
-          if (timestamp && docId) {
-            const afterDate = new Date(timestamp)
-            if (!Number.isNaN(afterDate.getTime())) {
-              baseQuery = baseQuery.startAfter(Timestamp.fromDate(afterDate), docId)
-            }
-          }
+        const decodedCursor = decodeTimestampIdCursor(afterParam)
+        if (decodedCursor) {
+          baseQuery = baseQuery.startAfter(decodedCursor.time, decodedCursor.id)
         }
 
         const snapshot = await baseQuery.get()
@@ -164,7 +138,7 @@ export const GET = createApiHandler(
         const nextCursor = nextCursorDoc
           ? (() => {
               const createdAt = toISO(nextCursorDoc.get('createdAt'))
-              return createdAt ? `${createdAt}|${nextCursorDoc.id}` : null
+              return createdAt ? encodeTimestampIdCursor(createdAt, nextCursorDoc.id) : null
             })()
           : null
 

@@ -3,7 +3,8 @@
 // =============================================================================
 
 import { formatDate } from '@/lib/dates'
-import { executeTikTokApiRequest, coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
+import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
+import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
 import {
   TikTokMetricsOptions,
   TikTokAdAccount,
@@ -29,7 +30,7 @@ export async function fetchTikTokAdAccounts(options: {
 
   const url = 'https://business-api.tiktok.com/open_api/v1.3/advertiser/info/'
   
-  const { payload } = await executeTikTokApiRequest<{
+  const { payload } = await tiktokAdsClient.executeRequest<{
     code?: number
     message?: string
     request_id?: string
@@ -133,7 +134,7 @@ export async function fetchTikTokAdsMetrics(options: TikTokMetricsOptions): Prom
       order_type: 'DESC',
     }
 
-    const { payload: body } = await executeTikTokApiRequest<TikTokReportResponse>({
+    const { payload: body } = await tiktokAdsClient.executeRequest<TikTokReportResponse>({
       url: 'https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/',
       method: 'POST',
       headers: {
@@ -142,7 +143,6 @@ export async function fetchTikTokAdsMetrics(options: TikTokMetricsOptions): Prom
       },
       body: JSON.stringify(requestPayload),
       operation: `fetchMetrics:page${page}`,
-      advertiserId,
       maxRetries,
       onAuthError: async () => {
         if (refreshAccessToken && !tokenRefreshAttempted) {

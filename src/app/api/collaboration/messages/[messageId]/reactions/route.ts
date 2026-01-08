@@ -3,10 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
-import {
-  sanitizeReaction,
-  type StoredMessage,
-} from '@/app/api/collaboration/messages/route'
+import { sanitizeReaction, type StoredMessage } from '@/lib/firestore/mappers'
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
 import { NotFoundError, ValidationError } from '@/lib/api-errors'
 

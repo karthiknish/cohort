@@ -109,11 +109,13 @@ export default function AdminPage() {
       if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
         const payload = await usersRes.value.json()
         const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        totalUsers = typeof data.total === 'number' ? data.total : data.users?.length ?? 0
-        activeUsers =
-          typeof data.activeTotal === 'number'
-            ? data.activeTotal
-            : data.users?.filter((u: { status: string }) => u.status === 'active')?.length ?? 0
+        if (data) {
+          totalUsers = typeof data.total === 'number' ? data.total : (Array.isArray(data.users) ? data.users.length : 0)
+          activeUsers =
+            typeof data.activeTotal === 'number'
+              ? data.activeTotal
+              : (Array.isArray(data.users) ? data.users.filter((u: { status: string }) => u.status === 'active').length : 0)
+        }
       }
 
       // Process clients
@@ -122,9 +124,11 @@ export default function AdminPage() {
       if (clientsRes.status === 'fulfilled' && clientsRes.value.ok) {
         const payload = await clientsRes.value.json()
         const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        totalClients = typeof data.total === 'number' ? data.total : data.clients?.length ?? 0
-        // Client records do not currently include a `status` field; treat all as active.
-        activeClients = totalClients
+        if (data) {
+          totalClients = typeof data.total === 'number' ? data.total : (Array.isArray(data.clients) ? data.clients.length : 0)
+          // Client records do not currently include a `status` field; treat all as active.
+          activeClients = totalClients
+        }
       }
 
       // Process leads
@@ -134,7 +138,7 @@ export default function AdminPage() {
       if (leadsRes.status === 'fulfilled' && leadsRes.value.ok) {
         const payload = await leadsRes.value.json()
         const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        const messages = data.messages ?? []
+        const messages = Array.isArray(data?.messages) ? data.messages : []
         pendingLeads = typeof data.pendingTotal === 'number'
           ? data.pendingTotal
           : messages.filter((m: { status: string }) => m.status === 'new').length
@@ -142,11 +146,11 @@ export default function AdminPage() {
         newLeadsToday = typeof data.todayTotal === 'number'
           ? data.todayTotal
           : (() => {
-              const today = new Date().toDateString()
-              return messages.filter((m: { createdAt: string }) =>
-                m.createdAt && new Date(m.createdAt).toDateString() === today
-              ).length
-            })()
+            const today = new Date().toDateString()
+            return messages.filter((m: { createdAt: string }) =>
+              m.createdAt && new Date(m.createdAt).toDateString() === today
+            ).length
+          })()
 
         // Add recent leads to activities
         messages.slice(0, 3).forEach((m: { id: string; name: string; company: string | null; createdAt: string }) => {
@@ -167,7 +171,7 @@ export default function AdminPage() {
       if (schedulerRes.status === 'fulfilled' && schedulerRes.value.ok) {
         const payload = await schedulerRes.value.json()
         const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        const events = data.events ?? []
+        const events = Array.isArray(data?.events) ? data.events : []
         recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
         if (recentErrors > 5) schedulerHealth = 'error'
         else if (recentErrors > 0) schedulerHealth = 'warning'
@@ -182,7 +186,7 @@ export default function AdminPage() {
       if (notificationsRes.status === 'fulfilled' && notificationsRes.value.ok) {
         const payload = await notificationsRes.value.json()
         const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        const notifications = data.notifications ?? []
+        const notifications = Array.isArray(data?.notifications) ? data.notifications : []
         notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
           if (n.type === 'new_user_signup') {
             recentActivities.push({
@@ -252,8 +256,8 @@ export default function AdminPage() {
     },
     {
       title: 'System Health',
-      description: 'Monitor scheduler runs, sync status, and error logs.',
-      href: '/admin/scheduler',
+      description: 'Monitor real-time connectivity, latency, and service status.',
+      href: '/admin/health',
       icon: Activity,
       cta: 'View status',
       badge: stats?.schedulerHealth === 'error' ? 'Issues' : stats?.schedulerHealth === 'warning' ? 'Warning' : 'Healthy',
@@ -472,9 +476,9 @@ export default function AdminPage() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/leads">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    Review new leads
+                  <Link href="/admin/health">
+                    <Activity className="mr-2 h-4 w-4" />
+                    System health check
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="sm" className="justify-start">

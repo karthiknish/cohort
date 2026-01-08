@@ -5,13 +5,13 @@
 import { formatDate } from '@/lib/dates'
 
 import {
-  executeMetaApiRequest,
   appendMetaAuthParams,
   buildTimeRange,
   coerceNumber,
   DEFAULT_RETRY_CONFIG,
   META_API_BASE,
 } from './client'
+import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import {
   MetaAdsOptions,
   MetaAdAccount,
@@ -54,7 +54,7 @@ export async function fetchMetaAdAccounts(options: {
 
   const url = `${META_API_BASE}/me/adaccounts?${params.toString()}`
   
-  const { payload } = await executeMetaApiRequest<{
+  const { payload } = await metaAdsClient.executeRequest<{
     data?: Array<{
       id?: unknown
       name?: unknown
@@ -63,7 +63,6 @@ export async function fetchMetaAdAccounts(options: {
     }>
   }>({
     url,
-    accessToken,
     operation: 'fetchAdAccounts',
     maxRetries,
   })
@@ -144,9 +143,8 @@ export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<Norm
 
     const url = `${META_API_BASE}/${adAccountId}/insights?${params.toString()}`
     
-    const { payload } = await executeMetaApiRequest<MetaInsightsResponse>({
+    const { payload } = await metaAdsClient.executeRequest<MetaInsightsResponse>({
       url,
-      accessToken: activeAccessToken,
       operation: `fetchInsights:page${page}`,
       maxRetries,
       onAuthError: async () => {

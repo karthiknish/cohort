@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import Link from 'next/link'
 import { CircleCheck, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -60,21 +61,22 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
   )
 }
 
-function TaskItem({ task }: { task: DashboardTaskItem }) {
-  const priorityColors: Record<DashboardTaskItem['priority'], string> = {
-    urgent: 'bg-rose-50 text-rose-700 border-rose-200',
-    high: 'bg-orange-50 text-orange-700 border-orange-200',
-    medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    low: 'bg-slate-50 text-slate-700 border-slate-200',
-  }
+const TaskItem = memo(function TaskItem({ task }: { task: DashboardTaskItem }) {
+  const priorityDotClass = useMemo(
+    () =>
+      task.priority === 'urgent'
+        ? 'bg-rose-500'
+        : task.priority === 'high'
+          ? 'bg-orange-500'
+          : task.priority === 'medium'
+            ? 'bg-yellow-500'
+            : 'bg-slate-400',
+    [task.priority]
+  )
 
   return (
     <div className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-colors hover:bg-muted/50 hover:border-border">
-      <div className={cn('mt-0.5 h-2 w-2 rounded-full shrink-0', 
-        task.priority === 'urgent' ? 'bg-rose-500' :
-        task.priority === 'high' ? 'bg-orange-500' :
-        task.priority === 'medium' ? 'bg-yellow-500' : 'bg-slate-400'
-      )} />
+      <div className={cn('mt-0.5 h-2 w-2 rounded-full shrink-0', priorityDotClass)} />
       <div className="flex-1 space-y-1 min-w-0">
         <p className="text-sm font-medium leading-none truncate">{task.title}</p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -87,4 +89,4 @@ function TaskItem({ task }: { task: DashboardTaskItem }) {
       </div>
     </div>
   )
-}
+})

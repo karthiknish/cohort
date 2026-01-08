@@ -1,11 +1,11 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { 
-  checkRateLimit, 
   getClientIdentifier, 
   buildRateLimitHeaders, 
   RATE_LIMITS 
 } from '@/lib/rate-limiter'
+import { checkDistributedRateLimit } from '@/lib/rate-limiter-distributed'
 
 const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, RATE_LIMITS.standard.maxRequests)
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, RATE_LIMITS.standard.windowMs)
@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api/')) {
     const identifier = getClientIdentifier(request)
-    const rateLimit = checkRateLimit(`api:${identifier}`, {
+    const rateLimit = await checkDistributedRateLimit(`api:${identifier}`, {
       maxRequests: API_RATE_LIMIT_MAX,
       windowMs: API_RATE_LIMIT_WINDOW_MS,
     })

@@ -3,13 +3,13 @@
 // =============================================================================
 
 import {
-  executeLinkedInApiRequest,
   normalizeCurrency,
   coerceNumber,
   buildTimeRange,
   formatDate,
   DEFAULT_RETRY_CONFIG,
 } from './client'
+import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
 import {
   LinkedInAdsOptions,
   LinkedInAdAccount,
@@ -34,7 +34,7 @@ export async function fetchLinkedInAdAccounts(options: {
 
   const url = 'https://api.linkedin.com/v2/adAccountsV2?q=search&sort.field=ID&sort.order=DESCENDING&count=100'
 
-  const { payload } = await executeLinkedInApiRequest<{
+  const { payload } = await linkedinAdsClient.executeRequest<{
     elements?: Array<{
       id?: string
       name?: string
@@ -107,7 +107,7 @@ export async function fetchLinkedInAdsMetrics(options: LinkedInAdsOptions): Prom
 
   const url = `https://api.linkedin.com/v2/adAnalytics?${params.toString()}`
   
-  const { payload } = await executeLinkedInApiRequest<{ elements?: LinkedInAnalyticsRow[] }>({
+  const { payload } = await linkedinAdsClient.executeRequest<{ elements?: LinkedInAnalyticsRow[] }>({
     url,
     method: 'GET',
     headers: {
@@ -115,7 +115,6 @@ export async function fetchLinkedInAdsMetrics(options: LinkedInAdsOptions): Prom
       'X-Restli-Protocol-Version': '2.0.0',
     },
     operation: 'fetchMetrics',
-    accountId,
     maxRetries,
     onAuthError: async () => {
       if (refreshAccessToken && !tokenRefreshAttempted) {

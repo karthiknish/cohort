@@ -1,20 +1,13 @@
 'use client'
 
 import { memo, useMemo } from 'react'
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart'
+import type { ChartConfig } from '@/components/ui/chart'
 
 interface MetricRecord {
   date: string
@@ -26,6 +19,43 @@ interface PerformanceChartProps {
   metrics: MetricRecord[]
   loading: boolean
 }
+
+const ChartPlaceholder = () => (
+  <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />
+)
+
+const ChartContainer = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartContainer), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const ChartTooltip = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartTooltip), {
+  ssr: false,
+  loading: () => null,
+})
+const ChartTooltipContent = dynamic(
+  () => import('@/components/ui/chart').then((m) => m.ChartTooltipContent),
+  { ssr: false, loading: () => null }
+)
+const ChartLegend = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartLegend), {
+  ssr: false,
+  loading: () => null,
+})
+const ChartLegendContent = dynamic(
+  () => import('@/components/ui/chart').then((m) => m.ChartLegendContent),
+  { ssr: false, loading: () => null }
+)
+
+const AreaChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.AreaChart), {
+  ssr: false,
+  loading: ChartPlaceholder,
+})
+const Area = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Area), { ssr: false, loading: () => null })
+const CartesianGrid = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.CartesianGrid), {
+  ssr: false,
+  loading: () => null,
+})
+const XAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.XAxis), { ssr: false, loading: () => null })
+const YAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.YAxis), { ssr: false, loading: () => null })
 
 const chartConfig = {
   revenue: {

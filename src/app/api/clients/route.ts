@@ -5,10 +5,11 @@ import { createApiHandler } from '@/lib/api-handler'
 import { adminDb } from '@/lib/firebase-admin'
 import { resolveWorkspaceContext } from '@/lib/workspace'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
-import type { StoredClient } from '@/types/stored-types'
 import { ConflictError, NotFoundError } from '@/lib/api-errors'
-import { coerceNumber, toISO } from '@/lib/utils'
+import { toISO } from '@/lib/utils'
 import { logAuditAction } from '@/lib/audit-logger'
+import { coerceClientTeamMembers, mapClientDoc, type StoredClient } from '@/lib/firestore/mappers'
+import { decodeStringIdCursor, encodeStringIdCursor, parsePageSize } from '@/lib/pagination'
 
 const teamMemberSchema = z.object({
   name: z.string().trim().min(1, 'Team member name is required').max(120),
@@ -51,65 +52,7 @@ function slugify(value: string): string {
   return base
 }
 
-function coerceTeamMembers(value: unknown): ClientTeamMember[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value
-    .map((item) => {
-      if (!item || typeof item !== 'object') {
-        return null
-      }
-
-      const record = item as Record<string, unknown>
-      const name = typeof record.name === 'string' ? record.name.trim() : ''
-      const role = typeof record.role === 'string' ? record.role.trim() : ''
-
-      if (!name) {
-        return null
-      }
-
-      return {
-        name,
-        role: role || 'Contributor',
-      }
-    })
-    .filter(Boolean) as ClientTeamMember[]
-}
-
-type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
-
-function mapClientDoc(docId: string, data: StoredClient): ClientRecord {
-  const name = typeof data.name === 'string' ? data.name : 'Untitled client'
-  const accountManager = typeof data.accountManager === 'string' ? data.accountManager : 'Unassigned'
-  const teamMembers = coerceTeamMembers(data.teamMembers)
-  const billingEmail = typeof data.billingEmail === 'string' ? data.billingEmail : null
-  const stripeCustomerId = typeof data.stripeCustomerId === 'string' ? data.stripeCustomerId : null
-  const lastInvoiceStatus = typeof data.lastInvoiceStatus === 'string' ? data.lastInvoiceStatus : null
-  const lastInvoiceAmount = coerceNumber(data.lastInvoiceAmount)
-  const lastInvoiceCurrency = typeof data.lastInvoiceCurrency === 'string' ? data.lastInvoiceCurrency : null
-  const lastInvoiceIssuedAt = toISO(data.lastInvoiceIssuedAt as TimestampLike)
-  const lastInvoiceNumber = typeof data.lastInvoiceNumber === 'string' ? data.lastInvoiceNumber : null
-  const lastInvoiceUrl = typeof data.lastInvoiceUrl === 'string' ? data.lastInvoiceUrl : null
-
-  return {
-    id: docId,
-    name,
-    accountManager,
-    teamMembers,
-    billingEmail,
-    stripeCustomerId,
-    lastInvoiceStatus,
-    lastInvoiceAmount,
-    lastInvoiceCurrency,
-    lastInvoiceIssuedAt,
-    lastInvoiceNumber,
-    lastInvoiceUrl,
-    createdAt: toISO(data.createdAt as TimestampLike),
-    updatedAt: toISO(data.updatedAt as TimestampLike),
-  }
-}
+const coerceTeamMembers = coerceClientTeamMembers
 
 export const GET = createApiHandler(
   {
@@ -120,7 +63,7 @@ export const GET = createApiHandler(
   async (req, { auth, workspace, query }) => {
     if (!workspace) throw new Error('Workspace context missing')
     
-    const pageSize = Math.min(Math.max(Number(query.pageSize) || 50, 1), 100)
+    const pageSize = parsePageSize(query.pageSize, { defaultValue: 50, max: 100 })
     const afterParam = query.after
     const includeTotals = query.includeTotals === 'true' || query.includeTotals === '1'
 
@@ -130,9 +73,9 @@ export const GET = createApiHandler(
       .orderBy(FieldPath.documentId(), 'asc')
       .limit(pageSize + 1)
 
-    if (typeof afterParam === 'string' && afterParam.includes('|')) {
-      const [namePart, docId] = afterParam.split('|')
-      baseQuery = baseQuery.startAfter(namePart, docId)
+    const decodedCursor = decodeStringIdCursor(typeof afterParam === 'string' ? afterParam : null)
+    if (decodedCursor) {
+      baseQuery = baseQuery.startAfter(decodedCursor.value, decodedCursor.id)
     }
 
     let snapshot = await baseQuery.get()
@@ -245,7 +188,7 @@ export const GET = createApiHandler(
     if (hasMore && docs.length > 0) {
       const lastDoc = docs[docs.length - 1]
       const lastData = lastDoc.data() as StoredClient
-      nextCursor = `${lastData.name ?? ''}|${lastDoc.id}`
+      nextCursor = encodeStringIdCursor(typeof lastData.name === 'string' ? lastData.name : '', lastDoc.id)
     }
 
     const totalsAgg = includeTotals

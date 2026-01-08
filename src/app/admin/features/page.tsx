@@ -6,6 +6,7 @@ import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
+import { apiFetch } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
@@ -48,16 +49,7 @@ export default function AdminFeaturesPage() {
       }
 
       try {
-        const token = await getIdToken()
-        const response = await fetch('/api/admin/features', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch features')
-        }
-
-        const data = await response.json()
+        const data = await apiFetch<{ features: FeatureItem[] }>('/api/admin/features')
         setFeatures(data.features ?? [])
       } catch (error) {
         console.error('Failed to fetch features:', error)
@@ -101,15 +93,9 @@ export default function AdminFeaturesPage() {
     setIsDeleting(true)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/admin/features/${featureToDelete.id}`, {
+      await apiFetch(`/api/admin/features/${featureToDelete.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete feature')
-      }
 
       setFeatures((prev) => prev.filter((f) => f.id !== featureToDelete.id))
       toast({
@@ -141,19 +127,10 @@ export default function AdminFeaturesPage() {
       )
 
       try {
-        const token = await getIdToken()
-        const response = await fetch(`/api/admin/features/${featureId}`, {
+        await apiFetch(`/api/admin/features/${featureId}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({ status: newStatus }),
         })
-
-        if (!response.ok) {
-          throw new Error('Failed to update feature status')
-        }
 
         toast({
           title: 'Status updated',
@@ -188,20 +165,11 @@ export default function AdminFeaturesPage() {
 
       if (editingFeature) {
         // Update existing feature
-        const response = await fetch(`/api/admin/features/${editingFeature.id}`, {
+        const result = await apiFetch<{ feature: FeatureItem }>(`/api/admin/features/${editingFeature.id}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify(data),
         })
 
-        if (!response.ok) {
-          throw new Error('Failed to update feature')
-        }
-
-        const result = await response.json()
         setFeatures((prev) =>
           prev.map((f) => (f.id === editingFeature.id ? result.feature : f))
         )
@@ -212,20 +180,11 @@ export default function AdminFeaturesPage() {
         })
       } else {
         // Create new feature
-        const response = await fetch('/api/admin/features', {
+        const result = await apiFetch<{ feature: FeatureItem }>('/api/admin/features', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify(data),
         })
 
-        if (!response.ok) {
-          throw new Error('Failed to create feature')
-        }
-
-        const result = await response.json()
         setFeatures((prev) => [result.feature, ...prev])
 
         toast({

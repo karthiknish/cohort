@@ -30,11 +30,14 @@ export const getPrimaryCurrencyTotals = (totals: FinanceCurrencyTotals[] | undef
 export const normalizeMonthly = (amount: number, cadence: FinanceCostEntry['cadence']): number => {
   if (cadence === 'monthly') return amount
   if (cadence === 'quarterly') return amount / 3
-  return amount / 12
+  if (cadence === 'annual') return amount / 12
+  return 0 // 'one-off' is not recurring monthly
 }
 
 export const formatCadence = (cadence: FinanceCostEntry['cadence']): string => {
   switch (cadence) {
+    case 'one-off':
+      return 'One-off'
     case 'monthly':
       return 'Monthly'
     case 'quarterly':

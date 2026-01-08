@@ -9,6 +9,12 @@ import type { ProjectRecord } from '@/types/projects'
 import { recordProjectCreatedNotification } from '@/lib/notifications'
 import { logAuditAction } from '@/lib/audit-logger'
 import { serverCache, workspaceCacheKey } from '@/lib/cache'
+import { decodeTimestampIdCursor, encodeTimestampIdCursor, parsePageSize } from '@/lib/pagination'
+import { buildProjectSummary } from '@/lib/projects-stats'
+import type { ProjectStats } from '@/lib/projects-stats'
+
+export { buildProjectSummary, calculateProjectStats } from '@/lib/projects-stats'
+export type { ProjectStats } from '@/lib/projects-stats'
 
 const MAX_PROJECTS = 100
 const STATS_CACHE_TTL_MS = 30_000 // 30 seconds
@@ -70,7 +76,9 @@ async function calculateProjectStatsBatch(
   const projectIds = pending.map((item) => item.projectId)
   const chunks = chunkArray(projectIds, FIRESTORE_IN_QUERY_LIMIT)
 
-  const taskSnapshots = await Promise.all(chunks.map((chunk) => workspace.tasksCollection.where('projectId', 'in', chunk).get()))
+  const taskSnapshots = await Promise.all(
+    chunks.map((chunk) => workspace.tasksCollection.where('projectId', 'in', chunk).get())
+  )
   for (const snapshot of taskSnapshots) {
     snapshot.forEach((doc) => {
       const data = doc.data() as Record<string, unknown>
@@ -176,94 +184,6 @@ type ProjectListResponse = {
   projects: ProjectRecord[]
 }
 
-type ProjectStats = {
-  taskCount: number
-  openTaskCount: number
-  recentActivityAt: string | null
-}
-
-export type { ProjectStats }
-
-export async function calculateProjectStats(
-  workspace: WorkspaceContext,
-  projectId: string,
-  baselineActivity: string | null
-): Promise<ProjectStats> {
-  // Check cache first
-  const cacheKey = workspaceCacheKey(workspace.workspaceId, 'projects', 'stats', projectId)
-  const cached = await serverCache.get<ProjectStats>(cacheKey)
-  if (cached) {
-    return cached
-  }
-
-  let latestActivity: Date | null = baselineActivity ? new Date(baselineActivity) : null
-  let taskCount = 0
-  let openTaskCount = 0
-
-  const tasksSnapshot = await workspace.tasksCollection.where('projectId', '==', projectId).get()
-  tasksSnapshot.forEach((doc) => {
-    const data = doc.data() as Record<string, unknown>
-    taskCount += 1
-    const status = typeof data.status === 'string' ? data.status : 'todo'
-    if (status !== 'completed') {
-      openTaskCount += 1
-    }
-    const candidate = toISO(data.updatedAt ?? data.createdAt)
-    if (candidate) {
-      const date = new Date(candidate)
-      if (!Number.isNaN(date.getTime()) && (!latestActivity || date > latestActivity)) {
-        latestActivity = date
-      }
-    }
-  })
-
-  const messagesSnapshot = await workspace.collaborationCollection
-    .where('channelType', '==', 'project')
-    .where('projectId', '==', projectId)
-    .orderBy('createdAt', 'desc')
-    .limit(1)
-    .get()
-
-  if (!messagesSnapshot.empty) {
-    const doc = messagesSnapshot.docs[0]
-    const candidate = toISO(doc.get('createdAt'))
-    if (candidate) {
-      const date = new Date(candidate)
-      if (!Number.isNaN(date.getTime()) && (!latestActivity || date > latestActivity)) {
-        latestActivity = date
-      }
-    }
-  }
-
-  const recentActivityAt = latestActivity ? latestActivity.toISOString() : baselineActivity
-
-  const stats: ProjectStats = {
-    taskCount,
-    openTaskCount,
-    recentActivityAt,
-  }
-
-  // Cache the result
-  void serverCache.set(cacheKey, stats, STATS_CACHE_TTL_MS)
-
-  return stats
-}
-
-export async function buildProjectSummary(
-  workspace: WorkspaceContext,
-  docId: string,
-  data: Record<string, unknown>
-): Promise<ProjectRecord> {
-  const base = mapProjectDoc(docId, data)
-  const stats = await calculateProjectStats(workspace, docId, base.recentActivityAt)
-  return {
-    ...base,
-    taskCount: stats.taskCount,
-    openTaskCount: stats.openTaskCount,
-    recentActivityAt: stats.recentActivityAt,
-  }
-}
-
 export const GET = createApiHandler(
   {
     workspace: 'required',
@@ -275,7 +195,7 @@ export const GET = createApiHandler(
 
     const { status, clientId, query: queryParam, pageSize: pageSizeParam, after: afterParam, includeStats: includeStatsParam } = query
     const normalizedQuery = queryParam?.trim().toLowerCase() ?? null
-    const pageSize = Math.min(Math.max(Number(pageSizeParam) || 50, 1), MAX_PROJECTS)
+    const pageSize = parsePageSize(pageSizeParam, { defaultValue: 50, max: MAX_PROJECTS })
     const includeStats = includeStatsParam === 'true'
     const afterCursor = afterParam?.trim() || null
 
@@ -291,14 +211,9 @@ export const GET = createApiHandler(
 
     let orderedQuery = baseQuery.orderBy('updatedAt', 'desc').orderBy(FieldPath.documentId(), 'desc')
 
-    if (afterCursor) {
-      const [cursorTime, cursorId] = afterCursor.split('|')
-      if (cursorTime && cursorId) {
-        const cursorDate = new Date(cursorTime)
-        if (!Number.isNaN(cursorDate.getTime())) {
-          orderedQuery = orderedQuery.startAfter(Timestamp.fromDate(cursorDate), cursorId)
-        }
-      }
+    const decodedCursor = decodeTimestampIdCursor(afterCursor)
+    if (decodedCursor) {
+      orderedQuery = orderedQuery.startAfter(decodedCursor.time, decodedCursor.id)
     }
 
     let docs: QueryDocumentSnapshot[]
@@ -358,7 +273,7 @@ export const GET = createApiHandler(
     const nextCursor = nextCursorDoc
       ? (() => {
         const iso = toISO(nextCursorDoc.get('updatedAt') ?? nextCursorDoc.get('createdAt'))
-        return iso ? `${iso}|${nextCursorDoc.id}` : null
+        return iso ? encodeTimestampIdCursor(iso, nextCursorDoc.id) : null
       })()
       : null
 

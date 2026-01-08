@@ -3,7 +3,8 @@
 // =============================================================================
 
 import { formatDate } from '@/lib/dates'
-import { executeTikTokApiRequest, coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
+import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
+import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
 import { TikTokApiError } from './errors'
 import {
   TikTokCampaign,
@@ -38,7 +39,7 @@ export async function listTikTokCampaigns(options: {
     requestPayload.primary_status = statusFilter[0]
   }
 
-  const { payload } = await executeTikTokApiRequest<{
+  const { payload } = await tiktokAdsClient.executeRequest<{
     code?: number
     message?: string
     request_id?: string
@@ -61,7 +62,6 @@ export async function listTikTokCampaigns(options: {
     },
     body: JSON.stringify(requestPayload),
     operation: 'listCampaigns',
-    advertiserId,
     maxRetries,
   })
 
@@ -96,7 +96,7 @@ export async function updateTikTokCampaignStatus(options: {
     maxRetries = 3,
   } = options
 
-  const { payload } = await executeTikTokApiRequest<TikTokApiErrorResponse>({
+  const { payload } = await tiktokAdsClient.executeRequest<TikTokApiErrorResponse>({
     url: 'https://business-api.tiktok.com/open_api/v1.3/campaign/status/update/',
     method: 'POST',
     headers: {
@@ -109,7 +109,6 @@ export async function updateTikTokCampaignStatus(options: {
       opt_status: status,
     }),
     operation: 'updateCampaignStatus',
-    advertiserId,
     maxRetries,
   })
 
@@ -145,7 +144,7 @@ export async function updateTikTokCampaignBudget(options: {
     maxRetries = 3,
   } = options
 
-  const { payload } = await executeTikTokApiRequest<TikTokApiErrorResponse>({
+  const { payload } = await tiktokAdsClient.executeRequest<TikTokApiErrorResponse>({
     url: 'https://business-api.tiktok.com/open_api/v1.3/campaign/update/',
     method: 'POST',
     headers: {
@@ -159,7 +158,6 @@ export async function updateTikTokCampaignBudget(options: {
       budget,
     }),
     operation: 'updateCampaignBudget',
-    advertiserId,
     maxRetries,
   })
 
@@ -230,7 +228,7 @@ export async function fetchTikTokAdMetrics(options: {
     requestPayload.filters = [{ field_name: 'campaign_id', filter_type: 'IN', filter_value: [campaignId] }]
   }
 
-  const { payload } = await executeTikTokApiRequest<TikTokReportResponse>({
+  const { payload } = await tiktokAdsClient.executeRequest<TikTokReportResponse>({
     url: 'https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/',
     method: 'POST',
     headers: {
@@ -239,7 +237,6 @@ export async function fetchTikTokAdMetrics(options: {
     },
     body: JSON.stringify(requestPayload),
     operation: 'fetchAdMetrics',
-    advertiserId,
     maxRetries,
   })
 
@@ -310,7 +307,7 @@ export async function fetchTikTokCreatives(options: {
     requestPayload.filtering = { ad_ids: [], campaign_ids: campaignId ? [campaignId] : [], adgroup_ids: adGroupId ? [adGroupId] : [] }
   }
 
-  const { payload } = await executeTikTokApiRequest<{
+  const { payload } = await tiktokAdsClient.executeRequest<{
     code?: number
     message?: string
     request_id?: string
@@ -343,7 +340,6 @@ export async function fetchTikTokCreatives(options: {
     },
     body: JSON.stringify(requestPayload),
     operation: 'fetchCreatives',
-    advertiserId,
     maxRetries,
   })
 
@@ -401,7 +397,7 @@ export async function fetchTikTokAudienceTargeting(options: {
     requestPayload.filtering = { ...(requestPayload.filtering as object || {}), adgroup_ids: adGroupIds }
   }
 
-  const { payload } = await executeTikTokApiRequest<{
+  const { payload } = await tiktokAdsClient.executeRequest<{
     code?: number
     message?: string
     data?: {
@@ -440,7 +436,6 @@ export async function fetchTikTokAudienceTargeting(options: {
     },
     body: JSON.stringify(requestPayload),
     operation: 'fetchAudienceTargeting',
-    advertiserId,
     maxRetries,
   })
 
@@ -507,7 +502,7 @@ export async function createTikTokAudience(options: {
     maxRetries = 3,
   } = options
 
-  const { payload } = await executeTikTokApiRequest<{
+  const { payload } = await tiktokAdsClient.executeRequest<{
     code?: number
     data?: { custom_audience_id?: string }
   }>({
@@ -523,7 +518,6 @@ export async function createTikTokAudience(options: {
       type: 'REMARKETING',
     }),
     operation: 'createAudience',
-    advertiserId,
     maxRetries,
   })
 
