@@ -58,27 +58,31 @@ export function AnalyticsCharts({
     return (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Revenue vs Spend Chart */}
-            <Card className="border-muted/60 bg-background">
-                <CardHeader>
-                    <CardTitle>Revenue vs spend</CardTitle>
-                    <CardDescription>Daily totals for the selected period</CardDescription>
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Revenue vs spend</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily totals for the selected period</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full" />
+                        <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : chartData.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
                             No performance data for the selected filters.
                         </div>
                     ) : (
                         <ChartContainer config={revenueSpendChartConfig} className="h-[300px] w-full">
                             <LineChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
                                     axisLine={false}
-                                    tickMargin={8}
+                                    tickMargin={12}
+                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
                                     tickFormatter={(value) => {
                                         const date = new Date(value)
                                         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -87,38 +91,40 @@ export function AnalyticsCharts({
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tickMargin={8}
+                                    tickMargin={12}
+                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
                                     tickFormatter={(value) => formatCurrency(value)}
                                 />
                                 <ChartTooltip
-                                    cursor={false}
+                                    cursor={{ stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 }}
                                     content={
                                         <ChartTooltipContent
+                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
                                             formatter={(value, name) => (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground">{name}:</span>
-                                                    <span className="font-medium">{formatCurrency(value as number)}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">{name}:</span>
+                                                    <span className="text-sm font-bold text-foreground">{formatCurrency(value as number)}</span>
                                                 </div>
                                             )}
                                         />
                                     }
                                 />
-                                <ChartLegend content={<ChartLegendContent />} />
+                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
                                 <Line
                                     type="monotone"
                                     dataKey="revenue"
                                     stroke="var(--color-revenue)"
-                                    strokeWidth={2}
+                                    strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6 }}
+                                    activeDot={{ r: 6, strokeWidth: 0 }}
                                 />
                                 <Line
                                     type="monotone"
                                     dataKey="spend"
                                     stroke="var(--color-spend)"
-                                    strokeWidth={2}
+                                    strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6 }}
+                                    activeDot={{ r: 6, strokeWidth: 0 }}
                                 />
                             </LineChart>
                         </ChartContainer>
@@ -127,27 +133,31 @@ export function AnalyticsCharts({
             </Card>
 
             {/* ROAS Performance Chart */}
-            <Card className="border-muted/60 bg-background">
-                <CardHeader>
-                    <CardTitle>ROAS performance</CardTitle>
-                    <CardDescription>Return on ad spend across the selected period</CardDescription>
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">ROAS performance</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Return on ad spend across the selected period</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full" />
+                        <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : chartData.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
                             No performance data for the selected filters.
                         </div>
                     ) : (
                         <ChartContainer config={roasChartConfig} className="h-[300px] w-full">
                             <BarChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
                                     axisLine={false}
-                                    tickMargin={8}
+                                    tickMargin={12}
+                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
                                     tickFormatter={(value) => {
                                         const date = new Date(value)
                                         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -156,24 +166,26 @@ export function AnalyticsCharts({
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tickMargin={8}
+                                    tickMargin={12}
+                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
                                     tickFormatter={(value) => `${value.toFixed(1)}x`}
                                 />
                                 <ChartTooltip
-                                    cursor={false}
+                                    cursor={{ fill: 'rgba(var(--primary), 0.05)' }}
                                     content={
                                         <ChartTooltipContent
+                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
                                             formatter={(value) => (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground">ROAS:</span>
-                                                    <span className="font-medium">{(value as number).toFixed(2)}x</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">ROAS:</span>
+                                                    <span className="text-sm font-bold text-foreground">{(value as number).toFixed(2)}x</span>
                                                 </div>
                                             )}
                                         />
                                     }
                                 />
-                                <ChartLegend content={<ChartLegendContent />} />
-                                <Bar dataKey="roas" fill="var(--color-roas)" radius={[4, 4, 0, 0]} />
+                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
+                                <Bar dataKey="roas" fill="var(--color-roas)" radius={[6, 6, 0, 0]} barSize={24} />
                             </BarChart>
                         </ChartContainer>
                     )}
@@ -181,16 +193,19 @@ export function AnalyticsCharts({
             </Card>
 
             {/* Platform Budget Distribution Chart */}
-            <Card className="border-muted/60 bg-background">
-                <CardHeader>
-                    <CardTitle>Platform budget distribution</CardTitle>
-                    <CardDescription>Spend share across connected platforms</CardDescription>
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Platform budget distribution</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Spend share across connected platforms</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     {initialMetricsLoading || (isMetricsLoading && platformBreakdown.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full" />
+                        <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : platformBreakdown.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
                             Connect a platform to see spend distribution.
                         </div>
                     ) : (
@@ -199,10 +214,11 @@ export function AnalyticsCharts({
                                 <ChartTooltip
                                     content={
                                         <ChartTooltipContent
+                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
                                             formatter={(value, name) => (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground">{name}:</span>
-                                                    <span className="font-medium">{formatCurrency(value as number)}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">{name}:</span>
+                                                    <span className="text-sm font-bold text-foreground">{formatCurrency(value as number)}</span>
                                                 </div>
                                             )}
                                         />
@@ -214,14 +230,15 @@ export function AnalyticsCharts({
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
+                                    innerRadius={70}
                                     outerRadius={100}
-                                    paddingAngle={2}
+                                    paddingAngle={4}
                                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                     labelLine={false}
+                                    style={{ fontSize: '10px', fontWeight: 'bold' }}
                                 >
                                     {platformBreakdown.map((entry) => (
-                                        <Cell key={entry.name} fill={entry.color} />
+                                        <Cell key={entry.name} fill={entry.color} stroke="none" />
                                     ))}
                                 </Pie>
                             </PieChart>
@@ -231,27 +248,31 @@ export function AnalyticsCharts({
             </Card>
 
             {/* Click Performance Chart */}
-            <Card className="border-muted/60 bg-background">
-                <CardHeader>
-                    <CardTitle>Click performance</CardTitle>
-                    <CardDescription>Breakdown of daily click volume</CardDescription>
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-orange-500" />
+                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Click performance</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Breakdown of daily click volume</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full" />
+                        <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : chartData.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
                             Welcome! Connect your first ad account to see click performance.
                         </div>
                     ) : (
                         <ChartContainer config={clicksChartConfig} className="h-[300px] w-full">
                             <LineChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
                                     axisLine={false}
-                                    tickMargin={8}
+                                    tickMargin={12}
+                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
                                     tickFormatter={(value) => {
                                         const date = new Date(value)
                                         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -260,30 +281,32 @@ export function AnalyticsCharts({
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
-                                    tickMargin={8}
+                                    tickMargin={12}
+                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
                                     tickFormatter={(value) => value.toLocaleString()}
                                 />
                                 <ChartTooltip
-                                    cursor={false}
+                                    cursor={{ stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 }}
                                     content={
                                         <ChartTooltipContent
+                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
                                             formatter={(value) => (
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-muted-foreground">Clicks:</span>
-                                                    <span className="font-medium">{(value as number).toLocaleString()}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Clicks:</span>
+                                                    <span className="text-sm font-bold text-foreground">{(value as number).toLocaleString()}</span>
                                                 </div>
                                             )}
                                         />
                                     }
                                 />
-                                <ChartLegend content={<ChartLegendContent />} />
+                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
                                 <Line
                                     type="monotone"
                                     dataKey="clicks"
                                     stroke="var(--color-clicks)"
-                                    strokeWidth={2}
+                                    strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6 }}
+                                    activeDot={{ r: 6, strokeWidth: 0 }}
                                 />
                             </LineChart>
                         </ChartContainer>

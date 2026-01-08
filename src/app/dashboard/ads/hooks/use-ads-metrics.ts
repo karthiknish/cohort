@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
 
 import type { MetricRecord, ProviderSummary } from '../components/types'
+import type { MetricsSummary } from '../components/types'
 import type { DateRange } from '../components/date-range-picker'
 import {
   METRICS_PAGE_SIZE,
@@ -33,7 +34,7 @@ export interface UseAdsMetricsReturn {
   metrics: MetricRecord[]
   processedMetrics: MetricRecord[]
   providerSummaries: Record<string, ProviderSummary>
-  serverSideSummary: any
+  serverSideSummary: MetricsSummary | null
   hasMetricData: boolean
   
   // Loading states
@@ -82,7 +83,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [internalRefreshTick, setInternalRefreshTick] = useState(0)
   
-  const [serverSideSummary, setServerSideSummary] = useState<any>(null)
+  const [serverSideSummary, setServerSideSummary] = useState<MetricsSummary | null>(null)
   
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     start: startOfDay(subDays(new Date(), DEFAULT_DATE_RANGE_DAYS - 1)),

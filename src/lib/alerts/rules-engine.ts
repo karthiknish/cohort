@@ -12,6 +12,7 @@ import type {
     TrendCondition,
     ThresholdOperator,
 } from './types'
+import { safeEvaluateFormula } from '../metrics'
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -121,10 +122,21 @@ function formatMetricValue(metric: AlertMetric, value: number): string {
  */
 export function evaluateThresholdRule(
     rule: AlertRule,
-    current: DailyMetricData
+    current: DailyMetricData,
+    formula?: { formula: string; inputs: string[] }
 ): AlertResult {
     const condition = rule.condition as ThresholdCondition
-    const currentValue = getMetricValue(current, rule.metric)
+    let currentValue = getMetricValue(current, rule.metric)
+
+    // Handle custom formula
+    if (rule.metric === 'custom_formula' && formula) {
+        const inputValues: Record<string, number> = {}
+        formula.inputs.forEach(input => {
+            inputValues[input] = getMetricValue(current, input as AlertMetric)
+        })
+        currentValue = safeEvaluateFormula(formula.formula, inputValues) ?? 0
+    }
+
     const triggered = compareValues(currentValue, condition.operator, condition.value)
 
     return {
@@ -134,10 +146,11 @@ export function evaluateThresholdRule(
         severity: rule.severity,
         metric: rule.metric,
         message: triggered
-            ? `${rule.metric.toUpperCase()} (${formatMetricValue(rule.metric, currentValue)}) is ${getOperatorText(condition.operator)} ${formatMetricValue(rule.metric, condition.value)}`
-            : `${rule.metric.toUpperCase()} is within threshold`,
+            ? `${rule.metric === 'custom_formula' ? rule.name : rule.metric.toUpperCase()} (${formatMetricValue(rule.metric, currentValue)}) is ${getOperatorText(condition.operator)} ${formatMetricValue(rule.metric, condition.value)}`
+            : `${rule.metric === 'custom_formula' ? rule.name : rule.metric.toUpperCase()} is within threshold`,
         currentValue,
         threshold: condition.value,
+        formulaId: rule.formulaId,
         timestamp: new Date().toISOString(),
     }
 }
@@ -288,11 +301,27 @@ export function evaluateTrendRule(
 export function evaluateRule(
     rule: AlertRule,
     current: DailyMetricData,
-    history: DailyMetricData[]
+    history: DailyMetricData[],
+    formula?: { formula: string; inputs: string[] }
 ): AlertResult {
+    if (rule.type === 'algorithmic') {
+        // Algorithmic rules are handled in the evaluator usually, but we'll return a placeholder here
+        // to maintain type safety if called through this path
+        return {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            triggered: false,
+            severity: rule.severity,
+            metric: rule.metric,
+            message: 'Algorithmic rule evaluation not supported in single-rule mode',
+            currentValue: 0,
+            timestamp: new Date().toISOString(),
+        }
+    }
+
     switch (rule.condition.type) {
         case 'threshold':
-            return evaluateThresholdRule(rule, current)
+            return evaluateThresholdRule(rule, current, formula)
         case 'anomaly':
             return evaluateAnomalyRule(rule, current, history)
         case 'trend':

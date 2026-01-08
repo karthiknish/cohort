@@ -39,36 +39,37 @@ export function AnalyticsCreativesSection({
     onRefreshMetrics,
 }: AnalyticsCreativesSectionProps) {
     return (
-        <Card className="border-muted/60 bg-background">
-            <CardHeader>
-                <CardTitle>Meta creative highlights</CardTitle>
-                <CardDescription className="flex items-center justify-between gap-4">
-                    <span>Top-performing creatives from Meta Ads (based on spend)</span>
+        <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+            <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        <div>
+                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Meta creative performance</CardTitle>
+                            <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Top-performing ads from Meta based on spend distribution</CardDescription>
+                        </div>
+                    </div>
                     <button
                         type="button"
                         onClick={onRefreshMetrics}
                         disabled={isMetricsLoading || metricsRefreshing}
-                        className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+                        className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
                     >
-                        <RefreshCw className={`h-3.5 w-3.5 ${metricsRefreshing ? 'animate-spin' : ''}`} />
-                        Refresh creatives
+                        <RefreshCw className={`h-3 w-3 transition-transform duration-500 group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+                        Refresh
                     </button>
-                </CardDescription>
+                </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 {initialMetricsLoading || (isMetricsLoading && creativeBreakdown.length === 0) ? (
-                    <div className="rounded border border-dashed border-muted/60 p-6">
-                        <div className="mb-4 flex items-center justify-between">
-                            <Skeleton className="h-4 w-48" />
-                            <Skeleton className="h-4 w-28" />
-                        </div>
-                        <div className="space-y-3">
+                    <div className="p-6">
+                        <div className="space-y-4">
                             {Array.from({ length: 4 }).map((_, idx) => (
-                                <div key={idx} className="rounded border border-muted/40 p-4">
-                                    <Skeleton className="h-4 w-56" />
-                                    <div className="mt-3 grid grid-cols-4 gap-3">
+                                <div key={idx} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
+                                    <Skeleton className="h-4 w-1/3 rounded-full" />
+                                    <div className="mt-4 grid grid-cols-4 gap-4">
                                         {Array.from({ length: 4 }).map((__, metricIdx) => (
-                                            <Skeleton key={metricIdx} className="h-4 w-full" />
+                                            <Skeleton key={metricIdx} className="h-4 w-full rounded-md" />
                                         ))}
                                     </div>
                                 </div>
@@ -76,70 +77,75 @@ export function AnalyticsCreativesSection({
                         </div>
                     </div>
                 ) : creativeBreakdown.length === 0 ? (
-                    <div className="rounded border border-dashed border-muted/60 p-6 text-center text-sm text-muted-foreground">
-                        No creative-level data yet. Ensure Meta syncs are configured with creative insights.
+                    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/20 text-muted-foreground/30 mb-4">
+                            <Info className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground/60 italic max-w-sm">
+                            No creative-level data identified. Ensure Meta syncs are configured with active creative insights.
+                        </p>
                     </div>
                 ) : (
-                    <ScrollArea className="h-72">
-                        <table className="w-full table-fixed text-left text-sm">
-                            <thead className="sticky top-0 bg-background">
-                                <tr className="border-b border-muted/60 text-xs uppercase text-muted-foreground">
-                                    <th className="py-2 pr-4 font-medium">Creative</th>
-                                    <th className="py-2 pr-4 font-medium">
-                                        <div className="flex items-center gap-1">
+                    <ScrollArea className="h-[400px]">
+                        <table className="w-full text-left">
+                            <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-md">
+                                <tr className="border-b border-muted/20">
+                                    <th className="py-4 pl-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Creative Asset</th>
+                                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                        <div className="flex items-center gap-1.5">
                                             Spend
                                             <TooltipProvider>
                                                 <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <Info className="h-3 w-3 text-muted-foreground/70" />
+                                                    <TooltipTrigger className="cursor-help">
+                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Amount spent on this creative</p>
+                                                    <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
+                                                        <p className="text-[10px] font-bold">Amount spent on this creative</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
                                         </div>
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
-                                        <div className="flex items-center gap-1">
+                                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                        <div className="flex items-center gap-1.5">
                                             Clicks
                                             <TooltipProvider>
                                                 <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <Info className="h-3 w-3 text-muted-foreground/70" />
+                                                    <TooltipTrigger className="cursor-help">
+                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Number of clicks on this creative</p>
+                                                    <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
+                                                        <p className="text-[10px] font-bold">Total click volume</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
                                         </div>
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
-                                        <div className="flex items-center gap-1">
-                                            Conversions
+                                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                        <div className="flex items-center gap-1.5">
+                                            Conv
                                             <TooltipProvider>
                                                 <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <Info className="h-3 w-3 text-muted-foreground/70" />
+                                                    <TooltipTrigger className="cursor-help">
+                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Number of conversions from this creative</p>
+                                                    <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
+                                                        <p className="text-[10px] font-bold">Attributed conversions</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
                                         </div>
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
-                                        <div className="flex items-center gap-1">
+                                    <th className="py-4 pr-6 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                        <div className="flex items-center justify-end gap-1.5">
                                             Revenue
                                             <TooltipProvider>
                                                 <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <Info className="h-3 w-3 text-muted-foreground/70" />
+                                                    <TooltipTrigger className="cursor-help">
+                                                        <Info className="h-3 w-3 transition-colors hover:text-primary" />
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Revenue generated by this creative</p>
+                                                    <TooltipContent className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md p-2">
+                                                        <p className="text-[10px] font-bold">Gross revenue generated</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>
@@ -147,19 +153,27 @@ export function AnalyticsCreativesSection({
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-muted/10">
                                 {creativeBreakdown.map((creative) => (
-                                    <tr key={`${creative.id}-${creative.date}`} className="border-b border-muted/40">
-                                        <td className="py-2 pr-4">
+                                    <tr key={`${creative.id}-${creative.date}`} className="group transition-colors hover:bg-muted/5">
+                                        <td className="py-4 pl-6">
                                             <div className="flex flex-col">
-                                                <span className="font-medium text-foreground line-clamp-1">{creative.name}</span>
-                                                <span className="text-xs text-muted-foreground">{creative.date}</span>
+                                                <span className="text-sm font-bold text-foreground transition-colors group-hover:text-primary line-clamp-1">{creative.name}</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">{creative.date}</span>
                                             </div>
                                         </td>
-                                        <td className="py-2 pr-4">{formatCurrency(creative.spend ?? 0)}</td>
-                                        <td className="py-2 pr-4">{creative.clicks?.toLocaleString() ?? '—'}</td>
-                                        <td className="py-2 pr-4">{creative.conversions?.toLocaleString() ?? '—'}</td>
-                                        <td className="py-2">{formatCurrency(creative.revenue ?? 0)}</td>
+                                        <td className="py-4 px-4">
+                                            <span className="text-sm font-bold text-foreground">{formatCurrency(creative.spend ?? 0)}</span>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className="text-sm font-bold text-foreground">{creative.clicks?.toLocaleString() ?? '—'}</span>
+                                        </td>
+                                        <td className="py-4 px-4">
+                                            <span className="text-sm font-bold text-foreground">{creative.conversions?.toLocaleString() ?? '—'}</span>
+                                        </td>
+                                        <td className="py-4 pr-6 text-right">
+                                            <span className="text-sm font-bold text-primary">{formatCurrency(creative.revenue ?? 0)}</span>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

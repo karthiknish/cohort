@@ -5,19 +5,44 @@ import { useCallback, useState } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
-import {
-    createCustomFormula,
-    getCustomFormulas,
-    updateCustomFormula,
-    deleteCustomFormula,
-    type CustomFormulaRecord,
-    type CreateCustomFormulaInput,
-    type UpdateCustomFormulaInput,
-} from '@/lib/storage'
+import { apiFetch } from '@/lib/api-client'
+import { extractFormulaVariables, safeEvaluateFormula } from '@/lib/metrics'
 
 // =============================================================================
 // TYPES
 // =============================================================================
+
+export type CustomFormula = {
+    workspaceId: string
+    formulaId: string
+    name: string
+    description?: string | null
+    formula: string
+    inputs: string[]
+    outputMetric: string
+    isActive: boolean
+    createdBy: string
+    createdAt?: string | null
+    updatedAt?: string | null
+}
+
+export type CreateCustomFormulaInput = {
+    name: string
+    description?: string
+    formula: string
+    inputs: string[]
+    outputMetric: string
+}
+
+export type UpdateCustomFormulaInput = {
+    formulaId: string
+    name?: string
+    description?: string | null
+    formula?: string
+    inputs?: string[]
+    outputMetric?: string
+    isActive?: boolean
+}
 
 export interface FormulaValidationResult {
     valid: boolean
@@ -27,14 +52,14 @@ export interface FormulaValidationResult {
 
 export interface UseFormulaEditorReturn {
     // State
-    formulas: CustomFormulaRecord[]
+    formulas: CustomFormula[]
     loading: boolean
     error: string | null
 
     // Actions
     loadFormulas: () => Promise<void>
-    createFormula: (input: Omit<CreateCustomFormulaInput, 'workspaceId' | 'createdBy'>) => Promise<CustomFormulaRecord | null>
-    updateFormula: (input: Omit<UpdateCustomFormulaInput, 'workspaceId'>) => Promise<void>
+    createFormula: (input: CreateCustomFormulaInput) => Promise<CustomFormula | null>
+    updateFormula: (input: UpdateCustomFormulaInput) => Promise<void>
     deleteFormula: (formulaId: string) => Promise<void>
     validateFormula: (formula: string) => FormulaValidationResult
 
@@ -64,20 +89,7 @@ const KNOWN_METRICS = [
  * Extract variable names from a formula string
  */
 function extractVariables(formula: string): string[] {
-    // Remove numbers, operators, and whitespace to find variable names
-    const cleaned = formula
-        .replace(/[0-9.]+/g, ' ')
-        .replace(/[+\-*/()]/g, ' ')
-
-    const words = cleaned.split(/\s+/).filter(Boolean)
-
-    // Filter out known functions
-    const variables = words.filter((word) =>
-        !SUPPORTED_FUNCTIONS.includes(word.toLowerCase()) &&
-        /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(word)
-    )
-
-    return [...new Set(variables)]
+    return extractFormulaVariables(formula)
 }
 
 /**
@@ -120,43 +132,7 @@ function validateFormulaSyntax(formula: string): FormulaValidationResult {
  * Safely execute a formula with given inputs
  */
 function safeEvaluate(formula: string, inputs: Record<string, number>): number | null {
-    try {
-        // Replace variable names with their values
-        let expression = formula
-        Object.entries(inputs).forEach(([name, value]) => {
-            expression = expression.replace(
-                new RegExp(`\\b${name}\\b`, 'g'),
-                String(value)
-            )
-        })
-
-        // Replace function names with Math equivalents
-        expression = expression
-            .replace(/\babs\b/gi, 'Math.abs')
-            .replace(/\bmin\b/gi, 'Math.min')
-            .replace(/\bmax\b/gi, 'Math.max')
-            .replace(/\bround\b/gi, 'Math.round')
-            .replace(/\bfloor\b/gi, 'Math.floor')
-            .replace(/\bceil\b/gi, 'Math.ceil')
-
-        // Validate no remaining letters (which would indicate undefined variables)
-        if (/[a-zA-Z]/.test(expression.replace(/Math\./g, ''))) {
-            return null
-        }
-
-        // Use Function constructor for safe evaluation (no access to external scope)
-        // eslint-disable-next-line no-new-func
-        const fn = new Function(`return (${expression})`)
-        const result = fn()
-
-        if (typeof result !== 'number' || !isFinite(result)) {
-            return null
-        }
-
-        return result
-    } catch {
-        return null
-    }
+    return safeEvaluateFormula(formula, inputs)
 }
 
 // =============================================================================
@@ -171,7 +147,7 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
     const { selectedClientId } = useClientContext()
     const { toast } = useToast()
 
-    const [formulas, setFormulas] = useState<CustomFormulaRecord[]>([])
+    const [formulas, setFormulas] = useState<CustomFormula[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -183,8 +159,11 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
         setError(null)
 
         try {
-            const result = await getCustomFormulas({ workspaceId: selectedClientId })
-            setFormulas(result.formulas)
+            const result = await apiFetch<{ formulas: CustomFormula[]; count: number }>(
+                `/api/integrations/formulas?workspaceId=${encodeURIComponent(selectedClientId)}`,
+                { cache: 'no-store' }
+            )
+            setFormulas(Array.isArray(result.formulas) ? result.formulas : [])
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load formulas'
             setError(message)
@@ -195,8 +174,8 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
 
     // Create a new formula
     const handleCreateFormula = useCallback(async (
-        input: Omit<CreateCustomFormulaInput, 'workspaceId' | 'createdBy'>
-    ): Promise<CustomFormulaRecord | null> => {
+        input: CreateCustomFormulaInput
+    ): Promise<CustomFormula | null> => {
         if (!selectedClientId || !user?.id) {
             toast({ title: 'Error', description: 'Not authenticated', variant: 'destructive' })
             return null
@@ -210,11 +189,13 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
         }
 
         try {
-            const record = await createCustomFormula({
-                ...input,
-                workspaceId: selectedClientId,
-                createdBy: user.id,
-                inputs: validation.inputs ?? input.inputs,
+            const record = await apiFetch<CustomFormula>('/api/integrations/formulas', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...input,
+                    workspaceId: selectedClientId,
+                    inputs: validation.inputs ?? input.inputs,
+                }),
             })
 
             setFormulas((prev) => [...prev, record])
@@ -229,7 +210,7 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
 
     // Update an existing formula
     const handleUpdateFormula = useCallback(async (
-        input: Omit<UpdateCustomFormulaInput, 'workspaceId'>
+        input: UpdateCustomFormulaInput
     ): Promise<void> => {
         if (!selectedClientId) return
 
@@ -243,10 +224,18 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
         }
 
         try {
-            await updateCustomFormula({ ...input, workspaceId: selectedClientId })
-            setFormulas((prev) =>
-                prev.map((f) => (f.formulaId === input.formulaId ? { ...f, ...input } : f))
+            const updated = await apiFetch<CustomFormula>(
+                `/api/integrations/formulas/${encodeURIComponent(input.formulaId)}`,
+                {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        workspaceId: selectedClientId,
+                        ...input,
+                    }),
+                }
             )
+
+            setFormulas((prev) => prev.map((f) => (f.formulaId === input.formulaId ? updated : f)))
             toast({ title: 'Formula Updated' })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to update formula'
@@ -259,7 +248,10 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
         if (!selectedClientId) return
 
         try {
-            await deleteCustomFormula({ workspaceId: selectedClientId, formulaId })
+            await apiFetch<{ ok: true }>(
+                `/api/integrations/formulas/${encodeURIComponent(formulaId)}?workspaceId=${encodeURIComponent(selectedClientId)}`,
+                { method: 'DELETE' }
+            )
             setFormulas((prev) => prev.filter((f) => f.formulaId !== formulaId))
             toast({ title: 'Formula Deleted' })
         } catch (err) {

@@ -63,6 +63,9 @@ export interface BillingStatusResponse {
 export interface NotificationPreferencesResponse {
   whatsappTasks: boolean
   whatsappCollaboration: boolean
+  emailAdAlerts: boolean
+  emailPerformanceDigest: boolean
+  emailTaskActivity: boolean
   phoneNumber: string | null
 }
 

@@ -6,6 +6,7 @@ import type {
   IntegrationStatusResponse,
   MetricRecord,
   MetricsResponse,
+  MetricsSummary,
 } from './types'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 import { retryFetch, ApiError, NetworkError, getRetryableErrorMessage, type RetryOptions } from './retry-fetch'
@@ -194,7 +195,7 @@ export async function fetchMetrics(
   const { data, error } = unwrapApiData<{
     metrics?: MetricRecord[]
     nextCursor?: string | null
-    summary?: any
+    summary?: MetricsSummary | null
   }>(raw)
 
   if (!data || !Array.isArray(data.metrics)) {
@@ -204,7 +205,7 @@ export async function fetchMetrics(
   return {
     metrics: data.metrics,
     nextCursor: typeof data.nextCursor === 'string' && data.nextCursor.length > 0 ? data.nextCursor : null,
-    summary: data.summary,
+    summary: data.summary ?? null,
   }
 }
 

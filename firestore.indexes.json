@@ -101,6 +101,20 @@
       ]
     },
     {
+      "collectionGroup": "adMetrics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "syncJobs",
       "queryScope": "COLLECTION",
       "fields": [

@@ -12,8 +12,11 @@ export {
     calculateMovingAverage,
     calculateRoasMovingAverage,
     calculateGrowthRates,
+    calculateBenchmarks,
     calculateCrossplatformBenchmarks,
     calculateCustomKpis,
+    extractFormulaVariables,
+    safeEvaluateFormula,
 } from './formula-engine'
 
 // Pipeline

@@ -32,12 +32,13 @@ import { PerformanceChart } from '@/components/dashboard/performance-chart'
 import { FadeInItem, FadeInStagger } from '@/components/ui/animate-in'
 import { formatCurrency } from '@/lib/utils'
 
-import type { MetricRecord, SummaryCard } from './types'
+import type { MetricRecord, MetricsSummary, SummaryCard, Totals } from './types'
 import { DateRangePicker, type DateRange } from './date-range-picker'
 import { PROVIDER_ICON_MAP, formatProviderName } from './utils'
 
 interface CrossChannelOverviewCardProps {
   processedMetrics: MetricRecord[]
+  serverSideSummary?: MetricsSummary | null
   hasMetricData: boolean
   initialMetricsLoading: boolean
   metricsLoading: boolean
@@ -48,6 +49,7 @@ interface CrossChannelOverviewCardProps {
 
 export function CrossChannelOverviewCard({
   processedMetrics,
+  serverSideSummary,
   hasMetricData,
   initialMetricsLoading,
   metricsLoading,
@@ -57,11 +59,16 @@ export function CrossChannelOverviewCard({
 }: CrossChannelOverviewCardProps) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
 
+  const summaryProviders = useMemo(() => {
+    if (!serverSideSummary?.providers) return []
+    return Object.keys(serverSideSummary.providers).sort()
+  }, [serverSideSummary])
+
   // Get unique providers from the data
   const availableProviders = useMemo(() => {
-    const providers = new Set(processedMetrics.map((m) => m.providerId))
+    const providers = new Set<string>([...processedMetrics.map((m) => m.providerId), ...summaryProviders])
     return Array.from(providers).sort()
-  }, [processedMetrics])
+  }, [processedMetrics, summaryProviders])
 
   // Filter metrics by selected providers
   const filteredMetrics = useMemo(() => {
@@ -69,9 +76,28 @@ export function CrossChannelOverviewCard({
     return processedMetrics.filter((m) => selectedProviders.includes(m.providerId))
   }, [processedMetrics, selectedProviders])
 
-  // Calculate summary cards from filtered metrics
-  const summaryCards: SummaryCard[] = useMemo(() => {
-    const totals = filteredMetrics.reduce(
+  const filteredTotals: Totals = useMemo(() => {
+    if (serverSideSummary?.totals && serverSideSummary.providers) {
+      if (selectedProviders.length === 0) {
+        return serverSideSummary.totals
+      }
+
+      return selectedProviders.reduce<Totals>(
+        (acc, providerId) => {
+          const p = serverSideSummary.providers[providerId]
+          if (!p) return acc
+          acc.spend += p.spend
+          acc.impressions += p.impressions
+          acc.clicks += p.clicks
+          acc.conversions += p.conversions
+          acc.revenue += p.revenue
+          return acc
+        },
+        { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+      )
+    }
+
+    return filteredMetrics.reduce<Totals>(
       (acc, m) => {
         acc.spend += m.spend
         acc.impressions += m.impressions
@@ -82,29 +108,53 @@ export function CrossChannelOverviewCard({
       },
       { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
     )
+  }, [filteredMetrics, selectedProviders, serverSideSummary])
 
-    const hasData = filteredMetrics.length > 0
-    const averageCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
-    const roas = totals.spend > 0 ? totals.revenue / totals.spend : 0
+  // Calculate summary cards from filtered metrics
+  const summaryCards: SummaryCard[] = useMemo(() => {
+    const hasData = filteredMetrics.length > 0 || filteredTotals.spend > 0 || filteredTotals.impressions > 0
+    const averageCpc = filteredTotals.clicks > 0 ? filteredTotals.spend / filteredTotals.clicks : 0
+    const roas = filteredTotals.spend > 0 ? filteredTotals.revenue / filteredTotals.spend : 0
+    const ctr = filteredTotals.impressions > 0 ? filteredTotals.clicks / filteredTotals.impressions : 0
+    const conversionRate = filteredTotals.clicks > 0 ? filteredTotals.conversions / filteredTotals.clicks : 0
+    const cpa = filteredTotals.conversions > 0 ? filteredTotals.spend / filteredTotals.conversions : 0
 
     return [
       {
         id: 'spend',
         label: 'Total Spend',
-        value: formatCurrency(totals.spend),
+        value: formatCurrency(filteredTotals.spend),
         helper: hasData ? 'All selected platforms combined' : 'Connect a platform to populate',
       },
       {
         id: 'impressions',
         label: 'Impressions',
-        value: totals.impressions > 0 ? totals.impressions.toLocaleString() : '—',
+        value: filteredTotals.impressions > 0 ? filteredTotals.impressions.toLocaleString() : '—',
         helper: hasData ? 'Total times ads were served' : 'Awaiting your first sync',
+      },
+      {
+        id: 'ctr',
+        label: 'CTR',
+        value: ctr > 0 ? `${(ctr * 100).toFixed(2)}%` : '—',
+        helper: ctr > 0 ? 'Clicks ÷ impressions' : 'Needs impressions and clicks data',
       },
       {
         id: 'avg-cpc',
         label: 'Avg CPC',
-        value: totals.clicks > 0 ? formatCurrency(averageCpc) : '—',
-        helper: totals.clicks > 0 ? 'What each click cost on average' : 'Need click data to calculate',
+        value: filteredTotals.clicks > 0 ? formatCurrency(averageCpc) : '—',
+        helper: filteredTotals.clicks > 0 ? 'What each click cost on average' : 'Need click data to calculate',
+      },
+      {
+        id: 'cpa',
+        label: 'CPA',
+        value: cpa > 0 ? formatCurrency(cpa) : '—',
+        helper: cpa > 0 ? 'Spend ÷ conversions (lower is better)' : 'Needs spend and conversions data',
+      },
+      {
+        id: 'conv-rate',
+        label: 'Conv. Rate',
+        value: conversionRate > 0 ? `${(conversionRate * 100).toFixed(2)}%` : '—',
+        helper: conversionRate > 0 ? 'Conversions ÷ clicks' : 'Needs clicks and conversions data',
       },
       {
         id: 'roas',
@@ -113,7 +163,7 @@ export function CrossChannelOverviewCard({
         helper: roas > 0 ? 'Revenue ÷ spend (higher is better)' : 'Needs revenue and spend data',
       },
     ]
-  }, [filteredMetrics])
+  }, [filteredMetrics.length, filteredTotals])
 
   const toggleProvider = (providerId: string) => {
     setSelectedProviders((prev) =>
@@ -139,6 +189,11 @@ export function CrossChannelOverviewCard({
               Key performance indicators from the latest successful sync.
             </CardDescription>
           </div>
+          {serverSideSummary && (
+            <Badge variant="secondary" className="self-start">
+              Server aggregated
+            </Badge>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             {/* Provider Filter */}
             {availableProviders.length > 0 && (

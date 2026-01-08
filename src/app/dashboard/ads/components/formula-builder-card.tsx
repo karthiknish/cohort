@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn, formatCurrency } from '@/lib/utils'
 
-import type { UseFormulaEditorReturn } from '../hooks/use-formula-editor'
+import type { UseFormulaEditorReturn, FormulaValidationResult } from '../hooks/use-formula-editor'
 import type { MetricTotals } from '../hooks/use-derived-metrics'
 
 // =============================================================================
@@ -95,7 +95,7 @@ export function FormulaBuilderCard({
     const [formulaName, setFormulaName] = useState('')
     const [formulaExpression, setFormulaExpression] = useState('')
     const [outputMetric, setOutputMetric] = useState('')
-    const [validation, setValidation] = useState<{ valid: boolean; error?: string } | null>(null)
+    const [validation, setValidation] = useState<FormulaValidationResult | null>(null)
     const [previewResult, setPreviewResult] = useState<number | null>(null)
 
     // Load formulas on mount
@@ -133,12 +133,10 @@ export function FormulaBuilderCard({
     const handleSave = async () => {
         if (!validation?.valid || !formulaName.trim() || !outputMetric.trim()) return
 
-        const validationWithInputs = validation as { valid: boolean; inputs?: string[] }
-
         await createFormula({
             name: formulaName.trim(),
             formula: formulaExpression.trim(),
-            inputs: validationWithInputs.inputs ?? [],
+            inputs: validation.inputs ?? [],
             outputMetric: outputMetric.trim(),
         })
 

@@ -12,6 +12,9 @@ import {
   AutomationControlsCard,
   CampaignManagementCard,
   CrossChannelOverviewCard,
+  CustomInsightsCard,
+  ComparisonViewCard,
+  FormulaBuilderCard,
   PerformanceSummaryCard,
   MetricsTableCard,
   WorkflowCard,
@@ -22,6 +25,9 @@ import {
   useAdsMetrics,
   useAdsConnections,
   useAdsAutomation,
+  useDerivedMetrics,
+  useFormulaEditor,
+  useMetricsComparison,
 } from './hooks'
 
 /**
@@ -44,6 +50,7 @@ export default function AdsPage() {
     metrics,
     processedMetrics,
     providerSummaries,
+    serverSideSummary,
     hasMetricData,
     metricsLoading,
     initialMetricsLoading,
@@ -58,6 +65,13 @@ export default function AdsPage() {
     handleExport,
     triggerRefresh: triggerMetricsRefresh,
   } = useAdsMetrics()
+
+  const derivedMetrics = useDerivedMetrics({ metrics: processedMetrics })
+  const formulaEditor = useFormulaEditor()
+  const { periodComparison, providerComparison } = useMetricsComparison({
+    metrics: processedMetrics,
+    dateRange,
+  })
 
   // 2. Manage provider connections and integration statuses
   const {
@@ -228,6 +242,7 @@ export default function AdsPage() {
       <FadeIn>
         <CrossChannelOverviewCard
           processedMetrics={processedMetrics}
+          serverSideSummary={serverSideSummary}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
@@ -246,6 +261,30 @@ export default function AdsPage() {
           metricError={suppressMetricsErrors ? null : metricError}
           onRefresh={handleManualRefresh}
           onExport={handleExport}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <ComparisonViewCard
+          periodComparison={periodComparison}
+          providerComparison={providerComparison}
+          loading={metricsLoading || initialMetricsLoading}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <CustomInsightsCard
+          derivedMetrics={hasMetricData ? derivedMetrics : null}
+          processedMetrics={processedMetrics}
+          loading={metricsLoading || initialMetricsLoading}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <FormulaBuilderCard
+          formulaEditor={formulaEditor}
+          metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
+          loading={metricsLoading || initialMetricsLoading}
         />
       </FadeIn>
 

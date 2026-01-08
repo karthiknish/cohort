@@ -76,6 +76,10 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
         return { messages: getPreviewCollaborationMessages(clientId, projectId), nextCursor: null } as T
       }
 
+      if (path === '/api/integrations/formulas') {
+        return { formulas: [], count: 0 } as T
+      }
+
       // Proposal versions are stored per-user in Firestore; preview mode proposals are synthetic.
       // Return an empty list to avoid noisy 404s + console errors in preview/demo flows.
       if (path === '/api/proposal-versions') {

@@ -1,4 +1,4 @@
-import { Clock, ListTodo, CirclePlay, Eye, CircleCheck } from 'lucide-react'
+import { Clock, ListTodo, CirclePlay, Eye, CircleCheck, AlertCircle, AlertTriangle, CheckCircle2, Circle } from 'lucide-react'
 import { TaskStatus, TaskPriority, TaskRecord } from '@/types/tasks'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils'
@@ -23,24 +23,31 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ]
 
 export const statusColors: Record<TaskStatus, string> = {
-  todo: 'bg-muted text-muted-foreground',
-  'in-progress': 'bg-blue-100 text-blue-800',
-  review: 'bg-amber-100 text-amber-800',
-  completed: 'bg-emerald-100 text-emerald-800',
+  todo: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800',
+  'in-progress': 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
+  review: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
+  completed: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
+}
+
+export const statusLaneColors: Record<TaskStatus, string> = {
+  todo: '#64748b', // slate-500
+  'in-progress': '#3b82f6', // blue-500
+  review: '#f59e0b', // amber-500
+  completed: '#10b981', // emerald-500
 }
 
 export const priorityColors: Record<TaskPriority, string> = {
-  low: 'bg-emerald-100 text-emerald-800',
-  medium: 'bg-amber-100 text-amber-800',
-  high: 'bg-orange-100 text-orange-800',
-  urgent: 'bg-red-100 text-red-800',
+  low: 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50',
+  medium: 'text-blue-600 bg-blue-50 border-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50',
+  high: 'text-orange-600 bg-orange-50 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/50',
+  urgent: 'text-red-600 bg-red-50 border-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50',
 }
 
-export const STATUS_ICONS: Record<TaskStatus, typeof Clock> = {
-  todo: ListTodo,
+export const STATUS_ICONS: Record<TaskStatus, any> = {
+  todo: Circle,
   'in-progress': CirclePlay,
   review: Eye,
-  completed: CircleCheck,
+  completed: CheckCircle2,
 }
 
 export const PRIORITY_ORDER: Record<TaskPriority, number> = {
@@ -114,6 +121,23 @@ export function isNetworkError(error: unknown): boolean {
 
 export function formatDate(value: string | null | undefined): string {
   if (!value) return 'No due date'
+
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return value
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+  const diffTime = target.getTime() - today.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === -1) return 'Yesterday'
+  if (diffDays > 1 && diffDays < 7) {
+    return formatDateLib(value, 'EEEE')
+  }
 
   const formatted = formatDateLib(value, DATE_FORMATS.SHORT, undefined, '')
   return formatted || value

@@ -15,22 +15,33 @@ const phoneNumberSchema = z
 const updatePreferencesSchema = z.object({
   whatsappTasks: z.boolean(),
   whatsappCollaboration: z.boolean(),
+  emailAdAlerts: z.boolean().optional(),
+  emailPerformanceDigest: z.boolean().optional(),
+  emailTaskActivity: z.boolean().optional(),
   phoneNumber: z.union([phoneNumberSchema, z.null()]).optional(),
 })
 
 function mapPreferences(data: Record<string, unknown>) {
   const prefs =
     data.notificationPreferences && typeof data.notificationPreferences === 'object'
-      ? (data.notificationPreferences as { whatsapp?: { tasks?: unknown; collaboration?: unknown } })
+      ? (data.notificationPreferences as {
+        whatsapp?: { tasks?: unknown; collaboration?: unknown };
+        email?: { adAlerts?: unknown; performanceDigest?: unknown; taskActivity?: unknown };
+      })
       : {}
 
   const whatsapp = prefs.whatsapp && typeof prefs.whatsapp === 'object' ? prefs.whatsapp : {}
+  const email = prefs.email && typeof prefs.email === 'object' ? prefs.email : {}
 
   const phoneNumber = typeof data.phoneNumber === 'string' ? data.phoneNumber : null
 
   return {
     whatsappTasks: Boolean((whatsapp as { tasks?: unknown }).tasks),
     whatsappCollaboration: Boolean((whatsapp as { collaboration?: unknown }).collaboration),
+    // Default to true for email notifications if not yet set
+    emailAdAlerts: (email as { adAlerts?: unknown }).adAlerts !== false,
+    emailPerformanceDigest: (email as { performanceDigest?: unknown }).performanceDigest !== false,
+    emailTaskActivity: (email as { taskActivity?: unknown }).taskActivity !== false,
     phoneNumber,
   }
 }
@@ -65,6 +76,11 @@ export const PATCH = createApiHandler(
         whatsapp: {
           tasks: payload.whatsappTasks,
           collaboration: payload.whatsappCollaboration,
+        },
+        email: {
+          adAlerts: payload.emailAdAlerts ?? true,
+          performanceDigest: payload.emailPerformanceDigest ?? true,
+          taskActivity: payload.emailTaskActivity ?? true,
         },
       },
       updatedAt: FieldValue.serverTimestamp(),

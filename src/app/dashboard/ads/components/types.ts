@@ -33,7 +33,7 @@ export interface MetricRecord {
 export interface MetricsResponse {
   metrics: MetricRecord[]
   nextCursor: string | null
-  summary?: any
+  summary?: MetricsSummary | null
 }
 
 export type ProviderSummary = {
@@ -50,6 +50,12 @@ export type Totals = {
   clicks: number
   conversions: number
   revenue: number
+}
+
+export type MetricsSummary = {
+  totals: Totals
+  providers: Record<string, Totals>
+  count: number
 }
 
 export type ProviderAutomationFormState = {

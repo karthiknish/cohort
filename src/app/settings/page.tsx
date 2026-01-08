@@ -55,6 +55,9 @@ export default function SettingsPage() {
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [whatsappTasksEnabled, setWhatsappTasksEnabled] = useState(false)
   const [whatsappCollaborationEnabled, setWhatsappCollaborationEnabled] = useState(false)
+  const [emailAdAlertsEnabled, setEmailAdAlertsEnabled] = useState(true)
+  const [emailPerformanceDigestEnabled, setEmailPerformanceDigestEnabled] = useState(true)
+  const [emailTaskActivityEnabled, setEmailTaskActivityEnabled] = useState(true)
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [profilePhone, setProfilePhone] = useState(user?.phoneNumber ?? '')
 
@@ -108,12 +111,18 @@ export default function SettingsPage() {
       const preferences: NotificationPreferencesResponse = {
         whatsappTasks: Boolean(payload.whatsappTasks),
         whatsappCollaboration: Boolean(payload.whatsappCollaboration),
+        emailAdAlerts: Boolean(payload.emailAdAlerts),
+        emailPerformanceDigest: Boolean(payload.emailPerformanceDigest),
+        emailTaskActivity: Boolean(payload.emailTaskActivity),
         phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
       }
 
       if (isMountedRef.current) {
         setWhatsappTasksEnabled(preferences.whatsappTasks)
         setWhatsappCollaborationEnabled(preferences.whatsappCollaboration)
+        setEmailAdAlertsEnabled(preferences.emailAdAlerts)
+        setEmailPerformanceDigestEnabled(preferences.emailPerformanceDigest)
+        setEmailTaskActivityEnabled(preferences.emailTaskActivity)
         setNotificationError(null)
         setNotificationsLoading(false)
 
@@ -138,7 +147,13 @@ export default function SettingsPage() {
   // Save notification preferences
   const saveNotificationPreferences = useCallback(
     async (
-      input: { tasks: boolean; collaboration: boolean },
+      input: {
+        tasks: boolean
+        collaboration: boolean
+        emailAdAlerts?: boolean
+        emailPerformanceDigest?: boolean
+        emailTaskActivity?: boolean
+      },
       options: { silent?: boolean } = {}
     ): Promise<NotificationPreferencesResponse | null> => {
       if (!user) {
@@ -175,6 +190,9 @@ export default function SettingsPage() {
           body: JSON.stringify({
             whatsappTasks: input.tasks,
             whatsappCollaboration: input.collaboration,
+            emailAdAlerts: input.emailAdAlerts,
+            emailPerformanceDigest: input.emailPerformanceDigest,
+            emailTaskActivity: input.emailTaskActivity,
             phoneNumber: trimmedPhone.length ? trimmedPhone : null,
           }),
         })
@@ -189,12 +207,18 @@ export default function SettingsPage() {
         const preferences: NotificationPreferencesResponse = {
           whatsappTasks: Boolean(payload.whatsappTasks),
           whatsappCollaboration: Boolean(payload.whatsappCollaboration),
+          emailAdAlerts: Boolean(payload.emailAdAlerts),
+          emailPerformanceDigest: Boolean(payload.emailPerformanceDigest),
+          emailTaskActivity: Boolean(payload.emailTaskActivity),
           phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
         }
 
         if (isMountedRef.current) {
           setWhatsappTasksEnabled(preferences.whatsappTasks)
           setWhatsappCollaborationEnabled(preferences.whatsappCollaboration)
+          setEmailAdAlertsEnabled(preferences.emailAdAlerts)
+          setEmailPerformanceDigestEnabled(preferences.emailPerformanceDigest)
+          setEmailTaskActivityEnabled(preferences.emailTaskActivity)
           if (preferences.phoneNumber && preferences.phoneNumber !== profilePhone) {
             setProfilePhone(preferences.phoneNumber)
           }
@@ -226,7 +250,10 @@ export default function SettingsPage() {
 
   // Toggle notification preference
   const handlePreferenceToggle = useCallback(
-    async (type: 'tasks' | 'collaboration', checked: boolean) => {
+    async (
+      type: 'tasks' | 'collaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity',
+      checked: boolean
+    ) => {
       if (notificationsLoading || savingPreferences) {
         return
       }
@@ -234,20 +261,35 @@ export default function SettingsPage() {
       const current = {
         tasks: whatsappTasksEnabled,
         collaboration: whatsappCollaborationEnabled,
+        emailAdAlerts: emailAdAlertsEnabled,
+        emailPerformanceDigest: emailPerformanceDigestEnabled,
+        emailTaskActivity: emailTaskActivityEnabled,
       }
 
       const next = {
         tasks: type === 'tasks' ? checked : current.tasks,
         collaboration: type === 'collaboration' ? checked : current.collaboration,
+        emailAdAlerts: type === 'emailAdAlerts' ? checked : current.emailAdAlerts,
+        emailPerformanceDigest: type === 'emailPerformanceDigest' ? checked : current.emailPerformanceDigest,
+        emailTaskActivity: type === 'emailTaskActivity' ? checked : current.emailTaskActivity,
       }
 
-      if (next.tasks === current.tasks && next.collaboration === current.collaboration) {
+      if (
+        next.tasks === current.tasks &&
+        next.collaboration === current.collaboration &&
+        next.emailAdAlerts === current.emailAdAlerts &&
+        next.emailPerformanceDigest === current.emailPerformanceDigest &&
+        next.emailTaskActivity === current.emailTaskActivity
+      ) {
         return
       }
 
       if (isMountedRef.current) {
         setWhatsappTasksEnabled(next.tasks)
         setWhatsappCollaborationEnabled(next.collaboration)
+        setEmailAdAlertsEnabled(next.emailAdAlerts)
+        setEmailPerformanceDigestEnabled(next.emailPerformanceDigest)
+        setEmailTaskActivityEnabled(next.emailTaskActivity)
       }
 
       const result = await saveNotificationPreferences(next)
@@ -255,9 +297,21 @@ export default function SettingsPage() {
       if (!result && isMountedRef.current) {
         setWhatsappTasksEnabled(current.tasks)
         setWhatsappCollaborationEnabled(current.collaboration)
+        setEmailAdAlertsEnabled(current.emailAdAlerts)
+        setEmailPerformanceDigestEnabled(current.emailPerformanceDigest)
+        setEmailTaskActivityEnabled(current.emailTaskActivity)
       }
     },
-    [notificationsLoading, saveNotificationPreferences, savingPreferences, whatsappCollaborationEnabled, whatsappTasksEnabled]
+    [
+      notificationsLoading,
+      saveNotificationPreferences,
+      savingPreferences,
+      whatsappCollaborationEnabled,
+      whatsappTasksEnabled,
+      emailAdAlertsEnabled,
+      emailPerformanceDigestEnabled,
+      emailTaskActivityEnabled,
+    ]
   )
 
   // Fetch billing data
@@ -429,6 +483,9 @@ export default function SettingsPage() {
             notificationError={notificationError}
             whatsappTasksEnabled={whatsappTasksEnabled}
             whatsappCollaborationEnabled={whatsappCollaborationEnabled}
+            emailAdAlertsEnabled={emailAdAlertsEnabled}
+            emailPerformanceDigestEnabled={emailPerformanceDigestEnabled}
+            emailTaskActivityEnabled={emailTaskActivityEnabled}
             savingPreferences={savingPreferences}
             profilePhone={profilePhone}
             onPreferenceToggle={handlePreferenceToggle}

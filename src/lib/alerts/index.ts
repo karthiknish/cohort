@@ -25,3 +25,6 @@ export {
     formatAlertsForSlack,
     formatAlertsForEmail,
 } from './evaluator'
+
+// Processor
+export { processWorkspaceAlerts } from './processor'

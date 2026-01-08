@@ -6,6 +6,7 @@
 
 import * as Brevo from '@getbrevo/brevo'
 
+import { adminDb } from '@/lib/firebase-admin'
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
 import {
   invoicePaidTemplate,
@@ -14,7 +15,13 @@ import {
   taskAssignedTemplate,
   mentionTemplate,
   proposalReadyTemplate,
+  integrationAlertTemplate,
+  workspaceInviteTemplate,
+  performanceDigestTemplate,
+  taskActivityTemplate,
+  invoicePaymentFailedTemplate,
 } from './email-templates'
+import type { IntegrationAlertTemplateParams, WorkspaceInviteTemplateParams, PerformanceDigestTemplateParams, TaskActivityTemplateParams, InvoicePaymentFailedTemplateParams } from './email-templates'
 
 // =============================================================================
 // CONFIGURATION
@@ -56,6 +63,28 @@ function getBrevoClient(): Brevo.TransactionalEmailsApi | null {
   const apiInstance = new Brevo.TransactionalEmailsApi()
   apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, BREVO_API_KEY)
   return apiInstance
+}
+
+/**
+ * Check if a user has enabled a specific email notification type.
+ * Returns true if enabled or if no preference is set (defaults to true).
+ */
+async function isEmailNotificationEnabled(recipientEmail: string, prefKey: 'adAlerts' | 'performanceDigest' | 'taskActivity'): Promise<boolean> {
+  try {
+    const usersRef = adminDb.collection('users')
+    const snapshot = await usersRef.where('email', '==', recipientEmail).limit(1).get()
+
+    if (snapshot.empty) return true // Default to true for non-system users/legacy
+
+    const userData = snapshot.docs[0].data()
+    const prefs = userData?.notificationPreferences?.email
+
+    if (!prefs) return true
+    return prefs[prefKey] !== false
+  } catch (error) {
+    console.error('[brevo] error checking preferences', error)
+    return true // Default to true on error to ensure critical emails are sent
+  }
 }
 
 // =============================================================================
@@ -190,6 +219,10 @@ export async function notifyTaskAssignedEmail(options: {
 }): Promise<BrevoEmailResult> {
   const { recipientEmail, recipientName, taskTitle, priority, dueDate, assignedBy, clientName } = options
 
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'taskActivity'))) {
+    return { success: true }
+  }
+
   const priorityEmoji = priority === 'high' ? '🔴' : priority === 'medium' ? '🟡' : '🟢'
   const subject = `${priorityEmoji} Task assigned: ${taskTitle}`
   const htmlContent = taskAssignedTemplate({ taskTitle, priority, dueDate, assignedBy, clientName })
@@ -211,6 +244,10 @@ export async function notifyMentionEmail(options: {
   clientName: string | null
 }): Promise<BrevoEmailResult> {
   const { recipientEmail, recipientName, mentionedBy, messageSnippet, channelType, clientName } = options
+
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'taskActivity'))) {
+    return { success: true }
+  }
 
   const subject = `💬 ${mentionedBy} mentioned you`
   const htmlContent = mentionTemplate({ mentionedBy, messageSnippet, channelType, clientName })
@@ -240,6 +277,103 @@ export async function notifyProposalReadyEmail(options: {
     subject,
     htmlContent,
     tags: ['proposal-ready'],
+  })
+}
+
+export async function notifyIntegrationAlertEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & IntegrationAlertTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'adAlerts'))) {
+    return { success: true }
+  }
+
+  const subject = `🚨 Action Required: ${params.providerId.toUpperCase()} Connection issue`
+  const htmlContent = integrationAlertTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['integration-alert'],
+  })
+}
+
+export async function notifyWorkspaceInviteEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & WorkspaceInviteTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  const subject = `🚀 You've been invited to ${params.workspaceName}`
+  const htmlContent = workspaceInviteTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['workspace-invite'],
+  })
+}
+
+export async function notifyPerformanceDigestEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & PerformanceDigestTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'performanceDigest'))) {
+    return { success: true }
+  }
+
+  const subject = `📈 Performance Summary: ${params.workspaceName}`
+  const htmlContent = performanceDigestTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['performance-digest'],
+  })
+}
+
+export async function notifyTaskActivityEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & TaskActivityTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'taskActivity'))) {
+    return { success: true }
+  }
+
+  const subject = `📝 Task ${params.action}: ${params.taskTitle}`
+  const htmlContent = taskActivityTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['task-activity'],
+  })
+}
+
+export async function notifyInvoicePaymentFailedEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & InvoicePaymentFailedTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  const subject = `⚠️ Payment failed for ${params.clientName}`
+  const htmlContent = invoicePaymentFailedTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['invoice-failed'],
   })
 }
 

@@ -233,6 +233,11 @@ service cloud.firestore {
         allow read, write: if isAdminOrAgencyMember(workspaceId);
       }
 
+      // Alert Rules within workspace
+      match /alertRules/{ruleId} {
+        allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
+
       // Custom Formulas within workspace
       match /customFormulas/{formulaId} {
         allow read: if isAdminOrAgencyMember(workspaceId);

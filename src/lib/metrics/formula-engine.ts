@@ -284,6 +284,174 @@ export function calculateGrowthRates(
 // CROSS-PLATFORM BENCHMARKS
 // =============================================================================
 
+export type BenchmarkMetricKey =
+    | 'cpa'
+    | 'roas'
+    | 'ctr'
+    | 'cpc'
+    | 'cpm'
+    | 'conversionRate'
+    | 'profitMargin'
+
+export type MetricBenchmark = {
+    metric: BenchmarkMetricKey
+    /** Benchmark value in UI-friendly units (e.g. CTR as 0-1 fraction, not percent). */
+    value: number
+    source: 'historical_median' | 'fallback'
+}
+
+export type PlatformIndustryRoasComparison = {
+    providerId: string
+    roas: number
+    industryRoas: number | null
+    /** Percentage difference from industry baseline (e.g. +10 means 10% above). */
+    vsIndustryPercent: number | null
+}
+
+export type BenchmarksSummary = {
+    benchmarks: MetricBenchmark[]
+    platformBenchmarks: BenchmarkResult[]
+    roasIndustryComparisons: PlatformIndustryRoasComparison[]
+}
+
+const FALLBACK_BENCHMARKS: Record<BenchmarkMetricKey, number> = {
+    cpa: 50,
+    roas: 3,
+    ctr: 0.02,
+    cpc: 2,
+    cpm: 10,
+    conversionRate: 0.03,
+    profitMargin: 0.2,
+}
+
+// Conservative placeholders; adjust per your vertical.
+const INDUSTRY_ROAS_BY_PROVIDER: Record<string, number> = {
+    google: 3,
+    facebook: 2.5,
+    linkedin: 3,
+    tiktok: 2,
+}
+
+function median(values: number[]): number | null {
+    const filtered = values.filter((v) => Number.isFinite(v))
+    if (filtered.length === 0) return null
+    const sorted = [...filtered].sort((a, b) => a - b)
+    const mid = Math.floor(sorted.length / 2)
+    if (sorted.length % 2 === 1) return sorted[mid]
+    return (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+function safeRatio(numerator: number, denominator: number): number | null {
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null
+    const result = numerator / denominator
+    return Number.isFinite(result) ? result : null
+}
+
+/**
+ * Calculates UI-facing benchmarks from historical metrics.
+ *
+ * - Uses per-day blended KPI medians as the primary benchmark.
+ * - Includes platform benchmarks (vs blended average) using existing logic.
+ * - Includes ROAS comparisons vs a configurable industry baseline.
+ */
+export function calculateBenchmarks(metrics: NormalizedAdMetric[]): BenchmarksSummary {
+    if (metrics.length === 0) {
+        return {
+            benchmarks: (Object.keys(FALLBACK_BENCHMARKS) as BenchmarkMetricKey[]).map((metric) => ({
+                metric,
+                value: FALLBACK_BENCHMARKS[metric],
+                source: 'fallback',
+            })),
+            platformBenchmarks: [],
+            roasIndustryComparisons: [],
+        }
+    }
+
+    // 1) Historical (per-day) blended KPIs
+    const byDate = new Map<string, { spend: number; revenue: number; conversions: number; clicks: number; impressions: number }>()
+    for (const m of metrics) {
+        const existing = byDate.get(m.date) ?? { spend: 0, revenue: 0, conversions: 0, clicks: 0, impressions: 0 }
+        existing.spend += m.spend
+        existing.revenue += m.revenue
+        existing.conversions += m.conversions
+        existing.clicks += m.clicks
+        existing.impressions += m.impressions
+        byDate.set(m.date, existing)
+    }
+
+    const dailyCpa: number[] = []
+    const dailyRoas: number[] = []
+    const dailyCtr: number[] = []
+    const dailyCpc: number[] = []
+    const dailyCpm: number[] = []
+    const dailyConversionRate: number[] = []
+    const dailyProfitMargin: number[] = []
+
+    for (const totals of byDate.values()) {
+        const roas = safeRatio(totals.revenue, totals.spend)
+        if (roas !== null) dailyRoas.push(roas)
+
+        const cpa = safeRatio(totals.spend, totals.conversions)
+        if (cpa !== null) dailyCpa.push(cpa)
+
+        const ctr = safeRatio(totals.clicks, totals.impressions)
+        if (ctr !== null) dailyCtr.push(ctr)
+
+        const cpc = safeRatio(totals.spend, totals.clicks)
+        if (cpc !== null) dailyCpc.push(cpc)
+
+        const cpm = safeRatio(totals.spend * 1000, totals.impressions)
+        if (cpm !== null) dailyCpm.push(cpm)
+
+        const conversionRate = safeRatio(totals.conversions, totals.clicks)
+        if (conversionRate !== null) dailyConversionRate.push(conversionRate)
+
+        const profitMargin = safeRatio(totals.revenue - totals.spend, totals.revenue)
+        if (profitMargin !== null) dailyProfitMargin.push(profitMargin)
+    }
+
+    const computed: Partial<Record<BenchmarkMetricKey, number>> = {
+        cpa: median(dailyCpa) ?? undefined,
+        roas: median(dailyRoas) ?? undefined,
+        ctr: median(dailyCtr) ?? undefined,
+        cpc: median(dailyCpc) ?? undefined,
+        cpm: median(dailyCpm) ?? undefined,
+        conversionRate: median(dailyConversionRate) ?? undefined,
+        profitMargin: median(dailyProfitMargin) ?? undefined,
+    }
+
+    const benchmarks: MetricBenchmark[] = (Object.keys(FALLBACK_BENCHMARKS) as BenchmarkMetricKey[]).map((metric) => {
+        const value = computed[metric]
+        if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+            return { metric, value, source: 'historical_median' }
+        }
+        return { metric, value: FALLBACK_BENCHMARKS[metric], source: 'fallback' }
+    })
+
+    // 2) Cross-platform (per-provider) benchmarks vs blended average
+    const platformBenchmarks = calculateCrossplatformBenchmarks(metrics)
+
+    // 3) ROAS vs industry baseline (per provider)
+    const byProvider = new Map<string, { spend: number; revenue: number }>()
+    for (const m of metrics) {
+        const existing = byProvider.get(m.providerId) ?? { spend: 0, revenue: 0 }
+        existing.spend += m.spend
+        existing.revenue += m.revenue
+        byProvider.set(m.providerId, existing)
+    }
+
+    const roasIndustryComparisons: PlatformIndustryRoasComparison[] = Array.from(byProvider.entries()).map(
+        ([providerId, totals]) => {
+            const roas = safeRatio(totals.revenue, totals.spend) ?? 0
+            const industryRoas = INDUSTRY_ROAS_BY_PROVIDER[providerId] ?? null
+            const vsIndustryPercent = industryRoas && industryRoas > 0 ? ((roas - industryRoas) / industryRoas) * 100 : null
+            return { providerId, roas, industryRoas, vsIndustryPercent }
+        }
+    )
+
+    return { benchmarks, platformBenchmarks, roasIndustryComparisons }
+}
+
 /**
  * Calculates platform-level benchmarks and compares to blended average.
  */
@@ -426,5 +594,74 @@ export function calculateCustomKpis(
         profit,
         profitMargin,
         adjustedConversions,
+    }
+}
+
+// =============================================================================
+// DYNAMIC FORMULA EVALUATION
+// =============================================================================
+
+const SUPPORTED_FUNCTIONS = ['abs', 'min', 'max', 'round', 'floor', 'ceil']
+
+/**
+ * Extract variable names from a formula string
+ */
+export function extractFormulaVariables(formula: string): string[] {
+    // Remove numbers, operators, and whitespace to find variable names
+    const cleaned = formula
+        .replace(/[0-9.]+/g, ' ')
+        .replace(/[+\-*/()]/g, ' ')
+
+    const words = cleaned.split(/\s+/).filter(Boolean)
+
+    // Filter out known functions and reserved words
+    const variables = words.filter((word) =>
+        !SUPPORTED_FUNCTIONS.includes(word.toLowerCase()) &&
+        /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(word)
+    )
+
+    return [...new Set(variables)]
+}
+
+/**
+ * Safely evaluate a formula with given inputs
+ */
+export function safeEvaluateFormula(formula: string, inputs: Record<string, number>): number | null {
+    try {
+        // Replace variable names with their values
+        let expression = formula
+        Object.entries(inputs).forEach(([name, value]) => {
+            expression = expression.replace(
+                new RegExp(`\\b${name}\\b`, 'g'),
+                String(value)
+            )
+        })
+
+        // Replace function names with Math equivalents
+        expression = expression
+            .replace(/\babs\b/gi, 'Math.abs')
+            .replace(/\bmin\b/gi, 'Math.min')
+            .replace(/\bmax\b/gi, 'Math.max')
+            .replace(/\bround\b/gi, 'Math.round')
+            .replace(/\bfloor\b/gi, 'Math.floor')
+            .replace(/\bceil\b/gi, 'Math.ceil')
+
+        // Validate no remaining letters (which would indicate undefined variables)
+        if (/[a-zA-Z]/.test(expression.replace(/Math\./g, ''))) {
+            return null
+        }
+
+        // Use Function constructor for safe evaluation (no access to external scope)
+        // eslint-disable-next-line no-new-func
+        const fn = new Function(`return (${expression})`)
+        const result = fn()
+
+        if (typeof result !== 'number' || !isFinite(result)) {
+            return null
+        }
+
+        return result
+    } catch {
+        return null
     }
 }

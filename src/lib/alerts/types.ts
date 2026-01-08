@@ -5,7 +5,7 @@
 /**
  * Type of alert rule
  */
-export type AlertRuleType = 'threshold' | 'anomaly' | 'trend'
+export type AlertRuleType = 'threshold' | 'anomaly' | 'trend' | 'algorithmic'
 
 /**
  * Alert severity levels
@@ -15,7 +15,7 @@ export type AlertSeverity = 'info' | 'warning' | 'critical'
 /**
  * Supported metrics for alerts
  */
-export type AlertMetric = 'spend' | 'cpc' | 'ctr' | 'roas' | 'conversions' | 'cpa' | 'revenue' | 'impressions' | 'clicks'
+export type AlertMetric = 'spend' | 'cpc' | 'ctr' | 'roas' | 'conversions' | 'cpa' | 'revenue' | 'impressions' | 'clicks' | 'custom_formula'
 
 /**
  * Comparison operators for threshold rules
@@ -91,6 +91,10 @@ export interface AlertRule {
     providerId?: string
     /** Campaign filter (optional) */
     campaignId?: string
+    /** Custom formula ID (required if metric is custom_formula) */
+    formulaId?: string
+    /** Algorithmic insight type (optional for algorithmic alerts) */
+    insightType?: 'efficiency' | 'budget' | 'creative' | 'audience' | 'all'
     /** Notification channels */
     channels: AlertChannel[]
     /** Created timestamp */
@@ -123,6 +127,11 @@ export interface AlertResult {
     average?: number
     deviationPercent?: number
     trendDays?: number
+    /** For custom formulas */
+    formulaId?: string
+    /** For algorithmic alerts */
+    insightType?: string
+    suggestion?: string
     timestamp: string
 }
 

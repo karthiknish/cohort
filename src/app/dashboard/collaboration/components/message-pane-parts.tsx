@@ -26,44 +26,53 @@ export function MessagePaneHeader({
   onExport,
 }: MessagePaneHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-muted/40 bg-background/50 p-4 backdrop-blur-sm">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <h2 className="truncate text-base font-semibold text-foreground">{channel.name}</h2>
-          <Badge
-            variant="outline"
-            className={cn(
-              'h-5 px-1.5 py-0 text-[10px] font-normal',
-              CHANNEL_TYPE_COLORS[channel.type]
-            )}
-          >
-            {channel.type}
-          </Badge>
-          {channel.clientId && (
-            <Link href={`/dashboard/clients?clientId=${channel.clientId}`}>
+    <div className="flex items-center justify-between gap-4 border-b border-muted/40 bg-background/60 p-5 backdrop-blur-md sticky top-0 z-20">
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0 shadow-sm border border-primary/10">
+            <MessageSquare className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-lg font-bold tracking-tight text-foreground">{channel.name}</h2>
               <Badge
                 variant="outline"
-                className="h-5 cursor-pointer border-dashed px-1.5 py-0 text-[10px] font-normal hover:bg-muted"
+                className={cn(
+                  'h-5 px-1.5 py-0 text-[10px] font-bold uppercase tracking-wider',
+                  CHANNEL_TYPE_COLORS[channel.type]
+                )}
               >
-                Client Workspace
+                {channel.type}
               </Badge>
-            </Link>
-          )}
+              {channel.clientId && (
+                <Link href={`/dashboard/clients?clientId=${channel.clientId}`}>
+                  <Badge
+                    variant="secondary"
+                    className="h-5 cursor-pointer border-none bg-muted/50 px-1.5 py-0 text-[10px] font-bold uppercase tracking-wider hover:bg-muted transition-colors shadow-none"
+                  >
+                    Client
+                  </Badge>
+                </Link>
+              )}
+            </div>
+            <p className="truncate text-xs font-medium text-muted-foreground/70">
+              {channelParticipants.length} people · {channelParticipants.map((member) => member.name).slice(0, 3).join(', ')}{channelParticipants.length > 3 ? '...' : ''}
+            </p>
+          </div>
         </div>
-        <p className="mt-1 truncate text-xs text-muted-foreground">
-          {channelParticipants.map((member) => member.name).join(', ')}
-        </p>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onExport}
-        disabled={messageCount === 0}
-        className="h-8 text-xs"
-      >
-        <Download className="mr-2 h-3.5 w-3.5" />
-        Export
-      </Button>
+      <div className="flex items-center gap-2 shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onExport}
+          disabled={messageCount === 0}
+          className="h-9 px-3 text-xs font-semibold gap-2 border border-muted/40 hover:bg-muted/60"
+        >
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+      </div>
     </div>
   )
 }
@@ -101,9 +110,9 @@ export function MessageSearchBar({
   )
 }
 
-export interface EmptyChannelStateProps {}
+export interface EmptyChannelStateProps { }
 
-export function EmptyChannelState({}: EmptyChannelStateProps) {
+export function EmptyChannelState({ }: EmptyChannelStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
       <div className="mb-4 rounded-full bg-muted/30 p-4">
@@ -118,9 +127,9 @@ export function EmptyChannelState({}: EmptyChannelStateProps) {
   )
 }
 
-export interface EmptyMessagesStateProps {}
+export interface EmptyMessagesStateProps { }
 
-export function EmptyMessagesState({}: EmptyMessagesStateProps) {
+export function EmptyMessagesState({ }: EmptyMessagesStateProps) {
   return (
     <div className="rounded-md border border-dashed border-muted/50 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       Start the conversation by posting the first update for this workspace.
@@ -128,9 +137,9 @@ export function EmptyMessagesState({}: EmptyMessagesStateProps) {
   )
 }
 
-export interface NoSearchResultsStateProps {}
+export interface NoSearchResultsStateProps { }
 
-export function NoSearchResultsState({}: NoSearchResultsStateProps) {
+export function NoSearchResultsState({ }: NoSearchResultsStateProps) {
   return (
     <div className="rounded-md border border-dashed border-muted/50 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       No messages match your search.

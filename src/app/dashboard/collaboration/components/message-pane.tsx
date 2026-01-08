@@ -409,23 +409,29 @@ export function CollaborationMessagePane({
       (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
 
     const containerClass = cn(
-      'relative group flex items-start gap-3 px-4 py-2 transition-colors hover:bg-muted/30',
-      isReply
-        ? 'ml-12 mt-2 rounded-md border border-muted/40 bg-muted/10 p-3 hover:border-muted/60'
-        : '-mx-4',
+      'relative group flex items-start gap-3 px-6 py-2.5 transition-all duration-200',
       isSearchResult && 'bg-primary/5 ring-1 ring-primary/20',
-      !showAvatar && !isReply && 'mt-0 py-1'
+      !showAvatar && !isReply && 'py-1',
+      isReply && 'ml-14 mt-2'
+    )
+
+    const bubbleClass = cn(
+      'relative min-w-0 flex-1 space-y-1.5 p-4 rounded-2xl transition-all duration-200',
+      isReply ? 'bg-muted/10 border border-muted/30' : 'bg-muted/5 border border-transparent group-hover:bg-muted/10 group-hover:border-muted/20',
+      (isSearchResult || isReply) && 'shadow-sm'
     )
 
     return (
       <div key={message.id} className={containerClass}>
         {showAvatar ? (
-          <MessageAvatar senderName={message.senderName} isReply={isReply} />
+          <div className="shrink-0 pt-1">
+            <MessageAvatar senderName={message.senderName} isReply={isReply} />
+          </div>
         ) : (
           <div className="w-10 flex-shrink-0" />
         )}
 
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className={bubbleClass}>
           {showHeader && (
             <MessageHeader
               senderName={message.senderName}

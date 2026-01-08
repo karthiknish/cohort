@@ -2,6 +2,11 @@
 // CUSTOM FORMULAS STORAGE - Firestore CRUD operations
 // =============================================================================
 
+/**
+ * @deprecated Formulas should be accessed via the server API routes under `/api/integrations/formulas`.
+ * This client-side Firestore storage module is kept only for backward compatibility / migrations.
+ */
+
 import {
     Timestamp,
     collection,

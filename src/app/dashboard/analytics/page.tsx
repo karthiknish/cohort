@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw } from 'lucide-react'
+import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { authService } from '@/services/auth'
@@ -319,175 +319,211 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Analytics dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Track spend, performance, and creative efficiency across connected ad platforms.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <select
-            value={selectedPlatform}
-            onChange={(e) => setSelectedPlatform(e.target.value)}
-            className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            {PLATFORM_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value as typeof PERIOD_OPTIONS[number]['value'])}
-            className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            {PERIOD_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Google Analytics data source */}
-      <Card className="border-muted/60 bg-background">
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-8 pb-10">
+        {/* Header Section */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <CardTitle className="text-base">Google Analytics</CardTitle>
-            <CardDescription>
-              Connect GA4 to import users, sessions, conversions, and revenue into the unified dashboard.
-            </CardDescription>
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <TrendingUp className="h-6 w-6" />
+              </div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Analytics</h1>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground/80 max-w-xl">
+              Real-time performance metrics and cross-platform creative insights for your active campaigns.
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {gaConnected ? (
-              <span className="inline-flex items-center gap-2 rounded-md bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                Connected{gaAccountLabel ? `: ${gaAccountLabel}` : ''}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                <Link2 className="h-4 w-4" />
-                Not connected
-              </span>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative group">
+              <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
+              <select
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+                className="block w-full min-w-[160px] cursor-pointer rounded-xl border border-muted/30 bg-background px-4 py-2.5 text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
+              >
+                {PLATFORM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative group">
+              <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value as typeof PERIOD_OPTIONS[number]['value'])}
+                className="block w-full min-w-[140px] cursor-pointer rounded-xl border border-muted/30 bg-background px-4 py-2.5 text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
+              >
+                {PERIOD_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Google Analytics data source */}
+        {/* Google Analytics data source */}
+        <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+          <CardHeader className="flex flex-col gap-4 border-b border-muted/10 bg-muted/5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 shadow-sm">
+                <RotateCw className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Google Analytics Integration</CardTitle>
+                <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">
+                  Import users, sessions, and conversions into your dashboard.
+                </CardDescription>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {gaConnected ? (
+                <div className="inline-flex animate-in fade-in slide-in-from-right-2 duration-500 items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-500/20">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Connected{gaAccountLabel ? `: ${gaAccountLabel}` : ''}
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border border-muted/30">
+                  <Link2 className="h-3.5 w-3.5" />
+                  No property linked
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleConnectGoogleAnalytics()}
+                  disabled={gaLoading}
+                  className="h-9 rounded-xl border-muted/40 text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-muted/10 active:scale-[0.98]"
+                >
+                  {gaLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+                  {gaConnected ? 'Reconnect' : 'Link Account'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleSyncGoogleAnalytics()}
+                  disabled={gaSyncing || gaLoading}
+                  className="h-9 rounded-xl bg-primary text-[10px] font-bold uppercase tracking-widest shadow-md transition-all hover:bg-primary/90 active:scale-[0.98]"
+                >
+                  {gaSyncing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-white" /> : <RotateCw className="h-3.5 w-3.5 text-white" />}
+                  Sync now
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="bg-muted/5 py-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary">TIP</div>
+              <p className="text-[10px] font-medium text-muted-foreground/70">
+                Sync writes metrics with provider <span className="font-bold text-muted-foreground underline decoration-primary/30">Google Analytics</span> for unified filtering.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Error Alert */}
+        {metricsError && (
+          <Alert variant="destructive">
+            <AlertTitle>Unable to load analytics</AlertTitle>
+            <AlertDescription>{metricsError.message}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Performance Summary Header */}
+        {/* Performance Summary Header */}
+        <div className="flex items-center justify-between border-b border-muted/10 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Performance Summary</h2>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {metricsNextCursor && (
+              <button
+                type="button"
+                onClick={handleLoadMoreMetrics}
+                disabled={metricsLoadingMore}
+                className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+              >
+                {metricsLoadingMore ? (
+                  <>
+                    <LoaderCircle className="h-3 w-3 animate-spin" />
+                    Loading
+                  </>
+                ) : (
+                  <>
+                    <RotateCw className="h-3 w-3 transition-transform group-hover:rotate-180 duration-500" />
+                    Load older data
+                  </>
+                )}
+              </button>
             )}
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleConnectGoogleAnalytics()}
-              disabled={gaLoading}
-              className="inline-flex items-center gap-2"
-            >
-              {gaLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-              {gaConnected ? 'Reconnect' : 'Connect'}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void handleSyncGoogleAnalytics()}
-              disabled={gaSyncing || gaLoading}
-              className="inline-flex items-center gap-2"
-            >
-              {gaSyncing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
-              Sync now
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-xs text-muted-foreground">
-            Tip: Sync writes metrics with provider <span className="font-medium text-foreground">Google Analytics</span> so you can filter it in the platform dropdown.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Error Alert */}
-      {metricsError && (
-        <Alert variant="destructive">
-          <AlertTitle>Unable to load analytics</AlertTitle>
-          <AlertDescription>{metricsError.message}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Performance Summary Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-muted-foreground">Performance summary</h2>
-        <div className="flex items-center gap-2">
-          {metricsNextCursor && (
             <button
               type="button"
-              onClick={handleLoadMoreMetrics}
-              disabled={metricsLoadingMore}
-              className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
+              onClick={() => mutateMetrics()}
+              disabled={metricsLoading || metricsRefreshing}
+              className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
             >
-              {metricsLoadingMore ? (
-                <>
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  Loading more
-                </>
-              ) : (
-                'Load older data'
-              )}
+              <RefreshCw className={`h-3 w-3 transition-transform duration-500 group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => mutateMetrics()}
-            disabled={metricsLoading || metricsRefreshing}
-            className="inline-flex items-center gap-2 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition hover:bg-muted disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${metricsRefreshing ? 'animate-spin' : ''}`} />
-            Refresh metrics
-          </button>
+          </div>
         </div>
+
+        {/* Summary Cards */}
+        <AnalyticsSummaryCards
+          totals={totals}
+          averageRoaS={averageRoaS}
+          conversionRate={conversionRate}
+          averageCpc={averageCpc}
+          isLoading={initialMetricsLoading}
+        />
+
+        {/* Advanced Metric Cards */}
+        <AnalyticsMetricCards
+          mer={mer}
+          aov={aov}
+          rpc={rpc}
+          roi={roi}
+          isLoading={initialMetricsLoading}
+        />
+
+        {/* Charts Grid */}
+        <AnalyticsCharts
+          chartData={chartData}
+          platformBreakdown={platformBreakdown}
+          isMetricsLoading={metricsLoading}
+          initialMetricsLoading={initialMetricsLoading}
+        />
+
+        {/* Insights Section */}
+        <AnalyticsInsightsSection
+          insights={insights}
+          algorithmic={algorithmic}
+          insightsError={insightsError}
+          insightsLoading={insightsLoading}
+          insightsRefreshing={insightsRefreshing}
+          initialInsightsLoading={initialInsightsLoading}
+          onRefreshInsights={() => mutateInsights()}
+        />
+
+        {/* Creatives Section */}
+        <AnalyticsCreativesSection
+          creativeBreakdown={creativeBreakdown}
+          isMetricsLoading={metricsLoading}
+          metricsRefreshing={metricsRefreshing}
+          initialMetricsLoading={initialMetricsLoading}
+          onRefreshMetrics={() => mutateMetrics()}
+        />
       </div>
-
-      {/* Summary Cards */}
-      <AnalyticsSummaryCards
-        totals={totals}
-        averageRoaS={averageRoaS}
-        conversionRate={conversionRate}
-        averageCpc={averageCpc}
-        isLoading={initialMetricsLoading}
-      />
-
-      {/* Advanced Metric Cards */}
-      <AnalyticsMetricCards
-        mer={mer}
-        aov={aov}
-        rpc={rpc}
-        roi={roi}
-        isLoading={initialMetricsLoading}
-      />
-
-      {/* Charts Grid */}
-      <AnalyticsCharts
-        chartData={chartData}
-        platformBreakdown={platformBreakdown}
-        isMetricsLoading={metricsLoading}
-        initialMetricsLoading={initialMetricsLoading}
-      />
-
-      {/* Insights Section */}
-      <AnalyticsInsightsSection
-        insights={insights}
-        algorithmic={algorithmic}
-        insightsError={insightsError}
-        insightsLoading={insightsLoading}
-        insightsRefreshing={insightsRefreshing}
-        initialInsightsLoading={initialInsightsLoading}
-        onRefreshInsights={() => mutateInsights()}
-      />
-
-      {/* Creatives Section */}
-      <AnalyticsCreativesSection
-        creativeBreakdown={creativeBreakdown}
-        isMetricsLoading={metricsLoading}
-        metricsRefreshing={metricsRefreshing}
-        initialMetricsLoading={initialMetricsLoading}
-        onRefreshMetrics={() => mutateMetrics()}
-      />
     </div>
   )
 }

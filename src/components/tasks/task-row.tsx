@@ -49,97 +49,134 @@ function TaskRowComponent({
   return (
     <div
       className={cn(
-        'px-6 py-4 transition hover:bg-muted/40',
+        'group relative px-6 py-5 transition-all hover:bg-muted/40 border-b border-muted/20 last:border-0',
         isPendingUpdate && 'opacity-75 pointer-events-none'
       )}
     >
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Checkbox
-              checked={selected}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                onSelectToggle?.(task.id, event.target.checked)
-              }
-              aria-label="Select task"
-            />
-            <p className="text-sm font-semibold text-foreground truncate max-w-[260px] sm:max-w-[360px]">
-              {task.title}
-            </p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Badge
-                  variant="secondary"
-                  className={cn(
-                    statusColors[task.status],
-                    'cursor-pointer hover:opacity-80 gap-1'
-                  )}
-                >
-                  {isPendingUpdate ? (
-                    <LoaderCircle className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <StatusIcon className="h-3 w-3" />
-                  )}
-                  {formatStatusLabel(task.status)}
-                </Badge>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {TASK_STATUSES.filter((s) => s !== task.status).map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => onQuickStatusChange(task, status)}
+      {/* Priority accent bar */}
+      <div
+        className={cn(
+          "absolute left-0 top-0 bottom-0 w-1 transition-opacity opacity-70 group-hover:opacity-100",
+          task.priority === 'urgent' ? 'bg-red-500' :
+            task.priority === 'high' ? 'bg-orange-500' :
+              task.priority === 'medium' ? 'bg-blue-500' : 'bg-emerald-500'
+        )}
+      />
+
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex-1 min-w-0 space-y-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={selected}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  onSelectToggle?.(task.id, event.target.checked)
+                }
+                aria-label="Select task"
+              />
+              <p className="text-base font-bold text-foreground truncate max-w-[300px] sm:max-w-[450px]">
+                {task.title}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      statusColors[task.status],
+                      'h-6 border px-2 py-0 cursor-pointer transition-all hover:opacity-90 gap-1.5'
+                    )}
                   >
-                    {formatStatusLabel(status)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Badge variant="outline" className={priorityColors[task.priority]}>
-              {formatPriorityLabel(task.priority)}
-            </Badge>
+                    {isPendingUpdate ? (
+                      <LoaderCircle className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <StatusIcon className="h-3 w-3" />
+                    )}
+                    <span className="text-[10px] font-bold tracking-wider uppercase leading-none">
+                      {formatStatusLabel(task.status)}
+                    </span>
+                  </Badge>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {TASK_STATUSES.filter((s) => s !== task.status).map((status) => (
+                    <DropdownMenuItem
+                      key={status}
+                      onClick={() => onQuickStatusChange(task, status)}
+                    >
+                      {formatStatusLabel(status)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Badge
+                variant="outline"
+                className={cn(priorityColors[task.priority], "h-6 text-[10px] px-2 font-bold uppercase tracking-wide")}
+              >
+                {formatPriorityLabel(task.priority)}
+              </Badge>
+
+              {task.client && (
+                task.clientId ? (
+                  <Link href={`/dashboard/clients?clientId=${task.clientId}`}>
+                    <Badge
+                      variant="secondary"
+                      className="h-6 text-[11px] font-medium bg-muted/50 hover:bg-muted cursor-pointer transition-colors border-none px-2 shadow-none"
+                    >
+                      {task.client}
+                    </Badge>
+                  </Link>
+                ) : (
+                  <Badge variant="outline" className="h-6 text-[11px] border-dashed border-muted/60 font-medium px-2">
+                    {task.client}
+                  </Badge>
+                )
+              )}
+            </div>
           </div>
+
           {task.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+            <p className="text-sm text-muted-foreground/80 line-clamp-1 max-w-2xl">{task.description}</p>
           )}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <User className="h-3.5 w-3.5" />
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-muted-foreground/70">
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
+                <User className="h-2.5 w-2.5" />
+              </div>
               {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}
             </span>
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
+              <span className={cn(
+                task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed' && "text-red-500 font-medium"
+              )}>
+                {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
+              </span>
             </span>
-            {task.clientId ? (
-              <Link href={`/dashboard/clients?clientId=${task.clientId}`}>
-                <Badge
-                  variant="outline"
-                  className="border border-dashed hover:bg-muted cursor-pointer"
-                >
-                  {task.client ?? 'Internal'}
-                </Badge>
-              </Link>
-            ) : (
-              <Badge variant="outline" className="border border-dashed">
-                {task.client ?? 'Internal'}
-              </Badge>
+
+            {(task.tags ?? []).length > 0 && (
+              <div className="flex items-center gap-1.5 ml-auto">
+                {(task.tags ?? []).slice(0, 2).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px] h-4 px-1 bg-muted/30 text-muted-foreground/60 border-none">
+                    #{tag}
+                  </Badge>
+                ))}
+                {(task.tags ?? []).length > 2 && (
+                  <span className="text-[10px] text-muted-foreground/40">+{(task.tags ?? []).length - 2}</span>
+                )}
+              </div>
             )}
           </div>
-          {(task.tags ?? []).length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {(task.tags ?? []).map((tag) => (
-                <Badge key={tag} variant="secondary" className="bg-muted text-muted-foreground">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          )}
         </div>
-        <div className="flex items-center justify-end gap-2">
+
+        <div className="flex items-center justify-end gap-1 shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 text-xs gap-1"
+            className="h-8 text-xs gap-1.5 font-medium hover:bg-primary/5 hover:text-primary transition-colors"
             onClick={() => onEdit(task)}
           >
             <Pencil className="h-3.5 w-3.5" />

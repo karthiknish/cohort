@@ -28,8 +28,10 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn, formatCurrency } from '@/lib/utils'
+import { calculateBenchmarks } from '@/lib/metrics'
 
 import type { DerivedMetrics, GrowthRateResult, CustomKPIs } from '../hooks/use-derived-metrics'
+import type { MetricRecord } from './types'
 
 // =============================================================================
 // TYPES
@@ -37,6 +39,7 @@ import type { DerivedMetrics, GrowthRateResult, CustomKPIs } from '../hooks/use-
 
 interface CustomInsightsCardProps {
     derivedMetrics: DerivedMetrics | null
+    processedMetrics?: MetricRecord[]
     loading?: boolean
 }
 
@@ -70,8 +73,8 @@ function formatValue(value: number | null, format: string): string {
     }
 }
 
-function getTrendStatus(trend: number | null, invertTrend?: boolean): 'up' | 'down' | 'neutral' {
-    if (trend === null || Math.abs(trend) < 0.01) return 'neutral'
+function getTrendStatus(trend: number | null | undefined, invertTrend?: boolean): 'up' | 'down' | 'neutral' {
+    if (trend === null || trend === undefined || Math.abs(trend) < 0.01) return 'neutral'
     const isPositive = trend > 0
     return invertTrend ? (isPositive ? 'down' : 'up') : (isPositive ? 'up' : 'down')
 }
@@ -156,7 +159,33 @@ function InsightsSkeleton() {
 // MAIN COMPONENT
 // =============================================================================
 
-export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCardProps) {
+export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }: CustomInsightsCardProps) {
+    const computedBenchmarks = useMemo(() => {
+        if (!derivedMetrics) return null
+
+        const normalized = (processedMetrics ?? []).map((m) => ({
+            providerId: m.providerId,
+            adId: m.id,
+            campaignId: 'unknown',
+            date: m.date,
+            impressions: m.impressions,
+            clicks: m.clicks,
+            spend: m.spend,
+            conversions: m.conversions,
+            revenue: m.revenue ?? 0,
+        }))
+
+        return calculateBenchmarks(normalized)
+    }, [derivedMetrics, processedMetrics])
+
+    const cpaBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpa')?.value ?? 50
+    const roasBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'roas')?.value ?? 3
+    const ctrBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'ctr')?.value ?? 0.02
+    const cpcBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpc')?.value ?? 2
+    const cpmBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'cpm')?.value ?? 10
+    const conversionRateBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'conversionRate')?.value ?? 0.03
+    const profitMarginBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'profitMargin')?.value ?? 0.2
+
     const kpiData = useMemo(() => {
         if (!derivedMetrics) return null
 
@@ -169,7 +198,7 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'currency' as const,
                 icon: <Target className="h-4 w-4" />,
                 trend: null,
-                benchmark: 50, // Example benchmark
+                benchmark: cpaBenchmark,
                 invertTrend: true, // Lower is better
             },
             {
@@ -178,7 +207,7 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'ratio' as const,
                 icon: <Zap className="h-4 w-4" />,
                 trend: growthWeekOverWeek.revenue,
-                benchmark: 3, // 3x return benchmark
+                benchmark: roasBenchmark,
             },
             {
                 label: 'CTR',
@@ -186,7 +215,7 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'percent' as const,
                 icon: <MousePointer className="h-4 w-4" />,
                 trend: growthWeekOverWeek.clicks,
-                benchmark: 0.02, // 2% benchmark
+                benchmark: ctrBenchmark,
             },
             {
                 label: 'CPC',
@@ -194,7 +223,7 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'currency' as const,
                 icon: <DollarSign className="h-4 w-4" />,
                 trend: null,
-                benchmark: 2, // $2 benchmark
+                benchmark: cpcBenchmark,
                 invertTrend: true,
             },
             {
@@ -203,7 +232,7 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'currency' as const,
                 icon: <Eye className="h-4 w-4" />,
                 trend: null,
-                benchmark: 10,
+                benchmark: cpmBenchmark,
                 invertTrend: true,
             },
             {
@@ -212,7 +241,7 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'percent' as const,
                 icon: <Target className="h-4 w-4" />,
                 trend: growthWeekOverWeek.conversions,
-                benchmark: 0.03,
+                benchmark: conversionRateBenchmark,
             },
             {
                 label: 'Profit',
@@ -227,10 +256,10 @@ export function CustomInsightsCard({ derivedMetrics, loading }: CustomInsightsCa
                 format: 'percent' as const,
                 icon: <Zap className="h-4 w-4" />,
                 trend: null,
-                benchmark: 0.2,
+                benchmark: profitMarginBenchmark,
             },
         ]
-    }, [derivedMetrics])
+    }, [derivedMetrics, cpaBenchmark, roasBenchmark, ctrBenchmark, cpcBenchmark, cpmBenchmark, conversionRateBenchmark, profitMarginBenchmark])
 
     const anomalyCount = useMemo(() => {
         if (!kpiData) return 0

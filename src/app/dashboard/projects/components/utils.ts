@@ -15,10 +15,17 @@ export type ViewMode = 'list' | 'grid' | 'board' | 'gantt'
 export const STATUS_FILTERS: StatusFilter[] = ['all', ...PROJECT_STATUSES]
 
 export const STATUS_CLASSES: Record<ProjectStatus, string> = {
-  planning: 'bg-slate-100 text-slate-800',
-  active: 'bg-emerald-100 text-emerald-800',
-  on_hold: 'bg-amber-100 text-amber-800',
-  completed: 'bg-muted text-muted-foreground',
+  planning: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800',
+  active: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
+  on_hold: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
+  completed: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
+}
+
+export const STATUS_ACCENT_COLORS: Record<ProjectStatus, string> = {
+  planning: '#64748b', // slate-500
+  active: '#10b981', // emerald-500
+  on_hold: '#f59e0b', // amber-500
+  completed: '#3b82f6', // blue-500
 }
 
 export const STATUS_ICONS: Record<ProjectStatus, React.ComponentType<{ className?: string }>> = {

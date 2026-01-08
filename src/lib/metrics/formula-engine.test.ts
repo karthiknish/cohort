@@ -5,6 +5,7 @@ import {
     calculateMovingAverage,
     calculateRoasMovingAverage,
     calculateGrowthRates,
+    calculateBenchmarks,
     calculateCrossplatformBenchmarks,
     calculateCustomKpis,
 } from './formula-engine'
@@ -203,6 +204,39 @@ describe('calculateCrossplatformBenchmarks', () => {
 
     it('returns empty array for empty metrics', () => {
         expect(calculateCrossplatformBenchmarks([])).toEqual([])
+    })
+})
+
+describe('calculateBenchmarks', () => {
+    it('returns fallback benchmarks for empty metrics', () => {
+        const result = calculateBenchmarks([])
+        expect(result.benchmarks.length).toBeGreaterThan(0)
+        expect(result.benchmarks.find((b) => b.metric === 'cpa')?.value).toBe(50)
+        expect(result.platformBenchmarks).toEqual([])
+    })
+
+    it('computes historical median benchmarks from daily blended KPIs', () => {
+        const metrics: NormalizedAdMetric[] = [
+            createMetric({ date: '2026-01-01', spend: 100, revenue: 300, conversions: 10, clicks: 50, impressions: 1000 }),
+            createMetric({ date: '2026-01-02', spend: 200, revenue: 500, conversions: 20, clicks: 80, impressions: 2000 }),
+            // Add a second provider on the same day to validate blending-by-day
+            createMetric({ providerId: 'tiktok', date: '2026-01-02', spend: 100, revenue: 200, conversions: 5, clicks: 40, impressions: 800 }),
+        ]
+
+        const result = calculateBenchmarks(metrics)
+
+        const roas = result.benchmarks.find((b) => b.metric === 'roas')?.value
+        const cpa = result.benchmarks.find((b) => b.metric === 'cpa')?.value
+
+        // Day1 ROAS = 300/100 = 3
+        // Day2 ROAS = (500+200)/(200+100) = 700/300 = 2.333...
+        // Median of [2.333..., 3] = (2.333...+3)/2 = 2.666...
+        expect(roas).toBeCloseTo(2.666, 2)
+
+        // Day1 CPA = 100/10 = 10
+        // Day2 CPA = 300/25 = 12
+        // Median = (10+12)/2 = 11
+        expect(cpa).toBeCloseTo(11, 2)
     })
 })
 

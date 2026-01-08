@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 import { CollaborationChannelList } from './channel-list'
 import { CollaborationMessagePane } from './message-pane'
@@ -104,8 +105,8 @@ export function CollaborationDashboard() {
       channels.find((channel) => channel.type === 'project' && channel.projectId === requestedProjectId) ??
       (normalizedName
         ? channels.find(
-            (channel) => channel.type === 'project' && channel.name.toLowerCase() === normalizedName
-          )
+          (channel) => channel.type === 'project' && channel.name.toLowerCase() === normalizedName
+        )
         : undefined)
 
     if (targetChannel && targetChannel.id !== selectedChannel?.id) {
@@ -334,54 +335,77 @@ function CollaborationKanban({ channels, channelSummaries, onSelect }: Collabora
 
   return (
     <div className="w-full space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {(['team', 'client', 'project'] as const).map((typeKey) => {
           const column = grouped[typeKey]
           return (
-            <div key={typeKey} className="flex flex-col gap-3 rounded-md border border-muted/50 bg-muted/10 p-3">
-              <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                <span>{columnLabel[typeKey]}</span>
-                <Badge variant="outline" className="bg-background text-xs">{column.length}</Badge>
+            <div key={typeKey} className="group flex flex-col gap-4 rounded-2xl border bg-muted/5 transition-colors hover:bg-muted/10">
+              <div className="flex items-center justify-between px-4 py-4 border-b border-muted/20">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-2.5 w-2.5 rounded-full shadow-sm"
+                    style={{ backgroundColor: typeKey === 'team' ? '#6366f1' : typeKey === 'client' ? '#10b981' : '#f59e0b' }}
+                  />
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                    {columnLabel[typeKey]}
+                  </span>
+                </div>
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-bold bg-muted/40 group-hover:bg-muted/60 transition-colors">
+                  {column.length}
+                </Badge>
               </div>
-              {column.length === 0 ? (
-                <div className="rounded-md border border-dashed border-muted/50 bg-background px-3 py-6 text-center text-xs text-muted-foreground">
-                  No channels in this lane
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {column.map((channel) => {
-                    const summary = channelSummaries.get(channel.id)
-                    return (
-                      <button
-                        key={channel.id}
-                        type="button"
-                        onClick={() => onSelect(channel.id)}
-                        className="w-full rounded-md border border-muted/40 bg-background p-3 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                            {channel.type === 'team' && <Users className="h-4 w-4 text-muted-foreground" />}
-                            {channel.type === 'client' && <Briefcase className="h-4 w-4 text-muted-foreground" />}
-                            {channel.type === 'project' && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
-                            <span className="truncate" title={channel.name}>{channel.name}</span>
+
+              <div className="flex-1 space-y-4 p-4">
+                {column.length === 0 ? (
+                  <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-muted/30 bg-background/40 p-4 text-center">
+                    <p className="text-xs font-medium text-muted-foreground/60 italic">No channels here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {column.map((channel) => {
+                      const summary = channelSummaries.get(channel.id)
+                      return (
+                        <button
+                          key={channel.id}
+                          type="button"
+                          onClick={() => onSelect(channel.id)}
+                          className="w-full flex flex-col rounded-xl border border-muted/40 bg-background p-4 text-left shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-md active:scale-[0.98]"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary shrink-0">
+                                {channel.type === 'team' && <Users className="h-4 w-4" />}
+                                {channel.type === 'client' && <Briefcase className="h-4 w-4" />}
+                                {channel.type === 'project' && <MessageSquare className="h-4 w-4" />}
+                              </div>
+                              <span className="text-sm font-bold text-foreground truncate" title={channel.name}>
+                                {channel.name}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] font-bold border-muted/60">
+                              {channel.teamMembers.length}
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="text-[10px]">{channel.teamMembers.length} people</Badge>
-                        </div>
-                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                          {summary?.lastMessage || 'No messages yet'}
-                        </p>
-                        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span>{formatUpdated(summary?.lastTimestamp)}</span>
-                          <span className="inline-flex items-center gap-1">
-                            <MessageSquare className="h-3 w-3" />
-                            {summary?.lastMessage ? 'Active' : 'Idle'}
-                          </span>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+
+                          <p className="mt-3 line-clamp-2 text-xs text-muted-foreground leading-relaxed h-8">
+                            {summary?.lastMessage || 'No messages yet'}
+                          </p>
+
+                          <div className="mt-3 flex items-center justify-between pt-3 border-t border-muted/10">
+                            <span className="text-[10px] font-medium text-muted-foreground/60">
+                              {formatUpdated(summary?.lastTimestamp)}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary/80">
+                              <div className={cn("h-1.5 w-1.5 rounded-full", summary?.lastMessage ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40")} />
+                              {summary?.lastMessage ? 'ACTIVE' : 'IDLE'}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )
         })}

@@ -28,17 +28,17 @@ export function AnalyticsMetricCards({
 }: AnalyticsMetricCardsProps) {
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-muted/40 bg-background/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">MER (Blended ROAS)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Blended ROAS (MER)</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50" />
+                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Marketing Efficiency Ratio: Total Revenue / Total Spend</p>
+                                    <p className="text-xs">Marketing Efficiency Ratio: Total Revenue / Total Spend</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -46,24 +46,24 @@ export function AnalyticsMetricCards({
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-7 w-16 rounded-lg" />
                     ) : (
-                        <div className="text-xl font-semibold">{mer.toFixed(2)}x</div>
+                        <div className="text-xl font-bold tracking-tight text-foreground">{mer.toFixed(2)}x</div>
                     )}
                 </CardContent>
             </Card>
 
-            <Card className="border-muted/40 bg-background/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">Avg. Order Value (AOV)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg. Order Value (AOV)</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50" />
+                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Average revenue generated per conversion</p>
+                                    <p className="text-xs">Average revenue generated per conversion</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -71,24 +71,24 @@ export function AnalyticsMetricCards({
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="h-7 w-20 rounded-lg" />
                     ) : (
-                        <div className="text-xl font-semibold">{formatCurrency(aov)}</div>
+                        <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(aov)}</div>
                     )}
                 </CardContent>
             </Card>
 
-            <Card className="border-muted/40 bg-background/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">Revenue Per Click (RPC)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Revenue Per Click (RPC)</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50" />
+                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Average revenue generated for every click</p>
+                                    <p className="text-xs">Average revenue generated for every click</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -96,24 +96,24 @@ export function AnalyticsMetricCards({
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-7 w-16 rounded-lg" />
                     ) : (
-                        <div className="text-xl font-semibold">{formatCurrency(rpc)}</div>
+                        <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(rpc)}</div>
                     )}
                 </CardContent>
             </Card>
 
-            <Card className="border-muted/40 bg-background/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-medium text-muted-foreground">Return on Investment (ROI)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Return on Investment (ROI)</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50" />
+                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Percentage of profit relative to spend: ((Rev - Spend) / Spend) * 100</p>
+                                    <p className="text-xs">Percentage of profit relative to spend: ((Rev - Spend) / Spend) * 100</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -121,11 +121,11 @@ export function AnalyticsMetricCards({
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <Skeleton className="h-6 w-16" />
+                        <Skeleton className="h-7 w-16 rounded-lg" />
                     ) : (
                         <div className={cn(
-                            "text-xl font-semibold",
-                            roi >= 0 ? "text-emerald-600" : "text-red-600"
+                            "text-xl font-bold tracking-tight",
+                            roi >= 0 ? "text-emerald-500" : "text-red-500"
                         )}>
                             {roi > 0 ? '+' : ''}{roi.toFixed(1)}%
                         </div>

@@ -2,23 +2,23 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { 
+import {
   TriangleAlert,
   ArrowDown,
   ArrowUp,
-  Briefcase, 
-  Calendar, 
+  Briefcase,
+  Calendar,
   CircleCheck,
-  Clock, 
+  Clock,
   FolderKanban,
-  LayoutGrid, 
-  List, 
-  ListChecks, 
-  LoaderCircle, 
-  MoreHorizontal, 
-  Plus, 
-  RefreshCw, 
-  Search, 
+  LayoutGrid,
+  List,
+  ListChecks,
+  LoaderCircle,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
   Users,
   CircleX,
   ChartGantt,
@@ -122,14 +122,14 @@ export default function ProjectsPage() {
   const [milestonesByProject, setMilestonesByProject] = useState<Record<string, MilestoneRecord[]>>({})
   const [milestonesLoading, setMilestonesLoading] = useState(false)
   const [milestonesError, setMilestonesError] = useState<string | null>(null)
-  
+
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [projectToEdit, setProjectToEdit] = useState<ProjectRecord | null>(null)
-  
+
   // Optimistic update tracking
   const [pendingStatusUpdates, setPendingStatusUpdates] = useState<Set<string>>(new Set())
-  
+
   // Abort controller for cancelling requests
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -139,12 +139,12 @@ export default function ProjectsPage() {
     // Use preview data when in preview mode
     if (isPreviewMode) {
       let previewProjects = getPreviewProjects(selectedClientId)
-      
+
       // Apply status filter
       if (statusFilter !== 'all') {
         previewProjects = previewProjects.filter((p) => p.status === statusFilter)
       }
-      
+
       // Apply search filter
       if (debouncedQuery.trim().length > 0) {
         const query = debouncedQuery.trim().toLowerCase()
@@ -154,7 +154,7 @@ export default function ProjectsPage() {
           p.tags.some((tag) => tag.toLowerCase().includes(query))
         )
       }
-      
+
       setProjects(previewProjects)
       setLoading(false)
       setError(null)
@@ -205,10 +205,10 @@ export default function ProjectsPage() {
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return
       }
-      
+
       console.error('Failed to fetch projects', fetchError)
       const message = getErrorMessage(fetchError, 'Unable to load projects')
-      
+
       // Retry on network errors
       if (retryAttempt < RETRY_CONFIG.maxRetries && isNetworkError(fetchError)) {
         const delay = calculateBackoffDelay(retryAttempt)
@@ -217,7 +217,7 @@ export default function ProjectsPage() {
         await sleep(delay)
         return loadProjects(retryAttempt + 1)
       }
-      
+
       setProjects([])
       setError(message)
       toast({
@@ -350,7 +350,7 @@ export default function ProjectsPage() {
   const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
     // In preview mode, just update local state (won't persist)
     if (isPreviewMode) {
-      setProjects((prev) => prev.map((p) => 
+      setProjects((prev) => prev.map((p) =>
         p.id === project.id ? { ...p, status: newStatus } : p
       ))
       toast({
@@ -361,13 +361,13 @@ export default function ProjectsPage() {
     }
 
     if (!user?.id) return
-    
+
     // Prevent duplicate updates
     if (pendingStatusUpdates.has(project.id)) return
 
     // Optimistic update
     const previousStatus = project.status
-    setProjects((prev) => prev.map((p) => 
+    setProjects((prev) => prev.map((p) =>
       p.id === project.id ? { ...p, status: newStatus } : p
     ))
     setPendingStatusUpdates((prev) => new Set(prev).add(project.id))
@@ -377,7 +377,7 @@ export default function ProjectsPage() {
         method: 'PATCH',
         body: JSON.stringify({ status: newStatus }),
       })
-      
+
       setProjects((prev) => prev.map((p) => p.id === project.id ? updatedProject : p))
       toast({
         title: 'Status updated',
@@ -385,7 +385,7 @@ export default function ProjectsPage() {
       })
     } catch (error) {
       // Rollback optimistic update
-      setProjects((prev) => prev.map((p) => 
+      setProjects((prev) => prev.map((p) =>
         p.id === project.id ? { ...p, status: previousStatus } : p
       ))
       const message = error instanceof Error ? error.message : 'Failed to update project'
@@ -409,7 +409,7 @@ export default function ProjectsPage() {
     const sorted = [...projects]
     sorted.sort((a, b) => {
       let comparison = 0
-      
+
       switch (sortField) {
         case 'name':
           comparison = a.name.localeCompare(b.name)
@@ -428,10 +428,10 @@ export default function ProjectsPage() {
           comparison = (new Date(a.updatedAt ?? 0).getTime()) - (new Date(b.updatedAt ?? 0).getTime())
           break
       }
-      
+
       return sortDirection === 'desc' ? -comparison : comparison
     })
-    
+
     return sorted
   }, [projects, sortField, sortDirection])
 
@@ -508,20 +508,20 @@ export default function ProjectsPage() {
                 </TooltipTrigger>
                 <TooltipContent>Grid view</TooltipContent>
               </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={viewMode === 'board' ? 'secondary' : 'ghost'}
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setViewMode('board')}
-                      aria-label="Kanban view"
-                    >
-                      <Columns3 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Kanban view</TooltipContent>
-                </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'board' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode('board')}
+                    aria-label="Kanban view"
+                  >
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Kanban view</TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -583,7 +583,7 @@ export default function ProjectsPage() {
                 Delete project?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action cannot be undone. 
+                Are you sure you want to delete &quot;{projectToDelete?.name}&quot;? This action cannot be undone.
                 All associated tasks and collaboration history will remain but will no longer be linked to this project.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -607,31 +607,34 @@ export default function ProjectsPage() {
             label="Total projects"
             icon={Briefcase}
             value={projects.length}
-            caption={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'Tracking active and planned work'}
+            description={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'All initiatives'}
           />
           <SummaryCard
-            label="Active"
+            label="Active Focus"
             icon={ListChecks}
             value={statusCounts.active}
-            caption={`${statusCounts.planning} planning · ${statusCounts.on_hold} on hold`}
+            description={`${statusCounts.planning} in planning`}
           />
           <SummaryCard
             label="Open tasks"
             icon={Users}
             value={openTaskTotal}
-            caption={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for assignments'}
+            description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
           />
-          <Card className="border-muted/60 bg-background">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completion rate</CardTitle>
-              <CircleCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold text-foreground">{completionRate}%</div>
-              <Progress value={completionRate} className="mt-2 h-2" />
-              <p className="mt-1 text-xs text-muted-foreground">
-                {statusCounts.completed} of {projects.length} projects
-              </p>
+          <Card className="overflow-hidden border-muted/50 bg-background shadow-sm transition-all hover:shadow-md">
+            <CardContent className="flex items-center gap-5 p-5">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 leading-none">Portfolio Health</p>
+                  <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{completionRate}%</span>
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-500 ease-out"
+                    style={{ width: `${completionRate}%` }}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
