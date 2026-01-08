@@ -1,92 +1,42 @@
-/**
- * Account Operations Helpers
- * 
- * Functions for account management: password reset, change, deletion
- */
-
 import { auth } from '@/lib/firebase'
 import {
-    sendPasswordResetEmail,
-    verifyPasswordResetCode as firebaseVerifyResetCode,
-    confirmPasswordReset as firebaseConfirmReset,
+    sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+    verifyPasswordResetCode as firebaseVerifyPasswordResetCode,
+    confirmPasswordReset as firebaseConfirmPasswordReset,
+    updateProfile as updateFirebaseProfile,
     EmailAuthProvider,
     reauthenticateWithCredential,
-    updatePassword,
-    deleteUser,
+    updatePassword as firebaseUpdatePassword,
+    deleteUser as firebaseDeleteUser,
+    User as FirebaseUser,
 } from 'firebase/auth'
+import { toISO } from '@/lib/dates'
 import { isFirebaseError } from './utils'
 import { getFriendlyAuthErrorMessage } from './error-utils'
+import type { AuthUser } from './types'
 
 /**
- * Password strength validation rules
+ * Send a password reset email
  */
-export interface PasswordValidationResult {
-    valid: boolean
-    errors: string[]
-}
-
-export function validatePasswordStrength(password: string): PasswordValidationResult {
-    const errors: string[] = []
-
-    if (password.length < 8) {
-        errors.push('Password must be at least 8 characters long')
-    }
-    if (!/[A-Z]/.test(password)) {
-        errors.push('Password must contain at least one uppercase letter')
-    }
-    if (!/[a-z]/.test(password)) {
-        errors.push('Password must contain at least one lowercase letter')
-    }
-    if (!/[0-9]/.test(password)) {
-        errors.push('Password must contain at least one number')
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-        errors.push('Password must contain at least one special character')
-    }
-
-    return {
-        valid: errors.length === 0,
-        errors,
-    }
-}
-
-/**
- * Throws an error if password is not strong enough
- */
-export function assertPasswordStrength(password: string): void {
-    const result = validatePasswordStrength(password)
-    if (!result.valid) {
-        throw new Error(result.errors[0])
-    }
-}
-
-/**
- * Send password reset email
- */
-export async function sendResetPasswordEmail(
-    email: string,
-    appUrl?: string
-): Promise<void> {
+export async function sendPasswordResetEmail(email: string): Promise<void> {
     if (!email || !email.trim()) {
         throw new Error('Enter the email associated with your account')
     }
 
     const normalizedEmail = email.trim().toLowerCase()
-    const resolvedAppUrl = appUrl ||
-        process.env.NEXT_PUBLIC_APP_URL ||
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ||
         (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
 
     const actionCodeSettings = {
-        url: `${resolvedAppUrl}/auth/reset`,
+        url: `${appUrl}/auth/reset`,
         handleCodeInApp: true
     }
 
     try {
-        await sendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings)
+        await firebaseSendPasswordResetEmail(auth, normalizedEmail, actionCodeSettings)
     } catch (error: unknown) {
         console.error('Password reset error:', error)
         if (isFirebaseError(error) && error.code === 'auth/user-not-found') {
-            // Don't reveal if user exists
             return
         }
         throw new Error(getFriendlyAuthErrorMessage(error))
@@ -94,11 +44,11 @@ export async function sendResetPasswordEmail(
 }
 
 /**
- * Verify password reset code
+ * Verify a password reset code
  */
-export async function verifyResetCode(oobCode: string): Promise<string> {
+export async function verifyPasswordResetCode(oobCode: string): Promise<string> {
     try {
-        return await firebaseVerifyResetCode(auth, oobCode)
+        return await firebaseVerifyPasswordResetCode(auth, oobCode)
     } catch (error: unknown) {
         console.error('Password reset code verification error:', error)
         throw new Error(getFriendlyAuthErrorMessage(error))
@@ -106,11 +56,11 @@ export async function verifyResetCode(oobCode: string): Promise<string> {
 }
 
 /**
- * Confirm password reset with new password
+ * Confirm a password reset
  */
-export async function confirmReset(oobCode: string, newPassword: string): Promise<void> {
+export async function confirmPasswordReset(oobCode: string, newPassword: string): Promise<void> {
     try {
-        await firebaseConfirmReset(auth, oobCode, newPassword)
+        await firebaseConfirmPasswordReset(auth, oobCode, newPassword)
     } catch (error: unknown) {
         console.error('Password reset confirmation error:', error)
         throw new Error(getFriendlyAuthErrorMessage(error))
@@ -118,9 +68,57 @@ export async function confirmReset(oobCode: string, newPassword: string): Promis
 }
 
 /**
- * Re-authenticate user with password
+ * Update the user's profile information
  */
-export async function reauthenticateUser(password: string): Promise<void> {
+export async function updateProfile(
+    currentUser: AuthUser,
+    data: Partial<AuthUser>,
+    onNotify: (user: AuthUser) => void
+): Promise<AuthUser> {
+    const firebaseUser = auth.currentUser
+    if (!firebaseUser) {
+        throw new Error('No authenticated user')
+    }
+
+    try {
+        const profileUpdates: { displayName?: string | null; photoURL?: string | null } = {}
+        let resolvedName: string | undefined
+        if (typeof data.name === 'string') {
+            resolvedName = data.name.trim()
+            if (resolvedName.length > 0 && resolvedName !== firebaseUser.displayName) {
+                profileUpdates.displayName = resolvedName
+            }
+        }
+
+        const hasPhotoUpdate = Object.prototype.hasOwnProperty.call(data, 'photoURL')
+        if (hasPhotoUpdate) {
+            profileUpdates.photoURL = data.photoURL ?? null
+        }
+
+        if (Object.keys(profileUpdates).length > 0) {
+            await updateFirebaseProfile(firebaseUser, profileUpdates)
+        }
+
+        const updatedUser: AuthUser = {
+            ...currentUser,
+            ...data,
+            name: typeof resolvedName === 'string' && resolvedName.length > 0 ? resolvedName : currentUser.name,
+            photoURL: hasPhotoUpdate ? data.photoURL ?? null : currentUser.photoURL,
+            updatedAt: toISO(),
+        }
+
+        onNotify(updatedUser)
+        return updatedUser
+    } catch (error: unknown) {
+        console.error('Profile update error:', error)
+        throw new Error('Failed to update profile')
+    }
+}
+
+/**
+ * Re-authenticate the user with their current password
+ */
+export async function reauthenticate(password: string): Promise<void> {
     const user = auth.currentUser
     if (!user || !user.email) {
         throw new Error('No authenticated user')
@@ -139,24 +137,20 @@ export async function reauthenticateUser(password: string): Promise<void> {
 }
 
 /**
- * Change user password
+ * Change the user's password
  */
-export async function changeUserPassword(
-    currentPassword: string,
-    newPassword: string
-): Promise<void> {
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
     if (!currentPassword || !newPassword) {
         throw new Error('Current and new passwords are required')
     }
 
-    assertPasswordStrength(newPassword)
+    validatePasswordStrength(newPassword)
 
     try {
-        await reauthenticateUser(currentPassword)
+        await reauthenticate(currentPassword)
         const user = auth.currentUser
         if (!user) throw new Error('No authenticated user')
-        await updatePassword(user, newPassword)
-        console.log('Password changed successfully')
+        await firebaseUpdatePassword(user, newPassword)
     } catch (error: unknown) {
         console.error('Password change error:', error)
         if (error instanceof Error) throw error
@@ -165,10 +159,11 @@ export async function changeUserPassword(
 }
 
 /**
- * Delete user account
+ * Delete the user's account
  */
-export async function deleteUserAccount(
-    getIdToken: () => Promise<string>,
+export async function deleteAccount(
+    getIdToken: (forceRefresh?: boolean) => Promise<string>,
+    onClear: () => void,
     password?: string
 ): Promise<void> {
     const user = auth.currentUser
@@ -176,10 +171,10 @@ export async function deleteUserAccount(
 
     try {
         if (password) {
-            await reauthenticateUser(password)
+            await reauthenticate(password)
         }
 
-        const token = await getIdToken()
+        const token = await getIdToken(true)
         const response = await fetch('/api/auth/delete', {
             method: 'DELETE',
             headers: {
@@ -193,7 +188,8 @@ export async function deleteUserAccount(
             throw new Error(message)
         }
 
-        await deleteUser(user)
+        await firebaseDeleteUser(user)
+        onClear()
     } catch (error: unknown) {
         console.error('Account deletion error:', error)
         if (isFirebaseError(error) && error.code === 'auth/requires-recent-login') {
@@ -207,11 +203,11 @@ export async function deleteUserAccount(
 }
 
 /**
- * Disconnect an OAuth provider
+ * Disconnect an integration provider
  */
 export async function disconnectProvider(
-    providerId: string,
-    getIdToken: () => Promise<string>
+    getIdToken: () => Promise<string>,
+    providerId: string
 ): Promise<void> {
     const token = await getIdToken()
     const response = await fetch('/api/integrations/disconnect', {
@@ -227,5 +223,26 @@ export async function disconnectProvider(
         const payload = (await response.json().catch(() => ({}))) as { error?: string }
         const message = typeof payload?.error === 'string' ? payload.error : 'Failed to disconnect provider'
         throw new Error(message)
+    }
+}
+
+/**
+ * Validate password strength
+ */
+export function validatePasswordStrength(password: string): void {
+    if (password.length < 8) {
+        throw new Error('Password must be at least 8 characters long')
+    }
+    if (!/[A-Z]/.test(password)) {
+        throw new Error('Password must contain at least one uppercase letter')
+    }
+    if (!/[a-z]/.test(password)) {
+        throw new Error('Password must contain at least one lowercase letter')
+    }
+    if (!/[0-9]/.test(password)) {
+        throw new Error('Password must contain at least one number')
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        throw new Error('Password must contain at least one special character')
     }
 }

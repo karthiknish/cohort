@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { useVoiceInput } from '@/hooks/use-voice-input'
 import { useMentionData } from '@/hooks/use-mention-data'
 import { MentionDropdown, formatMention, type MentionItem } from './mention-dropdown'
+import { VoiceWaveform } from './voice-waveform'
 import type { AgentConversationSummary, AgentMessage } from '@/hooks/use-agent-mode'
 
 interface AgentModePanelProps {
@@ -409,6 +410,13 @@ export function AgentModePanel({
                     <p className="mt-2 text-xs text-destructive">{voiceError}</p>
                   )}
 
+                  {/* Voice Waveform - shows when listening */}
+                  {isListening && (
+                    <div className="mt-3">
+                      <VoiceWaveform isActive={isListening} />
+                    </div>
+                  )}
+
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {QUICK_SUGGESTIONS.map((suggestion) => (
                       <button
@@ -462,6 +470,13 @@ export function AgentModePanel({
                 <div className="border-t bg-destructive/10 px-4 py-2.5 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
                   <p className="text-xs text-destructive">{voiceError}</p>
+                </div>
+              )}
+
+              {/* Voice Waveform - shows when listening */}
+              {isListening && (
+                <div className="flex justify-center py-3 border-t bg-muted/10">
+                  <VoiceWaveform isActive={isListening} />
                 </div>
               )}
 

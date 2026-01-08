@@ -361,7 +361,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
 
     try {
-      const redirectTarget = `${window.location.origin}/dashboard/ads`
+      const redirectTarget = `${window.location.origin}${window.location.pathname}`
       if (providerId === PROVIDER_IDS.FACEBOOK) {
         console.log('[Meta OAuth Debug] Starting Meta OAuth flow...')
         console.log('[Meta OAuth Debug] Redirect target:', redirectTarget)
