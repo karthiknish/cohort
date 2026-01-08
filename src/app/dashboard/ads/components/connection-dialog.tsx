@@ -1,7 +1,7 @@
 'use client'
 
-import { memo, useCallback, useState } from 'react'
-import { Check, ChevronRight, ExternalLink, Loader2, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { memo, useCallback, useState, useEffect } from 'react'
+import { Check, ChevronRight, ExternalLink, Loader2, X, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import {
@@ -32,6 +32,44 @@ import { PROVIDER_INFO, PROVIDER_IDS, CONNECTION_STEPS, ERROR_GUIDANCE } from '.
 // =============================================================================
 
 export type ConnectionStep = 'idle' | 'redirecting' | 'authenticating' | 'fetching' | 'selecting' | 'syncing' | 'complete' | 'error'
+
+// =============================================================================
+// ERROR MESSAGE HELPERS
+// =============================================================================
+
+/**
+ * Map raw error messages to user-friendly guidance
+ */
+function getErrorGuidance(error: string): { title: string; action: string } | null {
+  const errorLower = error.toLowerCase()
+
+  if (errorLower.includes('popup') || errorLower.includes('blocked')) {
+    return ERROR_GUIDANCE.POPUP_BLOCKED
+  }
+  if (errorLower.includes('cancel') || errorLower.includes('closed')) {
+    return ERROR_GUIDANCE.OAUTH_CANCELLED
+  }
+  if (errorLower.includes('denied') || errorLower.includes('declined')) {
+    return ERROR_GUIDANCE.OAUTH_DENIED
+  }
+  if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
+    return ERROR_GUIDANCE.TIMEOUT
+  }
+  if (errorLower.includes('network') || errorLower.includes('internet') || errorLower.includes('failed to fetch')) {
+    return ERROR_GUIDANCE.NETWORK_ERROR
+  }
+  if (errorLower.includes('not configured') || errorLower.includes('environment')) {
+    return ERROR_GUIDANCE.NOT_CONFIGURED
+  }
+  if (errorLower.includes('rate limit') || errorLower.includes('too many')) {
+    return ERROR_GUIDANCE.RATE_LIMITED
+  }
+  if (errorLower.includes('no ad accounts') || errorLower.includes('no accounts')) {
+    return ERROR_GUIDANCE.NO_AD_ACCOUNTS
+  }
+
+  return null
+}
 
 interface ConnectionDialogProps {
   open: boolean
@@ -229,8 +267,31 @@ export const ConnectionDialog = memo(function ConnectionDialog({
             </>
           )}
 
-          {/* Connection progress */}
-          {(isInProgress || connectionStep === 'complete') && (
+          {/* Redirecting state - special handling for redirect-based OAuth */}
+          {connectionStep === 'redirecting' && providerInfo.loginMethod === 'redirect' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <ArrowRight className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Redirecting to {providerInfo.shortName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    You&apos;ll be taken to {providerInfo.shortName} to log in
+                  </p>
+                </div>
+              </div>
+              <Alert className="border-blue-200 bg-blue-50">
+                <ExternalLink className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-sm text-blue-800">
+                  After logging in, you&apos;ll be automatically redirected back here to complete setup.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          {/* Connection progress - for popup flows and post-redirect steps */}
+          {((isInProgress && !(connectionStep === 'redirecting' && providerInfo.loginMethod === 'redirect')) || connectionStep === 'complete') && (
             <ConnectionProgress step={connectionStep} providerName={providerInfo.name} />
           )}
 
@@ -238,17 +299,13 @@ export const ConnectionDialog = memo(function ConnectionDialog({
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Connection failed</AlertTitle>
+              <AlertTitle>{getErrorGuidance(error)?.title ?? 'Connection failed'}</AlertTitle>
               <AlertDescription className="space-y-2">
                 <p>{error}</p>
-                {error.toLowerCase().includes('popup') && (
-                  <p className="text-xs opacity-90">{ERROR_GUIDANCE.POPUP_BLOCKED.action}</p>
-                )}
-                {error.toLowerCase().includes('cancel') && (
-                  <p className="text-xs opacity-90">{ERROR_GUIDANCE.OAUTH_CANCELLED.action}</p>
-                )}
-                {error.toLowerCase().includes('denied') && (
-                  <p className="text-xs opacity-90">{ERROR_GUIDANCE.OAUTH_DENIED.action}</p>
+                {getErrorGuidance(error)?.action && (
+                  <p className="mt-2 text-xs font-medium opacity-90">
+                    {getErrorGuidance(error)?.action}
+                  </p>
                 )}
               </AlertDescription>
             </Alert>

@@ -152,12 +152,16 @@ export function AdConnectionsCard({
         await onOauthRedirect?.(selectedProvider.id)
         // The page will redirect, so we don't need to update state
       } else if (selectedProvider.connect) {
-        // For popup flow, show progress
+        // For popup flow, show progress through steps
         setConnectionStep('authenticating')
         await onConnect(selectedProvider.id, selectedProvider.connect)
+        setConnectionStep('fetching')
+        // Small delay to show the fetching step before completion
+        await new Promise((resolve) => setTimeout(resolve, 500))
         setConnectionStep('complete')
       }
     } catch {
+      // Error will be shown in the dialog via connectionErrors prop
       setConnectionStep('error')
     }
   }, [selectedProvider, onConnect, onOauthRedirect])

@@ -202,6 +202,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setMetaSetupMessage(null)
     setInitializingMeta(true)
+
+    // Add timeout to prevent hanging indefinitely
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
     try {
       const token = await getIdToken()
       const params = new URLSearchParams()
@@ -214,6 +219,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       const response = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
       if (!response.ok) {
@@ -226,11 +232,27 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           : 'Default ad account linked successfully.',
       })
       triggerRefresh()
+
+      // Trigger initial sync processing immediately so user doesn't have to wait for cron
+      try {
+        await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch {
+        // Sync will be picked up by cron if this fails - non-critical
+        console.log('[initializeMetaIntegration] Initial sync trigger failed, will be processed by cron')
+      }
     } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to complete Meta setup')
+      // Handle abort error specifically
+      const isTimeout = error instanceof Error && error.name === 'AbortError'
+      const message = isTimeout
+        ? 'Request timed out. Please try again.'
+        : getErrorMessage(error, 'Unable to complete Meta setup')
       setMetaSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
     } finally {
+      clearTimeout(timeoutId)
       setInitializingMeta(false)
     }
   }, [getIdToken, toast, selectedClientId])
@@ -238,6 +260,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const initializeTikTokIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setTiktokSetupMessage(null)
     setInitializingTikTok(true)
+
+    // Add timeout to prevent hanging indefinitely
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
     try {
       const token = await getIdToken()
       const effectiveClientId = clientIdOverride ?? selectedClientId ?? null
@@ -250,6 +277,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       const response = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
       const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
       if (!response.ok) {
@@ -262,11 +290,27 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           : 'Default ad account linked successfully.',
       })
       triggerRefresh()
+
+      // Trigger initial sync processing immediately so user doesn't have to wait for cron
+      try {
+        await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch {
+        // Sync will be picked up by cron if this fails - non-critical
+        console.log('[initializeTikTokIntegration] Initial sync trigger failed, will be processed by cron')
+      }
     } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to complete TikTok setup')
+      // Handle abort error specifically
+      const isTimeout = error instanceof Error && error.name === 'AbortError'
+      const message = isTimeout
+        ? 'Request timed out. Please try again.'
+        : getErrorMessage(error, 'Unable to complete TikTok setup')
       setTiktokSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.TIKTOK_SETUP_FAILED, description: message })
     } finally {
+      clearTimeout(timeoutId)
       setInitializingTikTok(false)
     }
   }, [getIdToken, toast, selectedClientId])
@@ -348,16 +392,36 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       } else if (provider === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
       } else if (provider === PROVIDER_IDS.GOOGLE) {
-        void initializeGoogleIntegration().then(() => {
-          toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Default account linked successfully.' })
+        void initializeGoogleIntegration().then(async () => {
+          toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
+          // Trigger initial sync processing immediately
+          const token = await getIdToken()
+          try {
+            await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          } catch {
+            console.log('[initializeGoogleIntegration] Initial sync trigger failed, will be processed by cron')
+          }
         }).catch(err => {
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize Google Ads') })
         })
       } else if (provider === PROVIDER_IDS.LINKEDIN) {
-        void initializeLinkedInIntegration().then(() => {
-          toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Default account linked successfully.' })
+        void initializeLinkedInIntegration().then(async () => {
+          toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
+          // Trigger initial sync processing immediately
+          const token = await getIdToken()
+          try {
+            await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          } catch {
+            console.log('[initializeLinkedInIntegration] Initial sync trigger failed, will be processed by cron')
+          }
         }).catch(err => {
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize LinkedIn Ads') })
         })

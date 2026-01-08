@@ -1,12 +1,27 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoaderCircle } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
+
+const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
+
+/**
+ * Check if a valid session cookie exists.
+ * This helps prevent the "Sign in required" flash on reload when
+ * Firebase is still initializing but the user has a valid session.
+ */
+function hasValidSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false
+  const match = document.cookie.match(new RegExp(`(?:^|; )${SESSION_EXPIRES_COOKIE}=([^;]*)`))
+  if (!match) return false
+  const expiresAt = Number.parseInt(decodeURIComponent(match[1]), 10)
+  return Number.isFinite(expiresAt) && expiresAt > Date.now()
+}
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -16,9 +31,25 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, isSyncing, signOut } = useAuth()
   const router = useRouter()
+  // Track if we're still waiting for Firebase to restore auth from a valid session
+  const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
+
+  // Clear awaiting state once user is loaded or auth loading completes
+  useEffect(() => {
+    if (user) {
+      setIsAwaitingAuthRestore(false)
+    } else if (!loading && !isSyncing) {
+      // Auth finished loading with no user - stop waiting
+      // Add a small delay to give Firebase one more chance to restore auth
+      const timeout = setTimeout(() => {
+        setIsAwaitingAuthRestore(false)
+      }, 100)
+      return () => clearTimeout(timeout)
+    }
+  }, [user, loading, isSyncing])
 
   useEffect(() => {
-    if (loading || isSyncing) return
+    if (loading || isSyncing || isAwaitingAuthRestore) return
 
     if (!user) {
       router.push('/')
@@ -32,7 +63,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     if (requiredRole && !hasRequiredRole(user.role, requiredRole)) {
       router.push('/dashboard')
     }
-  }, [user, loading, isSyncing, router, requiredRole])
+  }, [user, loading, isSyncing, isAwaitingAuthRestore, router, requiredRole])
 
   const handleBlockedSignOut = useCallback(async () => {
     try {
@@ -42,7 +73,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     }
   }, [signOut, router])
 
-  if (loading || isSyncing) {
+  if (loading || isSyncing || isAwaitingAuthRestore) {
     return (
       <AccessOverlay
         title={isSyncing ? 'Syncing your session' : 'Loading your workspace'}
