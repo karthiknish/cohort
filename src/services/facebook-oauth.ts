@@ -29,7 +29,9 @@ export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): str
   }
 
   const params = new URLSearchParams({
-    business_config_id: businessConfigId,
+    // Meta Business Login expects a configuration id parameter.
+    // Using the legacy /login/connect/authorize endpoint can lead to "This page isn't available".
+    config_id: businessConfigId,
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
@@ -40,11 +42,11 @@ export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): str
     params.set('state', state)
   }
 
-  const finalUrl = `https://business.facebook.com/login/connect/authorize?${params.toString()}`
+  const finalUrl = `https://www.facebook.com/${META_GRAPH_API_VERSION}/dialog/oauth?${params.toString()}`
 
   // Debug: Log all OAuth parameters
   console.log('[buildMetaBusinessLoginUrl] OAuth URL Details:', {
-    business_config_id: businessConfigId,
+    config_id: businessConfigId,
     client_id: appId,
     redirect_uri: redirectUri,
     redirect_uri_encoded: encodeURIComponent(redirectUri),
