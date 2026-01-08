@@ -42,6 +42,7 @@ export const GET = createApiHandler(
         message: (data.lastSyncMessage as string | undefined) ?? null,
         linkedAt: toISO(data.linkedAt),
         accountId: typeof data.accountId === 'string' && data.accountId.length > 0 ? data.accountId : null,
+        accountName: typeof data.accountName === 'string' && data.accountName.length > 0 ? data.accountName : null,
         autoSyncEnabled: typeof data.autoSyncEnabled === 'boolean' ? data.autoSyncEnabled : null,
         syncFrequencyMinutes:
           typeof data.syncFrequencyMinutes === 'number' && Number.isFinite(data.syncFrequencyMinutes)

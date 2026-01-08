@@ -1,5 +1,6 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
 import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
+import { fetchLinkedInAdAccounts } from '@/services/integrations/linkedin-ads'
 
 // =============================================================================
 // LINKEDIN OAUTH CONFIGURATION
@@ -289,6 +290,17 @@ export async function completeLinkedInOAuthFlow(options: {
     : null
 
   // Persist the tokens
+  let accountId: string | null = null
+  let accountName: string | null = null
+  try {
+    const accounts = await fetchLinkedInAdAccounts({ accessToken: tokenResponse.access_token })
+    const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0]
+    accountId = preferredAccount?.id ?? null
+    accountName = preferredAccount?.name ?? null
+  } catch (error) {
+    console.warn('[LinkedIn OAuth] Failed to resolve account name during OAuth completion:', error)
+  }
+
   await persistIntegrationTokens({
     userId,
     providerId: 'linkedin',
@@ -296,6 +308,8 @@ export async function completeLinkedInOAuthFlow(options: {
     accessToken: tokenResponse.access_token,
     refreshToken: tokenResponse.refresh_token ?? null,
     scopes: LINKEDIN_ADS_SCOPES,
+    accountId,
+    accountName,
     accessTokenExpiresAt: expiresAt,
     refreshTokenExpiresAt: refreshTokenExpiresAt,
   })

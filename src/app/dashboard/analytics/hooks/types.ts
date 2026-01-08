@@ -46,6 +46,7 @@ export interface AlgorithmicInsight {
 
 export const PROVIDER_LABELS: Record<string, string> = {
   google: 'Google Ads',
+  'google-analytics': 'Google Analytics',
   facebook: 'Meta Ads',
   linkedin: 'LinkedIn Ads',
   tiktok: 'TikTok Ads',
@@ -60,6 +61,7 @@ export const PERIOD_OPTIONS = [
 export const PLATFORM_OPTIONS = [
   { value: 'all', label: 'All platforms' },
   { value: 'google', label: 'Google Ads' },
+  { value: 'google-analytics', label: 'Google Analytics' },
   { value: 'facebook', label: 'Meta Ads' },
   { value: 'linkedin', label: 'LinkedIn Ads' },
 ] as const

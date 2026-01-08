@@ -34,6 +34,7 @@ import {
   signInWithLinkedInViaPopup,
   signInWithGoogleViaPopup,
 } from './oauth-providers'
+import { connectGoogleAnalyticsViaPopup } from './oauth-providers'
 
 import {
   sendPasswordResetEmail,
@@ -197,6 +198,11 @@ export class AuthService {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
     await connectGoogleAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
   }
+
+    async connectGoogleAnalyticsAccount(clientId?: string | null): Promise<void> {
+      const currentUser = this.ensureAuthenticatedFirebaseUser()
+      await connectGoogleAnalyticsViaPopup({ currentUser, authUser: this.currentUser, clientId })
+    }
 
   async connectFacebookAdsAccount(clientId?: string | null): Promise<void> {
     const currentUser = this.ensureAuthenticatedFirebaseUser()

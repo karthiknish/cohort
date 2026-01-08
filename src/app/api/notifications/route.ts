@@ -56,9 +56,22 @@ function mapNotification(doc: FirebaseFirestore.QueryDocumentSnapshot, userId: s
 
   return {
     id: doc.id,
-    kind: typeof data.kind === 'string' && (data.kind === 'task.created' || data.kind === 'collaboration.message' || data.kind === 'proposal.deck.ready')
-      ? (data.kind as WorkspaceNotificationKind)
-      : 'task.created',
+    kind:
+      typeof data.kind === 'string' &&
+      (
+        data.kind === 'task.created' ||
+        data.kind === 'task.updated' ||
+        data.kind === 'task.comment' ||
+        data.kind === 'task.mention' ||
+        data.kind === 'project.created' ||
+        data.kind === 'collaboration.message' ||
+        data.kind === 'collaboration.mention' ||
+        data.kind === 'proposal.deck.ready' ||
+        data.kind === 'invoice.sent' ||
+        data.kind === 'invoice.paid'
+      )
+        ? (data.kind as WorkspaceNotificationKind)
+        : 'task.created',
     title: typeof data.title === 'string' ? data.title : 'Notification',
     body: typeof data.body === 'string' ? data.body : '',
     actor: {

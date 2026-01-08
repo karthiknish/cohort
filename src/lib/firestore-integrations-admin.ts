@@ -80,6 +80,7 @@ export async function persistIntegrationTokens(options: {
   status?: 'pending' | 'success' | 'error' | 'never'
   refreshToken?: string | null
   accountId?: string | null
+  accountName?: string | null
   developerToken?: string | null
   loginCustomerId?: string | null
   managerCustomerId?: string | null
@@ -113,6 +114,7 @@ export async function updateIntegrationCredentials(options: {
   loginCustomerId?: string | null
   managerCustomerId?: string | null
   accountId?: string | null
+  accountName?: string | null
 }): Promise<void> {
   const {
     userId,

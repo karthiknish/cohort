@@ -33,5 +33,10 @@ export {
   createGoogleAudience,
 } from './campaigns'
 
-
-
+// Insights
+export {
+  calculateGoogleAdsInsights,
+  calculateGoogleAdsMetrics,
+  generateGoogleAdsInsights,
+} from './insights'
+export type { GoogleAdsRawMetrics } from './insights'

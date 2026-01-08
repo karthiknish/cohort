@@ -55,6 +55,7 @@ type PersistTokensOptions = {
   status?: 'pending' | 'success' | 'error' | 'never'
   refreshToken?: string | null
   accountId?: string | null
+  accountName?: string | null
   developerToken?: string | null
   loginCustomerId?: string | null
   managerCustomerId?: string | null
@@ -72,6 +73,7 @@ type UpdateCredentialsOptions = {
   loginCustomerId?: string | null
   managerCustomerId?: string | null
   accountId?: string | null
+  accountName?: string | null
 }
 
 type SyncJobOptions = {
@@ -92,6 +94,7 @@ export function buildIntegrationPersistPayload<TTimestamp>(
     status = 'pending',
     refreshToken = null,
     accountId = null,
+    accountName = null,
     developerToken = null,
     loginCustomerId = null,
     managerCustomerId = null,
@@ -108,6 +111,7 @@ export function buildIntegrationPersistPayload<TTimestamp>(
     lastSyncStatus: status,
     lastSyncRequestedAt: helpers.serverTimestamp(),
     accountId,
+    accountName,
     developerToken,
     loginCustomerId,
     managerCustomerId,
@@ -130,6 +134,7 @@ export function buildIntegrationUpdatePayload<TTimestamp>(
     loginCustomerId,
     managerCustomerId,
     accountId,
+    accountName,
   } = options
 
   const updatePayload: Record<string, unknown> = {
@@ -143,6 +148,7 @@ export function buildIntegrationUpdatePayload<TTimestamp>(
   if (loginCustomerId !== undefined) updatePayload.loginCustomerId = loginCustomerId
   if (managerCustomerId !== undefined) updatePayload.managerCustomerId = managerCustomerId
   if (accountId !== undefined) updatePayload.accountId = accountId
+  if (accountName !== undefined) updatePayload.accountName = accountName
   if (accessTokenExpiresAt !== undefined) {
     updatePayload.accessTokenExpiresAt = helpers.toTimestamp(accessTokenExpiresAt)
   }
@@ -184,6 +190,7 @@ export function mapIntegrationSnapshot<TTimestamp extends { toDate?: () => Date 
     refreshToken: (data.refreshToken as string | null) ?? null,
     scopes: coerceStringArray(data.scopes),
     accountId: (data.accountId as string | undefined) ?? null,
+    accountName: typeof data.accountName === 'string' && data.accountName.length > 0 ? data.accountName : null,
     developerToken: (data.developerToken as string | undefined) ?? null,
     loginCustomerId: (data.loginCustomerId as string | undefined) ?? null,
     managerCustomerId: (data.managerCustomerId as string | undefined) ?? null,

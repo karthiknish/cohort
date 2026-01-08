@@ -37,4 +37,10 @@ export {
   createLinkedInAudience,
 } from './campaigns'
 
-
+// Insights
+export {
+  calculateLinkedInAdsInsights,
+  calculateLinkedInAdsMetrics,
+  generateLinkedInAdsInsights,
+} from './insights'
+export type { LinkedInAdsRawMetrics } from './insights'

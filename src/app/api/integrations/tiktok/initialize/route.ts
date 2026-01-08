@@ -50,6 +50,7 @@ export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sens
       providerId: 'tiktok',
       clientId,
       accountId: preferredAccount.id,
+      accountName: preferredAccount.name,
     })
 
     return {

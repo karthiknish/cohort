@@ -40,7 +40,7 @@ const updateTaskSchema = z.object({
     ])
     .optional(),
   tags: z.array(z.string().trim().min(1).max(60)).optional(),
-})
+}).strict()
 
 type UpdateTaskInput = z.infer<typeof updateTaskSchema>
 

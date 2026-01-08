@@ -49,6 +49,24 @@ export type StoredTask = {
   deletedAt?: unknown
 }
 
+export type StoredTaskComment = {
+  taskId?: unknown
+  content?: unknown
+  format?: unknown
+  authorId?: unknown
+  authorName?: unknown
+  authorRole?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+  deletedAt?: unknown
+  deletedBy?: unknown
+  deleted?: unknown
+  attachments?: unknown
+  mentions?: unknown
+  parentCommentId?: unknown
+  threadRootId?: unknown
+}
+
 // ============================================================================
 // Finance Types
 // ============================================================================
@@ -92,6 +110,81 @@ export type StoredFinanceCost = {
   amount?: unknown
   cadence?: unknown
   currency?: unknown
+  workspaceId?: unknown
+  createdBy?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+export type StoredFinanceExpenseCategory = {
+  name?: unknown
+  code?: unknown
+  description?: unknown
+  isActive?: unknown
+  isSystem?: unknown
+  sortOrder?: unknown
+  workspaceId?: unknown
+  createdBy?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+export type StoredFinanceVendor = {
+  name?: unknown
+  email?: unknown
+  phone?: unknown
+  website?: unknown
+  notes?: unknown
+  isActive?: unknown
+  workspaceId?: unknown
+  createdBy?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+export type StoredFinanceExpense = {
+  description?: unknown
+  categoryId?: unknown
+  categoryName?: unknown
+  vendorId?: unknown
+  vendorName?: unknown
+  amount?: unknown
+  currency?: unknown
+  costType?: unknown
+  incurredAt?: unknown
+  status?: unknown
+  employeeId?: unknown
+  submittedAt?: unknown
+  approvedAt?: unknown
+  rejectedAt?: unknown
+  decidedBy?: unknown
+  decisionNote?: unknown
+  attachments?: unknown
+  workspaceId?: unknown
+  createdBy?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+}
+
+export type StoredFinancePurchaseOrder = {
+  number?: unknown
+  status?: unknown
+  vendorId?: unknown
+  vendorName?: unknown
+  currency?: unknown
+  items?: unknown
+  totalAmount?: unknown
+  notes?: unknown
+  requestedBy?: unknown
+  submittedAt?: unknown
+  approvedAt?: unknown
+  rejectedAt?: unknown
+  decidedBy?: unknown
+  decisionNote?: unknown
+  orderedAt?: unknown
+  receivedAt?: unknown
+  workspaceId?: unknown
+  createdBy?: unknown
   createdAt?: unknown
   updatedAt?: unknown
 }

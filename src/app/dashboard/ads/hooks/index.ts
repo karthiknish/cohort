@@ -1,3 +1,6 @@
 export { useAdsMetrics, type UseAdsMetricsReturn } from './use-ads-metrics'
 export { useAdsConnections, type UseAdsConnectionsReturn } from './use-ads-connections'
 export { useAdsAutomation, type UseAdsAutomationReturn } from './use-ads-automation'
+export { useDerivedMetrics, type DerivedMetrics, type UseDerivedMetricsOptions } from './use-derived-metrics'
+export { useFormulaEditor, type UseFormulaEditorReturn, type FormulaValidationResult } from './use-formula-editor'
+export { useMetricsComparison, type UseMetricsComparisonReturn, type PeriodComparison, type ProviderComparison } from './use-metrics-comparison'

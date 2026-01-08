@@ -1,5 +1,6 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
 import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
+import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
 
 // =============================================================================
 // GOOGLE OAUTH CONFIGURATION
@@ -285,6 +286,32 @@ export async function completeGoogleOAuthFlow(options: {
     throw new GoogleOAuthError('No access token received from Google')
   }
 
+  // Best-effort: fetch account metadata so we can persist `accountName`.
+  // This should not block connecting if listing accounts fails (e.g. missing developer token).
+  let accountId: string | null = null
+  let accountName: string | null = null
+  let loginCustomerId: string | null = null
+  let managerCustomerId: string | null = null
+  try {
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? null
+    if (developerToken) {
+      const accounts = await fetchGoogleAdAccounts({
+        accessToken: tokenResponse.access_token,
+        developerToken,
+      })
+
+      const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]
+      if (primaryAccount) {
+        accountId = primaryAccount.id
+        accountName = primaryAccount.name
+        loginCustomerId = primaryAccount.loginCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
+        managerCustomerId = primaryAccount.managerCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
+      }
+    }
+  } catch (error) {
+    console.warn('[Google OAuth] Failed to resolve account name during OAuth completion:', error)
+  }
+
   // Persist the tokens
   await persistIntegrationTokens({
     userId,
@@ -293,6 +320,10 @@ export async function completeGoogleOAuthFlow(options: {
     accessToken: tokenResponse.access_token,
     refreshToken: tokenResponse.refresh_token ?? null,
     scopes: GOOGLE_ADS_SCOPES,
+    accountId,
+    accountName,
+    loginCustomerId,
+    managerCustomerId,
     accessTokenExpiresAt: tokenResponse.expires_in
       ? new Date(Date.now() + tokenResponse.expires_in * 1000)
       : null,

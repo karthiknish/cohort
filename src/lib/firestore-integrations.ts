@@ -70,6 +70,7 @@ export async function persistIntegrationTokens(options: {
   status?: 'pending' | 'success' | 'error' | 'never'
   refreshToken?: string | null
   accountId?: string | null
+  accountName?: string | null
   developerToken?: string | null
   loginCustomerId?: string | null
   managerCustomerId?: string | null
@@ -91,6 +92,7 @@ export async function persistIntegrationTokens(options: {
 export async function updateIntegrationCredentials(options: {
   workspaceId: string
   providerId: string
+  clientId?: string | null
   accessToken?: string | null
   refreshToken?: string | null
   idToken?: string | null
@@ -100,14 +102,16 @@ export async function updateIntegrationCredentials(options: {
   loginCustomerId?: string | null
   managerCustomerId?: string | null
   accountId?: string | null
+  accountName?: string | null
 }): Promise<void> {
   const {
     workspaceId,
     providerId,
+    clientId,
     ...payloadOptions
   } = options
 
-  const integrationRef = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
+  const integrationRef = getIntegrationDocRef(workspaceId, providerId, clientId)
 
   const updatePayload = buildIntegrationUpdatePayload(payloadOptions, timestampHelpers)
   await setDoc(integrationRef, updatePayload, { merge: true })
@@ -130,9 +134,10 @@ export async function enqueueSyncJob(options: {
 export async function getAdIntegration(options: {
   workspaceId: string
   providerId: string
+  clientId?: string | null
 }): Promise<AdIntegration | null> {
-  const { workspaceId, providerId } = options
-  const ref = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
+  const { workspaceId, providerId, clientId } = options
+  const ref = getIntegrationDocRef(workspaceId, providerId, clientId)
   const snapshot = await getDoc(ref)
   if (!snapshot.exists()) {
     return null
@@ -182,11 +187,12 @@ export async function failSyncJob(options: {
 export async function updateIntegrationStatus(options: {
   workspaceId: string
   providerId: string
+  clientId?: string | null
   status: 'pending' | 'success' | 'error'
   message?: string | null
 }): Promise<void> {
-  const { workspaceId, providerId } = options
-  const integrationRef = doc(db, 'workspaces', workspaceId, 'adIntegrations', providerId)
+  const { workspaceId, providerId, clientId } = options
+  const integrationRef = getIntegrationDocRef(workspaceId, providerId, clientId)
   await updateDoc(integrationRef, buildIntegrationStatusUpdate(options, timestampHelpers))
 }
 

@@ -48,6 +48,7 @@ export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sens
       providerId: 'facebook',
       clientId,
       accountId: preferredAccount.id,
+      accountName: preferredAccount.name,
     })
 
     return {

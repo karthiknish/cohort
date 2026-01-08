@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAuth } from '@/contexts/auth-context'
@@ -391,6 +392,9 @@ export default function TasksPage() {
 
   const initialLoading = loading && tasks.length === 0
 
+  const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected client' : 'All clients')
+  const scopeHelper = selectedClient ? 'Scoped to the selected client' : 'Showing tasks across all clients'
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -400,13 +404,31 @@ export default function TasksPage() {
           retryCount={retryCount}
           onRefresh={handleRefresh}
           onNewTaskClick={() => form.handleCreateOpenChange(true)}
+          scopeLabel={scopeLabel}
+          scopeHelper={scopeHelper}
         />
 
         {/* Summary Cards */}
-        <TaskSummaryCards
-          taskCounts={filters.taskCounts}
-          completionRate={filters.completionRate}
-        />
+        {initialLoading ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <Card key={idx} className="border-muted/60 bg-background">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-6 w-14" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <TaskSummaryCards
+            taskCounts={filters.taskCounts}
+            completionRate={filters.completionRate}
+          />
+        )}
 
         {/* Main Content */}
         <Tabs
@@ -552,11 +574,17 @@ export default function TasksPage() {
         <EditTaskSheet
           open={form.isEditOpen}
           onOpenChange={(open) => !open && form.handleEditClose()}
+          taskId={form.editingTask?.id ?? null}
           formState={form.editFormState}
           setFormState={form.setEditFormState}
           updating={form.updating}
           updateError={form.updateError}
           onSubmit={form.handleEditSubmit}
+          currentWorkspaceId={user?.agencyId ?? null}
+          currentUserId={user?.id ?? null}
+          currentUserName={user?.name ?? null}
+          currentUserRole={user?.role ?? null}
+          participants={selectedClient?.teamMembers ?? []}
         />
 
         {/* Delete Confirmation Dialog */}

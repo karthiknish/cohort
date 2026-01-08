@@ -35,7 +35,7 @@ export const baseTaskSchema = z.object({
       'Invalid due date'
     ),
   tags: z.array(z.string().trim().min(1).max(60)).default([]),
-})
+}).strict()
 
 type CreateTaskInput = z.infer<typeof baseTaskSchema>
 

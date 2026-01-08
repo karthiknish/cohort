@@ -1,5 +1,6 @@
 import { decrypt, encrypt } from '@/lib/crypto'
 import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
+import { fetchMetaAdAccounts } from '@/services/integrations/meta-ads'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 
@@ -168,12 +169,27 @@ export async function completeMetaOAuthFlow(options: {
   }
 
   // Persist the tokens
+  let accountId: string | null = null
+  let accountName: string | null = null
+  try {
+    if (longLivedToken) {
+      const accounts = await fetchMetaAdAccounts({ accessToken: longLivedToken })
+      const preferredAccount = accounts.find((account) => account.account_status === 1) ?? accounts[0]
+      accountId = preferredAccount?.id ?? null
+      accountName = preferredAccount?.name ?? null
+    }
+  } catch (error) {
+    console.warn('[Meta OAuth] Failed to resolve account name during OAuth completion:', error)
+  }
+
   await persistIntegrationTokens({
     userId,
     providerId: 'facebook',
     clientId: clientId ?? null,
     accessToken: longLivedToken,
     scopes: ['ads_management', 'ads_read', 'business_management'],
+    accountId,
+    accountName,
     accessTokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
   })
 

@@ -27,6 +27,14 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - Financial insights and cash flow predictions
 - Self-serve subscription management with Stripe Checkout & Billing Portal
 
+### Expense Management (MVP)
+- Expense categories CRUD (Firestore-backed)
+- Vendor management CRUD
+- Expenses with cost types (fixed/variable/time/milestone/reimbursements)
+- Receipt / image attachments via Firebase Storage (client uploads)
+- Basic approval workflow (submit → approve/reject → mark paid)
+- Expense reports grouped by employee
+
 ### Proposal Generator
 - Dynamic form to collect client information
 - AI-powered proposal content generation
@@ -177,6 +185,28 @@ This project now includes hardened Firestore and Storage rules for production de
 	firebase deploy --only firestore:rules,firestore:indexes,storage:rules
 	```
 	The generated files (`firestore.rules`, `firestore.indexes.json`, `storage.rules`) match the application’s access patterns—users may only touch their own nested data, while administrative operations run through secured API routes using the Firebase Admin SDK.
+
+#### Expense APIs (Finance)
+
+- `GET /api/finance/expense-categories`
+- `POST /api/finance/expense-categories` (admin)
+- `PATCH /api/finance/expense-categories/:id` (admin)
+- `DELETE /api/finance/expense-categories/:id` (admin)
+- `POST /api/finance/expense-categories/seed-defaults` (admin)
+
+- `GET /api/finance/vendors`
+- `POST /api/finance/vendors` (admin)
+- `PATCH /api/finance/vendors/:id` (admin)
+- `DELETE /api/finance/vendors/:id` (admin)
+
+- `GET /api/finance/expenses`
+- `POST /api/finance/expenses`
+- `PATCH /api/finance/expenses/:id`
+- `POST /api/finance/expenses/:id` (status transitions)
+- `DELETE /api/finance/expenses/:id`
+- `GET /api/finance/expenses/report` (admin)
+
+Receipt uploads use Firebase client SDK and store files under `users/{uid}/expenses/...`.
 
 ### Monitoring & Observability (Sentry)
 

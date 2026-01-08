@@ -3,6 +3,8 @@ export type WorkspaceNotificationRole = 'admin' | 'team' | 'client'
 export type WorkspaceNotificationKind =
   | 'task.created'
   | 'task.updated'
+  | 'task.comment'
+  | 'task.mention'
   | 'project.created'
   | 'collaboration.message'
   | 'collaboration.mention'

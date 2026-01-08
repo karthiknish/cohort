@@ -4,12 +4,21 @@ import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 
+export interface AgentMessageMetadata {
+  action?: 'navigate' | 'execute' | 'response'
+  operation?: string
+  success?: boolean
+  data?: Record<string, unknown>
+}
+
 export interface AgentMessage {
   id: string
   type: 'user' | 'agent'
   content: string
   timestamp: Date
   route?: string | null
+  status?: 'success' | 'error' | 'info'
+  metadata?: AgentMessageMetadata
 }
 
 export interface AgentConversationSummary {
@@ -72,7 +81,13 @@ export function useAgentMode(): UseAgentModeReturn {
     setOpen((prev) => !prev)
   }, [])
 
-  const addMessage = useCallback((type: 'user' | 'agent', content: string | unknown, route?: string | null) => {
+  const addMessage = useCallback((
+    type: 'user' | 'agent',
+    content: string | unknown,
+    route?: string | null,
+    status?: 'success' | 'error' | 'info',
+    metadata?: AgentMessageMetadata
+  ) => {
     // Ensure content is always a string to prevent React error #301
     const safeContent = typeof content === 'string' ? content : String(content ?? '')
     const message: AgentMessage = {
@@ -81,6 +96,8 @@ export function useAgentMode(): UseAgentModeReturn {
       content: safeContent,
       timestamp: new Date(),
       route,
+      status,
+      metadata,
     }
     setMessages((prev) => [...prev, message])
     return message
@@ -135,31 +152,48 @@ export function useAgentMode(): UseAgentModeReturn {
         setConversationId(data.conversationId)
       }
 
-      // Add agent response
-      addMessage('agent', data.message, data.route)
+      // Determine status and metadata for enhanced UX
+      let status: 'success' | 'error' | 'info' = 'info'
+      const metadata: AgentMessageMetadata = {
+        action: data.action,
+        operation: data.operation,
+      }
 
       // Handle different action types
       if (data.action === 'navigate' && data.route) {
+        status = 'success'
+        metadata.success = true
+        // Add agent response with status
+        addMessage('agent', data.message, data.route, status, metadata)
         // Navigation action - go to the route after a brief delay
         setTimeout(() => {
           router.push(data.route!)
           setOpen(false)
         }, 800)
       } else if (data.action === 'execute' && data.executeResult) {
-        // Execute action - action was performed, optionally navigate
+        // Execute action - action was performed
+        status = data.executeResult.success ? 'success' : 'error'
+        metadata.success = data.executeResult.success
+        metadata.data = data.executeResult.data
+        addMessage('agent', data.message, data.route, status, metadata)
+
         if (data.executeResult.success) {
-          // Success - could show a toast or navigate to relevant page
           console.log('[useAgentMode] Action executed successfully:', data.operation, data.executeResult.data)
         } else {
-          // Failure - message already explains what to do
           console.warn('[useAgentMode] Action execution failed:', data.message)
         }
+      } else {
+        // Regular response
+        addMessage('agent', data.message, data.route, 'info', metadata)
       }
     } catch (error) {
       console.error('[useAgentMode] Error:', error)
       addMessage(
         'agent',
-        'Sorry, I had trouble processing that. Try saying "go to analytics" or "add 500 in ad spend".'
+        'Sorry, I had trouble processing that. Try saying "go to analytics" or "add 500 in ad spend".',
+        null,
+        'error',
+        { action: 'response', success: false }
       )
     } finally {
       setIsProcessing(false)

@@ -50,6 +50,8 @@ export {
 export {
   recordTaskNotification,
   recordTaskUpdatedNotification,
+  recordTaskCommentNotification,
+  recordTaskMentionNotifications,
   recordCollaborationNotification,
   recordMentionNotifications,
   recordProposalDeckReadyNotification,

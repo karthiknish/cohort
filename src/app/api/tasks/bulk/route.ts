@@ -15,15 +15,15 @@ const bulkUpdateSchema = z.object({
     priority: z.enum(TASK_PRIORITIES).optional(),
     assignedTo: z.array(z.string().trim().min(1).max(120)).optional(),
     tags: z.array(z.string().trim().min(1).max(60)).optional(),
-  }).refine(
+  }).strict().refine(
     (data) => Object.keys(data).length > 0,
     { message: 'At least one field to update is required' }
   ),
-})
+}).strict()
 
 const bulkDeleteSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one task ID is required').max(50, 'Maximum 50 tasks per request'),
-})
+}).strict()
 
 /**
  * PATCH /api/tasks/bulk - Update multiple tasks at once

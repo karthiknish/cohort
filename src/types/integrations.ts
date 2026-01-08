@@ -28,6 +28,7 @@ export interface AdIntegration {
   refreshToken?: string | null
   scopes: string[]
   accountId?: string | null
+  accountName?: string | null
   developerToken?: string | null
   loginCustomerId?: string | null
   lastSyncStatus?: 'never' | 'pending' | 'success' | 'error'

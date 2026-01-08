@@ -31,4 +31,10 @@ export {
   createTikTokAudience,
 } from './campaigns'
 
-
+// Insights
+export {
+  calculateTikTokAdsInsights,
+  calculateTikTokAdsMetrics,
+  generateTikTokAdsInsights,
+} from './insights'
+export type { TikTokAdsRawMetrics } from './insights'

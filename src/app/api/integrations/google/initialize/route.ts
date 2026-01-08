@@ -49,6 +49,7 @@ export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sens
       providerId: 'google',
       clientId,
       accountId,
+      accountName: primaryAccount.name,
       loginCustomerId: loginCustomerId ?? undefined,
       managerCustomerId: managerCustomerId ?? undefined,
       developerToken: developerToken ?? undefined,

@@ -47,6 +47,7 @@ export const POST = createApiHandler({ bodySchema, querySchema, rateLimit: 'sens
       providerId: 'linkedin',
       clientId,
       accountId: preferredAccount.id,
+      accountName: preferredAccount.name,
     })
 
     return {

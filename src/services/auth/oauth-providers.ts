@@ -11,12 +11,48 @@ import {
     FacebookAuthProvider,
     OAuthProvider,
     linkWithPopup,
+    reauthenticateWithPopup,
     signInWithPopup,
     User as FirebaseUser,
 } from 'firebase/auth'
 import { extractRefreshToken, isFirebaseError } from './utils'
 import { getFriendlyAuthErrorMessage } from './error-utils'
 import type { AuthUser } from './types'
+
+async function bestEffortInitializeIntegration(options: {
+    currentUser: FirebaseUser
+    endpoint: string
+    clientId?: string | null
+}): Promise<void> {
+    const { currentUser, endpoint, clientId } = options
+    try {
+        const jwt = await currentUser.getIdToken().catch(() => null)
+        if (!jwt) return
+
+        const params = new URLSearchParams()
+        if (clientId) params.set('clientId', clientId)
+        const url = params.toString().length > 0 ? `${endpoint}?${params.toString()}` : endpoint
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${jwt}`,
+            },
+            cache: 'no-store',
+        })
+
+        if (!response.ok) {
+            const payload = await response.json().catch(() => null)
+            console.warn('[OAuth Popup] Integration initialize failed', {
+                endpoint,
+                status: response.status,
+                payload,
+            })
+        }
+    } catch (error) {
+        console.warn('[OAuth Popup] Integration initialize error', { endpoint, error })
+    }
+}
 
 export interface OAuthConnectionOptions {
     currentUser: FirebaseUser
@@ -73,6 +109,15 @@ export async function connectGoogleAdsViaPopup(options: OAuthConnectionOptions):
             refreshToken,
             accessTokenExpiresAt,
         })
+
+        // Best-effort: populate accountId/accountName/loginCustomerId/managerCustomerId immediately.
+        // This uses the existing server initialize route (which can access Google Ads developer token).
+        await bestEffortInitializeIntegration({
+            currentUser,
+            endpoint: '/api/integrations/google/initialize',
+            clientId: integrationClientId ?? null,
+        })
+
         await enqueueSyncJob({
             workspaceId: authUser?.agencyId ?? currentUser.uid,
             providerId: 'google',
@@ -84,6 +129,99 @@ export async function connectGoogleAdsViaPopup(options: OAuthConnectionOptions):
             throw new Error('This Google account is already linked to another user.')
         }
         throw new Error('Failed to connect Google Ads. Please try again.')
+    }
+}
+
+/**
+ * Connect Google Analytics (GA4) account via OAuth popup
+ */
+export async function connectGoogleAnalyticsViaPopup(options: OAuthConnectionOptions): Promise<void> {
+    const { currentUser, authUser, clientId: integrationClientId } = options
+    const provider = new GoogleAuthProvider()
+    provider.addScope('https://www.googleapis.com/auth/analytics.readonly')
+    provider.addScope('email')
+
+    provider.setCustomParameters({
+        prompt: 'consent',
+        access_type: 'offline',
+    })
+
+    try {
+        const result = await linkWithPopup(currentUser, provider)
+        const credential = GoogleAuthProvider.credentialFromResult(result)
+        const tokenResponse = (result as {
+            _tokenResponse?: {
+                oauthAccessToken?: string
+                oauthRefreshToken?: string
+                refreshToken?: string
+                expiresIn?: string | number
+                expires_in?: string | number
+            }
+        })._tokenResponse
+
+        const resolvedAccessToken = credential?.accessToken ?? tokenResponse?.oauthAccessToken ?? null
+        const refreshToken = extractRefreshToken(credential, tokenResponse)
+        const expiresInSeconds = Number(tokenResponse?.expiresIn ?? tokenResponse?.expires_in ?? 0)
+        const accessTokenExpiresAt = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+            ? new Date(Date.now() + expiresInSeconds * 1000)
+            : undefined
+
+        await persistIntegrationTokens({
+            workspaceId: authUser?.agencyId ?? currentUser.uid,
+            providerId: 'google-analytics',
+            clientId: integrationClientId ?? null,
+            accessToken: resolvedAccessToken,
+            idToken: credential?.idToken ?? null,
+            scopes: ['https://www.googleapis.com/auth/analytics.readonly', 'email'],
+            refreshToken,
+            accessTokenExpiresAt,
+        })
+    } catch (error: unknown) {
+        // If the user already signed in with Google, the provider may already be linked.
+        // In that case, reauthenticate to obtain a fresh OAuth credential + access token.
+        if (isFirebaseError(error) && error.code === 'auth/provider-already-linked') {
+            try {
+                const result = await reauthenticateWithPopup(currentUser, provider)
+                const credential = GoogleAuthProvider.credentialFromResult(result)
+                const tokenResponse = (result as {
+                    _tokenResponse?: {
+                        oauthAccessToken?: string
+                        oauthRefreshToken?: string
+                        refreshToken?: string
+                        expiresIn?: string | number
+                        expires_in?: string | number
+                    }
+                })._tokenResponse
+
+                const resolvedAccessToken = credential?.accessToken ?? tokenResponse?.oauthAccessToken ?? null
+                const refreshToken = extractRefreshToken(credential, tokenResponse)
+                const expiresInSeconds = Number(tokenResponse?.expiresIn ?? tokenResponse?.expires_in ?? 0)
+                const accessTokenExpiresAt = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+                    ? new Date(Date.now() + expiresInSeconds * 1000)
+                    : undefined
+
+                await persistIntegrationTokens({
+                    workspaceId: authUser?.agencyId ?? currentUser.uid,
+                    providerId: 'google-analytics',
+                    clientId: integrationClientId ?? null,
+                    accessToken: resolvedAccessToken,
+                    idToken: credential?.idToken ?? null,
+                    scopes: ['https://www.googleapis.com/auth/analytics.readonly', 'email'],
+                    refreshToken,
+                    accessTokenExpiresAt,
+                })
+                return
+            } catch (reauthError: unknown) {
+                console.error('Google Analytics reauth error:', reauthError)
+                throw new Error('Failed to connect Google Analytics. Please try again.')
+            }
+        }
+
+        console.error('Google Analytics connection error:', error)
+        if (isFirebaseError(error) && error.code === 'auth/credential-already-in-use') {
+            throw new Error('This Google account is already linked to another user.')
+        }
+        throw new Error('Failed to connect Google Analytics. Please try again.')
     }
 }
 
@@ -124,6 +262,13 @@ export async function connectFacebookAdsViaPopup(options: OAuthConnectionOptions
             accessTokenExpiresAt,
         })
 
+        // Best-effort: populate accountId/accountName immediately.
+        await bestEffortInitializeIntegration({
+            currentUser,
+            endpoint: '/api/integrations/meta/initialize',
+            clientId: integrationClientId ?? null,
+        })
+
         await enqueueSyncJob({
             workspaceId: authUser?.agencyId ?? currentUser.uid,
             providerId: 'facebook',
@@ -159,6 +304,14 @@ export async function connectLinkedInAdsViaPopup(options: OAuthConnectionOptions
             idToken: credential?.idToken ?? null,
             scopes: ['r_ads', 'rw_ads'],
         })
+
+        // Best-effort: populate accountId/accountName immediately.
+        await bestEffortInitializeIntegration({
+            currentUser,
+            endpoint: '/api/integrations/linkedin/initialize',
+            clientId: integrationClientId ?? null,
+        })
+
         await enqueueSyncJob({
             workspaceId: authUser?.agencyId ?? currentUser.uid,
             providerId: 'linkedin',

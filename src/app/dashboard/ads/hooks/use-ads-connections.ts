@@ -34,6 +34,7 @@ export interface IntegrationStatusInfo {
   lastSyncRequestedAt?: string | null
   status?: string
   accountId?: string | null
+  accountName?: string | null
 }
 
 export interface UseAdsConnectionsReturn {
@@ -113,6 +114,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       lastSyncRequestedAt: status.lastSyncRequestedAt,
       status: status.status,
       accountId: status.accountId,
+      accountName: status.accountName,
     }
   })
 
@@ -157,7 +159,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   // Initialize integration helpers
   const initializeGoogleIntegration = useCallback(async () => {
     const token = await getIdToken()
-    const response = await fetch(API_ENDPOINTS.INTEGRATIONS.GOOGLE_INIT, {
+
+    const params = new URLSearchParams()
+    const effectiveClientId = selectedClientId ?? null
+    if (effectiveClientId) params.set('clientId', effectiveClientId)
+    const url = params.toString().length > 0
+      ? `${API_ENDPOINTS.INTEGRATIONS.GOOGLE_INIT}?${params.toString()}`
+      : API_ENDPOINTS.INTEGRATIONS.GOOGLE_INIT
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -166,11 +176,19 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       throw new Error(parseApiError(payload) ?? ERROR_MESSAGES.GOOGLE_INIT_FAILED)
     }
     return response.json()
-  }, [getIdToken])
+  }, [getIdToken, selectedClientId])
 
   const initializeLinkedInIntegration = useCallback(async () => {
     const token = await getIdToken()
-    const response = await fetch(API_ENDPOINTS.INTEGRATIONS.LINKEDIN_INIT, {
+
+    const params = new URLSearchParams()
+    const effectiveClientId = selectedClientId ?? null
+    if (effectiveClientId) params.set('clientId', effectiveClientId)
+    const url = params.toString().length > 0
+      ? `${API_ENDPOINTS.INTEGRATIONS.LINKEDIN_INIT}?${params.toString()}`
+      : API_ENDPOINTS.INTEGRATIONS.LINKEDIN_INIT
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -179,7 +197,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       throw new Error(parseApiError(payload) ?? ERROR_MESSAGES.LINKEDIN_INIT_FAILED)
     }
     return response.json()
-  }, [getIdToken])
+  }, [getIdToken, selectedClientId])
 
   const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setMetaSetupMessage(null)

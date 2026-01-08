@@ -13,6 +13,7 @@ export * from './task-view-controls'
 export * from './task-results-count'
 export * from './task-kanban'
 export * from './task-bulk-toolbar'
+export * from './task-comments'
 
 // Hooks
 export * from './hooks'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,9 @@ import { useFinanceData } from '../hooks/use-finance-data'
 import { FinanceHeader } from './finance-header'
 import { FinanceStatsGrid } from './finance-stats-grid'
 import { FinanceCostsCard } from './finance-costs-card'
+import { FinanceExpensesCard } from './finance-expenses-card'
+import { FinanceExpenseReportCard } from './finance-expense-report-card'
+import { FinancePurchaseOrdersCard } from './finance-purchase-orders-card'
 import { FinanceChartsSection } from './finance-charts-section'
 import { FinanceForecastCard } from './finance-forecast-card'
 import { FinanceInvoiceTable } from './finance-invoice-table'
@@ -20,12 +23,14 @@ import { FinanceDashboardSkeleton } from './finance-dashboard-skeleton'
 import { RecurringInvoicesCard } from './recurring-invoices-card'
 
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
-import { BarChart3, FileText, Users, Megaphone, RefreshCw, CircleAlert } from 'lucide-react'
+import { BarChart3, RefreshCw, CircleAlert } from 'lucide-react'
 
 export function FinanceDashboard() {
   const { user } = useAuth()
+  const { selectedClientId, selectedClient } = useClientContext()
   const { toast } = useToast()
   const isAdmin = user?.role === 'admin'
   const isClient = user?.role === 'client'
@@ -172,12 +177,22 @@ export function FinanceDashboard() {
   const isInitialLoading = !hasAttemptedLoad && isLoading
   const isRefreshing = hasAttemptedLoad && isLoading
 
+  const isEmptyState = useMemo(() => {
+    const hasInvoices = filteredInvoices.length > 0
+    const hasCosts = costs.length > 0
+    const hasChart = chartData.length > 0
+    return !isLoading && !loadError && !hasInvoices && !hasCosts && !hasChart
+  }, [chartData.length, costs.length, filteredInvoices.length, isLoading, loadError])
+
+  const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected workspace' : 'All workspaces')
+  const scopeHelper = selectedClient ? 'Scoped to the selected workspace' : 'Showing totals across workspaces'
+
   if (isInitialLoading) {
     return <FinanceDashboardSkeleton />
   }
 
-  // Error state with retry
-  if (loadError && !hasAttemptedLoad) {
+  // Error state with retry (no data loaded)
+  if (loadError && hasAttemptedLoad && filteredInvoices.length === 0 && costs.length === 0 && chartData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="rounded-full bg-destructive/10 p-4 mb-4">
@@ -214,7 +229,10 @@ export function FinanceDashboard() {
         onSelectPeriod={setSelectedPeriod}
         onRefresh={refresh}
         refreshing={isRefreshing}
+        scopeLabel={scopeLabel}
+        scopeHelper={scopeHelper}
         paymentsHref="/dashboard/finance/payments"
+        manageInvoicesHref={!isClient ? '/dashboard/clients' : undefined}
         onExportData={handleExportData}
       />
       
@@ -238,25 +256,64 @@ export function FinanceDashboard() {
               Costs
             </TabsTrigger>
           )}
+          {!isClient && (
+            <TabsTrigger value="expenses" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Expenses
+            </TabsTrigger>
+          )}
+          {!isClient && (
+            <TabsTrigger value="purchaseOrders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Purchase Orders
+            </TabsTrigger>
+          )}
+          {!isClient && isAdmin && (
+            <TabsTrigger value="expenseReports" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              Expense Reports
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-0">
-          {/* Charts Section - Full Width */}
-          <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
-          
-          {/* Forecast Section */}
-          {forecast && forecast.length > 0 && (
-            <FinanceForecastCard data={forecast} currency={stats.primaryCurrency} />
-          )}
-          
-          {/* Revenue Sidebar - Below Charts */}
-          <FinanceRevenueSidebar
-            revenue={revenueByClient}
-            upcomingPayments={upcomingPayments}
-            totalOutstanding={stats.totalOutstanding}
-            currencyTotals={stats.currencyTotals}
-            primaryCurrency={stats.primaryCurrency}
-          />
+          {isEmptyState ? (
+            <Alert className="border-muted/60 bg-muted/20">
+              <BarChart3 className="h-4 w-4" />
+              <AlertTitle>Get started with Finance</AlertTitle>
+              <AlertDescription>
+                Add your first invoice or cost to unlock revenue, expense, and profit charts.
+                {!isClient ? (
+                  <span className="block mt-2 text-xs text-muted-foreground">
+                    Tip: Use the <span className="font-medium text-foreground">Costs</span> tab to capture overhead, and the <span className="font-medium text-foreground">Manage invoices</span> button to send invoices.
+                  </span>
+                ) : (
+                  <span className="block mt-2 text-xs text-muted-foreground">
+                    Tip: Once invoices are issued and paid, they’ll appear here automatically.
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr),minmax(0,1fr)] xl:items-start">
+            <div className="space-y-6">
+              {/* Charts Section */}
+              <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
+
+              {/* Forecast Section */}
+              {forecast && forecast.length > 0 && (
+                <FinanceForecastCard data={forecast} currency={stats.primaryCurrency} />
+              )}
+            </div>
+
+            <div className="xl:sticky xl:top-6">
+              <FinanceRevenueSidebar
+                revenue={revenueByClient}
+                upcomingPayments={upcomingPayments}
+                totalOutstanding={stats.totalOutstanding}
+                currencyTotals={stats.currencyTotals}
+                primaryCurrency={stats.primaryCurrency}
+              />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="invoices" className="space-y-4 mt-0">
@@ -296,6 +353,24 @@ export function FinanceDashboard() {
               loadingMore={loadingMoreCosts}
               currency={stats.primaryCurrency}
             />
+          </TabsContent>
+        )}
+
+        {!isClient && (
+          <TabsContent value="expenses" className="space-y-4 mt-0">
+            <FinanceExpensesCard currency={stats.primaryCurrency} />
+          </TabsContent>
+        )}
+
+        {!isClient && (
+          <TabsContent value="purchaseOrders" className="space-y-4 mt-0">
+            <FinancePurchaseOrdersCard currency={stats.primaryCurrency} />
+          </TabsContent>
+        )}
+
+        {!isClient && isAdmin && (
+          <TabsContent value="expenseReports" className="space-y-4 mt-0">
+            <FinanceExpenseReportCard currency={stats.primaryCurrency} />
           </TabsContent>
         )}
       </Tabs>

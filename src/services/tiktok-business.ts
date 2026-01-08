@@ -186,6 +186,7 @@ export async function completeTikTokOAuthFlow(options: {
     refreshToken: tokenResult.refreshToken ?? null,
     scopes: tokenResult.scopes ?? [],
     accountId: selectedAccount?.id ?? null,
+    accountName: selectedAccount?.name ?? null,
     accessTokenExpiresAt,
     refreshTokenExpiresAt,
   })

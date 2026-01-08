@@ -63,3 +63,11 @@ export {
   fetchMetaAudienceTargeting,
   createMetaAudience,
 } from './campaigns'
+
+// Insights
+export {
+  calculateMetaAdsInsights,
+  calculateMetaAdsMetrics,
+  generateMetaAdsInsights,
+} from './insights'
+export type { MetaAdsRawMetrics } from './insights'

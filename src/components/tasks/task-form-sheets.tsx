@@ -32,7 +32,9 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { TaskPriority, TaskStatus } from '@/types/tasks'
+import type { ClientTeamMember } from '@/types/clients'
 import { TaskFormState } from './task-types'
+import { TaskCommentsPanel } from './task-comments'
 
 export type CreateTaskSheetProps = {
   open: boolean
@@ -229,21 +231,33 @@ export function CreateTaskSheet({
 export type EditTaskSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  taskId: string | null
   formState: TaskFormState
   setFormState: Dispatch<SetStateAction<TaskFormState>>
   updating: boolean
   updateError: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  currentWorkspaceId: string | null
+  currentUserId: string | null
+  currentUserName: string | null
+  currentUserRole: string | null
+  participants: ClientTeamMember[]
 }
 
 export function EditTaskSheet({
   open,
   onOpenChange,
+  taskId,
   formState,
   setFormState,
   updating,
   updateError,
   onSubmit,
+  currentWorkspaceId,
+  currentUserId,
+  currentUserName,
+  currentUserRole,
+  participants,
 }: EditTaskSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -384,6 +398,17 @@ export function EditTaskSheet({
               />
             </div>
             {updateError && <p className="text-sm text-destructive">{updateError}</p>}
+
+            {taskId ? (
+              <TaskCommentsPanel
+                taskId={taskId}
+                workspaceId={currentWorkspaceId}
+                userId={currentUserId}
+                userName={currentUserName}
+                userRole={currentUserRole}
+                participants={participants}
+              />
+            ) : null}
           </div>
           <SheetFooter className="border-t px-4 py-4">
             <SheetClose asChild>

@@ -1,13 +1,6 @@
 export type FinanceCostCadence = 'one-off' | 'monthly' | 'quarterly' | 'annual'
 
-export type ExpenseCategory =
-  | 'people'
-  | 'saas'
-  | 'marketing'
-  | 'operations'
-  | 'travel'
-  | 'training'
-  | 'other'
+export type ExpenseCategory = string
 
 export type FinanceCostEntry = {
   id: string

@@ -12,6 +12,7 @@ import { useVoiceInput } from '@/hooks/use-voice-input'
 import { useMentionData } from '@/hooks/use-mention-data'
 import { MentionDropdown, formatMention, type MentionItem } from './mention-dropdown'
 import { VoiceWaveform } from './voice-waveform'
+import { AgentMessageCard } from './agent-message-card'
 import type { AgentConversationSummary, AgentMessage } from '@/hooks/use-agent-mode'
 
 interface AgentModePanelProps {
@@ -437,21 +438,7 @@ export function AgentModePanel({
               <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 <div className="space-y-3">
                   {messages.map((msg) => (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={cn('flex', msg.type === 'user' ? 'justify-end' : 'justify-start')}
-                    >
-                      <div
-                        className={cn(
-                          'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
-                          msg.type === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                        )}
-                      >
-                        {typeof msg.content === 'string' ? msg.content : String(msg.content ?? '')}
-                      </div>
-                    </motion.div>
+                    <AgentMessageCard key={msg.id} message={msg} />
                   ))}
 
                   {isProcessing && (

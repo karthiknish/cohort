@@ -71,7 +71,7 @@ export default function NotificationsPage() {
 
       // Client-side filtering for mentions and system
       if (filter === 'mentions') {
-        items = items.filter((n) => n.kind === 'collaboration.mention')
+        items = items.filter((n) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
       } else if (filter === 'system') {
         items = items.filter((n) => 
           n.kind === 'invoice.sent' || 
@@ -211,6 +211,9 @@ export default function NotificationsPage() {
   const getNotificationIcon = (kind: WorkspaceNotification['kind']) => {
     switch (kind) {
       case 'collaboration.mention':
+      case 'task.mention':
+        return <MessageSquare className="h-6 w-6" />
+      case 'task.comment':
         return <MessageSquare className="h-6 w-6" />
       case 'invoice.sent':
       case 'invoice.paid':
@@ -226,9 +229,9 @@ export default function NotificationsPage() {
   }
 
   const getNotificationCategory = (kind: WorkspaceNotification['kind']) => {
-    if (kind === 'collaboration.mention') return 'Mention'
+    if (kind === 'collaboration.mention' || kind === 'task.mention') return 'Mention'
     if (kind === 'invoice.sent' || kind === 'invoice.paid' || kind === 'proposal.deck.ready') return 'System'
-    if (kind === 'task.created' || kind === 'task.updated') return 'Task'
+    if (kind === 'task.created' || kind === 'task.updated' || kind === 'task.comment') return 'Task'
     return 'General'
   }
 

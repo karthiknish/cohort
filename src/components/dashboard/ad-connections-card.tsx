@@ -46,6 +46,7 @@ interface IntegrationStatusInfo {
   lastSyncRequestedAt?: string | null
   status?: string
   accountId?: string | null
+  accountName?: string | null
 }
 
 interface AdConnectionsCardProps {
@@ -310,6 +311,12 @@ const ProviderCard = memo(function ProviderCard({
   const statusVariant = getStatusBadgeVariant(statusInfo?.status, isConnected)
   const statusLabel = getStatusLabel(statusInfo?.status, isConnected)
   const lastSyncLabel = formatLastSync(statusInfo?.lastSyncedAt)
+  const accountLabel =
+    typeof statusInfo?.accountName === 'string' && statusInfo.accountName.length > 0
+      ? statusInfo.accountName
+      : typeof statusInfo?.accountId === 'string' && statusInfo.accountId.length > 0
+        ? statusInfo.accountId
+        : null
 
   return (
     <Card className={cn(
@@ -385,6 +392,14 @@ const ProviderCard = memo(function ProviderCard({
             <AlertTriangle className="h-3 w-3" />
             <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Connected account label */}
+        {isConnected && accountLabel && (
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">Account:</span>{' '}
+            <span className="truncate">{accountLabel}</span>
+          </div>
         )}
 
         {/* Sync error message from status */}

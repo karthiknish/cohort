@@ -51,14 +51,14 @@ const createTaskSchema = z.object({
     assigneeId: z.string().optional(), // Assign to someone else
     projectId: z.string().optional(),
     clientId: z.string().optional(),
-})
+}).strict()
 
 const updateTaskSchema = z.object({
     taskId: z.string().min(1),
     status: z.enum(['todo', 'in-progress', 'done', 'cancelled']).optional(),
     priority: z.enum(['low', 'medium', 'high']).optional(),
     title: z.string().min(1).optional(),
-})
+}).strict()
 
 const createProjectSchema = z.object({
     name: z.string().min(1).max(200),

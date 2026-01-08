@@ -6,3 +6,5 @@ export type { StoredClient } from './clients'
 
 export { mapMessageDoc, sanitizeReaction } from './collaboration-messages'
 export type { StoredMessage } from './collaboration-messages'
+
+export { mapTaskCommentDoc } from './task-comments'

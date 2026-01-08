@@ -127,6 +127,11 @@ service cloud.firestore {
         allow read: if isAdminOrAgencyMember(workspaceId);
         allow create, update: if isAdminOrAgencyMember(workspaceId);
         allow delete: if isAdmin();
+
+        // Client-scoped Ad Integrations (used when a dashboard client is selected)
+        match /adIntegrations/{integrationId} {
+          allow read, write: if isAdminOrAgencyMember(workspaceId);
+        }
       }
 
       // Tasks within workspace
@@ -134,6 +139,12 @@ service cloud.firestore {
         allow read: if isAdminOrAgencyMember(workspaceId);
         allow create, update: if isAdminOrAgencyMember(workspaceId);
         allow delete: if isAdminOrAgencyMember(workspaceId);
+
+        // Task comments within a task
+        match /comments/{commentId} {
+          allow read: if isAdminOrAgencyMember(workspaceId);
+          allow create, update, delete: if isAdminOrAgencyMember(workspaceId);
+        }
       }
 
       // Projects within workspace
@@ -220,6 +231,23 @@ service cloud.firestore {
       // Sync Jobs within workspace
       match /syncJobs/{jobId} {
         allow read, write: if isAdminOrAgencyMember(workspaceId);
+      }
+
+      // Custom Formulas within workspace
+      match /customFormulas/{formulaId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create: if isAdminOrAgencyMember(workspaceId);
+        allow update: if isAdminOrAgencyMember(workspaceId) && 
+          resource.data.createdBy == request.auth.uid;
+        allow delete: if isAdminOrAgencyMember(workspaceId) && 
+          (resource.data.createdBy == request.auth.uid || isAdmin());
+      }
+
+      // Derived Ad Metrics within workspace
+      match /adMetricsDerived/{metricId} {
+        allow read: if isAdminOrAgencyMember(workspaceId);
+        allow create, update: if isAdminOrAgencyMember(workspaceId);
+        allow delete: if isAdmin();
       }
 
       // Agent Mode Conversations within workspace

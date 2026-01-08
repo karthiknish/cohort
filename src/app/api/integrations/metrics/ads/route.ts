@@ -3,6 +3,7 @@ import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, NotFoundError, UnauthorizedError } from '@/lib/api-errors'
 import { getAdIntegration } from '@/lib/firestore/admin'
 import { ensureGoogleAccessToken } from '@/lib/integration-token-refresh'
+import { runDerivedMetricsPipeline } from '@/lib/metrics'
 
 import { fetchGoogleAdMetrics, fetchGoogleAdGroupMetrics, GoogleAdMetric } from '@/services/integrations/google-ads'
 import { fetchTikTokAdMetrics, TikTokAdMetric } from '@/services/integrations/tiktok-ads'
@@ -220,6 +221,7 @@ export const GET = createApiHandler(
         totalConversions: metrics.reduce((sum, m) => sum + m.conversions, 0),
         totalRevenue: metrics.reduce((sum, m) => sum + m.revenue, 0),
       },
+      derivedMetrics: runDerivedMetricsPipeline(metrics),
     }
   }
 )

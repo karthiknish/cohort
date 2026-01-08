@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<AuthUser>
   signInWithGoogle: () => Promise<AuthUser>
   connectGoogleAdsAccount: (clientId?: string | null) => Promise<void>
+  connectGoogleAnalyticsAccount: (clientId?: string | null) => Promise<void>
   connectFacebookAdsAccount: (clientId?: string | null) => Promise<void>
   connectLinkedInAdsAccount: (clientId?: string | null) => Promise<void>
   startMetaOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
@@ -150,6 +151,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.connectGoogleAdsAccount(clientId)
   }, [])
 
+  const connectGoogleAnalyticsAccount = useCallback(async (clientId?: string | null) => {
+    await authService.connectGoogleAnalyticsAccount(clientId)
+  }, [])
+
   const connectFacebookAdsAccount = useCallback(async (clientId?: string | null) => {
     await authService.connectFacebookAdsAccount(clientId)
   }, [])
@@ -182,6 +187,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signIn,
       signInWithGoogle,
       connectGoogleAdsAccount,
+      connectGoogleAnalyticsAccount,
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
       startMetaOauth,
@@ -204,6 +210,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signIn,
       signInWithGoogle,
       connectGoogleAdsAccount,
+      connectGoogleAnalyticsAccount,
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
       startMetaOauth,

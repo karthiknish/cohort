@@ -13,6 +13,10 @@ export type WorkspaceContext = {
   financeInvoicesCollection: FirebaseFirestore.CollectionReference
   financeRevenueCollection: FirebaseFirestore.CollectionReference
   financeCostsCollection: FirebaseFirestore.CollectionReference
+  financeExpenseCategoriesCollection: FirebaseFirestore.CollectionReference
+  financeVendorsCollection: FirebaseFirestore.CollectionReference
+  financeExpensesCollection: FirebaseFirestore.CollectionReference
+  financePurchaseOrdersCollection: FirebaseFirestore.CollectionReference
   projectsCollection: FirebaseFirestore.CollectionReference
   proposalsCollection: FirebaseFirestore.CollectionReference
   integrationsCollection: FirebaseFirestore.CollectionReference
@@ -77,6 +81,10 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
   const financeInvoicesCollection = workspaceRef.collection('financeInvoices')
   const financeRevenueCollection = workspaceRef.collection('financeRevenue')
   const financeCostsCollection = workspaceRef.collection('financeCosts')
+  const financeExpenseCategoriesCollection = workspaceRef.collection('financeExpenseCategories')
+  const financeVendorsCollection = workspaceRef.collection('financeVendors')
+  const financeExpensesCollection = workspaceRef.collection('financeExpenses')
+  const financePurchaseOrdersCollection = workspaceRef.collection('financePurchaseOrders')
   const projectsCollection = workspaceRef.collection('projects')
   const proposalsCollection = workspaceRef.collection('proposals')
   const integrationsCollection = workspaceRef.collection('adIntegrations')
@@ -92,6 +100,10 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
     financeInvoicesCollection,
     financeRevenueCollection,
     financeCostsCollection,
+    financeExpenseCategoriesCollection,
+    financeVendorsCollection,
+    financeExpensesCollection,
+    financePurchaseOrdersCollection,
     projectsCollection,
     proposalsCollection,
     integrationsCollection,

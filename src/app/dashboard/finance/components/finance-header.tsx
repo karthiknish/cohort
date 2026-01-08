@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-import { CreditCard, Plus, RefreshCw, Download } from 'lucide-react'
+import { CreditCard, Plus, RefreshCw, Download, FileText } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -25,8 +25,11 @@ interface FinanceHeaderProps {
   onSelectPeriod: (value: string) => void
   onRefresh: () => Promise<void> | void
   refreshing: boolean
+  scopeLabel?: string | null
+  scopeHelper?: string | null
   onCreateInvoice?: () => void
   paymentsHref?: string
+  manageInvoicesHref?: string
   onExportData?: () => void
 }
 
@@ -35,17 +38,26 @@ export function FinanceHeader({
   onSelectPeriod,
   onRefresh,
   refreshing,
+  scopeLabel,
+  scopeHelper,
   onCreateInvoice,
   paymentsHref,
+  manageInvoicesHref,
   onExportData,
 }: FinanceHeaderProps) {
   return (
     <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-1.5">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Finance Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Finance</h1>
         <p className="text-base text-muted-foreground max-w-2xl">
           Manage invoices, track revenue, and keep company-wide costs tied directly to your reporting charts.
         </p>
+        {scopeLabel ? (
+          <p className="text-xs text-muted-foreground">
+            Viewing: <span className="font-medium text-foreground">{scopeLabel}</span>
+            {scopeHelper ? <span className="text-muted-foreground"> · {scopeHelper}</span> : null}
+          </p>
+        ) : null}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Select value={selectedPeriod} onValueChange={onSelectPeriod}>
@@ -71,6 +83,14 @@ export function FinanceHeader({
               Export
             </Button>
           )}
+          {manageInvoicesHref ? (
+            <Button asChild variant="outline" className="shadow-sm">
+              <Link href={manageInvoicesHref} className="inline-flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Manage invoices
+              </Link>
+            </Button>
+          ) : null}
           {paymentsHref && (
             <Button asChild variant="outline" className="shadow-sm">
               <Link href={paymentsHref} className="inline-flex items-center gap-2">

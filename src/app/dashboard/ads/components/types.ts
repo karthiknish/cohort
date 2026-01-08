@@ -8,6 +8,7 @@ export interface IntegrationStatus {
   message?: string | null
   linkedAt?: string | null
   accountId?: string | null
+  accountName?: string | null
   autoSyncEnabled?: boolean | null
   syncFrequencyMinutes?: number | null
   scheduledTimeframeDays?: number | null

@@ -227,6 +227,94 @@ export async function recordTaskUpdatedNotification(options: {
   })
 }
 
+export async function recordTaskCommentNotification(options: {
+  workspaceId: string
+  task: TaskRecord
+  commentId: string
+  snippet: string
+  actorId?: string | null
+  actorName?: string | null
+}) {
+  const { workspaceId, task } = options
+  if (!workspaceId || !task?.id || !options.commentId) {
+    return
+  }
+
+  const clientId =
+    typeof task.clientId === 'string' && task.clientId.trim().length > 0 ? task.clientId.trim() : null
+  const baseRoles: WorkspaceNotificationRole[] = ['admin', 'team']
+  const recipients: WorkspaceNotificationRecipients = {
+    roles: clientId ? uniqueRoles([...baseRoles, 'client']) : baseRoles,
+    clientIds: clientId ? [clientId] : undefined,
+    clientId,
+  }
+
+  await createWorkspaceNotification({
+    workspaceId,
+    kind: 'task.comment',
+    title: `New comment: ${task.title}`,
+    body: options.snippet,
+    actor: {
+      id: options.actorId ?? null,
+      name: options.actorName ?? null,
+    },
+    resource: { type: 'task', id: task.id },
+    recipients,
+    metadata: {
+      taskId: task.id,
+      commentId: options.commentId,
+      clientId,
+      clientName: task.client ?? null,
+    },
+  })
+}
+
+export async function recordTaskMentionNotifications(options: {
+  workspaceId: string
+  task: TaskRecord
+  commentId: string
+  mentions: Array<{ slug: string; name: string; role?: string | null }>
+  snippet: string
+  actorId?: string | null
+  actorName?: string | null
+}) {
+  const { workspaceId, task } = options
+  if (!workspaceId || !task?.id || !options.commentId || !options.mentions?.length) {
+    return
+  }
+
+  const clientId =
+    typeof task.clientId === 'string' && task.clientId.trim().length > 0 ? task.clientId.trim() : null
+  const senderName = options.actorName ?? 'Someone'
+
+  for (const mention of options.mentions) {
+    await createWorkspaceNotification({
+      workspaceId,
+      kind: 'task.mention',
+      title: `${senderName} mentioned you`,
+      body: options.snippet,
+      actor: {
+        id: options.actorId ?? null,
+        name: senderName,
+      },
+      resource: { type: 'task', id: task.id },
+      recipients: {
+        roles: ['admin', 'team', 'client'],
+        clientIds: clientId ? [clientId] : undefined,
+        clientId,
+      },
+      metadata: {
+        taskId: task.id,
+        taskTitle: task.title,
+        commentId: options.commentId,
+        mentionedName: mention.name,
+        mentionSlug: mention.slug,
+        clientId,
+      },
+    })
+  }
+}
+
 // =============================================================================
 // COLLABORATION NOTIFICATIONS
 // =============================================================================

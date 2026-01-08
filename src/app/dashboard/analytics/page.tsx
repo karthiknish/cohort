@@ -1,13 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshCw, LoaderCircle } from 'lucide-react'
+import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { authService } from '@/services/auth'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
 import { usePreview } from '@/contexts/preview-context'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Extracted hooks and types
 import {
@@ -31,6 +33,11 @@ export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<typeof PERIOD_OPTIONS[number]['value']>(PERIOD_OPTIONS[0].value)
   const [selectedPlatform, setSelectedPlatform] = useState('all')
 
+  const [gaConnected, setGaConnected] = useState(false)
+  const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(null)
+  const [gaLoading, setGaLoading] = useState(false)
+  const [gaSyncing, setGaSyncing] = useState(false)
+
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
@@ -52,6 +59,52 @@ export default function AnalyticsPage() {
     const option = PERIOD_OPTIONS.find((opt) => opt.value === selectedPeriod)
     return option?.days ?? 7
   }, [selectedPeriod])
+
+  const refreshGoogleAnalyticsStatus = useCallback(async () => {
+    if (isPreviewMode) {
+      setGaConnected(false)
+      setGaAccountLabel(null)
+      return
+    }
+
+    const jwt = await authService.getIdToken().catch(() => null)
+    if (!jwt) return
+
+    try {
+      const params = new URLSearchParams()
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      const url = params.toString().length > 0
+        ? `/api/integrations/status?${params.toString()}`
+        : '/api/integrations/status'
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${jwt}` },
+        cache: 'no-store',
+      })
+
+      const payload = (await response.json().catch(() => ({}))) as any
+      const statuses = payload && typeof payload === 'object' && 'success' in payload
+        ? (payload.data?.statuses ?? [])
+        : (payload.statuses ?? [])
+
+      const ga = Array.isArray(statuses)
+        ? statuses.find((s: any) => s?.providerId === 'google-analytics')
+        : null
+
+      const linkedAt = ga?.linkedAt
+      const accountName = typeof ga?.accountName === 'string' ? ga.accountName : null
+      const accountId = typeof ga?.accountId === 'string' ? ga.accountId : null
+
+      setGaConnected(Boolean(linkedAt))
+      setGaAccountLabel(accountName ?? accountId ?? null)
+    } catch {
+      // Silent; analytics can still load.
+    }
+  }, [isPreviewMode, selectedClientId])
+
+  useEffect(() => {
+    void refreshGoogleAnalyticsStatus()
+  }, [refreshGoogleAnalyticsStatus])
 
   const {
     metricsData,
@@ -84,6 +137,74 @@ export default function AnalyticsPage() {
       toast({ title: 'Metrics pagination error', description: message, variant: 'destructive' })
     }
   }, [loadMoreMetrics, metricsNextCursor, toast])
+
+  const handleConnectGoogleAnalytics = useCallback(async () => {
+    if (isPreviewMode) {
+      toast({ title: 'Preview mode', description: 'Google Analytics connection is disabled in preview mode.' })
+      return
+    }
+
+    setGaLoading(true)
+    try {
+      await authService.connectGoogleAnalyticsAccount(selectedClientId ?? null)
+      toast({
+        title: 'Google Analytics connected',
+        description: 'Account access granted. You can sync data now.',
+      })
+      await refreshGoogleAnalyticsStatus()
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unable to connect Google Analytics'
+      toast({ title: 'Connection failed', description: message, variant: 'destructive' })
+    } finally {
+      setGaLoading(false)
+    }
+  }, [isPreviewMode, refreshGoogleAnalyticsStatus, selectedClientId, toast])
+
+  const handleSyncGoogleAnalytics = useCallback(async () => {
+    if (isPreviewMode) {
+      toast({ title: 'Preview mode', description: 'Google Analytics sync is disabled in preview mode.' })
+      return
+    }
+
+    const jwt = await authService.getIdToken().catch(() => null)
+    if (!jwt) {
+      toast({ title: 'Auth required', description: 'Please sign in again and retry.', variant: 'destructive' })
+      return
+    }
+
+    setGaSyncing(true)
+    try {
+      const params = new URLSearchParams({ days: String(periodDays) })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      const url = `/api/analytics/google-analytics/sync?${params.toString()}`
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${jwt}` },
+      })
+
+      const payload = (await response.json().catch(() => ({}))) as any
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to sync Google Analytics'
+        throw new Error(message)
+      }
+
+      toast({
+        title: 'Google Analytics synced',
+        description: payload?.propertyName
+          ? `Imported ${payload?.written ?? 0} day(s) from ${payload.propertyName}.`
+          : `Imported ${payload?.written ?? 0} day(s).`,
+      })
+
+      await refreshGoogleAnalyticsStatus()
+      await mutateMetrics()
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unable to sync Google Analytics'
+      toast({ title: 'Sync failed', description: message, variant: 'destructive' })
+    } finally {
+      setGaSyncing(false)
+    }
+  }, [isPreviewMode, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])
 
   const initialMetricsLoading = metricsLoading && metrics.length === 0
   const initialInsightsLoading = insightsLoading && insights.length === 0
@@ -230,6 +351,56 @@ export default function AnalyticsPage() {
           </select>
         </div>
       </div>
+
+      {/* Google Analytics data source */}
+      <Card className="border-muted/60 bg-background">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Google Analytics</CardTitle>
+            <CardDescription>
+              Connect GA4 to import users, sessions, conversions, and revenue into the unified dashboard.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {gaConnected ? (
+              <span className="inline-flex items-center gap-2 rounded-md bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Connected{gaAccountLabel ? `: ${gaAccountLabel}` : ''}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                <Link2 className="h-4 w-4" />
+                Not connected
+              </span>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleConnectGoogleAnalytics()}
+              disabled={gaLoading}
+              className="inline-flex items-center gap-2"
+            >
+              {gaLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              {gaConnected ? 'Reconnect' : 'Connect'}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSyncGoogleAnalytics()}
+              disabled={gaSyncing || gaLoading}
+              className="inline-flex items-center gap-2"
+            >
+              {gaSyncing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+              Sync now
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            Tip: Sync writes metrics with provider <span className="font-medium text-foreground">Google Analytics</span> so you can filter it in the platform dropdown.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Error Alert */}
       {metricsError && (
