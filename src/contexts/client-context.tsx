@@ -39,7 +39,7 @@ function parseError(error: unknown, fallback: string): string {
 }
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading, getIdToken } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
@@ -133,7 +133,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     } catch (storageError) {
       console.warn('[ClientProvider] failed to persist client selection', storageError)
     }
-  }, [selectedClientId])
+  }, [selectedClientId, previewEnabled])
 
   const fetchClients = useCallback(async (): Promise<ClientRecord[]> => {
     if (previewEnabled) {
@@ -210,7 +210,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     if (!authLoading && user?.id) {
       void fetchClients()
     }
-  }, [previewEnabled])
+  }, [previewEnabled, authLoading, user?.id, fetchClients])
 
   useEffect(() => {
     if (clients.length === 0) {
@@ -239,7 +239,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       if (firstId === current) return current
       return firstId
     })
-  }, [clients])
+  }, [clients, selectedClientId])
 
   const refreshClients = useCallback(async () => {
     return await fetchClients()

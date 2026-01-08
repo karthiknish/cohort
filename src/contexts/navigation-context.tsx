@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 import { useClientContext } from '@/contexts/client-context'
 import { isFeatureEnabled } from '@/lib/features'
@@ -32,28 +32,12 @@ const STORAGE_KEYS = {
 
 const NavigationContext = createContext<NavigationContextValue | undefined>(undefined)
 
-function parseError(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
-  return fallback
-}
-
 function getClientStorageKey(baseKey: string, clientId: string | null): string {
   return clientId ? `${baseKey}.${clientId}` : baseKey
 }
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const { selectedClientId } = useClientContext()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
   const mountedRef = useRef(false)
 
@@ -73,7 +57,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     if (mountedRef.current && typeof window !== 'undefined') {
       loadNavigationState()
     }
-  }, [selectedClientId])
+  }, [selectedClientId, loadNavigationState])
 
   // Initialize on first mount
   useEffect(() => {
@@ -89,7 +73,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     if (isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
       loadNavigationState()
     }
-  }, [])
+  }, [loadNavigationState])
 
   // Sync with URL parameters (URL takes precedence over localStorage)
   useEffect(() => {

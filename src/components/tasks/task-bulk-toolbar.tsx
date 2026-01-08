@@ -1,8 +1,8 @@
 "use client"
 
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { CalendarClock, CheckSquare, Filter, ListChecks, Trash2, Calendar as CalendarIcon } from 'lucide-react'
-import { format, parseISO, isValid } from 'date-fns'
+import { CalendarClock, CheckSquare, Filter, Trash2, Calendar as CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

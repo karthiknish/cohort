@@ -116,7 +116,7 @@ export function isTokenExpiringSoon(expiresAt?: AnyTimestamp | null | string, bu
   return Date.now() + bufferMs >= expiryMs
 }
 
-export async function refreshGoogleAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
+export async function refreshGoogleAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'google', clientId })
 
   if (!integration?.refreshToken) {
@@ -239,7 +239,7 @@ export async function refreshGoogleAccessToken({ userId, clientId, forceRefresh 
   throw lastError ?? new IntegrationTokenError('Google token refresh failed after all retries', 'google', userId)
 }
 
-export async function refreshMetaAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
+export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
   const integration = await getAdIntegration({ userId, providerId: 'facebook', clientId })
 
   if (!integration?.accessToken) {
@@ -277,7 +277,7 @@ export async function refreshMetaAccessToken({ userId, clientId, forceRefresh }:
         }
 
         const errorMessage = parsedError?.error?.message ?? errorPayload
-        const errorCode = parsedError?.error?.code ?? response.status
+
 
         // Check if error is retryable (5xx errors or specific Meta error codes)
         const isRetryable = response.status >= 500 || response.status === 429

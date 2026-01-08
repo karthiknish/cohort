@@ -15,7 +15,7 @@ import {
   MoreHorizontal,
   Calendar as CalendarIcon,
 } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { toErrorMessage } from '@/lib/error-utils'

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BarChart3, CreditCard, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase, Users } from 'lucide-react'
+import { BarChart3, CreditCard, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase } from 'lucide-react'
 
 import { useMemo } from 'react'
 
@@ -128,7 +128,6 @@ export function QuickActions({ compact }: QuickActionsProps) {
           {!compact && (
             <div className="hidden sm:flex items-center gap-2">
               {filteredCreateActions.map((action) => {
-                const Icon = action.icon
                 return (
                   <Button key={action.href} asChild variant="outline" size="sm" className="gap-1.5">
                     <Link href={action.href}>

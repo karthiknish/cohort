@@ -2,10 +2,9 @@
 
 import { memo } from 'react'
 
-import { Clock, CheckCircle2, CircleAlert, Eye as EyeIcon, Circle, CirclePlay } from 'lucide-react'
+import { Clock, CheckCircle2, Eye as EyeIcon, Circle, CirclePlay } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { TaskStatus } from '@/types/tasks'
 

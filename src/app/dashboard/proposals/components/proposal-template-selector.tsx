@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, ChevronDown, FileText, LoaderCircle, Plus, Save, Star, Trash2 } from 'lucide-react'
+import { ChevronDown, FileText, LoaderCircle, Save, Star, Trash2 } from 'lucide-react'
 
-import { useAuth } from '@/contexts/auth-context'
+
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@/lib/utils'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalTemplate } from '@/types/proposal-templates'
 import {
@@ -165,7 +164,6 @@ export function ProposalTemplateSelector({
     }
   }, [toast])
 
-  const defaultTemplate = templates.find((t) => t.isDefault)
 
   return (
     <>

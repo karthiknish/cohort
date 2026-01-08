@@ -1,4 +1,4 @@
-import { format, parseISO, isValid, formatDistanceToNow as fdn } from 'date-fns'
+import { parseISO, isValid, formatDistanceToNow as fdn } from 'date-fns'
 import { formatInTimeZone, toZonedTime, fromZonedTime } from 'date-fns-tz'
 
 const DEFAULT_TIMEZONE = process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE || 'UTC'

@@ -72,7 +72,6 @@ function formatFullDate(dateString: string | null): string {
 
 export function ProposalVersionHistory({
   proposalId,
-  currentFormData,
   onVersionRestored,
   disabled = false,
 }: ProposalVersionHistoryProps) {
@@ -251,7 +250,7 @@ export function ProposalVersionHistory({
             </div>
           ) : versions.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              No versions yet. Click "Save Point" to create one.
+              No versions yet. Click &quot;Save Point&quot; to create one.
             </div>
           ) : (
             <ScrollArea className="max-h-64">

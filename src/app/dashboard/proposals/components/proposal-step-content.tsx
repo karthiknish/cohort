@@ -2,7 +2,6 @@
 
 import { memo } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -305,7 +304,7 @@ function ProposalStepContentComponent({
           <div className="space-y-4">
             <div className="flex flex-col gap-1">
               <Label className="text-base font-semibold">Key Challenges</Label>
-              <p className="text-xs text-muted-foreground">What's currently standing in your way?</p>
+              <p className="text-xs text-muted-foreground">What&apos;s currently standing in your way?</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {challenges.map((challenge) => {

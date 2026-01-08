@@ -3,7 +3,7 @@ import {
   startOfDay, 
   subDays
 } from 'date-fns'
-import { parseDate, toISO, formatDate, DATE_FORMATS } from './dates'
+import { parseDate, formatDate, DATE_FORMATS } from './dates'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'

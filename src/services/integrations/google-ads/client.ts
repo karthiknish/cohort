@@ -39,7 +39,7 @@ export function extractNumber(value: unknown): number | null {
 // EXECUTE GOOGLE ADS API REQUEST WITH RETRY LOGIC
 // =============================================================================
 
-interface ExecuteRequestOptions<T> {
+interface ExecuteRequestOptions {
   url: string
   method: 'GET' | 'POST'
   headers: Record<string, string>
@@ -51,7 +51,7 @@ interface ExecuteRequestOptions<T> {
 }
 
 export async function executeGoogleAdsApiRequest<T>(
-  options: ExecuteRequestOptions<T>
+  options: ExecuteRequestOptions
 ): Promise<{ response: Response; payload: T }> {
   return executeIntegrationRequest<T>(googleAdsClient, options)
 }

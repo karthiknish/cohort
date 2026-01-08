@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { apiFetch } from '@/lib/api-client'
+import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
 const PAGE_SIZE = 25
 
@@ -34,7 +35,16 @@ export default function NotificationsPage() {
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
 
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  const filterTabs = usePersistedTab<FilterType>({
+    param: 'tab',
+    defaultValue: 'all',
+    allowedValues: ['all', 'unread', 'mentions', 'system'] as const,
+    storageNamespace: 'dashboard:notifications',
+    syncToUrl: true,
+  })
+
+  const activeFilter = filterTabs.value
+  const setActiveFilter = filterTabs.setValue
   const [notifications, setNotifications] = useState<WorkspaceNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)

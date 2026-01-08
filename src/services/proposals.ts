@@ -1,5 +1,4 @@
 import { ProposalFormData, mergeProposalForm } from '@/lib/proposals'
-import { authService } from '@/services/auth'
 
 export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'sent'
 
@@ -42,12 +41,13 @@ import { apiFetch } from '@/lib/api-client'
 
 function normalizeProposalDraft(input: ProposalDraft): ProposalDraft {
   // The API payload may contain partial/missing formData depending on legacy docs.
-  // Normalise to the full shape so consumers can safely read nested fields.
+  // Normalise to full shape so consumers can safely read nested fields.
   return {
     ...input,
-    formData: mergeProposalForm((input as any)?.formData ?? null),
+    formData: mergeProposalForm((input as { formData?: unknown })?.formData ?? null),
   }
 }
+
 
 export async function listProposals(params: { status?: ProposalStatus; clientId?: string } = {}) {
   const search = new URLSearchParams()
@@ -96,12 +96,12 @@ export async function updateProposalDraft(id: string, body: Partial<ProposalDraf
 }
 
 export async function submitProposalDraft(id: string, delivery: 'summary' | 'summary_and_pdf' = 'summary') {
-  const payload = await apiFetch<any>(`/api/proposals/${id}/submit`, {
+  const payload = await apiFetch<ProposalDraft>(`/api/proposals/${id}/submit`, {
     method: 'POST',
     body: JSON.stringify({ delivery }),
   })
 
-  return resolveProposalDeck(normalizeProposalDraft(payload as ProposalDraft))
+  return resolveProposalDeck(normalizeProposalDraft(payload))
 }
 
 export async function deleteProposalDraft(id: string) {
@@ -113,11 +113,11 @@ export async function deleteProposalDraft(id: string) {
 }
 
 export async function prepareProposalDeck(id: string) {
-  const payload = await apiFetch<any>(`/api/proposals/${id}/deck`, {
+  const payload = await apiFetch<ProposalDraft>(`/api/proposals/${id}/deck`, {
     method: 'POST',
   })
 
-  return resolveProposalDeck(normalizeProposalDraft(payload as ProposalDraft))
+  return resolveProposalDeck(normalizeProposalDraft(payload))
 }
 
 function resolveProposalDeck<T extends { pptUrl?: string | null; presentationDeck?: ProposalPresentationDeck | null; gammaDeck?: ProposalPresentationDeck | null; aiSuggestions?: string | null }>(payload: T): T & { presentationDeck?: ProposalPresentationDeck | null } {

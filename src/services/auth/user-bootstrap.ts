@@ -2,7 +2,6 @@ import { db } from '@/lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { User as FirebaseUser } from 'firebase/auth'
 import { toISO } from '@/lib/dates'
-import { sleep } from '@/lib/retry-utils'
 import { normalizeRole, normalizeStatus, getBrowserCookie } from './utils'
 import type { AuthRole, AuthStatus, AuthUser } from './types'
 

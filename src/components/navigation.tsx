@@ -21,8 +21,6 @@ import {
   ChevronRight,
   Activity,
   Users,
-  CircleHelp,
-  Sparkles,
   Shield,
   Rocket,
 } from 'lucide-react'

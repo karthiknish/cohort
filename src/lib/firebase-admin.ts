@@ -108,7 +108,7 @@ function initializeFirebaseAdmin() {
       credential: applicationDefault(),
       storageBucket,
     })
-  } catch (error) {
+  } catch {
     throw new Error(
       'Failed to initialize Firebase Admin SDK. Provide either FIREBASE_ADMIN_SERVICE_ACCOUNT_KEY JSON or the FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY, and FIREBASE_ADMIN_PROJECT_ID variables.',
     )

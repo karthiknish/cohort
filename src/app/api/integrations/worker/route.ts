@@ -4,6 +4,7 @@ import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError } from '@/lib/api-errors'
+import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
@@ -32,9 +33,9 @@ export const POST = createApiHandler(
     const origin = req.nextUrl.origin
     const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
 
-  if (!cronSecret) {
-    throw new Error('INTEGRATIONS_CRON_SECRET is not configured')
-  }
+    if (!cronSecret) {
+      throw new Error('INTEGRATIONS_CRON_SECRET is not configured')
+    }
   
   let processedJobs = 0
   let successfulJobs = 0
@@ -43,85 +44,89 @@ export const POST = createApiHandler(
   let inspectedQueuedJobs = 0
   const jobResults: Array<{ userId: string; jobId: string; providerId: string; status: string; error?: string }> = []
 
-  // Get users with queued sync jobs
-  const usersSnapshot = await adminDb
-    .collection('users')
-    .limit(maxUsers)
-    .get()
-
-  for (const userDoc of usersSnapshot.docs) {
-    if (processedJobs >= maxJobs) {
-      break // Stop if we've hit the job limit
-    }
-
-    const userId = userDoc.id
-    
-    // Check for queued jobs for this user
-    const queuedJobsSnapshot = await adminDb
+    // Get users with queued sync jobs
+    // Note: sync jobs are stored under workspaces/<workspaceId>/syncJobs.
+    const usersSnapshot = await adminDb
       .collection('users')
-      .doc(userId)
-      .collection('syncJobs')
-      .where('status', '==', 'queued')
-      .orderBy('createdAt', 'asc')
-      .limit(Math.min(3, maxJobs - processedJobs)) // Max 3 jobs per user per run
+      .limit(maxUsers)
       .get()
 
-    if (!queuedJobsSnapshot.empty) {
-      hadQueuedJobs = true
-      inspectedQueuedJobs += queuedJobsSnapshot.size
-    }
+    for (const userDoc of usersSnapshot.docs) {
+      if (processedJobs >= maxJobs) {
+        break // Stop if we've hit the job limit
+      }
 
-    for (const jobDoc of queuedJobsSnapshot.docs) {
-      try {
-        processedJobs++
-        
-        // Call the process endpoint for this specific job
-        const processResponse = await fetch(`${origin}/api/integrations/process`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-cron-key': cronSecret
-          },
-          body: JSON.stringify({ userId })
-        })
+      const userId = userDoc.id
 
-        const result = await processResponse.json().catch(() => ({ error: 'Invalid response' }))
-        
-        if (processResponse.ok) {
-          successfulJobs++
-          jobResults.push({
-            userId,
-            jobId: result.jobId || jobDoc.id,
-            providerId: result.providerId || 'unknown',
-            status: 'success'
+      // Resolve workspaceId for this user (agency workspace support)
+      const workspaceId = await resolveWorkspaceIdForUser(userId)
+
+      // Check for queued jobs for this workspace
+      const queuedJobsSnapshot = await adminDb
+        .collection('workspaces')
+        .doc(workspaceId)
+        .collection('syncJobs')
+        .where('status', '==', 'queued')
+        .orderBy('createdAt', 'asc')
+        .limit(Math.min(3, maxJobs - processedJobs)) // Max 3 jobs per workspace per run
+        .get()
+
+      if (!queuedJobsSnapshot.empty) {
+        hadQueuedJobs = true
+        inspectedQueuedJobs += queuedJobsSnapshot.size
+      }
+
+      for (const jobDoc of queuedJobsSnapshot.docs) {
+        try {
+          processedJobs++
+
+          // Call the process endpoint; it will claim and process the next queued job in this workspace.
+          const processResponse = await fetch(`${origin}/api/integrations/process`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-cron-key': cronSecret
+            },
+            body: JSON.stringify({ userId })
           })
-        } else {
+
+          const result = await processResponse.json().catch(() => ({ error: 'Invalid response' }))
+
+          if (processResponse.ok) {
+            successfulJobs++
+            jobResults.push({
+              userId,
+              jobId: result.jobId || jobDoc.id,
+              providerId: result.providerId || 'unknown',
+              status: 'success'
+            })
+          } else {
+            failedJobs++
+            jobResults.push({
+              userId,
+              jobId: jobDoc.id,
+              providerId: 'unknown',
+              status: 'failed',
+              error: result.error || 'Unknown error'
+            })
+          }
+
+          // Small delay between jobs to avoid overwhelming APIs
+          await new Promise(resolve => setTimeout(resolve, 100))
+
+        } catch (error) {
           failedJobs++
+          const message = error instanceof Error ? error.message : 'Unknown processing error'
           jobResults.push({
             userId,
             jobId: jobDoc.id,
             providerId: 'unknown',
             status: 'failed',
-            error: result.error || 'Unknown error'
+            error: message
           })
         }
-
-        // Small delay between jobs to avoid overwhelming APIs
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-      } catch (error) {
-        failedJobs++
-        const message = error instanceof Error ? error.message : 'Unknown processing error'
-        jobResults.push({
-          userId,
-          jobId: jobDoc.id,
-          providerId: 'unknown',
-          status: 'failed',
-          error: message
-        })
       }
     }
-  }
 
   const summary = {
     processedJobs,
@@ -180,5 +185,5 @@ export const POST = createApiHandler(
     notes: hadQueuedJobs && processedJobs === 0 ? 'Detected queued jobs without progress' : undefined,
   })
 
-  return summary
+    return summary
 })

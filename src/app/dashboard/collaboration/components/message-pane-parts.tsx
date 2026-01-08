@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationMessage } from '@/types/collaboration'
 import type { Channel } from '../types'
 import { CHANNEL_TYPE_COLORS } from '../utils'
 
@@ -110,9 +109,7 @@ export function MessageSearchBar({
   )
 }
 
-export interface EmptyChannelStateProps { }
-
-export function EmptyChannelState({ }: EmptyChannelStateProps) {
+export function EmptyChannelState() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
       <div className="mb-4 rounded-full bg-muted/30 p-4">
@@ -127,9 +124,7 @@ export function EmptyChannelState({ }: EmptyChannelStateProps) {
   )
 }
 
-export interface EmptyMessagesStateProps { }
-
-export function EmptyMessagesState({ }: EmptyMessagesStateProps) {
+export function EmptyMessagesState() {
   return (
     <div className="rounded-md border border-dashed border-muted/50 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       Start the conversation by posting the first update for this workspace.
@@ -137,9 +132,7 @@ export function EmptyMessagesState({ }: EmptyMessagesStateProps) {
   )
 }
 
-export interface NoSearchResultsStateProps { }
-
-export function NoSearchResultsState({ }: NoSearchResultsStateProps) {
+export function NoSearchResultsState() {
   return (
     <div className="rounded-md border border-dashed border-muted/50 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       No messages match your search.

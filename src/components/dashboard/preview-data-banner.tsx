@@ -1,6 +1,6 @@
 'use client'
 
-import { Database, Eye, X } from 'lucide-react'
+import { Database, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { usePreview } from '@/contexts/preview-context'

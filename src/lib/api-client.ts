@@ -15,7 +15,7 @@ import {
   isPreviewModeEnabled,
 } from '@/lib/preview-data'
 
-const inFlightRequests = new Map<string, Promise<any>>()
+const inFlightRequests = new Map<string, Promise<unknown>>()
 
 // Short-lived response cache to prevent identical rapid-fire requests
 const RESPONSE_CACHE_TTL_MS = 2000 // 2 seconds
@@ -23,7 +23,7 @@ const responseCache = new CacheManager(new MemoryCacheBackend({ maxEntries: 300 
   backendName: 'memory',
 })
 
-export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
+export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
   const method = init.method || 'GET'
   const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
@@ -105,12 +105,16 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
   }
 
   if (isDeduplicatable && inFlightRequests.has(cacheKey)) {
-    return inFlightRequests.get(cacheKey)
+    return inFlightRequests.get(cacheKey) as Promise<T>
   }
 
   const executeRequest = async (attempt = 0): Promise<T> => {
     try {
-      const token = await authService.getIdToken()
+      if (typeof window !== 'undefined') {
+        await authService.waitForInitialAuth().catch(() => {})
+      }
+
+      const token = await authService.getIdToken().catch(() => null)
       const headers = new Headers(init.headers)
 
       if (token) {
@@ -169,7 +173,7 @@ export async function apiFetch<T = any>(input: RequestInfo | URL, init: RequestI
       if (isDeduplicatable) void responseCache.set(cacheKey, payload as T, RESPONSE_CACHE_TTL_MS)
       return payload as T
     } catch (error) {
-      if (attempt < 2 && (error as any).code === 'NETWORK_ERROR' && isDeduplicatable) {
+      if (attempt < 2 && (error as ApiClientError).code === 'NETWORK_ERROR' && isDeduplicatable) {
         await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000))
         return executeRequest(attempt + 1)
       }

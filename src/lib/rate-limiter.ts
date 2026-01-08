@@ -137,7 +137,7 @@ export function getClientIdentifier(request: NextRequest): string {
     }
   }
 
-  const realIp = request.headers.get('x-real-ip') || (request as any).ip
+  const realIp = request.headers.get('x-real-ip') || (request as { ip?: string }).ip
   if (realIp && realIp.length > 0) {
     return realIp
   }

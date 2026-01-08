@@ -1,4 +1,4 @@
-import { Clock, ListTodo, CirclePlay, Eye, CircleCheck, AlertCircle, AlertTriangle, CheckCircle2, Circle } from 'lucide-react'
+import { Clock, CirclePlay, Eye, CheckCircle2, Circle } from 'lucide-react'
 import { TaskStatus, TaskPriority, TaskRecord } from '@/types/tasks'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils'
@@ -43,7 +43,7 @@ export const priorityColors: Record<TaskPriority, string> = {
   urgent: 'text-red-600 bg-red-50 border-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50',
 }
 
-export const STATUS_ICONS: Record<TaskStatus, any> = {
+export const STATUS_ICONS: Record<TaskStatus, typeof Circle> = {
   todo: Circle,
   'in-progress': CirclePlay,
   review: Eye,

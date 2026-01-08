@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { CircleCheck, Circle } from "lucide-react"
+import { CircleCheck } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -42,7 +42,6 @@ function ProposalStepIndicatorComponent({
           {steps.map((item, index) => {
             const isCurrent = index === currentStep && !submitted
             const isComplete = index < currentStep || submitted
-            const isFuture = index > currentStep && !submitted
 
             return (
               <li key={item.id} className="flex flex-col items-center">

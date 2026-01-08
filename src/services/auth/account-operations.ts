@@ -8,7 +8,6 @@ import {
     reauthenticateWithCredential,
     updatePassword as firebaseUpdatePassword,
     deleteUser as firebaseDeleteUser,
-    User as FirebaseUser,
 } from 'firebase/auth'
 import { toISO } from '@/lib/dates'
 import { isFirebaseError } from './utils'

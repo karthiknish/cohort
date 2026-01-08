@@ -270,7 +270,7 @@ export function useAgentMode(): UseAgentModeReturn {
       }
 
       // Call the Agent API with retry logic
-      const { data, error: fetchError, response } = await postWithRetry<{ data?: Record<string, unknown> }>(
+      const { data, error: fetchError } = await postWithRetry<{ data?: Record<string, unknown> }>(
         '/api/agent',
         payload,
         token,

@@ -218,9 +218,7 @@ export function calculateGrowthRates(
     }
 
     // Find date range
-    const dates = metrics.map((m) => new Date(m.date))
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
-    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
+    const maxDate = new Date(Math.max(...metrics.map((m) => new Date(m.date).getTime())))
 
     // Calculate WoW: compare last 7 days vs previous 7 days
     const thisWeekEnd = maxDate
@@ -651,8 +649,6 @@ export function safeEvaluateFormula(formula: string, inputs: Record<string, numb
             return null
         }
 
-        // Use Function constructor for safe evaluation (no access to external scope)
-        // eslint-disable-next-line no-new-func
         const fn = new Function(`return (${expression})`)
         const result = fn()
 

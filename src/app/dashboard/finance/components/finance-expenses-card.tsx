@@ -8,9 +8,19 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CurrencySelect } from '@/components/ui/currency-select'
@@ -114,102 +124,172 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
 
       <ContentWrapper className={embedded ? '' : 'space-y-6 pt-6'}>
         {loadError ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-            {loadError}
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive flex items-center justify-between">
+            <span>{loadError}</span>
+            <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loading}>
+              <RefreshCw className="h-3 w-3 mr-1" /> Retry
+            </Button>
           </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-[2fr,1fr,1fr,1fr,1fr,auto]">
-          <div className="space-y-1.5">
-            <Label htmlFor="expense-desc">Description</Label>
-            <Input
-              id="expense-desc"
-              value={newExpense.description}
-              onChange={(e) => setNewExpense((p) => ({ ...p, description: e.target.value }))}
-              placeholder="e.g. Stripe fees for December"
-            />
+        {/* Add New Expense Form - Two Row Layout for Better Readability */}
+        <div className="rounded-lg border border-muted/60 bg-muted/5 p-4 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Plus className="h-4 w-4" />
+            Add expense
+          </div>
+          
+          {/* Primary fields */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="expense-desc">Description *</Label>
+              <Input
+                id="expense-desc"
+                value={newExpense.description}
+                onChange={(e) => setNewExpense((p) => ({ ...p, description: e.target.value }))}
+                placeholder="e.g. Stripe fees for December"
+                className="bg-background"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-amount">Amount *</Label>
+              <Input
+                id="expense-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={newExpense.amount}
+                onChange={(e) => setNewExpense((p) => ({ ...p, amount: e.target.value }))}
+                placeholder="125.50"
+                className="bg-background tabular-nums"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-currency">Currency</Label>
+              <CurrencySelect
+                value={(newExpense.currency ?? resolvedCurrency) as CurrencyCode}
+                onValueChange={(value) => setNewExpense((p) => ({ ...p, currency: value }))}
+                showPopular
+              />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="expense-amount">Amount</Label>
-            <Input
-              id="expense-amount"
-              type="number"
-              min="0"
-              value={newExpense.amount}
-              onChange={(e) => setNewExpense((p) => ({ ...p, amount: e.target.value }))}
-              placeholder="125.50"
-            />
+          {/* Secondary fields */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select
+                value={newExpense.costType}
+                onValueChange={(value) => setNewExpense((p) => ({ ...p, costType: value as any }))}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Variable" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="variable">Variable</SelectItem>
+                  <SelectItem value="fixed">Fixed</SelectItem>
+                  <SelectItem value="time">Time-based</SelectItem>
+                  <SelectItem value="milestone">Milestone</SelectItem>
+                  <SelectItem value="reimbursement">Reimbursement</SelectItem>
+                  <SelectItem value="employee_reimbursement">Employee</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select
+                value={newExpense.categoryId || 'none'}
+                onValueChange={(value) => setNewExpense((p) => ({ ...p, categoryId: value === 'none' ? '' : value }))}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Uncategorized</SelectItem>
+                  {categories
+                    .filter((c) => c.isActive)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Vendor</Label>
+              <Select
+                value={newExpense.vendorId || 'none'}
+                onValueChange={(value) => setNewExpense((p) => ({ ...p, vendorId: value === 'none' ? '' : value }))}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {vendors
+                    .filter((v) => v.isActive)
+                    .map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="expense-date">Date</Label>
+              <Input
+                id="expense-date"
+                type="date"
+                value={newExpense.incurredDate}
+                onChange={(e) => setNewExpense((p) => ({ ...p, incurredDate: e.target.value }))}
+                className="bg-background"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                type="button"
+                className="w-full"
+                disabled={submitting || !newExpense.description.trim() || !newExpense.amount}
+                onClick={() => void handleCreateExpense()}
+              >
+                {submitting ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Saving…
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" /> Add Expense
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="expense-currency">Currency</Label>
-            <CurrencySelect
-              value={(newExpense.currency ?? resolvedCurrency) as CurrencyCode}
-              onValueChange={(value) => setNewExpense((p) => ({ ...p, currency: value }))}
-              showPopular
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Cost type</Label>
-            <Select
-              value={newExpense.costType}
-              onValueChange={(value) => setNewExpense((p) => ({ ...p, costType: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Variable" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="variable">Variable</SelectItem>
-                <SelectItem value="fixed">Fixed</SelectItem>
-                <SelectItem value="time">Time-based</SelectItem>
-                <SelectItem value="milestone">Milestone</SelectItem>
-                <SelectItem value="reimbursement">Reimbursement</SelectItem>
-                <SelectItem value="employee_reimbursement">Employee reimbursement</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Category</Label>
-            <Select
-              value={newExpense.categoryId || 'none'}
-              onValueChange={(value) => setNewExpense((p) => ({ ...p, categoryId: value === 'none' ? '' : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Uncategorized</SelectItem>
-                {categories
-                  .filter((c) => c.isActive)
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-end">
-            <Button
-              type="button"
-              className="w-full"
-              disabled={submitting || !newExpense.description.trim()}
-              onClick={() => void handleCreateExpense()}
-            >
-              {submitting ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Saving…
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" /> Add
-                </>
-              )}
-            </Button>
+          {/* Receipt upload */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Label htmlFor="expense-receipt" className="text-xs text-muted-foreground">Receipt (optional)</Label>
+              <Input
+                id="expense-receipt"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => void handleAddReceipt(e.target.files?.[0] ?? null)}
+                className="text-xs mt-1"
+              />
+            </div>
+            {newExpense.attachments.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-medium">{newExpense.attachments.length} file(s) attached</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -427,16 +507,37 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
                         ) : null}
 
                         {e.status === 'draft' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="gap-2 text-destructive"
-                            disabled={actingExpenseId === e.id}
-                            onClick={() => void handleDeleteExpense(e.id)}
-                          >
-                            <Trash className="h-4 w-4" /> Delete
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={actingExpenseId === e.id}
+                              >
+                                <Trash className="h-4 w-4" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the expense &quot;{e.description}&quot;. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => void handleDeleteExpense(e.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         ) : null}
                       </div>
                     </TableCell>

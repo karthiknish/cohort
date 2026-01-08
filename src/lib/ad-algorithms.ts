@@ -41,7 +41,6 @@ export function calculateAlgorithmicInsights(summary: AdMetricsSummary): Algorit
   if (totalSpend === 0) return []
 
   const cpa = totalConversions > 0 ? totalSpend / totalConversions : Infinity
-  const ctr = summary.totalImpressions > 0 ? (totalClicks / summary.totalImpressions) * 100 : 0
   const convRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0
   const aov = totalConversions > 0 ? totalRevenue / totalConversions : 0
   const rpc = totalClicks > 0 ? totalRevenue / totalClicks : 0
@@ -124,7 +123,7 @@ export function calculateAlgorithmicInsights(summary: AdMetricsSummary): Algorit
  * Weights: ROAS (40%), Conv Rate (30%), CTR (20%), CPC (10% inverse)
  */
 export function calculateEfficiencyScore(summary: AdMetricsSummary): number {
-  const { totalSpend, totalRevenue, totalClicks, totalConversions, totalImpressions, averageRoaS, averageCpc } = summary
+  const { totalSpend, totalClicks, totalConversions, totalImpressions, averageRoaS, averageCpc } = summary
   if (totalSpend === 0) return 0
 
   const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
@@ -140,7 +139,7 @@ export function calculateEfficiencyScore(summary: AdMetricsSummary): number {
 }
 
 export function enrichSummaryWithMetrics(summary: AdMetricsSummary): AdMetricsSummary {
-  const { totalSpend, totalRevenue, totalClicks, totalConversions, totalImpressions } = summary
+  const { totalSpend, totalRevenue, totalClicks, totalConversions } = summary
   
   const aov = totalConversions > 0 ? totalRevenue / totalConversions : 0
   const rpc = totalClicks > 0 ? totalRevenue / totalClicks : 0

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ElementType } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -46,6 +46,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
 // Section header component for consistency
 function SectionHeader({
@@ -259,13 +260,16 @@ export function FinanceDashboard() {
     return base
   }, [isAdmin, isClient])
 
-  const [activeSection, setActiveSection] = useState<string>(() => sections[0]?.value ?? 'overview')
+  const sectionTabs = usePersistedTab<string>({
+    param: 'section',
+    defaultValue: sections[0]?.value ?? 'overview',
+    allowedValues: sections.map((s) => s.value),
+    storageNamespace: 'dashboard:finance',
+    syncToUrl: true,
+  })
 
-  useEffect(() => {
-    if (!sections.some((s) => s.value === activeSection)) {
-      setActiveSection(sections[0]?.value ?? 'overview')
-    }
-  }, [activeSection, sections])
+  const activeSection = sectionTabs.value
+  const setActiveSection = sectionTabs.setValue
 
   const handleJumpTo = useCallback(
     (value: string) => {
@@ -276,7 +280,7 @@ export function FinanceDashboard() {
       if (!el) return
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     },
-    [sections]
+    [sections, setActiveSection]
   )
 
   if (isInitialLoading) {

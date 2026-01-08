@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { TriangleAlert, CircleCheck, LoaderCircle, Sparkles } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type DeckProgressStage = "initializing" | "polling" | "launching" | "queued" | "error"
@@ -29,7 +30,7 @@ const deckStageMessages: Record<DeckProgressStage, { title: string; description:
   },
 }
 
-const generationFlow: { label: string; helper: string; icon: any; duration: number | null }[] = [
+const generationFlow: { label: string; helper: string; icon: LucideIcon; duration: number | null }[] = [
   {
     label: "Analyzing your input...",
     helper: "Reviewing your responses and goals to set the brief.",

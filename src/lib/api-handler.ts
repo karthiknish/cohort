@@ -198,7 +198,7 @@ export function createApiHandler<
         try {
           json = await req.json()
           rawBody = JSON.stringify(json)
-        } catch (e) {
+        } catch {
           return NextResponse.json({ 
             success: false,
             error: 'Invalid JSON body' 

@@ -78,7 +78,16 @@ export const POST = createApiHandler(
 
       if (!integration || !integration.accessToken) {
         await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' })
-        await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'error', message: 'Missing credentials' })
+        // If the integration document was deleted (disconnect), avoid throwing from a status update.
+        if (integration) {
+          await updateIntegrationStatus({
+            userId: targetUserId,
+            providerId: job.providerId,
+            clientId,
+            status: 'error',
+            message: 'Missing credentials',
+          })
+        }
         throw new ValidationError('Integration credentials missing')
       }
 

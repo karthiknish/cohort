@@ -59,7 +59,7 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
   if (errorMessage && typeof errorMessage === 'string') {
     // Firebase messages usually look like "Firebase: Error (auth/invalid-email)."
     // We want to strip the "Firebase: " prefix and any trailing error codes in parentheses
-    let clean = errorMessage
+    const clean = errorMessage
       .replace(/^Firebase:\s*/i, '')
       .replace(/\s*\(auth\/[^)]+\)\.?$/i, '')
       .trim()

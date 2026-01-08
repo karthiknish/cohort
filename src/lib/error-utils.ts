@@ -6,8 +6,8 @@ export function getErrorMessage(error: unknown, fallback: string): string {
 
 export function toErrorMessage(error: unknown, fallback = 'An error occurred'): string {
   if (typeof error === 'string') return error
-  if (error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string') {
-    const message = ((error as any).message as string).trim()
+  if (error && typeof error === 'object' && 'message' in error && typeof (error as Record<string, unknown>).message === 'string') {
+    const message = ((error as Record<string, unknown>).message as string).trim()
     return message.length > 0 ? message : fallback
   }
   return fallback

@@ -1,19 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import {  useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+
 } from '@/components/ui/select'
 import { useClientContext } from '@/contexts/client-context'
 import { useRealtimeActivity } from '@/app/dashboard/activity/hooks/use-realtime-activity'
@@ -48,17 +48,7 @@ function formatRelativeTime(timestamp: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function formatLastUpdated(date: Date | null): string {
-  if (!date) return ''
-  const now = new Date()
-  const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
-  if (diffSeconds < 60) return 'Updated just now'
-  if (diffSeconds < 3600) return `Updated ${Math.floor(diffSeconds / 60)}m ago`
-  if (diffSeconds < 86400) return `Updated ${Math.floor(diffSeconds / 3600)}h ago`
-  
-  return `Updated ${Math.floor(diffSeconds / 86400)}d ago`
-}
+
 
 interface ActivityItemProps {
   activity: Activity

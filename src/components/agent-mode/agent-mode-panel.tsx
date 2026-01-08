@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Mic, MicOff, Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff, Wifi } from 'lucide-react'
+import { Mic, MicOff, Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
@@ -119,7 +119,6 @@ export function AgentModePanel({
   messages,
   isProcessing,
   onSendMessage,
-  onClear,
   conversationId,
   history,
   isHistoryLoading,
@@ -128,7 +127,6 @@ export function AgentModePanel({
   onUpdateConversationTitle,
   onDeleteConversation,
   // Error handling props
-  error,
   onClearError,
   lastFailedMessage,
   onRetry,

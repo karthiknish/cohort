@@ -3,7 +3,6 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Briefcase, MessageSquare, Users } from 'lucide-react'
 
 import {
   Card,
@@ -22,6 +21,7 @@ import { usePreview } from '@/contexts/preview-context'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
+import { usePersistedTab } from '@/hooks/use-persisted-tab'
 import { useToast } from '@/components/ui/use-toast'
 import { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks'
 import type { UpdateTaskPayload } from '@/components/tasks/hooks/use-tasks'
@@ -80,6 +80,14 @@ export default function TasksPage() {
   const { setProjectContext } = useNavigationContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
+
+  const taskTabs = usePersistedTab({
+    param: 'tab',
+    defaultValue: 'all-tasks',
+    allowedValues: ['all-tasks', 'my-tasks'] as const,
+    storageNamespace: 'dashboard:tasks',
+    syncToUrl: true,
+  })
 
   // Project filter state
   const [projectFilter, setProjectFilter] = useState<ProjectFilter>(() => ({
@@ -144,6 +152,8 @@ export default function TasksPage() {
     selectedClientId: selectedClientId ?? undefined,
     projectFilterId: projectFilter.id,
     projectFilterName: projectFilter.name,
+    activeTab: taskTabs.value,
+    setActiveTab: (next) => taskTabs.setValue(next as 'all-tasks' | 'my-tasks'),
   })
 
   // Sync debounced search
@@ -282,65 +292,6 @@ export default function TasksPage() {
     setSelectedTaskIds(new Set(filtered.map((task) => task.id)))
   }, [visibleTasks])
 
-  const buildUpdatePayload = useCallback(
-    (
-      task: TaskRecord,
-      overrides: {
-        status?: TaskStatus
-        priority?: TaskPriority
-        assignedTo?: string[]
-        dueDate?: string | null
-        tags?: string[]
-        description?: string
-        title?: string
-      },
-    ): UpdateTaskPayload => {
-      return {
-        title: task.title,
-        description: task.description ?? '',
-        status: (overrides.status ?? task.status) as TaskStatus,
-        priority: (overrides.priority ?? task.priority) as TaskPriority,
-        assignedTo: overrides.assignedTo ?? (task.assignedTo ?? []),
-        dueDate: overrides.dueDate === null ? undefined : overrides.dueDate ?? (task.dueDate ?? undefined),
-        tags: overrides.tags ?? (task.tags ?? []),
-      }
-    },
-    [],
-  )
-
-  const runBulkOperation = useCallback(
-    async (label: string, tasksToUpdate: TaskRecord[], worker: (task: TaskRecord) => Promise<void>) => {
-      if (tasksToUpdate.length === 0) return
-
-      setBulkState({ active: true, label, progress: 0 })
-      let successCount = 0
-      let failureCount = 0
-
-      for (let index = 0; index < tasksToUpdate.length; index += 1) {
-        const task = tasksToUpdate[index]
-        try {
-          await worker(task)
-          successCount += 1
-        } catch (err) {
-          failureCount += 1
-          console.error(`Bulk action failed for task ${task.id}`, err)
-        }
-
-        const progress = Math.round(((index + 1) / tasksToUpdate.length) * 100)
-        setBulkState({ active: true, label, progress })
-      }
-
-      setBulkState({ active: false, label: '', progress: 0 })
-      setSelectedTaskIds(new Set())
-
-      toast({
-        title: failureCount > 0 ? `${label} completed with issues` : `${label} complete`,
-        description: `${successCount}/${tasksToUpdate.length} tasks processed${failureCount > 0 ? `, ${failureCount} failed` : ''}.`,
-        variant: failureCount > 0 ? 'destructive' : 'default',
-      })
-    },
-    [toast],
-  )
 
   const handleBulkStatusChange = useCallback(
     async (status: TaskStatus) => {

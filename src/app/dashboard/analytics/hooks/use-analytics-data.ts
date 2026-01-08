@@ -44,7 +44,7 @@ export function useAnalyticsData(
   // If in preview mode, return preview data immediately
   const previewMetrics = useMemo(() => {
     if (!isPreviewMode) return null
-    return getPreviewAnalyticsMetrics(clientId) as MetricRecord[]
+    return getPreviewAnalyticsMetrics() as MetricRecord[]
   }, [isPreviewMode, clientId])
   
   const previewInsights = useMemo(() => {

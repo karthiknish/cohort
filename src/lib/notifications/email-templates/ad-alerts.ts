@@ -14,7 +14,6 @@ export function adAlertsTemplate(params: AdAlertsTemplateParams): string {
     const { alerts, providerId } = params
 
     const criticalCount = alerts.filter((a) => a.severity === 'critical').length
-    const warningCount = alerts.filter((a) => a.severity === 'warning').length
 
     const alertItems = alerts.map((alert) => {
         const severityColor = alert.severity === 'critical' ? '#dc2626' : alert.severity === 'warning' ? '#f59e0b' : '#3b82f6'

@@ -68,10 +68,10 @@ function calculateNextRunDate(
   frequency: RecurringFrequency,
   currentNextRun: string,
   dayOfMonth: number | null,
-  dayOfWeek: number | null
+  _dayOfWeek: number | null
 ): string {
   const current = new Date(currentNextRun)
-  let next = new Date(current)
+  const next = new Date(current)
 
   if (frequency === 'weekly') {
     next.setDate(next.getDate() + 7)

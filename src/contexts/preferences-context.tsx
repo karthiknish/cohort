@@ -34,7 +34,7 @@ interface PreferencesProviderProps {
 }
 
 export function PreferencesProvider({ children }: PreferencesProviderProps) {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -44,6 +44,7 @@ export default function AnalyticsPage() {
     let cancelled = false
     const fetchToken = async () => {
       if (token) return
+      await authService.waitForInitialAuth().catch(() => {})
       const jwt = await authService.getIdToken().catch(() => null)
       if (!cancelled) {
         setToken(jwt)
@@ -67,6 +68,7 @@ export default function AnalyticsPage() {
       return
     }
 
+    await authService.waitForInitialAuth().catch(() => {})
     const jwt = await authService.getIdToken().catch(() => null)
     if (!jwt) return
 
@@ -166,6 +168,7 @@ export default function AnalyticsPage() {
       return
     }
 
+    await authService.waitForInitialAuth().catch(() => {})
     const jwt = await authService.getIdToken().catch(() => null)
     if (!jwt) {
       toast({ title: 'Auth required', description: 'Please sign in again and retry.', variant: 'destructive' })

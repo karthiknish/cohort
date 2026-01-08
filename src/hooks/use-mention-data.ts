@@ -34,7 +34,9 @@ async function fetchWithAuth(url: string, token: string) {
   const payload = await res.json()
   // Most API routes return `{ success: true, data: ... }`.
   // Some legacy endpoints may return the data directly.
-  return (payload && typeof payload === 'object' && 'data' in payload) ? (payload as any).data : payload
+  return (payload && typeof payload === 'object' && 'data' in payload) 
+    ? (payload as { data: unknown }).data 
+    : payload
 }
 
 export function useMentionData() {

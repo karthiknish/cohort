@@ -7,7 +7,7 @@ import { logAuditAction } from '@/lib/audit-logger'
 
 const disconnectSchema = z.object({
   providerId: z.string().min(1),
-  clientId: z.string().optional(),
+  clientId: z.string().nullable().optional(),
 })
 
 export const POST = createApiHandler(

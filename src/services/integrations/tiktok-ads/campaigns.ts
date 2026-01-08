@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { formatDate } from '@/lib/dates'
-import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
+import { coerceNumber } from './client'
 import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
 import { TikTokApiError } from './errors'
 import {
@@ -540,5 +540,6 @@ export async function updateTikTokCampaignBidding(options: {
   maxRetries?: number
 }): Promise<{ success: boolean }> {
   // TikTok bidding is often at the adgroup level.
+  void options
   return { success: true }
 }

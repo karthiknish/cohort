@@ -15,7 +15,7 @@ export function VoiceWaveform({ isActive }: VoiceWaveformProps) {
     useEffect(() => {
         if (isActive) {
             // Map the normalized frequencies (0-1) to heights (8-40)
-            const newBars = frequencies.map((freq, i) => {
+            const newBars = frequencies.map((freq) => {
                 const baseHeight = 8
                 // Amplify frequencies slightly for more visual impact
                 const amplifiedFreq = Math.pow(freq, 0.8) // Bring up lower volumes

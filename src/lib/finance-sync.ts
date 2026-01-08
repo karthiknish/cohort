@@ -1,7 +1,7 @@
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
 
-import { formatDate, parseDate, toISO } from '@/lib/dates'
+import { formatDate, parseDate } from '@/lib/dates'
 import { adminDb } from '@/lib/firebase-admin'
 
 export type SyncOptions = {

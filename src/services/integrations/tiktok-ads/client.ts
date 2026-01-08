@@ -27,7 +27,7 @@ export function coerceNumber(value: unknown): number {
 // EXECUTE TIKTOK API REQUEST WITH RETRY LOGIC
 // =============================================================================
 
-interface ExecuteRequestOptions<T> {
+interface ExecuteRequestOptions {
   url: string
   method?: 'GET' | 'POST'
   headers: Record<string, string>
@@ -39,7 +39,7 @@ interface ExecuteRequestOptions<T> {
 }
 
 export async function executeTikTokApiRequest<T extends TikTokApiErrorResponse>(
-  options: ExecuteRequestOptions<T>
+  options: ExecuteRequestOptions
 ): Promise<{ response: Response; payload: T }> {
   return executeIntegrationRequest<T>(tiktokAdsClient, options, { defaultMethod: 'POST' })
 }

@@ -39,7 +39,7 @@ export class FirestoreCacheBackend implements CacheBackend {
     const data = (snap.data() ?? {}) as Partial<StoredCacheRecord>
     if (typeof data.value !== 'string') return null
 
-    const expiresAt = (data.expiresAt as any)?.toDate?.() as Date | undefined
+    const expiresAt = data.expiresAt instanceof Timestamp ? data.expiresAt.toDate() : undefined
     if (!expiresAt || expiresAt.getTime() <= Date.now()) {
       // Best-effort cleanup of expired values
       await this.collection.doc(docId).delete().catch(() => {})

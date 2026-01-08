@@ -150,8 +150,8 @@ export function coerceDate(value: unknown): Date | null {
     return date && !Number.isNaN(date.getTime()) ? date : null
   }
   // Firestore Timestamp
-  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
-    return (value as any).toDate()
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate()
   }
   return null
 }

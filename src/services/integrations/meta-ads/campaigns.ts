@@ -6,7 +6,6 @@ import {
   appendMetaAuthParams,
   buildTimeRange,
   coerceNumber,
-  DEFAULT_RETRY_CONFIG,
   META_API_BASE,
 } from './client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
@@ -502,5 +501,6 @@ export async function updateMetaCampaignBidding(options: {
   maxRetries?: number
 }): Promise<{ success: boolean }> {
   // Meta bidding is usually done at the AdSet level.
+  void options
   return { success: true }
 }

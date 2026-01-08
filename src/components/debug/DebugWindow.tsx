@@ -23,7 +23,7 @@ interface LogEntry {
   timestamp: Date
   level: 'info' | 'warn' | 'error' | 'debug'
   message: string
-  context?: any
+  context?: unknown
 }
 
 export function DebugWindow() {
@@ -42,18 +42,17 @@ export function DebugWindow() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
-    return null
-  }
-
   // Intercept console logs
   React.useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') {
+      return
+    }
+
     const originalLog = console.log
     const originalError = console.error
     const originalWarn = console.warn
 
-    const addLog = (level: LogEntry['level'], args: any[]) => {
+    const addLog = (level: LogEntry['level'], args: unknown[]) => {
       const message = args.map(arg => 
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' ')
@@ -103,6 +102,10 @@ export function DebugWindow() {
       console.warn = originalWarn
     }
   }, [])
+
+  if (process.env.NODE_ENV !== 'development') {
+    return null
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-[9999]">

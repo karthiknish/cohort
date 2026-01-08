@@ -54,7 +54,7 @@ export class CacheManager {
       this.counters.hits += 1
       this.onEvent?.({ type: 'hit', key, backend: this.backendName })
       return JSON.parse(raw) as T
-    } catch (error) {
+    } catch {
       this.counters.errors += 1
       this.onEvent?.({ type: 'error', key, backend: this.backendName })
       return null

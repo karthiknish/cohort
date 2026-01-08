@@ -84,7 +84,7 @@ export async function appendMetaAuthParams(options: {
 // EXECUTE META API REQUEST WITH RETRY LOGIC
 // =============================================================================
 
-interface ExecuteRequestOptions<T> {
+interface ExecuteRequestOptions {
   url: string
   accessToken: string
   operation: string
@@ -96,7 +96,7 @@ interface ExecuteRequestOptions<T> {
 }
 
 export async function executeMetaApiRequest<T>(
-  options: ExecuteRequestOptions<T>
+  options: ExecuteRequestOptions
 ): Promise<{ response: Response; payload: T }> {
   const {
     url,

@@ -7,7 +7,6 @@ import {
   coerceNumber,
   buildTimeRange,
   formatDate,
-  DEFAULT_RETRY_CONFIG,
 } from './client'
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
 import { LinkedInApiError } from './errors'
@@ -570,7 +569,7 @@ export async function createLinkedInAudience(options: {
     status: 'ACTIVE'
   }
 
-  const { payload } = await linkedinAdsClient.executeRequest<any>({
+  const { payload } = await linkedinAdsClient.executeRequest<{ id?: string }>({
     url,
     method: 'POST',
     headers: {
@@ -584,9 +583,9 @@ export async function createLinkedInAudience(options: {
     maxRetries,
   })
 
-  return { 
-    success: true, 
-    id: payload.id || '' 
+  return {
+    success: true,
+    id: payload.id || ''
   }
 }
 
@@ -619,7 +618,7 @@ export async function updateLinkedInCampaignBidding(options: {
     }
   }
 
-  const { payload } = await linkedinAdsClient.executeRequest<any>({
+  const { payload } = await linkedinAdsClient.executeRequest<LinkedInApiErrorResponse>({
     url,
     method: 'POST',
     headers: {
@@ -633,6 +632,13 @@ export async function updateLinkedInCampaignBidding(options: {
     operation: 'updateCampaignBidding',
     maxRetries,
   })
+
+  if (payload.status && payload.status >= 400) {
+    throw new LinkedInApiError({
+      message: payload.message ?? 'Campaign bidding update failed',
+      httpStatus: payload.status,
+    })
+  }
 
   return { success: true }
 }

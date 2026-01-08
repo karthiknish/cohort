@@ -1,10 +1,7 @@
 import type { CollaborationMessage } from './types'
-import { getPreviewClients } from './clients'
 import { isoDaysAgo } from './utils'
 
 export function getPreviewCollaborationMessages(clientId: string | null, projectId: string | null): CollaborationMessage[] {
-    const clients = getPreviewClients()
-
     const messages: CollaborationMessage[] = [
         {
             id: 'preview-collab-1',

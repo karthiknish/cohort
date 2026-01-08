@@ -177,7 +177,7 @@ export function buildSyncJobPayload<TTimestamp>(
   }
 }
 
-export function mapIntegrationSnapshot<TTimestamp extends { toDate?: () => Date }>(
+export function mapIntegrationSnapshot(
   providerId: string,
   snapshotId: string,
   data: Record<string, unknown>
@@ -213,7 +213,7 @@ export function mapIntegrationSnapshot<TTimestamp extends { toDate?: () => Date 
   }
 }
 
-export function mapSyncJobSnapshot<TTimestamp>(
+export function mapSyncJobSnapshot(
   docId: string,
   data: Record<string, unknown>
 ): SyncJob {

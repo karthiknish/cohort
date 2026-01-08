@@ -147,7 +147,6 @@ export function ImageUploader({
       {previewUrl ? (
         <div className="relative group">
           <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <LazyImage
               src={previewUrl}
               alt="Feature preview"

@@ -1,6 +1,5 @@
 import { apiFetch } from '@/lib/api-client'
 import type {
-  ProposalEventType,
   ProposalAnalyticsEvent,
   ProposalAnalyticsSummary,
   ProposalAnalyticsTimeSeriesPoint,

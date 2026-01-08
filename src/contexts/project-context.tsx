@@ -30,7 +30,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   // Auto-populate project from URL params
   useEffect(() => {
     const urlProjectId = searchParams.get('projectId')
-    const urlProjectName = searchParams.get('projectName')
 
     if (urlProjectId && selectedClient?.id) {
       setSelectedProjectId(urlProjectId)

@@ -1,13 +1,11 @@
 import { useCallback, useMemo } from 'react'
-import { driver, Driver } from 'driver.js'
+import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
-import { useRouter } from 'next/navigation'
 import { db } from '@/lib/firebase'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '@/contexts/auth-context'
 
 export function useOnboardingTour() {
-    const router = useRouter()
     const { user } = useAuth()
 
     const tourSteps = useMemo(() => [
@@ -86,7 +84,7 @@ export function useOnboardingTour() {
             animate: true,
             steps: tourSteps,
             popoverClass: 'cohorts-tour-popover',
-            onHighlightStarted: (element) => {
+            onHighlightStarted: () => {
                 // Optional: Add custom animations or glow effects to highlighted element
             },
             onDestroyed: async () => {

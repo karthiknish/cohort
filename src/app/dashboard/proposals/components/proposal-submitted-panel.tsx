@@ -3,16 +3,16 @@
 import Link from "next/link"
 import { Copy, Sparkles, RefreshCw, LoaderCircle, CircleCheck, FileText, Layout, Download, ExternalLink, Presentation } from "lucide-react"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { ProposalFormData } from "@/lib/proposals"
 import { ProposalPresentationDeck } from "@/services/proposals"
 import { cn } from "@/lib/utils"
 
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 interface ProposalSubmittedPanelProps {
   summary: ProposalFormData

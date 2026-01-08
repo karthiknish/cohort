@@ -55,6 +55,7 @@ export function TaskList({
     [error, initialLoading, loading, tasks.length, viewMode]
   )
   const parentRef = useRef<HTMLDivElement | null>(null)
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: useVirtual ? tasks.length : 0,
     getScrollElement: () => parentRef.current,

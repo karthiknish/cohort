@@ -7,9 +7,7 @@ import {
   ArrowDown,
   ArrowUp,
   Briefcase,
-  Calendar,
-  CircleCheck,
-  Clock,
+
   FolderKanban,
   LayoutGrid,
   List,
@@ -34,7 +32,6 @@ import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,

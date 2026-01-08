@@ -20,8 +20,6 @@ import {
   MetaPagingState,
   MetaApiErrorResponse,
   NormalizedMetric,
-  MetaAdsListResponse,
-  MetaAdData,
 } from './types'
 
 // =============================================================================

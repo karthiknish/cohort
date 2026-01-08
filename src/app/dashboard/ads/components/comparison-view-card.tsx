@@ -1,6 +1,4 @@
 'use client'
-
-import { useMemo } from 'react'
 import {
     TrendingUp,
     TrendingDown,
@@ -21,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn, formatCurrency } from '@/lib/utils'
+import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
 import type { PeriodComparison, ProviderComparison } from '../hooks/use-metrics-comparison'
 import { PROVIDER_ICON_MAP, formatProviderName } from './utils'
@@ -284,6 +283,13 @@ export function ComparisonViewCard({
     providerComparison,
     loading,
 }: ComparisonViewCardProps) {
+    const viewTabs = usePersistedTab({
+        defaultValue: 'period',
+        allowedValues: ['period', 'platform'] as const,
+        storageNamespace: 'dashboard:ads:comparison',
+        syncToUrl: false,
+    })
+
     return (
         <Card className="shadow-sm">
             <CardHeader>
@@ -302,7 +308,7 @@ export function ComparisonViewCard({
                         <Skeleton className="h-64 w-full" />
                     </div>
                 ) : (
-                    <Tabs defaultValue="period" className="w-full">
+                    <Tabs value={viewTabs.value} onValueChange={(v) => viewTabs.setValue(v as 'period' | 'platform')} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="period" className="gap-2">
                                 <Calendar className="h-4 w-4" />

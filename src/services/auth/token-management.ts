@@ -42,10 +42,10 @@ export async function fetchAndCacheIdToken(
         const isNetworkError =
             (error instanceof TypeError &&
                 (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
-            (typeof error === 'object' &&
-                error !== null &&
-                'code' in error &&
-                (error as any).code === 'auth/network-request-failed')
+             (typeof error === 'object' &&
+                 error !== null &&
+                 'code' in error &&
+                 (error as { code: string }).code === 'auth/network-request-failed')
 
         if (isNetworkError && attempt < 2) {
             // Wait 1s then 2s

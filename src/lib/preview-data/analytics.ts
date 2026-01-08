@@ -5,7 +5,7 @@ import type {
 } from './types'
 import { isoDaysAgo } from './utils'
 
-export function getPreviewAnalyticsMetrics(clientId: string | null): PreviewAnalyticsMetric[] {
+export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
     const providers = ['google', 'facebook', 'linkedin']
 
     const baseData: Record<string, Array<{ spend: number; impressions: number; clicks: number; conversions: number; revenue: number }>> = {

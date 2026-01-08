@@ -1,10 +1,7 @@
 import type { Activity } from './types'
-import { getPreviewClients } from './clients'
 import { isoDaysAgo } from './utils'
 
 export function getPreviewActivity(clientId: string | null): Activity[] {
-    const clients = getPreviewClients()
-    const targetClientIds = clientId ? [clientId] : clients.map((c) => c.id)
 
     const activities: Activity[] = [
         {

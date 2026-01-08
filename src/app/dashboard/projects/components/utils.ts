@@ -3,9 +3,8 @@ import { PROJECT_STATUSES } from '@/types/projects'
 import type { ProjectRecord } from '@/types/projects'
 import { FolderKanban, CircleCheck, TriangleAlert } from 'lucide-react'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
-import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
+import { calculateBackoffDelay as calculateBackoffDelayLib } from '@/lib/retry-utils'
 import { getErrorMessage as getErrorMessageLib } from '@/lib/error-utils'
-import { useDebouncedValue } from '@/hooks/use-debounce'
 
 export type StatusFilter = 'all' | ProjectStatus
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount'

@@ -11,6 +11,8 @@ export type UseTaskFiltersOptions = {
   selectedClientId: string | undefined
   projectFilterId: string | null
   projectFilterName: string | null
+  activeTab?: string
+  setActiveTab?: React.Dispatch<React.SetStateAction<string>>
 }
 
 export type UseTaskFiltersReturn = {
@@ -55,14 +57,19 @@ export function useTaskFilters({
   selectedClientId,
   projectFilterId,
   projectFilterName,
+  activeTab: controlledActiveTab,
+  setActiveTab: controlledSetActiveTab,
 }: UseTaskFiltersOptions): UseTaskFiltersReturn {
   const [selectedStatus, setSelectedStatus] = useState<'all' | TaskStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAssignee, setSelectedAssignee] = useState('all')
-  const [activeTab, setActiveTab] = useState('all-tasks')
+  const [activeTabInternal, setActiveTabInternal] = useState('all-tasks')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'board'>('list')
+
+  const activeTab = controlledActiveTab ?? activeTabInternal
+  const setActiveTab = controlledSetActiveTab ?? setActiveTabInternal
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))

@@ -4,14 +4,13 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onIdTokenChanged,
+  setPersistence,
+  browserLocalPersistence,
   updateProfile as updateFirebaseProfile,
   User as FirebaseUser,
 } from 'firebase/auth'
 
 import type { AuthUser, SignUpData } from './types'
-import {
-  isFirebaseError,
-} from './utils'
 import { getFriendlyAuthErrorMessage } from './error-utils'
 import { isValidRedirectUrl } from '@/lib/utils'
 
@@ -58,7 +57,21 @@ export class AuthService {
   private idTokenRefreshPromise: Promise<string> | null = null
   private refreshTimeout: NodeJS.Timeout | null = null
 
+  private initialAuthResolved = false
+  private readonly initialAuthPromise: Promise<void>
+  private resolveInitialAuth!: () => void
+
   private constructor() {
+    this.initialAuthPromise = new Promise((resolve) => {
+      this.resolveInitialAuth = resolve
+    })
+
+    if (typeof window !== 'undefined') {
+      setPersistence(auth, browserLocalPersistence).catch((error) => {
+        console.warn('[AuthService] Failed to set auth persistence:', error)
+      })
+    }
+
     onIdTokenChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       this.clearIdTokenCache()
       if (this.refreshTimeout) {
@@ -81,6 +94,11 @@ export class AuthService {
       } else {
         this.currentUser = null
         this.notifyListeners(null)
+      }
+
+      if (!this.initialAuthResolved) {
+        this.initialAuthResolved = true
+        this.resolveInitialAuth()
       }
     })
   }
@@ -106,7 +124,7 @@ export class AuthService {
       } catch (error) {
         const isNetworkError =
           (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
-          (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'auth/network-request-failed')
+          (typeof error === 'object' && error !== null && 'code' in error && (error as { code: string }).code === 'auth/network-request-failed')
 
         if (!isNetworkError) {
           console.error('Background token refresh failed:', error)
@@ -430,13 +448,23 @@ export class AuthService {
 
   onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
     this.authStateListeners.push(callback)
-    callback(this.currentUser)
+    if (this.initialAuthResolved) {
+      callback(this.currentUser)
+    }
     return () => {
       const index = this.authStateListeners.indexOf(callback)
       if (index > -1) {
         this.authStateListeners.splice(index, 1)
       }
     }
+  }
+
+  /**
+   * Resolves once Firebase has finished restoring the initial auth state.
+   * Useful to avoid treating the pre-restore null user as a sign-out.
+   */
+  async waitForInitialAuth(): Promise<void> {
+    await this.initialAuthPromise
   }
 
   private notifyListeners(user: AuthUser | null): void {
