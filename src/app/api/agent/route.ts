@@ -205,6 +205,8 @@ export const POST = createApiHandler(
             workspace: {
               workspaceId: workspace.workspaceId,
               financeCostsCollection: workspace.financeCostsCollection,
+              financeInvoicesCollection: workspace.financeInvoicesCollection,
+              financeRevenueCollection: workspace.financeRevenueCollection,
               tasksCollection: workspace.tasksCollection,
               projectsCollection: workspace.projectsCollection,
               proposalsCollection: workspace.proposalsCollection,

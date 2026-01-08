@@ -16,6 +16,8 @@ export interface ActionContext {
     workspace: {
         workspaceId: string
         financeCostsCollection: FirebaseFirestore.CollectionReference
+        financeInvoicesCollection: FirebaseFirestore.CollectionReference
+        financeRevenueCollection: FirebaseFirestore.CollectionReference
         tasksCollection: FirebaseFirestore.CollectionReference
         projectsCollection: FirebaseFirestore.CollectionReference
         proposalsCollection: FirebaseFirestore.CollectionReference
@@ -58,7 +60,37 @@ const updateTaskSchema = z.object({
     status: z.enum(['todo', 'in-progress', 'done', 'cancelled']).optional(),
     priority: z.enum(['low', 'medium', 'high']).optional(),
     title: z.string().min(1).optional(),
+    assigneeId: z.string().optional(),
 }).strict()
+
+const createClientSchema = z.object({
+    name: z.string().min(1).max(200),
+    email: z.string().email().optional(),
+    company: z.string().optional(),
+    status: z.enum(['active', 'onboarding', 'lead', 'inactive']).default('active'),
+})
+
+const updateProjectSchema = z.object({
+    projectId: z.string().min(1),
+    status: z.enum(['planning', 'active', 'on-hold', 'completed']).optional(),
+    name: z.string().optional(),
+}).strict()
+
+const createInvoiceSchema = z.object({
+    clientId: z.string().optional(),
+    clientName: z.string().optional(),
+    amount: z.coerce.number().positive(),
+    dueDate: z.string().optional(),
+    status: z.enum(['draft', 'sent', 'paid', 'overdue']).default('draft'),
+})
+
+const addRevenueSchema = z.object({
+    amount: z.coerce.number().positive(),
+    source: z.string().min(1).default('Direct'),
+    clientId: z.string().optional(),
+    clientName: z.string().optional(),
+    category: z.string().default('Service Fee'),
+})
 
 const createProjectSchema = z.object({
     name: z.string().min(1).max(200),
@@ -89,6 +121,21 @@ const addUserToTeamSchema = z.object({
     userName: z.string().min(1).optional(),
     userEmail: z.string().email().optional(),
 })
+
+async function findClientByName(name: string, context: ActionContext): Promise<{ id: string, name: string } | null> {
+    // Simple prefix search for client by name
+    const query = await context.workspace.clientsCollection
+        .where('name', '>=', name)
+        .where('name', '<=', name + '\uf8ff')
+        .limit(1)
+        .get()
+
+    if (!query.empty) {
+        const doc = query.docs[0]
+        return { id: doc.id, name: doc.data().name as string }
+    }
+    return null
+}
 
 // =============================================================================
 // OPERATION HANDLERS
@@ -207,6 +254,7 @@ async function handleUpdateTask(
         if (validated.status) updates.status = validated.status
         if (validated.priority) updates.priority = validated.priority
         if (validated.title) updates.title = validated.title
+        if (validated.assigneeId) updates.assigneeId = validated.assigneeId
 
         await taskRef.update(updates)
 
@@ -263,6 +311,180 @@ async function handleCreateProject(
         return {
             success: false,
             message: 'I couldn\'t create the project. Please try again or go to Projects.',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        }
+    }
+}
+
+async function handleUpdateProject(
+    params: Record<string, unknown>,
+    context: ActionContext
+): Promise<ActionResult> {
+    try {
+        const validated = updateProjectSchema.parse(params)
+        const projectRef = context.workspace.projectsCollection.doc(validated.projectId)
+        const projectSnap = await projectRef.get()
+
+        if (!projectSnap.exists) {
+            return {
+                success: false,
+                message: 'I couldn\'t find that project. Please check the project ID.',
+                error: 'Project not found',
+            }
+        }
+
+        const updates: Record<string, unknown> = {
+            updatedAt: FieldValue.serverTimestamp(),
+        }
+
+        if (validated.status) updates.status = validated.status
+        if (validated.name) updates.name = validated.name
+
+        await projectRef.update(updates)
+
+        return {
+            success: true,
+            message: `Done! Project "${projectSnap.data()?.name || 'updated'}" has been updated.`,
+            data: { projectId: validated.projectId, ...updates },
+        }
+    } catch (error) {
+        console.error('[action-executor] updateProject failed:', error)
+        return {
+            success: false,
+            message: 'I couldn\'t update the project. Please try again.',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        }
+    }
+}
+
+async function handleCreateClient(
+    params: Record<string, unknown>,
+    context: ActionContext
+): Promise<ActionResult> {
+    try {
+        const validated = createClientSchema.parse(params)
+        const docRef = context.workspace.clientsCollection.doc()
+        const timestamp = FieldValue.serverTimestamp()
+
+        await docRef.set({
+            name: validated.name,
+            email: validated.email || '',
+            company: validated.company || '',
+            status: validated.status,
+            workspaceId: context.workspace.workspaceId,
+            createdBy: context.auth.uid,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        })
+
+        return {
+            success: true,
+            message: `Done! I've added ${validated.name} as a new client.`,
+            data: { id: docRef.id, name: validated.name },
+            navigateTo: '/dashboard/clients',
+        }
+    } catch (error) {
+        console.error('[action-executor] createClient failed:', error)
+        return {
+            success: false,
+            message: 'I couldn\'t create the client record. Please try again.',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        }
+    }
+}
+
+async function handleCreateInvoice(
+    params: Record<string, unknown>,
+    context: ActionContext
+): Promise<ActionResult> {
+    try {
+        const validated = createInvoiceSchema.parse(params)
+        let clientId = validated.clientId || null
+        let clientName = validated.clientName || 'Unknown Client'
+
+        if (!clientId && validated.clientName) {
+            const client = await findClientByName(validated.clientName, context)
+            if (client) {
+                clientId = client.id
+                clientName = client.name
+            }
+        }
+
+        const docRef = context.workspace.financeInvoicesCollection.doc()
+        const timestamp = FieldValue.serverTimestamp()
+
+        await docRef.set({
+            clientId,
+            clientName,
+            amount: validated.amount,
+            dueDate: validated.dueDate || null,
+            status: validated.status,
+            workspaceId: context.workspace.workspaceId,
+            createdBy: context.auth.uid,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+            items: [],
+        })
+
+        return {
+            success: true,
+            message: `Done! I've created a ${validated.status} invoice for ${clientName} for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(validated.amount)}.`,
+            data: { id: docRef.id, clientName, amount: validated.amount },
+            navigateTo: '/dashboard/finance',
+        }
+    } catch (error) {
+        console.error('[action-executor] createInvoice failed:', error)
+        return {
+            success: false,
+            message: 'I couldn\'t generate the invoice. Please try again.',
+            error: error instanceof Error ? error.message : 'Unknown error',
+        }
+    }
+}
+
+async function handleAddRevenue(
+    params: Record<string, unknown>,
+    context: ActionContext
+): Promise<ActionResult> {
+    try {
+        const validated = addRevenueSchema.parse(params)
+        let clientId = validated.clientId || null
+        let clientName = validated.clientName || null
+
+        if (!clientId && validated.clientName) {
+            const client = await findClientByName(validated.clientName, context)
+            if (client) {
+                clientId = client.id
+                clientName = client.name
+            }
+        }
+
+        const docRef = context.workspace.financeRevenueCollection.doc()
+        const timestamp = FieldValue.serverTimestamp()
+
+        await docRef.set({
+            amount: validated.amount,
+            source: validated.source,
+            clientId,
+            clientName,
+            category: validated.category,
+            workspaceId: context.workspace.workspaceId,
+            createdBy: context.auth.uid,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+        })
+
+        return {
+            success: true,
+            message: `Done! Logged ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(validated.amount)} in revenue from ${clientName || validated.source}.`,
+            data: { id: docRef.id, amount: validated.amount },
+            navigateTo: '/dashboard/finance',
+        }
+    } catch (error) {
+        console.error('[action-executor] addRevenue failed:', error)
+        return {
+            success: false,
+            message: 'I couldn\'t log the revenue. Please try again.',
             error: error instanceof Error ? error.message : 'Unknown error',
         }
     }
@@ -535,6 +757,13 @@ const OPERATION_HANDLERS: Record<
     markTaskDone: async (params, ctx) => handleUpdateTask({ ...params, status: 'done' }, ctx),
     createProject: handleCreateProject,
     addProject: handleCreateProject,   // alias
+    updateProject: handleUpdateProject,
+    createClient: handleCreateClient,
+    addClient: handleCreateClient,     // alias
+    createInvoice: handleCreateInvoice,
+    addInvoice: handleCreateInvoice,   // alias
+    addRevenue: handleAddRevenue,
+    logRevenue: handleAddRevenue,      // alias
     createProposal: handleCreateProposal,
     startProposal: handleCreateProposal, // alias
     sendMessage: handleSendMessage,
@@ -604,6 +833,40 @@ When the user wants to CREATE or UPDATE data, use:
 - **createProject**: Create a new project
   Params: { name: string, description?: string, status?: "planning"|"active"|"on-hold"|"completed" }
   Example: "start new project called Website Redesign" → {"action": "execute", "operation": "createProject", "params": {"name": "Website Redesign"}, "message": "Done! Project created."}
+
+- **updateProject**: Update an existing project
+  Params: { projectId: string, status?: string, name?: string }
+  Example: "mark project XYZ as active" → {"action": "execute", "operation": "updateProject", "params": {"projectId": "XYZ", "status": "active"}, "message": "Done!"}
+
+### Client Operations
+- **createClient**: Add a new client record
+  Params: { name: string, company?: string, email?: string, status?: "active"|"onboarding"|"lead"|"inactive" }
+  Example: "add a new lead called Acme Corp" → {"action": "execute", "operation": "createClient", "params": {"name": "Acme Corp", "status": "lead"}, "message": "Done!"}
+
+### Financial Operations
+- **createCost**: Add expense to Finance
+  Params: { category: string, amount: number, cadence?: "one-off"|"monthly"|"quarterly"|"annual" }
+  - Use "one-off" for one-time purchases (equipment, single payments)
+  - Use "monthly" for recurring monthly expenses (subscriptions, ad spend)
+  Example: "add a one-off $1000 office equipment expense" → {"action": "execute", "operation": "createCost", "params": {"category": "Office Equipment", "amount": 1000, "cadence": "one-off"}, "message": "Done! Added $1,000 one-time Office Equipment expense."}
+
+- **createInvoice**: Generate a new invoice
+  Params: { amount: number, clientName?: string, dueDate?: ISO string, status?: "draft"|"sent" }
+  Example: "create a $500 invoice for Acme corp" → {"action": "execute", "operation": "createInvoice", "params": {"amount": 500, "clientName": "Acme corp"}, "message": "Done! Invoice created."}
+
+- **addRevenue**: Log incoming revenue
+  Params: { amount: number, source: string, clientName?: string, category?: string }
+  Example: "log $1000 in revenue from client X" → {"action": "execute", "operation": "addRevenue", "params": {"amount": 1000, "clientName": "client X"}, "message": "Done! Revenue logged."}
+
+### Task Operations  
+- **createTask**: Create a new task
+  Params: { title: string, priority?: "low"|"medium"|"high", description?: string, dueDate?: ISO string, assigneeId?: string }
+  Example: "remind me to review proposals" → {"action": "execute", "operation": "createTask", "params": {"title": "Review proposals"}, "message": "Done! Task created."}
+
+- **updateTask**: Update task status/priority/assignee
+  Params: { taskId: string, status?: "todo"|"in-progress"|"done"|"cancelled", priority?: string, assigneeId?: string }
+  Example: "mark task ABC as done" → {"action": "execute", "operation": "updateTask", "params": {"taskId": "ABC", "status": "done"}, "message": "Done!"}
+  Example: "assign task ABC to 123" → {"action": "execute", "operation": "updateTask", "params": {"taskId": "ABC", "assigneeId": "123"}, "message": "Done!"}
 
 ### Proposal Operations
 - **createProposal**: Start a new proposal draft
