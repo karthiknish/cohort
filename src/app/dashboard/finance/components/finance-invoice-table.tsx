@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   BellRing,
   Calendar,
@@ -31,7 +32,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -83,6 +83,7 @@ export function FinanceInvoiceTable({
   loadingMore,
 }: FinanceInvoiceTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const parentRef = useRef<HTMLDivElement>(null)
 
   const filteredInvoices = invoices.filter((invoice) => {
     if (!searchQuery) return true
@@ -94,6 +95,18 @@ export function FinanceInvoiceTable({
       invoice.description?.toLowerCase().includes(query)
     )
   })
+
+  const INVOICE_ITEM_HEIGHT = 120 // Estimated height per invoice row
+
+  const virtualizer = useVirtualizer({
+    count: filteredInvoices.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => INVOICE_ITEM_HEIGHT,
+    overscan: 5,
+    getItemKey: (index) => filteredInvoices[index]?.id ?? index,
+  })
+
+  const virtualItems = virtualizer.getVirtualItems()
 
   const handleExport = () => {
     exportToCsv(
@@ -130,10 +143,10 @@ export function FinanceInvoiceTable({
           <CardDescription className="mt-1">Filter, download, and monitor the latest billing activity.</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExport} 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
             disabled={filteredInvoices.length === 0}
             className="hover:bg-muted/50 transition-colors"
           >
@@ -164,152 +177,177 @@ export function FinanceInvoiceTable({
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="max-h-[520px]">
-          {filteredInvoices.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-muted-foreground">
-              No invoices found for the selected filters.
-            </div>
-          ) : (
-            <div className="divide-y divide-muted/30">
-              {filteredInvoices.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="group flex flex-col gap-4 px-6 py-5 transition-colors hover:bg-muted/20 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="flex-1 space-y-2.5">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <p className="text-sm font-semibold text-foreground">
-                        {invoice.number ?? invoice.id}
-                      </p>
-                      <span className="text-muted-foreground">·</span>
-                      <p className="text-sm text-foreground">{invoice.clientName}</p>
-                      <Badge variant="secondary" className={`${STATUS_COLORS[invoice.status]} font-medium`}>
-                        {invoice.status}
-                      </Badge>
-                      {invoice.stripeStatus && invoice.stripeStatus !== invoice.status && (
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {invoice.stripeStatus.replace(/_/g, ' ')}
-                        </Badge>
-                      )}
-                    </div>
-                    {invoice.description && (
-                      <p className="text-sm text-muted-foreground leading-relaxed">{invoice.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                      {invoice.issuedDate && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" /> 
-                          Issued {new Date(invoice.issuedDate).toLocaleDateString()}
-                        </span>
-                      )}
-                      {invoice.dueDate && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" /> 
-                          Due {new Date(invoice.dueDate).toLocaleDateString()}
-                        </span>
-                      )}
-                      {invoice.paidDate && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" /> 
-                          Paid {new Date(invoice.paidDate).toLocaleDateString()}
-                        </span>
-                      )}
-                      {typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0 ? (
-                        <span className="font-medium">
-                          Paid {formatCurrency(invoice.amountPaid, invoice.currency ?? 'USD')}
-                        </span>
-                      ) : null}
-                      {typeof invoice.amountRemaining === 'number' && invoice.amountRemaining > 0 ? (
-                        <span className="font-medium text-amber-600">
-                          Outstanding {formatCurrency(invoice.amountRemaining, invoice.currency ?? 'USD')}
-                        </span>
-                      ) : null}
-                      {typeof invoice.amountRefunded === 'number' && invoice.amountRefunded > 0 ? (
-                        <span className="font-medium text-blue-600">
-                          Refunded {formatCurrency(invoice.amountRefunded, invoice.currency ?? 'USD')}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 md:justify-end">
-                    <div className="text-right">
-                      <p className="text-lg font-semibold text-foreground">
-                        {formatCurrency(invoice.amount, invoice.currency ?? 'USD')}
-                      </p>
-                      {invoice.status === 'overdue' && (
-                        <span className="text-xs font-semibold text-red-600">Overdue</span>
-                      )}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 opacity-70 group-hover:opacity-100 transition-opacity"
-                          aria-label="Invoice actions"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={!invoice.hostedInvoiceUrl}
-                          onClick={() => {
-                            if (!invoice.hostedInvoiceUrl) return
-                            window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
-                          }}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Invoice
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={!invoice.hostedInvoiceUrl}
-                          onClick={() => {
-                            if (!invoice.hostedInvoiceUrl) return
-                            window.open(`${invoice.hostedInvoiceUrl}?download=1`, '_blank', 'noopener')
-                          }}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download PDF
-                        </DropdownMenuItem>
-                        {onSendReminder && (invoice.status === 'sent' || invoice.status === 'overdue') && (
-                          <>
+        {filteredInvoices.length === 0 ? (
+          <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+            No invoices found for the selected filters.
+          </div>
+        ) : (
+          <div
+            ref={parentRef}
+            className="max-h-[520px] overflow-auto"
+          >
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualItems.map((virtualItem) => {
+                const invoice = filteredInvoices[virtualItem.index]
+                return (
+                  <div
+                    key={virtualItem.key}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                    className="border-b border-muted/30"
+                  >
+                    <div
+                      className="group flex flex-col gap-4 px-6 py-5 transition-colors hover:bg-muted/20 md:flex-row md:items-center md:justify-between"
+                    >
+                      <div className="flex-1 space-y-2.5">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <p className="text-sm font-semibold text-foreground">
+                            {invoice.number ?? invoice.id}
+                          </p>
+                          <span className="text-muted-foreground">·</span>
+                          <p className="text-sm text-foreground">{invoice.clientName}</p>
+                          <Badge variant="secondary" className={`${STATUS_COLORS[invoice.status]} font-medium`}>
+                            {invoice.status}
+                          </Badge>
+                          {invoice.stripeStatus && invoice.stripeStatus !== invoice.status && (
+                            <Badge variant="outline" className="capitalize text-xs">
+                              {invoice.stripeStatus.replace(/_/g, ' ')}
+                            </Badge>
+                          )}
+                        </div>
+                        {invoice.description && (
+                          <p className="text-sm text-muted-foreground leading-relaxed">{invoice.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                          {invoice.issuedDate && (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Issued {new Date(invoice.issuedDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          {invoice.dueDate && (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Due {new Date(invoice.dueDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          {invoice.paidDate && (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Paid {new Date(invoice.paidDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          {typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0 ? (
+                            <span className="font-medium">
+                              Paid {formatCurrency(invoice.amountPaid, invoice.currency ?? 'USD')}
+                            </span>
+                          ) : null}
+                          {typeof invoice.amountRemaining === 'number' && invoice.amountRemaining > 0 ? (
+                            <span className="font-medium text-amber-600">
+                              Outstanding {formatCurrency(invoice.amountRemaining, invoice.currency ?? 'USD')}
+                            </span>
+                          ) : null}
+                          {typeof invoice.amountRefunded === 'number' && invoice.amountRefunded > 0 ? (
+                            <span className="font-medium text-blue-600">
+                              Refunded {formatCurrency(invoice.amountRefunded, invoice.currency ?? 'USD')}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 md:justify-end">
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-foreground">
+                            {formatCurrency(invoice.amount, invoice.currency ?? 'USD')}
+                          </p>
+                          {invoice.status === 'overdue' && (
+                            <span className="text-xs font-semibold text-red-600">Overdue</span>
+                          )}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 opacity-70 group-hover:opacity-100 transition-opacity"
+                              aria-label="Invoice actions"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              disabled={sendingInvoiceId === invoice.id}
-                              onClick={() => onSendReminder(invoice)}
+                              disabled={!invoice.hostedInvoiceUrl}
+                              onClick={() => {
+                                if (!invoice.hostedInvoiceUrl) return
+                                window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
+                              }}
                             >
-                              <BellRing className={`mr-2 h-4 w-4 ${sendingInvoiceId === invoice.id ? 'animate-pulse text-primary' : ''}`} />
-                              {sendingInvoiceId === invoice.id ? 'Sending...' : 'Send Reminder'}
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Invoice
                             </DropdownMenuItem>
-                          </>
-                        )}
-                        {onIssueRefund && 
-                          invoice.status === 'paid' && 
-                          typeof invoice.amountPaid === 'number' && 
-                          (invoice.amountRefunded ?? 0) < invoice.amountPaid && (
-                          <>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              disabled={refundingInvoiceId === invoice.id}
-                              onClick={() => onIssueRefund(invoice)}
-                              className="text-red-600 focus:text-red-600"
+                              disabled={!invoice.hostedInvoiceUrl}
+                              onClick={() => {
+                                if (!invoice.hostedInvoiceUrl) return
+                                window.open(`${invoice.hostedInvoiceUrl}?download=1`, '_blank', 'noopener')
+                              }}
                             >
-                              <RotateCcw className={`mr-2 h-4 w-4 ${refundingInvoiceId === invoice.id ? 'animate-spin' : ''}`} />
-                              {refundingInvoiceId === invoice.id ? 'Processing...' : 'Issue Refund'}
+                              <Download className="mr-2 h-4 w-4" />
+                              Download PDF
                             </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                            {onSendReminder && (invoice.status === 'sent' || invoice.status === 'overdue') && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  disabled={sendingInvoiceId === invoice.id}
+                                  onClick={() => onSendReminder(invoice)}
+                                >
+                                  <BellRing className={`mr-2 h-4 w-4 ${sendingInvoiceId === invoice.id ? 'animate-pulse text-primary' : ''}`} />
+                                  {sendingInvoiceId === invoice.id ? 'Sending...' : 'Send Reminder'}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {onIssueRefund &&
+                              invoice.status === 'paid' &&
+                              typeof invoice.amountPaid === 'number' &&
+                              (invoice.amountRefunded ?? 0) < invoice.amountPaid && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    disabled={refundingInvoiceId === invoice.id}
+                                    onClick={() => onIssueRefund(invoice)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <RotateCcw className={`mr-2 h-4 w-4 ${refundingInvoiceId === invoice.id ? 'animate-spin' : ''}`} />
+                                    {refundingInvoiceId === invoice.id ? 'Processing...' : 'Issue Refund'}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
-          )}
-        </ScrollArea>
+          </div>
+        )}
         {hasMore ? (
           <div className="border-t border-muted/30 px-6 py-4 text-center bg-muted/5">
             <Button
@@ -333,3 +371,4 @@ export function FinanceInvoiceTable({
     </Card>
   )
 }
+

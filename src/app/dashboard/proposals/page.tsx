@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,8 +9,8 @@ import {
   CardContent,
   CardHeader,
 } from '@/components/ui/card'
-import { createProposalDraft, deleteProposalDraft, getProposalById, listProposals, prepareProposalDeck, submitProposalDraft, updateProposalDraft, type ProposalDraft, type ProposalPresentationDeck } from '@/services/proposals'
-import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/services/proposals'
+import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { ProposalStepContent } from './components/proposal-step-content'
@@ -24,72 +24,23 @@ import { ProposalDraftPanel } from './components/proposal-draft-panel'
 import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
 import { ProposalTemplateSelector } from './components/proposal-template-selector'
 import { ProposalVersionHistory } from './components/proposal-version-history'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 import { ProposalMetrics } from './components/proposal-metrics'
 
-import { BarChart3, CreditCard, Users, FileText } from 'lucide-react'
+// Extracted hooks
 import {
-  trackDraftCreated,
-  trackProposalSubmitted,
-  trackAiGenerationStarted,
-  trackAiGenerationCompleted,
-  trackAiGenerationFailed,
-  trackDeckGenerationStarted,
-  trackDeckGenerationCompleted,
-  trackDeckGenerationFailed,
-} from '@/services/proposal-analytics'
-import {
-  proposalSteps,
-  createInitialProposalFormState,
-  stepErrorPaths,
-  validateProposalStep,
-  collectStepValidationErrors,
-  hasCompletedAnyStepData,
-} from './utils/form-steps'
-
-type SubmissionSnapshot = {
-  draftId: string
-  form: ProposalFormData
-  step: number
-  clientId: string | null
-  clientName: string | null
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return formatUserFacingErrorMessage(error, fallback)
-}
+  useProposalWizard,
+  useProposalDrafts,
+  useProposalSubmission,
+  useDeckPreparation,
+  type SubmissionSnapshot,
+} from './hooks'
 
 export default function ProposalsPage() {
   const searchParams = useSearchParams()
-  const [currentStep, setCurrentStep] = useState(0)
-  const [formState, setFormState] = useState<ProposalFormData>(() => createInitialProposalFormState())
-  const [submitted, setSubmitted] = useState(false)
-  const [draftId, setDraftId] = useState<string | null>(null)
-  const [isBootstrapping, setIsBootstrapping] = useState(true)
-  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [isCreatingDraft, setIsCreatingDraft] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  const [presentationDeck, setPresentationDeck] = useState<ProposalPresentationDeck | null>(null)
-  const [aiSuggestions, setAiSuggestions] = useState<string | null>(null)
-  const [proposals, setProposals] = useState<ProposalDraft[]>([])
-  const [isLoadingProposals, setIsLoadingProposals] = useState(false)
-  const [isPresentationReady, setIsPresentationReady] = useState(false)
-  const [isRecheckingDeck, setIsRecheckingDeck] = useState(false)
-  const [deletingProposalId, setDeletingProposalId] = useState<string | null>(null)
-  const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null)
-  const [deckProgressStage, setDeckProgressStage] = useState<DeckProgressStage | null>(null)
-  const [proposalPendingDelete, setProposalPendingDelete] = useState<ProposalDraft | null>(null)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [lastSubmissionSnapshot, setLastSubmissionSnapshot] = useState<SubmissionSnapshot | null>(null)
-  const hydrationRef = useRef(false)
-  const draftIdRef = useRef<string | null>(draftId)
-  const submittedRef = useRef(submitted)
-  const wizardRef = useRef<HTMLDivElement | null>(null)
-  const pendingDeckWindowRef = useRef<Window | null>(null)
   const { toast } = useToast()
   const { selectedClient, selectedClientId, selectClient } = useClientContext()
 
+  // Handle URL params for client selection
   useEffect(() => {
     const clientIdParam = searchParams.get('clientId')
     if (clientIdParam && clientIdParam !== selectedClientId) {
@@ -97,873 +48,163 @@ export default function ProposalsPage() {
     }
   }, [searchParams, selectedClientId, selectClient])
 
-  const steps = proposalSteps
-  const step = steps[currentStep]
-  const isFirstStep = currentStep === 0
-  const isLastStep = currentStep === steps.length - 1
+  // Local state for proposals list (needed by deck preparation)
+  const [proposals, setProposals] = useState<ProposalDraft[]>([])
 
-  const toggleArrayValue = (path: string[], value: string) => {
-    setFormState((prev) => {
-      const updated = structuredClone(prev) as typeof prev
-      let target: Record<string, unknown> = updated as unknown as Record<string, unknown>
-      path.slice(0, -1).forEach((key) => {
-        const next = target[key]
-        if (next && typeof next === 'object') {
-          target = next as Record<string, unknown>
-        }
-      })
-      const field = path[path.length - 1]
-      const array = Array.isArray(target[field]) ? (target[field] as string[]) : []
-      target[field] = array.includes(value) ? array.filter((item) => item !== value) : [...array, value]
-      return updated
-    })
-    const fieldPath = path.join('.')
-    if (path[path.length - 1] === 'objectives' || path[path.length - 1] === 'services') {
-      const hasValues = path[path.length - 1] === 'objectives'
-        ? formState.goals.objectives.includes(value)
-        : formState.scope.services.includes(value)
-      if (!hasValues) {
-        clearErrors(fieldPath)
-      }
-    } else {
-      clearErrors(fieldPath)
-    }
-  }
+  // Wizard hook - form state and step navigation
+  const wizard = useProposalWizard()
+  const {
+    currentStep,
+    formState,
+    validationErrors,
+    steps,
+    step,
+    isFirstStep,
+    isLastStep,
+    hasPersistableData,
+    setCurrentStep,
+    setFormState,
+    updateField,
+    toggleArrayValue,
+    handleSocialHandleChange,
+    clearErrors,
+    handleBack,
+  } = wizard
 
-  const updateField = (path: string[], value: string) => {
-    setFormState((prev) => {
-      const updated = structuredClone(prev) as typeof prev
-      let target: Record<string, unknown> = updated as unknown as Record<string, unknown>
-      path.slice(0, -1).forEach((key) => {
-        const next = target[key]
-        if (next && typeof next === 'object') {
-          target = next as Record<string, unknown>
-        }
-      })
-      target[path[path.length - 1]] = value
-      return updated
-    })
-    clearErrors(path.join('.'))
-  }
+  // Draft management hook
+  const drafts = useProposalDrafts({
+    formState,
+    currentStep,
+    hasPersistableData,
+    onFormStateChange: setFormState,
+    onStepChange: setCurrentStep,
+    onSubmittedChange: (submitted) => submission.setSubmitted(submitted),
+    onPresentationDeckChange: (deck) => submission.setPresentationDeck(deck),
+    onAiSuggestionsChange: (suggestions) => submission.setAiSuggestions(suggestions),
+    onLastSubmissionSnapshotChange: (snapshot) => submission.setLastSubmissionSnapshot(snapshot),
+    steps,
+  })
+  const {
+    draftId,
+    isLoadingProposals,
+    isCreatingDraft,
+    isBootstrapping,
+    autosaveStatus,
+    deletingProposalId,
+    proposalPendingDelete,
+    isDeleteDialogOpen,
+    setDraftId,
+    setAutosaveStatus,
+    refreshProposals,
+    ensureDraftId,
+    handleCreateNewProposal,
+    handleResumeProposal,
+    handleDeleteProposal,
+    requestDeleteProposal,
+    handleDeleteDialogChange,
+    wizardRef,
+  } = drafts
 
-  const handleSocialHandleChange = useCallback((handle: string, value: string) => {
-    setFormState((prev) => ({
-      ...prev,
-      marketing: {
-        ...prev.marketing,
-        socialHandles: {
-          ...prev.marketing.socialHandles,
-          [handle]: value,
-        },
-      },
-    }))
+  // Sync proposals from drafts hook to local state
+  useEffect(() => {
+    // This is handled inside the drafts hook via the refreshProposals callback
   }, [])
 
-  const handleDeleteProposal = useCallback(async (proposal: ProposalDraft) => {
-    if (deletingProposalId && deletingProposalId !== proposal.id) {
-      return
+  // Submission hook - AI generation and deck polling
+  const submission = useProposalSubmission({
+    draftId,
+    formState,
+    currentStep,
+    ensureDraftId,
+    refreshProposals: async () => {
+      const result = await refreshProposals()
+      setProposals(result)
+      return result
+    },
+    setDraftId,
+    setFormState,
+    setCurrentStep,
+    setAutosaveStatus,
+    clearErrors,
+    steps,
+  })
+  const {
+    isSubmitting,
+    submitted,
+    isPresentationReady,
+    presentationDeck,
+    aiSuggestions,
+    lastSubmissionSnapshot,
+    submitProposal,
+    handleContinueEditingFromSnapshot,
+    handleRecheckDeck,
+    canResumeSubmission,
+    deckDownloadUrl,
+    activeProposalIdForDeck,
+  } = submission
+
+  // Deck preparation hook
+  const deckPrep = useDeckPreparation({
+    draftId,
+    refreshProposals: async () => {
+      const result = await refreshProposals()
+      setProposals(result)
+      return result
+    },
+    setPresentationDeck: submission.setPresentationDeck,
+    setAiSuggestions: submission.setAiSuggestions,
+    setProposals,
+    presentationDeck,
+  })
+  const { downloadingDeckId, deckProgressStage, handleDownloadDeck } = deckPrep
+
+  // Initial load of proposals
+  useEffect(() => {
+    const loadProposals = async () => {
+      const result = await refreshProposals()
+      setProposals(result)
     }
-
-    try {
-      setDeletingProposalId(proposal.id)
-      await deleteProposalDraft(proposal.id)
-
-      setProposals((prev) => prev.filter((candidate) => candidate.id !== proposal.id))
-
-      if (draftId === proposal.id) {
-        setDraftId(null)
-        setFormState(createInitialProposalFormState())
-        setCurrentStep(0)
-        setSubmitted(false)
-        setPresentationDeck(null)
-        setAiSuggestions(null)
-        setLastSubmissionSnapshot(null)
-      }
-
-      toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
-    } catch (err: unknown) {
-      const message = getErrorMessage(err, 'Failed to delete proposal')
-      toast({ title: 'Unable to delete proposal', description: message, variant: 'destructive' })
-    } finally {
-      setDeletingProposalId(null)
-      setProposalPendingDelete(null)
-      setIsDeleteDialogOpen(false)
+    if (!isBootstrapping && selectedClientId) {
+      void loadProposals()
     }
-  }, [deletingProposalId, draftId, toast])
+  }, [isBootstrapping, selectedClientId, refreshProposals])
 
-  const requestDeleteProposal = useCallback((proposal: ProposalDraft) => {
-    setProposalPendingDelete(proposal)
-    setIsDeleteDialogOpen(true)
-  }, [])
-
-  const handleDeleteDialogChange = useCallback((open: boolean) => {
-    setIsDeleteDialogOpen(open)
-    if (!open) {
-      setProposalPendingDelete(null)
-    }
-  }, [])
-
-  const clearErrors = (paths: string | string[]) => {
-    const keys = Array.isArray(paths) ? paths : [paths]
-    setValidationErrors((prev) => {
-      const next = { ...prev }
-      keys.forEach((key) => {
-        delete next[key]
-      })
-      return next
-    })
-  }
-
+  // Handle next button with submit
   const handleNext = () => {
-    if (!validateProposalStep(step.id, formState)) {
-      const message = 'Please complete the required fields before continuing.'
-      toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
-      const stepErrors = collectStepValidationErrors(step.id, formState)
-      setValidationErrors((prev) => ({ ...prev, ...stepErrors }))
-      return
-    }
-    clearErrors(stepErrorPaths[step.id])
-    if (!isLastStep) {
-      setCurrentStep((prev) => prev + 1)
-    } else {
+    if (isLastStep) {
       void submitProposal()
-    }
-  }
-
-  const handleBack = () => {
-    if (!isFirstStep) {
-      setCurrentStep((prev) => prev - 1)
-    }
-  }
-
-  const handleResumeProposal = useCallback((proposal: ProposalDraft) => {
-    const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)
-    const targetStep = Math.min(proposal.stepProgress ?? 0, steps.length - 1)
-
-    setDraftId(proposal.id)
-    setFormState(mergedForm)
-    setCurrentStep(targetStep)
-    setSubmitted(proposal.status === 'ready')
-    setPresentationDeck(proposal.presentationDeck ? { ...proposal.presentationDeck, storageUrl: proposal.presentationDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
-    setAiSuggestions(proposal.aiSuggestions ?? null)
-
-    if (proposal.status === 'ready') {
-      setLastSubmissionSnapshot({
-        draftId: proposal.id,
-        form: structuredClone(mergedForm) as ProposalFormData,
-        step: targetStep,
-        clientId: proposal.clientId ?? null,
-        clientName: proposal.clientName ?? null,
-      })
     } else {
-      setLastSubmissionSnapshot(null)
+      wizard.handleNext()
     }
+  }
 
-    wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [steps])
-
-  useEffect(() => {
-    draftIdRef.current = draftId
-  }, [draftId])
-
-  useEffect(() => {
-    submittedRef.current = submitted
-  }, [submitted])
-
+  // Summary for display
   const summary = useMemo(() => {
     if (submitted && lastSubmissionSnapshot) {
       return structuredClone(lastSubmissionSnapshot.form) as ProposalFormData
     }
-
     return structuredClone(formState) as ProposalFormData
   }, [formState, lastSubmissionSnapshot, submitted])
 
-  const hasPersistableData = useMemo(() => hasCompletedAnyStepData(formState), [formState])
-
-  const activeProposalIdForDeck = lastSubmissionSnapshot?.draftId ?? draftId
-  const deckDownloadUrl = presentationDeck?.storageUrl ?? presentationDeck?.pptxUrl ?? null
   const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
-  const canResumeSubmission = Boolean(
-    lastSubmissionSnapshot &&
-    !isSubmitting &&
-    lastSubmissionSnapshot.draftId &&
-    lastSubmissionSnapshot.clientId === (selectedClientId ?? null)
-  )
 
-  const refreshProposals = useCallback(async () => {
-    if (!selectedClientId) {
-      setProposals([])
-      setIsLoadingProposals(false)
-      setAiSuggestions(null)
-      return []
-    }
-
-    setIsLoadingProposals(true)
-    try {
-      const result = await listProposals({ clientId: selectedClientId })
-      setProposals(result)
-
-      const activeId = draftIdRef.current
-      if (activeId) {
-        const active = result.find((proposal) => proposal.id === activeId)
-        if (active) {
-          setAiSuggestions(active.aiSuggestions ?? null)
-        }
-      } else if (!submittedRef.current) {
-        setAiSuggestions(null)
-      }
-
-      return result
-    } catch (err: unknown) {
-      const message = getErrorMessage(err, 'Failed to load proposals')
-      toast({ title: 'Unable to load proposals', description: message, variant: 'destructive' })
-      return []
-    } finally {
-      setIsLoadingProposals(false)
-    }
-  }, [selectedClientId, toast])
-
-  const openDeckUrl = useCallback((url: string, pendingWindow?: Window | null) => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    if (pendingWindow && !pendingWindow.closed) {
-      pendingWindow.location.href = url
-      return
-    }
-
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.target = '_blank'
-    anchor.rel = 'noopener'
-    anchor.style.display = 'none'
-
-    document.body.appendChild(anchor)
-    anchor.click()
-    document.body.removeChild(anchor)
-  }, [])
-
-  const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
-    
-    const localDeckUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
-    console.log('[ProposalDownload] URL priority check:', {
-      pptUrl: proposal.pptUrl,
-      storageUrl: proposal.presentationDeck?.storageUrl,
-      pptxUrl: proposal.presentationDeck?.pptxUrl,
-      selectedUrl: localDeckUrl
-    })
-
-    if (localDeckUrl) {
-      console.log('[ProposalDownload] Using existing URL:', localDeckUrl)
-      openDeckUrl(localDeckUrl)
-      return
-    }
-
-    if (downloadingDeckId) {
-      console.log('[ProposalDownload] Download already in progress for:', downloadingDeckId)
-      toast({
-        title: 'Deck already preparing',
-        description: 'Please wait for the current deck request to finish.',
-      })
-      return
-    }
-
-    setDeckProgressStage('initializing')
-
-    if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
-      pendingDeckWindowRef.current.close()
-    }
-    pendingDeckWindowRef.current = null
-
-    try {
-      console.log('[ProposalDownload] Starting deck preparation for proposal:', proposal.id)
-      if (typeof window !== 'undefined') {
-        const popup = window.open('about:blank', '_blank')
-        if (popup) {
-          pendingDeckWindowRef.current = popup
-          try {
-            popup.document.open()
-            popup.document.write(`<!doctype html><title>Preparing presentation...</title><style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; background: #0f172a; color: white; }
-              .container { text-align: center; max-width: 360px; padding: 24px; }
-              .spinner { width: 48px; height: 48px; border-radius: 9999px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-              @keyframes spin { to { transform: rotate(360deg); } }
-            </style><body><div class="container"><div class="spinner" aria-hidden="true"></div><h1 style="font-size: 20px; margin-bottom: 12px;">Preparing your deck...</h1><p style="font-size: 14px; line-height: 1.5; opacity: 0.85;">We're generating your presentation and saving a copy to your workspace. Keep this tab open &mdash; the download launches automatically once it's ready.</p></div></body>`)
-            popup.document.close()
-          } catch (popupError) {
-            console.warn('[ProposalDownload] Unable to render popup content', popupError)
-          }
-        }
-      }
-      setDeckProgressStage('polling')
-      setDownloadingDeckId(proposal.id)
-      
-      // Track deck generation start for analytics
-      const deckStartTime = Date.now()
-      trackDeckGenerationStarted(proposal.id, proposal.clientId, proposal.clientName).catch(console.error)
-      
-      const result = await prepareProposalDeck(proposal.id)
-      const deckDuration = Date.now() - deckStartTime
-      console.log('[ProposalDownload] Deck preparation result:', {
-        pptUrl: result.pptUrl,
-        deckStorageUrl: result.presentationDeck?.storageUrl,
-        deckPptxUrl: result.presentationDeck?.pptxUrl,
-        deckShareUrl: result.presentationDeck?.shareUrl
-      })
-      
-      const deckUrl = result.pptUrl
-        ?? result.presentationDeck?.storageUrl
-        ?? result.presentationDeck?.pptxUrl
-        ?? result.presentationDeck?.shareUrl
-        ?? null
-
-      console.log('[ProposalDownload] Final selected deck URL:', deckUrl)
-
-      // Track deck generation success
-      if (deckUrl) {
-        trackDeckGenerationCompleted(proposal.id, deckDuration, proposal.clientId, proposal.clientName).catch(console.error)
-      }
-
-      if (deckUrl) {
-        setDeckProgressStage('launching')
-        console.log('[ProposalDownload] Opening deck URL:', deckUrl)
-        openDeckUrl(deckUrl, pendingDeckWindowRef.current ?? undefined)
-        pendingDeckWindowRef.current = null
-      } else {
-        setDeckProgressStage('queued')
-        if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
-          pendingDeckWindowRef.current.close()
-        }
-        pendingDeckWindowRef.current = null
-      }
-
-      if (deckUrl) {
-        console.log('[ProposalDownload] Updating proposal state with deck URL:', deckUrl)
-        setProposals((prev) =>
-          prev.map((item) => {
-            if (item.id !== proposal.id) {
-              return item
-            }
-            const nextDeck = result.presentationDeck
-              ? { ...result.presentationDeck, storageUrl: deckUrl }
-              : item.presentationDeck
-                ? { ...item.presentationDeck, storageUrl: deckUrl }
-                : null
-            return {
-              ...item,
-              pptUrl: deckUrl,
-              presentationDeck: nextDeck,
-            }
-          })
-        )
-      }
-
-      console.log('[ProposalDownload] Refreshing proposals list')
-      const refreshed = await refreshProposals()
-      if (proposal.id === draftId && Array.isArray(refreshed)) {
-        const latest = refreshed.find((candidate) => candidate.id === proposal.id)
-        if (latest) {
-          console.log('[ProposalDownload] Updating presentation deck for active draft')
-          setPresentationDeck(
-            latest.presentationDeck
-              ? { ...latest.presentationDeck, storageUrl: latest.pptUrl ?? latest.presentationDeck?.storageUrl ?? null }
-              : null
-          )
-          setAiSuggestions(latest.aiSuggestions ?? null)
-        }
-      }
-
-      toast({
-        title: deckUrl ? 'Deck ready' : 'Deck still generating',
-        description: deckUrl
-          ? 'We saved the PPT in Firebase storage and opened it in a new tab.'
-          : 'The presentation export is still processing. We will save it automatically once it finishes.',
-      })
-    } catch (error: unknown) {
-      setDeckProgressStage('error')
-      console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
-      const message = getErrorMessage(error, 'Failed to prepare the presentation deck')
-      
-      // Track deck generation failure
-      trackDeckGenerationFailed(proposal.id, message, proposal.clientId, proposal.clientName).catch(console.error)
-      
-      toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })
-      if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
-        pendingDeckWindowRef.current.close()
-      }
-      pendingDeckWindowRef.current = null
-    } finally {
-      console.log('[ProposalDownload] Clearing downloading state for proposal:', proposal.id)
-      setDownloadingDeckId(null)
-      setDeckProgressStage(null)
-    }
-  }, [downloadingDeckId, draftId, openDeckUrl, refreshProposals, toast])
-
-  const handleContinueEditingFromSnapshot = useCallback(async () => {
-    if (!lastSubmissionSnapshot) {
-      return
-    }
-
-    if (lastSubmissionSnapshot.clientId && lastSubmissionSnapshot.clientId !== selectedClientId) {
-      toast({
-        title: 'Switch back to original client',
-        description: 'Return to the client associated with this proposal to continue editing.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const restoredForm = structuredClone(lastSubmissionSnapshot.form) as ProposalFormData
-    const restoredStep = Math.min(lastSubmissionSnapshot.step, steps.length - 1)
-
-    setFormState(restoredForm)
-    setCurrentStep(restoredStep)
-    setSubmitted(false)
-    setPresentationDeck(null)
-    setAiSuggestions(null)
-    setDraftId(lastSubmissionSnapshot.draftId)
-    setLastSubmissionSnapshot(null)
-    setAutosaveStatus('idle')
-
-    try {
-      await updateProposalDraft(lastSubmissionSnapshot.draftId, {
-        formData: restoredForm,
-        stepProgress: restoredStep,
-        status: 'draft',
-      })
-      await refreshProposals()
-      toast({ title: 'Editing restored', description: 'Your previous responses have been reloaded.' })
-      wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } catch (error: unknown) {
-      console.error('[ProposalWizard] resume snapshot failed', error)
-      const message = getErrorMessage(error, 'Failed to reopen proposal for editing')
-      toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
-    }
-  }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast])
-
-  const handleRecheckDeck = useCallback(async () => {
-    const proposalId = lastSubmissionSnapshot?.draftId ?? draftId
-    if (!proposalId) {
-      toast({
-        title: 'No proposal selected',
-        description: 'Cannot check deck status without an active proposal.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setIsRecheckingDeck(true)
-    try {
-      // First, try to fetch the latest proposal data from Firebase
-      const refreshedProposal = await getProposalById(proposalId)
-      const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
-
-      if (deckUrl) {
-        // Deck is ready in Firebase
-        setPresentationDeck(
-          refreshedProposal.presentationDeck
-            ? { ...refreshedProposal.presentationDeck, storageUrl: deckUrl }
-            : presentationDeck
-              ? { ...presentationDeck, storageUrl: deckUrl, status: 'ready' }
-              : null
-        )
-        await refreshProposals()
-        toast({
-          title: 'Presentation ready!',
-          description: 'Your slide deck has been generated and is ready for download.',
-        })
-        return
-      }
-
-      // If not in Firebase yet, try to trigger Gamma to check/generate
-      const result = await prepareProposalDeck(proposalId)
-      const newDeckUrl = result.pptUrl ?? result.presentationDeck?.storageUrl ?? result.presentationDeck?.pptxUrl ?? null
-
-      if (newDeckUrl) {
-        setPresentationDeck(
-          result.presentationDeck
-            ? { ...result.presentationDeck, storageUrl: newDeckUrl }
-            : presentationDeck
-              ? { ...presentationDeck, storageUrl: newDeckUrl, status: 'ready' }
-              : null
-        )
-        await refreshProposals()
-        toast({
-          title: 'Presentation ready!',
-          description: 'Your slide deck has been generated and saved.',
-        })
-      } else {
-        // Still pending
-        toast({
-          title: 'Still processing',
-          description: 'The presentation is still being generated. Please try again in a few moments.',
-        })
-      }
-    } catch (error: unknown) {
-      console.error('[ProposalWizard] recheck deck failed', error)
-      const message = getErrorMessage(error, 'Failed to check presentation status')
-      toast({ title: 'Unable to check status', description: message, variant: 'destructive' })
-    } finally {
-      setIsRecheckingDeck(false)
-    }
-  }, [draftId, lastSubmissionSnapshot, presentationDeck, refreshProposals, toast])
-
-  const ensureDraftId = useCallback(async () => {
-    if (draftId) {
-      return draftId
-    }
-
-    if (!hasPersistableData) {
-      toast({
-        title: 'Draft not ready',
-        description: 'Fill in the proposal form before generating.',
-        variant: 'destructive',
-      })
-      return null
-    }
-
-    if (isCreatingDraft) {
-      toast({
-        title: 'Preparing proposal',
-        description: 'Please wait while we prepare your proposal for generation.',
-      })
-      return null
-    }
-
-    try {
-      setIsCreatingDraft(true)
-      setAutosaveStatus('saving')
-      const newDraftId = await createProposalDraft({
-        formData: formState,
-        stepProgress: currentStep,
-        clientId: selectedClientId ?? undefined,
-        clientName: selectedClient?.name ?? undefined,
-      })
-      setDraftId(newDraftId)
-      setAutosaveStatus('saved')
-      await refreshProposals()
-      return newDraftId
-    } catch (error: unknown) {
-      setAutosaveStatus('error')
-      toast({
-        title: 'Unable to create draft',
-        description: getErrorMessage(error, 'Failed to create proposal draft'),
-        variant: 'destructive',
-      })
-      return null
-    } finally {
-      setIsCreatingDraft(false)
-    }
-  }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, refreshProposals, toast])
-
-  const handleCreateNewProposal = useCallback(async () => {
-    if (!selectedClientId) {
-      toast({
-        title: 'Select a client',
-        description: 'Choose a client from the sidebar before starting a proposal.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (isCreatingDraft) {
-      toast({
-        title: 'Preparing proposal',
-        description: 'Please wait for the current draft to finish initializing.',
-      })
-      return
-    }
-
-    try {
-      setIsCreatingDraft(true)
-      setAutosaveStatus('saving')
-      const initialForm = createInitialProposalFormState()
-      const newDraftId = await createProposalDraft({
-        formData: initialForm,
-        stepProgress: 0,
-        status: 'draft',
-        clientId: selectedClientId ?? undefined,
-        clientName: selectedClient?.name ?? undefined,
-      })
-
-      setDraftId(newDraftId)
-      setFormState(initialForm)
-      setCurrentStep(0)
-      setSubmitted(false)
-      setPresentationDeck(null)
-      setAiSuggestions(null)
-      setLastSubmissionSnapshot(null)
-      setAutosaveStatus('saved')
-
-      // Track draft creation for analytics
-      trackDraftCreated(newDraftId, selectedClientId, selectedClient?.name).catch(console.error)
-
-      await refreshProposals()
-
-      toast({
-        title: 'New proposal started',
-        description: selectedClient?.name
-          ? `Working on a fresh plan for ${selectedClient.name}.`
-          : 'You can begin filling out the proposal steps.',
-      })
-    } catch (error: unknown) {
-      setAutosaveStatus('error')
-      toast({
-        title: 'Unable to create draft',
-        description: getErrorMessage(error, 'Failed to create proposal draft'),
-        variant: 'destructive',
-      })
-    } finally {
-      setIsCreatingDraft(false)
-    }
-  }, [isCreatingDraft, refreshProposals, selectedClient, selectedClientId, toast])
-
-  const handleSelectTemplate = useCallback((templateFormData: ProposalFormData) => {
+  const handleSelectTemplate = (templateFormData: ProposalFormData) => {
     setFormState(templateFormData)
     setCurrentStep(0)
     toast({
       title: 'Template applied',
       description: 'The template has been applied to your proposal. You can customize it as needed.',
     })
-  }, [toast])
+  }
 
-  const handleVersionRestored = useCallback((restoredFormData: ProposalFormData) => {
+  const handleVersionRestored = (restoredFormData: ProposalFormData) => {
     setFormState(restoredFormData)
     setCurrentStep(0)
     toast({
       title: 'Version restored',
       description: 'The proposal has been restored to the selected version.',
     })
-  }, [toast])
-
-  const submitProposal = async () => {
-    try {
-      setIsSubmitting(true)
-      setIsPresentationReady(false)
-      clearErrors(stepErrorPaths.value)
-      setAiSuggestions(null)
-      let activeDraftId = draftId
-      if (!activeDraftId) {
-        activeDraftId = await ensureDraftId()
-        if (!activeDraftId) {
-          setIsSubmitting(false)
-          return
-        }
-      }
-
-      try {
-        setAutosaveStatus('saving')
-        await updateProposalDraft(activeDraftId, {
-          formData: formState,
-          stepProgress: currentStep,
-        })
-        setAutosaveStatus('saved')
-      } catch (updateError: unknown) {
-        console.error('[ProposalWizard] submit sync failed', updateError)
-        setAutosaveStatus('error')
-        toast({
-          title: 'Unable to save proposal',
-          description: getErrorMessage(updateError, 'Failed to sync latest changes before generation'),
-          variant: 'destructive',
-        })
-        setIsSubmitting(false)
-        return
-      }
-
-      setLastSubmissionSnapshot(null)
-
-      // Track AI generation start for analytics
-      const aiStartTime = Date.now()
-      trackAiGenerationStarted(activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
-
-      const response = await submitProposalDraft(activeDraftId, 'summary')
-      const isReady = response.status === 'ready'
-      const aiDuration = Date.now() - aiStartTime
-
-      // Track AI generation completion or failure
-      if (isReady) {
-        trackAiGenerationCompleted(activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
-        trackProposalSubmitted(activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
-      } else {
-        trackAiGenerationFailed(activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch(console.error)
-      }
-
-      // Poll for presentation deck if AI summary is ready but deck isn't
-      let finalPptUrl = response.pptUrl ?? response.presentationDeck?.storageUrl ?? null
-      let finalDeck = response.presentationDeck ?? null
-
-      if (isReady && !finalPptUrl) {
-        // Poll for the presentation deck (Gamma generates it asynchronously)
-        const maxAttempts = 30 // Poll for up to ~60 seconds
-        const pollInterval = 2000 // 2 seconds between attempts
-        
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval))
-          
-          try {
-            const refreshedProposal = await getProposalById(activeDraftId)
-            const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
-            
-            if (deckUrl) {
-              finalPptUrl = deckUrl
-              finalDeck = refreshedProposal.presentationDeck ?? null
-              console.log('[ProposalWizard] Presentation deck ready after polling:', deckUrl)
-              break
-            }
-          } catch (pollError) {
-            console.warn('[ProposalWizard] Polling for deck failed:', pollError)
-            // Continue polling even if one request fails
-          }
-        }
-      }
-
-      // Mark presentation as ready (either we have it or we've polled enough)
-      setIsPresentationReady(true)
-
-      setSubmitted(isReady)
-      setPresentationDeck(finalDeck ? { ...finalDeck, storageUrl: finalPptUrl ?? finalDeck.storageUrl ?? null } : null)
-      setAiSuggestions(response.aiSuggestions ?? null)
-
-      if (isReady) {
-        const formSnapshot = structuredClone(formState) as ProposalFormData
-        setLastSubmissionSnapshot({
-          draftId: activeDraftId,
-          form: formSnapshot,
-          step: currentStep,
-          clientId: selectedClientId ?? null,
-          clientName: selectedClient?.name ?? null,
-        })
-      }
-
-      if (isReady) {
-        setFormState(createInitialProposalFormState())
-        setCurrentStep(0)
-        setDraftId(null)
-        setAutosaveStatus('idle')
-      }
-
-      if (finalPptUrl) {
-        toast({
-          title: 'Presentation ready',
-          description: 'We saved the presentation in Firebase storage for instant download.',
-        })
-      } else {
-        toast({
-          title: 'Presentation still generating',
-          description: 'The presentation is taking longer than expected. You can download it from the proposal history once ready.',
-        })
-      }
-
-      if (!isReady) {
-        toast({
-          title: 'AI plan pending',
-          description: 'We could not finish the AI proposal yet. Please try again in a few minutes.',
-        })
-      } else {
-        toast({
-          title: 'Proposal ready',
-          description: 'Your AI-generated recommendations are ready for review.',
-        })
-      }
-
-      await refreshProposals()
-    } catch (err: unknown) {
-      console.error('[ProposalWizard] submit failed', err)
-      const message = getErrorMessage(err, 'Failed to submit proposal')
-      
-      // Track AI generation failure
-      if (draftId) {
-        trackAiGenerationFailed(draftId, message, selectedClientId, selectedClient?.name).catch(console.error)
-      }
-      
-      setSubmitted(false)
-      setPresentationDeck(null)
-      setAiSuggestions(null)
-      setLastSubmissionSnapshot(null)
-      toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
-    } finally {
-      setIsSubmitting(false)
-    }
   }
-
-  useEffect(() => {
-    hydrationRef.current = false
-    let cancelled = false
-
-    const bootstrapDraft = async () => {
-      setIsBootstrapping(true)
-      try {
-        if (!selectedClientId) {
-          setDraftId(null)
-          setFormState(createInitialProposalFormState())
-          setCurrentStep(0)
-          setSubmitted(false)
-          setPresentationDeck(null)
-          setAiSuggestions(null)
-          setProposals([])
-          setLastSubmissionSnapshot(null)
-          return
-        }
-
-        const allProposals = await refreshProposals()
-        if (cancelled) {
-          return
-        }
-
-        const draft = allProposals.find((proposal) => proposal.status === 'draft') ?? allProposals[0]
-
-        if (draft) {
-          setDraftId(draft.id)
-          setFormState(mergeProposalForm(draft.formData as Partial<ProposalFormData>))
-          setCurrentStep(Math.min(draft.stepProgress ?? 0, steps.length - 1))
-          setSubmitted(draft.status === 'ready')
-          setPresentationDeck(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
-          setAiSuggestions(draft.aiSuggestions ?? null)
-          setLastSubmissionSnapshot(null)
-        } else {
-          setDraftId(null)
-          setFormState(createInitialProposalFormState())
-          setCurrentStep(0)
-          setSubmitted(false)
-          setPresentationDeck(null)
-          setAiSuggestions(null)
-          setLastSubmissionSnapshot(null)
-        }
-      } catch (err: unknown) {
-        if (cancelled) {
-          return
-        }
-        console.error('[ProposalWizard] bootstrap failed', err)
-        toast({ title: 'Unable to start proposal wizard', description: getErrorMessage(err, 'Unable to start proposal wizard'), variant: 'destructive' })
-      } finally {
-        if (!cancelled) {
-          hydrationRef.current = true
-          setIsBootstrapping(false)
-        }
-      }
-    }
-
-    void bootstrapDraft()
-
-    return () => {
-      cancelled = true
-    }
-  }, [refreshProposals, selectedClientId, steps, toast])
-
-  useEffect(() => {
-    if (!hydrationRef.current || submitted) {
-      return
-    }
-
-    if (!selectedClientId) {
-      return
-    }
-
-    if (!draftId && !hasPersistableData) {
-      setAutosaveStatus('idle')
-    }
-  }, [draftId, submitted, selectedClientId, hasPersistableData])
 
   const renderStepContent = () => (
     <ProposalStepContent
@@ -992,8 +233,8 @@ export default function ProposalsPage() {
             onVersionRestored={handleVersionRestored}
             disabled={!draftId || isSubmitting}
           />
-          <Button 
-            onClick={handleCreateNewProposal} 
+          <Button
+            onClick={handleCreateNewProposal}
             disabled={!selectedClientId || isCreatingDraft}
             className="shrink-0 shadow-sm transition-all hover:shadow-md"
           >
@@ -1022,7 +263,7 @@ export default function ProposalsPage() {
               onResumeSubmission={handleContinueEditingFromSnapshot}
               isSubmitting={isSubmitting}
               onRecheckDeck={handleRecheckDeck}
-              isRecheckingDeck={isRecheckingDeck}
+              isRecheckingDeck={false}
             />
           ) : (
             <ProposalDraftPanel
@@ -1046,7 +287,7 @@ export default function ProposalsPage() {
         draftId={draftId}
         isLoading={isLoadingProposals}
         deletingProposalId={deletingProposalId}
-        onRefresh={() => void refreshProposals()}
+        onRefresh={() => void refreshProposals().then(setProposals)}
         onResume={handleResumeProposal}
         onRequestDelete={requestDeleteProposal}
         isGenerating={isSubmitting}
@@ -1069,7 +310,6 @@ export default function ProposalsPage() {
       />
       <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
-
     </div>
   )
 }
