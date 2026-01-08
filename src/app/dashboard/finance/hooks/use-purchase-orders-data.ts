@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { toErrorMessage } from '@/lib/error-utils'
@@ -66,13 +66,17 @@ export function usePurchaseOrdersData() {
   const [submitting, setSubmitting] = useState(false)
   const [actingId, setActingId] = useState<string | null>(null)
 
+  // Use ref for status filter to avoid infinite loop in useEffect
+  const statusFilterRef = useRef(statusFilter)
+  statusFilterRef.current = statusFilter
+
   const refresh = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
 
     try {
       const [posRes, vendorsRes] = await Promise.all([
-        listPurchaseOrders({ status: statusFilter === 'all' ? undefined : statusFilter, limit: 100 }),
+        listPurchaseOrders({ status: statusFilterRef.current === 'all' ? undefined : statusFilterRef.current, limit: 100 }),
         listVendors({ includeInactive: isAdmin }),
       ])
 
@@ -83,11 +87,21 @@ export function usePurchaseOrdersData() {
     } finally {
       setLoading(false)
     }
-  }, [isAdmin, statusFilter])
+  }, [isAdmin])
 
+  // Separate effect for initial load
   useEffect(() => {
     void refresh()
-  }, [refresh])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Separate effect for filter changes (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void refresh()
+    }, 300)
+    return () => clearTimeout(timeoutId)
+  }, [statusFilter, refresh])
 
   const vendorLookup = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors])
 

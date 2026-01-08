@@ -28,7 +28,7 @@ function StatusBadge({ status }: { status: PurchaseOrderStatus }) {
   return <Badge variant={variant as any} className="capitalize">{status}</Badge>
 }
 
-export function FinancePurchaseOrdersCard({ currency }: { currency: string }) {
+export function FinancePurchaseOrdersCard({ currency, embedded = false }: { currency: string; embedded?: boolean }) {
   const {
     isAdmin,
     purchaseOrders,
@@ -71,22 +71,28 @@ export function FinancePurchaseOrdersCard({ currency }: { currency: string }) {
     [setNewPO]
   )
 
+  const Wrapper = embedded ? 'div' : Card
+  const HeaderWrapper = embedded ? 'div' : CardHeader
+  const ContentWrapper = embedded ? 'div' : CardContent
+
   return (
-    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold">Purchase Orders</CardTitle>
-          <CardDescription>Create draft POs, submit for approval, and track ordered/received.</CardDescription>
-        </div>
+    <Wrapper className={embedded ? 'space-y-6' : 'border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow'}>
+      {!embedded && (
+        <HeaderWrapper className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold">Purchase Orders</CardTitle>
+            <CardDescription>Create draft POs, submit for approval, and track ordered/received.</CardDescription>
+          </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button variant="outline" onClick={() => void refresh()} disabled={loading} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </Button>
-        </div>
-      </CardHeader>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="outline" onClick={() => void refresh()} disabled={loading} className="gap-2">
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </Button>
+          </div>
+        </HeaderWrapper>
+      )}
 
-      <CardContent className="space-y-6 pt-6">
+      <ContentWrapper className={embedded ? '' : 'space-y-6 pt-6'}>
         {loadError ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
             {loadError}
@@ -351,7 +357,7 @@ export function FinancePurchaseOrdersCard({ currency }: { currency: string }) {
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+      </ContentWrapper>
+    </Wrapper>
   )
 }

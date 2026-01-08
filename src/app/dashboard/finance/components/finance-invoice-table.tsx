@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useCallback } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   BellRing,
@@ -39,14 +39,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import type { FinanceInvoice, FinanceInvoiceStatus } from '@/types/finance'
 import { exportToCsv } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 import { formatCurrency } from '../utils'
 
@@ -68,6 +63,7 @@ interface FinanceInvoiceTableProps {
   onLoadMore?: () => void
   hasMore?: boolean
   loadingMore?: boolean
+  embedded?: boolean
 }
 
 export function FinanceInvoiceTable({
@@ -81,29 +77,37 @@ export function FinanceInvoiceTable({
   onLoadMore,
   hasMore,
   loadingMore,
+  embedded,
 }: FinanceInvoiceTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const parentRef = useRef<HTMLDivElement>(null)
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    if (!searchQuery) return true
+  const filteredInvoices = useMemo(() => {
+    if (!searchQuery) return invoices
     const query = searchQuery.toLowerCase()
-    return (
+    return invoices.filter((invoice) =>
       invoice.clientName?.toLowerCase().includes(query) ||
       invoice.number?.toLowerCase().includes(query) ||
       invoice.id.toLowerCase().includes(query) ||
       invoice.description?.toLowerCase().includes(query)
     )
-  })
+  }, [invoices, searchQuery])
 
   const INVOICE_ITEM_HEIGHT = 120 // Estimated height per invoice row
 
+  const getScrollElement = useCallback(() => parentRef.current, [])
+  const estimateSize = useCallback(() => INVOICE_ITEM_HEIGHT, [])
+  const getItemKey = useCallback(
+    (index: number) => filteredInvoices[index]?.id ?? index,
+    [filteredInvoices]
+  )
+
   const virtualizer = useVirtualizer({
     count: filteredInvoices.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => INVOICE_ITEM_HEIGHT,
+    getScrollElement,
+    estimateSize,
     overscan: 5,
-    getItemKey: (index) => filteredInvoices[index]?.id ?? index,
+    getItemKey,
   })
 
   const virtualItems = virtualizer.getVirtualItems()
@@ -135,50 +139,63 @@ export function FinanceInvoiceTable({
     )
   }
 
-  return (
-    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+  const outerPaddingX = embedded ? 'px-0' : 'px-6'
+  const headerPaddingX = embedded ? 'px-0' : undefined
+  const listPaddingX = embedded ? 'px-0' : 'px-6'
+
+  const TableHeader = (
+    <div className={cn(
+      'flex flex-col gap-4 border-b border-muted/40 pb-4 sm:flex-row sm:items-center sm:justify-between',
+      headerPaddingX
+    )}>
+      {!embedded ? (
         <div>
           <CardTitle className="text-xl font-semibold">Recent Invoices</CardTitle>
           <CardDescription className="mt-1">Filter, download, and monitor the latest billing activity.</CardDescription>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={filteredInvoices.length === 0}
-            className="hover:bg-muted/50 transition-colors"
-          >
-            <FileDown className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <div className="relative w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search invoices..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 focus-visible:ring-primary"
-            />
-          </div>
-          <Select value={selectedStatus} onValueChange={onSelectStatus}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-            </SelectContent>
-          </Select>
+      ) : (
+        <div className="text-sm font-medium text-foreground">Filter invoices</div>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          disabled={filteredInvoices.length === 0}
+          className="hover:bg-muted/50 transition-colors"
+        >
+          <FileDown className="mr-2 h-4 w-4" />
+          Export invoices
+        </Button>
+        <div className="relative w-full sm:w-64">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search invoices..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 focus-visible:ring-primary"
+          />
         </div>
-      </CardHeader>
-      <CardContent className="p-0">
+        <Select value={selectedStatus} onValueChange={onSelectStatus}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All status</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+
+  const TableBody = (
+    <>
         {filteredInvoices.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+          <div className={cn(outerPaddingX, 'py-12 text-center text-sm text-muted-foreground')}>
             No invoices found for the selected filters.
           </div>
         ) : (
@@ -210,7 +227,10 @@ export function FinanceInvoiceTable({
                     className="border-b border-muted/30"
                   >
                     <div
-                      className="group flex flex-col gap-4 px-6 py-5 transition-colors hover:bg-muted/20 md:flex-row md:items-center md:justify-between"
+                      className={cn(
+                        'group flex flex-col gap-4 py-5 transition-colors hover:bg-muted/20 md:flex-row md:items-center md:justify-between',
+                        listPaddingX
+                      )}
                     >
                       <div className="flex-1 space-y-2.5">
                         <div className="flex flex-wrap items-center gap-2.5">
@@ -349,7 +369,7 @@ export function FinanceInvoiceTable({
           </div>
         )}
         {hasMore ? (
-          <div className="border-t border-muted/30 px-6 py-4 text-center bg-muted/5">
+          <div className={cn('border-t border-muted/30 py-4 text-center bg-muted/5', outerPaddingX)}>
             <Button
               variant="outline"
               size="sm"
@@ -367,6 +387,61 @@ export function FinanceInvoiceTable({
             </Button>
           </div>
         ) : null}
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        {TableHeader}
+        {TableBody}
+      </div>
+    )
+  }
+
+  return (
+    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
+      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle className="text-xl font-semibold">Recent Invoices</CardTitle>
+          <CardDescription className="mt-1">Filter, download, and monitor the latest billing activity.</CardDescription>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={filteredInvoices.length === 0}
+            className="hover:bg-muted/50 transition-colors"
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Export invoices
+          </Button>
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 focus-visible:ring-primary"
+            />
+          </div>
+          <Select value={selectedStatus} onValueChange={onSelectStatus}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {TableBody}
       </CardContent>
     </Card>
   )

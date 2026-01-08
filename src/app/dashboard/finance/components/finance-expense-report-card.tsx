@@ -25,7 +25,7 @@ function isoFromDateInput(value: string, boundary: 'start' | 'end'): string | nu
 
 const STATUSES: ExpenseStatus[] = ['draft', 'submitted', 'approved', 'rejected', 'paid']
 
-export function FinanceExpenseReportCard({ currency }: { currency: string }) {
+export function FinanceExpenseReportCard({ currency, embedded = false }: { currency: string; embedded?: boolean }) {
   const { toast } = useToast()
 
   const [fromDate, setFromDate] = useState('')
@@ -115,25 +115,31 @@ export function FinanceExpenseReportCard({ currency }: { currency: string }) {
     }
   }, [report?.rows, resolvedCurrency, toast])
 
+  const Wrapper = embedded ? 'div' : Card
+  const HeaderWrapper = embedded ? 'div' : CardHeader
+  const ContentWrapper = embedded ? 'div' : CardContent
+
   return (
-    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold">Expense Reports</CardTitle>
-          <CardDescription>Admin summary by employee (last 500 expenses; filterable by date).</CardDescription>
-        </div>
+    <Wrapper className={embedded ? 'space-y-6' : 'border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow'}>
+      {!embedded && (
+        <HeaderWrapper className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold">Expense Reports</CardTitle>
+            <CardDescription>Admin summary by employee (last 500 expenses; filterable by date).</CardDescription>
+          </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button variant="outline" onClick={() => void refresh()} disabled={loading} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Run
-          </Button>
-          <Button variant="outline" onClick={handleExportCsv} disabled={loading || !(report?.rows?.length)} className="gap-2">
-            <Download className="h-4 w-4" /> Export CSV
-          </Button>
-        </div>
-      </CardHeader>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="outline" onClick={() => void refresh()} disabled={loading} className="gap-2">
+              <RefreshCw className="h-4 w-4" /> Run
+            </Button>
+            <Button variant="outline" onClick={handleExportCsv} disabled={loading || !(report?.rows?.length)} className="gap-2">
+              <Download className="h-4 w-4" /> Export CSV
+            </Button>
+          </div>
+        </HeaderWrapper>
+      )}
 
-      <CardContent className="space-y-6 pt-6">
+      <ContentWrapper className={embedded ? '' : 'space-y-6 pt-6'}>
         {error ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
             {error}
@@ -206,7 +212,7 @@ export function FinanceExpenseReportCard({ currency }: { currency: string }) {
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+      </ContentWrapper>
+    </Wrapper>
   )
 }

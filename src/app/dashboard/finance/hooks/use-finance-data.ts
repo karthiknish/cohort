@@ -141,10 +141,10 @@ export function useFinanceData(): FinanceHookReturn {
   const [costNextCursor, setCostNextCursor] = useState<string | null>(null)
   const [loadingMoreInvoices, setLoadingMoreInvoices] = useState(false)
   const [loadingMoreCosts, setLoadingMoreCosts] = useState(false)
-  const [retryCount, setRetryCount] = useState(0)
   const [budget, setBudget] = useState<FinanceBudget>({ totalMonthlyBudget: 0, categoryBudgets: {} })
-  
+
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const retryCountRef = useRef(0)
 
   const clientNameLookup = useMemo(() => new Map(clients.map((client) => [client.id, client.name])), [clients])
 
@@ -161,9 +161,9 @@ export function useFinanceData(): FinanceHookReturn {
     setIsLoading(true)
     if (!options?.isRetry) {
       setLoadError(null)
-      setRetryCount(0)
+      retryCountRef.current = 0
     }
-    
+
     try {
       const summary = await fetchFinanceSummary({ clientId: selectedClientId ?? null })
       const revenueEntries = Array.isArray(summary.revenue) ? summary.revenue : []
@@ -187,32 +187,33 @@ export function useFinanceData(): FinanceHookReturn {
       setInvoiceNextCursor(typeof summary.invoiceNextCursor === 'string' && summary.invoiceNextCursor.length > 0 ? summary.invoiceNextCursor : null)
       setCostNextCursor(typeof summary.costNextCursor === 'string' && summary.costNextCursor.length > 0 ? summary.costNextCursor : null)
       setLoadError(null)
-      setRetryCount(0)
+      retryCountRef.current = 0
     } catch (error: unknown) {
       const message = toErrorMessage(error, 'Failed to load finance data')
-      
+
       // Implement retry logic
-      const currentRetry = retryCount + 1
+      const currentRetry = retryCountRef.current + 1
       if (currentRetry < RETRY_CONFIG.maxAttempts) {
-        setRetryCount(currentRetry)
+        retryCountRef.current = currentRetry
+
         const delay = Math.min(
           RETRY_CONFIG.baseDelay * Math.pow(2, currentRetry - 1),
           RETRY_CONFIG.maxDelay
         )
-        
+
         retryTimeoutRef.current = setTimeout(() => {
           void loadFinanceSummary({ quiet: true, isRetry: true })
         }, delay)
-        
+
         if (!options?.quiet) {
-          toast({ 
-            title: 'Retrying...', 
+          toast({
+            title: 'Retrying...',
             description: `Attempt ${currentRetry + 1} of ${RETRY_CONFIG.maxAttempts}`,
           })
         }
         return
       }
-      
+
       setLoadError(message)
       setRevenueRecords([])
       setInvoices([])
@@ -220,7 +221,7 @@ export function useFinanceData(): FinanceHookReturn {
       setPaymentSummary(EMPTY_PAYMENT_SUMMARY)
       setInvoiceNextCursor(null)
       setCostNextCursor(null)
-      
+
       if (!options?.quiet) {
         toast({ title: 'Failed to load finance data', description: `${message}. Please try again.`, variant: 'destructive' })
       }
@@ -228,7 +229,9 @@ export function useFinanceData(): FinanceHookReturn {
       setIsLoading(false)
       setHasAttemptedLoad(true)
     }
-  }, [isPreviewMode, selectedClientId, toast, retryCount])
+  // Note: toast is stable; dependency limited to selectedClientId to avoid re-running
+  // the loader when the toast state updates (which could trigger extra renders).
+  }, [selectedClientId])
 
   useEffect(() => {
     void loadFinanceSummary({ quiet: true })

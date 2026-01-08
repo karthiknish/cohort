@@ -26,7 +26,7 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant={variant as any} className="capitalize">{status}</Badge>
 }
 
-export function FinanceExpensesCard({ currency }: { currency: string }) {
+export function FinanceExpensesCard({ currency, embedded = false }: { currency: string; embedded?: boolean }) {
   const { user } = useAuth()
   const {
     isAdmin,
@@ -79,34 +79,40 @@ export function FinanceExpensesCard({ currency }: { currency: string }) {
 
   const canApprove = isAdmin
 
+  const Wrapper = embedded ? 'div' : Card
+  const HeaderWrapper = embedded ? 'div' : CardHeader
+  const ContentWrapper = embedded ? 'div' : CardContent
+
   return (
-    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold">Expenses</CardTitle>
-          <CardDescription>
-            Track variable costs, time-based costs, reimbursements, and attach receipts.
-          </CardDescription>
-        </div>
+    <Wrapper className={embedded ? 'space-y-6' : 'border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow'}>
+      {!embedded && (
+        <HeaderWrapper className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold">Expenses</CardTitle>
+            <CardDescription>
+              Track variable costs, time-based costs, reimbursements, and attach receipts.
+            </CardDescription>
+          </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button variant="outline" onClick={() => void refresh()} disabled={loading} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </Button>
-          {isAdmin ? (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setManagingCategories(true)} className="gap-2">
-                <Settings className="h-4 w-4" /> Categories
-              </Button>
-              <Button variant="outline" onClick={() => setManagingVendors(true)} className="gap-2">
-                <Settings className="h-4 w-4" /> Vendors
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </CardHeader>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button variant="outline" onClick={() => void refresh()} disabled={loading} className="gap-2">
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </Button>
+            {isAdmin ? (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setManagingCategories(true)} className="gap-2">
+                  <Settings className="h-4 w-4" /> Categories
+                </Button>
+                <Button variant="outline" onClick={() => setManagingVendors(true)} className="gap-2">
+                  <Settings className="h-4 w-4" /> Vendors
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </HeaderWrapper>
+      )}
 
-      <CardContent className="space-y-6 pt-6">
+      <ContentWrapper className={embedded ? '' : 'space-y-6 pt-6'}>
         {loadError ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
             {loadError}
@@ -597,7 +603,7 @@ export function FinanceExpensesCard({ currency }: { currency: string }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </CardContent>
-    </Card>
+      </ContentWrapper>
+    </Wrapper>
   )
 }

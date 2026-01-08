@@ -267,10 +267,12 @@ h6 {
   }
 
   .cohorts-tour-popover .driver-popover-title {
-    @apply !font-heading !text-lg !font-bold !text-foreground !pb-2 !px-5 !pt-5 !m-0;
+    font-family: var(--font-anybody), var(--font-sans), sans-serif;
+    @apply !text-lg !font-bold !text-foreground !pb-2 !px-5 !pt-5 !m-0;
   }
 
   .cohorts-tour-popover .driver-popover-description {
+    font-family: var(--font-sans), sans-serif;
     @apply !text-sm !text-muted-foreground !leading-relaxed !px-5 !pb-4 !m-0;
   }
 
@@ -279,19 +281,29 @@ h6 {
   }
 
   .cohorts-tour-popover .driver-popover-btn {
-    @apply !text-xs !font-semibold !rounded-md !px-3 !py-1.5 !transition-all !duration-200 !shadow-none !border;
+    font-family: var(--font-sans), sans-serif;
+    text-shadow: none !important;
+    @apply !text-sm !font-semibold !leading-tight !tracking-normal !rounded-md !px-3 !py-1.5 !transition-all !duration-200 !shadow-none !border !filter-none !backdrop-blur-none !antialiased;
   }
 
   .cohorts-tour-popover .driver-popover-next-btn {
-    @apply !bg-primary !text-primary-foreground !border-primary hover: !bg-primary/90;
+    @apply !bg-primary !text-primary-foreground !border-primary hover:!bg-primary/90;
+  }
+
+  .cohorts-tour-popover .driver-popover-next-btn::before,
+  .cohorts-tour-popover .driver-popover-next-btn::after,
+  .cohorts-tour-popover .driver-popover-prev-btn::before,
+  .cohorts-tour-popover .driver-popover-prev-btn::after {
+    content: none !important;
+    display: none !important;
   }
 
   .cohorts-tour-popover .driver-popover-prev-btn {
-    @apply !bg-background !text-foreground !border-border hover: !bg-muted/50;
+    @apply !bg-background !text-foreground !border-border hover:!bg-muted/50;
   }
 
   .cohorts-tour-popover .driver-popover-close-btn {
-    @apply !text-muted-foreground hover: !text-foreground !p-1 !absolute !top-3 !right-3;
+    @apply !text-muted-foreground hover:!text-foreground !p-1 !absolute !top-3 !right-3;
   }
 
   .cohorts-tour-popover .driver-popover-progress-text {
@@ -300,6 +312,7 @@ h6 {
 
   /* Custom animation for tour highlights */
   .driver-active-element {
-    @apply !shadow-[0_0_0_4px_rgba(7, 23, 64, 0.1), 0_0_20px_rgba(7, 23, 64, 0.2)] !transition-all !duration-500;
+    box-shadow: 0 0 0 4px rgba(7, 23, 64, 0.1), 0 0 20px rgba(7, 23, 64, 0.2);
+    @apply !transition-all !duration-500;
   }
 }

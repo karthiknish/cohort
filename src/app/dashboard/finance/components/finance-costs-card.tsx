@@ -49,6 +49,7 @@ interface FinanceCostsCardProps {
   hasMore?: boolean
   loadingMore?: boolean
   currency?: string
+  embedded?: boolean
 }
 
 export function FinanceCostsCard({
@@ -64,6 +65,7 @@ export function FinanceCostsCard({
   hasMore,
   loadingMore,
   currency,
+  embedded = false,
 }: FinanceCostsCardProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const resolvedCurrency = currency ?? 'USD'
@@ -77,31 +79,50 @@ export function FinanceCostsCard({
     )
   })
 
+  const Wrapper = embedded ? 'div' : Card
+  const HeaderWrapper = embedded ? 'div' : CardHeader
+  const ContentWrapper = embedded ? 'div' : CardContent
+
   return (
-    <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold">Operating Costs</CardTitle>
-          <CardDescription>
-            Track SaaS, people, and overhead expenses that roll into financial charts.
-          </CardDescription>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search costs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 focus-visible:ring-primary"
-            />
+    <Wrapper className={embedded ? 'space-y-4' : 'border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow'}>
+      {!embedded && (
+        <HeaderWrapper className="flex flex-col gap-4 border-b border-muted/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold">Operating Costs</CardTitle>
+            <CardDescription>
+              Track SaaS, people, and overhead expenses that roll into financial charts.
+            </CardDescription>
           </div>
-          <Badge variant="secondary" className="w-fit whitespace-nowrap bg-primary/10 text-xs font-semibold uppercase tracking-wide text-primary px-3 py-1.5">
-            {formatCurrency(Math.round(monthlyCostTotal), resolvedCurrency)} per month
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search costs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 focus-visible:ring-primary"
+              />
+            </div>
+            <Badge variant="secondary" className="w-fit whitespace-nowrap bg-primary/10 text-xs font-semibold uppercase tracking-wide text-primary px-3 py-1.5">
+              {formatCurrency(Math.round(monthlyCostTotal), resolvedCurrency)} per month
+            </Badge>
+          </div>
+        </HeaderWrapper>
+      )}
+      <ContentWrapper className={embedded ? '' : 'space-y-4 pt-6'}>
+        {embedded && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search costs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 focus-visible:ring-primary"
+              />
+            </div>
+          </div>
+        )}
         <form onSubmit={onAddCost} className="grid gap-3 md:grid-cols-[2fr,1fr,1fr,1fr,auto]">
           <div className="space-y-1.5">
             <Label htmlFor="cost-category" className="text-sm font-medium">Cost category</Label>
@@ -241,7 +262,7 @@ export function FinanceCostsCard({
             </div>
           ) : null}
         </div>
-      </CardContent>
-    </Card>
+      </ContentWrapper>
+    </Wrapper>
   )
 }

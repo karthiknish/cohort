@@ -1,10 +1,16 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ElementType } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 
 import { useToast } from '@/components/ui/use-toast'
 
@@ -26,7 +32,61 @@ import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
-import { BarChart3, RefreshCw, CircleAlert } from 'lucide-react'
+import {
+  BarChart3,
+  RefreshCw,
+  CircleAlert,
+  FileText,
+  Repeat,
+  Receipt,
+  Wallet,
+  ClipboardList,
+  FileSpreadsheet,
+  ChevronDown
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+// Section header component for consistency
+function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+  count
+}: {
+  icon: ElementType
+  title: string
+  description?: string
+  count?: number
+}) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+        "bg-muted text-muted-foreground group-data-[state=open]:bg-primary/10 group-data-[state=open]:text-primary"
+      )}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-foreground">{title}</h3>
+          {typeof count === 'number' && count > 0 && (
+            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {count}
+            </span>
+          )}
+        </div>
+        {description && (
+          <p className="text-sm text-muted-foreground truncate">{description}</p>
+        )}
+      </div>
+      <ChevronDown className={cn(
+        "h-4 w-4 text-muted-foreground transition-transform duration-200",
+        "group-data-[state=open]:rotate-180"
+      )} />
+    </div>
+  )
+}
 
 export function FinanceDashboard() {
   const { user } = useAuth()
@@ -34,7 +94,6 @@ export function FinanceDashboard() {
   const { toast } = useToast()
   const isAdmin = user?.role === 'admin'
   const isClient = user?.role === 'client'
-  const [activeTab, setActiveTab] = useState('overview')
 
   const {
     selectedPeriod,
@@ -103,7 +162,6 @@ export function FinanceDashboard() {
 
   const handleExportData = useCallback(() => {
     try {
-      // Validate data exists before export
       if (!filteredInvoices || !costs) {
         toast({
           title: 'No data to export',
@@ -113,7 +171,6 @@ export function FinanceDashboard() {
         return
       }
 
-      // Create CSV content for invoices
       const csvHeaders = ['Invoice ID', 'Client', 'Amount', 'Status', 'Issue Date', 'Due Date', 'Paid Date', 'Currency']
       const csvRows = filteredInvoices.map(invoice => [
         invoice.id || '',
@@ -126,7 +183,6 @@ export function FinanceDashboard() {
         invoice.currency || 'USD'
       ])
 
-      // Add costs section
       csvRows.push(['', '', '', '', '', '', '', ''])
       csvRows.push(['COSTS', '', '', '', '', '', '', ''])
       csvRows.push(['Cost ID', 'Category', 'Amount', 'Cadence', 'Currency', '', '', ''])
@@ -141,13 +197,11 @@ export function FinanceDashboard() {
         ])
       })
 
-      // Convert to CSV string
       const csvContent = [
         csvHeaders.join(','),
         ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
       ].join('\n')
 
-      // Create and download file
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
@@ -157,9 +211,8 @@ export function FinanceDashboard() {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      URL.revokeObjectURL(url) // Clean up
+      URL.revokeObjectURL(url)
 
-      // Success feedback
       toast({
         title: 'Export complete!',
         description: `Downloaded ${filteredInvoices.length} invoice${filteredInvoices.length !== 1 ? 's' : ''} and ${costs.length} cost${costs.length !== 1 ? 's' : ''} to CSV.`,
@@ -186,6 +239,45 @@ export function FinanceDashboard() {
 
   const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected workspace' : 'All workspaces')
   const scopeHelper = selectedClient ? 'Scoped to the selected workspace' : 'Showing totals across workspaces'
+
+  const sections = useMemo(() => {
+    const base = [
+      { value: 'overview', label: 'Overview', targetId: 'finance-overview' },
+      { value: 'invoices', label: 'Invoices', targetId: 'finance-invoices' },
+    ]
+
+    if (!isClient) {
+      base.push({ value: 'recurring', label: 'Recurring', targetId: 'finance-recurring' })
+      base.push({ value: 'costs', label: 'Costs', targetId: 'finance-costs' })
+      base.push({ value: 'expenses', label: 'Expenses', targetId: 'finance-expenses' })
+      base.push({ value: 'pos', label: 'POs', targetId: 'finance-purchase-orders' })
+      if (isAdmin) {
+        base.push({ value: 'reports', label: 'Reports', targetId: 'finance-expense-reports' })
+      }
+    }
+
+    return base
+  }, [isAdmin, isClient])
+
+  const [activeSection, setActiveSection] = useState<string>(() => sections[0]?.value ?? 'overview')
+
+  useEffect(() => {
+    if (!sections.some((s) => s.value === activeSection)) {
+      setActiveSection(sections[0]?.value ?? 'overview')
+    }
+  }, [activeSection, sections])
+
+  const handleJumpTo = useCallback(
+    (value: string) => {
+      setActiveSection(value)
+      const section = sections.find((s) => s.value === value)
+      if (!section) return
+      const el = document.getElementById(section.targetId)
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    },
+    [sections]
+  )
 
   if (isInitialLoading) {
     return <FinanceDashboardSkeleton />
@@ -223,7 +315,7 @@ export function FinanceDashboard() {
           </AlertDescription>
         </Alert>
       )}
-      
+
       <FinanceHeader
         selectedPeriod={selectedPeriod}
         onSelectPeriod={setSelectedPeriod}
@@ -235,146 +327,237 @@ export function FinanceDashboard() {
         manageInvoicesHref={!isClient ? '/dashboard/clients' : undefined}
         onExportData={handleExportData}
       />
-      
+
       <FinanceStatsGrid stats={stats} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            Invoices
-          </TabsTrigger>
-          {!isClient && (
-            <TabsTrigger value="recurring" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Recurring
-            </TabsTrigger>
-          )}
-          {!isClient && (
-            <TabsTrigger value="costs" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Costs
-            </TabsTrigger>
-          )}
-          {!isClient && (
-            <TabsTrigger value="expenses" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Expenses
-            </TabsTrigger>
-          )}
-          {!isClient && (
-            <TabsTrigger value="purchaseOrders" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Purchase Orders
-            </TabsTrigger>
-          )}
-          {!isClient && isAdmin && (
-            <TabsTrigger value="expenseReports" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              Expense Reports
-            </TabsTrigger>
-          )}
-        </TabsList>
+      {/* Sticky jump navigation (reduces long-scroll cognitive load) */}
+      <div className="sticky top-0 z-20 -mx-6 border-b border-muted/40 bg-background/75 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs font-medium text-muted-foreground">Jump to</div>
+          <Tabs value={activeSection} onValueChange={handleJumpTo}>
+            <TabsList className="w-full justify-start sm:w-auto">
+              {sections.map((s) => (
+                <TabsTrigger key={s.value} value={s.value}>
+                  {s.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      </div>
 
-        <TabsContent value="overview" className="space-y-6 mt-0">
-          {isEmptyState ? (
-            <Alert className="border-muted/60 bg-muted/20">
-              <BarChart3 className="h-4 w-4" />
-              <AlertTitle>Get started with Finance</AlertTitle>
-              <AlertDescription>
-                Add your first invoice or cost to unlock revenue, expense, and profit charts.
-                {!isClient ? (
-                  <span className="block mt-2 text-xs text-muted-foreground">
-                    Tip: Use the <span className="font-medium text-foreground">Costs</span> tab to capture overhead, and the <span className="font-medium text-foreground">Manage invoices</span> button to send invoices.
-                  </span>
-                ) : (
-                  <span className="block mt-2 text-xs text-muted-foreground">
-                    Tip: Once invoices are issued and paid, they’ll appear here automatically.
-                  </span>
-                )}
-              </AlertDescription>
-            </Alert>
-          ) : null}
+      {/* Empty State */}
+      {isEmptyState && (
+        <Alert className="border-muted/60 bg-muted/20">
+          <BarChart3 className="h-4 w-4" />
+          <AlertTitle>Get started with Finance</AlertTitle>
+          <AlertDescription>
+            Add your first invoice or cost to unlock revenue, expense, and profit charts.
+            {!isClient ? (
+              <span className="block mt-2 text-xs text-muted-foreground">
+                Tip: Add costs below to capture overhead, and use the <span className="font-medium text-foreground">Manage invoices</span> button to send invoices.
+              </span>
+            ) : (
+              <span className="block mt-2 text-xs text-muted-foreground">
+                Tip: Once invoices are issued and paid, they’ll appear here automatically.
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr),minmax(0,1fr)] xl:items-start">
-            <div className="space-y-6">
-              {/* Charts Section */}
-              <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
-
-              {/* Forecast Section */}
-              {forecast && forecast.length > 0 && (
-                <FinanceForecastCard data={forecast} currency={stats.primaryCurrency} />
-              )}
-            </div>
-
-            <div className="xl:sticky xl:top-6">
-              <FinanceRevenueSidebar
-                revenue={revenueByClient}
-                upcomingPayments={upcomingPayments}
-                totalOutstanding={stats.totalOutstanding}
-                currencyTotals={stats.currencyTotals}
-                primaryCurrency={stats.primaryCurrency}
-              />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="invoices" className="space-y-4 mt-0">
-          <FinanceInvoiceTable
-            invoices={filteredInvoices}
-            selectedStatus={invoiceStatusFilter}
-            onSelectStatus={setInvoiceStatusFilter}
-            onSendReminder={isAdmin ? handleSendReminder : undefined}
-            onIssueRefund={isAdmin ? handleIssueRefund : undefined}
-            sendingInvoiceId={sendingInvoiceId}
-            refundingInvoiceId={refundingInvoiceId}
-            onLoadMore={loadMoreInvoices}
-            hasMore={hasMoreInvoices}
-            loadingMore={loadingMoreInvoices}
+      {/* Overview Section - Charts & Revenue Sidebar */}
+      <section
+        id="finance-overview"
+        className="grid scroll-mt-24 gap-6 xl:grid-cols-[minmax(0,2fr),minmax(0,1fr)] xl:items-start"
+      >
+        <div className="space-y-6">
+          <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
+          {forecast && forecast.length > 0 && (
+            <FinanceForecastCard data={forecast} currency={stats.primaryCurrency} />
+          )}
+        </div>
+        <div className="xl:sticky xl:top-6">
+          <FinanceRevenueSidebar
+            revenue={revenueByClient}
+            upcomingPayments={upcomingPayments}
+            totalOutstanding={stats.totalOutstanding}
+            currencyTotals={stats.currencyTotals}
+            primaryCurrency={stats.primaryCurrency}
           />
-        </TabsContent>
+        </div>
+      </section>
 
-        {!isClient && (
-          <TabsContent value="recurring" className="space-y-4 mt-0">
-            <RecurringInvoicesCard />
-          </TabsContent>
-        )}
+      {/* Invoices Section */}
+      <section id="finance-invoices" className="scroll-mt-24">
+      <Collapsible defaultOpen>
+        <Card className="overflow-hidden">
+          <CollapsibleTrigger className="group w-full text-left">
+            <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+              <SectionHeader
+                icon={FileText}
+                title="Invoices"
+                description="Track sent and paid invoices"
+                count={filteredInvoices.length}
+              />
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <FinanceInvoiceTable
+                invoices={filteredInvoices}
+                selectedStatus={invoiceStatusFilter}
+                onSelectStatus={setInvoiceStatusFilter}
+                onSendReminder={isAdmin ? handleSendReminder : undefined}
+                onIssueRefund={isAdmin ? handleIssueRefund : undefined}
+                sendingInvoiceId={sendingInvoiceId}
+                refundingInvoiceId={refundingInvoiceId}
+                onLoadMore={loadMoreInvoices}
+                hasMore={hasMoreInvoices}
+                loadingMore={loadingMoreInvoices}
+                embedded
+              />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+      </section>
 
-        {!isClient && (
-          <TabsContent value="costs" className="space-y-4 mt-0">
-            <FinanceCostsCard
-              costs={costs}
-              monthlyCostTotal={monthlyCostTotal}
-              newCost={newCost}
-              onChangeNewCost={setNewCost}
-              onAddCost={handleAddCost}
-              onRemoveCost={handleRemoveCost}
-              submitting={isSubmittingCost}
-              removingCostId={removingCostId}
-              onLoadMore={loadMoreCosts}
-              hasMore={hasMoreCosts}
-              loadingMore={loadingMoreCosts}
-              currency={stats.primaryCurrency}
-            />
-          </TabsContent>
-        )}
+      {/* Recurring Invoices - Admin/Team only */}
+      {!isClient && (
+        <section id="finance-recurring" className="scroll-mt-24">
+        <Collapsible defaultOpen={false}>
+          <Card className="overflow-hidden">
+            <CollapsibleTrigger className="group w-full text-left">
+              <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                <SectionHeader
+                  icon={Repeat}
+                  title="Recurring Invoices"
+                  description="Automated billing schedules"
+                />
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <RecurringInvoicesCard />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+        </section>
+      )}
 
-        {!isClient && (
-          <TabsContent value="expenses" className="space-y-4 mt-0">
-            <FinanceExpensesCard currency={stats.primaryCurrency} />
-          </TabsContent>
-        )}
+      {/* Costs & Expenses Grid - Admin/Team only */}
+      {!isClient && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Costs Section */}
+          <section id="finance-costs" className="scroll-mt-24">
+          <Collapsible defaultOpen>
+            <Card className="overflow-hidden h-fit">
+              <CollapsibleTrigger className="group w-full text-left">
+                <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                  <SectionHeader
+                    icon={Receipt}
+                    title="Company Costs"
+                    description={`${formatCurrency(monthlyCostTotal, stats.primaryCurrency)}/mo`}
+                    count={costs.length}
+                  />
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <FinanceCostsCard
+                    costs={costs}
+                    monthlyCostTotal={monthlyCostTotal}
+                    newCost={newCost}
+                    onChangeNewCost={setNewCost}
+                    onAddCost={handleAddCost}
+                    onRemoveCost={handleRemoveCost}
+                    submitting={isSubmittingCost}
+                    removingCostId={removingCostId}
+                    onLoadMore={loadMoreCosts}
+                    hasMore={hasMoreCosts}
+                    loadingMore={loadingMoreCosts}
+                    currency={stats.primaryCurrency}
+                    embedded
+                  />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+          </section>
 
-        {!isClient && (
-          <TabsContent value="purchaseOrders" className="space-y-4 mt-0">
-            <FinancePurchaseOrdersCard currency={stats.primaryCurrency} />
-          </TabsContent>
-        )}
+          {/* Expenses Section */}
+          <section id="finance-expenses" className="scroll-mt-24">
+          <Collapsible defaultOpen>
+            <Card className="overflow-hidden h-fit">
+              <CollapsibleTrigger className="group w-full text-left">
+                <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                  <SectionHeader
+                    icon={Wallet}
+                    title="Expenses"
+                    description="Track reimbursable expenses"
+                  />
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <FinanceExpensesCard currency={stats.primaryCurrency} embedded />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+          </section>
+        </div>
+      )}
 
-        {!isClient && isAdmin && (
-          <TabsContent value="expenseReports" className="space-y-4 mt-0">
-            <FinanceExpenseReportCard currency={stats.primaryCurrency} />
-          </TabsContent>
-        )}
-      </Tabs>
+      {/* Purchase Orders - Admin/Team only */}
+      {!isClient && (
+        <section id="finance-purchase-orders" className="scroll-mt-24">
+        <Collapsible defaultOpen={false}>
+          <Card className="overflow-hidden">
+            <CollapsibleTrigger className="group w-full text-left">
+              <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                <SectionHeader
+                  icon={ClipboardList}
+                  title="Purchase Orders"
+                  description="Manage vendor purchase orders"
+                />
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <FinancePurchaseOrdersCard currency={stats.primaryCurrency} embedded />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+        </section>
+      )}
 
+      {/* Expense Reports - Admin only */}
+      {!isClient && isAdmin && (
+        <section id="finance-expense-reports" className="scroll-mt-24">
+        <Collapsible defaultOpen={false}>
+          <Card className="overflow-hidden">
+            <CollapsibleTrigger className="group w-full text-left">
+              <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                <SectionHeader
+                  icon={FileSpreadsheet}
+                  title="Expense Reports"
+                  description="Review and approve team expense reports"
+                />
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <FinanceExpenseReportCard currency={stats.primaryCurrency} embedded />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+        </section>
+      )}
     </div>
   )
 }

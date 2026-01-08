@@ -184,6 +184,29 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
           <ScrollArea className="h-[400px] px-6 pb-6">
             {showWelcome && (
               <TabsContent value="welcome" className="mt-4 space-y-4">
+                <div className="pt-2 flex flex-col gap-2">
+                  <Button
+                    onClick={() => {
+                      onOpenChange(false)
+                      startTour()
+                    }}
+                    className="w-full bg-gradient-to-r from-primary to-primary/80"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Launch Interactive Tour
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      localStorage.setItem('cohorts_welcome_seen', 'true')
+                      onOpenChange(false)
+                    }}
+                    className="w-full text-muted-foreground"
+                  >
+                    Skip to dashboard
+                  </Button>
+                </div>
+
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-start gap-3">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
@@ -219,29 +242,6 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                       </Button>
                     </div>
                   ))}
-                </div>
-
-                <div className="pt-2 flex flex-col gap-2">
-                  <Button
-                    onClick={() => {
-                      onOpenChange(false)
-                      startTour()
-                    }}
-                    className="w-full bg-gradient-to-r from-primary to-primary/80"
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Launch Interactive Tour
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      localStorage.setItem('cohorts_welcome_seen', 'true')
-                      onOpenChange(false)
-                    }}
-                    className="w-full text-muted-foreground"
-                  >
-                    Skip to dashboard
-                  </Button>
                 </div>
               </TabsContent>
             )}

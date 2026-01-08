@@ -24,6 +24,7 @@ import {
   CircleHelp,
   Sparkles,
   Shield,
+  Rocket,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -381,7 +382,7 @@ export function Header() {
                     className="hidden sm:inline-flex"
                     aria-label="Show onboarding"
                   >
-                    <Sparkles className="h-4 w-4" />
+                    <Rocket className="h-4 w-4" />
                     <span className="sr-only">Onboarding</span>
                   </Button>
                 </TooltipTrigger>
@@ -394,28 +395,6 @@ export function Header() {
               </Tooltip>
             </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    id="tour-help-trigger"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => void onHelpOpenChange(true)}
-                    className="hidden sm:inline-flex"
-                  >
-                    <CircleHelp className="h-4 w-4" />
-                    <span className="sr-only">Help</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="flex items-center gap-2">
-                    <span>Help & Navigation</span>
-                    <KeyboardShortcutBadge combo="?" />
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
 
             <NotificationsDropdown />
 

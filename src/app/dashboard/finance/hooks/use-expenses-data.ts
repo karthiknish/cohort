@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { toErrorMessage } from '@/lib/error-utils'
@@ -63,6 +63,12 @@ export function useExpensesData() {
   const [submitting, setSubmitting] = useState(false)
   const [actingExpenseId, setActingExpenseId] = useState<string | null>(null)
 
+  // Use refs for filters to avoid infinite loop in useEffect
+  const statusFilterRef = useRef(statusFilter)
+  const employeeFilterRef = useRef(employeeFilter)
+  statusFilterRef.current = statusFilter
+  employeeFilterRef.current = employeeFilter
+
   const refresh = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
@@ -70,8 +76,8 @@ export function useExpensesData() {
     try {
       const [expenseRes, categoryRes, vendorRes] = await Promise.all([
         listExpenses({
-          status: statusFilter === 'all' ? undefined : statusFilter,
-          employeeId: employeeFilter.trim() ? employeeFilter.trim() : undefined,
+          status: statusFilterRef.current === 'all' ? undefined : statusFilterRef.current,
+          employeeId: employeeFilterRef.current.trim() ? employeeFilterRef.current.trim() : undefined,
           limit: 100,
         }),
         listExpenseCategories({ includeInactive: isAdmin }),
@@ -87,11 +93,21 @@ export function useExpensesData() {
     } finally {
       setLoading(false)
     }
-  }, [employeeFilter, isAdmin, statusFilter])
+  }, [isAdmin])
 
+  // Separate effect for initial load
   useEffect(() => {
     void refresh()
-  }, [refresh])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Separate effect for filter changes (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void refresh()
+    }, 300)
+    return () => clearTimeout(timeoutId)
+  }, [statusFilter, employeeFilter, refresh])
 
   const categoryLookup = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories])
   const vendorLookup = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors])
