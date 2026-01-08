@@ -18,8 +18,14 @@ import {
   Settings,
   ShieldCheck,
   TrendingUp,
+  TrendingDown,
   Users,
   Zap,
+  FolderKanban,
+  CheckSquare,
+  FileText,
+  Receipt,
+  Bot,
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -47,6 +53,29 @@ interface DashboardStats {
   recentErrors: number
 }
 
+interface UsageStats {
+  totalUsers: number
+  activeUsersToday: number
+  activeUsersWeek: number
+  activeUsersMonth: number
+  newUsersToday: number
+  newUsersWeek: number
+  totalProjects: number
+  projectsThisWeek: number
+  totalTasks: number
+  tasksCompletedThisWeek: number
+  totalInvoices: number
+  invoicesThisWeek: number
+  totalExpenses: number
+  expensesThisWeek: number
+  totalClients: number
+  activeClientsWeek: number
+  agentConversations: number
+  agentActionsThisWeek: number
+  dailyActiveUsers: Array<{ date: string; count: number }>
+  featureUsage: Array<{ feature: string; count: number; trend: number }>
+}
+
 interface RecentActivity {
   id: string
   type: 'user_joined' | 'client_created' | 'lead_received' | 'sync_completed' | 'error' | 'new_user_signup'
@@ -68,8 +97,10 @@ type AdminSection = {
 export default function AdminPage() {
   const { user, getIdToken } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null)
   const [activities, setActivities] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [usageLoading, setUsageLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
@@ -224,9 +255,32 @@ export default function AdminPage() {
     }
   }, [user?.id, getIdToken])
 
+  const fetchUsageStats = useCallback(async () => {
+    if (!user?.id) return
+
+    setUsageLoading(true)
+    try {
+      const token = await getIdToken()
+      const res = await fetch('/api/admin/usage', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (res.ok) {
+        const payload = await res.json()
+        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
+        setUsageStats(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch usage stats:', error)
+    } finally {
+      setUsageLoading(false)
+    }
+  }, [user?.id, getIdToken])
+
   useEffect(() => {
     fetchDashboardData()
-  }, [fetchDashboardData])
+    fetchUsageStats()
+  }, [fetchDashboardData, fetchUsageStats])
 
   const adminSections: AdminSection[] = [
     {
@@ -414,7 +468,222 @@ export default function AdminPage() {
           </Card>
         </div>
 
+        {/* Usage Analytics Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Usage Analytics
+            </h2>
+            <Badge variant="outline" className="text-xs">Last 7 days</Badge>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Active Users Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Active Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {usageLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{usageStats?.activeUsersWeek ?? 0}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {usageStats?.activeUsersToday ?? 0} today · {usageStats?.newUsersWeek ?? 0} new
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Projects Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Projects</CardTitle>
+                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {usageLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{usageStats?.totalProjects ?? 0}</div>
+                    <p className="text-xs text-muted-foreground">
+                      +{usageStats?.projectsThisWeek ?? 0} this week
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Tasks Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Tasks Completed</CardTitle>
+                <CheckSquare className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {usageLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{usageStats?.tasksCompletedThisWeek ?? 0}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {usageStats?.totalTasks ?? 0} total tasks
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Agent Mode Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Agent Mode</CardTitle>
+                <Bot className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {usageLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{usageStats?.agentConversations ?? 0}</div>
+                    <p className="text-xs text-muted-foreground">
+                      +{usageStats?.agentActionsThisWeek ?? 0} this week
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Daily Active Users Trend + Feature Usage */}
+          <div className="grid gap-4 mt-4 lg:grid-cols-2">
+            {/* Daily Trend Chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Daily Active Users
+                </CardTitle>
+                <CardDescription>User logins over the past 7 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {usageLoading ? (
+                  <div className="flex items-end gap-1 h-32">
+                    {[...Array(7)].map((_, i) => (
+                      <Skeleton key={i} className="flex-1 h-full" style={{ height: `${30 + Math.random() * 70}%` }} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Simple bar chart */}
+                    <div className="flex items-end gap-1 h-24">
+                      {usageStats?.dailyActiveUsers?.map((day, i) => {
+                        const maxCount = Math.max(...(usageStats?.dailyActiveUsers?.map(d => d.count) ?? [1]), 1)
+                        const height = maxCount > 0 ? (day.count / maxCount) * 100 : 0
+                        return (
+                          <div
+                            key={day.date}
+                            className="flex-1 flex flex-col items-center gap-1"
+                          >
+                            <div
+                              className={cn(
+                                "w-full rounded-t-sm transition-all",
+                                i === 6 ? "bg-primary" : "bg-primary/40"
+                              )}
+                              style={{ height: `${Math.max(height, 4)}%` }}
+                              title={`${day.count} users on ${day.date}`}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Day labels */}
+                    <div className="flex gap-1">
+                      {usageStats?.dailyActiveUsers?.map((day) => {
+                        const date = new Date(day.date)
+                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
+                        return (
+                          <div key={day.date} className="flex-1 text-center text-xs text-muted-foreground">
+                            {dayName}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Feature Usage Breakdown */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Feature Usage This Week
+                </CardTitle>
+                <CardDescription>Activity by module</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {usageLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-2 flex-1" />
+                        <Skeleton className="h-4 w-10" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {usageStats?.featureUsage?.slice(0, 5).map((feature) => {
+                      const icon = feature.feature === 'Projects' ? FolderKanban :
+                        feature.feature === 'Tasks' ? CheckSquare :
+                          feature.feature === 'Invoices' ? FileText :
+                            feature.feature === 'Expenses' ? Receipt :
+                              feature.feature === 'Agent Mode' ? Bot : Activity
+                      const Icon = icon
+                      const maxCount = Math.max(...(usageStats?.featureUsage?.map(f => f.count) ?? [1]), 1)
+                      const percentage = maxCount > 0 ? (feature.count / maxCount) * 100 : 0
+
+                      return (
+                        <div key={feature.feature} className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 w-24">
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm truncate">{feature.feature}</span>
+                          </div>
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1 w-16 justify-end">
+                            <span className="text-sm font-medium">{feature.count}</span>
+                            {feature.trend > 0 && (
+                              <TrendingUp className="h-3 w-3 text-emerald-500" />
+                            )}
+                            {feature.trend < 0 && (
+                              <TrendingDown className="h-3 w-3 text-red-500" />
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Main Content Grid */}
+
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Admin Sections - 2 columns */}
           <div className="lg:col-span-2 space-y-4">
