@@ -31,7 +31,7 @@ export function WorkflowCard() {
           </div>
         </div>
         <Button asChild size="sm" variant="outline">
-          <Link href="/docs/integrations">View integration checklist</Link>
+          <Link href="/dashboard/integrations">View integration checklist</Link>
         </Button>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-3">

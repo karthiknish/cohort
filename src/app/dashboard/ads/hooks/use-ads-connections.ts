@@ -11,10 +11,10 @@ import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
 import { parseApiError } from '../components/types'
 import { fetchIntegrationStatuses, getErrorMessage, formatProviderName } from '../components/utils'
-import { 
-  API_ENDPOINTS, 
-  ERROR_MESSAGES, 
-  SUCCESS_MESSAGES, 
+import {
+  API_ENDPOINTS,
+  ERROR_MESSAGES,
+  SUCCESS_MESSAGES,
   TOAST_TITLES,
   PROVIDER_IDS,
 } from '../components/constants'
@@ -35,7 +35,7 @@ export interface UseAdsConnectionsReturn {
   connectionErrors: Record<string, string>
   integrationStatuses: IntegrationStatusResponse | null
   automationStatuses: IntegrationStatus[]
-  
+
   // Setup messages
   metaSetupMessage: string | null
   tiktokSetupMessage: string | null
@@ -43,17 +43,17 @@ export interface UseAdsConnectionsReturn {
   initializingTikTok: boolean
   metaNeedsAccountSelection: boolean
   tiktokNeedsAccountSelection: boolean
-  
+
   // Actions
   handleConnect: (providerId: string, action: () => Promise<void>) => Promise<void>
   handleDisconnect: (providerId: string) => Promise<void>
   handleOauthRedirect: (providerId: string) => Promise<void>
   initializeMetaIntegration: () => Promise<void>
   initializeTikTokIntegration: () => Promise<void>
-  
+
   // Platform definitions
   adPlatforms: AdPlatform[]
-  
+
   // Trigger refresh
   triggerRefresh: () => void
 }
@@ -64,7 +64,7 @@ export interface UseAdsConnectionsReturn {
 
 export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAdsConnectionsReturn {
   const { onRefresh } = options
-  
+
   const {
     user,
     connectGoogleAdsAccount,
@@ -82,19 +82,19 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({})
   const [connectedProviders, setConnectedProviders] = useState<Record<string, boolean>>({})
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatusResponse | null>(null)
-  
+
   // Setup state
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
   const [tiktokSetupMessage, setTiktokSetupMessage] = useState<string | null>(null)
   const [initializingMeta, setInitializingMeta] = useState(false)
   const [initializingTikTok, setInitializingTikTok] = useState(false)
-  
+
   // Internal refresh trigger
   const [refreshTick, setRefreshTick] = useState(0)
 
   // Derived state
   const automationStatuses = integrationStatuses?.statuses ?? []
-  
+
   const metaStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.FACEBOOK)
   const metaNeedsAccountSelection = Boolean(metaStatus?.linkedAt && !metaStatus.accountId)
 
@@ -313,15 +313,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } else if (oauthError) {
       const displayProvider = provider ? formatProviderName(provider) : 'OAuth'
       const errorMessage = message || 'An unknown error occurred during authentication.'
-      
+
       console.error(`[useAdsConnections] Detected OAuth error for ${provider}:`, errorMessage)
-      
+
       toast({
         variant: 'destructive',
         title: `${displayProvider} connection failed`,
         description: errorMessage,
       })
-      
+
       if (provider) {
         setConnectionErrors((prev) => ({ ...prev, [provider]: errorMessage }))
       }
@@ -363,7 +363,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     try {
       const redirectTarget = `${window.location.origin}/dashboard/ads`
       if (providerId === PROVIDER_IDS.FACEBOOK) {
+        console.log('[Meta OAuth Debug] Starting Meta OAuth flow...')
+        console.log('[Meta OAuth Debug] Redirect target:', redirectTarget)
         const { url } = await startMetaOauth(redirectTarget)
+        console.log('[Meta OAuth Debug] Received OAuth URL:', url)
+        console.log('[Meta OAuth Debug] URL parsed:', {
+          origin: new URL(url).origin,
+          pathname: new URL(url).pathname,
+          params: Object.fromEntries(new URL(url).searchParams.entries())
+        })
         window.location.href = url
         return
       }
@@ -402,7 +410,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const handleDisconnect = useCallback(async (providerId: string) => {
     const providerName = formatProviderName(providerId)
     if (!confirm(`Are you sure you want to disconnect ${providerName}? This will stop all future syncs.`)) return
-    
+
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
@@ -426,7 +434,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     connectionErrors,
     integrationStatuses,
     automationStatuses,
-    
+
     // Setup messages
     metaSetupMessage,
     tiktokSetupMessage,
@@ -434,17 +442,17 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     initializingTikTok,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
-    
+
     // Actions
     handleConnect,
     handleDisconnect,
     handleOauthRedirect,
     initializeMetaIntegration,
     initializeTikTokIntegration,
-    
+
     // Platform definitions
     adPlatforms,
-    
+
     // Trigger refresh
     triggerRefresh,
   }
