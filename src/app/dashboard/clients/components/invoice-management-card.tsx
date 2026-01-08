@@ -470,14 +470,14 @@ export function InvoiceManagementCard({
                         <ShadcnCalendar
                           mode="single"
                           selected={createInvoiceForm.dueDate ? parseISO(createInvoiceForm.dueDate) : undefined}
-                          onSelect={(date) =>
+                          onSelect={(date: Date | undefined) =>
                             onCreateInvoiceFormChange({
                               ...createInvoiceForm,
                               dueDate: date ? format(date, 'yyyy-MM-dd') : '',
                             })
                           }
                           className="p-3"
-                          disabled={(date) => date < new Date()}
+                          disabled={(date: Date) => date < new Date()}
                         />
                       </PopoverContent>
                     </Popover>

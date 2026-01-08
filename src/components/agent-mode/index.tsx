@@ -26,6 +26,13 @@ export function AgentMode() {
     loadConversation,
     updateConversationTitle,
     deleteConversation,
+    // Error handling
+    error,
+    clearError,
+    lastFailedMessage,
+    retryLastMessage,
+    connectionStatus,
+    rateLimitCountdown,
   } = useAgentMode()
 
   return (
@@ -45,6 +52,13 @@ export function AgentMode() {
         onSelectConversation={loadConversation}
         onUpdateConversationTitle={updateConversationTitle}
         onDeleteConversation={deleteConversation}
+        // Error handling
+        error={error}
+        onClearError={clearError}
+        lastFailedMessage={lastFailedMessage}
+        onRetry={retryLastMessage}
+        connectionStatus={connectionStatus}
+        rateLimitCountdown={rateLimitCountdown}
       />
     </>
   )

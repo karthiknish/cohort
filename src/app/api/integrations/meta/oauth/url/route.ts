@@ -29,7 +29,7 @@ export const POST = createApiHandler(
       throw new ServiceUnavailableError('Meta business login is not configured')
     }
 
-    const redirect = query.redirect ?? `${appUrl}/dashboard`
+    const redirect = query.redirect ?? `${appUrl}/dashboard/ads`
 
     // Validate redirect URL to prevent Open Redirect vulnerabilities
     if (!isValidRedirectUrl(redirect)) {

@@ -186,7 +186,7 @@ export function CreateTaskSheet({
                     <Calendar
                       mode="single"
                       selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
-                      onSelect={(date) =>
+                      onSelect={(date: Date | undefined) =>
                         setFormState((prev) => ({
                           ...prev,
                           dueDate: date ? format(date, 'yyyy-MM-dd') : '',
@@ -374,7 +374,7 @@ export function EditTaskSheet({
                   <Calendar
                     mode="single"
                     selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
-                    onSelect={(date) =>
+                    onSelect={(date: Date | undefined) =>
                       setFormState((prev) => ({
                         ...prev,
                         dueDate: date ? format(date, 'yyyy-MM-dd') : '',

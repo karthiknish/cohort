@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
+import { postWithRetry, getWithRetry, type FetchWithRetryOptions } from '@/lib/fetch-with-retry'
+import { AgentError, AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 
 export interface AgentMessageMetadata {
   action?: 'navigate' | 'execute' | 'response'
@@ -28,6 +30,8 @@ export interface AgentConversationSummary {
   lastMessageAt: string | null
   messageCount: number | null
 }
+
+export type ConnectionStatus = 'connected' | 'retrying' | 'disconnected'
 
 export interface UseAgentModeReturn {
   /** Whether Agent Mode panel is open */
@@ -60,10 +64,43 @@ export interface UseAgentModeReturn {
   updateConversationTitle: (conversationId: string, title: string) => Promise<void>
   /** Delete a conversation and its messages */
   deleteConversation: (conversationId: string) => Promise<void>
+
+  // Error handling
+  /** Current error, if any */
+  error: AgentError | null
+  /** Clear current error */
+  clearError: () => void
+  /** Last failed message (for retry) */
+  lastFailedMessage: string | null
+  /** Retry the last failed message */
+  retryLastMessage: () => void
+  /** Connection status */
+  connectionStatus: ConnectionStatus
+  /** Rate limit countdown (seconds remaining) */
+  rateLimitCountdown: number | null
 }
+
+// Validation constants
+const MAX_MESSAGE_LENGTH = 500
+const MIN_MESSAGE_LENGTH = 1
+const DEBOUNCE_MS = 300
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+/**
+ * Validate user input before sending
+ */
+function validateInput(text: string): string | null {
+  const trimmed = text.trim()
+  if (trimmed.length < MIN_MESSAGE_LENGTH) {
+    return 'Message is too short'
+  }
+  if (trimmed.length > MAX_MESSAGE_LENGTH) {
+    return `Message too long (max ${MAX_MESSAGE_LENGTH} characters)`
+  }
+  return null
 }
 
 export function useAgentMode(): UseAgentModeReturn {
@@ -77,8 +114,28 @@ export function useAgentMode(): UseAgentModeReturn {
   const [history, setHistory] = useState<AgentConversationSummary[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
 
+  // Error handling state
+  const [error, setError] = useState<AgentError | null>(null)
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connected')
+  const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null)
+
+  // Debounce ref to prevent rapid submissions
+  const lastSubmitTimeRef = useRef<number>(0)
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
   const toggle = useCallback(() => {
     setOpen((prev) => !prev)
+  }, [])
+
+  const clearError = useCallback(() => {
+    setError(null)
+    setLastFailedMessage(null)
+    setRateLimitCountdown(null)
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
   }, [])
 
   const addMessage = useCallback((
@@ -103,13 +160,95 @@ export function useAgentMode(): UseAgentModeReturn {
     return message
   }, [])
 
+  /**
+   * Start rate limit countdown timer
+   */
+  const startRateLimitCountdown = useCallback((seconds: number) => {
+    setRateLimitCountdown(seconds)
+    
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+    }
+
+    countdownIntervalRef.current = setInterval(() => {
+      setRateLimitCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current)
+            countdownIntervalRef.current = null
+          }
+          setError(null)
+          setConnectionStatus('connected')
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }, [])
+
+  /**
+   * Handle errors with proper categorization and UI updates
+   */
+  const handleError = useCallback((err: AgentError, failedMessage?: string) => {
+    setError(err)
+    setConnectionStatus(err.type === 'network' ? 'disconnected' : 'connected')
+    
+    if (failedMessage) {
+      setLastFailedMessage(failedMessage)
+    }
+
+    // Start countdown for rate limit errors
+    if (err.type === 'rate-limit' && err.retryAfter) {
+      startRateLimitCountdown(err.retryAfter)
+    }
+
+    // Show user-friendly error message
+    const displayMessage = ERROR_DISPLAY_MESSAGES[err.type] || err.message
+    addMessage('agent', displayMessage, null, 'error', { action: 'response', success: false })
+  }, [addMessage, startRateLimitCountdown])
+
+  /**
+   * Retry options for API calls
+   */
+  const getRetryOptions = useCallback((): FetchWithRetryOptions => ({
+    maxRetries: 3,
+    baseDelayMs: 1000,
+    getAuthToken: getIdToken,
+    onRetry: (attempt, err, delayMs) => {
+      console.log(`[useAgentMode] Retry attempt ${attempt}, waiting ${delayMs}ms`, err.type)
+      setConnectionStatus('retrying')
+    },
+    onFinalFailure: (err) => {
+      console.error('[useAgentMode] Final failure after retries:', err)
+    },
+  }), [getIdToken])
+
   const processInput = useCallback(async (text: string) => {
-    if (!text.trim()) return
+    // Debounce check
+    const now = Date.now()
+    if (now - lastSubmitTimeRef.current < DEBOUNCE_MS) {
+      console.log('[useAgentMode] Debounced rapid submission')
+      return
+    }
+    lastSubmitTimeRef.current = now
 
+    // Validate input
+    const validationError = validateInput(text)
+    if (validationError) {
+      setError(new AgentValidationError(validationError))
+      addMessage('agent', validationError, null, 'error')
+      return
+    }
+
+    const trimmedText = text.trim()
+    
+    // Clear previous errors
+    clearError()
     setIsProcessing(true)
+    setConnectionStatus('connected')
 
-    // Add user message
-    addMessage('user', text)
+    // Add user message (optimistic)
+    addMessage('user', trimmedText)
 
     try {
       // Get auth token
@@ -122,7 +261,7 @@ export function useAgentMode(): UseAgentModeReturn {
       }))
 
       const payload: Record<string, unknown> = {
-        message: text,
+        message: trimmedText,
         context: { previousMessages },
       }
 
@@ -130,102 +269,118 @@ export function useAgentMode(): UseAgentModeReturn {
         payload.conversationId = conversationId
       }
 
-      // Call the Agent API
-      const response = await fetch('/api/agent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      })
+      // Call the Agent API with retry logic
+      const { data, error: fetchError, response } = await postWithRetry<{ data?: Record<string, unknown> }>(
+        '/api/agent',
+        payload,
+        token,
+        getRetryOptions()
+      )
 
-      if (!response.ok) {
-        throw new Error('Failed to process request')
+      if (fetchError) {
+        handleError(fetchError, trimmedText)
+        return
       }
 
-      const raw = await response.json() as any
-      const data = (raw && typeof raw === 'object' && 'data' in raw) ? raw.data : raw
+      setConnectionStatus('connected')
+      
+      // Handle successful response
+      const rawData = data?.data || data
+      const responseData = rawData as {
+        conversationId?: string
+        action?: string
+        route?: string
+        message?: string
+        operation?: string
+        executeResult?: { success: boolean; data?: Record<string, unknown> }
+      }
 
       // Save conversationId for subsequent messages
-      if (data.conversationId && !conversationId) {
-        setConversationId(data.conversationId)
+      if (responseData?.conversationId && !conversationId) {
+        setConversationId(responseData.conversationId)
       }
 
       // Determine status and metadata for enhanced UX
       let status: 'success' | 'error' | 'info' = 'info'
       const metadata: AgentMessageMetadata = {
-        action: data.action,
-        operation: data.operation,
+        action: responseData?.action as AgentMessageMetadata['action'],
+        operation: responseData?.operation,
       }
 
       // Handle different action types
-      if (data.action === 'navigate' && data.route) {
+      if (responseData?.action === 'navigate' && responseData?.route) {
         status = 'success'
         metadata.success = true
         // Add agent response with status
-        addMessage('agent', data.message, data.route, status, metadata)
+        addMessage('agent', responseData.message || 'Navigating...', responseData.route, status, metadata)
         // Navigation action - go to the route after a brief delay
         setTimeout(() => {
-          router.push(data.route!)
+          router.push(responseData.route!)
           setOpen(false)
         }, 800)
-      } else if (data.action === 'execute' && data.executeResult) {
+      } else if (responseData?.action === 'execute' && responseData?.executeResult) {
         // Execute action - action was performed
-        status = data.executeResult.success ? 'success' : 'error'
-        metadata.success = data.executeResult.success
-        metadata.data = data.executeResult.data
-        addMessage('agent', data.message, data.route, status, metadata)
+        status = responseData.executeResult.success ? 'success' : 'error'
+        metadata.success = responseData.executeResult.success
+        metadata.data = responseData.executeResult.data
+        addMessage('agent', responseData.message || 'Action completed', responseData.route, status, metadata)
 
-        if (data.executeResult.success) {
-          console.log('[useAgentMode] Action executed successfully:', data.operation, data.executeResult.data)
+        if (responseData.executeResult.success) {
+          console.log('[useAgentMode] Action executed successfully:', responseData.operation, responseData.executeResult.data)
         } else {
-          console.warn('[useAgentMode] Action execution failed:', data.message)
+          console.warn('[useAgentMode] Action execution failed:', responseData.message)
         }
       } else {
         // Regular response
-        addMessage('agent', data.message, data.route, 'info', metadata)
+        addMessage('agent', responseData?.message || 'I didn\'t quite understand that.', responseData?.route, 'info', metadata)
       }
-    } catch (error) {
-      console.error('[useAgentMode] Error:', error)
-      addMessage(
-        'agent',
-        'Sorry, I had trouble processing that. Try saying "go to analytics" or "add 500 in ad spend".',
-        null,
-        'error',
-        { action: 'response', success: false }
-      )
+
+      // Clear failed message on success
+      setLastFailedMessage(null)
+    } catch (err) {
+      console.error('[useAgentMode] Unexpected error:', err)
+      const agentError = parseAgentError(err, null)
+      handleError(agentError, trimmedText)
     } finally {
       setIsProcessing(false)
     }
-  }, [addMessage, conversationId, getIdToken, messages, router])
+  }, [addMessage, clearError, conversationId, getIdToken, getRetryOptions, handleError, messages, router])
+
+  const retryLastMessage = useCallback(() => {
+    if (lastFailedMessage) {
+      clearError()
+      processInput(lastFailedMessage)
+    }
+  }, [lastFailedMessage, clearError, processInput])
 
   const clearMessages = useCallback(() => {
     setMessages([])
     setConversationId(null)
-  }, [])
+    clearError()
+  }, [clearError])
 
   const fetchHistory = useCallback(async () => {
     setIsHistoryLoading(true)
     try {
       const token = await getIdToken()
-      const response = await fetch('/api/agent/conversations?limit=20', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      const { data, error: fetchError } = await getWithRetry<{ data?: { conversations?: AgentConversationSummary[] } }>(
+        '/api/agent/conversations?limit=20',
+        token,
+        { maxRetries: 2 }
+      )
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversation history')
+      if (fetchError) {
+        console.error('[useAgentMode] Failed to fetch history:', fetchError)
+        return
       }
 
-      const raw = await response.json() as any
-      const data = (raw && typeof raw === 'object' && 'data' in raw) ? raw.data : raw
-      const conversations = Array.isArray(data?.conversations) ? data.conversations : []
+      const rawData = data?.data || data
+      const conversations = Array.isArray((rawData as Record<string, unknown>)?.conversations) 
+        ? (rawData as { conversations: AgentConversationSummary[] }).conversations 
+        : []
       setHistory(conversations)
-    } catch (error) {
-      console.error('[useAgentMode] Failed to fetch history:', error)
+    } catch (err) {
+      console.error('[useAgentMode] Failed to fetch history:', err)
     } finally {
       setIsHistoryLoading(false)
     }
@@ -235,40 +390,47 @@ export function useAgentMode(): UseAgentModeReturn {
     if (!targetConversationId) return
 
     setIsProcessing(true)
+    clearError()
+    
     try {
       const token = await getIdToken()
-      const response = await fetch(`/api/agent/conversations/${encodeURIComponent(targetConversationId)}?limit=500`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      const { data, error: fetchError } = await getWithRetry<{ data?: { messages?: unknown[] } }>(
+        `/api/agent/conversations/${encodeURIComponent(targetConversationId)}?limit=500`,
+        token,
+        { maxRetries: 2 }
+      )
 
-      if (!response.ok) {
-        throw new Error('Failed to load conversation')
+      if (fetchError) {
+        handleError(fetchError)
+        return
       }
 
-      const raw = await response.json() as any
-      const data = (raw && typeof raw === 'object' && 'data' in raw) ? raw.data : raw
-      const apiMessages = Array.isArray(data?.messages) ? data.messages : []
+      const rawData = data?.data || data
+      const apiMessages = Array.isArray((rawData as Record<string, unknown>)?.messages) 
+        ? (rawData as { messages: unknown[] }).messages 
+        : []
 
-      const nextMessages: AgentMessage[] = apiMessages.map((m: any) => ({
-        id: typeof m?.id === 'string' ? m.id : generateId(),
-        type: m?.type === 'user' ? 'user' : 'agent',
-        content: typeof m?.content === 'string' ? m.content : '',
-        timestamp: m?.timestamp ? new Date(m.timestamp) : new Date(),
-        route: typeof m?.route === 'string' ? m.route : null,
-      }))
+      const nextMessages: AgentMessage[] = apiMessages.map((m: unknown) => {
+        const msg = m as Record<string, unknown>
+        return {
+          id: typeof msg?.id === 'string' ? msg.id : generateId(),
+          type: msg?.type === 'user' ? 'user' as const : 'agent' as const,
+          content: typeof msg?.content === 'string' ? msg.content : '',
+          timestamp: msg?.timestamp ? new Date(msg.timestamp as string) : new Date(),
+          route: typeof msg?.route === 'string' ? msg.route : null,
+        }
+      })
 
       setMessages(nextMessages)
       setConversationId(targetConversationId)
-    } catch (error) {
-      console.error('[useAgentMode] Failed to load conversation:', error)
-      addMessage('agent', 'Sorry — I couldn\'t load that chat history. Please try again.')
+    } catch (err) {
+      console.error('[useAgentMode] Failed to load conversation:', err)
+      const agentError = parseAgentError(err, null)
+      handleError(agentError)
     } finally {
       setIsProcessing(false)
     }
-  }, [addMessage, getIdToken])
+  }, [clearError, getIdToken, handleError])
 
   const updateConversationTitle = useCallback(async (targetConversationId: string, title: string) => {
     const trimmed = title.trim()
@@ -290,8 +452,8 @@ export function useAgentMode(): UseAgentModeReturn {
       }
 
       setHistory((prev) => prev.map((c) => (c.id === targetConversationId ? { ...c, title: trimmed } : c)))
-    } catch (error) {
-      console.error('[useAgentMode] Failed to update title:', error)
+    } catch (err) {
+      console.error('[useAgentMode] Failed to update title:', err)
       addMessage('agent', 'Sorry — I couldn\'t update that chat title. Please try again.')
     }
   }, [addMessage, getIdToken])
@@ -317,8 +479,8 @@ export function useAgentMode(): UseAgentModeReturn {
         setMessages([])
         setConversationId(null)
       }
-    } catch (error) {
-      console.error('[useAgentMode] Failed to delete conversation:', error)
+    } catch (err) {
+      console.error('[useAgentMode] Failed to delete conversation:', err)
       addMessage('agent', 'Sorry — I couldn\'t delete that chat. Please try again.')
     }
   }, [addMessage, conversationId, getIdToken])
@@ -338,5 +500,12 @@ export function useAgentMode(): UseAgentModeReturn {
     loadConversation,
     updateConversationTitle,
     deleteConversation,
+    // Error handling
+    error,
+    clearError,
+    lastFailedMessage,
+    retryLastMessage,
+    connectionStatus,
+    rateLimitCountdown,
   }
 }

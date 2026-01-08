@@ -109,7 +109,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
                 selected={dateRange}
                 onSelect={handleSelect}
                 numberOfMonths={2}
-                disabled={(date) => date > new Date()}
+                disabled={(date: Date) => date > new Date()}
               />
             </div>
           </div>

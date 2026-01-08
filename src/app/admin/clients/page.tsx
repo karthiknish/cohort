@@ -625,7 +625,7 @@ export default function AdminClientsPage() {
                       selected={invoiceDueDate}
                       onSelect={setInvoiceDueDate}
                       initialFocus
-                      disabled={(date) => date < new Date()}
+                      disabled={(date: Date) => date < new Date()}
                     />
                   </PopoverContent>
                 </Popover>

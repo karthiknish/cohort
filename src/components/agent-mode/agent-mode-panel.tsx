@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Mic, MicOff, Send, X, Sparkles, Loader2, AlertCircle, History, Pencil, Trash2, Check } from 'lucide-react'
+import { Mic, MicOff, Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff, Wifi } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,8 @@ import { useMentionData } from '@/hooks/use-mention-data'
 import { MentionDropdown, formatMention, type MentionItem } from './mention-dropdown'
 import { VoiceWaveform } from './voice-waveform'
 import { AgentMessageCard } from './agent-message-card'
-import type { AgentConversationSummary, AgentMessage } from '@/hooks/use-agent-mode'
+import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/hooks/use-agent-mode'
+import type { AgentError } from '@/lib/agent-errors'
 
 interface AgentModePanelProps {
   isOpen: boolean
@@ -29,6 +30,13 @@ interface AgentModePanelProps {
   onSelectConversation: (conversationId: string) => void
   onUpdateConversationTitle: (conversationId: string, title: string) => void
   onDeleteConversation: (conversationId: string) => void
+  // Error handling props
+  error?: AgentError | null
+  onClearError?: () => void
+  lastFailedMessage?: string | null
+  onRetry?: () => void
+  connectionStatus?: ConnectionStatus
+  rateLimitCountdown?: number | null
 }
 
 const QUICK_SUGGESTIONS = [
@@ -39,6 +47,71 @@ const QUICK_SUGGESTIONS = [
   'View Ads Hub',
   'Team Chat',
 ]
+
+// Skeleton component for loading states
+function HistorySkeleton() {
+  return (
+    <div className="space-y-2 p-2">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="animate-pulse">
+          <div className="h-12 rounded-lg bg-muted" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Connection status indicator
+function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
+  if (status === 'connected') return null
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className={cn(
+        'flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full',
+        status === 'retrying' && 'bg-amber-100 text-amber-700',
+        status === 'disconnected' && 'bg-red-100 text-red-700'
+      )}
+    >
+      {status === 'retrying' ? (
+        <>
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Reconnecting...</span>
+        </>
+      ) : (
+        <>
+          <WifiOff className="h-3 w-3" />
+          <span>Offline</span>
+        </>
+      )}
+    </motion.div>
+  )
+}
+
+// Rate limit banner
+function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismiss?: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm"
+    >
+      <div className="flex items-center gap-2 text-amber-700">
+        <Clock className="h-4 w-4 shrink-0" />
+        <span>Too many requests. Please wait <strong>{countdown}s</strong>...</span>
+      </div>
+      {onDismiss && (
+        <Button variant="ghost" size="sm" onClick={onDismiss} className="h-7 px-2 text-amber-700 hover:text-amber-800">
+          Dismiss
+        </Button>
+      )}
+    </motion.div>
+  )
+}
 
 export function AgentModePanel({
   isOpen,
@@ -54,6 +127,13 @@ export function AgentModePanel({
   onSelectConversation,
   onUpdateConversationTitle,
   onDeleteConversation,
+  // Error handling props
+  error,
+  onClearError,
+  lastFailedMessage,
+  onRetry,
+  connectionStatus = 'connected',
+  rateLimitCountdown,
 }: AgentModePanelProps) {
   const [inputValue, setInputValue] = useState('')
   const [showMentions, setShowMentions] = useState(false)
@@ -67,7 +147,15 @@ export function AgentModePanel({
   // Fetch data for mentions
   const { clients, projects, teams, users, isLoading: mentionsLoading } = useMentionData()
 
-  const { isSupported, isListening, toggleListening, transcript, error: voiceError } = useVoiceInput({
+  const { 
+    isSupported, 
+    isListening, 
+    toggleListening, 
+    transcript, 
+    error: voiceError,
+    timeRemaining,
+    clearError: clearVoiceError,
+  } = useVoiceInput({
     onResult: (text) => {
       if (text.trim()) {
         onSendMessage(text)
@@ -174,9 +262,17 @@ export function AgentModePanel({
     onSendMessage(suggestion)
   }
 
+  const handleRetry = () => {
+    onClearError?.()
+    onRetry?.()
+  }
+
   const showEmptyState = messages.length === 0
 
   const toggleHistory = () => setShowHistory((prev) => !prev)
+
+  // Check if input is disabled (rate limited or processing)
+  const isInputDisabled = isProcessing || (typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0)
 
   return (
     <AnimatePresence>
@@ -189,32 +285,46 @@ export function AgentModePanel({
           className="fixed inset-0 z-50 flex flex-col bg-background"
         >
           {/* Header (top-right) */}
-          <div className="flex items-center justify-end gap-3 border-b bg-background/80 px-4 py-3 backdrop-blur">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleHistory}
-              className="h-9 gap-2 rounded-full"
-              aria-expanded={showHistory}
-              aria-label="Chat history"
-            >
-              <History className="h-4 w-4" />
-              <span>History</span>
-            </Button>
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span>Agent Mode</span>
+          <div className="flex items-center justify-between gap-3 border-b bg-background/80 px-4 py-3 backdrop-blur">
+            {/* Connection status indicator */}
+            <AnimatePresence>
+              <ConnectionIndicator status={connectionStatus} />
+            </AnimatePresence>
+
+            <div className="flex items-center gap-3 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleHistory}
+                className="h-9 gap-2 rounded-full"
+                aria-expanded={showHistory}
+                aria-label="Chat history"
+              >
+                <History className="h-4 w-4" />
+                <span>History</span>
+              </Button>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>Agent Mode</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-9 w-9 rounded-full"
+                aria-label="Close Agent Mode"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-9 w-9 rounded-full"
-              aria-label="Close Agent Mode"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
+
+          {/* Rate limit banner */}
+          <AnimatePresence>
+            {typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0 && (
+              <RateLimitBanner countdown={rateLimitCountdown} onDismiss={onClearError} />
+            )}
+          </AnimatePresence>
 
           {showHistory && (
             <div className="absolute right-4 top-[60px] z-50 w-[340px] overflow-hidden rounded-xl border bg-background shadow-sm">
@@ -223,11 +333,13 @@ export function AgentModePanel({
                 {isHistoryLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
               <ScrollArea className="max-h-[320px]">
-                <div className="p-2">
-                  {history.length === 0 && !isHistoryLoading ? (
-                    <p className="px-2 py-2 text-sm text-muted-foreground">No previous chats yet.</p>
-                  ) : (
-                    history.map((c) => (
+                {isHistoryLoading ? (
+                  <HistorySkeleton />
+                ) : history.length === 0 ? (
+                  <p className="px-4 py-4 text-sm text-muted-foreground text-center">No previous chats yet.</p>
+                ) : (
+                  <div className="p-2">
+                    {history.map((c) => (
                       <div
                         key={c.id}
                         className={cn(
@@ -324,9 +436,9 @@ export function AgentModePanel({
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </ScrollArea>
             </div>
           )}
@@ -371,7 +483,7 @@ export function AgentModePanel({
                         'flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm',
                         isListening && 'placeholder:text-primary placeholder:font-medium'
                       )}
-                      disabled={isProcessing}
+                      disabled={isInputDisabled}
                     />
 
                     {isSupported && (
@@ -383,8 +495,8 @@ export function AgentModePanel({
                           'h-10 w-10 shrink-0 rounded-full transition-all',
                           isListening && 'animate-pulse ring-2 ring-destructive/50'
                         )}
-                        disabled={isProcessing}
-                        title={isListening ? 'Stop listening' : 'Start voice input'}
+                        disabled={isInputDisabled}
+                        title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
                       >
                         {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                       </Button>
@@ -393,7 +505,7 @@ export function AgentModePanel({
                     <Button
                       size="icon"
                       onClick={handleSubmit}
-                      disabled={!inputValue.trim() || isProcessing}
+                      disabled={!inputValue.trim() || isInputDisabled}
                       className="h-10 w-10 shrink-0 rounded-full"
                       title="Send message"
                     >
@@ -408,13 +520,23 @@ export function AgentModePanel({
                   )}
 
                   {voiceError && (
-                    <p className="mt-2 text-xs text-destructive">{voiceError}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-xs text-destructive flex-1">{voiceError}</p>
+                      <Button variant="ghost" size="sm" onClick={clearVoiceError} className="h-6 px-2 text-xs">
+                        Dismiss
+                      </Button>
+                    </div>
                   )}
 
                   {/* Voice Waveform - shows when listening */}
                   {isListening && (
                     <div className="mt-3">
                       <VoiceWaveform isActive={isListening} />
+                      {timeRemaining !== null && (
+                        <p className="mt-1 text-center text-xs text-muted-foreground">
+                          {timeRemaining}s remaining
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -423,7 +545,8 @@ export function AgentModePanel({
                       <button
                         key={suggestion}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+                        disabled={isInputDisabled}
+                        className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
                       >
                         {suggestion}
                       </button>
@@ -452,18 +575,45 @@ export function AgentModePanel({
                 </div>
               </ScrollArea>
 
+              {/* Retry banner for failed messages */}
+              {lastFailedMessage && !isProcessing && (
+                <div className="flex items-center justify-between gap-3 border-t bg-red-50 px-4 py-2.5">
+                  <div className="flex items-center gap-2 text-sm text-red-700">
+                    <WifiOff className="h-4 w-4 shrink-0" />
+                    <span>Message failed to send</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRetry}
+                    className="h-8 gap-2 border-red-200 text-red-700 hover:bg-red-100"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retry
+                  </Button>
+                </div>
+              )}
+
               {/* Voice error */}
               {voiceError && (
                 <div className="border-t bg-destructive/10 px-4 py-2.5 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                  <p className="text-xs text-destructive">{voiceError}</p>
+                  <WifiOff className="h-4 w-4 text-destructive shrink-0" />
+                  <p className="text-xs text-destructive flex-1">{voiceError}</p>
+                  <Button variant="ghost" size="sm" onClick={clearVoiceError} className="h-6 px-2 text-xs">
+                    Dismiss
+                  </Button>
                 </div>
               )}
 
               {/* Voice Waveform - shows when listening */}
               {isListening && (
-                <div className="flex justify-center py-3 border-t bg-muted/10">
+                <div className="flex flex-col items-center py-3 border-t bg-muted/10">
                   <VoiceWaveform isActive={isListening} />
+                  {timeRemaining !== null && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {timeRemaining}s remaining
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -492,7 +642,7 @@ export function AgentModePanel({
                     'flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm',
                     isListening && 'placeholder:text-primary placeholder:font-medium'
                   )}
-                  disabled={isProcessing}
+                  disabled={isInputDisabled}
                 />
 
                 {isSupported && (
@@ -504,8 +654,8 @@ export function AgentModePanel({
                       'h-10 w-10 shrink-0 rounded-full transition-all',
                       isListening && 'animate-pulse ring-2 ring-destructive/50'
                     )}
-                    disabled={isProcessing}
-                    title={isListening ? 'Stop listening' : 'Start voice input'}
+                    disabled={isInputDisabled}
+                    title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
                   >
                     {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </Button>
@@ -514,7 +664,7 @@ export function AgentModePanel({
                 <Button
                   size="icon"
                   onClick={handleSubmit}
-                  disabled={!inputValue.trim() || isProcessing}
+                  disabled={!inputValue.trim() || isInputDisabled}
                   className="h-10 w-10 shrink-0 rounded-full"
                   title="Send message"
                 >

@@ -205,7 +205,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                       selected={startDate}
                       onSelect={setStartDate}
                       initialFocus
-                      disabled={(date) => date < new Date('1900-01-01')}
+                      disabled={(date: Date) => date < new Date('1900-01-01')}
                     />
                   </PopoverContent>
                 </Popover>
@@ -232,7 +232,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                       selected={endDate}
                       onSelect={setEndDate}
                       initialFocus
-                      disabled={(date) =>
+                      disabled={(date: Date) =>
                         (startDate ? date < startDate : false) || date < new Date('1900-01-01')
                       }
                     />
