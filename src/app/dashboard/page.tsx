@@ -277,15 +277,17 @@ export default function DashboardPage() {
           </FadeIn>
         )}
 
-        <StatsCards
-          stats={orderedStats}
-          primaryCount={Math.max(1, primaryStats.length || Math.min(4, orderedStats.length))}
-          loading={statsLoading}
-        />
+        <div id="tour-stats-cards">
+          <StatsCards
+            stats={orderedStats}
+            primaryCount={Math.max(1, primaryStats.length || Math.min(4, orderedStats.length))}
+            loading={statsLoading}
+          />
+        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <FadeIn>
+            <FadeIn id="tour-performance-chart">
               <PerformanceChart metrics={chartData} loading={statsLoading} />
             </FadeIn>
 

@@ -132,7 +132,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
         onValueChange={(value) => selectClient(value || null)}
         disabled={!hasClients}
       >
-        <SelectTrigger className="w-full min-w-[200px]">
+        <SelectTrigger id="tour-workspace-selector" className="w-full min-w-[200px]">
           <SelectValue placeholder={hasClients ? 'Select client' : 'No clients available'} />
         </SelectTrigger>
         {hasClients && (

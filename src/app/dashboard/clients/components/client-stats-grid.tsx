@@ -32,83 +32,99 @@ export function ClientStatsGrid({
   managersCount,
 }: ClientStatsGridProps) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Projects Stats */}
+      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500/80 transition-all group-hover:bg-blue-500" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Projects</CardTitle>
-          <Briefcase className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Projects</CardTitle>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/5 text-blue-500/80 shadow-sm transition-colors group-hover:bg-blue-500/10 group-hover:text-blue-500">
+            <Briefcase className="h-4 w-4" />
+          </div>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
-            <Skeleton className="h-7 w-16" />
+            <Skeleton className="h-8 w-16 rounded-lg" />
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">{stats?.activeProjects ?? 0}</span>
-                <span className="text-sm text-muted-foreground">active</span>
+                <span className="text-2xl font-black tracking-tight text-foreground">{stats?.activeProjects ?? 0}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">active</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.totalProjects ?? 0} total projects
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+                {stats?.totalProjects ?? 0} TOTAL PROJECTS
               </p>
             </>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
+      {/* Tasks Stats */}
+      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500/80 transition-all group-hover:bg-emerald-500" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Tasks</CardTitle>
-          <CheckSquare className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Tasks</CardTitle>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/5 text-emerald-500/80 shadow-sm transition-colors group-hover:bg-emerald-500/10 group-hover:text-emerald-500">
+            <CheckSquare className="h-4 w-4" />
+          </div>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
-            <Skeleton className="h-7 w-16" />
+            <Skeleton className="h-8 w-16 rounded-lg" />
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">{stats?.openTasks ?? 0}</span>
-                <span className="text-sm text-muted-foreground">open</span>
+                <span className="text-2xl font-black tracking-tight text-foreground">{stats?.openTasks ?? 0}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">open</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.completedTasks ?? 0} completed
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+                {stats?.completedTasks ?? 0} COMPLETED
               </p>
             </>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
+      {/* Team Stats */}
+      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500/80 transition-all group-hover:bg-violet-500" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Team</CardTitle>
-          <UsersIcon className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Team</CardTitle>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/5 text-violet-500/80 shadow-sm transition-colors group-hover:bg-violet-500/10 group-hover:text-violet-500">
+            <UsersIcon className="h-4 w-4" />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold">{teamMembersCount}</span>
-            <span className="text-sm text-muted-foreground">members</span>
+            <span className="text-2xl font-black tracking-tight text-foreground">{teamMembersCount}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">members</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {managersCount} managers
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+            {managersCount} MANAGERS ASSIGNED
           </p>
         </CardContent>
       </Card>
 
-      <Card className="border-muted/60 bg-background transition-all hover:shadow-md">
+      {/* Proposals Stats */}
+      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500/80 transition-all group-hover:bg-orange-500" />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Proposals</CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Proposals</CardTitle>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/5 text-orange-500/80 shadow-sm transition-colors group-hover:bg-orange-500/10 group-hover:text-orange-500">
+            <FileText className="h-4 w-4" />
+          </div>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
-            <Skeleton className="h-7 w-16" />
+            <Skeleton className="h-8 w-16 rounded-lg" />
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">{stats?.pendingProposals ?? 0}</span>
-                <span className="text-sm text-muted-foreground">pending</span>
+                <span className="text-2xl font-black tracking-tight text-foreground">{stats?.pendingProposals ?? 0}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">pending</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Awaiting review or approval
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+                AWAITING CLIENT ACTION
               </p>
             </>
           )}

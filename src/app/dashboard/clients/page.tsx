@@ -149,18 +149,18 @@ function ClientsDashboardContent() {
       }
 
       const totalProjects = projects.length
-      const activeProjects = projects.filter((p: { status?: string }) => 
+      const activeProjects = projects.filter((p: { status?: string }) =>
         p.status === 'active' || p.status === 'in_progress'
       ).length
 
-      const openTasks = tasks.filter((t: { status?: string }) => 
+      const openTasks = tasks.filter((t: { status?: string }) =>
         t.status === 'todo' || t.status === 'in-progress'
       ).length
-      const completedTasks = tasks.filter((t: { status?: string }) => 
+      const completedTasks = tasks.filter((t: { status?: string }) =>
         t.status === 'done' || t.status === 'completed'
       ).length
 
-      const pendingProposals = proposals.filter((p: { status?: string }) => 
+      const pendingProposals = proposals.filter((p: { status?: string }) =>
         p.status === 'draft' || p.status === 'pending' || p.status === 'sent'
       ).length
 
@@ -296,9 +296,9 @@ function ClientsDashboardContent() {
 
     const lineItemSummary = lineItemsTotal > 0 && createInvoiceForm.lineItems.length > 0
       ? createInvoiceForm.lineItems
-          .filter((item) => item.label.trim().length > 0 || parseFloat(item.amount) > 0)
-          .map((item) => `${item.label || 'Line item'} — $${parseFloat(item.amount || '0').toFixed(2)}`)
-          .join('; ')
+        .filter((item) => item.label.trim().length > 0 || parseFloat(item.amount) > 0)
+        .map((item) => `${item.label || 'Line item'} — $${parseFloat(item.amount || '0').toFixed(2)}`)
+        .join('; ')
       : ''
     const mergedDescription = createInvoiceForm.description.trim() || lineItemSummary || undefined
 
@@ -577,51 +577,55 @@ function ClientsDashboardContent() {
     <TooltipProvider>
       <div className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-2 duration-500">
         {/* Header */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">{selectedClient.name}</h1>
-              {invoiceSummary?.isOutstanding && (
-                <Badge variant="destructive" className="animate-pulse">
-                  Payment Due
-                </Badge>
-              )}
-              {invoiceSummary?.isPaid && (
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-                  Paid
-                </Badge>
-              )}
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm border border-primary/20">
+              <UsersIcon className="h-6 w-6" />
             </div>
-            <p className="text-muted-foreground">
-              Managed by {selectedClient.accountManager || 'your team'}
-              {clientAge && <span className="text-muted-foreground/60"> · Client since {clientAge}</span>}
-            </p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{selectedClient.name}</h1>
+                {invoiceSummary?.isOutstanding && (
+                  <Badge variant="destructive" className="animate-pulse rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest border-2 border-background shadow-sm">
+                    Payment Due
+                  </Badge>
+                )}
+                {invoiceSummary?.isPaid && (
+                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20 shadow-sm">
+                    Paid
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm font-medium text-muted-foreground/70">
+                Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
+                {clientAge && <span className="text-muted-foreground/40 font-normal"> · Partnered {clientAge}</span>}
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden sm:inline">Settings</span>
-                  <MoreHorizontal className="h-4 w-4 sm:hidden" />
+                <Button variant="outline" size="sm" className="h-10 rounded-xl border-muted/30 bg-background px-4 text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]">
+                  <Settings className="mr-2 h-3.5 w-3.5" />
+                  Settings
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link href="/admin/clients">
-                    <Settings className="mr-2 h-4 w-4" />
+              <DropdownMenuContent align="end" className="w-56 rounded-xl border-muted/40 shadow-xl backdrop-blur-md">
+                <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+                  <Link href="/admin/clients" className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4 opacity-70" />
                     Manage client
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" />
+                <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+                  <Download className="mr-2 h-4 w-4 opacity-70" />
                   Export data
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`}>
-                    <UsersIcon className="mr-2 h-4 w-4" />
+                <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+                  <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`} className="flex items-center">
+                    <UsersIcon className="mr-2 h-4 w-4 opacity-70" />
                     Collaboration
                   </Link>
                 </DropdownMenuItem>
@@ -635,13 +639,12 @@ function ClientsDashboardContent() {
                   size="sm"
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="gap-2"
+                  className="h-10 w-10 rounded-xl border-muted/30 bg-background p-0 shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
                 >
                   <RefreshCcw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
-                  <span className="hidden sm:inline">Refresh</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Refresh client data</TooltipContent>
+              <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -764,23 +767,33 @@ function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelineBoardP
   }))
 
   return (
-    <Card className="border-muted/60 bg-background shadow-sm">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base">Client pipeline</CardTitle>
-        <CardDescription>Quick CRM view grouped by billing stage.</CardDescription>
+    <Card className="overflow-hidden border-muted/30 bg-background shadow-sm transition-all hover:shadow-md">
+      <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-primary" />
+          <div>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Client pipeline</CardTitle>
+            <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">CRM overview stage transition tracking</CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-3">
+      <CardContent className="p-6">
+        <div className="grid gap-6 md:grid-cols-3">
           {groups.map(({ stage, items }) => (
-            <div key={stage.id} className="flex flex-col gap-3 rounded-md border border-muted/50 bg-muted/10 p-3">
-              <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                <span>{stage.label}</span>
-                <Badge variant="outline" className="bg-background text-xs">{items.length}</Badge>
+            <div key={stage.id} className="flex flex-col gap-4 rounded-2xl border border-muted/20 bg-muted/5 p-4 transition-all hover:bg-muted/[0.07]">
+              <div className="flex items-center justify-between pb-1">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">{stage.label}</span>
+                  <Badge variant="outline" className="h-5 rounded-full border-muted/30 bg-background px-2 text-[10px] font-black text-primary shadow-sm">
+                    {items.length}
+                  </Badge>
+                </div>
+                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/20" />
               </div>
-              <p className="text-xs text-muted-foreground">{stage.helper}</p>
+
               {items.length === 0 ? (
-                <div className="rounded-md border border-dashed border-muted/50 bg-background px-3 py-6 text-center text-xs text-muted-foreground">
-                  No clients in this stage
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted/30 bg-background/50 py-10 px-4 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">Stage Empty</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -789,20 +802,37 @@ function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelineBoardP
                       key={client.id}
                       href={`/dashboard/clients?clientId=${client.id}`}
                       className={cn(
-                        'block rounded-md border border-muted/40 bg-background p-3 text-sm shadow-sm transition hover:border-primary/40 hover:shadow',
-                        client.id === selectedClientId && 'border-primary/50 shadow-md'
+                        'group block rounded-xl border border-muted/30 bg-background p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.99]',
+                        client.id === selectedClientId && 'border-primary/50 bg-primary/[0.02] shadow-md ring-1 ring-primary/20'
                       )}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-foreground truncate" title={client.name}>{client.name}</span>
-                        <Badge variant="secondary" className="text-[10px]">{client.accountManager || 'Unassigned'}</Badge>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary" title={client.name}>
+                            {client.name}
+                          </span>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                              {client.accountManager ? client.accountManager : 'Unassigned'}
+                            </span>
+                          </div>
+                        </div>
+                        {client.id === selectedClientId && (
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                        )}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {client.lastInvoiceStatus ? `Invoice: ${client.lastInvoiceStatus}` : 'No billing yet'}
-                      </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground/80">
-                        Added {client.createdAt ? new Date(client.createdAt).toLocaleDateString() : 'Recently'}
-                      </p>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-muted/10 pt-3">
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-[0.15em]",
+                          client.lastInvoiceStatus === 'paid' ? "text-emerald-500" : "text-muted-foreground/40"
+                        )}>
+                          {client.lastInvoiceStatus ?? 'No Billing'}
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30">
+                          {client.createdAt ? new Date(client.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'NEW'}
+                        </span>
+                      </div>
                     </Link>
                   ))}
                 </div>

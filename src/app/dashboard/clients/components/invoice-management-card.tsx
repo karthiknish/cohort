@@ -132,19 +132,18 @@ function formatDate(value: string | null): string {
 
 // Invoice Status Badge Component
 export function InvoiceStatusBadge({ status, isOutstanding }: { status: string; isOutstanding: boolean }) {
-  const getVariant = () => {
-    if (isOutstanding) return 'destructive'
-    if (status === 'paid') return 'secondary'
-    return 'outline'
-  }
-
-  const getClassName = () => {
-    if (status === 'paid') return 'bg-emerald-100 text-emerald-700'
-    return ''
-  }
+  const isPaid = status === 'paid'
 
   return (
-    <Badge variant={getVariant()} className={cn('capitalize', getClassName())}>
+    <Badge
+      variant={isOutstanding ? 'destructive' : 'secondary'}
+      className={cn(
+        'h-5 px-2 text-[9px] font-black uppercase tracking-[0.15em] rounded-full border-none shadow-sm',
+        isPaid ? 'bg-emerald-500/10 text-emerald-600' :
+          isOutstanding ? 'bg-red-500/10 text-red-600 animate-pulse' :
+            'bg-muted/30 text-muted-foreground/60'
+      )}
+    >
       {status?.replace('_', ' ') || 'draft'}
     </Badge>
   )
@@ -152,33 +151,33 @@ export function InvoiceStatusBadge({ status, isOutstanding }: { status: string; 
 
 // Invoice Status Icon Component
 export function InvoiceStatusIcon({ status }: { status: string }) {
-  const iconClasses = 'h-8 w-8 rounded-full p-1.5'
+  const iconClasses = 'h-9 w-9 rounded-xl flex items-center justify-center shadow-sm border border-black/5'
 
   switch (status) {
     case 'paid':
       return (
-        <div className={cn(iconClasses, 'bg-emerald-100 text-emerald-600')}>
-          <Check className="h-full w-full" />
+        <div className={cn(iconClasses, 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20')}>
+          <Check className="h-5 w-5" strokeWidth={3} />
         </div>
       )
     case 'open':
     case 'sent':
       return (
-        <div className={cn(iconClasses, 'bg-blue-100 text-blue-600')}>
-          <Send className="h-full w-full" />
+        <div className={cn(iconClasses, 'bg-blue-500/10 text-blue-600 border-blue-500/20')}>
+          <Send className="h-4 w-4" strokeWidth={2.5} />
         </div>
       )
     case 'overdue':
     case 'uncollectible':
       return (
-        <div className={cn(iconClasses, 'bg-red-100 text-red-600')}>
-          <TriangleAlert className="h-full w-full" />
+        <div className={cn(iconClasses, 'bg-red-500/10 text-red-600 border-red-500/20')}>
+          <TriangleAlert className="h-5 w-5" strokeWidth={2.5} />
         </div>
       )
     default:
       return (
-        <div className={cn(iconClasses, 'bg-muted text-muted-foreground')}>
-          <FileText className="h-full w-full" />
+        <div className={cn(iconClasses, 'bg-muted/20 text-muted-foreground/30 border-muted/10')}>
+          <FileText className="h-5 w-5" />
         </div>
       )
   }
@@ -195,72 +194,72 @@ export function InvoiceHistoryItem({
   sendingReminder: boolean
 }) {
   const isOutstanding = invoice.status === 'open' || invoice.status === 'overdue' || invoice.status === 'uncollectible'
-  const isPaid = invoice.status === 'paid'
 
   return (
-    <div className="rounded-lg border border-muted/40 bg-card p-3 transition-all hover:border-muted hover:bg-muted/30">
-      <div className="flex items-start justify-between gap-2">
+    <div className="group rounded-xl border border-muted/20 bg-muted/2 p-4 transition-all hover:bg-muted/5 hover:border-muted/40 hover:shadow-sm">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-mono text-xs font-medium">
-              {invoice.number || invoice.id.slice(0, 8)}
+          <div className="flex items-center gap-2.5">
+            <span className="truncate font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40">
+              {invoice.number || `#${invoice.id.slice(0, 8)}`}
             </span>
-            <Badge
-              variant={isOutstanding ? 'destructive' : isPaid ? 'secondary' : 'outline'}
-              className={cn('text-xs capitalize', isPaid && 'bg-emerald-100 text-emerald-700')}
-            >
-              {invoice.status}
-            </Badge>
+            <InvoiceStatusBadge status={invoice.status} isOutstanding={isOutstanding} />
           </div>
-          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">
+          <div className="mt-3 flex items-baseline gap-3">
+            <span className="text-sm font-black text-foreground">
               {formatCurrency(invoice.amount, invoice.currency)}
             </span>
             {invoice.issuedDate && (
-              <span>{formatDate(invoice.issuedDate)}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                {formatDate(invoice.issuedDate)}
+              </span>
             )}
           </div>
+          {invoice.description && (
+            <p className="mt-2 truncate text-[10px] font-medium text-muted-foreground/50 leading-tight">
+              {invoice.description}
+            </p>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-              <MoreHorizontal className="h-3.5 w-3.5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-40 transition-opacity hover:opacity-100">
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-48 rounded-xl border-muted/30 shadow-xl backdrop-blur-md">
             {invoice.hostedInvoiceUrl && (
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider">
                 <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View
+                  <ExternalLink className="mr-3 h-4 w-4 opacity-60" />
+                  View Invoice
                 </a>
               </DropdownMenuItem>
             )}
             {invoice.hostedInvoiceUrl && (
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider">
                 <a href={`${invoice.hostedInvoiceUrl}?download=1`} target="_blank" rel="noreferrer">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
+                  <Download className="mr-3 h-4 w-4 opacity-60" />
+                  Download PDF
                 </a>
               </DropdownMenuItem>
             )}
             {isOutstanding && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onSendReminder} disabled={sendingReminder}>
-                  <BellRing className={cn('mr-2 h-4 w-4', sendingReminder && 'animate-pulse')} />
-                  {sendingReminder ? 'Sending...' : 'Remind'}
+                <DropdownMenuItem
+                  onClick={onSendReminder}
+                  disabled={sendingReminder}
+                  className="rounded-lg text-[11px] font-bold uppercase tracking-wider text-primary focus:text-primary focus:bg-primary/5"
+                >
+                  <BellRing className={cn('mr-3 h-4 w-4', sendingReminder && 'animate-pulse')} />
+                  {sendingReminder ? 'Sending...' : 'Send Reminder'}
                 </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {invoice.description && (
-        <p className="mt-2 truncate text-xs text-muted-foreground">
-          {invoice.description}
-        </p>
-      )}
     </div>
   )
 }
@@ -328,25 +327,25 @@ export function InvoiceManagementCard({
   }
 
   return (
-    <Card className="border-muted/60 bg-background">
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+      <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
-          <Receipt className="h-5 w-5 text-primary" />
+          <div className="h-2 w-2 rounded-full bg-primary" />
           <div>
-            <CardTitle className="text-lg">Invoicing</CardTitle>
-            <CardDescription>Manage billing and payments</CardDescription>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Financial Management</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Billing and revenue tracking</CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="rounded-lg border border-muted/50 bg-muted/10 p-4 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="invoice-amount" className="text-sm font-medium">
-                Amount or total
+      <CardContent className="pt-6 space-y-6">
+        <div className="rounded-2xl border border-muted/20 bg-muted/5 p-5 shadow-sm space-y-5">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-2.5">
+              <Label htmlFor="invoice-amount" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">
+                Amount Secured
               </Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative group">
+                <DollarSign className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
                 <Input
                   id="invoice-amount"
                   type="number"
@@ -356,135 +355,118 @@ export function InvoiceManagementCard({
                   placeholder="0.00"
                   value={createInvoiceForm.amount}
                   onChange={(e) => onCreateInvoiceFormChange({ ...createInvoiceForm, amount: e.target.value })}
-                  className="pl-9"
+                  className="h-10 rounded-xl border-muted/30 bg-background pl-10 pr-4 text-sm font-bold shadow-sm transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/5"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Line items override this number; totals update as you type.
-              </p>
             </div>
 
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="invoice-email" className="text-sm font-medium">
-                Billing email <span className="text-destructive">*</span>
-              </Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="invoice-email"
-                    type="email"
-                    placeholder="billing@company.com"
-                    value={createInvoiceForm.email}
-                    onChange={(e) => onCreateInvoiceFormChange({ ...createInvoiceForm, email: e.target.value })}
-                    className="pl-9"
-                  />
-                </div>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between ml-1">
+                <Label htmlFor="invoice-email" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  Billing Recipient
+                </Label>
                 {suggestedEmail && suggestedEmail !== createInvoiceForm.email && (
-                  <Button variant="outline" size="sm" onClick={applySuggestedEmail} className="shrink-0">
-                    Use suggested
-                  </Button>
+                  <button onClick={applySuggestedEmail} className="text-[9px] font-black uppercase tracking-widest text-primary hover:underline">
+                    Use Global
+                  </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                We pre-fill from the client record; adjust if needed.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 md:w-48">
-              <Button
-                onClick={onCreateInvoice}
-                disabled={createInvoiceLoading || !effectiveAmount || !createInvoiceForm.email.trim()}
-                className="gap-2"
-              >
-                {createInvoiceLoading ? (
-                  <>
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Create & Send
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="justify-start text-muted-foreground"
-                onClick={() => {
-                  applyProjectDescription()
-                  if (!createInvoiceOpen) onCreateInvoiceOpenChange(true)
-                }}
-              >
-                <FileText className="h-4 w-4" />
-                Auto-fill details
-              </Button>
+              <div className="relative group">
+                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
+                <Input
+                  id="invoice-email"
+                  type="email"
+                  placeholder="billing@company.com"
+                  value={createInvoiceForm.email}
+                  onChange={(e) => onCreateInvoiceFormChange({ ...createInvoiceForm, email: e.target.value })}
+                  className="h-10 rounded-xl border-muted/30 bg-background pl-10 pr-4 text-sm font-bold shadow-sm transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/5"
+                />
+              </div>
             </div>
           </div>
 
-          <Separator className="my-3" />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              onClick={onCreateInvoice}
+              disabled={createInvoiceLoading || !effectiveAmount || !createInvoiceForm.email.trim()}
+              className="h-10 flex-1 rounded-xl bg-primary text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.98]"
+            >
+              {createInvoiceLoading ? (
+                <>
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Initialize Invoicing
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 rounded-xl border-muted/30 bg-background px-4 text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 active:scale-[0.98]"
+              onClick={() => {
+                applyProjectDescription()
+                if (!createInvoiceOpen) onCreateInvoiceOpenChange(true)
+              }}
+            >
+              <FileText className="mr-2 h-4 w-4 opacity-40" />
+              Auto-fill
+            </Button>
+          </div>
 
-          <div className="rounded-md border border-dashed border-muted/60 bg-background p-3">
-            <div className="flex items-center justify-between gap-2">
+          <div className="rounded-xl border border-dashed border-muted/30 bg-background/50 p-4">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Details & line items</p>
-                <p className="text-xs text-muted-foreground">Optional breakdowns and due dates.</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Advanced Parameters</p>
+                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Line items and custom terms</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1"
+                className="h-8 w-8 rounded-lg text-muted-foreground/40 hover:text-foreground"
                 onClick={() => onCreateInvoiceOpenChange(!createInvoiceOpen)}
               >
                 {createInvoiceOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                {createInvoiceOpen ? 'Hide' : 'Add details'}
               </Button>
             </div>
 
             {createInvoiceOpen && (
-              <div className="mt-3 space-y-3">
-                <div className="grid gap-3 md:grid-cols-2">
+              <div className="mt-5 space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="invoice-description" className="text-sm font-medium">
-                      Description
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="invoice-description"
-                        placeholder="Services rendered for..."
-                        maxLength={500}
-                        value={createInvoiceForm.description}
-                        onChange={(e) => onCreateInvoiceFormChange({ ...createInvoiceForm, description: e.target.value })}
-                      />
-                      <Button variant="outline" size="sm" className="shrink-0" onClick={applyProjectDescription}>
-                        Use default
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Short summary appears on the invoice.</p>
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-1">Work Description</Label>
+                    <Input
+                      placeholder="Services rendered for..."
+                      maxLength={500}
+                      value={createInvoiceForm.description}
+                      onChange={(e) => onCreateInvoiceFormChange({ ...createInvoiceForm, description: e.target.value })}
+                      className="h-9 rounded-xl border-muted/30 bg-background px-3 text-xs font-medium focus:border-primary/40 focus:ring-0"
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Due date</Label>
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-1">Payment Maturity</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
                           className={cn(
-                            'w-full justify-start text-left font-normal',
-                            !createInvoiceForm.dueDate && 'text-muted-foreground'
+                            'h-9 w-full justify-start rounded-xl border-muted/30 bg-background px-3 text-left text-xs font-medium focus:ring-0',
+                            !createInvoiceForm.dueDate && 'text-muted-foreground/40'
                           )}
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          <CalendarIcon className="mr-2 h-3.5 w-3.5 opacity-40" />
                           {createInvoiceForm.dueDate ? (
                             format(parseISO(createInvoiceForm.dueDate), 'PPP')
                           ) : (
-                            <span>Pick a date</span>
+                            <span>Target Date</span>
                           )}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 rounded-2xl border-muted/30 shadow-2xl overflow-hidden" align="start">
                         <ShadcnCalendar
                           mode="single"
                           selected={createInvoiceForm.dueDate ? parseISO(createInvoiceForm.dueDate) : undefined}
@@ -494,344 +476,190 @@ export function InvoiceManagementCard({
                               dueDate: date ? format(date, 'yyyy-MM-dd') : '',
                             })
                           }
-                          initialFocus
+                          className="p-3"
                           disabled={(date) => date < new Date()}
                         />
                       </PopoverContent>
                     </Popover>
-                    <p className="text-xs text-muted-foreground">Leave blank for 14-day default payment terms.</p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-sm font-medium">Line items</Label>
-                    <Button variant="outline" size="sm" onClick={handleAddLineItem} className="gap-1.5">
-                      <Plus className="h-4 w-4" />
-                      Add item
-                    </Button>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between ml-1">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Itemization</Label>
+                    <button onClick={handleAddLineItem} className="text-[9px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:underline">
+                      <Plus className="h-3 w-3" /> Add Item
+                    </button>
                   </div>
+
                   {createInvoiceForm.lineItems.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Add items to break down the invoice. Totals override the simple amount.
-                    </p>
+                    <div className="py-2 px-1">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30">No line items specified</p>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {createInvoiceForm.lineItems.map((item) => (
                         <div
                           key={item.id}
-                          className="flex flex-col gap-2 rounded-md bg-muted/50 p-2 sm:flex-row sm:items-center"
+                          className="flex items-center gap-2 rounded-xl bg-muted/10 p-2"
                         >
                           <Input
-                            placeholder="Work description"
+                            placeholder="Deliverable description"
                             value={item.label}
                             onChange={(e) => handleLineItemChange(item.id, 'label', e.target.value)}
-                            className="flex-1"
+                            className="h-8 flex-1 rounded-lg border-muted/20 bg-background px-2.5 text-xs font-medium focus:ring-0"
                           />
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
-                              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                              <Input
-                                type="number"
-                                min="0"
-                                max="100000"
-                                step="0.01"
-                                placeholder="0.00"
-                                value={item.amount}
-                                onChange={(e) => handleLineItemChange(item.id, 'amount', e.target.value)}
-                                className="w-32 pl-9"
-                              />
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleRemoveLineItem(item.id)}
-                            >
-                              <CircleX className="h-4 w-4" />
-                              <span className="sr-only">Remove</span>
-                            </Button>
+                          <div className="relative w-28">
+                            <DollarSign className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/40" />
+                            <Input
+                              type="number"
+                              placeholder="0.00"
+                              value={item.amount}
+                              onChange={(e) => handleLineItemChange(item.id, 'amount', e.target.value)}
+                              className="h-8 rounded-lg border-muted/20 bg-background pl-6 pr-2 text-xs font-bold focus:ring-0"
+                            />
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-muted-foreground/20 hover:text-destructive active:scale-[0.98]"
+                            onClick={() => handleRemoveLineItem(item.id)}
+                          >
+                            <CircleX className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
-                  )}
-                  {lineItemsTotal > 0 && (
-                    <p className="text-xs font-medium text-foreground">
-                      Line items total {formatCurrency(lineItemsTotal, 'usd')}.
-                    </p>
                   )}
                 </div>
               </div>
             )}
           </div>
-
-          <div className="grid gap-3 pt-3 md:grid-cols-2">
-            <div className="rounded-lg border border-muted/60 bg-background p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Live preview</p>
-              <div className="mt-2 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-semibold">
-                    {effectiveAmount > 0 ? formatCurrency(effectiveAmount, 'usd') : 'Add amount'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Billing email</span>
-                  <span className="truncate font-medium" title={createInvoiceForm.email || 'Add email'}>
-                    {createInvoiceForm.email || 'Add email'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Due</span>
-                  <span className="font-medium">{createInvoiceForm.dueDate ? formatDate(createInvoiceForm.dueDate) : 'Default terms'}</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-muted-foreground">Description</span>
-                  <p className="text-sm font-medium text-foreground">
-                    {createInvoiceForm.description || `Services for ${clientName}`}
-                  </p>
-                </div>
-                {createInvoiceForm.lineItems.length > 0 && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground">Line items</span>
-                    <div className="space-y-1 rounded-md bg-muted/50 p-2 text-xs">
-                      {createInvoiceForm.lineItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between gap-2">
-                          <span className="truncate text-foreground">{item.label || 'Untitled item'}</span>
-                          <span className="font-medium text-foreground">
-                            {item.amount ? formatCurrency(parseFloat(item.amount) || 0, 'usd') : '--'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-muted/60 bg-muted/20 p-3 text-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Guidance</p>
-              <ul className="mt-2 list-disc space-y-1 px-4 text-muted-foreground">
-                <li>Line items take precedence over the single amount.</li>
-                <li>Due date defaults to 14 days when left blank.</li>
-                <li>We email the invoice immediately via Stripe.</li>
-                <li>Use reminders below if payment stays outstanding.</li>
-              </ul>
-            </div>
-          </div>
         </div>
 
         {invoiceSummary ? (
-          <>
-            {/* Invoice Status Header */}
-            <div className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
-              <div className="flex items-center gap-2">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between rounded-2xl border border-muted/20 bg-muted/5 p-4 shadow-sm">
+              <div className="flex items-center gap-4">
                 <InvoiceStatusIcon status={invoiceSummary.status} />
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Latest Invoice</p>
-                  <p className="text-sm font-mono">
-                    {invoiceSummary.identifier || 'Pending'}
-                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Active Statement</p>
+                  <p className="text-sm font-black text-foreground">{invoiceSummary.identifier || 'Processing...'}</p>
                 </div>
               </div>
               <InvoiceStatusBadge status={invoiceSummary.status} isOutstanding={invoiceSummary.isOutstanding} />
             </div>
 
-            {/* Amount Display */}
-            <div className="rounded-lg border border-muted/40 bg-gradient-to-br from-primary/5 to-background p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Amount</p>
-              <p className="mt-1 text-2xl font-bold text-foreground">
+            <div className="relative overflow-hidden rounded-2xl border border-muted/20 bg-background p-5 shadow-sm">
+              <div className="absolute right-[-20px] top-[-20px] h-32 w-32 rounded-full bg-primary/5 blur-3xl" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Contract Value</p>
+              <p className="mt-1 text-3xl font-black tracking-tight text-foreground">
                 {invoiceSummary.amount !== null
                   ? formatCurrency(invoiceSummary.amount, invoiceSummary.currency)
                   : '—'}
               </p>
-              {invoiceSummary.isOutstanding && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>Payment pending</span>
+              <div className="mt-4 flex items-center justify-between border-t border-muted/10 pt-4">
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                  <Calendar className="h-3 w-3" />
+                  Issued: <span className="text-foreground/60">{formatDate(invoiceSummary.issuedAt)}</span>
                 </div>
-              )}
-              {invoiceSummary.isPaid && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
-                  <Check className="h-3.5 w-3.5" />
-                  <span>Paid in full</span>
-                </div>
-              )}
-            </div>
-
-            {/* Invoice Details */}
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Issued
-                </span>
-                <span>{formatDate(invoiceSummary.issuedAt)}</span>
-              </div>
-              {invoiceSummary.paidAt && (
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Check className="h-3.5 w-3.5" />
-                    Paid
-                  </span>
-                  <span className="text-emerald-600">
-                    {formatDate(invoiceSummary.paidAt)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-2">
-              {invoiceSummary.url && (
-                <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
-                  <a href={invoiceSummary.url} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                    View Invoice
-                  </a>
-                </Button>
-              )}
-
-              {invoiceSummary.isOutstanding && invoiceSummary.identifier && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start gap-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                  onClick={() => onSendReminder()}
-                  disabled={sendingReminder}
-                >
-                  {sendingReminder ? (
-                    <>
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <BellRing className="h-4 w-4" />
-                      Send Reminder
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {invoiceSummary.isPaid && invoiceSummary.identifier && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => onRefundDialogOpenChange(true)}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Issue Refund
-                  </Button>
-
-                  <AlertDialog open={refundDialogOpen} onOpenChange={onRefundDialogOpenChange}>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Issue Refund</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to issue a full refund for invoice {invoiceSummary.identifier}?
-                          This action will refund {invoiceSummary.amount !== null
-                            ? formatCurrency(invoiceSummary.amount, invoiceSummary.currency)
-                            : 'the full amount'} to the client.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel disabled={refundLoading}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={onIssueRefund}
-                          disabled={refundLoading}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {refundLoading ? (
-                            <>
-                              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            'Confirm Refund'
-                          )}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              )}
-            </div>
-
-            {/* Outstanding Warning */}
-            {invoiceSummary.isOutstanding && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                <div>
-                  <p className="font-medium">Payment Outstanding</p>
-                  <p className="mt-0.5 text-amber-700">
-                    Consider sending a reminder or contacting the client directly.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Invoice History Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-between"
-              onClick={onToggleInvoiceHistory}
-            >
-              <span className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Invoice History
-              </span>
-              {showInvoiceHistory ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-
-            {/* Invoice History List */}
-            {showInvoiceHistory && (
-              <div className="space-y-2">
-                {invoiceHistoryLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : invoiceHistory.length === 0 ? (
-                  <p className="py-3 text-center text-xs text-muted-foreground">
-                    No invoice history available
-                  </p>
-                ) : (
-                  <div className="max-h-64 space-y-2 overflow-y-auto">
-                    {invoiceHistory.map((invoice) => (
-                      <InvoiceHistoryItem
-                        key={invoice.id}
-                        invoice={invoice}
-                        onSendReminder={() => onSendReminder(invoice.id)}
-                        sendingReminder={sendingReminder}
-                      />
-                    ))}
+                {invoiceSummary.paidAt && (
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500">
+                    <Check className="h-3 w-3" />
+                    Settled
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {invoiceSummary.url && (
+                <Button asChild variant="outline" className="h-10 rounded-xl border-muted/30 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                  <a href={invoiceSummary.url} target="_blank" rel="noreferrer">
+                    <ExternalLink className="mr-2 h-3.5 w-3.5 opacity-40" />
+                    Portal View
+                  </a>
+                </Button>
+              )}
+              {invoiceSummary.isOutstanding && invoiceSummary.identifier && (
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-xl border-orange-500/20 bg-orange-500/[0.03] text-orange-600 text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-orange-500/10"
+                  onClick={() => onSendReminder()}
+                  disabled={sendingReminder}
+                >
+                  {sendingReminder ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="mr-2 h-3.5 w-3.5" />}
+                  {sendingReminder ? 'Notifying...' : 'Push Reminder'}
+                </Button>
+              )}
+              {invoiceSummary.isPaid && invoiceSummary.identifier && (
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-xl border-red-500/20 bg-red-500/[0.03] text-red-600 text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-red-500/10"
+                  onClick={() => onRefundDialogOpenChange(true)}
+                >
+                  <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                  Issue Refund
+                </Button>
+              )}
+            </div>
+
+            <Button
+              variant="ghost"
+              className="w-full flex items-center justify-between h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-foreground hover:bg-muted/5"
+              onClick={onToggleInvoiceHistory}
+            >
+              <span className="flex items-center gap-2">
+                <History className="h-3.5 w-3.5 opacity-40" />
+                Statement History
+              </span>
+              {showInvoiceHistory ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </Button>
+
+            {showInvoiceHistory && (
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                {invoiceHistoryLoading ? (
+                  <div className="flex flex-col items-center justify-center py-10 opacity-20">
+                    <LoaderCircle className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : invoiceHistory.length === 0 ? (
+                  <p className="text-center py-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30 border border-dashed border-muted/30 rounded-xl">No historical records</p>
+                ) : (
+                  invoiceHistory.map((invoice) => (
+                    <InvoiceHistoryItem
+                      key={invoice.id}
+                      invoice={invoice}
+                      onSendReminder={() => onSendReminder(invoice.id)}
+                      sendingReminder={sendingReminder}
+                    />
+                  ))
+                )}
+              </div>
             )}
-          </>
-        ) : (
-          <div className="rounded-lg border border-dashed border-muted/60 bg-muted/10 p-6 text-center">
-            <CreditCard className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm font-medium">No invoices yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Use the invoicing form above to send the first invoice for this client.
-            </p>
           </div>
-        )}
+        ) : null}
       </CardContent>
+
+      <AlertDialog open={refundDialogOpen} onOpenChange={onRefundDialogOpenChange}>
+        <AlertDialogContent className="rounded-2xl border-muted/30 shadow-2xl overflow-hidden">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold tracking-tight">Authorization Required</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+              Initiating full capital reversal for invoice <span className="font-bold text-foreground">{invoiceSummary?.identifier}</span>. This procedure is irreversible once authorized.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel disabled={refundLoading} className="rounded-xl border-muted/30 text-[10px] font-bold uppercase tracking-widest">Abort Transaction</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onIssueRefund}
+              disabled={refundLoading}
+              className="rounded-xl bg-red-600 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 hover:bg-red-700 active:scale-[0.98]"
+            >
+              {refundLoading ? <LoaderCircle className="h-4 w-4 animate-spin text-white" /> : 'Confirm Reversal'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

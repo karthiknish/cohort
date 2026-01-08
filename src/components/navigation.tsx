@@ -22,6 +22,7 @@ import {
   Activity,
   Users,
   CircleHelp,
+  Sparkles,
   Shield,
 } from 'lucide-react'
 
@@ -257,6 +258,7 @@ export function Sidebar() {
 
   return (
     <aside
+      id="tour-sidebar"
       className={cn(
         'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-all duration-300 ease-in-out lg:flex',
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
@@ -287,7 +289,7 @@ export function Sidebar() {
 export function Header() {
   const { user, signOut } = useAuth()
   const [open, setOpen] = useState(false)
-  const { open: helpOpen, setOpen: setHelpOpen, showWelcome } = useHelpModal()
+  const { open: helpOpen, onOpenChange: onHelpOpenChange, showWelcome, setShowWelcome } = useHelpModal()
 
   const initials = user?.name
     ? user.name
@@ -357,7 +359,10 @@ export function Header() {
 
           {/* Search / Command menu - desktop only */}
           <div className="hidden sm:block sm:flex-1 sm:max-w-md">
-            <CommandMenu onOpenHelp={() => setHelpOpen(true)} />
+            <CommandMenu onOpenHelp={() => {
+              setShowWelcome(false)
+              void onHelpOpenChange(true)
+            }} />
           </div>
 
           {/* Right side actions */}
@@ -369,7 +374,34 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setHelpOpen(true)}
+                    onClick={() => {
+                      setShowWelcome(true)
+                      void onHelpOpenChange(true)
+                    }}
+                    className="hidden sm:inline-flex"
+                    aria-label="Show onboarding"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    <span className="sr-only">Onboarding</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="flex items-center gap-2">
+                    <span>Onboarding</span>
+                    <KeyboardShortcutBadge combo="shift+?" />
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    id="tour-help-trigger"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void onHelpOpenChange(true)}
                     className="hidden sm:inline-flex"
                   >
                     <CircleHelp className="h-4 w-4" />
@@ -432,7 +464,10 @@ export function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/settings">Settings</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setHelpOpen(true)}>
+                <DropdownMenuItem onSelect={() => {
+                  setShowWelcome(false)
+                  void onHelpOpenChange(true)
+                }}>
                   Help & Navigation
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -445,7 +480,7 @@ export function Header() {
         </div>
       </header>
 
-      <HelpModal open={helpOpen} onOpenChange={setHelpOpen} showWelcome={showWelcome} />
+      <HelpModal open={helpOpen} onOpenChange={(nextOpen) => void onHelpOpenChange(nextOpen)} showWelcome={showWelcome} />
     </>
   )
 }

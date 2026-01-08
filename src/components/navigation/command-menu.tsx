@@ -81,6 +81,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
       </button>
 
       <button
+        id="tour-command-menu"
         onClick={() => setOpen(true)}
         className="hidden sm:inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
@@ -88,12 +89,12 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
         <span>Quick navigation...</span>
         <KeyboardShortcutBadge combo="mod+k" />
       </button>
-      
+
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Search pages, actions, or type a command..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
-          
+
           <CommandGroup heading="Quick Actions">
             {quickActions.map((item) => {
               const Icon = item.icon
@@ -111,7 +112,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
           </CommandGroup>
 
           <CommandSeparator />
-          
+
           <CommandGroup heading="Navigation">
             {navigationItems.map((item) => {
               const Icon = item.icon
@@ -142,7 +143,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
                 <CommandShortcut>?</CommandShortcut>
               </CommandItem>
             )}
-            <CommandItem onSelect={() => runCommand(() => {})}>
+            <CommandItem onSelect={() => runCommand(() => { })}>
               <Keyboard className="mr-2 h-4 w-4" />
               <span>Keyboard shortcuts</span>
             </CommandItem>
@@ -155,8 +156,8 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
 
 export function useCommandMenu() {
   const [open, setOpen] = useState(false)
-  
+
   const toggle = useCallback(() => setOpen((prev) => !prev), [])
-  
+
   return { open, setOpen, toggle }
 }

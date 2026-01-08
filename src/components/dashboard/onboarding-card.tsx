@@ -4,6 +4,7 @@ import { Sparkles, ArrowRight, CircleCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useOnboardingTour } from '@/hooks/use-onboarding-tour'
 
 const onboardingSteps = [
   {
@@ -27,6 +28,8 @@ const onboardingSteps = [
 ] as const
 
 export function OnboardingCard() {
+  const { startTour } = useOnboardingTour()
+
   return (
     <Card className="border-muted/70 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -43,9 +46,18 @@ export function OnboardingCard() {
           <Badge variant="secondary" className="text-xs">
             Getting started
           </Badge>
+          <Button
+            onClick={() => startTour()}
+            size="sm"
+            variant="default"
+            className="bg-primary hover:bg-primary/90"
+          >
+            Start Tour
+            <Sparkles className="ml-1.5 h-3.5 w-3.5" />
+          </Button>
           <Button asChild size="sm" variant="outline">
             <Link href="/docs/background-sync-setup">
-              View setup guide
+              Setup guide
               <ArrowRight className="ml-1 h-3 w-3" />
             </Link>
           </Button>
@@ -81,7 +93,7 @@ export function OnboardingCard() {
             </div>
           ))}
         </div>
-        
+
         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
           <CircleCheck className="h-3.5 w-3.5" />
           <span>Tip: Press <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium">⌘K</kbd> anytime to quickly navigate between pages</span>

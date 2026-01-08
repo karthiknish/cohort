@@ -33,6 +33,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/auth-context'
 import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/hooks/use-keyboard-shortcuts'
+import { db } from '@/lib/firebase'
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { useOnboardingTour } from '@/hooks/use-onboarding-tour'
 
 interface HelpModalProps {
   open: boolean
@@ -139,6 +142,7 @@ const gettingStartedSteps = [
 export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
   const [activeTab, setActiveTab] = useState(showWelcome ? 'welcome' : 'navigation')
   const [isMac, setIsMac] = useState(false)
+  const { startTour } = useOnboardingTour()
 
   useEffect(() => {
     setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform))
@@ -217,15 +221,26 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                   ))}
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 flex flex-col gap-2">
                   <Button
+                    onClick={() => {
+                      onOpenChange(false)
+                      startTour()
+                    }}
+                    className="w-full bg-gradient-to-r from-primary to-primary/80"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Launch Interactive Tour
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       localStorage.setItem('cohorts_welcome_seen', 'true')
                       onOpenChange(false)
                     }}
-                    className="w-full"
+                    className="w-full text-muted-foreground"
                   >
-                    Get Started
+                    Skip to dashboard
                   </Button>
                 </div>
               </TabsContent>
@@ -337,23 +352,95 @@ export function useHelpModal() {
   const [open, setOpen] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
   const { user } = useAuth()
+  const userId = user?.id
+  const userCreatedAt = user?.createdAt
 
   useEffect(() => {
-    if (!user) return
+    if (!userId) return
 
-    // Check if user has seen the welcome modal
-    const hasSeenWelcome = localStorage.getItem('cohorts_welcome_seen')
-    
-    // Check if user is new (created within last 24 hours)
-    const created = user.createdAt ? new Date(user.createdAt) : new Date()
-    const now = new Date()
-    const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
+    const uid = userId
+    const createdAt = userCreatedAt
 
-    if (!hasSeenWelcome && isNewUser) {
-      setShowWelcome(true)
-      setOpen(true)
+    let cancelled = false
+
+    async function run() {
+      // Local fallback cache (kept for fast repeat loads)
+      const hasSeenWelcomeLocal = typeof window !== 'undefined'
+        ? window.localStorage.getItem('cohorts_welcome_seen')
+        : null
+
+      // Check Firestore completion state
+      let hasSeenWelcomeRemote = false
+      try {
+        const snap = await getDoc(doc(db, 'users', uid))
+        if (snap.exists()) {
+          const data = snap.data() as { onboarding?: { completedAt?: unknown; welcomeSeenAt?: unknown } }
+          hasSeenWelcomeRemote = Boolean(data?.onboarding?.completedAt || data?.onboarding?.welcomeSeenAt)
+        }
+      } catch (error) {
+        console.warn('Failed to read onboarding state from Firestore', error)
+      }
+
+      // Backfill Firestore if the user already saw the welcome (local-only legacy)
+      if (hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
+        try {
+          await setDoc(
+            doc(db, 'users', uid),
+            { onboarding: { welcomeSeenAt: serverTimestamp(), version: 1 } },
+            { merge: true },
+          )
+          hasSeenWelcomeRemote = true
+        } catch (error) {
+          console.warn('Failed to backfill onboarding state to Firestore', error)
+        }
+      }
+
+      // Auto-open only for genuinely new users who have not completed onboarding
+      const created = createdAt ? new Date(createdAt) : new Date()
+      const now = new Date()
+      const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
+
+      if (!cancelled && !hasSeenWelcomeRemote && !hasSeenWelcomeLocal && isNewUser) {
+        setShowWelcome(true)
+        setOpen(true)
+      }
     }
-  }, [user])
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId, userCreatedAt])
+
+  const markWelcomeSeen = async (uid: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('cohorts_welcome_seen', '1')
+      }
+    } catch {
+      // Ignore localStorage failures.
+    }
+
+    try {
+      await setDoc(
+        doc(db, 'users', uid),
+        { onboarding: { completedAt: serverTimestamp(), version: 1 } },
+        { merge: true },
+      )
+    } catch (error) {
+      console.warn('Failed to persist onboarding completion to Firestore', error)
+    }
+  }
+
+  const onOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+
+    if (!nextOpen && showWelcome && userId) {
+      setShowWelcome(false)
+      void markWelcomeSeen(userId)
+    }
+  }
 
   useKeyboardShortcut({
     combo: 'shift+?',
@@ -363,5 +450,5 @@ export function useHelpModal() {
     },
   })
 
-  return { open, setOpen, showWelcome, setShowWelcome }
+  return { open, setOpen, onOpenChange, showWelcome, setShowWelcome }
 }

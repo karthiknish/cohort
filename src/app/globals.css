@@ -106,10 +106,14 @@ h6 {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
   }
+
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply antialiased;
   }
 }
 
@@ -118,48 +122,53 @@ h6 {
     0% {
       transform: translateX(-100%);
     }
+
     100% {
       transform: translateX(100%);
     }
   }
-  
+
   @keyframes fade-in {
     from {
       opacity: 0;
       transform: translateY(4px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-  
+
   @keyframes slide-in-from-bottom {
     from {
       opacity: 0;
       transform: translateY(12px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-  
+
   @keyframes scale-in {
     from {
       opacity: 0;
       transform: scale(0.95);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
     }
   }
-  
+
   @keyframes spin-slow {
     from {
       transform: rotate(0deg);
     }
+
     to {
       transform: rotate(360deg);
     }
@@ -169,6 +178,7 @@ h6 {
     0% {
       background-position: -250% 0;
     }
+
     100% {
       background-position: 250% 0;
     }
@@ -181,15 +191,15 @@ h6 {
   .animate-fade-in {
     animation: fade-in 0.3s ease-out;
   }
-  
+
   .animate-slide-in-from-bottom {
     animation: slide-in-from-bottom 0.4s ease-out;
   }
-  
+
   .animate-scale-in {
     animation: scale-in 0.2s ease-out;
   }
-  
+
   .animate-spin-slow {
     animation: spin-slow 2s linear infinite;
   }
@@ -198,27 +208,27 @@ h6 {
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
-  
+
   /* Better scrollbar styling */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--muted) transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: var(--muted);
     border-radius: 9999px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: var(--muted-foreground);
   }
@@ -227,18 +237,69 @@ h6 {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
 
   /* Interactive card hover effect */
   .card-interactive {
-    @apply transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+      transform: translateY(-2px);
+    }
   }
-  
+
   /* Gradient text utility */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent;
+    background: linear-gradient(to right, var(--primary), color-mix(in srgb, var(--primary) 70%, transparent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Premium Driver.js / Onboarding Tour styling */
+  .cohorts-tour-popover {
+    @apply !bg-background !backdrop-blur-md !border !border-primary/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-all duration-300;
+  }
+
+  .cohorts-tour-popover .driver-popover-title {
+    @apply !font-heading !text-lg !font-bold !text-foreground !pb-2 !px-5 !pt-5 !m-0;
+  }
+
+  .cohorts-tour-popover .driver-popover-description {
+    @apply !text-sm !text-muted-foreground !leading-relaxed !px-5 !pb-4 !m-0;
+  }
+
+  .cohorts-tour-popover .driver-popover-footer {
+    @apply !flex !items-center !justify-between !bg-muted/30 !px-4 !py-3 !mt-2 !border-t !border-border/50;
+  }
+
+  .cohorts-tour-popover .driver-popover-btn {
+    @apply !text-xs !font-semibold !rounded-md !px-3 !py-1.5 !transition-all !duration-200 !shadow-none !border;
+  }
+
+  .cohorts-tour-popover .driver-popover-next-btn {
+    @apply !bg-primary !text-primary-foreground !border-primary hover: !bg-primary/90;
+  }
+
+  .cohorts-tour-popover .driver-popover-prev-btn {
+    @apply !bg-background !text-foreground !border-border hover: !bg-muted/50;
+  }
+
+  .cohorts-tour-popover .driver-popover-close-btn {
+    @apply !text-muted-foreground hover: !text-foreground !p-1 !absolute !top-3 !right-3;
+  }
+
+  .cohorts-tour-popover .driver-popover-progress-text {
+    @apply !text-[10px] !font-medium !text-muted-foreground/80;
+  }
+
+  /* Custom animation for tour highlights */
+  .driver-active-element {
+    @apply !shadow-[0_0_0_4px_rgba(7, 23, 64, 0.1), 0_0_20px_rgba(7, 23, 64, 0.2)] !transition-all !duration-500;
   }
 }

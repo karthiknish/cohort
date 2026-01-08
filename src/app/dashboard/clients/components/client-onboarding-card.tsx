@@ -6,9 +6,11 @@ import { Progress } from '@/components/ui/progress'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 export type ClientChecklistItem = {
   id: string
@@ -24,46 +26,61 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
   const progress = total === 0 ? 0 : Math.round((completed / total) * 100)
 
   return (
-    <Card className="border-muted/60 bg-background">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Onboarding</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {completed === total && total > 0
-            ? `Onboarding complete for ${clientName}`
-            : `${completed}/${total} steps done`}
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{progress}% complete</span>
-            <span>
-              {completed}/{total}
-            </span>
+    <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+      <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-primary" />
+          <div>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Onboarding Objectives</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              {completed === total && total > 0
+                ? "Workspace fully initialized"
+                : `${completed} of ${total} benchmarks secured`}
+            </CardDescription>
           </div>
-          <Progress value={progress} />
+        </div>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-6">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+            <span>{progress}% complete</span>
+            <span className="text-foreground/60">{completed}/{total}</span>
+          </div>
+          <Progress value={progress} className="h-1.5 bg-muted/10" />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {items.map((item) => {
             const Icon = item.loading ? LoaderCircle : item.done ? CircleCheck : Circle
             return (
               <div
                 key={item.id}
-                className="flex items-start gap-3 rounded-md border border-muted/60 bg-muted/10 px-3 py-2"
+                className={cn(
+                  "group flex items-start gap-3 rounded-xl border border-muted/30 p-3 transition-all",
+                  item.done ? "bg-emerald-500/[0.03] border-emerald-500/20" : "bg-muted/5"
+                )}
               >
-                <Icon
-                  className={`mt-0.5 h-4 w-4 ${
-                    item.loading
-                      ? 'animate-spin text-muted-foreground'
-                      : item.done
-                        ? 'text-emerald-500'
-                        : 'text-muted-foreground'
-                  }`}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  {item.helper ? <p className="text-xs text-muted-foreground">{item.helper}</p> : null}
+                <div className={cn(
+                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
+                  item.done ? "bg-emerald-500/10 text-emerald-600" : "bg-muted/20 text-muted-foreground/30"
+                )}>
+                  <Icon
+                    className={cn(
+                      "h-3 w-3",
+                      item.loading && "animate-spin"
+                    )}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={cn(
+                    "text-xs font-bold tracking-tight transition-colors",
+                    item.done ? "text-emerald-700/80" : "text-foreground/80"
+                  )}>{item.label}</p>
+                  {item.helper ? (
+                    <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground/50">
+                      {item.helper}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             )
