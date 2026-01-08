@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 
 export interface UseAudioAnalyzerReturn {
     volume: number
+    frequencies: number[]
     isAnalyzing: boolean
     error: string | null
 }
 
 export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
     const [volume, setVolume] = useState(0)
+    const [frequencies, setFrequencies] = useState<number[]>(new Array(12).fill(0))
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -53,7 +55,9 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                 audioContextRef.current = audioContext
 
                 const analyzer = audioContext.createAnalyser()
-                analyzer.fftSize = 256
+                // Smaller fftSize for snappier updates, specifically for visualization
+                analyzer.fftSize = 128
+                analyzer.smoothingTimeConstant = 0.6
                 analyzerRef.current = analyzer
 
                 const source = audioContext.createMediaStreamSource(stream)
@@ -71,13 +75,27 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
 
                     analyzerRef.current.getByteFrequencyData(dataArray)
 
-                    // Calculate average volume
-                    let sum = 0
-                    for (let i = 0; i < bufferLength; i++) {
-                        sum += dataArray[i]
+                    // Provide raw frequencies for mapping
+                    // We only take the lower half as voice is typically there
+                    const binCount = 12
+                    const bins = new Array(binCount).fill(0)
+                    const samplesPerBin = Math.floor(bufferLength * 0.7 / binCount)
+
+                    for (let i = 0; i < binCount; i++) {
+                        let sum = 0
+                        for (let j = 0; j < samplesPerBin; j++) {
+                            sum += dataArray[i * samplesPerBin + j] || 0
+                        }
+                        bins[i] = (sum / samplesPerBin) / 255
                     }
-                    const average = sum / bufferLength
-                    // Normalize to 0-1 range (roughly)
+                    setFrequencies(bins)
+
+                    // Calculate average volume for backward compatibility or simple scale
+                    let totalSum = 0
+                    for (let i = 0; i < bufferLength; i++) {
+                        totalSum += dataArray[i]
+                    }
+                    const average = totalSum / bufferLength
                     setVolume(Math.min(1, average / 128))
 
                     animationFrameRef.current = requestAnimationFrame(updateVolume)
@@ -120,8 +138,9 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
         }
 
         setVolume(0)
+        setFrequencies(new Array(12).fill(0))
         setIsAnalyzing(false)
     }
 
-    return { volume, isAnalyzing, error }
+    return { volume, frequencies, isAnalyzing, error }
 }

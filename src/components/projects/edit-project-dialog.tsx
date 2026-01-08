@@ -360,7 +360,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
                       selected={startDate}
                       onSelect={setStartDate}
                       initialFocus
-                      disabled={(date) => date < new Date('1900-01-01')}
+                      disabled={(date: Date) => date < new Date('1900-01-01')}
                     />
                   </PopoverContent>
                 </Popover>
@@ -389,7 +389,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
                       selected={endDate}
                       onSelect={setEndDate}
                       initialFocus
-                      disabled={(date) =>
+                      disabled={(date: Date) =>
                         (startDate ? date < startDate : false) || date < new Date('1900-01-01')
                       }
                     />
