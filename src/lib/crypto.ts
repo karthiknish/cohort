@@ -1,5 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto'
 
+import { ServiceUnavailableError } from '@/lib/api-errors'
+
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
@@ -7,7 +9,9 @@ const AUTH_TAG_LENGTH = 16
 function ensureSecret(stage: string): Buffer {
   const secret = process.env.METRIC_SECRET || process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET
   if (!secret) {
-    throw new Error(`Missing encryption secret (${stage})`)
+    throw new ServiceUnavailableError(
+      `Missing encryption secret (${stage}). Set METRIC_SECRET (recommended) or JWT_SECRET or NEXTAUTH_SECRET.`
+    )
   }
   return createHash('sha256').update(secret).digest()
 }
