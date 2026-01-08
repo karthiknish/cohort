@@ -136,23 +136,38 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     }
     
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let finalTranscript = ''
-      let interimTranscript = ''
-      
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i]
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript
-        } else {
-          interimTranscript += result[0].transcript
+      try {
+        const results = event.results
+        if (!results || results.length === 0) return
+
+        let finalTranscript = ''
+        let interimTranscript = ''
+
+        const startIndex = Math.max(0, event.resultIndex ?? 0)
+        for (let i = startIndex; i < results.length; i++) {
+          const result = results[i]
+          const transcript = result?.[0]?.transcript
+          if (!transcript) continue
+
+          if (result.isFinal) {
+            finalTranscript += transcript
+          } else {
+            interimTranscript += transcript
+          }
         }
-      }
-      
-      const currentTranscript = finalTranscript || interimTranscript
-      setTranscript(currentTranscript)
-      
-      if (finalTranscript) {
-        onResultRef.current?.(finalTranscript.trim())
+
+        const currentTranscript = (finalTranscript || interimTranscript).trim()
+        setTranscript(currentTranscript)
+
+        if (finalTranscript.trim()) {
+          onResultRef.current?.(finalTranscript.trim())
+        }
+      } catch (err) {
+        console.error('Speech recognition onresult error:', err)
+        const msg = 'Voice input encountered an unexpected error'
+        setError(msg)
+        setIsListening(false)
+        onErrorRef.current?.(msg)
       }
     }
     
@@ -171,6 +186,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
           break
         case 'aborted':
           // User or system aborted, not really an error
+          setIsListening(false)
           return
         default:
           errorMessage = event.message || `Error: ${event.error}`
@@ -183,7 +199,9 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     
     recognition.onend = () => {
       setIsListening(false)
-      recognitionRef.current = null
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null
+      }
     }
     
     recognitionRef.current = recognition
@@ -191,8 +209,10 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     try {
       recognition.start()
     } catch (err) {
-      const msg = 'Failed to start speech recognition'
+      console.error('Speech recognition start error:', err)
+      const msg = 'Failed to start voice input'
       setError(msg)
+      setIsListening(false)
       onErrorRef.current?.(msg)
     }
   }, [continuous, language])

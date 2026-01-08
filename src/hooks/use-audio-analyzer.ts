@@ -27,10 +27,29 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
 
         async function startAnalyzing() {
             try {
+                if (typeof window === 'undefined') {
+                    return
+                }
+
+                if (!navigator?.mediaDevices?.getUserMedia) {
+                    setError('Microphone is not supported in this browser')
+                    setIsAnalyzing(false)
+                    return
+                }
+
+                const AudioContextCtor =
+                    window.AudioContext ||
+                    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+                if (!AudioContextCtor) {
+                    setError('Audio analysis is not supported in this browser')
+                    setIsAnalyzing(false)
+                    return
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
                 streamRef.current = stream
 
-                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                const audioContext = new AudioContextCtor()
                 audioContextRef.current = audioContext
 
                 const analyzer = audioContext.createAnalyser()
@@ -82,18 +101,22 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
     const stopAnalyzing = () => {
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current)
+            animationFrameRef.current = null
         }
 
         if (sourceRef.current) {
             sourceRef.current.disconnect()
+            sourceRef.current = null
         }
 
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close()
+            audioContextRef.current = null
         }
 
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop())
+            streamRef.current = null
         }
 
         setVolume(0)
