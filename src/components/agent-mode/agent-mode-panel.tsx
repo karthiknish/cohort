@@ -441,7 +441,7 @@ export function AgentModePanel({
                           msg.type === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                         )}
                       >
-                        {msg.content}
+                        {typeof msg.content === 'string' ? msg.content : String(msg.content ?? '')}
                       </div>
                     </motion.div>
                   ))}

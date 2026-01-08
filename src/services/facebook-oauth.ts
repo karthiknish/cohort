@@ -40,7 +40,21 @@ export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): str
     params.set('state', state)
   }
 
-  return `https://business.facebook.com/login/connect/authorize?${params.toString()}`
+  const finalUrl = `https://business.facebook.com/login/connect/authorize?${params.toString()}`
+
+  // Debug: Log all OAuth parameters
+  console.log('[buildMetaBusinessLoginUrl] OAuth URL Details:', {
+    business_config_id: businessConfigId,
+    client_id: appId,
+    redirect_uri: redirectUri,
+    redirect_uri_encoded: encodeURIComponent(redirectUri),
+    response_type: 'code',
+    scopes: scopes.join(','),
+    state_present: !!state,
+    final_url: finalUrl,
+  })
+
+  return finalUrl
 }
 
 interface ExchangeCodeOptions {
@@ -92,14 +106,14 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
   const { appId, appSecret, redirectUri, code } = options
 
   if (!appId || !appSecret) {
-    throw new MetaTokenExchangeError({ 
-      message: 'Meta app credentials are required to exchange the code' 
+    throw new MetaTokenExchangeError({
+      message: 'Meta app credentials are required to exchange the code'
     })
   }
 
   if (!code) {
-    throw new MetaTokenExchangeError({ 
-      message: 'Authorization code is required' 
+    throw new MetaTokenExchangeError({
+      message: 'Authorization code is required'
     })
   }
 
@@ -111,14 +125,14 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
   })
 
   const url = `https://graph.facebook.com/${META_GRAPH_API_VERSION}/oauth/access_token?${params.toString()}`
-  
+
   let response: Response
   try {
     response = await fetch(url)
   } catch (networkError) {
     const message = networkError instanceof Error ? networkError.message : 'Network error'
-    throw new MetaTokenExchangeError({ 
-      message: `Network error during Meta token exchange: ${message}` 
+    throw new MetaTokenExchangeError({
+      message: `Network error during Meta token exchange: ${message}`
     })
   }
 
@@ -128,15 +142,15 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
   try {
     responseData = JSON.parse(responseText) as MetaTokenResponse | MetaErrorResponse
   } catch {
-    throw new MetaTokenExchangeError({ 
-      message: `Invalid response from Meta: ${responseText.substring(0, 200)}` 
+    throw new MetaTokenExchangeError({
+      message: `Invalid response from Meta: ${responseText.substring(0, 200)}`
     })
   }
 
   if (!response.ok) {
     const errorData = responseData as MetaErrorResponse
     const error = errorData?.error ?? {}
-    
+
     throw new MetaTokenExchangeError({
       message: error.message ?? `Meta token exchange failed (${response.status})`,
       code: error.code ?? response.status,
@@ -147,10 +161,10 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
   }
 
   const tokenData = responseData as MetaTokenResponse
-  
+
   if (!tokenData.access_token) {
-    throw new MetaTokenExchangeError({ 
-      message: 'Meta token response missing access_token' 
+    throw new MetaTokenExchangeError({
+      message: 'Meta token response missing access_token'
     })
   }
 

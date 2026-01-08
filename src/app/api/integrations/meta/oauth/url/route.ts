@@ -36,12 +36,22 @@ export const POST = createApiHandler(
     }
 
     const statePayload = createMetaOAuthState({ state: auth.uid, redirect })
-  const loginUrl = buildMetaBusinessLoginUrl({
-    businessConfigId,
-    appId,
-    redirectUri,
-    state: statePayload,
-  })
+    const loginUrl = buildMetaBusinessLoginUrl({
+      businessConfigId,
+      appId,
+      redirectUri,
+      state: statePayload,
+    })
 
-  return { url: loginUrl }
-})
+    // Debug logging for OAuth configuration
+    console.log('[meta.oauth.url] OAuth Configuration Debug:', {
+      META_APP_ID: appId,
+      META_BUSINESS_CONFIG_ID: businessConfigId,
+      META_OAUTH_REDIRECT_URI: redirectUri,
+      GENERATED_LOGIN_URL: loginUrl,
+      USER_ID: auth.uid,
+      REDIRECT_AFTER_AUTH: redirect,
+    })
+
+    return { url: loginUrl }
+  })

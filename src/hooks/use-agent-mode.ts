@@ -72,11 +72,13 @@ export function useAgentMode(): UseAgentModeReturn {
     setOpen((prev) => !prev)
   }, [])
 
-  const addMessage = useCallback((type: 'user' | 'agent', content: string, route?: string | null) => {
+  const addMessage = useCallback((type: 'user' | 'agent', content: string | unknown, route?: string | null) => {
+    // Ensure content is always a string to prevent React error #301
+    const safeContent = typeof content === 'string' ? content : String(content ?? '')
     const message: AgentMessage = {
       id: generateId(),
       type,
-      content,
+      content: safeContent,
       timestamp: new Date(),
       route,
     }
