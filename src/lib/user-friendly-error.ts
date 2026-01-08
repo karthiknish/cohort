@@ -55,6 +55,24 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
   const code = unified.code
   const details = unified.details
 
+  // If we were given a plain Error (not a UnifiedError/ApiClientError) that already contains a
+  // user-facing message, prefer that message over generic status-based copy.
+  // This prevents throwing `new Error('X')` in UI flows from being rewritten into a 500 message.
+  if (
+    error instanceof Error &&
+    !(error instanceof UnifiedError) &&
+    typeof error.message === 'string' &&
+    error.message.trim().length > 0
+  ) {
+    return {
+      message: error.message,
+      actions: baseActions,
+      code: undefined,
+      status: undefined,
+      details,
+    }
+  }
+
   if (isNetworkError(error)) {
     return {
       message: 'We could not reach the server. Check your connection, then try again.',

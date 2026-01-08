@@ -154,7 +154,9 @@ export async function connectLinkedInAdsViaPopup(options: OAuthConnectionOptions
             throw new Error('This LinkedIn account is already linked to another user.')
         }
         if (isFirebaseError(error) && error.code === 'auth/operation-not-allowed') {
-            throw new Error('LinkedIn Ads connection is not enabled. Contact support to enable this provider.')
+            throw new Error(
+              "LinkedIn Ads connection is not enabled in Firebase Authentication. Enable the OAuth/OIDC provider with ID 'linkedin.com' (or contact support)."
+            )
         }
         throw new Error('Failed to connect LinkedIn Ads. Please try again.')
     }

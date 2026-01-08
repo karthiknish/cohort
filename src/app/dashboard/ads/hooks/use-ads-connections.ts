@@ -382,19 +382,32 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       }
       throw new Error('This provider does not support OAuth yet.')
     } catch (error: unknown) {
-      const message = getErrorMessage(
-        error,
-        providerId === PROVIDER_IDS.FACEBOOK
-          ? 'Unable to start Meta OAuth. Please try again.'
-          : providerId === PROVIDER_IDS.TIKTOK
-            ? 'Unable to start TikTok OAuth. Please try again.'
-            : 'Unable to start OAuth. Please try again.'
-      )
+      const rawMessage = error instanceof Error ? error.message : ''
+
+      const isMetaConfigError =
+        providerId === PROVIDER_IDS.FACEBOOK && /meta business login is not configured/i.test(rawMessage)
+
+      const isTikTokConfigError =
+        providerId === PROVIDER_IDS.TIKTOK && /tiktok oauth is not configured/i.test(rawMessage)
+
+      // For known configuration errors, prefer the raw message so it doesn't get
+      // replaced by a generic 5xx-friendly message.
+      const message = (isMetaConfigError || isTikTokConfigError)
+        ? rawMessage
+        : getErrorMessage(
+            error,
+            providerId === PROVIDER_IDS.FACEBOOK
+              ? 'Unable to start Meta OAuth. Please try again.'
+              : providerId === PROVIDER_IDS.TIKTOK
+                ? 'Unable to start TikTok OAuth. Please try again.'
+                : 'Unable to start OAuth. Please try again.'
+          )
+
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-      if (providerId === PROVIDER_IDS.FACEBOOK && message.toLowerCase().includes('meta business login is not configured')) {
+      if (providerId === PROVIDER_IDS.FACEBOOK && (isMetaConfigError || message.toLowerCase().includes('meta business login is not configured'))) {
         setMetaSetupMessage('Meta business login is not configured. Add META_APP_ID, META_BUSINESS_CONFIG_ID, and META_OAUTH_REDIRECT_URI environment variables.')
       }
-      if (providerId === PROVIDER_IDS.TIKTOK && message.toLowerCase().includes('tiktok oauth is not configured')) {
+      if (providerId === PROVIDER_IDS.TIKTOK && (isTikTokConfigError || message.toLowerCase().includes('tiktok oauth is not configured'))) {
         setTiktokSetupMessage('TikTok OAuth is not configured. Add TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, and TIKTOK_OAUTH_REDIRECT_URI environment variables.')
       }
       toast({
