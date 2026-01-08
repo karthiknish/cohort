@@ -258,7 +258,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     if (!integrationStatuses?.statuses) return
     const updatedConnected: Record<string, boolean> = {}
     integrationStatuses.statuses.forEach((status) => {
-      updatedConnected[status.providerId] = status.status === 'success'
+      // `status.status` is derived from lastSyncStatus. Immediately after OAuth we store
+      // integrations with lastSyncStatus = 'pending', so requiring 'success' makes the UI
+      // look disconnected even though the account is linked.
+      updatedConnected[status.providerId] = Boolean(status.linkedAt) || status.status === 'success'
     })
     setConnectedProviders(updatedConnected)
   }, [integrationStatuses])
