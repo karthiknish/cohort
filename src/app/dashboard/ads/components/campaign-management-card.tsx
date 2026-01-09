@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
+import { useClientContext } from '@/contexts/client-context'
 
 // =============================================================================
 // TYPES
@@ -63,6 +64,7 @@ type Props = {
 // =============================================================================
 
 export function CampaignManagementCard({ providerId, providerName, isConnected, onRefresh }: Props) {
+  const { selectedClientId } = useClientContext()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -81,31 +83,41 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     
     setLoading(true)
     try {
-      const response = await fetch(`/api/integrations/campaigns?providerId=${providerId}`)
-      if (!response.ok) throw new Error('Failed to fetch campaigns')
+      const params = new URLSearchParams({ providerId })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      const response = await fetch(`/api/integrations/campaigns?${params.toString()}`)
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || error.message || 'Failed to fetch campaigns')
+      }
       const data = await response.json()
       setCampaigns(data.campaigns || [])
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load campaigns',
+        description: error instanceof Error ? error.message : 'Failed to load campaigns',
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
-  }, [providerId, isConnected])
+  }, [providerId, isConnected, selectedClientId])
 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
     setActionLoading(campaignId)
     try {
+      const payload: Record<string, unknown> = { providerId, campaignId, action }
+      if (selectedClientId) payload.clientId = selectedClientId
       const response = await fetch('/api/integrations/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${campaignId}-${action}-${Date.now()}` },
-        body: JSON.stringify({ providerId, campaignId, action }),
+        body: JSON.stringify(payload),
       })
       
-      if (!response.ok) throw new Error('Action failed')
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || error.message || 'Action failed')
+      }
       
       toast({
         title: 'Success',
@@ -117,28 +129,30 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } catch (error) {
       toast({
         title: 'Error',
-        description: `Failed to ${action} campaign`,
+        description: error instanceof Error ? error.message : `Failed to ${action} campaign`,
         variant: 'destructive',
       })
     } finally {
       setActionLoading(null)
     }
-  }, [providerId, fetchCampaigns, onRefresh])
+  }, [providerId, fetchCampaigns, onRefresh, selectedClientId])
 
   const handleBudgetUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBudget) return
     
     setActionLoading(selectedCampaign.id)
     try {
+      const payload: Record<string, unknown> = {
+        providerId,
+        campaignId: selectedCampaign.id,
+        action: 'updateBudget',
+        budget: parseFloat(newBudget),
+      }
+      if (selectedClientId) payload.clientId = selectedClientId
       const response = await fetch('/api/integrations/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${selectedCampaign.id}-budget-${Date.now()}` },
-        body: JSON.stringify({
-          providerId,
-          campaignId: selectedCampaign.id,
-          action: 'updateBudget',
-          budget: parseFloat(newBudget),
-        }),
+        body: JSON.stringify(payload),
       })
       
       if (!response.ok) {
@@ -165,23 +179,25 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, newBudget, providerId, fetchCampaigns, onRefresh])
+  }, [selectedCampaign, newBudget, providerId, fetchCampaigns, onRefresh, selectedClientId])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
     
     setActionLoading(selectedCampaign.id)
     try {
+      const payload: Record<string, unknown> = {
+        providerId,
+        campaignId: selectedCampaign.id,
+        action: 'updateBidding',
+        biddingType: newBidding.type,
+        biddingValue: parseFloat(newBidding.value || '0'),
+      }
+      if (selectedClientId) payload.clientId = selectedClientId
       const response = await fetch('/api/integrations/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${selectedCampaign.id}-bidding-${Date.now()}` },
-        body: JSON.stringify({
-          providerId,
-          campaignId: selectedCampaign.id,
-          action: 'updateBidding',
-          biddingType: newBidding.type,
-          biddingValue: parseFloat(newBidding.value || '0'),
-        }),
+        body: JSON.stringify(payload),
       })
       
       if (!response.ok) {
@@ -207,7 +223,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh])
+  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId])
 
   const getStatusBadge = (status: string) => {
     const statusLower = status.toLowerCase()

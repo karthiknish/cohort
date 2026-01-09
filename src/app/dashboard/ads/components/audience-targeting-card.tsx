@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/components/ui/use-toast'
 import { AudienceBuilderDialog } from './audience-builder-dialog'
+import { useClientContext } from '@/contexts/client-context'
 
 // =============================================================================
 // TYPES
@@ -72,6 +73,7 @@ type Props = {
 // =============================================================================
 
 export function AudienceTargetingCard({ providerId, providerName, isConnected }: Props) {
+  const { selectedClientId } = useClientContext()
   const [targeting, setTargeting] = useState<TargetingData[]>([])
   const [insights, setInsights] = useState<Insights | null>(null)
   const [loading, setLoading] = useState(false)
@@ -83,21 +85,26 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
     
     setLoading(true)
     try {
-      const response = await fetch(`/api/integrations/targeting?providerId=${providerId}`)
-      if (!response.ok) throw new Error('Failed to fetch targeting')
+      const params = new URLSearchParams({ providerId })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      const response = await fetch(`/api/integrations/targeting?${params.toString()}`)
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || error.message || 'Failed to fetch targeting')
+      }
       const data = await response.json()
       setTargeting(data.targeting || [])
       setInsights(data.insights || null)
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load audience targeting data',
+        description: error instanceof Error ? error.message : 'Failed to load audience targeting data',
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
-  }, [providerId, isConnected])
+  }, [providerId, isConnected, selectedClientId])
 
   const formatAgeRange = (range: string) => {
     return range.replace(/_/g, '-').replace('AGE', '').replace('RANGE', '').trim()

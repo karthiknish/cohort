@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, NotFoundError, UnauthorizedError } from '@/lib/api-errors'
 import { getAdIntegration } from '@/lib/firestore/admin'
-import { ensureGoogleAccessToken } from '@/lib/integration-token-refresh'
+import { ensureGoogleAccessToken, ensureMetaAccessToken, IntegrationTokenError } from '@/lib/integration-token-refresh'
 
 import {
   fetchGoogleAudienceTargeting,
@@ -30,6 +30,7 @@ import {
 
 const querySchema = z.object({
   providerId: z.enum(['google', 'tiktok', 'linkedin', 'facebook']),
+  clientId: z.string().optional(),
   campaignId: z.string().optional(),
   adGroupId: z.string().optional(),
 })
@@ -217,8 +218,11 @@ export const GET = createApiHandler(
     }
 
     const { providerId, campaignId, adGroupId } = query
+    const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
 
-    const integration = await getAdIntegration({ userId: auth.uid, providerId })
+    const integration = await getAdIntegration({ userId: auth.uid, providerId, clientId })
     if (!integration) {
       throw new NotFoundError(`${providerId} integration not found`)
     }
@@ -226,7 +230,15 @@ export const GET = createApiHandler(
     let targeting: NormalizedTargeting[] = []
 
     if (providerId === 'google') {
-      const accessToken = await ensureGoogleAccessToken({ userId: auth.uid })
+      let accessToken: string
+      try {
+        accessToken = await ensureGoogleAccessToken({ userId: auth.uid, clientId })
+      } catch (error: unknown) {
+        if (error instanceof IntegrationTokenError) {
+          throw new BadRequestError(error.message)
+        }
+        throw error
+      }
       const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
       const customerId = integration.accountId ?? ''
       const loginCustomerId = integration.loginCustomerId
@@ -277,11 +289,19 @@ export const GET = createApiHandler(
 
       targeting = normalizeLinkedInTargeting(linkedInTargeting)
     } else if (providerId === 'facebook') {
-      const accessToken = integration.accessToken
+      let accessToken: string
+      try {
+        accessToken = await ensureMetaAccessToken({ userId: auth.uid, clientId })
+      } catch (error: unknown) {
+        if (error instanceof IntegrationTokenError) {
+          throw new BadRequestError(error.message)
+        }
+        throw error
+      }
       const adAccountId = integration.accountId
 
-      if (!accessToken || !adAccountId) {
-        throw new BadRequestError('Meta credentials not configured')
+      if (!adAccountId) {
+        throw new BadRequestError('Meta ad account ID not configured. Finish setup to select an ad account.')
       }
 
       const metaTargeting = await fetchMetaAudienceTargeting({
