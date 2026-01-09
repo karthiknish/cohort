@@ -52,6 +52,9 @@ export default function CreativeDetailPage() {
   const [editedLandingPage, setEditedLandingPage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const [generatingHeadlines, setGeneratingHeadlines] = useState(false)
+  const [generatingDescriptions, setGeneratingDescriptions] = useState(false)
+
   const [days, setDays] = useState('7')
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricsError, setMetricsError] = useState<string | null>(null)
@@ -192,6 +195,104 @@ export default function CreativeDetailPage() {
     setEditedCta('')
     setEditedLandingPage('')
   }
+
+  const generateCopy = useCallback(async (kind: 'headlines' | 'captions') => {
+    if (!creative) return
+    if (!isEditing) {
+      toast({
+        title: 'Start editing to use AI',
+        description: 'Click Edit to enable AI-assisted generation.',
+      })
+      return
+    }
+
+    const setLoading = kind === 'headlines' ? setGeneratingHeadlines : setGeneratingDescriptions
+    setLoading(true)
+
+    try {
+      const payload: Record<string, unknown> = {
+        providerId: params.providerId,
+        clientId: selectedClientId ?? undefined,
+        campaignId: params.campaignId,
+        creativeId: params.creativeId,
+        campaignName,
+        creativeName: creative.name,
+        landingPageUrl: editedLandingPage || creative.landingPageUrl,
+        callToAction: editedCta || creative.callToAction,
+        creativeType: creative.type,
+        pageName: creative.pageName,
+        existingHeadlines: (editedHeadlines.length ? editedHeadlines : (creative.headlines ?? [])).filter(Boolean),
+        existingCaptions: (editedDescriptions.length ? editedDescriptions : (creative.descriptions ?? [])).filter(Boolean),
+        kind: kind === 'headlines' ? 'headlines' : 'captions',
+        count: 5,
+      }
+
+      const res = await fetch('/api/integrations/creatives/generate-copy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': `${params.creativeId}-gen-${kind}-${Date.now()}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const resp = await res.json().catch(() => ({})) as unknown
+      const rec = resp && typeof resp === 'object' ? (resp as Record<string, unknown>) : null
+      if (!res.ok) {
+        const msg = (rec && typeof rec.error === 'string' && rec.error) || (rec && typeof rec.message === 'string' && rec.message) || 'AI generation failed'
+        throw new Error(msg)
+      }
+
+      const headlines = Array.isArray(rec?.headlines) ? (rec!.headlines as unknown[]).filter((v): v is string => typeof v === 'string') : []
+      const captions = Array.isArray(rec?.captions) ? (rec!.captions as unknown[]).filter((v): v is string => typeof v === 'string') : []
+
+      if (kind === 'headlines') {
+        if (headlines.length === 0) {
+          toast({ title: 'No new headlines', description: 'Try again with different inputs.' })
+          return
+        }
+        setEditedHeadlines((prev) => {
+          const base = prev.length ? prev : []
+          const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
+          const additions = headlines.filter((h) => {
+            const key = h.trim().toLowerCase()
+            if (!key) return false
+            if (existing.has(key)) return false
+            existing.add(key)
+            return true
+          })
+          return [...base, ...additions]
+        })
+        toast({ title: 'Generated headlines', description: `Added ${headlines.length} new variant(s).` })
+      } else {
+        if (captions.length === 0) {
+          toast({ title: 'No new captions', description: 'Try again with different inputs.' })
+          return
+        }
+        setEditedDescriptions((prev) => {
+          const base = prev.length ? prev : []
+          const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
+          const additions = captions.filter((c) => {
+            const key = c.trim().toLowerCase()
+            if (!key) return false
+            if (existing.has(key)) return false
+            existing.add(key)
+            return true
+          })
+          return [...base, ...additions]
+        })
+        toast({ title: 'Generated captions', description: `Added ${captions.length} new variant(s).` })
+      }
+    } catch (error) {
+      toast({
+        title: 'AI generation error',
+        description: error instanceof Error ? error.message : 'AI generation failed',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, params.campaignId, params.creativeId, params.providerId, selectedClientId])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -378,6 +479,11 @@ export default function CreativeDetailPage() {
           onUpdateDescription={updateDescription}
           onChangeCta={setEditedCta}
           onChangeLandingPage={setEditedLandingPage}
+
+          generatingHeadlines={generatingHeadlines}
+          generatingDescriptions={generatingDescriptions}
+          onGenerateHeadlines={() => void generateCopy('headlines')}
+          onGenerateDescriptions={() => void generateCopy('captions')}
           days={days}
           onChangeDays={setDays}
           metricsLoading={metricsLoading}

@@ -57,6 +57,11 @@ export function CreativeEditorTabs(props: {
   onChangeCta: (value: string) => void
   onChangeLandingPage: (value: string) => void
 
+  generatingHeadlines?: boolean
+  generatingDescriptions?: boolean
+  onGenerateHeadlines?: () => void
+  onGenerateDescriptions?: () => void
+
   days: string
   onChangeDays: (value: string) => void
   metricsLoading: boolean
@@ -85,6 +90,10 @@ export function CreativeEditorTabs(props: {
     onUpdateDescription,
     onChangeCta,
     onChangeLandingPage,
+    generatingHeadlines,
+    generatingDescriptions,
+    onGenerateHeadlines,
+    onGenerateDescriptions,
     days,
     onChangeDays,
     metricsLoading,
@@ -207,9 +216,15 @@ export function CreativeEditorTabs(props: {
 
               {isEditing && (
                 <div className="flex items-center gap-2 pt-2">
-                  <Button variant="ghost" size="sm" className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-primary/5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onGenerateHeadlines}
+                    disabled={!onGenerateHeadlines || generatingHeadlines}
+                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                  >
                     <Sparkles className="h-3 w-3" />
-                    GENERATE AI ALTERNATIVES
+                    {generatingHeadlines ? 'GENERATING…' : 'GENERATE AI ALTERNATIVES'}
                   </Button>
                 </div>
               )}
@@ -292,6 +307,21 @@ export function CreativeEditorTabs(props: {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">No primary text available</p>
+              )}
+
+              {isEditing && (
+                <div className="flex items-center gap-2 pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onGenerateDescriptions}
+                    disabled={!onGenerateDescriptions || generatingDescriptions}
+                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    {generatingDescriptions ? 'GENERATING…' : 'GENERATE AI ALTERNATIVES'}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
