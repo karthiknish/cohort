@@ -48,51 +48,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     lastViewedChannel: null,
   })
 
-  // Load navigation state from localStorage on mount and client change
-  useEffect(() => {
-    if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
-      return
-    }
-
-    if (mountedRef.current && typeof window !== 'undefined') {
-      loadNavigationState()
-    }
-  }, [selectedClientId, loadNavigationState])
-
-  // Initialize on first mount
-  useEffect(() => {
-    if (mountedRef.current) {
-      return
-    }
-    mountedRef.current = true
-
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    if (isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
-      loadNavigationState()
-    }
-  }, [loadNavigationState])
-
-  // Sync with URL parameters (URL takes precedence over localStorage)
-  useEffect(() => {
-    if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
-      return
-    }
-
-    const urlProjectId = searchParams.get('projectId')
-    const urlProjectName = searchParams.get('projectName')
-
-    if (urlProjectId || urlProjectName) {
-      setNavigationState((prev) => ({
-        ...prev,
-        projectId: urlProjectId,
-        projectName: urlProjectName,
-      }))
-    }
-  }, [searchParams])
-
   // Cleanup old localStorage data to prevent hitting limits
   const cleanupOldData = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -182,6 +137,52 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       console.warn('[NavigationProvider] Failed to save navigation state:', error)
     }
   }, [selectedClientId])
+
+  // Load navigation state from localStorage on mount and client change
+  useEffect(() => {
+    if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
+      return
+    }
+
+    if (mountedRef.current && typeof window !== 'undefined') {
+      loadNavigationState()
+    }
+  }, [selectedClientId, loadNavigationState])
+
+  // Initialize on first mount
+  useEffect(() => {
+    if (mountedRef.current) {
+      return
+    }
+    mountedRef.current = true
+
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
+      loadNavigationState()
+    }
+  }, [loadNavigationState])
+
+  // Sync with URL parameters (URL takes precedence over localStorage)
+  useEffect(() => {
+    if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
+      return
+    }
+
+    const urlProjectId = searchParams.get('projectId')
+    const urlProjectName = searchParams.get('projectName')
+
+    if (urlProjectId || urlProjectName) {
+      setNavigationState((prev) => ({
+        ...prev,
+        projectId: urlProjectId,
+        projectName: urlProjectName,
+      }))
+    }
+  }, [searchParams])
+
 
   const setProjectContext = useCallback((projectId: string | null, projectName: string | null) => {
     const newState = {
