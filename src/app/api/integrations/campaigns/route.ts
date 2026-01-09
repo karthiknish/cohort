@@ -311,6 +311,8 @@ export const POST = createApiHandler(
       throw new NotFoundError(`${providerId} integration not found`)
     }
 
+    const normalizedBudgetMode = typeof budgetMode === 'string' ? budgetMode.trim().toLowerCase() : undefined
+
     if (providerId === 'google') {
       let accessToken: string
       try {
@@ -380,12 +382,19 @@ export const POST = createApiHandler(
           status: action === 'enable' ? 'ENABLE' : 'DISABLE',
         })
       } else if (action === 'updateBudget' && budget !== undefined) {
+        const mode = normalizedBudgetMode
+        const mappedBudgetMode = mode === 'daily'
+          ? 'BUDGET_MODE_DAY'
+          : mode === 'total'
+            ? 'BUDGET_MODE_TOTAL'
+            : (budgetMode as 'BUDGET_MODE_DAY' | 'BUDGET_MODE_TOTAL' | undefined)
+
         await updateTikTokCampaignBudget({
           accessToken,
           advertiserId,
           campaignId,
           budget,
-          budgetMode: budgetMode as 'BUDGET_MODE_DAY' | 'BUDGET_MODE_TOTAL' | undefined,
+          budgetMode: mappedBudgetMode,
         })
       } else if (action === 'updateBidding' && biddingType) {
         await updateTikTokCampaignBidding({
@@ -416,11 +425,12 @@ export const POST = createApiHandler(
           status: action === 'enable' ? 'ACTIVE' : 'PAUSED',
         })
       } else if (action === 'updateBudget' && budget !== undefined) {
-        await updateLinkedInCampaignBudget({
-          accessToken,
-          campaignId,
-          dailyBudget: budget,
-        })
+        const mode = normalizedBudgetMode
+        await updateLinkedInCampaignBudget(
+          mode === 'total'
+            ? { accessToken, campaignId, totalBudget: budget }
+            : { accessToken, campaignId, dailyBudget: budget }
+        )
       } else if (action === 'updateBidding' && biddingType) {
         await updateLinkedInCampaignBidding({
           accessToken,
@@ -452,11 +462,12 @@ export const POST = createApiHandler(
           status: action === 'enable' ? 'ACTIVE' : 'PAUSED',
         })
       } else if (action === 'updateBudget' && budget !== undefined) {
-        await updateMetaCampaignBudget({
-          accessToken,
-          campaignId,
-          dailyBudget: budget,
-        })
+        const mode = normalizedBudgetMode
+        await updateMetaCampaignBudget(
+          mode === 'lifetime'
+            ? { accessToken, campaignId, lifetimeBudget: budget }
+            : { accessToken, campaignId, dailyBudget: budget }
+        )
       } else if (action === 'updateBidding' && biddingType) {
         await updateMetaCampaignBidding({
           accessToken,

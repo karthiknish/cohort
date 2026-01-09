@@ -16,6 +16,7 @@ import { MetricCardsSection } from '../../components/metric-cards-section'
 import { InsightsChartsSection } from '../../components/insights-charts-section'
 import { AlgorithmicInsightsSection } from '../../components/algorithmic-insights-section'
 import { AudienceControlSection } from '../../components/audience-control-section'
+import { BudgetControlSection } from '../../components/budget-control-section'
 import { CampaignAdsSection } from '../../components/campaign-ads-section'
 import { FormulaBuilderCard } from '@/app/dashboard/ads/components/formula-builder-card'
 import { useFormulaEditor } from '@/app/dashboard/ads/hooks/use-formula-editor'
@@ -433,7 +434,19 @@ export default function CampaignInsightsPage() {
         efficiencyScore={efficiencyScore}
       />
 
-      {/* 3. Audience Control */}
+      {/* 3. Budget Control */}
+      <BudgetControlSection
+        providerId={providerId}
+        campaignId={campaignId}
+        clientId={selectedClientId}
+        isPreviewMode={isPreviewMode}
+        currency={insights?.currency || campaign?.currency}
+        budget={campaign?.budget}
+        budgetType={campaign?.budgetType}
+        onReloadCampaign={loadCampaign}
+      />
+
+      {/* 4. Audience Control */}
       <AudienceControlSection
         providerId={providerId}
         campaignId={campaignId}
@@ -441,7 +454,7 @@ export default function CampaignInsightsPage() {
         isPreviewMode={isPreviewMode}
       />
 
-      {/* 4. Visualization Charts */}
+      {/* 5. Visualization Charts */}
       {insightsError ? (
         <Card className="border-muted/40 bg-muted/5 p-10 text-center">
           <p className="text-sm font-bold text-muted-foreground">{insightsError}</p>
@@ -456,7 +469,7 @@ export default function CampaignInsightsPage() {
         />
       )}
 
-      {/* 5. Ads used in this campaign */}
+      {/* 6. Ads used in this campaign */}
       <CampaignAdsSection
         providerId={providerId}
         campaignId={campaignId}
@@ -464,7 +477,7 @@ export default function CampaignInsightsPage() {
         isPreviewMode={isPreviewMode}
       />
 
-      {/* 6. Formula Builder */}
+      {/* 7. Formula Builder */}
       <div className="grid grid-cols-1 gap-6">
         <FormulaBuilderCard
           formulaEditor={formulaEditor}
@@ -473,7 +486,7 @@ export default function CampaignInsightsPage() {
         />
       </div>
 
-      {/* 7. Algorithmic Insights */}
+      {/* 8. Algorithmic Insights */}
       {!insightsLoading && !insightsError && (
         <AlgorithmicInsightsSection
           insights={algorithmicInsightsList}
