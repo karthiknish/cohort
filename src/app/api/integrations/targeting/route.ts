@@ -67,6 +67,12 @@ type NormalizedTargeting = {
     companySizes: string[]
     seniorities: string[]
   }
+  metaPlacements?: {
+    facebook?: string[]
+    instagram?: string[]
+    audienceNetwork?: string[]
+    messenger?: string[]
+  }
 }
 
 // =============================================================================
@@ -196,10 +202,25 @@ function normalizeMetaTargeting(items: MetaAudienceTargeting[]): NormalizedTarge
     interests: [
       ...t.interests.map(i => ({ ...i, category: 'interest' })),
       ...t.behaviors.map(b => ({ ...b, category: 'behavior' })),
+      ...(t.flexible_spec ?? []).flatMap(spec => [
+        ...(spec.interests ?? []).map(i => ({ ...i, category: 'interest' })),
+        ...(spec.behaviors ?? []).map(b => ({ ...b, category: 'behavior' })),
+        ...(spec.demographics ?? []).map(d => ({ ...d, category: 'demographic' })),
+        ...(spec.life_events ?? []).map(l => ({ ...l, category: 'life_event' })),
+        ...(spec.industries ?? []).map(i => ({ ...i, category: 'industry' })),
+        ...(spec.work_positions ?? []).map(w => ({ ...w, category: 'job_title' })),
+        ...(spec.work_employers ?? []).map(e => ({ ...e, category: 'employer' })),
+      ]),
     ],
     keywords: [],
     devices: t.devicePlatforms,
     placements: t.publisherPlatforms,
+    metaPlacements: {
+      facebook: t.facebookPositions,
+      instagram: t.instagramPositions,
+      audienceNetwork: t.audienceNetworkPositions,
+      messenger: t.messengerPositions,
+    }
   }))
 }
 

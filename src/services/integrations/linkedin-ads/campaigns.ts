@@ -129,6 +129,50 @@ export async function updateLinkedInCampaignStatus(options: {
 }
 
 // =============================================================================
+// UPDATE AD STATUS
+// =============================================================================
+
+export async function updateLinkedInAdStatus(options: {
+  accessToken: string
+  creativeId: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  const {
+    accessToken,
+    creativeId,
+    status,
+    maxRetries = 3,
+  } = options
+
+  const url = `https://api.linkedin.com/v2/adCreativesV2/urn:li:sponsoredCreative:${creativeId}`
+
+  const { payload } = await linkedinAdsClient.executeRequest<LinkedInApiErrorResponse>({
+    url,
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+      'X-HTTP-Method-Override': 'PATCH',
+    },
+    body: JSON.stringify({ patch: { $set: { status } } }),
+    operation: 'updateAdStatus',
+    maxRetries,
+  })
+
+  if (payload.status && payload.status >= 400) {
+    throw new LinkedInApiError({
+      message: payload.message ?? 'Ad status update failed',
+      httpStatus: payload.status,
+    })
+  }
+
+  return { success: true }
+}
+
+// =============================================================================
 // UPDATE CAMPAIGN BUDGET
 // =============================================================================
 
@@ -290,14 +334,14 @@ export async function fetchLinkedInCreatives(options: {
   accessToken: string
   accountId: string
   campaignId?: string
-  statusFilter?: ('ACTIVE' | 'PAUSED' | 'DRAFT')[]
+  statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'CANCELED' | 'DRAFT')[]
   maxRetries?: number
 }): Promise<LinkedInCreative[]> {
   const {
     accessToken,
     accountId,
     campaignId,
-    statusFilter = ['ACTIVE', 'PAUSED'],
+    statusFilter = ['ACTIVE', 'PAUSED', 'ARCHIVED', 'CANCELED', 'DRAFT'],
     maxRetries = 3,
   } = options
 

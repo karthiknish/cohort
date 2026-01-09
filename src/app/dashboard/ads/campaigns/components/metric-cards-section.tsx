@@ -29,6 +29,7 @@ interface MetricCardsSectionProps {
   metrics: CalculatedMetrics | null
   loading: boolean
   currency?: string
+  efficiencyScore?: number | null
 }
 
 function formatCurrency(value: number, currency: string = 'USD'): string {
@@ -105,8 +106,12 @@ function MetricCard({
   )
 }
 
-export function MetricCardsSection({ metrics, loading, currency }: MetricCardsSectionProps) {
+export function MetricCardsSection({ metrics, loading, currency, efficiencyScore }: MetricCardsSectionProps) {
   const displayCurrency = currency || 'USD'
+  const displayEfficiencyScore =
+    typeof efficiencyScore === 'number' && Number.isFinite(efficiencyScore)
+      ? Math.max(0, Math.min(100, Math.round(efficiencyScore)))
+      : null
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -158,7 +163,7 @@ export function MetricCardsSection({ metrics, loading, currency }: MetricCardsSe
       />
       <MetricCard
         label="Efficiency Score"
-        value={metrics ? `${Math.round(Math.min(100, (metrics.roas / 4) * 100))}%` : '—'}
+        value={displayEfficiencyScore !== null ? `${displayEfficiencyScore}%` : '—'}
         icon={TrendingUp}
         loading={loading}
       />

@@ -31,6 +31,7 @@ export {
   updateLinkedInCampaignBudget,
   updateLinkedInCampaignBidding,
   removeLinkedInCampaign,
+  updateLinkedInAdStatus,
   fetchLinkedInCreativeMetrics,
   fetchLinkedInCreatives,
   fetchLinkedInAudienceTargeting,

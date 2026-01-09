@@ -25,6 +25,7 @@ export {
   updateTikTokCampaignBudget,
   updateTikTokCampaignBidding,
   removeTikTokCampaign,
+  updateTikTokAdStatus,
   fetchTikTokAdMetrics,
   fetchTikTokCreatives,
   fetchTikTokAudienceTargeting,

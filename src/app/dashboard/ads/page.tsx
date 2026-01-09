@@ -10,7 +10,6 @@ import { DateRangePicker } from './components/date-range-picker'
 
 import {
   AdsSkeleton,
-  AutomationControlsCard,
   CampaignManagementCard,
   CrossChannelOverviewCard,
   CustomInsightsCard,
@@ -25,7 +24,6 @@ import {
 import {
   useAdsMetrics,
   useAdsConnections,
-  useAdsAutomation,
   useDerivedMetrics,
   useFormulaEditor,
   useMetricsComparison,
@@ -108,22 +106,6 @@ export default function AdsPage() {
 
   const suppressMetricsErrors = !isPreviewMode && !hasAnyAdIntegration
 
-  // 3. Manage automation settings and manual sync triggers
-  const {
-    automationDraft,
-    savingSettings,
-    settingsErrors,
-    expandedProviders,
-    syncingProvider,
-    updateAutomationDraft,
-    handleSaveAutomation,
-    toggleAdvanced,
-    runManualSync,
-  } = useAdsAutomation({
-    automationStatuses,
-    onRefresh: triggerMetricsRefresh,
-  })
-
   // Surface notable errors as toasts once
   useEffect(() => {
     const errors: string[] = [
@@ -199,21 +181,6 @@ export default function AdsPage() {
                 refreshing={metricsLoading}
               />
             </div>
-          </FadeIn>
-
-          <FadeIn>
-            <AutomationControlsCard
-              automationStatuses={automationStatuses}
-              automationDraft={automationDraft}
-              savingSettings={savingSettings}
-              settingsErrors={settingsErrors}
-              expandedProviders={expandedProviders}
-              syncingProvider={syncingProvider}
-              onUpdateDraft={updateAutomationDraft}
-              onSaveAutomation={(id) => void handleSaveAutomation(id)}
-              onToggleAdvanced={toggleAdvanced}
-              onRunManualSync={(id) => void runManualSync(id)}
-            />
           </FadeIn>
 
           {/* Campaign Management Cards for each connected provider */}

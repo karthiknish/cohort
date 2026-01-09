@@ -124,6 +124,52 @@ export async function updateTikTokCampaignStatus(options: {
 }
 
 // =============================================================================
+// UPDATE AD STATUS
+// =============================================================================
+
+export async function updateTikTokAdStatus(options: {
+  accessToken: string
+  advertiserId: string
+  adId: string
+  status: 'ENABLE' | 'DISABLE'
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  const {
+    accessToken,
+    advertiserId,
+    adId,
+    status,
+    maxRetries = 3,
+  } = options
+
+  const { payload } = await tiktokAdsClient.executeRequest<TikTokApiErrorResponse>({
+    url: 'https://business-api.tiktok.com/open_api/v1.3/ad/status/update/',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Token': accessToken,
+    },
+    body: JSON.stringify({
+      advertiser_id: advertiserId,
+      ad_ids: [adId],
+      opt_status: status,
+    }),
+    operation: 'updateAdStatus',
+    maxRetries,
+  })
+
+  if (payload.code && payload.code !== 0) {
+    throw new TikTokApiError({
+      message: payload.message ?? 'Ad status update failed',
+      httpStatus: 400,
+      errorCode: payload.code,
+    })
+  }
+
+  return { success: true }
+}
+
+// =============================================================================
 // UPDATE CAMPAIGN BUDGET
 // =============================================================================
 
@@ -274,7 +320,7 @@ export async function fetchTikTokCreatives(options: {
   advertiserId: string
   campaignId?: string
   adGroupId?: string
-  statusFilter?: ('ENABLE' | 'DISABLE')[]
+  statusFilter?: ('ENABLE' | 'DISABLE' | 'DELETE')[]
   maxRetries?: number
 }): Promise<TikTokCreative[]> {
   const {
@@ -282,7 +328,7 @@ export async function fetchTikTokCreatives(options: {
     advertiserId,
     campaignId,
     adGroupId,
-    statusFilter,
+    statusFilter = ['ENABLE', 'DISABLE', 'DELETE'],
     maxRetries = 3,
   } = options
 
@@ -355,6 +401,9 @@ export async function fetchTikTokCreatives(options: {
     status: (item.status ?? 'DISABLE') as 'ENABLE' | 'DISABLE' | 'DELETE',
     format: item.ad_format ?? item.image_mode,
     videoId: item.video_id,
+    imageUrl: (item as any).image_url || ((item as any).image_urls?.[0]),
+    videoUrl: (item as any).video_url,
+    thumbnailUrl: (item as any).thumbnail_url,
     title: item.ad_text,
     description: item.ad_text,
     callToAction: item.call_to_action,
@@ -521,9 +570,9 @@ export async function createTikTokAudience(options: {
     maxRetries,
   })
 
-  return { 
-    success: true, 
-    id: String(payload?.data?.custom_audience_id ?? '') 
+  return {
+    success: true,
+    id: String(payload?.data?.custom_audience_id ?? '')
   }
 }
 

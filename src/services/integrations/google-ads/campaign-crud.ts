@@ -194,6 +194,69 @@ export async function updateGoogleCampaignStatus(options: {
 }
 
 // =============================================================================
+// UPDATE AD STATUS
+// =============================================================================
+
+export async function updateGoogleAdStatus(options: {
+    accessToken: string
+    developerToken: string
+    customerId: string
+    adId: string
+    adGroupId: string
+    status: 'ENABLED' | 'PAUSED'
+    loginCustomerId?: string | null
+}): Promise<{ success: boolean; message?: string }> {
+    const {
+        accessToken,
+        developerToken,
+        customerId,
+        adId,
+        adGroupId,
+        status,
+        loginCustomerId,
+    } = options
+
+    const url = `${GOOGLE_API_BASE}/customers/${customerId}/adGroupAds:mutate`
+
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+        'developer-token': developerToken,
+        'Content-Type': 'application/json',
+    }
+
+    if (loginCustomerId) {
+        headers['login-customer-id'] = loginCustomerId
+    }
+
+    const mutation = {
+        operations: [{
+            update: {
+                resourceName: `customers/${customerId}/adGroupAds/${adGroupId}~${adId}`,
+                status,
+            },
+            updateMask: 'status',
+        }],
+    }
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(mutation),
+    })
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+        throw new GoogleAdsApiError({
+            message: errorData?.error?.message ?? 'Ad update failed',
+            httpStatus: response.status,
+            errorCode: 'MUTATION_ERROR',
+        })
+    }
+
+    return { success: true, message: `Ad ${status.toLowerCase()}` }
+}
+
+// =============================================================================
 // UPDATE CAMPAIGN BUDGET
 // =============================================================================
 

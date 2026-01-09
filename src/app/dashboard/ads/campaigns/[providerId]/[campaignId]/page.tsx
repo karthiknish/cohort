@@ -15,6 +15,8 @@ import { CampaignHeader } from '../../components/campaign-header'
 import { MetricCardsSection } from '../../components/metric-cards-section'
 import { InsightsChartsSection } from '../../components/insights-charts-section'
 import { AlgorithmicInsightsSection } from '../../components/algorithmic-insights-section'
+import { AudienceControlSection } from '../../components/audience-control-section'
+import { CampaignAdsSection } from '../../components/campaign-ads-section'
 import { FormulaBuilderCard } from '@/app/dashboard/ads/components/formula-builder-card'
 import { useFormulaEditor } from '@/app/dashboard/ads/hooks/use-formula-editor'
 
@@ -29,6 +31,8 @@ type Campaign = {
   objective?: string
   startTime?: string
   stopTime?: string
+  accountName?: string
+  accountLogoUrl?: string
 }
 
 type CampaignInsightsResponse = {
@@ -88,13 +92,13 @@ function parseIsoDateOnly(value: string | null): Date | null {
 
 function parseIsoDateTime(value: string | null): Date | null {
   if (!value) return null
-  
+
   // Handle some common format variations (like missing colon in timezone offset +0530)
   let normalizedValue = value
   if (/[+-]\d{4}$/.test(value)) {
     normalizedValue = value.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
   }
-  
+
   const d = new Date(normalizedValue)
   if (Number.isNaN(d.getTime())) return null
   return d
@@ -121,32 +125,32 @@ export default function CampaignInsightsPage() {
   const initialStart = parseIsoDateOnly(searchParams.get('startDate'))
   const initialEnd = parseIsoDateOnly(searchParams.get('endDate'))
 
-  const urlHasExplicitRange = Boolean(initialStart || initialEnd)
   const campaignStartFromUrl = parseIsoDateTime(searchParams.get('campaignStartTime'))
   const campaignStopFromUrl = parseIsoDateTime(searchParams.get('campaignStopTime'))
 
   const [dateRangeTouched, setDateRangeTouched] = useState(false)
 
   const [dateRange, setDateRange] = useState<DateRange>(() => {
-    // 1. Favor explicit startDate/endDate from URL
+    // 1. PRIORITIZE campaign start/stop times if available (show full campaign duration by default)
+    if (campaignStartFromUrl || campaignStopFromUrl) {
+      const now = new Date()
+      // If campaign has ended, use the stop date; otherwise use today
+      const end = campaignStopFromUrl && campaignStopFromUrl <= now ? campaignStopFromUrl : now
+      // Always prefer campaign start if available
+      const start = campaignStartFromUrl ?? new Date(new Date(end).setDate(end.getDate() - 30))
+      return clampDateRange({ start, end })
+    }
+
+    // 2. Fall back to explicit startDate/endDate from URL if no campaign times
     if (initialStart || initialEnd) {
       const end = initialEnd ?? (initialStart ? new Date(new Date(initialStart).setDate(initialStart.getDate() + 6)) : new Date())
       const start = initialStart ?? new Date(new Date(end).setDate(end.getDate() - 6))
       return clampDateRange({ start, end })
     }
 
-    // 2. Fallback to campaign start/stop times
-    if (campaignStartFromUrl || campaignStopFromUrl) {
-      // Use campaign stop as end if current, otherwise use it but don't default to 2026
-      const end = campaignStopFromUrl ?? new Date()
-      // Use campaign start as start, or default to 6 days before end
-      const start = campaignStartFromUrl ?? new Date(new Date(end).setDate(end.getDate() - 6))
-      return clampDateRange({ start, end })
-    }
-
-    // 3. Default to last 7 days from "now"
+    // 3. Default to last 30 days from "now"
     const end = new Date()
-    const start = new Date(new Date(end).setDate(end.getDate() - 6))
+    const start = new Date(new Date(end).setDate(end.getDate() - 30))
     return { start, end }
   })
 
@@ -178,16 +182,22 @@ export default function CampaignInsightsPage() {
   const formulaEditor = useFormulaEditor()
 
   useEffect(() => {
-    if (urlHasExplicitRange || dateRangeTouched) return
+    // Only update if user hasn't manually changed the date range
+    if (dateRangeTouched) return
+
     const campaignStart = parseIsoDateTime(campaign?.startTime ?? null)
     const campaignStop = parseIsoDateTime(campaign?.stopTime ?? null)
 
+    // If campaign has start/stop times, use them (this handles when campaign is loaded from API)
     if (!campaignStart && !campaignStop) return
 
-    const end = campaignStop ?? new Date()
-    const start = campaignStart ?? new Date(new Date(end).setDate(end.getDate() - 6))
+    const now = new Date()
+    // If campaign has ended, use stop date; otherwise use today
+    const end = campaignStop && campaignStop <= now ? campaignStop : now
+    // Always use campaign start if available
+    const start = campaignStart ?? new Date(new Date(end).setDate(end.getDate() - 30))
     setDateRange(clampDateRange({ start, end }))
-  }, [campaign?.startTime, campaign?.stopTime, dateRangeTouched, urlHasExplicitRange])
+  }, [campaign?.startTime, campaign?.stopTime, dateRangeTouched])
 
   const loadCampaign = useCallback(async () => {
     setCampaignLoading(true)
@@ -312,7 +322,7 @@ export default function CampaignInsightsPage() {
     if (!totals) return null
 
     const { spend, impressions, clicks, conversions, revenue } = totals
-    
+
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
     const cpc = clicks > 0 ? spend / clicks : 0
     const cpa = conversions > 0 ? spend / conversions : 0
@@ -361,7 +371,7 @@ export default function CampaignInsightsPage() {
   }, [insights?.series])
 
   const efficiencyScore = useMemo(() => {
-    if (!calculatedMetrics) return 0
+    if (!calculatedMetrics) return null
     // Map to AdMetricsSummary expected by ad-algorithms.ts
     const summary = {
       providerId: campaign?.providerId || 'unknown',
@@ -420,9 +430,18 @@ export default function CampaignInsightsPage() {
         metrics={calculatedMetrics}
         loading={insightsLoading}
         currency={insights?.currency || campaign?.currency}
+        efficiencyScore={efficiencyScore}
       />
 
-      {/* 3. Visualization Charts */}
+      {/* 3. Audience Control */}
+      <AudienceControlSection
+        providerId={providerId}
+        campaignId={campaignId}
+        clientId={selectedClientId}
+        isPreviewMode={isPreviewMode}
+      />
+
+      {/* 4. Visualization Charts */}
       {insightsError ? (
         <Card className="border-muted/40 bg-muted/5 p-10 text-center">
           <p className="text-sm font-bold text-muted-foreground">{insightsError}</p>
@@ -437,7 +456,15 @@ export default function CampaignInsightsPage() {
         />
       )}
 
-      {/* 4. Formula Builder */}
+      {/* 5. Ads used in this campaign */}
+      <CampaignAdsSection
+        providerId={providerId}
+        campaignId={campaignId}
+        clientId={selectedClientId}
+        isPreviewMode={isPreviewMode}
+      />
+
+      {/* 6. Formula Builder */}
       <div className="grid grid-cols-1 gap-6">
         <FormulaBuilderCard
           formulaEditor={formulaEditor}
@@ -446,12 +473,12 @@ export default function CampaignInsightsPage() {
         />
       </div>
 
-      {/* 5. Algorithmic Insights */}
+      {/* 7. Algorithmic Insights */}
       {!insightsLoading && !insightsError && (
-        <AlgorithmicInsightsSection 
+        <AlgorithmicInsightsSection
           insights={algorithmicInsightsList}
           loading={insightsLoading}
-          efficiencyScore={efficiencyScore}
+          efficiencyScore={efficiencyScore ?? 0}
         />
       )}
     </div>

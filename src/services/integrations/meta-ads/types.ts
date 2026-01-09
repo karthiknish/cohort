@@ -15,31 +15,31 @@ export const META_ERROR_CODES = {
   INVALID_ACCESS_TOKEN: 190,
   ACCESS_TOKEN_EXPIRED: 463,
   PASSWORD_CHANGED: 464,
-  
+
   // Rate Limiting
   RATE_LIMIT_EXCEEDED: 4,
   TOO_MANY_CALLS: 17,
   USER_RATE_LIMIT: 17,
   APP_RATE_LIMIT: 4,
   ACCOUNT_RATE_LIMIT: 32,
-  
+
   // Permission Errors
   PERMISSION_DENIED: 10,
   PERMISSION_ERROR: 200,
   UNSUPPORTED_GET_REQUEST: 100,
-  
+
   // API Errors
   UNKNOWN_ERROR: 1,
   SERVICE_UNAVAILABLE: 2,
   METHOD_UNKNOWN: 3,
   APPLICATION_REQUEST_LIMIT: 4,
   TOO_MANY_DATA_REQUESTS: 613,
-  
+
   // Business Errors
   AD_ACCOUNT_NOT_FOUND: 1487390,
   AD_ACCOUNT_ACCESS_DENIED: 275,
   CAMPAIGN_NOT_FOUND: 100,
-  
+
   // Transient Errors
   TEMPORARY_ERROR: 2,
   ASYNC_JOB_UNKNOWN: 2601,
@@ -110,16 +110,30 @@ export type MetaAdCreative = {
   id?: string
   name?: string
   thumbnail_url?: string
+  image_url?: string
   object_story_spec?: {
     page_id?: string
+    instagram_actor_id?: string
     link_data?: {
       link?: string
       message?: string
+      picture?: string
+      image_hash?: string
+      name?: string
+      caption?: string
+      description?: string
       call_to_action?: { type?: string }
     }
     video_data?: {
       video_id?: string
       message?: string
+      title?: string
+      call_to_action?: {
+        type?: string
+        value?: {
+          link?: string
+        }
+      }
     }
   }
 }
@@ -137,6 +151,8 @@ export type MetaAdData = {
   name?: string
   status?: string
   effective_status?: string
+  adset_id?: string
+  campaign_id?: string
   adcreatives?: {
     data?: MetaAdCreative[]
   }
@@ -220,10 +236,16 @@ export type MetaCreative = {
   creativeId?: string
   creativeName?: string
   thumbnailUrl?: string
+  imageUrl?: string
+  videoSourceUrl?: string
+  videoThumbnailUrl?: string
   callToAction?: string
   landingPageUrl?: string
   videoId?: string
   message?: string
+  pageName?: string
+  pageProfileImageUrl?: string
+  headlines?: string[]
 }
 
 // =============================================================================
@@ -255,6 +277,24 @@ export type MetaAudienceTargeting = {
   // Placements
   publisherPlatforms: string[]
   devicePlatforms: string[]
+  facebookPositions?: string[]
+  instagramPositions?: string[]
+  audienceNetworkPositions?: string[]
+  messengerPositions?: string[]
+  // Detailed Targeting (Advanced)
+  flexible_spec?: Array<{
+    interests?: Array<{ id: string; name: string }>
+    behaviors?: Array<{ id: string; name: string }>
+    demographics?: Array<{ id: string; name: string }>
+    life_events?: Array<{ id: string; name: string }>
+    industries?: Array<{ id: string; name: string }>
+    work_positions?: Array<{ id: string; name: string }>
+    work_employers?: Array<{ id: string; name: string }>
+  }>
+  exclusions?: {
+    interests?: Array<{ id: string; name: string }>
+    behaviors?: Array<{ id: string; name: string }>
+  }
 }
 
 // =============================================================================

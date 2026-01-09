@@ -18,6 +18,7 @@ export {
   updateGoogleCampaignBudgetByCampaign,
   updateGoogleCampaignBidding,
   removeGoogleCampaign,
+  updateGoogleAdStatus,
 } from './campaign-crud'
 
 // Ad group metrics

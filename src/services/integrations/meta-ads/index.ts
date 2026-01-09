@@ -58,6 +58,7 @@ export {
   updateMetaCampaignBudget,
   updateMetaCampaignBidding,
   removeMetaCampaign,
+  updateMetaAdStatus,
   fetchMetaAdMetrics,
   fetchMetaCreatives,
   fetchMetaAudienceTargeting,

@@ -78,6 +78,8 @@ type NormalizedCampaign = {
   objective?: string
   startTime?: string
   stopTime?: string
+  accountName?: string
+  accountLogoUrl?: string
   biddingStrategy?: {
     type: string
     targetCpa?: number
@@ -235,10 +237,35 @@ export const GET = createApiHandler(
         throw new BadRequestError('Meta ad account ID not configured. Finish setup to select an ad account.')
       }
 
-      const metaCampaigns = await listMetaCampaigns({
-        accessToken,
-        adAccountId,
-      })
+      // Fetch campaigns and account currency in parallel
+      const [metaCampaigns, accountCurrency] = await Promise.all([
+        listMetaCampaigns({ accessToken, adAccountId }),
+        // Fetch account currency
+        (async () => {
+          try {
+            const res = await fetch(
+              `https://graph.facebook.com/v21.0/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${accessToken}`
+            )
+            const data = await res.json() as {
+              currency?: string;
+              name?: string;
+              promote_pages?: { data: Array<{ name: string; picture?: { data: { url: string } } }> }
+            }
+
+            const firstPage = data?.promote_pages?.data?.[0]
+            return {
+              currency: data?.currency ?? integration.currency ?? 'USD',
+              accountName: firstPage?.name || data?.name || integration.providerId,
+              accountLogoUrl: firstPage?.picture?.data?.url
+            }
+          } catch {
+            return {
+              currency: integration.currency ?? 'USD',
+              accountName: integration.providerId
+            }
+          }
+        })(),
+      ])
 
       campaigns = metaCampaigns.map((c): NormalizedCampaign => ({
         id: c.id,
@@ -247,7 +274,9 @@ export const GET = createApiHandler(
         status: c.status,
         budget: c.dailyBudget ?? c.lifetimeBudget,
         budgetType: c.dailyBudget ? 'daily' : c.lifetimeBudget ? 'lifetime' : undefined,
-        currency: integration.currency ?? undefined,
+        currency: accountCurrency.currency,
+        accountName: accountCurrency.accountName,
+        accountLogoUrl: accountCurrency.accountLogoUrl,
         objective: c.objective,
         startTime: c.startTime,
         stopTime: c.stopTime,

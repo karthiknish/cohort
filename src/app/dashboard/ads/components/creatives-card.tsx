@@ -15,6 +15,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/components/ui/avatar'
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -49,6 +54,8 @@ type Creative = {
   videoUrl?: string
   landingPageUrl?: string
   callToAction?: string
+  pageName?: string
+  pageProfileImageUrl?: string
 }
 
 type Props = {
@@ -70,7 +77,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
 
   const fetchCreatives = useCallback(async () => {
     if (!isConnected) return
-    
+
     setLoading(true)
     try {
       const response = await fetch(`/api/integrations/creatives?providerId=${providerId}`)
@@ -170,7 +177,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                 </TableHeader>
                 <TableBody>
                   {creatives.map((creative) => (
-                    <TableRow 
+                    <TableRow
                       key={creative.creativeId}
                       className={selectedIds.has(creative.creativeId) ? 'bg-primary/5' : ''}
                     >
@@ -202,8 +209,17 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium max-w-[200px] truncate">
-                        {creative.name || creative.campaignName || creative.creativeId}
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <p className="font-medium truncate max-w-[200px]">
+                            {creative.name || creative.campaignName || creative.creativeId}
+                          </p>
+                          {creative.pageName && (
+                            <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                              via {creative.pageName}
+                            </p>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="max-w-[250px]">
                         {creative.headlines && creative.headlines.length > 0 ? (
@@ -264,20 +280,39 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
               .filter((c) => selectedIds.has(c.creativeId))
               .map((c) => (
                 <div key={c.creativeId} className="border rounded-xl p-4 space-y-4 relative bg-muted/20">
-                  <div className="absolute top-2 right-2 flex gap-1">
+                  <div className="absolute top-2 right-2 flex items-center gap-2">
+                    {c.pageProfileImageUrl && (
+                      <Avatar className="h-4 w-4 ring-1 ring-background">
+                        <AvatarImage src={c.pageProfileImageUrl} />
+                        <AvatarFallback className="text-[6px]">{c.pageName?.[0]}</AvatarFallback>
+                      </Avatar>
+                    )}
                     {getStatusBadge(c.status)}
                   </div>
-                  
+
                   {/* Visual Preview */}
                   <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border">
                     {c.imageUrl ? (
-                      <img src={c.imageUrl} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={c.imageUrl}
+                        alt=""
+                        className="w-full h-full object-contain bg-muted/50"
+                        style={{ imageRendering: 'auto' }}
+                      />
                     ) : c.videoUrl ? (
                       <Video className="h-8 w-8 text-muted-foreground" />
                     ) : (
                       <FileText className="h-8 w-8 text-muted-foreground" />
                     )}
                   </div>
+
+                  {c.pageName && (
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
+                        {c.pageName}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <h3 className="font-semibold text-sm line-clamp-2">
@@ -301,8 +336,8 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                     )}
                   </div>
 
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full text-xs h-8"
                     onClick={() => {
                       toast({

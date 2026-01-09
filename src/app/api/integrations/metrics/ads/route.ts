@@ -16,6 +16,7 @@ import { fetchLinkedInCreativeMetrics, LinkedInCreativeMetric } from '@/services
 
 const querySchema = z.object({
   providerId: z.enum(['google', 'tiktok', 'linkedin']),
+  clientId: z.string().optional(),
   campaignId: z.string().optional(),
   adGroupId: z.string().optional(),
   level: z.enum(['ad', 'adGroup', 'creative']).optional().default('ad'),
@@ -137,9 +138,12 @@ export const GET = createApiHandler(
     }
 
     const { providerId, campaignId, adGroupId, level, days } = query
+    const clientId = typeof query.clientId === 'string' && query.clientId.trim().length > 0
+      ? query.clientId.trim()
+      : null
     const timeframeDays = parseInt(days, 10) || 7
 
-    const integration = await getAdIntegration({ userId: auth.uid, providerId })
+    const integration = await getAdIntegration({ userId: auth.uid, providerId, clientId })
     if (!integration) {
       throw new NotFoundError(`${providerId} integration not found`)
     }
@@ -147,7 +151,7 @@ export const GET = createApiHandler(
     let metrics: NormalizedAdMetric[] = []
 
     if (providerId === 'google') {
-      const accessToken = await ensureGoogleAccessToken({ userId: auth.uid })
+      const accessToken = await ensureGoogleAccessToken({ userId: auth.uid, clientId })
       const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
       const customerId = integration.accountId ?? ''
       const loginCustomerId = integration.loginCustomerId

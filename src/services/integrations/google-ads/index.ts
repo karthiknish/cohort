@@ -26,6 +26,7 @@ export {
   updateGoogleCampaignBudgetByCampaign,
   updateGoogleCampaignBidding,
   removeGoogleCampaign,
+  updateGoogleAdStatus,
   fetchGoogleAdGroupMetrics,
   fetchGoogleAdMetrics,
   fetchGoogleCreatives,

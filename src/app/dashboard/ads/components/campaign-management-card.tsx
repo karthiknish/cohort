@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pause, Play, Trash2, DollarSign, RefreshCw, Settings2, Calendar, TrendingUp, Clock } from 'lucide-react'
+import { Pause, Play, Trash2, DollarSign, RefreshCw, TrendingUp } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,7 +26,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useClientContext } from '@/contexts/client-context'
+import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
 import type { DateRange } from './date-range-picker'
 
 // =============================================================================
@@ -69,18 +76,57 @@ function toIsoDateOnly(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
+function formatRelativeDate(date: Date): string {
+  const now = new Date()
+  const diffTime = date.getTime() - now.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays === -1) return 'Yesterday'
+  if (diffDays > 0 && diffDays <= 7) return `In ${diffDays} days`
+  if (diffDays < 0 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`
+
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
+}
+
 function formatCampaignDateRange(startTime?: string, stopTime?: string): string {
+  const now = new Date()
   const start = startTime ? new Date(startTime) : null
   const stop = stopTime ? new Date(stopTime) : null
 
   const hasStart = Boolean(start && !Number.isNaN(start.getTime()))
   const hasStop = Boolean(stop && !Number.isNaN(stop.getTime()))
 
-  if (!hasStart && !hasStop) return '—'
-  if (hasStart && !hasStop) return `Starts ${start!.toLocaleDateString()}`
-  if (!hasStart && hasStop) return `Ends ${stop!.toLocaleDateString()}`
-  return `${start!.toLocaleDateString()} → ${stop!.toLocaleDateString()}`
+  if (!hasStart && !hasStop) return 'Always running'
+
+  if (hasStart && !hasStop) {
+    if (start! > now) {
+      return `Starts ${formatRelativeDate(start!)}`
+    }
+    return `Since ${formatRelativeDate(start!)}`
+  }
+
+  if (!hasStart && hasStop) {
+    if (stop! > now) {
+      return `Until ${formatRelativeDate(stop!)}`
+    }
+    return `Ended ${formatRelativeDate(stop!)}`
+  }
+
+  // Both dates present
+  const startStr = start!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const endStr = stop!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
+  if (start! > now) {
+    return `${startStr} - ${endStr}`
+  }
+  if (stop! < now) {
+    return `Ended ${formatRelativeDate(stop!)}`
+  }
+  return `${startStr} - ${endStr}`
 }
+
 
 // =============================================================================
 // COMPONENT
@@ -94,7 +140,6 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
   const [biddingDialogOpen, setBiddingDialogOpen] = useState(false)
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [newBudget, setNewBudget] = useState('')
   const [newBidding, setNewBidding] = useState({
@@ -104,6 +149,19 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
   const startDate = useMemo(() => toIsoDateOnly(dateRange.start), [dateRange.start])
   const endDate = useMemo(() => toIsoDateOnly(dateRange.end), [dateRange.end])
+
+  const selectedCurrencyCode = useMemo(
+    () => normalizeCurrencyCode(selectedCampaign?.currency),
+    [selectedCampaign?.currency]
+  )
+  const selectedCurrencyInfo = useMemo(
+    () => (isSupportedCurrency(selectedCurrencyCode) ? getCurrencyInfo(selectedCurrencyCode) : null),
+    [selectedCurrencyCode]
+  )
+  const selectedCurrencyLabel = useMemo(
+    () => (selectedCurrencyInfo ? `${selectedCurrencyInfo.symbol} ${selectedCurrencyCode}` : selectedCurrencyCode),
+    [selectedCurrencyInfo, selectedCurrencyCode]
+  )
 
   const fetchCampaigns = useCallback(async () => {
     if (!isConnected) return
@@ -356,12 +414,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                       <TableCell>
                         {campaign.budget !== undefined ? (
                           <span>
-                            {new Intl.NumberFormat(undefined, {
-                              style: 'currency',
-                              currency: campaign.currency || 'USD',
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }).format(campaign.budget)}
+                            {formatMoney(campaign.budget, campaign.currency)}
                             /{campaign.budgetType || 'day'}
                           </span>
                         ) : (
@@ -373,87 +426,111 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                           {campaign.objective?.toLowerCase().replace(/_/g, ' ') || '-'}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {isActive(campaign.status) ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void handleAction(campaign.id, 'pause')
-                            }}
-                            disabled={actionLoading === campaign.id}
-                          >
-                            <Pause className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void handleAction(campaign.id, 'enable')
-                            }}
-                            disabled={actionLoading === campaign.id}
-                          >
-                            <Play className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedCampaign(campaign)
-                            setNewBudget(campaign.budget?.toString() || '')
-                            setBudgetDialogOpen(true)
-                          }}
-                          disabled={actionLoading === campaign.id}
-                        >
-                          <DollarSign className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedCampaign(campaign)
-                            setNewBidding({
-                              type: campaign.biddingStrategy?.type || '',
-                              value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
-                            })
-                            setBiddingDialogOpen(true)
-                          }}
-                          disabled={actionLoading === campaign.id}
-                          title="Bidding Strategy"
-                        >
-                          <TrendingUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedCampaign(campaign)
-                            setScheduleDialogOpen(true)
-                          }}
-                          disabled={actionLoading === campaign.id}
-                          title="Ad Schedule"
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            void handleAction(campaign.id, 'remove')
-                          }}
-                          disabled={actionLoading === campaign.id}
-                          title="Remove Campaign"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <TooltipProvider>
+                          <div className="flex items-center justify-end gap-1">
+                            {isActive(campaign.status) ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      void handleAction(campaign.id, 'pause')
+                                    }}
+                                    disabled={actionLoading === campaign.id}
+                                  >
+                                    <Pause className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Pause campaign</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      void handleAction(campaign.id, 'enable')
+                                    }}
+                                    disabled={actionLoading === campaign.id}
+                                  >
+                                    <Play className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Enable campaign</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedCampaign(campaign)
+                                    setNewBudget(campaign.budget?.toString() || '')
+                                    setBudgetDialogOpen(true)
+                                  }}
+                                  disabled={actionLoading === campaign.id}
+                                >
+                                  <DollarSign className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Update budget</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedCampaign(campaign)
+                                    setNewBidding({
+                                      type: campaign.biddingStrategy?.type || '',
+                                      value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
+                                    })
+                                    setBiddingDialogOpen(true)
+                                  }}
+                                  disabled={actionLoading === campaign.id}
+                                >
+                                  <TrendingUp className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Bidding strategy</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void handleAction(campaign.id, 'remove')
+                                  }}
+                                  disabled={actionLoading === campaign.id}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Remove campaign</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -474,14 +551,14 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="budget">New Budget ($)</Label>
+              <Label htmlFor="budget">New Budget ({selectedCurrencyLabel})</Label>
               <Input
                 id="budget"
                 type="number"
                 step="0.01"
                 value={newBudget}
                 onChange={(e) => setNewBudget(e.target.value)}
-                placeholder="Enter new budget amount"
+                placeholder={`Enter new budget amount (${selectedCurrencyCode})`}
               />
             </div>
           </div>
@@ -537,48 +614,6 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Ad Schedule</DialogTitle>
-            <DialogDescription>
-              View delivery schedule for {selectedCampaign?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {selectedCampaign?.schedule && selectedCampaign.schedule.length > 0 ? (
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 font-semibold text-sm pb-2 border-b">
-                  <span>Day</span>
-                  <span>Start</span>
-                  <span>End</span>
-                </div>
-                {selectedCampaign.schedule.map((s, i) => (
-                  <div key={i} className="grid grid-cols-3 text-sm py-1 border-b border-muted">
-                    <span className="capitalize">{s.dayOfWeek.toLowerCase()}</span>
-                    <span>{s.startHour}:00</span>
-                    <span>{s.endHour}:00</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center space-y-2">
-                <Clock className="h-8 w-8 text-muted-foreground" />
-                <p className="text-muted-foreground text-sm">No custom schedule configured.<br/>Ad will run 24/7.</p>
-              </div>
-            )}
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg border text-xs text-muted-foreground flex gap-2">
-              <Settings2 className="h-4 w-4 shrink-0" />
-              <p>Schedule modification is currently limited to the native ad platform for safety. Advanced scheduling controls coming soon.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setScheduleDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

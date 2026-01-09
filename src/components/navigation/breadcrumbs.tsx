@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { 
-  ChevronRight, 
-  Home, 
-  Briefcase, 
-  ListChecks, 
+import {
+  ChevronRight,
+  Home,
+  Briefcase,
+  ListChecks,
   MessageSquare,
   BarChart3,
   CreditCard,
@@ -83,9 +83,9 @@ export function NavigationBreadcrumbs() {
                 ) : (
                   <BreadcrumbPage className="flex items-center gap-1 text-sm">
                     {item.icon && (() => {
-                    const Icon = item.icon!
-                    return <Icon className="h-4 w-4" />
-                  })()}
+                      const Icon = item.icon!
+                      return <Icon className="h-4 w-4" />
+                    })()}
                     <span className="truncate max-w-[120px]">{item.label}</span>
                   </BreadcrumbPage>
                 )}
@@ -125,9 +125,9 @@ export function NavigationBreadcrumbs() {
                 {item.href && !item.isCurrent ? (
                   <Link href={item.href} className="flex items-center gap-2">
                     {item.icon && (() => {
-                    const Icon = item.icon!
-                    return <Icon className="h-4 w-4" />
-                  })()}
+                      const Icon = item.icon!
+                      return <Icon className="h-4 w-4" />
+                    })()}
                     <span className={cn("truncate", item.isCurrent && "font-medium")}>
                       {item.label}
                     </span>
@@ -135,9 +135,9 @@ export function NavigationBreadcrumbs() {
                 ) : (
                   <div className="flex items-center gap-2">
                     {item.icon && (() => {
-                    const Icon = item.icon!
-                    return <Icon className="h-4 w-4" />
-                  })()}
+                      const Icon = item.icon!
+                      return <Icon className="h-4 w-4" />
+                    })()}
                     <span className="truncate font-medium">{item.label}</span>
                   </div>
                 )}
@@ -245,7 +245,7 @@ function generateBreadcrumbItems(
         href: '/dashboard/finance',
         icon: CreditCard,
       })
-      
+
       // Sub-pages for finance
       if (pathSegments[1] === 'payments') {
         items.push({
@@ -261,7 +261,7 @@ function generateBreadcrumbItems(
         href: '/dashboard/proposals',
         icon: FileText,
       })
-      
+
       // Sub-pages for proposals
       if (pathSegments[1] === 'analytics') {
         items.push({
@@ -288,7 +288,7 @@ function generateBreadcrumbItems(
         const providerId = pathSegments[2]
         const campaignId = pathSegments[3]
         const campaignName = searchParams.get('campaignName')
-        
+
         // Provider mapping
         const providerLabels: Record<string, string> = {
           'facebook': 'Meta',
@@ -296,17 +296,28 @@ function generateBreadcrumbItems(
           'linkedin': 'LinkedIn',
           'tiktok': 'TikTok',
         }
-        
+
         items.push({
           label: providerLabels[providerId] || providerId,
           href: `/dashboard/ads?provider=${providerId}`,
         })
 
         if (campaignId && campaignName) {
+          const isCreativePath = pathSegments[4] === 'creative' && pathSegments[5]
+
           items.push({
             label: campaignName,
-            isCurrent: true,
+            href: isCreativePath ? `/dashboard/ads/campaigns/${providerId}/${campaignId}?${searchParams.toString()}` : undefined,
+            isCurrent: !isCreativePath,
           })
+
+          if (isCreativePath) {
+            const creativeName = searchParams.get('creativeName')
+            items.push({
+              label: creativeName || 'Creative Detail',
+              isCurrent: true,
+            })
+          }
         }
       }
       break

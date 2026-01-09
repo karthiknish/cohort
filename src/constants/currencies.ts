@@ -251,3 +251,82 @@ export function getPopularCurrencyOptions(): Array<{ value: CurrencyCode; label:
     symbol: SUPPORTED_CURRENCIES[code].symbol,
   }))
 }
+
+/**
+ * Normalize a currency code to uppercase
+ */
+export function normalizeCurrencyCode(value?: string | null): string {
+  if (typeof value !== 'string') return DEFAULT_CURRENCY
+  const trimmed = value.trim()
+  return trimmed ? trimmed.toUpperCase() : DEFAULT_CURRENCY
+}
+
+/**
+ * Format a monetary amount with proper currency formatting
+ * Uses Intl.NumberFormat for locale-aware formatting
+ */
+export function formatMoney(amount: number, currency?: string | null): string {
+  const code = normalizeCurrencyCode(currency)
+
+  try {
+    const info = getCurrencyInfo(code)
+    return new Intl.NumberFormat(info.locale, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: info.decimalDigits,
+      maximumFractionDigits: info.decimalDigits,
+    }).format(amount)
+  } catch {
+    // Fallback for unsupported currencies
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount)
+    } catch {
+      // Ultimate fallback
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount)
+    }
+  }
+}
+
+/**
+ * Format a monetary amount in compact form (e.g., $1.2K, $3.5M)
+ */
+export function formatMoneyCompact(amount: number, currency?: string | null): string {
+  const code = normalizeCurrencyCode(currency)
+
+  try {
+    const info = getCurrencyInfo(code)
+    return new Intl.NumberFormat(info.locale, {
+      style: 'currency',
+      currency: code,
+      notation: 'compact',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    }).format(amount)
+  } catch {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: 'USD',
+      notation: 'compact',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    }).format(amount)
+  }
+}
+
+/**
+ * Get the currency symbol for a currency code
+ */
+export function getCurrencySymbol(currency?: string | null): string {
+  const code = normalizeCurrencyCode(currency)
+  return getCurrencyInfo(code).symbol
+}

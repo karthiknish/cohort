@@ -12,7 +12,7 @@ export async function fetchGoogleCreatives(options: {
     campaignId?: string
     adGroupId?: string
     loginCustomerId?: string | null
-    statusFilter?: ('ENABLED' | 'PAUSED')[]
+    statusFilter?: ('ENABLED' | 'PAUSED' | 'REMOVED')[]
     maxRetries?: number
 }): Promise<GoogleCreative[]> {
     const {
@@ -22,7 +22,7 @@ export async function fetchGoogleCreatives(options: {
         campaignId,
         adGroupId,
         loginCustomerId,
-        statusFilter = ['ENABLED', 'PAUSED'],
+        statusFilter = ['ENABLED', 'PAUSED', 'REMOVED'],
         maxRetries = 3,
     } = options
 
@@ -113,6 +113,9 @@ export async function fetchGoogleCreatives(options: {
             type = 'IMAGE_AD'
         } else if (ad?.type === 'VIDEO_AD' || ad?.videoAd) {
             type = 'VIDEO_AD'
+        } else {
+            // Fallback for other ad types
+            type = (ad?.type as any) || 'OTHER'
         }
 
         // Extract headlines and descriptions based on ad type
@@ -139,7 +142,7 @@ export async function fetchGoogleCreatives(options: {
             descriptions,
             finalUrls: ad?.finalUrls ?? [],
             displayUrl: ad?.displayUrl,
-            imageUrl: ad?.imageAd?.imageUrl,
+            imageUrl: ad?.imageAd?.imageUrl || ad?.responsiveDisplayAd?.marketingImages?.[0]?.asset,
             videoId: ad?.videoAd?.video?.id,
             businessName: ad?.responsiveDisplayAd?.businessName,
             callToAction: ad?.responsiveDisplayAd?.callToActionText,
