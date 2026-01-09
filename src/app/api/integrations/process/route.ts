@@ -25,11 +25,6 @@ import {
 import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 import { processWorkspaceAlerts } from '@/lib/alerts'
 
-function ensureString(value: unknown, message: string): string {
-  if (typeof value === 'string' && value.length > 0) return value
-  throw new Error(message)
-}
-
 const processSchema = z.object({
   userId: z.string().optional(),
 })
@@ -95,10 +90,19 @@ export const POST = createApiHandler(
 
       switch (job.providerId) {
         case 'google': {
-          const accountId = ensureString(
-            integration.accountId,
-            'Google Ads accountId must be stored on the integration'
-          )
+          const accountId = integration.accountId
+          if (typeof accountId !== 'string' || accountId.trim().length === 0) {
+            await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Google Ads account not configured. Please reconnect your Google Ads integration.' })
+            await updateIntegrationStatus({
+              userId: targetUserId,
+              providerId: job.providerId,
+              clientId,
+              status: 'error',
+              message: 'Account ID missing. Please reconnect integration.',
+            })
+            return { jobId: job.id, providerId: job.providerId, metricsCount: 0, skipped: true, reason: 'missing_account_id' }
+          }
+
           const loginCustomerId = typeof integration.loginCustomerId === 'string' && integration.loginCustomerId.length > 0
             ? integration.loginCustomerId
             : null
@@ -127,7 +131,19 @@ export const POST = createApiHandler(
           break
         }
         case 'facebook': {
-          const accountId = ensureString(integration.accountId, 'Meta Ads accountId must be stored on the integration')
+          const accountId = integration.accountId
+          if (typeof accountId !== 'string' || accountId.trim().length === 0) {
+            // Missing accountId - fail job gracefully and mark integration for reconfiguration
+            await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Meta Ads account not configured. Please reconnect your Meta Ads integration and select an ad account.' })
+            await updateIntegrationStatus({
+              userId: targetUserId,
+              providerId: job.providerId,
+              clientId,
+              status: 'error',
+              message: 'Account ID missing. Please reconnect integration.',
+            })
+            return { jobId: job.id, providerId: job.providerId, metricsCount: 0, skipped: true, reason: 'missing_account_id' }
+          }
 
           let metaAccessToken = integration.accessToken
           if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
@@ -147,7 +163,18 @@ export const POST = createApiHandler(
           break
         }
         case 'linkedin': {
-          const accountId = ensureString(integration.accountId, 'LinkedIn Ads accountId must be stored on the integration')
+          const accountId = integration.accountId
+          if (typeof accountId !== 'string' || accountId.trim().length === 0) {
+            await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'LinkedIn Ads account not configured. Please reconnect your LinkedIn Ads integration.' })
+            await updateIntegrationStatus({
+              userId: targetUserId,
+              providerId: job.providerId,
+              clientId,
+              status: 'error',
+              message: 'Account ID missing. Please reconnect integration.',
+            })
+            return { jobId: job.id, providerId: job.providerId, metricsCount: 0, skipped: true, reason: 'missing_account_id' }
+          }
 
           // LinkedIn tokens expire after 60 days but support refresh tokens
           // Use a 1-day buffer for pre-emptive refresh to avoid sync failures
@@ -172,10 +199,18 @@ export const POST = createApiHandler(
           break
         }
         case 'tiktok': {
-          const advertiserId = ensureString(
-            integration.accountId,
-            'TikTok Ads advertiserId must be stored on the integration',
-          )
+          const advertiserId = integration.accountId
+          if (typeof advertiserId !== 'string' || advertiserId.trim().length === 0) {
+            await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'TikTok Ads account not configured. Please reconnect your TikTok Ads integration.' })
+            await updateIntegrationStatus({
+              userId: targetUserId,
+              providerId: job.providerId,
+              clientId,
+              status: 'error',
+              message: 'Account ID missing. Please reconnect integration.',
+            })
+            return { jobId: job.id, providerId: job.providerId, metricsCount: 0, skipped: true, reason: 'missing_account_id' }
+          }
 
           let tiktokAccessToken = integration.accessToken
           if (isTokenExpiringSoon(integration.accessTokenExpiresAt)) {
