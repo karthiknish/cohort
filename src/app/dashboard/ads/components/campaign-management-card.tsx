@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Pause, Play, Trash2, DollarSign, RefreshCw, Settings2, Calendar, TrendingUp, Clock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
+import type { DateRange } from './date-range-picker'
 
 // =============================================================================
 // TYPES
@@ -38,7 +40,10 @@ type Campaign = {
   status: string
   budget?: number
   budgetType?: string
+  currency?: string
   objective?: string
+  startTime?: string
+  stopTime?: string
   biddingStrategy?: {
     type: string
     targetCpa?: number
@@ -56,15 +61,34 @@ type Props = {
   providerId: string
   providerName: string
   isConnected: boolean
+  dateRange: DateRange
   onRefresh?: () => void
+}
+
+function toIsoDateOnly(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+function formatCampaignDateRange(startTime?: string, stopTime?: string): string {
+  const start = startTime ? new Date(startTime) : null
+  const stop = stopTime ? new Date(stopTime) : null
+
+  const hasStart = Boolean(start && !Number.isNaN(start.getTime()))
+  const hasStop = Boolean(stop && !Number.isNaN(stop.getTime()))
+
+  if (!hasStart && !hasStop) return '—'
+  if (hasStart && !hasStop) return `Starts ${start!.toLocaleDateString()}`
+  if (!hasStart && hasStop) return `Ends ${stop!.toLocaleDateString()}`
+  return `${start!.toLocaleDateString()} → ${stop!.toLocaleDateString()}`
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function CampaignManagementCard({ providerId, providerName, isConnected, onRefresh }: Props) {
+export function CampaignManagementCard({ providerId, providerName, isConnected, dateRange, onRefresh }: Props) {
   const { selectedClientId } = useClientContext()
+  const router = useRouter()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -78,6 +102,9 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     value: '',
   })
 
+  const startDate = useMemo(() => toIsoDateOnly(dateRange.start), [dateRange.start])
+  const endDate = useMemo(() => toIsoDateOnly(dateRange.end), [dateRange.end])
+
   const fetchCampaigns = useCallback(async () => {
     if (!isConnected) return
     
@@ -90,8 +117,12 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
         const error = await response.json().catch(() => ({}))
         throw new Error(error.error || error.message || 'Failed to fetch campaigns')
       }
-      const data = await response.json()
-      setCampaigns(data.campaigns || [])
+      const payload: unknown = await response.json().catch(() => ({}))
+      const payloadRecord = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
+      const data = payloadRecord && 'data' in payloadRecord ? payloadRecord.data : payload
+      const dataRecord = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
+      const campaignsRaw = dataRecord?.campaigns
+      setCampaigns(Array.isArray(campaignsRaw) ? (campaignsRaw as Campaign[]) : [])
     } catch (error) {
       toast({
         title: 'Error',
@@ -102,6 +133,26 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       setLoading(false)
     }
   }, [providerId, isConnected, selectedClientId])
+
+  // Auto-load campaigns on mount when connected
+  useEffect(() => {
+    if (isConnected) {
+      void fetchCampaigns()
+    }
+  }, [fetchCampaigns, isConnected])
+
+  const openInsightsPage = useCallback(
+    (campaign: Campaign) => {
+      const params = new URLSearchParams({ startDate, endDate })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      params.set('campaignName', campaign.name)
+      if (campaign.startTime) params.set('campaignStartTime', campaign.startTime)
+      if (campaign.stopTime) params.set('campaignStopTime', campaign.stopTime)
+
+      router.push(`/dashboard/ads/campaigns/${providerId}/${campaign.id}?${params.toString()}`)
+    },
+    [endDate, providerId, router, selectedClientId, startDate]
+  )
 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
     setActionLoading(campaignId)
@@ -265,116 +316,150 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           </div>
           <Button variant="outline" size="sm" onClick={fetchCampaigns} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Load Campaigns
+            Refresh
           </Button>
         </CardHeader>
         <CardContent>
-          {campaigns.length === 0 ? (
+          {loading ? (
             <p className="text-muted-foreground text-sm">
-              Click &quot;Load Campaigns&quot; to view and manage your campaigns.
+              Loading campaigns...
+            </p>
+          ) : campaigns.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No campaigns found for this provider.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Budget</TableHead>
-                  <TableHead>Objective</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaigns.map((campaign) => (
-                  <TableRow key={campaign.id}>
-                    <TableCell className="font-medium">{campaign.name}</TableCell>
-                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                    <TableCell>
-                      {campaign.budget !== undefined ? (
-                        <span>${campaign.budget.toFixed(2)}/{campaign.budgetType || 'day'}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="capitalize text-sm text-muted-foreground">
-                        {campaign.objective?.toLowerCase().replace(/_/g, ' ') || '-'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      {isActive(campaign.status) ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAction(campaign.id, 'pause')}
-                          disabled={actionLoading === campaign.id}
-                        >
-                          <Pause className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAction(campaign.id, 'enable')}
-                          disabled={actionLoading === campaign.id}
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCampaign(campaign)
-                          setNewBudget(campaign.budget?.toString() || '')
-                          setBudgetDialogOpen(true)
-                        }}
-                        disabled={actionLoading === campaign.id}
-                      >
-                        <DollarSign className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCampaign(campaign)
-                          setNewBidding({
-                            type: campaign.biddingStrategy?.type || '',
-                            value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
-                          })
-                          setBiddingDialogOpen(true)
-                        }}
-                        disabled={actionLoading === campaign.id}
-                        title="Bidding Strategy"
-                      >
-                        <TrendingUp className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCampaign(campaign)
-                          setScheduleDialogOpen(true)
-                        }}
-                        disabled={actionLoading === campaign.id}
-                        title="Ad Schedule"
-                      >
-                        <Calendar className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleAction(campaign.id, 'remove')}
-                        disabled={actionLoading === campaign.id}
-                        title="Remove Campaign"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <div className="max-h-[420px] overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Runs</TableHead>
+                    <TableHead>Budget</TableHead>
+                    <TableHead>Objective</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {campaigns.map((campaign) => (
+                    <TableRow
+                      key={campaign.id}
+                      className="cursor-pointer"
+                      onClick={() => openInsightsPage(campaign)}
+                    >
+                      <TableCell className="font-medium hover:underline">{campaign.name}</TableCell>
+                      <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatCampaignDateRange(campaign.startTime, campaign.stopTime)}
+                      </TableCell>
+                      <TableCell>
+                        {campaign.budget !== undefined ? (
+                          <span>
+                            {new Intl.NumberFormat(undefined, {
+                              style: 'currency',
+                              currency: campaign.currency || 'USD',
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }).format(campaign.budget)}
+                            /{campaign.budgetType || 'day'}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="capitalize text-sm text-muted-foreground">
+                          {campaign.objective?.toLowerCase().replace(/_/g, ' ') || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        {isActive(campaign.status) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleAction(campaign.id, 'pause')
+                            }}
+                            disabled={actionLoading === campaign.id}
+                          >
+                            <Pause className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void handleAction(campaign.id, 'enable')
+                            }}
+                            disabled={actionLoading === campaign.id}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedCampaign(campaign)
+                            setNewBudget(campaign.budget?.toString() || '')
+                            setBudgetDialogOpen(true)
+                          }}
+                          disabled={actionLoading === campaign.id}
+                        >
+                          <DollarSign className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedCampaign(campaign)
+                            setNewBidding({
+                              type: campaign.biddingStrategy?.type || '',
+                              value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
+                            })
+                            setBiddingDialogOpen(true)
+                          }}
+                          disabled={actionLoading === campaign.id}
+                          title="Bidding Strategy"
+                        >
+                          <TrendingUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedCampaign(campaign)
+                            setScheduleDialogOpen(true)
+                          }}
+                          disabled={actionLoading === campaign.id}
+                          title="Ad Schedule"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void handleAction(campaign.id, 'remove')
+                          }}
+                          disabled={actionLoading === campaign.id}
+                          title="Remove Campaign"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -37,7 +37,6 @@ import {
   updateMetaCampaignBudget,
   updateMetaCampaignBidding,
   removeMetaCampaign,
-  MetaCampaign,
 } from '@/services/integrations/meta-ads'
 
 
@@ -75,7 +74,10 @@ type NormalizedCampaign = {
   status: string
   budget?: number
   budgetType?: string
+  currency?: string
   objective?: string
+  startTime?: string
+  stopTime?: string
   biddingStrategy?: {
     type: string
     targetCpa?: number
@@ -92,7 +94,7 @@ type NormalizedCampaign = {
 // HELPERS
 // =============================================================================
 
-function normalizeGoogleCampaigns(campaigns: GoogleCampaign[]): NormalizedCampaign[] {
+function normalizeGoogleCampaigns(campaigns: GoogleCampaign[], currency?: string): NormalizedCampaign[] {
   return campaigns.map((c) => ({
     id: c.id,
     name: c.name,
@@ -100,6 +102,7 @@ function normalizeGoogleCampaigns(campaigns: GoogleCampaign[]): NormalizedCampai
     status: c.status,
     budget: c.budgetAmountMicros ? c.budgetAmountMicros / 1_000_000 : undefined,
     budgetType: c.biddingStrategyType,
+    currency,
     objective: c.advertisingChannelType,
     biddingStrategy: c.biddingStrategyType ? {
       type: c.biddingStrategyType,
@@ -110,7 +113,7 @@ function normalizeGoogleCampaigns(campaigns: GoogleCampaign[]): NormalizedCampai
   }))
 }
 
-function normalizeTikTokCampaigns(campaigns: TikTokCampaign[]): NormalizedCampaign[] {
+function normalizeTikTokCampaigns(campaigns: TikTokCampaign[], currency?: string): NormalizedCampaign[] {
   return campaigns.map((c) => ({
     id: c.id,
     name: c.name,
@@ -118,11 +121,12 @@ function normalizeTikTokCampaigns(campaigns: TikTokCampaign[]): NormalizedCampai
     status: c.status,
     budget: c.budget,
     budgetType: c.budgetMode,
+    currency,
     objective: c.objective,
   }))
 }
 
-function normalizeLinkedInCampaigns(campaigns: LinkedInCampaign[]): NormalizedCampaign[] {
+function normalizeLinkedInCampaigns(campaigns: LinkedInCampaign[], currency?: string): NormalizedCampaign[] {
   return campaigns.map((c) => ({
     id: c.id,
     name: c.name,
@@ -130,6 +134,7 @@ function normalizeLinkedInCampaigns(campaigns: LinkedInCampaign[]): NormalizedCa
     status: c.status,
     budget: c.dailyBudget ?? c.totalBudget,
     budgetType: c.dailyBudget ? 'daily' : 'total',
+    currency,
     objective: c.objectiveType,
   }))
 }
@@ -185,7 +190,7 @@ export const GET = createApiHandler(
         loginCustomerId,
       })
 
-      campaigns = normalizeGoogleCampaigns(googleCampaigns)
+      campaigns = normalizeGoogleCampaigns(googleCampaigns, integration.currency ?? undefined)
     } else if (providerId === 'tiktok') {
       const accessToken = integration.accessToken
       const advertiserId = integration.accountId
@@ -199,7 +204,7 @@ export const GET = createApiHandler(
         advertiserId,
       })
 
-      campaigns = normalizeTikTokCampaigns(tiktokCampaigns)
+      campaigns = normalizeTikTokCampaigns(tiktokCampaigns, integration.currency ?? undefined)
     } else if (providerId === 'linkedin') {
       const accessToken = integration.accessToken
       const accountId = integration.accountId
@@ -213,7 +218,7 @@ export const GET = createApiHandler(
         accountId,
       })
 
-      campaigns = normalizeLinkedInCampaigns(linkedInCampaigns)
+      campaigns = normalizeLinkedInCampaigns(linkedInCampaigns, integration.currency ?? undefined)
     } else if (providerId === 'facebook') {
       let accessToken: string
       try {
@@ -242,7 +247,10 @@ export const GET = createApiHandler(
         status: c.status,
         budget: c.dailyBudget ?? c.lifetimeBudget,
         budgetType: c.dailyBudget ? 'daily' : c.lifetimeBudget ? 'lifetime' : undefined,
+        currency: integration.currency ?? undefined,
         objective: c.objective,
+        startTime: c.startTime,
+        stopTime: c.stopTime,
       }))
     }
 

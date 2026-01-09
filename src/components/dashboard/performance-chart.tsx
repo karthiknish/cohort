@@ -3,10 +3,17 @@
 import { memo, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { Info } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { ChartConfig } from '@/components/ui/chart'
 
 interface MetricRecord {
@@ -18,44 +25,63 @@ interface MetricRecord {
 interface PerformanceChartProps {
   metrics: MetricRecord[]
   loading: boolean
+  currency?: string
+}
+
+function formatCurrencyValue(value: number, currency: string = 'USD'): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value)
+  } catch {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+}
+
+function formatCurrencyValueFull(value: number, currency: string = 'USD'): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+    }).format(value)
+  } catch {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+    }).format(value)
+  }
 }
 
 const ChartPlaceholder = () => (
   <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />
 )
 
-const ChartContainer = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartContainer), {
-  ssr: false,
-  loading: ChartPlaceholder,
-})
-const ChartTooltip = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartTooltip), {
-  ssr: false,
-  loading: () => null,
-})
-const ChartTooltipContent = dynamic(
-  () => import('@/components/ui/chart').then((m) => m.ChartTooltipContent),
-  { ssr: false, loading: () => null }
-)
-const ChartLegend = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartLegend), {
-  ssr: false,
-  loading: () => null,
-})
-const ChartLegendContent = dynamic(
-  () => import('@/components/ui/chart').then((m) => m.ChartLegendContent),
-  { ssr: false, loading: () => null }
-)
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart'
 
-const AreaChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.AreaChart), {
-  ssr: false,
-  loading: ChartPlaceholder,
-})
-const Area = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Area), { ssr: false, loading: () => null })
-const CartesianGrid = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.CartesianGrid), {
-  ssr: false,
-  loading: () => null,
-})
-const XAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.XAxis), { ssr: false, loading: () => null })
-const YAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.YAxis), { ssr: false, loading: () => null })
+// Direct Recharts imports to fix rendering issues on pages with many charts
+import {
+  AreaChart,
+  Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from 'recharts'
 
 const chartConfig = {
   revenue: {
@@ -68,7 +94,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export const PerformanceChart = memo(function PerformanceChart({ metrics, loading }: PerformanceChartProps) {
+export const PerformanceChart = memo(function PerformanceChart({ metrics, loading, currency = 'USD' }: PerformanceChartProps) {
   const chartData = useMemo(() => {
     if (!metrics || !metrics.length) return []
 
@@ -136,7 +162,20 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
     <Card className="h-full shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-lg">Performance Overview</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">Performance Overview</CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p><strong>Revenue:</strong> Total income generated from campaign conversions.</p>
+                  <p className="mt-1"><strong>Ad Spend:</strong> Total amount invested in advertising. Compare with revenue to assess campaign profitability.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <CardDescription>Revenue vs Ad Spend over time</CardDescription>
         </div>
         <Button asChild variant="outline" size="sm">
@@ -168,17 +207,17 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
               axisLine={false}
               tickLine={false}
               tickMargin={8}
-              tickFormatter={(value) => `$${value.toLocaleString()}`}
+              tickFormatter={(value) => formatCurrencyValue(value, currency)}
               tick={{ fontSize: 12 }}
             />
-            <ChartTooltip
+            <RechartsTooltip
               cursor={{ strokeDasharray: '3 3' }}
               content={
                 <ChartTooltipContent
                   formatter={(value, name) => (
                     <div className="flex items-center justify-between gap-8">
                       <span className="text-muted-foreground">{chartConfig[name as keyof typeof chartConfig]?.label}</span>
-                      <span className="font-mono font-medium">${Number(value).toLocaleString()}</span>
+                      <span className="font-mono font-medium">{formatCurrencyValueFull(Number(value), currency)}</span>
                     </div>
                   )}
                 />

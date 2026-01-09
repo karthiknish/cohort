@@ -6,6 +6,7 @@ import { FadeIn } from '@/components/ui/animate-in'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
+import { DateRangePicker } from './components/date-range-picker'
 
 import {
   AdsSkeleton,
@@ -218,21 +219,23 @@ export default function AdsPage() {
           {/* Campaign Management Cards for each connected provider */}
           {adPlatforms.filter((p) => connectedProviders[p.id]).length > 0 && (
             <FadeIn>
-              <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-lg font-semibold">Campaign Management</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {adPlatforms
-                    .filter((p) => connectedProviders[p.id])
-                    .map((platform) => (
-                      <CampaignManagementCard
-                        key={platform.id}
-                        providerId={platform.id}
-                        providerName={platform.name}
-                        isConnected={connectedProviders[platform.id]}
-                        onRefresh={handleManualRefresh}
-                      />
-                    ))}
-                </div>
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+              </div>
+              <div className="mt-4 grid gap-4">
+                {adPlatforms
+                  .filter((p) => connectedProviders[p.id])
+                  .map((platform) => (
+                    <CampaignManagementCard
+                      key={platform.id}
+                      providerId={platform.id}
+                      providerName={platform.name}
+                      isConnected={connectedProviders[platform.id]}
+                      dateRange={dateRange}
+                      onRefresh={handleManualRefresh}
+                    />
+                  ))}
               </div>
             </FadeIn>
           )}

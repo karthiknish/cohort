@@ -102,3 +102,55 @@ export type PreviewAdsIntegrationStatus = {
     syncFrequencyMinutes: number
     scheduledTimeframeDays: number
 }
+
+export type PreviewCampaign = {
+    id: string
+    name: string
+    providerId: string
+    status: string
+    budget?: number
+    budgetType?: string
+    currency?: string
+    objective?: string
+    startTime?: string
+    stopTime?: string
+}
+
+export type PreviewCampaignInsights = {
+    providerId: string
+    campaignId: string
+    startDate: string
+    endDate: string
+    currency?: string
+    totals: {
+        spend: number
+        impressions: number
+        clicks: number
+        conversions: number
+        revenue: number
+        reach: number | null
+    }
+    series: Array<{
+        date: string
+        spend: number
+        impressions: number
+        clicks: number
+        conversions: number
+        revenue: number
+        reach: number | null
+    }>
+    insights: {
+        providerId: string
+        calculatedMetrics: Record<string, number | null>
+        insights: Array<{
+            type: string
+            level: 'success' | 'info' | 'warning' | 'error'
+            metric: string
+            value?: number | null
+            benchmark?: number | null
+            message: string
+            recommendation?: string
+        }>
+        calculatedAt: string
+    }
+}

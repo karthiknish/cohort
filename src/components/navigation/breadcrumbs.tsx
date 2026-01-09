@@ -282,6 +282,33 @@ function generateBreadcrumbItems(
         href: '/dashboard/ads',
         icon: Megaphone,
       })
+
+      // Handle campaign detail routes: /dashboard/ads/campaigns/[providerId]/[campaignId]
+      if (pathSegments[1] === 'campaigns' && pathSegments[2]) {
+        const providerId = pathSegments[2]
+        const campaignId = pathSegments[3]
+        const campaignName = searchParams.get('campaignName')
+        
+        // Provider mapping
+        const providerLabels: Record<string, string> = {
+          'facebook': 'Meta',
+          'google': 'Google Ads',
+          'linkedin': 'LinkedIn',
+          'tiktok': 'TikTok',
+        }
+        
+        items.push({
+          label: providerLabels[providerId] || providerId,
+          href: `/dashboard/ads?provider=${providerId}`,
+        })
+
+        if (campaignId && campaignName) {
+          items.push({
+            label: campaignName,
+            isCurrent: true,
+          })
+        }
+      }
       break
 
     case 'activity':

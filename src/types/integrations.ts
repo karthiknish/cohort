@@ -29,6 +29,7 @@ export interface AdIntegration {
   scopes: string[]
   accountId?: string | null
   accountName?: string | null
+  currency?: string | null
   developerToken?: string | null
   loginCustomerId?: string | null
   lastSyncStatus?: 'never' | 'pending' | 'success' | 'error'

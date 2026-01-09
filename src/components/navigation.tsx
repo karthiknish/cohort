@@ -255,7 +255,32 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
 }
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const stored = localStorage.getItem('cohorts.sidebar.collapsed')
+      if (stored === 'true') setCollapsed(true)
+      if (stored === 'false') setCollapsed(false)
+    } catch {
+      // ignore storage failures
+    }
+  }, [])
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cohorts.sidebar.collapsed', String(next))
+        }
+      } catch {
+        // ignore storage failures
+      }
+      return next
+    })
+  }, [])
 
   return (
     <aside
@@ -272,7 +297,7 @@ export function Sidebar() {
           'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-primary hover:bg-muted/50',
           collapsed && 'mt-2'
         )}
-        onClick={() => setCollapsed((prev) => !prev)}
+        onClick={toggleCollapsed}
       >
         {collapsed ? (
           <ChevronRight className="h-4 w-4 transition-transform" />

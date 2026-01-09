@@ -92,9 +92,10 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
         const error = await response.json().catch(() => ({}))
         throw new Error(error.error || error.message || 'Failed to fetch targeting')
       }
-      const data = await response.json()
-      setTargeting(data.targeting || [])
-      setInsights(data.insights || null)
+      const payload = await response.json().catch(() => ({})) as any
+      const data = payload?.data ?? payload
+      setTargeting(data?.targeting || [])
+      setInsights(data?.insights || null)
     } catch (error) {
       toast({
         title: 'Error',

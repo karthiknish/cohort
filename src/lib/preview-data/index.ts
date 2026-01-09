@@ -32,4 +32,4 @@ export { getPreviewNotifications } from './notifications'
 export { getPreviewCollaborationMessages } from './collaboration'
 
 // Ads
-export { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses } from './ads'
+export { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses, getPreviewCampaigns, getPreviewCampaignInsights } from './ads'
