@@ -337,3 +337,31 @@ export async function deleteAdIntegration(options: {
   const integrationsCollection = await getIntegrationsCollectionRef({ userId, clientId })
   await integrationsCollection.doc(providerId).delete()
 }
+
+export async function deleteSyncJobs(options: {
+  userId: string
+  providerId: string
+  clientId?: string | null
+}): Promise<void> {
+  const { userId, providerId, clientId } = options
+
+  const workspaceRef = await getWorkspaceRef(userId)
+  const jobsRef = workspaceRef.collection('syncJobs')
+  let query = jobsRef
+    .where('providerId', '==', providerId)
+    .where('status', 'in', ['queued', 'running', 'failed']) as FirebaseFirestore.Query
+
+  if (typeof clientId === 'string' && clientId.trim().length > 0) {
+    query = query.where('clientId', '==', clientId.trim())
+  }
+
+  const snapshot = await query.get()
+  if (snapshot.empty) return
+
+  const batch = adminDb.batch()
+  snapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref)
+  })
+
+  await batch.commit()
+}

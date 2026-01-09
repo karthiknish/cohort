@@ -136,9 +136,6 @@ export default function AdminClientsPage() {
               <Link href="/admin/team">Team</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/admin/leads">Leads</Link>
-            </Button>
-            <Button asChild variant="outline">
               <Link href="/admin">Admin home</Link>
             </Button>
             <Button variant="outline" size="sm" onClick={() => void loadClients()} disabled={clientsLoading} className="inline-flex items-center gap-2">

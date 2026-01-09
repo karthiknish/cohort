@@ -18,4 +18,5 @@ export {
     markIntegrationSyncRequested,
     updateIntegrationPreferences,
     deleteAdIntegration,
+    deleteSyncJobs,
 } from '@/lib/firestore-integrations-admin'

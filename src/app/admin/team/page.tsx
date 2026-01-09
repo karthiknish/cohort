@@ -291,9 +291,6 @@ export default function AdminTeamPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild variant="outline">
-              <Link href="/admin/leads">Contact leads</Link>
-            </Button>
-            <Button asChild variant="outline">
               <Link href="/admin/clients">Client workspaces</Link>
             </Button>
             <Button asChild variant="outline">

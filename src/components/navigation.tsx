@@ -23,6 +23,7 @@ import {
   Users,
   Shield,
   Rocket,
+  AlertCircle,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,7 @@ import { NotificationsDropdown } from '@/components/notifications-dropdown'
 import { CommandMenu } from '@/components/navigation/command-menu'
 import { HelpModal, useHelpModal } from '@/components/navigation/help-modal'
 import { KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
+import { ProblemReportModal } from '@/components/navigation/problem-report-modal'
 import {
   Tooltip,
   TooltipContent,
@@ -289,6 +291,7 @@ export function Header() {
   const { user, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const { open: helpOpen, onOpenChange: onHelpOpenChange, showWelcome, setShowWelcome } = useHelpModal()
+  const [problemReportOpen, setProblemReportOpen] = useState(false)
 
   const initials = user?.name
     ? user.name
@@ -366,6 +369,26 @@ export function Header() {
 
           {/* Right side actions */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setProblemReportOpen(true)}
+                    className="hidden sm:inline-flex"
+                    aria-label="Report a problem"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="sr-only">Report a problem</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span>Report a problem</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             <TooltipProvider>
               <Tooltip>
@@ -458,6 +481,7 @@ export function Header() {
       </header>
 
       <HelpModal open={helpOpen} onOpenChange={(nextOpen) => void onHelpOpenChange(nextOpen)} showWelcome={showWelcome} />
+      <ProblemReportModal open={problemReportOpen} onOpenChange={setProblemReportOpen} />
     </>
   )
 }

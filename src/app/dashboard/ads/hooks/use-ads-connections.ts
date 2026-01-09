@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -103,6 +103,12 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   // Internal refresh trigger
   const [refreshTick, setRefreshTick] = useState(0)
 
+  // Trigger refresh
+  const triggerRefresh = useCallback(() => {
+    setRefreshTick((tick) => tick + 1)
+    onRefresh?.()
+  }, [onRefresh])
+
   // Derived state
   const automationStatuses = integrationStatuses?.statuses ?? []
 
@@ -169,7 +175,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({}),
     })
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
@@ -190,7 +200,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({}),
     })
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
@@ -218,8 +232,12 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         signal: controller.signal,
+        body: JSON.stringify({}),
       })
       const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
       if (!response.ok) {
@@ -237,7 +255,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       try {
         await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({}),
         })
       } catch {
         // Sync will be picked up by cron if this fails - non-critical
@@ -255,7 +277,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       clearTimeout(timeoutId)
       setInitializingMeta(false)
     }
-  }, [getIdToken, toast, selectedClientId])
+  }, [getIdToken, toast, selectedClientId, triggerRefresh])
 
   const initializeTikTokIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setTiktokSetupMessage(null)
@@ -276,8 +298,12 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         signal: controller.signal,
+        body: JSON.stringify({}),
       })
       const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
       if (!response.ok) {
@@ -295,7 +321,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       try {
         await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({}),
         })
       } catch {
         // Sync will be picked up by cron if this fails - non-critical
@@ -313,13 +343,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       clearTimeout(timeoutId)
       setInitializingTikTok(false)
     }
-  }, [getIdToken, toast, selectedClientId])
-
-  // Trigger refresh
-  const triggerRefresh = useCallback(() => {
-    setRefreshTick((tick) => tick + 1)
-    onRefresh?.()
-  }, [onRefresh])
+  }, [getIdToken, toast, selectedClientId, triggerRefresh])
 
   // Load integration statuses
   useEffect(() => {
@@ -364,17 +388,25 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   }, [integrationStatuses])
 
   // URL signaling handler
+  const oauthProcessedRef = useRef<Record<string, boolean>>({})
+
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const searchParams = new URLSearchParams(window.location.search)
     const oauthSuccess = searchParams.get('oauth_success') === 'true'
     const oauthError = searchParams.get('oauth_error')
-    const provider = searchParams.get('provider')
+    const providerId = searchParams.get('provider')
     const message = searchParams.get('message')
     const oauthClientId = searchParams.get('clientId')
 
     if (!oauthSuccess && !oauthError) return
+    if (!providerId) return
+
+    // Prevent re-processing if this provider was already handled in this mount cycle
+    const processingKey = `${providerId}:${oauthSuccess ? 'success' : 'error'}`
+    if (oauthProcessedRef.current[processingKey]) return
+    oauthProcessedRef.current[processingKey] = true
 
     // Clean up URL immediately
     const newUrl = new URL(window.location.href)
@@ -385,13 +417,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     newUrl.searchParams.delete('clientId')
     window.history.replaceState({}, '', newUrl.toString())
 
-    if (oauthSuccess && provider) {
-      console.log(`[useAdsConnections] Detected OAuth success for ${provider}`)
-      if (provider === PROVIDER_IDS.FACEBOOK) {
+    if (oauthSuccess) {
+      console.log(`[useAdsConnections] Detected OAuth success for ${providerId}`)
+      if (providerId === PROVIDER_IDS.FACEBOOK) {
         void initializeMetaIntegration(oauthClientId)
-      } else if (provider === PROVIDER_IDS.TIKTOK) {
+      } else if (providerId === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
-      } else if (provider === PROVIDER_IDS.GOOGLE) {
+      } else if (providerId === PROVIDER_IDS.GOOGLE) {
         void initializeGoogleIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
@@ -400,7 +432,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           try {
             await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
               method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { 
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({}),
             })
           } catch {
             console.log('[initializeGoogleIntegration] Initial sync trigger failed, will be processed by cron')
@@ -408,7 +444,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         }).catch(err => {
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize Google Ads') })
         })
-      } else if (provider === PROVIDER_IDS.LINKEDIN) {
+      } else if (providerId === PROVIDER_IDS.LINKEDIN) {
         void initializeLinkedInIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
@@ -417,7 +453,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           try {
             await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
               method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { 
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({}),
             })
           } catch {
             console.log('[initializeLinkedInIntegration] Initial sync trigger failed, will be processed by cron')
@@ -428,15 +468,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       } else {
         toast({
           title: 'Connection successful',
-          description: `${formatProviderName(provider)} has been linked.`
+          description: `${formatProviderName(providerId)} has been linked.`
         })
         triggerRefresh()
       }
     } else if (oauthError) {
-      const displayProvider = provider ? formatProviderName(provider) : 'OAuth'
+      const displayProvider = formatProviderName(providerId)
       const errorMessage = message || 'An unknown error occurred during authentication.'
 
-      console.error(`[useAdsConnections] Detected OAuth error for ${provider}:`, errorMessage)
+      console.error(`[useAdsConnections] Detected OAuth error for ${providerId}:`, errorMessage)
 
       toast({
         variant: 'destructive',
@@ -444,11 +484,9 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         description: errorMessage,
       })
 
-      if (provider) {
-        setConnectionErrors((prev) => ({ ...prev, [provider]: errorMessage }))
-      }
+      setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
     }
-  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast, initializeGoogleIntegration, initializeLinkedInIntegration])
+  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast, initializeGoogleIntegration, initializeLinkedInIntegration, getIdToken])
 
   // Handlers
   const handleConnect = useCallback(async (providerId: string, action: () => Promise<void>) => {

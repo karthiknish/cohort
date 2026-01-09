@@ -10,10 +10,6 @@ import {
   BarChart3,
   Bell,
   CircleCheck,
-  Clock,
-  Inbox,
-  LoaderCircle,
-  Megaphone,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -46,8 +42,6 @@ interface DashboardStats {
   activeUsers: number
   totalClients: number
   activeClients: number
-  pendingLeads: number
-  newLeadsToday: number
   schedulerHealth: 'healthy' | 'warning' | 'error'
   lastSyncTime: string | null
   recentErrors: number
@@ -116,14 +110,11 @@ export default function AdminPage() {
       const token = await getIdToken()
 
       // Fetch stats from multiple endpoints in parallel
-      const [usersRes, clientsRes, leadsRes, schedulerRes, notificationsRes] = await Promise.allSettled([
+      const [usersRes, clientsRes, schedulerRes, notificationsRes] = await Promise.allSettled([
         fetch('/api/admin/users?pageSize=1', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('/api/clients?pageSize=1&includeTotals=true', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('/api/admin/contact-messages?pageSize=10&includeTotals=true', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('/api/admin/scheduler/events?limit=10', {
@@ -162,38 +153,7 @@ export default function AdminPage() {
         }
       }
 
-      // Process leads
-      let pendingLeads = 0
-      let newLeadsToday = 0
       const recentActivities: RecentActivity[] = []
-      if (leadsRes.status === 'fulfilled' && leadsRes.value.ok) {
-        const payload = await leadsRes.value.json()
-        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        const messages = Array.isArray(data?.messages) ? data.messages : []
-        pendingLeads = typeof data.pendingTotal === 'number'
-          ? data.pendingTotal
-          : messages.filter((m: { status: string }) => m.status === 'new').length
-
-        newLeadsToday = typeof data.todayTotal === 'number'
-          ? data.todayTotal
-          : (() => {
-            const today = new Date().toDateString()
-            return messages.filter((m: { createdAt: string }) =>
-              m.createdAt && new Date(m.createdAt).toDateString() === today
-            ).length
-          })()
-
-        // Add recent leads to activities
-        messages.slice(0, 3).forEach((m: { id: string; name: string; company: string | null; createdAt: string }) => {
-          recentActivities.push({
-            id: `lead-${m.id}`,
-            type: 'lead_received',
-            title: 'New lead received',
-            description: `${m.name}${m.company ? ` from ${m.company}` : ''}`,
-            timestamp: m.createdAt,
-          })
-        })
-      }
 
       // Process scheduler
       let schedulerHealth: 'healthy' | 'warning' | 'error' = 'healthy'
@@ -239,8 +199,6 @@ export default function AdminPage() {
         activeUsers,
         totalClients,
         activeClients,
-        pendingLeads,
-        newLeadsToday,
         schedulerHealth,
         lastSyncTime,
         recentErrors,
@@ -298,15 +256,6 @@ export default function AdminPage() {
       icon: ShieldCheck,
       cta: 'Manage clients',
       badge: stats ? `${stats.activeClients} active` : undefined,
-    },
-    {
-      title: 'Lead Pipeline',
-      description: 'Review incoming inquiries and track follow-up progress.',
-      href: '/admin/leads',
-      icon: Megaphone,
-      cta: 'Review leads',
-      badge: stats && stats.pendingLeads > 0 ? `${stats.pendingLeads} new` : undefined,
-      badgeVariant: stats && stats.pendingLeads > 0 ? 'destructive' : 'default',
     },
     {
       title: 'System Health',
@@ -410,24 +359,6 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Leads</CardTitle>
-              <Inbox className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{stats?.pendingLeads ?? 0}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.newLeadsToday ?? 0} new today
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -786,13 +717,11 @@ export default function AdminPage() {
                       <div key={activity.id} className="flex gap-3">
                         <div className={cn(
                           'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                          activity.type === 'lead_received' && 'bg-blue-100 text-blue-600',
                           activity.type === 'user_joined' && 'bg-emerald-100 text-emerald-600',
                           activity.type === 'client_created' && 'bg-purple-100 text-purple-600',
                           activity.type === 'new_user_signup' && 'bg-amber-100 text-amber-600',
                           activity.type === 'error' && 'bg-red-100 text-red-600',
                         )}>
-                          {activity.type === 'lead_received' && <Inbox className="h-4 w-4" />}
                           {activity.type === 'user_joined' && <Users className="h-4 w-4" />}
                           {activity.type === 'client_created' && <ShieldCheck className="h-4 w-4" />}
                           {activity.type === 'new_user_signup' && <Bell className="h-4 w-4" />}
@@ -818,23 +747,6 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Help Card */}
-            <Card className="border-dashed">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Inbox className="h-4 w-4" />
-                  Need Help?
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  Contact support for custom workflows or permissions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="secondary" size="sm" className="w-full">
-                  <Link href="/contact">Contact Support</Link>
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

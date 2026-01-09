@@ -277,10 +277,11 @@ service cloud.firestore {
     // ADMIN-ONLY COLLECTIONS
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Contact form submissions
-    match /contactMessages/{messageId} {
-      allow read, write: if isAdmin();
-      allow create: if true; // Public contact form
+    // Problem reports
+    match /problemReports/{reportId} {
+      allow create: if isSignedIn();
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     // Invitations (admin manages, invited users can read their own)

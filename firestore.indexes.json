@@ -33,20 +33,6 @@
       ]
     },
     {
-      "collectionGroup": "contactMessages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "adMetrics",
       "queryScope": "COLLECTION",
       "fields": [

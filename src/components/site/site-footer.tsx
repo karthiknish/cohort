@@ -31,9 +31,6 @@ export function SiteFooter() {
             <Link href="/privacy" className="transition hover:text-primary">
               Privacy
             </Link>
-            <Link href="/contact" className="transition hover:text-primary">
-              Contact
-            </Link>
           </div>
         </div>
       </div>

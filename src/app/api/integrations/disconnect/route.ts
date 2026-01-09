@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { deleteAdIntegration } from '@/lib/firestore/admin'
+import { deleteAdIntegration, deleteSyncJobs } from '@/lib/firestore/admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError } from '@/lib/api-errors'
 import { logAuditAction } from '@/lib/audit-logger'
@@ -24,6 +24,7 @@ export const POST = createApiHandler(
       ? body.clientId.trim()
       : null
 
+    await deleteSyncJobs({ userId: auth.uid!, providerId: body.providerId, clientId })
     await deleteAdIntegration({ userId: auth.uid!, providerId: body.providerId, clientId })
 
     await logAuditAction({

@@ -9,9 +9,9 @@ import {
   ChevronRight,
   LayoutDashboard,
   Lightbulb,
-  Megaphone,
   ShieldCheck,
   Users,
+  AlertCircle,
 } from 'lucide-react'
 
 import { ProtectedRoute } from '@/components/protected-route'
@@ -46,11 +46,6 @@ const adminNavItems = [
     icon: ShieldCheck,
   },
   {
-    title: 'Leads',
-    href: '/admin/leads',
-    icon: Megaphone,
-  },
-  {
     title: 'Features',
     href: '/admin/features',
     icon: Lightbulb,
@@ -59,6 +54,11 @@ const adminNavItems = [
     title: 'Health',
     href: '/admin/health',
     icon: Activity,
+  },
+  {
+    title: 'Issues',
+    href: '/admin/issues',
+    icon: AlertCircle,
   },
 ]
 
@@ -107,7 +107,6 @@ function AdminBreadcrumb() {
 
     if (segments[0] === 'admin') {
       breadcrumbs.push({ title: 'Admin', href: '/admin' })
-
       if (segments[1]) {
         const navItem = adminNavItems.find(item => item.href === `/admin/${segments[1]}`)
         if (navItem) {

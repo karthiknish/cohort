@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { CreditCard, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -220,14 +219,6 @@ export default function FinancePaymentsPage() {
         selectedStatus={invoiceStatusFilter}
         onSelectStatus={setInvoiceStatusFilter}
       />
-
-      <div className="text-xs text-muted-foreground">
-        Need help?{' '}
-        <Link href="/contact" className="text-primary underline">
-          Contact support
-        </Link>{' '}
-        for billing questions.
-      </div>
     </div>
   )
 }
