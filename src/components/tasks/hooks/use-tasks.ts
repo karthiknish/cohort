@@ -6,6 +6,7 @@ import { TaskRecord, TaskStatus } from '@/types/tasks'
 import { apiFetch } from '@/lib/api-client'
 import { ApiClientError } from '@/lib/user-friendly-error'
 import { getPreviewTasks } from '@/lib/preview-data'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import {
   RETRY_CONFIG,
   TaskListResponse,
@@ -322,6 +323,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
         })
 
         setTasks((prev) => prev.filter((t) => t.id !== task.id))
+        emitDashboardRefresh({ reason: 'task-mutated', clientId: task.clientId ?? clientId ?? null })
         toast({
           title: 'Task deleted',
           description: `"${task.title}" has been permanently removed.`,
@@ -377,6 +379,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
         })
         setTasks((prev) => [createdTask, ...prev])
         setError(null)
+        emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? clientId ?? null })
         toast({
           title: 'Task created successfully',
           description: `"${createdTask.title}" has been added to your task list.`,
@@ -423,6 +426,7 @@ export function useTasks({ userId, clientId, authLoading, isPreviewMode = false 
           body: JSON.stringify(payload),
         })
         setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
+        emitDashboardRefresh({ reason: 'task-mutated', clientId: updatedTask.clientId ?? clientId ?? null })
         toast({
           title: 'Task updated',
           description: `Changes to "${updatedTask.title}" have been saved.`,

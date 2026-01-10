@@ -69,6 +69,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { apiFetch } from '@/lib/api-client'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import type { MilestoneRecord } from '@/types/milestones'
 
@@ -330,6 +331,7 @@ export default function ProjectsPage() {
       })
 
       setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
+      emitDashboardRefresh({ reason: 'project-mutated', clientId: projectToDelete.clientId ?? null })
       toast({
         title: 'Project deleted',
         description: `"${projectToDelete.name}" has been permanently removed.`,
@@ -376,6 +378,7 @@ export default function ProjectsPage() {
       })
 
       setProjects((prev) => prev.map((p) => p.id === project.id ? updatedProject : p))
+      emitDashboardRefresh({ reason: 'project-mutated', clientId: updatedProject.clientId ?? null })
       toast({
         title: 'Status updated',
         description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,

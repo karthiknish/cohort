@@ -5,6 +5,7 @@ import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X } from 'lucide-rea
 import { format } from 'date-fns'
 
 import { apiFetch } from '@/lib/api-client'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -151,6 +152,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
       })
 
       onProjectCreated?.(createdProject)
+      emitDashboardRefresh({ reason: 'project-mutated', clientId: createdProject.clientId ?? null })
       setOpen(false)
       resetForm()
     } catch (error) {

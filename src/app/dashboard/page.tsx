@@ -49,6 +49,11 @@ import { ComparisonInsights } from '@/components/dashboard/comparison/comparison
 import { AdInsightsWidget } from '@/components/dashboard/ad-insights-widget'
 import { ClientProposalsCard } from './components/client-proposals-card'
 import { ClientInvoicesCard } from './components/client-invoices-card'
+import { AttentionSummaryCard } from '@/components/dashboard/attention-summary-card'
+import { WorkspaceTrendsCard } from '@/components/dashboard/workspace-trends-card'
+import { useIntegrationStatusSummary } from './hooks/use-integration-status-summary'
+import { AdvancedMetricsPreviewCards } from '@/components/dashboard/advanced-metrics-preview-cards'
+import { PlatformComparisonSummaryCard } from '@/components/dashboard/platform-comparison-summary-card'
 
 // Types
 import type { DashboardTaskItem } from '@/types/dashboard'
@@ -148,6 +153,16 @@ export default function DashboardPage() {
     isRefreshing,
   } = useDashboardData({ selectedClientId: selectedClientId ?? null })
 
+  const integrationScopeClientIds = useMemo(() => {
+    if (user?.role === 'admin' && comparisonClientIds.length > 0) return comparisonClientIds
+    if (selectedClientId) return [selectedClientId]
+    return [] as string[]
+  }, [comparisonClientIds, selectedClientId, user?.role])
+
+  const { summary: integrationSummary, loading: integrationsLoading } = useIntegrationStatusSummary({
+    clientIds: integrationScopeClientIds,
+  })
+
   // Comparison data hook
   const {
     comparisonSummaries,
@@ -173,6 +188,25 @@ export default function DashboardPage() {
   })
 
   const statsLoading = financeLoading || metricsLoading || tasksLoading
+
+  const advancedMetrics = useMemo(() => {
+    const totals = metrics.reduce(
+      (acc, metric) => {
+        acc.spend += metric.spend
+        acc.revenue += metric.revenue ?? 0
+        acc.clicks += metric.clicks
+        acc.conversions += metric.conversions
+        return acc
+      },
+      { spend: 0, revenue: 0, clicks: 0, conversions: 0 },
+    )
+
+    const mer = totals.spend > 0 ? totals.revenue / totals.spend : 0
+    const aov = totals.conversions > 0 ? totals.revenue / totals.conversions : 0
+    const rpc = totals.clicks > 0 ? totals.revenue / totals.clicks : 0
+
+    return { mer, aov, rpc }
+  }, [metrics])
 
   const errorStates = useMemo(
     () => [
@@ -308,6 +342,30 @@ export default function DashboardPage() {
             loading={statsLoading}
           />
         </div>
+
+        <FadeIn>
+          <AttentionSummaryCard
+            taskSummary={taskSummary}
+            financeSummary={financeSummary}
+            proposals={proposals}
+            integrationSummary={integrationSummary}
+            loading={{
+              finance: financeLoading,
+              proposals: proposalsLoading,
+              integrations: integrationsLoading,
+            }}
+          />
+        </FadeIn>
+
+        {/* Advanced metrics preview (MER/AOV/RPC) */}
+        <FadeIn>
+          <AdvancedMetricsPreviewCards
+            mer={advancedMetrics.mer}
+            aov={advancedMetrics.aov}
+            rpc={advancedMetrics.rpc}
+            isLoading={metricsLoading}
+          />
+        </FadeIn>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
@@ -447,6 +505,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6">
+            {/* Platform comparison summary */}
+            <FadeIn>
+              <PlatformComparisonSummaryCard metrics={metrics} isLoading={metricsLoading} />
+            </FadeIn>
             <FadeIn>
               <QuickActions compact />
             </FadeIn>
@@ -470,6 +532,16 @@ export default function DashboardPage() {
             {user?.role !== 'client' && !comparisonError && comparisonHasSelection && (comparisonLoading || comparisonSummaries.length > 0) && (
               <FadeIn>
                 <Card className="shadow-sm">
+                              {/* Trending across workspaces - Admin only */}
+                              {user?.role === 'admin' && !comparisonError && comparisonTargets.length > 1 && comparisonAggregate && (
+                                <FadeIn>
+                                  <WorkspaceTrendsCard
+                                    summaries={comparisonSummaries}
+                                    periodDays={comparisonPeriodDays}
+                                    mixedCurrencies={comparisonAggregate.mixedCurrencies}
+                                  />
+                                </FadeIn>
+                              )}
                   <CardHeader>
                     <CardTitle className="text-base">Workspace highlights</CardTitle>
                     <CardDescription>Auto-generated callouts based on the selected period.</CardDescription>

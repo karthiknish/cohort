@@ -5,6 +5,7 @@ import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X, CircleAlert } fro
 import { format, parseISO, isValid } from 'date-fns'
 
 import { apiFetch } from '@/lib/api-client'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
@@ -213,6 +214,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       })
 
       onProjectUpdated?.(updatedProject)
+      emitDashboardRefresh({ reason: 'project-mutated', clientId: updatedProject.clientId ?? null })
       onOpenChange(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update project'

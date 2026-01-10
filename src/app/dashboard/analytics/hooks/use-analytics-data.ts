@@ -4,6 +4,7 @@ import useSWR from 'swr'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
+import { onDashboardRefresh } from '@/lib/refresh-bus'
 import type { MetricRecord, MetricsResponse, ProviderInsight, AlgorithmicInsight } from './types'
 
 const fetcher = async (url: string, token: string) => {
@@ -103,6 +104,17 @@ export function useAnalyticsData(
     setMetricsList(entries)
     setMetricsCursor(typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null)
   }, [data, isPreviewMode])
+
+  // Global refresh integration: when the dashboard refresh button is used, or when
+  // tasks/projects mutate elsewhere, revalidate Analytics data automatically.
+  useEffect(() => {
+    if (isPreviewMode) return
+    const unsubscribe = onDashboardRefresh(() => {
+      void mutateMetrics()
+      void mutateInsights()
+    })
+    return unsubscribe
+  }, [isPreviewMode, mutateMetrics, mutateInsights])
 
   const loadMoreMetrics = useCallback(async () => {
     if (isPreviewMode || !token || !metricsCursor) {

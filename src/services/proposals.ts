@@ -49,13 +49,16 @@ function normalizeProposalDraft(input: ProposalDraft): ProposalDraft {
 }
 
 
-export async function listProposals(params: { status?: ProposalStatus; clientId?: string } = {}) {
+export async function listProposals(params: { status?: ProposalStatus; clientId?: string; pageSize?: number } = {}) {
   const search = new URLSearchParams()
   if (params.status) {
     search.set('status', params.status)
   }
   if (params.clientId) {
     search.set('clientId', params.clientId)
+  }
+  if (typeof params.pageSize === 'number' && Number.isFinite(params.pageSize)) {
+    search.set('pageSize', String(params.pageSize))
   }
 
   const payload = await apiFetch<{ proposals: ProposalDraft[] }>(`/api/proposals${search.toString() ? `?${search}` : ''}`, {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { authService } from '@/services/auth'
@@ -30,8 +31,31 @@ export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
-  const [selectedPeriod, setSelectedPeriod] = useState<typeof PERIOD_OPTIONS[number]['value']>(PERIOD_OPTIONS[0].value)
-  const [selectedPlatform, setSelectedPlatform] = useState('all')
+  const searchParams = useSearchParams()
+
+  const [selectedPeriod, setSelectedPeriod] = useState<typeof PERIOD_OPTIONS[number]['value']>(() => {
+    const period = searchParams.get('period')
+    const valid = PERIOD_OPTIONS.some((opt) => opt.value === period)
+    return (valid ? period : PERIOD_OPTIONS[0].value) as typeof PERIOD_OPTIONS[number]['value']
+  })
+
+  const [selectedPlatform, setSelectedPlatform] = useState(() => {
+    const platform = searchParams.get('platform')
+    const valid = PLATFORM_OPTIONS.some((opt) => opt.value === platform)
+    return valid ? (platform as string) : 'all'
+  })
+
+  // Keep state in sync when navigating via links that change query params.
+  const platformParam = searchParams.get('platform')
+  const periodParam = searchParams.get('period')
+  useEffect(() => {
+    if (platformParam && PLATFORM_OPTIONS.some((opt) => opt.value === platformParam)) {
+      setSelectedPlatform(platformParam)
+    }
+    if (periodParam && PERIOD_OPTIONS.some((opt) => opt.value === periodParam)) {
+      setSelectedPeriod(periodParam as typeof PERIOD_OPTIONS[number]['value'])
+    }
+  }, [platformParam, periodParam])
 
   const [gaConnected, setGaConnected] = useState(false)
   const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(null)

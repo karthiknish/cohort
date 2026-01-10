@@ -8,6 +8,7 @@ import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
 import { getErrorMessage, mapTasksForDashboard } from '@/lib/dashboard-utils'
 import { summarizeTasks, DEFAULT_TASK_SUMMARY, type TaskSummary } from '../components'
 import { listProposals, type ProposalDraft } from '@/services/proposals'
+import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
 
 export interface UseDashboardDataOptions {
     selectedClientId: string | null
@@ -68,9 +69,28 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const [refreshKey, setRefreshKey] = useState(0)
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
-    const handleRefresh = useCallback(() => {
+    const triggerReload = useCallback(() => {
         setRefreshKey((prev) => prev + 1)
     }, [])
+
+    const handleRefresh = useCallback(() => {
+        triggerReload()
+        emitDashboardRefresh({ reason: 'manual-dashboard-refresh', clientId: selectedClientId })
+    }, [selectedClientId, triggerReload])
+
+    // When tasks/projects are created/updated elsewhere, refresh dashboard data automatically.
+    // This fixes cross-page staleness (e.g., creating a project on /dashboard/projects).
+    useEffect(() => {
+        if (isPreviewMode) return
+        const unsubscribe = onDashboardRefresh((evt) => {
+            // If the dashboard is scoped to a client, only react to matching events.
+            if (selectedClientId && evt.clientId && evt.clientId !== selectedClientId) {
+                return
+            }
+            triggerReload()
+        })
+        return unsubscribe
+    }, [isPreviewMode, selectedClientId, triggerReload])
 
     const isRefreshing = financeLoading || metricsLoading || tasksLoading || (user?.role === 'client' && proposalsLoading)
 
@@ -277,7 +297,10 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         }
 
         const loadProposals = async () => {
-            if (user?.role !== 'client') {
+            // For clients: always load proposals for the selected workspace (or all, if none selected).
+            // For admin/team: load a limited set so we can surface "upcoming proposals" in cross-feature insights.
+            const shouldLoad = user?.role === 'client' || user?.role === 'admin' || user?.role === 'team'
+            if (!shouldLoad) {
                 setProposals([])
                 setProposalsLoading(false)
                 return
@@ -286,7 +309,10 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             setProposalsLoading(true)
             setProposalsError(null)
             try {
-                const results = await listProposals({ clientId: selectedClientId ?? undefined })
+                const results = await listProposals({
+                    clientId: selectedClientId ?? undefined,
+                    pageSize: user?.role === 'client' ? 50 : 25,
+                })
                 if (!isCancelled) {
                     setProposals(results)
                 }

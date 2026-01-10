@@ -35,6 +35,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
 import { authService } from '@/services/auth'
 import type { TaskRecord } from '@/types/tasks'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
 
 interface TaskCreationModalProps {
   isOpen: boolean
@@ -123,6 +124,7 @@ export function TaskCreationModal({
       })
 
       onTaskCreated?.(createdTask)
+      emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
       onClose()
 
       // Reset form
