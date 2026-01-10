@@ -13,7 +13,9 @@ import {
   Play,
   Grid3X3,
   List,
-  ChevronRight
+  ChevronRight,
+  Smartphone,
+  MapPin
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -58,6 +60,16 @@ export type CampaignAd = {
   callToAction?: string
   pageName?: string
   pageProfileImageUrl?: string
+  metrics?: {
+    spend: number
+    impressions: number
+    clicks: number
+    conversions: number
+    revenue: number
+    ctr: number
+    cpc: number
+    roas: number
+  }
 }
 
 type Summary = {
@@ -83,8 +95,11 @@ function unwrapApiData(payload: unknown): unknown {
 function getCreativeTypeIcon(type: string, className?: string) {
   const lowerType = type.toLowerCase()
   if (lowerType.includes('video')) return <Video className={className || "h-4 w-4"} />
-  if (lowerType.includes('image') || lowerType.includes('photo')) return <Image className={className || "h-4 w-4"} />
-  return <FileText className={className || "h-4 w-4"} />
+  if (lowerType.includes('image') || lowerType.includes('photo') || lowerType.includes('sponsored_status_update')) return <Image className={className || "h-4 w-4"} />
+  if (lowerType.includes('text') || lowerType.includes('search')) return <FileText className={className || "h-4 w-4"} />
+  if (lowerType.includes('app') || lowerType.includes('call') || lowerType.includes('sponsored_inmails')) return <Smartphone className={className || "h-4 w-4"} />
+  if (lowerType.includes('hotel')) return <MapPin className={className || "h-4 w-4"} />
+  return <Layers className={className || "h-4 w-4 text-muted-foreground/50"} />
 }
 
 function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
@@ -106,6 +121,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hasLoaded, setHasLoaded] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [adMetrics, setAdMetrics] = useState<Record<string, any>>({})
+  const [metricsLoading, setMetricsLoading] = useState(false)
 
   const canLoad = !isPreviewMode
 
@@ -120,10 +137,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       const params = new URLSearchParams({ providerId, campaignId })
       if (clientId) params.set('clientId', clientId)
 
-      console.log('[CampaignAdsSection] fetching ads:', { providerId, campaignId, clientId })
       const response = await fetch(`/api/integrations/creatives?${params.toString()}`)
       const payload = await response.json().catch(() => ({})) as unknown
-      console.log('[CampaignAdsSection] ads payload:', payload)
 
       if (!response.ok) {
         const rec = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
@@ -147,9 +162,39 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     }
   }, [canLoad, providerId, campaignId, clientId])
 
+  const fetchMetrics = useCallback(async () => {
+    if (!canLoad) return
+    setMetricsLoading(true)
+    try {
+      const params = new URLSearchParams({ providerId, campaignId, days: '30' })
+      if (clientId) params.set('clientId', clientId)
+      const response = await fetch(`/api/integrations/metrics/ads?${params.toString()}`)
+      const data = await response.json()
+      const metrics = data.metrics || []
+
+      const aggregated: Record<string, any> = {}
+      metrics.forEach((m: any) => {
+        if (!aggregated[m.adId]) {
+          aggregated[m.adId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+        }
+        aggregated[m.adId].spend += m.spend
+        aggregated[m.adId].impressions += m.impressions
+        aggregated[m.adId].clicks += m.clicks
+        aggregated[m.adId].conversions += m.conversions
+        aggregated[m.adId].revenue += m.revenue
+      })
+      setAdMetrics(aggregated)
+    } catch (error) {
+      console.error('[CampaignAdsSection] metrics error:', error)
+    } finally {
+      setMetricsLoading(false)
+    }
+  }, [canLoad, providerId, campaignId, clientId])
+
   useEffect(() => {
     void fetchAds()
-  }, [fetchAds])
+    void fetchMetrics()
+  }, [fetchAds, fetchMetrics])
 
   const uniqueTypes = useMemo(() => {
     const types = new Set(ads.map(ad => ad.type || 'Unknown'))
@@ -446,25 +491,27 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                       </div>
 
                       {/* Caption */}
-                      <div className="p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          {ad.pageProfileImageUrl ? (
-                            <Avatar className="h-4 w-4 ring-1 ring-border">
-                              <AvatarImage src={ad.pageProfileImageUrl} />
-                              <AvatarFallback className="text-[7px]">{ad.pageName?.[0] || '?'}</AvatarFallback>
-                            </Avatar>
-                          ) : ad.providerId === 'facebook' && (
-                            <div className="h-4 w-4 rounded-full bg-muted flex items-center justify-center ring-1 ring-border">
-                              <span className="text-[7px] text-muted-foreground">{ad.pageName?.[0] || 'M'}</span>
-                            </div>
-                          )}
-                          <span className="text-[10px] text-muted-foreground truncate font-medium">
-                            {ad.pageName || (ad.providerId === 'facebook' ? 'Meta Page' : '')}
-                          </span>
+                      <div className="p-3 bg-card flex flex-col gap-1.5 border-t">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[60%]">{ad.type}</span>
+                          <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
+                            {ad.status}
+                          </Badge>
                         </div>
-                        <p className="text-sm font-medium truncate leading-tight">
-                          {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
-                        </p>
+                        <h4 className="line-clamp-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
+
+                        {adMetrics[ad.creativeId] && (
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1 pt-1.5 border-t border-muted">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Spend</span>
+                              <span className="text-[11px] font-mono font-bold leading-none">${adMetrics[ad.creativeId].spend.toFixed(2)}</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Conv.</span>
+                              <span className="text-[11px] font-mono font-bold leading-none">{adMetrics[ad.creativeId].conversions}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -480,6 +527,9 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                         <TableHead className="w-16">Preview</TableHead>
                         <TableHead>Creative Details</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Spend</TableHead>
+                        <TableHead className="text-right">Clicks</TableHead>
+                        <TableHead className="text-right">Conv.</TableHead>
                         <TableHead className="hidden lg:table-cell">Primary Text/Headline</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
@@ -510,22 +560,18 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-0.5">
-                              {ad.pageName && (
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                  {ad.pageProfileImageUrl && (
-                                    <Avatar className="h-3.5 w-3.5 ring-1 ring-border">
-                                      <AvatarImage src={ad.pageProfileImageUrl} />
-                                      <AvatarFallback className="text-[6px]">{ad.pageName?.[0] || '?'}</AvatarFallback>
-                                    </Avatar>
-                                  )}
-                                  <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-tight">
-                                    {ad.pageName}
-                                  </span>
-                                </div>
-                              )}
                               <p className="font-medium truncate max-w-[240px]">
                                 {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
                               </p>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-bold uppercase text-muted-foreground">{ad.type}</span>
+                                {ad.pageName && (
+                                  <>
+                                    <span className="text-[9px] text-muted-foreground">•</span>
+                                    <span className="text-[9px] font-medium text-muted-foreground">{ad.pageName}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
@@ -544,6 +590,15 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                                 {ad.status.toLowerCase()}
                               </span>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {adMetrics[ad.creativeId] ? `$${adMetrics[ad.creativeId].spend.toFixed(2)}` : '—'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {adMetrics[ad.creativeId] ? adMetrics[ad.creativeId].clicks.toLocaleString() : '—'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {adMetrics[ad.creativeId] ? adMetrics[ad.creativeId].conversions.toLocaleString() : '—'}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <p className="text-sm text-muted-foreground truncate max-w-[200px]">

@@ -1,12 +1,13 @@
 'use client'
 
-import { 
-  CreditCard, 
-  Target, 
-  MousePointerClick, 
-  Eye, 
-  TrendingUp, 
-  TrendingDown 
+import {
+  CreditCard,
+  Target,
+  MousePointerClick,
+  Eye,
+  TrendingUp,
+  TrendingDown,
+  Users
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,6 +24,7 @@ interface CalculatedMetrics {
   cpa: number
   roas: number
   convRate: number
+  reach?: number
 }
 
 interface MetricCardsSectionProps {
@@ -94,8 +96,8 @@ function MetricCard({
             <div className={cn(
               "rounded-full p-2.5",
               trend === 'up' ? "bg-emerald-500/10 text-emerald-600" :
-              trend === 'down' ? "bg-red-500/10 text-red-600" :
-              "bg-muted/50 text-muted-foreground/70"
+                trend === 'down' ? "bg-red-500/10 text-red-600" :
+                  "bg-muted/50 text-muted-foreground/70"
             )}>
               <Icon className="h-5 w-5" />
             </div>
@@ -161,6 +163,15 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         icon={CreditCard}
         loading={loading}
       />
+      {metrics?.reach !== undefined && (
+        <MetricCard
+          label="Total Reach"
+          value={formatNumber(metrics.reach)}
+          icon={Users}
+          loading={loading}
+          subValue={metrics ? `${((metrics.reach / metrics.impressions) * 100).toFixed(1)}% of impressions` : undefined}
+        />
+      )}
       <MetricCard
         label="Efficiency Score"
         value={displayEfficiencyScore !== null ? `${displayEfficiencyScore}%` : '—'}

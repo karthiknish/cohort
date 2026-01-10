@@ -341,6 +341,7 @@ export default function CampaignInsightsPage() {
       cpa,
       roas,
       convRate,
+      reach: insights?.totals?.reach ?? undefined,
       days: insights?.series.length || 0,
     }
   }, [insights?.totals, insights?.series])
@@ -371,6 +372,20 @@ export default function CampaignInsightsPage() {
     }))
   }, [insights?.series])
 
+  const reachChartData = useMemo(() => {
+    const series = insights?.series ?? []
+    // Only return data if reach is present in at least ONE row
+    const hasReach = series.some(row => row.reach !== null && row.reach !== undefined)
+    if (!hasReach) return undefined
+
+    return series.map((row) => ({
+      date: row.date,
+      dateFormatted: new Date(row.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      reach: row.reach || 0,
+      impressions: row.impressions,
+    }))
+  }, [insights?.series])
+
   const efficiencyScore = useMemo(() => {
     if (!calculatedMetrics) return null
     // Map to AdMetricsSummary expected by ad-algorithms.ts
@@ -383,10 +398,13 @@ export default function CampaignInsightsPage() {
       totalImpressions: calculatedMetrics.impressions,
       averageRoaS: calculatedMetrics.roas,
       averageCpc: calculatedMetrics.cpc,
-      period: 'current'
+      averageCtr: (calculatedMetrics as any).ctr || 0,
+      averageConvRate: (calculatedMetrics as any).convRate || (calculatedMetrics.clicks > 0 ? (calculatedMetrics.conversions / calculatedMetrics.clicks) * 100 : 0),
+      period: 'current',
+      dayCount: insights?.series?.length || 0
     }
     return calculateEfficiencyScore(summary)
-  }, [calculatedMetrics, campaign?.providerId])
+  }, [calculatedMetrics, campaign?.providerId, insights?.series])
 
   const algorithmicInsightsList = useMemo(() => {
     if (!calculatedMetrics) return []
@@ -400,10 +418,13 @@ export default function CampaignInsightsPage() {
       totalImpressions: calculatedMetrics.impressions,
       averageRoaS: calculatedMetrics.roas,
       averageCpc: calculatedMetrics.cpc,
-      period: 'current'
+      averageCtr: (calculatedMetrics as any).ctr || 0,
+      averageConvRate: (calculatedMetrics as any).convRate || (calculatedMetrics.clicks > 0 ? (calculatedMetrics.conversions / calculatedMetrics.clicks) * 100 : 0),
+      period: 'current',
+      dayCount: insights?.series?.length || 0
     }
     return calculateAlgorithmicInsights(summary)
-  }, [calculatedMetrics, campaign?.providerId])
+  }, [calculatedMetrics, campaign?.providerId, insights?.series])
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-10 p-6 pb-20">
@@ -464,6 +485,7 @@ export default function CampaignInsightsPage() {
           chartMetrics={chartMetrics}
           engagementChartData={engagementChartData}
           conversionsChartData={conversionsChartData}
+          reachChartData={reachChartData}
           insightsLoading={insightsLoading}
           currency={insights?.currency || campaign?.currency}
         />

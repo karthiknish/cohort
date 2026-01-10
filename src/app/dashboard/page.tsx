@@ -46,6 +46,9 @@ import { TasksCard } from '@/components/dashboard/tasks-card'
 import { ComparisonTable } from '@/components/dashboard/comparison/comparison-table'
 import { ComparisonSummaryTile } from '@/components/dashboard/comparison/comparison-summary-tile'
 import { ComparisonInsights } from '@/components/dashboard/comparison/comparison-insights'
+import { AdInsightsWidget } from '@/components/dashboard/ad-insights-widget'
+import { ClientProposalsCard } from './components/client-proposals-card'
+import { ClientInvoicesCard } from './components/client-invoices-card'
 
 // Types
 import type { DashboardTaskItem } from '@/types/dashboard'
@@ -137,6 +140,9 @@ export default function DashboardPage() {
     taskSummary,
     tasksLoading,
     tasksError,
+    proposals,
+    proposalsLoading,
+    proposalsError,
     lastRefreshed,
     handleRefresh,
     isRefreshing,
@@ -178,6 +184,24 @@ export default function DashboardPage() {
   )
 
   const chartData = useMemo(() => buildChartData(metrics, financeSummary), [metrics, financeSummary])
+
+  // Calculate provider summaries for ad insights widget
+  const providerSummaries = useMemo(() => {
+    if (metrics.length === 0) return undefined
+    
+    const summaries: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; revenue: number }> = {}
+    metrics.forEach((m) => {
+      if (!summaries[m.providerId]) {
+        summaries[m.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+      }
+      summaries[m.providerId].spend += m.spend
+      summaries[m.providerId].impressions += m.impressions
+      summaries[m.providerId].clicks += m.clicks
+      summaries[m.providerId].conversions += m.conversions
+      summaries[m.providerId].revenue += m.revenue ?? 0
+    })
+    return Object.keys(summaries).length > 0 ? summaries : undefined
+  }, [metrics])
 
   const isNewUser = useMemo(() => {
     if (!user?.createdAt) return false
@@ -376,24 +400,48 @@ export default function DashboardPage() {
             {/* Client-specific: Project progress overview */}
             {user?.role === 'client' && (
               <FadeIn>
-                <Card className="shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-base">Your Projects</CardTitle>
-                    <CardDescription>Track progress on your active projects</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="text-sm text-muted-foreground">
-                        View your project updates, deliverables, and timelines in the Projects section.
-                      </div>
-                      <Link href="/dashboard/projects">
-                        <Button variant="outline" size="sm">
-                          View All Projects <ArrowUpRight className="ml-1 h-3 w-3" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <Card className="shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="text-base">Your Projects</CardTitle>
+                        <CardDescription>Track progress on your active projects</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="text-sm text-muted-foreground">
+                            View your project updates, deliverables, and timelines in the Projects section.
+                          </div>
+                          <Link href="/dashboard/projects">
+                            <Button variant="outline" size="sm">
+                              View All Projects <ArrowUpRight className="ml-1 h-3 w-3" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <ClientProposalsCard proposals={proposals} loading={proposalsLoading} />
+
+                    <ClientInvoicesCard
+                      financeSummary={financeSummary}
+                      loading={financeLoading}
+                      error={financeError}
+                    />
+                  </div>
+
+                  {/* Client-focused: recent updates in-context */}
+                  <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                    <ActivityWidget />
+                  </Suspense>
+
+                  {proposalsError && (
+                    <Alert variant="destructive">
+                      <AlertTitle>Proposals unavailable</AlertTitle>
+                      <AlertDescription>{proposalsError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
               </FadeIn>
             )}
           </div>
@@ -406,6 +454,17 @@ export default function DashboardPage() {
             <FadeIn>
               <MiniTaskKanban tasks={rawTasks} loading={tasksLoading} />
             </FadeIn>
+
+            {/* Ad Insights Widget - Show for Admin/Team with ad metrics */}
+            {user?.role !== 'client' && (
+              <FadeIn>
+                <AdInsightsWidget
+                  providerSummaries={providerSummaries}
+                  loading={metricsLoading}
+                  showEmpty={false}
+                />
+              </FadeIn>
+            )}
 
             {/* Comparison insights - Admin/Team only */}
             {user?.role !== 'client' && !comparisonError && comparisonHasSelection && (comparisonLoading || comparisonSummaries.length > 0) && (
@@ -426,11 +485,13 @@ export default function DashboardPage() {
               <TasksCard tasks={filteredUpcomingTasks} loading={tasksLoading} />
             </FadeIn>
 
-            <FadeIn>
-              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <ActivityWidget />
-              </Suspense>
-            </FadeIn>
+            {user?.role !== 'client' && (
+              <FadeIn>
+                <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                  <ActivityWidget />
+                </Suspense>
+              </FadeIn>
+            )}
           </div>
         </div>
       </div>

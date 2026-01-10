@@ -82,7 +82,10 @@ export function evaluateAlgorithmicAlerts(
         totalImpressions: input.current.impressions,
         averageRoaS: input.current.roas,
         averageCpc: input.current.cpc,
-        period: '1d'
+        averageCtr: (input.current as any).ctr || (input.current.impressions > 0 ? (input.current.clicks / input.current.impressions) * 100 : 0),
+        averageConvRate: (input.current as any).convRate || (input.current.clicks > 0 ? (input.current.conversions / input.current.clicks) * 100 : 0),
+        period: '1d',
+        dayCount: 1,
     }
 
     const enriched = enrichSummaryWithMetrics(summary)

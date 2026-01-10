@@ -4,3 +4,4 @@ export { useAdsAutomation, type UseAdsAutomationReturn } from './use-ads-automat
 export { useDerivedMetrics, type DerivedMetrics, type UseDerivedMetricsOptions } from './use-derived-metrics'
 export { useFormulaEditor, type UseFormulaEditorReturn, type FormulaValidationResult } from './use-formula-editor'
 export { useMetricsComparison, type UseMetricsComparisonReturn, type PeriodComparison, type ProviderComparison } from './use-metrics-comparison'
+export { useAlgorithmicInsights, type UseAlgorithmicInsightsReturn } from './use-algorithmic-insights'

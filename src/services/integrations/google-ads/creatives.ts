@@ -49,6 +49,12 @@ export async function fetchGoogleCreatives(options: {
       ad_group_ad.ad.responsive_display_ad.call_to_action_text,
       ad_group_ad.ad.image_ad.image_url,
       ad_group_ad.ad.video_ad.video.id,
+      ad_group_ad.ad.call_ad.headlines,
+      ad_group_ad.ad.call_ad.descriptions,
+      ad_group_ad.ad.call_ad.business_name,
+      ad_group_ad.ad.app_ad.headlines,
+      ad_group_ad.ad.app_ad.descriptions,
+      ad_group_ad.ad.hotel_ad.hotel_center_id,
       ad_group.id,
       ad_group.name,
       campaign.id,
@@ -57,8 +63,8 @@ export async function fetchGoogleCreatives(options: {
     WHERE ad_group_ad.status != 'REMOVED'
     ${filters}
     ORDER BY campaign.name, ad_group.name
-    LIMIT 500
-  `.replace(/\s+/g, ' ').trim()
+    LIMIT 1000
+`.replace(/\s+/g, ' ').trim()
 
     const rows = await googleAdsSearch({
         accessToken,
@@ -66,8 +72,8 @@ export async function fetchGoogleCreatives(options: {
         customerId,
         loginCustomerId,
         query,
-        pageSize: 500,
-        maxPages: 1,
+        pageSize: 1000,
+        maxPages: 10,
         maxRetries,
     })
 
@@ -95,6 +101,15 @@ export async function fetchGoogleCreatives(options: {
                 videoAd?: {
                     video?: { id?: string }
                 }
+                callAd?: {
+                    headlines?: Array<{ text?: string }>
+                    descriptions?: Array<{ text?: string }>
+                    businessName?: string
+                }
+                appAd?: {
+                    headlines?: Array<{ text?: string }>
+                    descriptions?: Array<{ text?: string }>
+                }
             }
             status?: string
         } | undefined
@@ -105,29 +120,46 @@ export async function fetchGoogleCreatives(options: {
 
         // Determine ad type
         let type: GoogleCreative['type'] = 'OTHER'
-        if (ad?.type === 'RESPONSIVE_SEARCH_AD' || ad?.responsiveSearchAd) {
+        const adTypeStr = ad?.type ?? ''
+
+        if (adTypeStr === 'RESPONSIVE_SEARCH_AD' || ad?.responsiveSearchAd) {
             type = 'RESPONSIVE_SEARCH_AD'
-        } else if (ad?.type === 'RESPONSIVE_DISPLAY_AD' || ad?.responsiveDisplayAd) {
+        } else if (adTypeStr === 'RESPONSIVE_DISPLAY_AD' || ad?.responsiveDisplayAd) {
             type = 'RESPONSIVE_DISPLAY_AD'
-        } else if (ad?.type === 'IMAGE_AD' || ad?.imageAd) {
+        } else if (adTypeStr === 'IMAGE_AD' || ad?.imageAd) {
             type = 'IMAGE_AD'
-        } else if (ad?.type === 'VIDEO_AD' || ad?.videoAd) {
+        } else if (adTypeStr === 'VIDEO_AD' || ad?.videoAd) {
             type = 'VIDEO_AD'
+        } else if (adTypeStr === 'CALL_ONLY_AD' || ad?.callAd) {
+            type = 'CALL_ONLY_AD'
+        } else if (adTypeStr === 'APP_AD' || ad?.appAd) {
+            type = 'APP_AD'
+        } else if (adTypeStr === 'HOTEL_AD') {
+            type = 'HOTEL_AD'
+        } else if (adTypeStr.includes('PERFORMANCE_MAX')) {
+            type = 'PERFORMANCE_MAX_AD'
+        } else if (adTypeStr.includes('SMART_DISPLAY')) {
+            type = 'SMART_DISPLAY_AD'
         } else {
-            // Fallback for other ad types
-            type = (ad?.type as any) || 'OTHER'
+            type = (adTypeStr as any) || 'OTHER'
         }
 
-        // Extract headlines and descriptions based on ad type
+        // Extract headlines and descriptions
         let headlines: string[] = []
         let descriptions: string[] = []
 
-        if (type === 'RESPONSIVE_SEARCH_AD' && ad?.responsiveSearchAd) {
+        if (ad?.responsiveSearchAd) {
             headlines = ad.responsiveSearchAd.headlines?.map(h => h.text ?? '').filter(Boolean) ?? []
             descriptions = ad.responsiveSearchAd.descriptions?.map(d => d.text ?? '').filter(Boolean) ?? []
-        } else if (type === 'RESPONSIVE_DISPLAY_AD' && ad?.responsiveDisplayAd) {
+        } else if (ad?.responsiveDisplayAd) {
             headlines = ad.responsiveDisplayAd.headlines?.map(h => h.text ?? '').filter(Boolean) ?? []
             descriptions = ad.responsiveDisplayAd.descriptions?.map(d => d.text ?? '').filter(Boolean) ?? []
+        } else if (ad?.callAd) {
+            headlines = ad.callAd.headlines?.map(h => h.text ?? '').filter(Boolean) ?? []
+            descriptions = ad.callAd.descriptions?.map(d => d.text ?? '').filter(Boolean) ?? []
+        } else if (ad?.appAd) {
+            headlines = ad.appAd.headlines?.map(h => h.text ?? '').filter(Boolean) ?? []
+            descriptions = ad.appAd.descriptions?.map(d => d.text ?? '').filter(Boolean) ?? []
         }
 
         return {
@@ -144,7 +176,7 @@ export async function fetchGoogleCreatives(options: {
             displayUrl: ad?.displayUrl,
             imageUrl: ad?.imageAd?.imageUrl || ad?.responsiveDisplayAd?.marketingImages?.[0]?.asset,
             videoId: ad?.videoAd?.video?.id,
-            businessName: ad?.responsiveDisplayAd?.businessName,
+            businessName: ad?.responsiveDisplayAd?.businessName || ad?.callAd?.businessName,
             callToAction: ad?.responsiveDisplayAd?.callToActionText,
         }
     })

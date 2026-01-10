@@ -1,80 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { collection, query, orderBy, getDocs, updateDoc, doc, deleteDoc, where } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
-import { authenticateRequest, assertAdmin } from '@/lib/server-auth'
+import { z } from 'zod'
+import { createApiHandler } from '@/lib/api-handler'
+import { adminDb } from '@/lib/firebase-admin'
 
-export async function GET(req: NextRequest) {
-  try {
-    const auth = await authenticateRequest(req)
-    assertAdmin(auth)
+/**
+ * Admin API for managing user-reported problems.
+ * Requires admin privileges.
+ */
 
-    const { searchParams } = new URL(req.url)
-    const status = searchParams.get('status')
-    
-    let q = query(collection(db, 'problemReports'), orderBy('createdAt', 'desc'))
-    
-    if (status && status !== 'all') {
-      q = query(collection(db, 'problemReports'), where('status', '==', status), orderBy('createdAt', 'desc'))
-    }
+export const GET = createApiHandler({
+  auth: 'required',
+  adminOnly: true,
+  querySchema: z.object({
+    status: z.string().optional()
+  })
+}, async (req, { query }) => {
+  const { status } = query
 
-    const snapshot = await getDocs(q)
-    const reports = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
+  let q: any = adminDb.collection('problemReports').orderBy('createdAt', 'desc')
 
-    return NextResponse.json({ data: reports })
-  } catch (error) {
-    console.error('Error fetching problem reports:', error)
-    if (error instanceof Error && (error.message.includes('Authentication') || error.message.includes('Admin'))) {
-      return NextResponse.json({ error: error.message }, { status: error.message.includes('required') ? 401 : 403 })
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  if (status && status !== 'all') {
+    q = adminDb.collection('problemReports')
+      .where('status', '==', status)
+      .orderBy('createdAt', 'desc')
   }
-}
 
-export async function PATCH(req: NextRequest) {
-  try {
-    const auth = await authenticateRequest(req)
-    assertAdmin(auth)
+  const snapshot = await q.get()
+  const reports = snapshot.docs.map((doc: any) => ({
+    id: doc.id,
+    ...doc.data(),
+  }))
 
-    const { id, ...updates } = await req.json()
-    if (!id) {
-      return NextResponse.json({ error: 'Missing report ID' }, { status: 400 })
-    }
+  return reports
+})
 
-    const reportRef = doc(db, 'problemReports', id)
-    await updateDoc(reportRef, {
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    })
+export const PATCH = createApiHandler({
+  auth: 'required',
+  adminOnly: true,
+  bodySchema: z.object({
+    id: z.string(),
+    status: z.string().optional(),
+    fixed: z.boolean().optional(),
+    resolution: z.string().optional()
+  }).passthrough()
+}, async (req, { body }) => {
+  const { id, ...updates } = body
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error updating problem report:', error)
-    if (error instanceof Error && (error.message.includes('Authentication') || error.message.includes('Admin'))) {
-      return NextResponse.json({ error: error.message }, { status: error.message.includes('required') ? 401 : 403 })
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
-  }
-}
+  const reportRef = adminDb.collection('problemReports').doc(id)
+  await reportRef.update({
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  })
 
-export async function DELETE(req: NextRequest) {
-  try {
-    const auth = await authenticateRequest(req)
-    assertAdmin(auth)
+  return { success: true }
+})
 
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get('id')
-    
-    if (!id) {
-      return NextResponse.json({ error: 'Missing report ID' }, { status: 400 })
-    }
+export const DELETE = createApiHandler({
+  auth: 'required',
+  adminOnly: true,
+  querySchema: z.object({
+    id: z.string()
+  })
+}, async (req, { query }) => {
+  const { id } = query
 
-    await deleteDoc(doc(db, 'problemReports', id))
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting problem report:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
-  }
-}
+  await adminDb.collection('problemReports').doc(id).delete()
+  return { success: true }
+})

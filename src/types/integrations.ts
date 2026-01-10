@@ -49,6 +49,8 @@ export interface NormalizedMetric {
   providerId: string
   /** Optional client scope for this metric record. */
   clientId?: string | null
+  /** The ad account ID this metric belongs to (for multi-account support). */
+  accountId?: string | null
   date: string
   spend: number
   impressions: number

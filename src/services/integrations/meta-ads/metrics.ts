@@ -213,6 +213,7 @@ export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<Norm
 
       metrics.push({
         providerId: 'facebook',
+        accountId: adAccountId,
         date: row?.date_start ?? row?.date_stop ?? formatDate(new Date(), 'yyyy-MM-dd'),
         spend,
         impressions,

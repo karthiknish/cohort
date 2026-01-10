@@ -1,5 +1,6 @@
 import { auth } from '@/lib/firebase'
 import { User as FirebaseUser } from 'firebase/auth'
+import { UnauthorizedError } from '@/lib/api-errors'
 
 export interface TokenCache {
     token: string
@@ -30,7 +31,7 @@ export async function fetchAndCacheIdToken(
     try {
         const result = await firebaseUser.getIdTokenResult(forceRefresh)
         if (!result?.token) {
-            throw new Error('Failed to resolve authentication token')
+            throw new UnauthorizedError('Failed to resolve authentication token')
         }
 
         if (auth.currentUser && auth.currentUser.uid === firebaseUser.uid) {
@@ -42,10 +43,10 @@ export async function fetchAndCacheIdToken(
         const isNetworkError =
             (error instanceof TypeError &&
                 (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
-             (typeof error === 'object' &&
-                 error !== null &&
-                 'code' in error &&
-                 (error as { code: string }).code === 'auth/network-request-failed')
+            (typeof error === 'object' &&
+                error !== null &&
+                'code' in error &&
+                (error as { code: string }).code === 'auth/network-request-failed')
 
         if (isNetworkError && attempt < 2) {
             // Wait 1s then 2s

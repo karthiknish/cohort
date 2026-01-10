@@ -8,6 +8,7 @@ import { runDerivedMetricsPipeline } from '@/lib/metrics'
 import { fetchGoogleAdMetrics, fetchGoogleAdGroupMetrics, GoogleAdMetric } from '@/services/integrations/google-ads'
 import { fetchTikTokAdMetrics, TikTokAdMetric } from '@/services/integrations/tiktok-ads'
 import { fetchLinkedInCreativeMetrics, LinkedInCreativeMetric } from '@/services/integrations/linkedin-ads'
+import { fetchMetaAdMetrics, MetaAdMetric } from '@/services/integrations/meta-ads'
 
 
 // =============================================================================
@@ -15,7 +16,7 @@ import { fetchLinkedInCreativeMetrics, LinkedInCreativeMetric } from '@/services
 // =============================================================================
 
 const querySchema = z.object({
-  providerId: z.enum(['google', 'tiktok', 'linkedin']),
+  providerId: z.enum(['google', 'tiktok', 'linkedin', 'facebook']),
   clientId: z.string().optional(),
   campaignId: z.string().optional(),
   adGroupId: z.string().optional(),
@@ -42,6 +43,7 @@ type NormalizedAdMetric = {
   ctr?: number
   cpc?: number
   roas?: number
+  reach?: number
 }
 
 // =============================================================================
@@ -119,6 +121,32 @@ function normalizeLinkedInMetrics(metrics: LinkedInCreativeMetric[]): Normalized
       ctr,
       cpc,
       roas,
+    }
+  })
+}
+
+function normalizeMetaMetrics(metrics: MetaAdMetric[]): NormalizedAdMetric[] {
+  return metrics.map((m) => {
+    const ctr = m.impressions > 0 ? (m.clicks / m.impressions) * 100 : 0
+    const cpc = m.clicks > 0 ? m.spend / m.clicks : 0
+    const roas = m.spend > 0 ? m.revenue / m.spend : 0
+
+    return {
+      providerId: 'facebook',
+      adId: m.adId,
+      adGroupId: m.adSetId,
+      campaignId: m.campaignId,
+      name: m.adName,
+      date: m.date,
+      impressions: m.impressions,
+      clicks: m.clicks,
+      spend: m.spend,
+      conversions: m.conversions,
+      revenue: m.revenue,
+      ctr,
+      cpc,
+      roas,
+      reach: m.reach,
     }
   })
 }
@@ -214,6 +242,22 @@ export const GET = createApiHandler(
       })
 
       metrics = normalizeLinkedInMetrics(linkedInMetrics)
+    } else if (providerId === 'facebook') {
+      const accessToken = integration.accessToken
+      const adAccountId = integration.accountId
+
+      if (!accessToken || !adAccountId) {
+        throw new BadRequestError('Meta credentials not configured')
+      }
+
+      const metaMetrics = await fetchMetaAdMetrics({
+        accessToken,
+        adAccountId,
+        campaignId,
+        timeframeDays,
+      })
+
+      metrics = normalizeMetaMetrics(metaMetrics)
     }
 
     return {

@@ -140,6 +140,7 @@ export async function fetchLinkedInAdsMetrics(options: LinkedInAdsOptions): Prom
 
     return {
       providerId: 'linkedin',
+      accountId,
       date,
       spend,
       impressions,

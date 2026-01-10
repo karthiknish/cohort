@@ -4,6 +4,7 @@ import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { NormalizedMetric } from '@/types/integrations'
+import { BadRequestError } from '@/lib/api-errors'
 
 export type PlatformCredentials = Record<string, string>
 
@@ -64,7 +65,7 @@ export class GoogleAdsService implements AdPlatform {
         customerId: accountId,
         timeframeDays: 30,
       })
-      
+
       const campaigns = new Map<string, CampaignOverview>()
       metrics.forEach(m => {
         if (m.campaignId && !campaigns.has(m.campaignId)) {
@@ -91,7 +92,7 @@ export class GoogleAdsService implements AdPlatform {
         customerId: credentials.accountId || '', // Assuming accountId is passed in credentials or we need to change interface
         timeframeDays: days,
       })
-      
+
       return metrics
         .filter(m => m.campaignId === campaignId)
         .map(mapToCampaignMetrics)
@@ -117,7 +118,7 @@ export class MetaAdsService implements AdPlatform {
         adAccountId: accountId,
         timeframeDays: 30,
       })
-      
+
       const campaigns = new Map<string, CampaignOverview>()
       metrics.forEach(m => {
         if (m.campaignId && !campaigns.has(m.campaignId)) {
@@ -143,7 +144,7 @@ export class MetaAdsService implements AdPlatform {
         adAccountId: credentials.accountId,
         timeframeDays: days,
       })
-      
+
       return metrics
         .filter(m => m.campaignId === campaignId)
         .map(mapToCampaignMetrics)
@@ -169,7 +170,7 @@ export class TikTokAdsService implements AdPlatform {
         advertiserId: accountId,
         timeframeDays: 30,
       })
-      
+
       const campaigns = new Map<string, CampaignOverview>()
       metrics.forEach(m => {
         if (m.campaignId && !campaigns.has(m.campaignId)) {
@@ -195,7 +196,7 @@ export class TikTokAdsService implements AdPlatform {
         advertiserId: credentials.accountId,
         timeframeDays: days,
       })
-      
+
       return metrics
         .filter(m => m.campaignId === campaignId)
         .map(mapToCampaignMetrics)
@@ -221,7 +222,7 @@ export class LinkedInAdsService implements AdPlatform {
         accountId: accountId,
         timeframeDays: 30,
       })
-      
+
       // LinkedIn metrics might not always have campaign breakdown depending on the API call
       // But NormalizedMetric has campaignId field
       const campaigns = new Map<string, CampaignOverview>()
@@ -249,7 +250,7 @@ export class LinkedInAdsService implements AdPlatform {
         accountId: credentials.accountId,
         timeframeDays: days,
       })
-      
+
       return metrics
         .filter(m => m.campaignId === campaignId)
         .map(mapToCampaignMetrics)
@@ -292,7 +293,7 @@ export class AdsManager {
         // So we can expose a new method or reuse getMetrics with a dummy ID or modify the interface.
         // For now, let's iterate campaigns.
         const campaigns = await platform.getCampaigns(account.accountId, account.credentials)
-        
+
         for (const campaign of campaigns) {
           const metrics = await platform.getMetrics(campaign.id, dateRange, account.credentials)
           allMetrics.push(...metrics)
@@ -308,7 +309,7 @@ export class AdsManager {
   async authenticatePlatform(platform: string, credentials: PlatformCredentials): Promise<boolean> {
     const service = this.getPlatform(platform)
     if (!service) {
-      throw new Error(`Unsupported platform: ${platform}`)
+      throw new BadRequestError(`Unsupported platform: ${platform}`)
     }
 
     return await service.authenticate(credentials)

@@ -23,12 +23,12 @@ export const GOOGLE_ADS_ERROR_CODES = {
   USER_PERMISSION_DENIED: 'USER_PERMISSION_DENIED',
   DEVELOPER_TOKEN_NOT_APPROVED: 'DEVELOPER_TOKEN_NOT_APPROVED',
   DEVELOPER_TOKEN_PROHIBITED: 'DEVELOPER_TOKEN_PROHIBITED',
-  
+
   // Rate Limiting
   RATE_EXCEEDED: 'RATE_EXCEEDED',
   RESOURCE_EXHAUSTED: 'RESOURCE_EXHAUSTED',
   RESOURCE_TEMPORARILY_EXHAUSTED: 'RESOURCE_TEMPORARILY_EXHAUSTED',
-  
+
   // Request Errors
   REQUEST_ERROR: 'REQUEST_ERROR',
   INVALID_CUSTOMER_ID: 'INVALID_CUSTOMER_ID',
@@ -36,7 +36,7 @@ export const GOOGLE_ADS_ERROR_CODES = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   TRANSIENT_ERROR: 'TRANSIENT_ERROR',
   UNKNOWN: 'UNKNOWN',
-  
+
   // Query Errors
   QUERY_ERROR: 'QUERY_ERROR',
   UNSPECIFIED: 'UNSPECIFIED',
@@ -243,7 +243,7 @@ export type GoogleCreative = {
   campaignId: string
   adGroupName?: string
   campaignName?: string
-  type: 'RESPONSIVE_SEARCH_AD' | 'RESPONSIVE_DISPLAY_AD' | 'IMAGE_AD' | 'VIDEO_AD' | 'OTHER'
+  type: 'RESPONSIVE_SEARCH_AD' | 'RESPONSIVE_DISPLAY_AD' | 'IMAGE_AD' | 'VIDEO_AD' | 'APP_AD' | 'CALL_ONLY_AD' | 'HOTEL_AD' | 'PERFORMANCE_MAX_AD' | 'SMART_DISPLAY_AD' | 'DISPLAY_AD' | 'SEARCH_AD' | 'OTHER'
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   headlines: string[]
   descriptions: string[]
@@ -260,7 +260,9 @@ export type GoogleCreative = {
 // =============================================================================
 
 export type GoogleAudienceTargeting = {
-  adGroupId: string
+  entityId: string
+  entityType: 'adGroup' | 'campaign'
+  adGroupId?: string
   adGroupName?: string
   campaignId: string
   campaignName?: string

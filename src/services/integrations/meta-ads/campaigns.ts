@@ -249,6 +249,7 @@ export async function fetchMetaAdMetrics(options: {
       'impressions',
       'clicks',
       'spend',
+      'reach',
       'actions',
       'action_values',
     ].join(','),
@@ -306,6 +307,7 @@ export async function fetchMetaAdMetrics(options: {
       spend: coerceNumber(row.spend),
       conversions,
       revenue,
+      reach: coerceNumber(row.reach),
     }
   })
 }
@@ -728,7 +730,49 @@ export async function updateMetaCampaignBidding(options: {
   biddingValue: number
   maxRetries?: number
 }): Promise<{ success: boolean }> {
-  // Meta bidding is usually done at the AdSet level.
-  void options
+  const {
+    accessToken,
+    campaignId,
+    biddingValue,
+    maxRetries = 3,
+  } = options
+
+  // 1. Fetch all ad sets for this campaign
+  const params = new URLSearchParams({
+    fields: 'id',
+    limit: '100',
+  })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+  const listUrl = `${META_API_BASE}/${campaignId}/adsets?${params.toString()}`
+  const { payload } = await metaAdsClient.executeRequest<{ data?: Array<{ id: string }> }>({
+    url: listUrl,
+    operation: 'listAdSetsForBidding',
+    maxRetries,
+  })
+
+  const adSets = payload?.data ?? []
+  if (adSets.length === 0) {
+    return { success: true } // No ad sets to update
+  }
+
+  // 2. Update each ad set's bid amount
+  // Meta uses "bid_amount" in cents (like budgets) if the strategy allows it.
+  // Note: Some bidding strategies don't support manual bids.
+  const updatePromises = adSets.map(async (adSet) => {
+    const updateParams = new URLSearchParams()
+    updateParams.set('bid_amount', String(Math.round(biddingValue * 100)))
+    await appendMetaAuthParams({ params: updateParams, accessToken, appSecret: process.env.META_APP_SECRET })
+
+    const updateUrl = `${META_API_BASE}/${adSet.id}?${updateParams.toString()}`
+    return metaAdsClient.executeRequest<{ success: boolean }>({
+      url: updateUrl,
+      operation: 'updateAdSetBidding',
+      method: 'POST',
+      maxRetries,
+    })
+  })
+
+  await Promise.all(updatePromises)
   return { success: true }
 }

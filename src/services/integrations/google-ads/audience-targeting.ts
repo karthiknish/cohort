@@ -29,12 +29,11 @@ export async function fetchGoogleAudienceTargeting(options: {
         maxRetries = 3,
     } = options
 
-    let filters = ''
-    if (campaignId) filters += ` AND campaign.id = ${campaignId}`
-    if (adGroupId) filters += ` AND ad_group.id = ${adGroupId}`
+    const filters: string[] = ["ad_group_criterion.status != 'REMOVED'"]
+    if (campaignId) filters.push(`campaign.id = ${campaignId}`)
+    if (adGroupId) filters.push(`ad_group.id = ${adGroupId}`)
 
-    // Query ad group criteria for targeting
-    const query = `
+    const adGroupQuery = `
     SELECT
       ad_group.id,
       ad_group.name,
@@ -54,56 +53,74 @@ export async function fetchGoogleAudienceTargeting(options: {
       ad_group_criterion.keyword.match_type,
       ad_group_criterion.placement.url,
       ad_group_criterion.topic.path,
-      ad_group_criterion.language.language_constant
+      ad_group_criterion.language.language_constant,
+      ad_group_criterion.combined_audience.combined_audience,
+      ad_group_criterion.custom_audience.custom_audience,
+      ad_group_criterion.device.type
     FROM ad_group_criterion
-    WHERE ad_group_criterion.status != 'REMOVED'
-    ${filters}
+    WHERE ${filters.join(' AND ')}
     LIMIT 1000
   `.replace(/\s+/g, ' ').trim()
 
-    const rows = await googleAdsSearch({
-        accessToken,
-        developerToken,
-        customerId,
-        loginCustomerId,
-        query,
-        pageSize: 1000,
-        maxPages: 1,
-        maxRetries,
-    })
+    const campaignFilters: string[] = ["campaign_criterion.status != 'REMOVED'"]
+    if (campaignId) campaignFilters.push(`campaign.id = ${campaignId}`)
 
-    // Group by ad group
+    const campaignQuery = `
+    SELECT
+      campaign.id,
+      campaign.name,
+      campaign_criterion.criterion_id,
+      campaign_criterion.type,
+      campaign_criterion.status,
+      campaign_criterion.negative,
+      campaign_criterion.location.geo_target_constant,
+      campaign_criterion.language.language_constant,
+      campaign_criterion.device.type,
+      campaign_criterion.age_range.type,
+      campaign_criterion.gender.type,
+      campaign_criterion.user_list.user_list,
+      campaign_criterion.custom_audience.custom_audience,
+      campaign_criterion.combined_audience.combined_audience
+    FROM campaign_criterion
+    WHERE ${campaignFilters.join(' AND ')}
+    LIMIT 1000
+  `.replace(/\s+/g, ' ').trim()
+
+    const [adGroupRows, campaignRows] = await Promise.all([
+        googleAdsSearch({
+            accessToken,
+            developerToken,
+            customerId,
+            loginCustomerId,
+            query: adGroupQuery,
+            pageSize: 1000,
+            maxPages: 10,
+            maxRetries,
+        }),
+        adGroupId ? [] : googleAdsSearch({
+            accessToken,
+            developerToken,
+            customerId,
+            loginCustomerId,
+            query: campaignQuery,
+            pageSize: 1000,
+            maxPages: 10,
+            maxRetries,
+        }),
+    ])
+
     const targetingMap = new Map<string, GoogleAudienceTargeting>()
 
-    for (const row of rows) {
-        const adGroup = row.adGroup as { id?: string; name?: string } | undefined
-        const campaign = row.campaign as { id?: string; name?: string } | undefined
-        const criterion = row.adGroupCriterion as {
-            criterionId?: string
-            type?: string
-            status?: string
-            negative?: boolean
-            ageRange?: { type?: string }
-            gender?: { type?: string }
-            parentalStatus?: { type?: string }
-            incomeRange?: { type?: string }
-            userInterest?: { userInterestCategory?: string }
-            userList?: { userList?: string }
-            keyword?: { text?: string; matchType?: string }
-            placement?: { url?: string }
-            topic?: { path?: string[] }
-            language?: { languageConstant?: string }
-        } | undefined
-
-        const adGroupIdValue = adGroup?.id ?? ''
-        if (!adGroupIdValue) continue
-
-        if (!targetingMap.has(adGroupIdValue)) {
-            targetingMap.set(adGroupIdValue, {
-                adGroupId: adGroupIdValue,
-                adGroupName: adGroup?.name,
-                campaignId: campaign?.id ?? '',
-                campaignName: campaign?.name,
+    function getOrCreateTargeting(id: string, type: 'adGroup' | 'campaign', name?: string, campaignId?: string, campaignName?: string): GoogleAudienceTargeting {
+        const key = `${type}:${id}`
+        if (!targetingMap.has(key)) {
+            targetingMap.set(key, {
+                entityId: id,
+                entityType: type,
+                adGroupId: type === 'adGroup' ? id : undefined,
+                adGroupName: type === 'adGroup' ? name : undefined,
+                campaignId: campaignId ?? id,
+                campaignName: campaignName ?? (type === 'campaign' ? name : undefined),
                 ageRanges: [],
                 genders: [],
                 parentalStatus: [],
@@ -122,9 +139,33 @@ export async function fetchGoogleAudienceTargeting(options: {
                 placements: [],
             })
         }
+        return targetingMap.get(key)!
+    }
 
-        const targeting = targetingMap.get(adGroupIdValue)!
+    // Process Ad Group Rows
+    for (const row of adGroupRows) {
+        const adGroup = row.adGroup as { id?: string; name?: string } | undefined
+        const campaign = row.campaign as { id?: string; name?: string } | undefined
+        const criterion = row.adGroupCriterion as any
+
+        if (!adGroup?.id) continue
+        const targeting = getOrCreateTargeting(adGroup.id, 'adGroup', adGroup.name, campaign?.id, campaign?.name)
+        processCriterion(targeting, criterion)
+    }
+
+    // Process Campaign Rows
+    for (const row of campaignRows) {
+        const campaign = row.campaign as { id?: string; name?: string } | undefined
+        const criterion = row.campaignCriterion as any
+
+        if (!campaign?.id) continue
+        const targeting = getOrCreateTargeting(campaign.id, 'campaign', campaign.name)
+        processCriterion(targeting, criterion)
+    }
+
+    function processCriterion(targeting: GoogleAudienceTargeting, criterion: any) {
         const type = criterion?.type
+        const negative = criterion?.negative === true
 
         if (type === 'AGE_RANGE' && criterion?.ageRange?.type) {
             targeting.ageRanges.push(criterion.ageRange.type)
@@ -136,7 +177,6 @@ export async function fetchGoogleAudienceTargeting(options: {
             targeting.incomeRanges.push(criterion.incomeRange.type)
         } else if (type === 'USER_INTEREST' && criterion?.userInterest?.userInterestCategory) {
             const category = criterion.userInterest.userInterestCategory
-            // Affinity vs In-Market determined by category prefix
             if (category.includes('AFFINITY')) {
                 targeting.affinityAudiences.push({ id: category, name: category })
             } else {
@@ -146,6 +186,16 @@ export async function fetchGoogleAudienceTargeting(options: {
             targeting.remarketingLists.push({
                 id: criterion.userList.userList,
                 name: criterion.userList.userList
+            })
+        } else if (type === 'CUSTOM_AUDIENCE' && criterion?.customAudience?.customAudience) {
+            targeting.customAudiences.push({
+                id: criterion.customAudience.customAudience,
+                name: 'Custom Audience'
+            })
+        } else if (type === 'COMBINED_AUDIENCE' && criterion?.combinedAudience?.combinedAudience) {
+            targeting.customAudiences.push({
+                id: criterion.combinedAudience.combinedAudience,
+                name: 'Combined Audience'
             })
         } else if (type === 'KEYWORD' && criterion?.keyword?.text) {
             targeting.keywords.push({
@@ -164,6 +214,15 @@ export async function fetchGoogleAudienceTargeting(options: {
             })
         } else if (type === 'LANGUAGE' && criterion?.language?.languageConstant) {
             targeting.languages.push(criterion.language.languageConstant)
+        } else if (type === 'LOCATION' && criterion?.location?.geoTargetConstant) {
+            const loc = { id: criterion.location.geoTargetConstant, name: 'Location', type: 'LOCATION' }
+            if (negative) {
+                targeting.excludedLocations.push(loc)
+            } else {
+                targeting.locations.push(loc)
+            }
+        } else if (type === 'DEVICE' && criterion?.device?.type) {
+            targeting.devices.push(criterion.device.type)
         }
     }
 

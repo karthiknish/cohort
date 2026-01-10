@@ -4,6 +4,7 @@ import { User as FirebaseUser } from 'firebase/auth'
 import { toISO } from '@/lib/dates'
 import { normalizeRole, normalizeStatus, getBrowserCookie } from './utils'
 import type { AuthRole, AuthStatus, AuthUser } from './types'
+import { ServiceUnavailableError } from '@/lib/api-errors'
 
 /**
  * Resolve the user's agency ID from token claims, localStorage, or Firestore
@@ -170,7 +171,7 @@ export async function ensureUserBootstrap(
 
     if (!response.ok || !payload) {
         const message = typeof payload?.error === 'string' ? payload.error : 'Failed to synchronise your account profile'
-        throw new Error(message)
+        throw new ServiceUnavailableError(message)
     }
 
     if (payload.agencyId) {

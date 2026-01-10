@@ -82,9 +82,9 @@ type NormalizedTargeting = {
 function normalizeGoogleTargeting(items: GoogleAudienceTargeting[]): NormalizedTargeting[] {
   return items.map((t) => ({
     providerId: 'google',
-    entityId: t.adGroupId,
-    entityName: t.adGroupName,
-    entityType: 'adGroup' as const,
+    entityId: t.entityId,
+    entityName: t.adGroupName || t.campaignName || t.entityId,
+    entityType: t.entityType,
     demographics: {
       ageRanges: t.ageRanges,
       genders: t.genders,

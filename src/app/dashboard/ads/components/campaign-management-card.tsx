@@ -32,6 +32,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
 import { useClientContext } from '@/contexts/client-context'
 import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
 import type { DateRange } from './date-range-picker'
@@ -62,6 +68,14 @@ type Campaign = {
     startHour: number
     endHour: number
   }>
+}
+
+type CampaignGroup = {
+  id: string
+  name: string
+  status: string
+  totalBudget?: number
+  currency?: string
 }
 
 type Props = {
@@ -141,11 +155,15 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
   const [biddingDialogOpen, setBiddingDialogOpen] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<CampaignGroup | null>(null)
   const [newBudget, setNewBudget] = useState('')
   const [newBidding, setNewBidding] = useState({
     type: '',
     value: '',
   })
+  const [view, setView] = useState<'campaigns' | 'groups'>('campaigns')
+  const [groups, setGroups] = useState<CampaignGroup[]>([])
+  const [groupsLoading, setGroupsLoading] = useState(false)
 
   const startDate = useMemo(() => toIsoDateOnly(dateRange.start), [dateRange.start])
   const endDate = useMemo(() => toIsoDateOnly(dateRange.end), [dateRange.end])
@@ -165,7 +183,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
   const fetchCampaigns = useCallback(async () => {
     if (!isConnected) return
-    
+
     setLoading(true)
     try {
       const params = new URLSearchParams({ providerId })
@@ -192,22 +210,38 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     }
   }, [providerId, isConnected, selectedClientId])
 
+  const fetchGroups = useCallback(async () => {
+    if (!isConnected || providerId !== 'linkedin') return
+    setGroupsLoading(true)
+    try {
+      const params = new URLSearchParams({ providerId })
+      if (selectedClientId) params.set('clientId', selectedClientId)
+      const response = await fetch(`/api/integrations/campaign-groups?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to fetch campaign groups')
+      const data = await response.json()
+      setGroups(data.groups || [])
+    } catch (error) {
+      console.error('Fetch groups error:', error)
+    } finally {
+      setGroupsLoading(false)
+    }
+  }, [providerId, isConnected, selectedClientId])
+
   // Auto-load campaigns on mount when connected
   useEffect(() => {
     if (isConnected) {
       void fetchCampaigns()
+      if (providerId === 'linkedin') void fetchGroups()
     }
-  }, [fetchCampaigns, isConnected])
+  }, [fetchCampaigns, fetchGroups, isConnected, providerId])
 
   const openInsightsPage = useCallback(
-    (campaign: Campaign) => {
+    (campaignOrGroupId: string, name: string) => {
       const params = new URLSearchParams({ startDate, endDate })
       if (selectedClientId) params.set('clientId', selectedClientId)
-      params.set('campaignName', campaign.name)
-      if (campaign.startTime) params.set('campaignStartTime', campaign.startTime)
-      if (campaign.stopTime) params.set('campaignStopTime', campaign.stopTime)
+      params.set('campaignName', name)
 
-      router.push(`/dashboard/ads/campaigns/${providerId}/${campaign.id}?${params.toString()}`)
+      router.push(`/dashboard/ads/campaigns/${providerId}/${campaignOrGroupId}?${params.toString()}`)
     },
     [endDate, providerId, router, selectedClientId, startDate]
   )
@@ -222,17 +256,17 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${campaignId}-${action}-${Date.now()}` },
         body: JSON.stringify(payload),
       })
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({}))
         throw new Error(error.error || error.message || 'Action failed')
       }
-      
+
       toast({
         title: 'Success',
         description: `Campaign ${action}d successfully`,
       })
-      
+
       fetchCampaigns()
       onRefresh?.()
     } catch (error) {
@@ -246,38 +280,81 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     }
   }, [providerId, fetchCampaigns, onRefresh, selectedClientId])
 
+  const handleGroupAction = useCallback(async (groupId: string, action: 'enable' | 'pause') => {
+    setActionLoading(groupId)
+    try {
+      const payload: Record<string, unknown> = { providerId, campaignGroupId: groupId, action }
+      if (selectedClientId) payload.clientId = selectedClientId
+      const response = await fetch('/api/integrations/campaign-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || error.message || 'Action failed')
+      }
+
+      toast({
+        title: 'Success',
+        description: `Campaign Group ${action}d successfully`,
+      })
+
+      fetchGroups()
+      onRefresh?.()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : `Failed to ${action} group`,
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoading(null)
+    }
+  }, [providerId, fetchGroups, onRefresh, selectedClientId])
+
   const handleBudgetUpdate = useCallback(async () => {
-    if (!selectedCampaign || !newBudget) return
-    
-    setActionLoading(selectedCampaign.id)
+    const isGroup = view === 'groups'
+    const targetId = isGroup ? selectedGroup?.id : selectedCampaign?.id
+    if (!targetId || !newBudget) return
+
+    setActionLoading(targetId)
     try {
       const payload: Record<string, unknown> = {
         providerId,
-        campaignId: selectedCampaign.id,
         action: 'updateBudget',
         budget: parseFloat(newBudget),
       }
+      if (isGroup) payload.campaignGroupId = targetId
+      else payload.campaignId = targetId
+
       if (selectedClientId) payload.clientId = selectedClientId
-      const response = await fetch('/api/integrations/campaigns', {
+
+      const endpoint = isGroup ? '/api/integrations/campaign-groups' : '/api/integrations/campaigns'
+
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${selectedCampaign.id}-budget-${Date.now()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      
+
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.message || 'Budget update failed')
       }
-      
+
       toast({
         title: 'Success',
         description: 'Budget updated successfully',
       })
-      
+
       setBudgetDialogOpen(false)
       setSelectedCampaign(null)
+      setSelectedGroup(null)
       setNewBudget('')
-      fetchCampaigns()
+      if (isGroup) fetchGroups()
+      else fetchCampaigns()
       onRefresh?.()
     } catch (error) {
       toast({
@@ -288,11 +365,11 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, newBudget, providerId, fetchCampaigns, onRefresh, selectedClientId])
+  }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
-    
+
     setActionLoading(selectedCampaign.id)
     try {
       const payload: Record<string, unknown> = {
@@ -308,17 +385,17 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
         headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${selectedCampaign.id}-bidding-${Date.now()}` },
         body: JSON.stringify(payload),
       })
-      
+
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.message || 'Bidding update failed')
       }
-      
+
       toast({
         title: 'Success',
         description: 'Bidding strategy updated successfully',
       })
-      
+
       setBiddingDialogOpen(false)
       setSelectedCampaign(null)
       fetchCampaigns()
@@ -349,7 +426,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
   }
 
   const isActive = (status: string) => {
-    const s = status.toLowerCase()
+    const s = (status || '').toLowerCase()
     return s === 'enabled' || s === 'enable' || s === 'active'
   }
 
@@ -368,24 +445,106 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-lg">Campaign Management</CardTitle>
-            <CardDescription>Manage {providerName} campaigns</CardDescription>
+            <CardDescription>Manage {providerName} {providerId === 'linkedin' ? (view === 'groups' ? 'campaign groups' : 'campaigns') : 'campaigns'}</CardDescription>
+            {providerId === 'linkedin' && (
+              <Tabs value={view} onValueChange={(v) => setView(v as 'campaigns' | 'groups')} className="mt-4">
+                <TabsList className="grid w-[300px] grid-cols-2">
+                  <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+                  <TabsTrigger value="groups">Group (Ad Sets)</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={fetchCampaigns} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" onClick={() => view === 'groups' ? fetchGroups() : fetchCampaigns()} disabled={loading || groupsLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${(loading || groupsLoading) ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {(loading || groupsLoading) ? (
             <p className="text-muted-foreground text-sm">
-              Loading campaigns...
+              Loading {view === 'groups' ? 'groups' : 'campaigns'}...
             </p>
-          ) : campaigns.length === 0 ? (
+          ) : (view === 'groups' ? groups.length === 0 : campaigns.length === 0) ? (
             <p className="text-muted-foreground text-sm">
-              No campaigns found for this provider.
+              No {view === 'groups' ? 'groups' : 'campaigns'} found for this provider.
             </p>
+          ) : view === 'groups' ? (
+            <div className="max-h-[420px] overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Budget</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groups.map((group) => (
+                    <TableRow
+                      key={group.id}
+                      className="cursor-pointer"
+                      onClick={() => openInsightsPage(group.id, group.name)}
+                    >
+                      <TableCell className="font-medium hover:underline">{group.name}</TableCell>
+                      <TableCell>{getStatusBadge(group.status)}</TableCell>
+                      <TableCell>
+                        {group.totalBudget !== undefined ? (
+                          <span>{formatMoney(group.totalBudget, group.currency)} total</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isActive(group.status) ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void handleGroupAction(group.id, 'pause')
+                              }}
+                              disabled={actionLoading === group.id}
+                            >
+                              <Pause className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void handleGroupAction(group.id, 'enable')
+                              }}
+                              disabled={actionLoading === group.id}
+                            >
+                              <Play className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedGroup(group)
+                              setNewBudget(group.totalBudget?.toString() || '')
+                              setBudgetDialogOpen(true)
+                            }}
+                            disabled={actionLoading === group.id}
+                          >
+                            <DollarSign className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="max-h-[420px] overflow-auto rounded-md border">
               <Table>
@@ -404,7 +563,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                     <TableRow
                       key={campaign.id}
                       className="cursor-pointer"
-                      onClick={() => openInsightsPage(campaign)}
+                      onClick={() => openInsightsPage(campaign.id, campaign.name)}
                     >
                       <TableCell className="font-medium hover:underline">{campaign.name}</TableCell>
                       <TableCell>{getStatusBadge(campaign.status)}</TableCell>
@@ -546,7 +705,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           <DialogHeader>
             <DialogTitle>Update Budget</DialogTitle>
             <DialogDescription>
-              Update the budget for {selectedCampaign?.name}
+              Update the budget for {selectedGroup?.name || selectedCampaign?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

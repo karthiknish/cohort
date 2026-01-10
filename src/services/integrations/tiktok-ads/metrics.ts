@@ -174,6 +174,7 @@ export async function fetchTikTokAdsMetrics(options: TikTokMetricsOptions): Prom
 
       metrics.push({
         providerId: 'tiktok',
+        accountId: advertiserId,
         date,
         spend,
         impressions,

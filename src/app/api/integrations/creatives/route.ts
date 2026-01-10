@@ -18,8 +18,10 @@ import {
 
 import {
   fetchLinkedInCreatives,
+  fetchLinkedInAds,
   updateLinkedInAdStatus,
   LinkedInCreative,
+  LinkedInAd,
 } from '@/services/integrations/linkedin-ads'
 
 import {
@@ -121,7 +123,7 @@ function normalizeLinkedInCreatives(creatives: LinkedInCreative[]): NormalizedCr
     adGroupId: c.campaignGroupId,
     campaignId: c.campaignId,
     campaignName: c.campaignName,
-    name: c.title,
+    name: c.title || c.headline || `LinkedIn Creative ${c.creativeId}`,
     type: c.type,
     status: c.status,
     headlines: c.headline ? [c.headline] : undefined,
@@ -130,6 +132,18 @@ function normalizeLinkedInCreatives(creatives: LinkedInCreative[]): NormalizedCr
     videoUrl: c.videoUrl,
     landingPageUrl: c.landingPageUrl,
     callToAction: c.callToAction,
+  }))
+}
+
+function normalizeLinkedInAds(ads: LinkedInAd[]): NormalizedCreative[] {
+  return ads.map((a) => ({
+    providerId: 'linkedin',
+    creativeId: a.creativeId, // We use creativeId for common UI
+    adGroupId: a.campaignGroupId,
+    campaignId: a.campaignId,
+    name: a.name || `LinkedIn Ad ${a.id}`,
+    type: a.type || 'ad',
+    status: a.status,
   }))
 }
 
@@ -269,6 +283,11 @@ export const GET = createApiHandler(
       })
 
       creatives = normalizeLinkedInCreatives(linkedInCreatives)
+
+      // If adGroupId (campaignGroupId) is provided, filter them
+      if (adGroupId) {
+        creatives = creatives.filter(c => c.adGroupId === adGroupId)
+      }
     } else if (providerId === 'facebook') {
       let accessToken: string
       try {

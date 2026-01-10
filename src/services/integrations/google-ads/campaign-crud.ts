@@ -54,7 +54,7 @@ export async function listGoogleCampaigns(options: {
     FROM campaign
     ${statusCondition}
     ORDER BY campaign.name
-    LIMIT 500
+    LIMIT 1000
   `.replace(/\s+/g, ' ').trim()
 
     const rows = await googleAdsSearch({
@@ -63,8 +63,8 @@ export async function listGoogleCampaigns(options: {
         customerId,
         loginCustomerId,
         query,
-        pageSize: 500,
-        maxPages: 1,
+        pageSize: 1000,
+        maxPages: 10,
         maxRetries,
     })
 

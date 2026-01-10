@@ -7,6 +7,7 @@ import type { TaskRecord } from '@/types/tasks'
 import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
 import { getErrorMessage, mapTasksForDashboard } from '@/lib/dashboard-utils'
 import { summarizeTasks, DEFAULT_TASK_SUMMARY, type TaskSummary } from '../components'
+import { listProposals, type ProposalDraft } from '@/services/proposals'
 
 export interface UseDashboardDataOptions {
     selectedClientId: string | null
@@ -29,6 +30,11 @@ export interface UseDashboardDataReturn {
     taskSummary: TaskSummary
     tasksLoading: boolean
     tasksError: string | null
+
+    // Proposals
+    proposals: ProposalDraft[]
+    proposalsLoading: boolean
+    proposalsError: string | null
 
     // Refresh
     lastRefreshed: Date
@@ -55,6 +61,10 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const [tasksLoading, setTasksLoading] = useState(true)
     const [tasksError, setTasksError] = useState<string | null>(null)
 
+    const [proposals, setProposals] = useState<ProposalDraft[]>([])
+    const [proposalsLoading, setProposalsLoading] = useState(true)
+    const [proposalsError, setProposalsError] = useState<string | null>(null)
+
     const [refreshKey, setRefreshKey] = useState(0)
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
@@ -62,7 +72,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         setRefreshKey((prev) => prev + 1)
     }, [])
 
-    const isRefreshing = financeLoading || metricsLoading || tasksLoading
+    const isRefreshing = financeLoading || metricsLoading || tasksLoading || (user?.role === 'client' && proposalsLoading)
 
     useEffect(() => {
         let isCancelled = false
@@ -78,6 +88,9 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             setTaskSummary(DEFAULT_TASK_SUMMARY)
             setTasksError(null)
             setTasksLoading(false)
+            setProposals([])
+            setProposalsError(null)
+            setProposalsLoading(false)
             return () => {
                 isCancelled = true
             }
@@ -101,6 +114,10 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             setTaskSummary(summarizeTasks(previewTasks))
             setTasksError(null)
             setTasksLoading(false)
+
+            setProposals([])
+            setProposalsError(null)
+            setProposalsLoading(false)
 
             setLastRefreshed(new Date())
 
@@ -259,8 +276,34 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             }
         }
 
+        const loadProposals = async () => {
+            if (user?.role !== 'client') {
+                setProposals([])
+                setProposalsLoading(false)
+                return
+            }
+
+            setProposalsLoading(true)
+            setProposalsError(null)
+            try {
+                const results = await listProposals({ clientId: selectedClientId ?? undefined })
+                if (!isCancelled) {
+                    setProposals(results)
+                }
+            } catch (error) {
+                if (!isCancelled) {
+                    setProposals([])
+                    setProposalsError(getErrorMessage(error, 'Unable to load proposals'))
+                }
+            } finally {
+                if (!isCancelled) {
+                    setProposalsLoading(false)
+                }
+            }
+        }
+
         const loadAll = async () => {
-            await Promise.all([loadFinance(), loadMetrics(), loadTasks()])
+            await Promise.all([loadFinance(), loadMetrics(), loadTasks(), loadProposals()])
             if (!isCancelled) {
                 setLastRefreshed(new Date())
             }
@@ -287,5 +330,8 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         lastRefreshed,
         handleRefresh,
         isRefreshing,
+        proposals,
+        proposalsLoading,
+        proposalsError,
     }
 }

@@ -112,9 +112,11 @@ export async function resolveWorkspaceContext(auth: AuthResult): Promise<Workspa
   }
 }
 
+import { ValidationError } from './api-errors'
+
 export async function resolveWorkspaceIdForUser(userId: string): Promise<string> {
   if (!userId) {
-    throw new Error('User id is required to resolve workspace id')
+    throw new ValidationError('User id is required to resolve workspace id')
   }
 
   const userRef = adminDb.collection('users').doc(userId)

@@ -13,6 +13,12 @@ import {
 import type { AuthUser, SignUpData } from './types'
 import { getFriendlyAuthErrorMessage } from './error-utils'
 import { isValidRedirectUrl } from '@/lib/utils'
+import {
+  UnauthorizedError,
+  ValidationError,
+  BadRequestError,
+  ServiceUnavailableError
+} from '@/lib/api-errors'
 
 import {
   cacheIdToken,
@@ -144,7 +150,7 @@ export class AuthService {
   async getIdToken(forceRefresh = false): Promise<string> {
     const currentUser = auth.currentUser
     if (!currentUser) {
-      throw new Error('No authenticated user')
+      throw new UnauthorizedError('No authenticated user')
     }
 
     const now = Date.now()
@@ -217,10 +223,10 @@ export class AuthService {
     await connectGoogleAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
   }
 
-    async connectGoogleAnalyticsAccount(clientId?: string | null): Promise<void> {
-      const currentUser = this.ensureAuthenticatedFirebaseUser()
-      await connectGoogleAnalyticsViaPopup({ currentUser, authUser: this.currentUser, clientId })
-    }
+  async connectGoogleAnalyticsAccount(clientId?: string | null): Promise<void> {
+    const currentUser = this.ensureAuthenticatedFirebaseUser()
+    await connectGoogleAnalyticsViaPopup({ currentUser, authUser: this.currentUser, clientId })
+  }
 
   async connectFacebookAdsAccount(clientId?: string | null): Promise<void> {
     const currentUser = this.ensureAuthenticatedFirebaseUser()
@@ -234,7 +240,7 @@ export class AuthService {
 
   async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
-      throw new Error('Invalid redirect URL')
+      throw new ValidationError('Invalid redirect URL')
     }
     const idToken = await this.getIdToken()
     const params = new URLSearchParams()
@@ -257,7 +263,7 @@ export class AuthService {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
       if (!record.success) {
         const message = typeof record.error === 'string' ? record.error : 'Failed to start Meta OAuth'
-        throw new Error(message)
+        throw new BadRequestError(message)
       }
 
       const data = record.data as { url?: unknown } | undefined
@@ -265,23 +271,23 @@ export class AuthService {
         return { url: data.url }
       }
 
-      throw new Error('Meta OAuth did not return a URL')
+      throw new ServiceUnavailableError('Meta OAuth did not return a URL')
     }
 
     if (!response.ok) {
       const record = payload as { error?: unknown }
       const message = typeof record?.error === 'string' ? record.error : 'Failed to start Meta OAuth'
-      throw new Error(message)
+      throw new BadRequestError(message)
     }
 
     const legacy = payload as { url?: unknown }
     if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
-    throw new Error('Meta OAuth did not return a URL')
+    throw new ServiceUnavailableError('Meta OAuth did not return a URL')
   }
 
   async startTikTokOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
-      throw new Error('Invalid redirect URL')
+      throw new ValidationError('Invalid redirect URL')
     }
     const idToken = await this.getIdToken()
     const params = new URLSearchParams()
@@ -302,7 +308,7 @@ export class AuthService {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
       if (!record.success) {
         const message = typeof record.error === 'string' ? record.error : 'Failed to start TikTok OAuth'
-        throw new Error(message)
+        throw new BadRequestError(message)
       }
 
       const data = record.data as { url?: unknown } | undefined
@@ -310,18 +316,18 @@ export class AuthService {
         return { url: data.url }
       }
 
-      throw new Error('TikTok OAuth did not return a URL')
+      throw new ServiceUnavailableError('TikTok OAuth did not return a URL')
     }
 
     if (!response.ok) {
       const record = payload as { error?: unknown }
       const message = typeof record?.error === 'string' ? record.error : 'Failed to start TikTok OAuth'
-      throw new Error(message)
+      throw new BadRequestError(message)
     }
 
     const legacy = payload as { url?: unknown }
     if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
-    throw new Error('TikTok OAuth did not return a URL')
+    throw new ServiceUnavailableError('TikTok OAuth did not return a URL')
   }
 
   /**
@@ -353,7 +359,7 @@ export class AuthService {
       return await mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
       const message = getFriendlyAuthErrorMessage(error)
-      throw new Error(message)
+      throw new UnauthorizedError(message)
     }
   }
 
@@ -374,7 +380,7 @@ export class AuthService {
       return await mapFirebaseUser(userCredential.user)
     } catch (error: unknown) {
       const message = getFriendlyAuthErrorMessage(error)
-      throw new Error(message)
+      throw new BadRequestError(message)
     }
   }
 
@@ -384,7 +390,7 @@ export class AuthService {
       this.clearIdTokenCache()
     } catch (error: unknown) {
       console.error('Sign out error:', error)
-      throw new Error('Failed to sign out')
+      throw new ServiceUnavailableError('Failed to sign out')
     }
   }
 
@@ -405,7 +411,7 @@ export class AuthService {
   }
 
   async updateProfile(data: Partial<AuthUser>): Promise<AuthUser> {
-    if (!this.currentUser) throw new Error('No authenticated user')
+    if (!this.currentUser) throw new UnauthorizedError('No authenticated user')
     return await updateProfileOp(
       this.currentUser,
       data,
@@ -417,12 +423,12 @@ export class AuthService {
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    if (!this.currentUser) throw new Error('No authenticated user')
+    if (!this.currentUser) throw new UnauthorizedError('No authenticated user')
     await changePasswordOp(currentPassword, newPassword)
   }
 
   async deleteAccount(password?: string): Promise<void> {
-    if (!this.currentUser) throw new Error('No authenticated user')
+    if (!this.currentUser) throw new UnauthorizedError('No authenticated user')
     await deleteAccountOp(
       (force) => this.getIdToken(force),
       () => {
@@ -474,7 +480,7 @@ export class AuthService {
   private ensureAuthenticatedFirebaseUser(): FirebaseUser {
     const currentUser = auth.currentUser
     if (!currentUser) {
-      throw new Error('You must be signed in to connect ad accounts')
+      throw new UnauthorizedError('You must be signed in to connect ad accounts')
     }
     return currentUser
   }

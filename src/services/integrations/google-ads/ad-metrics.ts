@@ -61,7 +61,7 @@ export async function fetchGoogleAdMetrics(options: {
         loginCustomerId,
         query,
         pageSize: 1000,
-        maxPages: 1,
+        maxPages: 10,
         maxRetries,
     })
 

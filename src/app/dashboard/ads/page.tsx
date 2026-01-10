@@ -19,6 +19,8 @@ import {
   MetricsTableCard,
   WorkflowCard,
   SetupAlerts,
+  AlgorithmicInsightsCard,
+  InsightsChartsCard,
 } from './components'
 
 import {
@@ -27,6 +29,7 @@ import {
   useDerivedMetrics,
   useFormulaEditor,
   useMetricsComparison,
+  useAlgorithmicInsights,
 } from './hooks'
 
 /**
@@ -70,6 +73,11 @@ export default function AdsPage() {
   const { periodComparison, providerComparison } = useMetricsComparison({
     metrics: processedMetrics,
     dateRange,
+  })
+  const algorithmicInsights = useAlgorithmicInsights({
+    metrics: processedMetrics,
+    providerSummaries,
+    loading: metricsLoading,
   })
 
   // 2. Manage provider connections and integration statuses
@@ -231,6 +239,22 @@ export default function AdsPage() {
           metricError={suppressMetricsErrors ? null : metricError}
           onRefresh={handleManualRefresh}
           onExport={handleExport}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <AlgorithmicInsightsCard
+          insights={algorithmicInsights.insights}
+          globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
+          providerEfficiencyScores={algorithmicInsights.providerEfficiencyScores}
+          loading={metricsLoading || initialMetricsLoading}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <InsightsChartsCard
+          analysis={algorithmicInsights.analysis}
+          loading={metricsLoading || initialMetricsLoading}
         />
       </FadeIn>
 

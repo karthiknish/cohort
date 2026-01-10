@@ -83,6 +83,7 @@ export type MetaInsightsRow = {
   clicks?: unknown
   actions?: MetaInsightAction[]
   action_values?: MetaInsightAction[]
+  reach?: unknown
 }
 
 export type MetaApiErrorResponse = {
@@ -219,6 +220,7 @@ export type MetaAdMetric = {
   spend: number
   conversions: number
   revenue: number
+  reach?: number
 }
 
 // =============================================================================

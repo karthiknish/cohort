@@ -37,7 +37,10 @@ interface ProviderSummary {
   totalImpressions: number
   averageRoaS: number
   averageCpc: number
+  averageCtr: number
+  averageConvRate: number
   period: string
+  dayCount: number
 }
 
 export const GET = createApiHandler(
@@ -128,7 +131,10 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
         totalImpressions: 0,
         averageRoaS: 0,
         averageCpc: 0,
+        averageCtr: 0,
+        averageConvRate: 0,
         period: `${periodDays}d`,
+        dayCount: 0,
       })
     }
 
@@ -140,9 +146,14 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
     summary.totalImpressions += metric.impressions
   })
 
+  const uniqueDates = new Set(records.map(r => r.date))
+
   map.forEach((summary) => {
     summary.averageRoaS = summary.totalSpend > 0 ? summary.totalRevenue / summary.totalSpend : 0
     summary.averageCpc = summary.totalClicks > 0 ? summary.totalSpend / summary.totalClicks : 0
+    summary.averageCtr = summary.totalImpressions > 0 ? (summary.totalClicks / summary.totalImpressions) * 100 : 0
+    summary.averageConvRate = summary.totalClicks > 0 ? (summary.totalConversions / summary.totalClicks) * 100 : 0
+    summary.dayCount = uniqueDates.size
   })
 
   return Array.from(map.values())
@@ -166,7 +177,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
 
   // Global budget suggestions & MER
   const globalSuggestions = getGlobalBudgetSuggestions(enrichedSummaries)
-  
+
   // Calculate Global MER
   const totalGlobalSpend = enrichedSummaries.reduce((sum, s) => sum + s.totalSpend, 0)
   const totalGlobalRevenue = enrichedSummaries.reduce((sum, s) => sum + s.totalRevenue, 0)
@@ -177,12 +188,14 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
       providerId: 'global',
       suggestions: [
         {
+          id: 'global-mer-insight',
           type: 'efficiency',
           level: globalMer > 3 ? 'success' : globalMer > 1.5 ? 'info' : 'warning',
+          category: 'System Performance',
           title: 'Global Marketing Efficiency (MER)',
           message: `Your blended MER across all platforms is ${globalMer.toFixed(2)}x.`,
-          suggestion: globalMer > 3 
-            ? 'Your overall marketing is healthy. You have room to test new channels.' 
+          suggestion: globalMer > 3
+            ? 'Your overall marketing is healthy. You have room to test new channels.'
             : 'Focus on optimizing your highest-performing channel to pull up the blended average.',
         },
         ...globalSuggestions
@@ -230,7 +243,7 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
   return { insights, algorithmic }
 }
 
-function buildInsightPrompt(summary: AdMetricsSummary) {
+function buildInsightPrompt(summary: any) {
   return `You are an expert marketing analyst. Provide a concise, actionable summary for the following ad platform.
 
 Platform: ${summary.providerId}
@@ -252,7 +265,7 @@ Include:
 Keep it under 120 words.`
 }
 
-function buildComparisonPrompt(google: AdMetricsSummary, meta: AdMetricsSummary) {
+function buildComparisonPrompt(google: any, meta: any) {
   return `You are an expert marketing analyst. Compare the performance of Google Ads and Meta (Facebook) Ads based on the following data.
 
 Google Ads:

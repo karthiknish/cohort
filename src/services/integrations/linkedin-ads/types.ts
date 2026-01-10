@@ -18,7 +18,7 @@ export const LINKEDIN_ERROR_CODES = {
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
   GATEWAY_TIMEOUT: 504,
-  
+
   // LinkedIn Specific
   RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
   INVALID_PARAMETER: 'INVALID_PARAMETER',
@@ -97,6 +97,26 @@ export type LinkedInCampaign = {
   totalBudget?: number
   costType?: string
   objectiveType?: string
+  campaignGroupId?: string
+}
+
+export type LinkedInCampaignGroup = {
+  id: string
+  name: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DRAFT' | 'CANCELED'
+  dailyBudget?: number
+  totalBudget?: number
+  costType?: string
+}
+
+export type LinkedInAd = {
+  id: string
+  campaignId: string
+  campaignGroupId?: string
+  name?: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DRAFT'
+  creativeId: string
+  type?: string
 }
 
 export type LinkedInCreativeMetric = {

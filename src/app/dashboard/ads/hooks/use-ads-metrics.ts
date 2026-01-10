@@ -101,7 +101,9 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const processedMetrics = useMemo(() => {
     const uniqueMap = new Map<string, MetricRecord>()
     metrics.forEach((m) => {
-      const key = `${m.providerId}|${m.date}`
+      // Include accountId in the key to properly handle multiple accounts per provider
+      const accountId = m.accountId ?? ''
+      const key = `${m.providerId}|${accountId}|${m.date}`
       const existing = uniqueMap.get(key)
       if (!existing || (m.createdAt && existing.createdAt && m.createdAt > existing.createdAt)) {
         uniqueMap.set(key, m)

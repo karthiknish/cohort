@@ -73,8 +73,8 @@ export const GET = createApiHandler(
     }
 
     // If aggregation is requested, we need to sum metrics for the period
-    // We deduplicate by providerId|date in memory to ensure accurate totals 
-    // even if overlapping syncs exist.
+    // We deduplicate by providerId|accountId|date in memory to ensure accurate totals 
+    // even if overlapping syncs exist or multiple accounts per provider are connected.
     let summary: any = null
     if (shouldAggregate) {
       // Fetch documents for the period (limit to a safe amount for in-memory processing)
@@ -83,7 +83,9 @@ export const GET = createApiHandler(
 
       aggregationSnapshot.docs.forEach((docSnap) => {
         const data = docSnap.data()
-        const key = `${data.providerId}|${data.date}`
+        // Include accountId in the key to properly handle multiple accounts per provider
+        const accountId = typeof data.accountId === 'string' ? data.accountId : ''
+        const key = `${data.providerId}|${accountId}|${data.date}`
         const existing = uniqueMetrics.get(key)
 
         const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : 0
@@ -137,6 +139,7 @@ export const GET = createApiHandler(
       return {
         id: docSnap.id,
         providerId: (data.providerId as string | undefined) ?? 'unknown',
+        accountId: typeof data.accountId === 'string' ? data.accountId : null,
         date: (data.date as string | undefined) ?? 'unknown',
         spend: Number(data.spend ?? 0),
         impressions: Number(data.impressions ?? 0),

@@ -14,6 +14,10 @@ import {
   LinkedInCampaign,
   LinkedInCreativeMetric,
   LinkedInApiErrorResponse,
+  LinkedInCampaignGroup,
+  LinkedInAd,
+  LinkedInCreative,
+  LinkedInAudienceTargeting,
 } from './types'
 
 // =============================================================================
@@ -69,8 +73,9 @@ export async function listLinkedInCampaigns(options: {
 
   const elements = Array.isArray(payload?.elements) ? payload.elements : []
 
-  return elements.map((item) => {
+  return elements.map((item: any) => {
     const id = typeof item.id === 'string' ? item.id.replace('urn:li:sponsoredCampaign:', '') : ''
+    const campaignGroupId = item.campaignGroup?.replace('urn:li:sponsoredCampaignGroup:', '')
 
     return {
       id,
@@ -80,8 +85,202 @@ export async function listLinkedInCampaigns(options: {
       totalBudget: item.totalBudget?.amount ? parseFloat(item.totalBudget.amount) : undefined,
       costType: item.costType,
       objectiveType: item.objectiveType,
+      campaignGroupId,
     }
   })
+}
+
+// =============================================================================
+// LIST CAMPAIGN GROUPS
+// =============================================================================
+
+
+export async function listLinkedInCampaignGroups(options: {
+  accessToken: string
+  accountId: string
+  statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED')[]
+  maxRetries?: number
+}): Promise<LinkedInCampaignGroup[]> {
+  const {
+    accessToken,
+    accountId,
+    statusFilter = ['ACTIVE', 'PAUSED'],
+    maxRetries = 3,
+  } = options
+
+  const params = new URLSearchParams({
+    q: 'search',
+    'search.account.values[0]': `urn:li:sponsoredAccount:${accountId}`,
+    count: '100',
+  })
+
+  statusFilter.forEach((status, index) => {
+    params.set(`search.status.values[${index}]`, status)
+  })
+
+  const url = `https://api.linkedin.com/v2/adCampaignGroupsV2?${params.toString()}`
+
+  const { payload } = await linkedinAdsClient.executeRequest<{
+    elements?: Array<{
+      id?: string
+      name?: string
+      status?: string
+      totalBudget?: { amount?: string; currencyCode?: string }
+    }>
+  }>({
+    url,
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+    },
+    operation: 'listCampaignGroups',
+    maxRetries,
+  })
+
+  const elements = Array.isArray(payload?.elements) ? payload.elements : []
+
+  return elements.map((item) => {
+    const id = typeof item.id === 'string' ? item.id.replace('urn:li:sponsoredCampaignGroup:', '') : ''
+
+    return {
+      id,
+      name: item.name ?? '',
+      status: (item.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DRAFT' | 'CANCELED',
+      totalBudget: item.totalBudget?.amount ? parseFloat(item.totalBudget.amount) : undefined,
+    }
+  })
+}
+
+// =============================================================================
+// LIST ADS
+// =============================================================================
+
+export async function fetchLinkedInAds(options: {
+  accessToken: string
+  accountId: string
+  campaignId?: string
+  statusFilter?: ('ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DRAFT')[]
+  maxRetries?: number
+}): Promise<LinkedInAd[]> {
+  const {
+    accessToken,
+    accountId,
+    campaignId,
+    statusFilter = ['ACTIVE', 'PAUSED'],
+    maxRetries = 3,
+  } = options
+
+  const params = new URLSearchParams({
+    q: 'search',
+    'search.account.values[0]': `urn:li:sponsoredAccount:${accountId}`,
+    count: '100',
+  })
+
+  statusFilter.forEach((status, index) => {
+    params.set(`search.status.values[${index}]`, status)
+  })
+
+  if (campaignId) {
+    params.set('search.campaign.values[0]', `urn:li:sponsoredCampaign:${campaignId}`)
+  }
+
+  const url = `https://api.linkedin.com/v2/adAdsV2?${params.toString()}`
+
+  const { payload } = await linkedinAdsClient.executeRequest<{
+    elements?: Array<{
+      id?: string
+      campaign?: string
+      status?: string
+      creative?: string
+      type?: string
+      name?: string
+    }>
+  }>({
+    url,
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+    },
+    operation: 'fetchAds',
+    maxRetries,
+  })
+
+  const elements = Array.isArray(payload?.elements) ? payload.elements : []
+
+  return elements.map((item) => {
+    const id = typeof item.id === 'string' ? item.id.replace('urn:li:sponsoredAd:', '') : ''
+    const campaignIdFromItem = item.campaign?.replace('urn:li:sponsoredCampaign:', '') ?? ''
+    const creativeId = item.creative?.replace('urn:li:sponsoredCreative:', '') ?? ''
+
+    return {
+      id,
+      campaignId: campaignIdFromItem,
+      name: item.name,
+      status: (item.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'ARCHIVED' | 'DRAFT',
+      creativeId,
+      type: item.type,
+    }
+  })
+}
+
+// =============================================================================
+// URN RESOLUTION
+// =============================================================================
+
+export async function resolveLinkedInUrns(options: {
+  accessToken: string
+  urns: string[]
+  maxRetries?: number
+}): Promise<Record<string, string>> {
+  const { accessToken, urns, maxRetries = 3 } = options
+  if (urns.length === 0) return {}
+
+  const uniqueUrns = Array.from(new Set(urns))
+  const results: Record<string, string> = {}
+
+  const videoUrns = uniqueUrns.filter(u => u.includes('digitalmediaAsset'))
+  const imageUrns = uniqueUrns.filter(u => u.includes('image'))
+
+  await Promise.all([
+    ...videoUrns.map(async (urn) => {
+      try {
+        const id = urn.split(':').pop()
+        const url = `https://api.linkedin.com/v2/videos/${id}`
+        const { payload } = await linkedinAdsClient.executeRequest<{ downloadUrl?: string }>({
+          url,
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}` },
+          operation: 'resolveVideo',
+          maxRetries,
+        })
+        if (payload.downloadUrl) results[urn] = payload.downloadUrl
+      } catch (e) {
+        console.warn(`Failed to resolve video URN: ${urn}`, e)
+      }
+    }),
+    ...imageUrns.map(async (urn) => {
+      try {
+        const id = urn.split(':').pop()
+        const url = `https://api.linkedin.com/v2/images/${id}`
+        const { payload } = await linkedinAdsClient.executeRequest<{ downloadUrl?: string }>({
+          url,
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}` },
+          operation: 'resolveImage',
+          maxRetries,
+        })
+        if (payload.downloadUrl) results[urn] = payload.downloadUrl
+      } catch (e) {
+        console.warn(`Failed to resolve image URN: ${urn}`, e)
+      }
+    })
+  ])
+
+  return results
 }
 
 // =============================================================================
@@ -229,6 +428,101 @@ export async function updateLinkedInCampaignBudget(options: {
 }
 
 // =============================================================================
+// UPDATE CAMPAIGN GROUP STATUS
+// =============================================================================
+
+export async function updateLinkedInCampaignGroupStatus(options: {
+  accessToken: string
+  campaignGroupId: string
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  const {
+    accessToken,
+    campaignGroupId,
+    status,
+    maxRetries = 3,
+  } = options
+
+  const url = `https://api.linkedin.com/v2/adCampaignGroupsV2/urn:li:sponsoredCampaignGroup:${campaignGroupId}`
+
+  const { payload } = await linkedinAdsClient.executeRequest<LinkedInApiErrorResponse>({
+    url,
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+      'X-HTTP-Method-Override': 'PATCH',
+    },
+    body: JSON.stringify({ patch: { $set: { status } } }),
+    operation: 'updateCampaignGroupStatus',
+    maxRetries,
+  })
+
+  if (payload.status && payload.status >= 400) {
+    throw new LinkedInApiError({
+      message: payload.message ?? 'Campaign Group status update failed',
+      httpStatus: payload.status,
+    })
+  }
+
+  return { success: true }
+}
+
+// =============================================================================
+// UPDATE CAMPAIGN GROUP BUDGET
+// =============================================================================
+
+export async function updateLinkedInCampaignGroupBudget(options: {
+  accessToken: string
+  campaignGroupId: string
+  totalBudget?: number
+  currencyCode?: string
+  maxRetries?: number
+}): Promise<{ success: boolean }> {
+  const {
+    accessToken,
+    campaignGroupId,
+    totalBudget,
+    currencyCode = 'USD',
+    maxRetries = 3,
+  } = options
+
+  const url = `https://api.linkedin.com/v2/adCampaignGroupsV2/urn:li:sponsoredCampaignGroup:${campaignGroupId}`
+
+  const patchData: Record<string, unknown> = {}
+  if (totalBudget !== undefined) {
+    patchData.totalBudget = { amount: totalBudget.toString(), currencyCode }
+  }
+
+  const { payload } = await linkedinAdsClient.executeRequest<LinkedInApiErrorResponse>({
+    url,
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'Linkedin-Version': '202310',
+      'X-HTTP-Method-Override': 'PATCH',
+    },
+    body: JSON.stringify({ patch: { $set: patchData } }),
+    operation: 'updateCampaignGroupBudget',
+    maxRetries,
+  })
+
+  if (payload.status && payload.status >= 400) {
+    throw new LinkedInApiError({
+      message: payload.message ?? 'Campaign Group budget update failed',
+      httpStatus: payload.status,
+    })
+  }
+
+  return { success: true }
+}
+
+// =============================================================================
 // ARCHIVE (DELETE) CAMPAIGN
 // =============================================================================
 
@@ -328,8 +622,6 @@ export async function fetchLinkedInCreativeMetrics(options: {
 // FETCH CREATIVES
 // =============================================================================
 
-import { LinkedInCreative } from './types'
-
 export async function fetchLinkedInCreatives(options: {
   accessToken: string
   accountId: string
@@ -403,6 +695,18 @@ export async function fetchLinkedInCreatives(options: {
 
   const elements = Array.isArray(payload?.elements) ? payload.elements : []
 
+  // Collect all URNs that need resolution
+  const urnsToResolve: string[] = []
+  elements.forEach(item => {
+    const textAdVars = item.variables?.data?.['com.linkedin.ads.TextAdCreativeVariables']
+    const videoVars = item.variables?.data?.['com.linkedin.ads.VideoCreativeVariables']
+    if (textAdVars?.vectorImage) urnsToResolve.push(textAdVars.vectorImage)
+    if (videoVars?.videoUrn) urnsToResolve.push(videoVars.videoUrn)
+  })
+
+  // Resolve URNs in batch
+  const resolvedUrls = await resolveLinkedInUrns({ accessToken, urns: urnsToResolve, maxRetries })
+
   return elements.map((item) => {
     const creativeId = item.id?.replace('urn:li:sponsoredCreative:', '') ?? ''
     const campaignIdFromItem = item.campaign?.replace('urn:li:sponsoredCampaign:', '') ?? ''
@@ -426,6 +730,9 @@ export async function fetchLinkedInCreatives(options: {
     const textAdVars = item.variables?.data?.['com.linkedin.ads.TextAdCreativeVariables']
     const videoVars = item.variables?.data?.['com.linkedin.ads.VideoCreativeVariables']
 
+    const imageUrl = textAdVars?.vectorImage ? resolvedUrls[textAdVars.vectorImage] : undefined
+    const videoUrl = videoVars?.videoUrn ? resolvedUrls[videoVars.videoUrn] : undefined
+
     return {
       creativeId,
       campaignId: campaignIdFromItem,
@@ -437,8 +744,8 @@ export async function fetchLinkedInCreatives(options: {
       headline: textAdVars?.title,
       callToAction: item.callToAction?.labelType,
       landingPageUrl: item.callToAction?.target,
-      imageUrl: textAdVars?.vectorImage,
-      videoUrl: videoVars?.videoUrn,
+      imageUrl,
+      videoUrl,
     }
   })
 }
@@ -446,8 +753,6 @@ export async function fetchLinkedInCreatives(options: {
 // =============================================================================
 // FETCH AUDIENCE TARGETING
 // =============================================================================
-
-import { LinkedInAudienceTargeting } from './types'
 
 type TargetingFacet = {
   type?: string

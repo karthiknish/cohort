@@ -21,6 +21,8 @@ export interface IntegrationStatusResponse {
 export interface MetricRecord {
   id: string
   providerId: string
+  /** The ad account ID this metric belongs to (for multi-account support). */
+  accountId?: string | null
   date: string
   spend: number
   impressions: number

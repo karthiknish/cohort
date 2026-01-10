@@ -104,6 +104,7 @@ export async function fetchGoogleAdsMetrics(options: GoogleAdsOptions): Promise<
 
     return {
       providerId: 'google',
+      accountId: customerId,
       date,
       spend,
       impressions,

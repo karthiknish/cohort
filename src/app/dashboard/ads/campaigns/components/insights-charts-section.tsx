@@ -20,8 +20,8 @@ import {
   BarChart,
   Bar,
   CartesianGrid,
-  XAxis, 
-  YAxis, 
+  XAxis,
+  YAxis,
   Tooltip as RechartsTooltip,
 } from 'recharts'
 
@@ -70,10 +70,22 @@ const costChartConfig = {
   },
 } satisfies ChartConfig
 
+const reachChartConfig = {
+  reach: {
+    label: 'Reach',
+    color: 'hsl(199 89% 48%)',
+  },
+  impressions: {
+    label: 'Impressions',
+    color: 'hsl(221 83% 53%)',
+  },
+} satisfies ChartConfig
+
 interface InsightsChartsSectionProps {
   chartMetrics: any[]
   engagementChartData: any[]
   conversionsChartData: any[]
+  reachChartData?: any[]
   insightsLoading: boolean
   currency?: string
 }
@@ -82,6 +94,7 @@ export function InsightsChartsSection({
   chartMetrics,
   engagementChartData,
   conversionsChartData,
+  reachChartData,
   insightsLoading,
   currency = 'USD'
 }: InsightsChartsSectionProps) {
@@ -232,8 +245,8 @@ export function InsightsChartsSection({
                             {conversionsChartConfig[name as keyof typeof conversionsChartConfig]?.label ?? name}
                           </span>
                           <span className="font-mono font-medium">
-                            {name === 'revenue' 
-                              ? new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(Number(value)) 
+                            {name === 'revenue'
+                              ? new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(Number(value))
                               : Number(value).toLocaleString('en-US')}
                           </span>
                         </div>
@@ -334,6 +347,81 @@ export function InsightsChartsSection({
           )}
         </CardContent>
       </Card>
+
+      {/* 5. Reach vs Impressions (Facebook specific) */}
+      {reachChartData && reachChartData.length > 0 && (
+        <Card className="border-muted/40 shadow-sm lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">Reach vs Impressions</CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p><strong>Reach:</strong> The number of unique people who saw your ads at least once.</p>
+                    <p className="mt-1"><strong>Impressions:</strong> The number of times your ads were on screen.</p>
+                    <p className="mt-1"><strong>Frequency:</strong> Average number of times each person saw your ad (Impressions / Reach).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <CardDescription>Unique reach compared to total impressions</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            <ChartContainer config={reachChartConfig} className="h-full w-full">
+              <BarChart data={reachChartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="dateFormatted"
+                  axisLine={false}
+                  tickLine={false}
+                  tickMargin={10}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => Number(value) >= 1000 ? `${(Number(value) / 1000).toFixed(1)}k` : value}
+                />
+                <RechartsTooltip
+                  cursor={{ fill: 'var(--color-reach)', opacity: 0.1 }}
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name) => (
+                        <div className="flex items-center justify-between gap-8">
+                          <span className="text-muted-foreground">
+                            {reachChartConfig[name as keyof typeof reachChartConfig]?.label ?? name}
+                          </span>
+                          <span className="font-mono font-medium">
+                            {Number(value).toLocaleString('en-US')}
+                          </span>
+                        </div>
+                      )}
+                    />
+                  }
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar
+                  dataKey="impressions"
+                  fill="var(--color-impressions)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                />
+                <Bar
+                  dataKey="reach"
+                  fill="var(--color-reach)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
