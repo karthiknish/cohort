@@ -20,7 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { FadeIn, FadeInStagger, FadeInItem } from '@/components/ui/animate-in'
@@ -136,7 +135,7 @@ export default function PrivacyPage() {
             <div className="border-t border-border bg-muted/30 p-8 sm:p-12 text-center">
               <h2 className="text-xl font-semibold text-foreground mb-4">Have Questions?</h2>
               <p className="mb-8 max-w-lg mx-auto">
-                If you have any questions or concerns regarding our privacy practices, please don't hesitate to reach out to our dedicated privacy team.
+                If you have any questions or concerns regarding our privacy practices, please don&apos;t hesitate to reach out to our dedicated privacy team.
               </p>
               <Button asChild size="lg">
                 <Link href="mailto:privacy@cohorts.app">

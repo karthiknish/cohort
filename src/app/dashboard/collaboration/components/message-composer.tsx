@@ -131,8 +131,8 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
         </div>
         {message.content && (
           <span className="ml-2 max-w-[200px] truncate border-l border-muted pl-2 text-muted-foreground">
-            "{message.content.slice(0, 50)}
-            {message.content.length > 50 ? '…' : ''}"
+            &quot;{message.content.slice(0, 50)}
+            {message.content.length > 50 ? '…' : ''}&quot;
           </span>
         )}
       </div>

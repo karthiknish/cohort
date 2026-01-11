@@ -17,8 +17,6 @@ export interface MessageAttachmentsProps {
 }
 
 export function MessageAttachments({ attachments, highlightTerms }: MessageAttachmentsProps) {
-  if (!attachments || attachments.length === 0) return null
-
   const [activePdf, setActivePdf] = useState<CollaborationAttachment | null>(null)
 
   const { imageAttachments, videoAttachments, pdfAttachments, otherAttachments } = useMemo(() => {
@@ -26,6 +24,10 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
     const videos: CollaborationAttachment[] = []
     const pdfs: CollaborationAttachment[] = []
     const other: CollaborationAttachment[] = []
+
+    if (!attachments || attachments.length === 0) {
+      return { imageAttachments: images, videoAttachments: videos, pdfAttachments: pdfs, otherAttachments: other }
+    }
 
     attachments.forEach((a) => {
       const type = (a.type || '').toLowerCase()
@@ -43,6 +45,8 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
 
     return { imageAttachments: images, videoAttachments: videos, pdfAttachments: pdfs, otherAttachments: other }
   }, [attachments])
+
+  if (!attachments || attachments.length === 0) return null
 
   const handleDownloadAll = () => {
     attachments.forEach((attachment, index) => {

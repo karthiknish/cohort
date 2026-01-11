@@ -23,8 +23,6 @@ import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
 
 import { formatRelativeTime, formatTimestamp, getInitials } from '../utils'
 
-const MAX_PREVIEW_LENGTH = 80
-
 export interface MessageActionsBarProps {
   message: CollaborationMessage
   canReact: boolean
@@ -284,7 +282,7 @@ export function MessageEditForm({
       />
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>Editing message</span>
-        {editingPreview && <span className="truncate">"{editingPreview}"</span>}
+        {editingPreview && <span className="truncate">&quot;{editingPreview}&quot;</span>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button

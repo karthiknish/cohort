@@ -144,7 +144,7 @@ export function AlgorithmicInsightsSection({
               </div>
               <p className="text-sm font-bold">Everything looks great!</p>
               <p className="max-w-[280px] text-xs font-medium text-muted-foreground/60">
-                The algorithm hasn't detected any immediate optimizations needed for this period.
+                The algorithm hasn&apos;t detected any immediate optimizations needed for this period.
               </p>
             </div>
           ) : (

@@ -4,8 +4,14 @@ import { useCallback, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useConvex } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
-import type { CollaborationMessage } from '@/types/collaboration'
-import type { CollaborationMessageFormat } from '@/types/collaboration'
+import type {
+  CollaborationAttachment,
+  CollaborationChannelType,
+  CollaborationMention,
+  CollaborationMessage,
+  CollaborationMessageFormat,
+  CollaborationReaction,
+} from '@/types/collaboration'
 import type {
   ThreadMessagesState,
   ThreadCursorsState,
@@ -14,6 +20,36 @@ import type {
 } from './types'
 import { THREAD_PAGE_SIZE } from './constants'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
+
+interface ConvexThreadRow {
+  legacyId?: string
+  channelType?: string
+  clientId?: string
+  projectId?: string
+  senderId?: string
+  senderName?: string
+  senderRole?: string
+  content?: string
+  createdAtMs?: number
+  updatedAtMs?: number
+  deletedAtMs?: number
+  deleted?: boolean
+  deletedBy?: string
+  attachments?: unknown[]
+  format?: string
+  mentions?: unknown[]
+  reactions?: unknown[]
+  parentMessageId?: string
+  threadRootId?: string
+  threadReplyCount?: number
+  threadLastReplyAtMs?: number
+}
+
+const VALID_CHANNEL_TYPES: CollaborationChannelType[] = ['client', 'team', 'project']
+
+function isValidChannelType(value: unknown): value is CollaborationChannelType {
+  return typeof value === 'string' && VALID_CHANNEL_TYPES.includes(value as CollaborationChannelType)
+}
 
 interface UseThreadsOptions {
   workspaceId: string | null
@@ -60,19 +96,19 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
         const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
         const afterLegacyId = decoded ? decoded.id : undefined
 
-        const rows = (await convex.query((collaborationApi as any).listThreadReplies, {
+        const rows = (await convex.query(collaborationApi.listThreadReplies, {
           workspaceId: String(workspaceId),
           threadRootId: trimmedId,
           limit: THREAD_PAGE_SIZE + 1,
           afterCreatedAtMs,
           afterLegacyId,
-        })) as any[]
+        })) as ConvexThreadRow[]
 
         const replies: CollaborationMessage[] = rows
           .slice(0, THREAD_PAGE_SIZE)
-          .map((row) => ({
+          .map((row: ConvexThreadRow) => ({
             id: String(row?.legacyId ?? ''),
-            channelType: typeof row?.channelType === 'string' ? row.channelType : 'team',
+            channelType: isValidChannelType(row?.channelType) ? row.channelType : 'team',
             clientId: typeof row?.clientId === 'string' ? row.clientId : null,
             projectId: typeof row?.projectId === 'string' ? row.projectId : null,
             senderId: typeof row?.senderId === 'string' ? row.senderId : null,
@@ -85,10 +121,19 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
             deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
             deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
             isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
-            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+            attachments:
+              Array.isArray(row?.attachments) && row.attachments.length > 0
+                ? (row.attachments as CollaborationAttachment[])
+                : undefined,
             format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
-            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
-            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            mentions:
+              Array.isArray(row?.mentions) && row.mentions.length > 0
+                ? (row.mentions as CollaborationMention[])
+                : undefined,
+            reactions:
+              Array.isArray(row?.reactions) && row.reactions.length > 0
+                ? (row.reactions as CollaborationReaction[])
+                : undefined,
             parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
             threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
             threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,

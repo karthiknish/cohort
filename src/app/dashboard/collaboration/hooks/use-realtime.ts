@@ -1,19 +1,54 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from 'convex/react'
 
-import { useToast } from '@/components/ui/use-toast'
 import { usePreview } from '@/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
 import { getPreviewCollaborationMessages } from '@/lib/preview-data'
-import type { CollaborationMessage } from '@/types/collaboration'
+import type {
+  CollaborationAttachment,
+  CollaborationChannelType,
+  CollaborationMention,
+  CollaborationMessage,
+  CollaborationReaction,
+} from '@/types/collaboration'
 import type { Channel } from '../types'
 import type { MessagesByChannelState, TypingParticipant } from './types'
 import { REALTIME_MESSAGE_LIMIT, TYPING_TIMEOUT_MS } from './constants'
 import { encodeTimestampIdCursor } from '@/lib/pagination'
 
-function mapConvexRealtimeMessageRow(row: any): CollaborationMessage {
+interface ConvexMessageRow {
+  legacyId?: string
+  channelType?: string
+  clientId?: string
+  projectId?: string
+  senderId?: string
+  senderName?: string
+  senderRole?: string
+  content?: string
+  createdAtMs?: number
+  updatedAtMs?: number
+  deletedAtMs?: number
+  deleted?: boolean
+  deletedBy?: string
+  attachments?: unknown[]
+  format?: string
+  mentions?: unknown[]
+  reactions?: unknown[]
+  parentMessageId?: string
+  threadRootId?: string
+  threadReplyCount?: number
+  threadLastReplyAtMs?: number
+}
+
+const VALID_CHANNEL_TYPES: CollaborationChannelType[] = ['client', 'team', 'project']
+
+function isValidChannelType(value: unknown): value is CollaborationChannelType {
+  return typeof value === 'string' && VALID_CHANNEL_TYPES.includes(value as CollaborationChannelType)
+}
+
+function mapConvexRealtimeMessageRow(row: ConvexMessageRow): CollaborationMessage {
   const isDeleted = Boolean(row?.deleted || row?.deletedAtMs)
   const createdAt = typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null
   const updatedAt = typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null
@@ -25,7 +60,7 @@ function mapConvexRealtimeMessageRow(row: any): CollaborationMessage {
 
   return {
     id: String(row?.legacyId ?? ''),
-    channelType: typeof row?.channelType === 'string' ? row.channelType : 'team',
+    channelType: isValidChannelType(row?.channelType) ? row.channelType : 'team',
     clientId: typeof row?.clientId === 'string' ? row.clientId : null,
     projectId: typeof row?.projectId === 'string' ? row.projectId : null,
     senderId: typeof row?.senderId === 'string' ? row.senderId : null,
@@ -38,10 +73,19 @@ function mapConvexRealtimeMessageRow(row: any): CollaborationMessage {
     deletedAt,
     deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
     isDeleted,
-    attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+    attachments:
+      Array.isArray(row?.attachments) && row.attachments.length > 0
+        ? (row.attachments as CollaborationAttachment[])
+        : undefined,
     format: row?.format === 'plaintext' ? 'plaintext' : 'markdown',
-    mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
-    reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+    mentions:
+      Array.isArray(row?.mentions) && row.mentions.length > 0
+        ? (row.mentions as CollaborationMention[])
+        : undefined,
+    reactions:
+      Array.isArray(row?.reactions) && row.reactions.length > 0
+        ? (row.reactions as CollaborationReaction[])
+        : undefined,
     parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
     threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
     threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
@@ -59,8 +103,6 @@ interface UseRealtimeMessagesOptions {
   onError: (channel: Channel) => void
 }
 
-const FALLBACK_POLL_INTERVAL_MS = 30000
-
 export function useRealtimeMessages({
   workspaceId,
   selectedChannel,
@@ -68,16 +110,8 @@ export function useRealtimeMessages({
   setNextCursorByChannel,
   setLoadingChannelId,
   setMessagesError,
-  onError,
 }: UseRealtimeMessagesOptions) {
-  const { toast } = useToast()
   const { isPreviewMode } = usePreview()
-
-  const channelRef = useRef(selectedChannel)
-  channelRef.current = selectedChannel
-
-  const onErrorRef = useRef(onError)
-  onErrorRef.current = onError
 
   const channelId = selectedChannel?.id ?? null
   const channelType = selectedChannel?.type ?? null
@@ -91,7 +125,7 @@ export function useRealtimeMessages({
     Boolean(channelType)
 
   const convexRows = useQuery(
-    (collaborationApi as any).listChannel,
+    collaborationApi.listChannel,
     convexEnabled
       ? {
           workspaceId: String(workspaceId),
@@ -101,7 +135,7 @@ export function useRealtimeMessages({
           limit: REALTIME_MESSAGE_LIMIT + 1,
         }
       : 'skip'
-  ) as Array<any> | undefined
+  ) as Array<ConvexMessageRow> | undefined
 
   useEffect(() => {
     if (!convexEnabled || !channelId) {
@@ -197,6 +231,12 @@ interface UseRealtimeTypingOptions {
   selectedChannel: Channel | null
 }
 
+interface ConvexTypingRow {
+  userId?: string
+  name?: string
+  role?: string
+}
+
 export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseRealtimeTypingOptions) {
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([])
 
@@ -208,7 +248,7 @@ export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseR
     Boolean(channelId)
 
   const typingRows = useQuery(
-    (collaborationApi as any).listTyping,
+    collaborationApi.listTyping,
     convexEnabled
       ? {
           workspaceId: String(workspaceId),
@@ -216,7 +256,7 @@ export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseR
           limit: 20,
         }
       : 'skip'
-  ) as Array<any> | undefined
+  ) as Array<ConvexTypingRow> | undefined
 
   useEffect(() => {
     if (!convexEnabled) {

@@ -80,7 +80,7 @@ export function FeatureCard({
       {/* Image Preview */}
       {feature.imageUrl && (
         <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted ml-4 mr-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <LazyImage
             src={feature.imageUrl}
             alt={feature.title}

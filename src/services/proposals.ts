@@ -9,6 +9,30 @@ type ConvexAuthArgs = {
   convexToken: string
 }
 
+interface ConvexProposalRow {
+  legacyId: string
+  status?: string
+  stepProgress?: number
+  formData?: ProposalDraft['formData'] | null
+  aiInsights?: ProposalDraft['aiInsights'] | null
+  aiSuggestions?: ProposalDraft['aiSuggestions'] | null
+  pdfUrl?: string | null
+  pptUrl?: string | null
+  createdAtMs?: number
+  updatedAtMs?: number
+  lastAutosaveAtMs?: number
+  clientId?: string | null
+  clientName?: string | null
+  presentationDeck?: {
+    storageUrl?: string | null
+    [key: string]: unknown
+  } | null
+}
+
+interface ConvexCreateResponse {
+  legacyId: string
+}
+
 function requireConvexUrl(): string {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
   if (!convexUrl) {
@@ -23,8 +47,8 @@ function createAuthedConvexClient(token: string): ConvexReactClient {
   return convex
 }
 
-function mapConvexProposalToDraft(row: any): ProposalDraft {
-  return resolveProposalDeck({
+function mapConvexProposalToDraft(row: ConvexProposalRow): ProposalDraft {
+  const baseDraft: ProposalDraft = {
     id: String(row.legacyId),
     status: (row.status ?? 'draft') as ProposalDraft['status'],
     stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
@@ -39,9 +63,21 @@ function mapConvexProposalToDraft(row: any): ProposalDraft {
     clientId: row.clientId ?? null,
     clientName: row.clientName ?? null,
     presentationDeck: row.presentationDeck
-      ? { ...row.presentationDeck, storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null }
+      ? ({
+          generationId: null,
+          status: 'unknown',
+          instructions: null,
+          webUrl: null,
+          shareUrl: null,
+          pptxUrl: null,
+          pdfUrl: null,
+          generatedFiles: [],
+          storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
+          ...row.presentationDeck,
+        } as ProposalDraft['presentationDeck'])
       : null,
-  })
+  }
+  return resolveProposalDeck(baseDraft)
 }
 
 export async function listProposals(
@@ -54,7 +90,7 @@ export async function listProposals(
     limit: typeof params.pageSize === 'number' && Number.isFinite(params.pageSize) ? params.pageSize : 100,
     status: params.status,
     clientId: params.clientId,
-  })) as any[]
+  })) as ConvexProposalRow[]
 
   return rows.map(mapConvexProposalToDraft)
 }
@@ -65,7 +101,7 @@ export async function getProposalById(id: string, auth: ConvexAuthArgs) {
   const row = (await convex.query(convexApi.proposals.getByLegacyId, {
     workspaceId: auth.workspaceId,
     legacyId: id,
-  })) as any
+  })) as ConvexProposalRow | null
 
   if (!row) {
     throw new Error('Proposal not found')
@@ -74,18 +110,18 @@ export async function getProposalById(id: string, auth: ConvexAuthArgs) {
   return mapConvexProposalToDraft(row)
 }
 
-export async function createProposalDraft(body: Partial<ProposalDraft> = {}, auth: ConvexAuthArgs) {
+export async function createProposalDraft(body: Partial<ProposalDraft> & { ownerId?: string | null } = {}, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
   const res = (await convex.mutation(convexApi.proposals.create, {
     workspaceId: auth.workspaceId,
-    ownerId: (body as any).ownerId ?? null,
+    ownerId: body.ownerId ?? null,
     status: (body.status ?? 'draft') as string,
     stepProgress: typeof body.stepProgress === 'number' ? body.stepProgress : 0,
     formData: body.formData ?? mergeProposalForm(null),
     clientId: body.clientId ?? null,
     clientName: body.clientName ?? null,
-  })) as any
+  })) as ConvexCreateResponse
 
   return String(res.legacyId)
 }
@@ -97,11 +133,11 @@ export async function updateProposalDraft(id: string, body: Partial<ProposalDraf
   await convex.mutation(convexApi.proposals.update, {
     workspaceId: auth.workspaceId,
     legacyId: id,
-    status: body.status as any,
-    stepProgress: body.stepProgress as any,
-    formData: body.formData as any,
-    clientId: body.clientId as any,
-    clientName: body.clientName as any,
+    status: body.status,
+    stepProgress: body.stepProgress,
+    formData: body.formData,
+    clientId: body.clientId,
+    clientName: body.clientName,
     updatedAtMs: timestamp,
     lastAutosaveAtMs: timestamp,
   })
@@ -126,5 +162,6 @@ export async function refreshProposalDraft(id: string, auth: ConvexAuthArgs) {
 
 export async function requestProposalDeckPreparation(_id: string) {
   // Deck preparation is handled server-side; keep this helper for future triggers.
+  void _id
   return { ok: true }
 }

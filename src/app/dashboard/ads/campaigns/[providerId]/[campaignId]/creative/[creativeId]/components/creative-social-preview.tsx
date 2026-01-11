@@ -479,7 +479,7 @@ export function CreativeSocialPreview(props: {
               </div>
 
               <p className="text-[11px] leading-relaxed text-muted-foreground font-medium text-center bg-background/30 backdrop-blur-sm p-4 rounded-2xl border border-muted-foreground/5 italic">
-                "This creative's conversion profile exceeds {Math.max(0, efficiencyScore - 10)}% of tested assets in the {creative.providerId}-network benchmarks."
+                &quot;This creative&apos;s conversion profile exceeds {Math.max(0, efficiencyScore - 10)}% of tested assets in the {creative.providerId}-network benchmarks.&quot;
               </p>
             </CardContent>
           </Card>
