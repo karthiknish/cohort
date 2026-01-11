@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ChevronDown, FileText, LoaderCircle, Save, Star, Trash2 } from 'lucide-react'
 
 
@@ -29,11 +29,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalTemplate } from '@/types/proposal-templates'
-import {
-  fetchProposalTemplates,
-  createProposalTemplate,
-  deleteProposalTemplate,
-} from '@/services/proposal-templates'
+import { useAuth } from '@/contexts/auth-context'
+import { useMutation, useQuery } from 'convex/react'
+import { proposalTemplatesApi } from '@/lib/convex-api'
 
 interface ProposalTemplateSelectorProps {
   currentFormData: ProposalFormData
@@ -47,9 +45,33 @@ export function ProposalTemplateSelector({
   disabled = false,
 }: ProposalTemplateSelectorProps) {
   const { toast } = useToast()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
 
-  const [templates, setTemplates] = useState<ProposalTemplate[]>([])
-  const [loading, setLoading] = useState(false)
+  const templatesRows = useQuery(
+    proposalTemplatesApi.list,
+    workspaceId ? { workspaceId, limit: 50 } : 'skip',
+  )
+
+  const createTemplate = useMutation(proposalTemplatesApi.create)
+  const deleteTemplate = useMutation(proposalTemplatesApi.remove)
+
+  const templates: ProposalTemplate[] = useMemo(() => {
+    if (!templatesRows) return []
+
+    return templatesRows.map((row: any) => ({
+      id: String(row.legacyId),
+      name: typeof row.name === 'string' ? row.name : 'Untitled Template',
+      description: typeof row.description === 'string' ? row.description : null,
+      formData: row.formData as ProposalFormData,
+      industry: typeof row.industry === 'string' ? row.industry : null,
+      tags: Array.isArray(row.tags) ? row.tags.filter((t: any): t is string => typeof t === 'string') : [],
+      isDefault: row.isDefault === true,
+      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+      updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+    }))
+  }, [templatesRows])
+
   const [open, setOpen] = useState(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -61,28 +83,7 @@ export function ProposalTemplateSelector({
   const [templateIndustry, setTemplateIndustry] = useState('')
   const [isDefault, setIsDefault] = useState(false)
 
-  const loadTemplates = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await fetchProposalTemplates()
-      setTemplates(data)
-    } catch (error) {
-      console.error('Failed to load templates:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load templates',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
-
-  useEffect(() => {
-    if (open) {
-      loadTemplates()
-    }
-  }, [open, loadTemplates])
+  const loading = templatesRows === undefined
 
   const handleApplyTemplate = useCallback((template: ProposalTemplate) => {
     onApplyTemplate(template.formData)
@@ -105,20 +106,19 @@ export function ProposalTemplateSelector({
 
     try {
       setSaving(true)
-      const newTemplate = await createProposalTemplate({
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+
+      await createTemplate({
+        workspaceId,
         name: templateName.trim(),
         description: templateDescription.trim() || null,
         formData: currentFormData,
         industry: templateIndustry.trim() || null,
+        tags: [],
         isDefault,
-      })
-
-      setTemplates((prev) => {
-        // If new template is default, unset others
-        if (isDefault) {
-          return [newTemplate, ...prev.map((t) => ({ ...t, isDefault: false }))]
-        }
-        return [newTemplate, ...prev]
+        createdBy: user?.id ?? null,
       })
 
       setSaveDialogOpen(false)
@@ -129,7 +129,7 @@ export function ProposalTemplateSelector({
 
       toast({
         title: 'Template saved',
-        description: `"${newTemplate.name}" has been saved.`,
+        description: `"${templateName.trim()}" has been saved.`,
       })
     } catch (error) {
       console.error('Failed to save template:', error)
@@ -146,8 +146,11 @@ export function ProposalTemplateSelector({
   const handleDeleteTemplate = useCallback(async (templateId: string, templateName: string) => {
     try {
       setDeleting(templateId)
-      await deleteProposalTemplate(templateId)
-      setTemplates((prev) => prev.filter((t) => t.id !== templateId))
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+
+      await deleteTemplate({ workspaceId, legacyId: templateId })
       toast({
         title: 'Template deleted',
         description: `"${templateName}" has been deleted.`,

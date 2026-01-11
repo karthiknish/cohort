@@ -33,11 +33,8 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
-import {
-  fetchProposalAnalyticsSummary,
-  fetchProposalAnalyticsTimeSeries,
-  fetchProposalAnalyticsByClient,
-} from '@/services/proposal-analytics'
+import { useQuery } from 'convex/react'
+import { proposalAnalyticsApi } from '@/lib/convex-api'
 import type {
   ProposalAnalyticsSummary,
   ProposalAnalyticsTimeSeriesPoint,
@@ -85,53 +82,55 @@ function formatPercentage(value: number): string {
 }
 
 export function ProposalAnalyticsCard() {
-  const { getIdToken } = useAuth()
+  const { user } = useAuth()
   const { toast } = useToast()
 
+  const workspaceId = user?.agencyId ?? null
+
   const [timeRange, setTimeRange] = useState<TimeRange>('30d')
-  const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [summary, setSummary] = useState<ProposalAnalyticsSummary | null>(null)
-  const [timeSeries, setTimeSeries] = useState<ProposalAnalyticsTimeSeriesPoint[]>([])
-  const [byClient, setByClient] = useState<ProposalAnalyticsByClient[]>([])
 
-  const loadAnalytics = useCallback(async (quiet = false) => {
-    try {
-      if (!quiet) setLoading(true)
-      else setRefreshing(true)
+  const dateRange = useMemo(() => getDateRange(timeRange), [timeRange])
+  const startDateMs = useMemo(() => {
+    if (!dateRange?.startDate) return undefined
+    const d = new Date(dateRange.startDate)
+    return Number.isNaN(d.getTime()) ? undefined : d.getTime()
+  }, [dateRange?.startDate])
+  const endDateMs = useMemo(() => {
+    if (!dateRange?.endDate) return undefined
+    const d = new Date(dateRange.endDate)
+    if (Number.isNaN(d.getTime())) return undefined
+    d.setHours(23, 59, 59, 999)
+    return d.getTime()
+  }, [dateRange?.endDate])
 
-      const dateRange = getDateRange(timeRange)
-      const [summaryData, timeSeriesData, byClientData] = await Promise.all([
-        fetchProposalAnalyticsSummary(dateRange),
-        fetchProposalAnalyticsTimeSeries(dateRange),
-        fetchProposalAnalyticsByClient(dateRange),
-      ])
+  const summaryRes = useQuery(
+    proposalAnalyticsApi.summarize,
+    workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
+  )
+  const timeSeriesRes = useQuery(
+    proposalAnalyticsApi.timeSeries,
+    workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
+  )
+  const byClientRes = useQuery(
+    proposalAnalyticsApi.byClient,
+    workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
+  )
 
-      setSummary(summaryData)
-      setTimeSeries(timeSeriesData)
-      setByClient(byClientData)
-    } catch (error) {
-      console.error('Failed to load proposal analytics:', error)
-      if (!quiet) {
-        toast({
-          title: 'Failed to load analytics',
-          description: error instanceof Error ? error.message : 'Unknown error',
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [timeRange, toast])
+  const summary = (summaryRes as any)?.summary as ProposalAnalyticsSummary | undefined
+  const timeSeries = ((timeSeriesRes as any)?.timeseries ?? []) as ProposalAnalyticsTimeSeriesPoint[]
+  const byClient = ((byClientRes as any)?.byClient ?? []) as ProposalAnalyticsByClient[]
+
+  const loading = summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined
 
   useEffect(() => {
-    loadAnalytics()
-  }, [loadAnalytics])
+    if (!loading) setRefreshing(false)
+  }, [loading])
 
   const handleRefresh = useCallback(() => {
-    loadAnalytics(true)
-  }, [loadAnalytics])
+    setRefreshing(true)
+    toast({ title: 'Refreshing…', description: 'Analytics will update automatically.' })
+  }, [toast])
 
   // Calculate simple chart data from time series
   const chartData = useMemo(() => {

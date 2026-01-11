@@ -1,29 +1,53 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  Timestamp,
-  collection,
-  doc,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  type QueryConstraint,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-} from 'firebase/firestore'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from 'convex/react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { usePreview } from '@/contexts/preview-context'
-import { db } from '@/lib/firebase'
+import { collaborationApi } from '@/lib/convex-api'
 import { getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { Channel } from '../types'
 import type { MessagesByChannelState, TypingParticipant } from './types'
 import { REALTIME_MESSAGE_LIMIT, TYPING_TIMEOUT_MS } from './constants'
-import { mapRealtimeMessage } from './utils'
+import { encodeTimestampIdCursor } from '@/lib/pagination'
+
+function mapConvexRealtimeMessageRow(row: any): CollaborationMessage {
+  const isDeleted = Boolean(row?.deleted || row?.deletedAtMs)
+  const createdAt = typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null
+  const updatedAt = typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null
+  const deletedAt = typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null
+  const threadLastReplyAt =
+    typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null
+
+  const content = typeof row?.content === 'string' ? row.content : ''
+
+  return {
+    id: String(row?.legacyId ?? ''),
+    channelType: typeof row?.channelType === 'string' ? row.channelType : 'team',
+    clientId: typeof row?.clientId === 'string' ? row.clientId : null,
+    projectId: typeof row?.projectId === 'string' ? row.projectId : null,
+    senderId: typeof row?.senderId === 'string' ? row.senderId : null,
+    senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
+    senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
+    content: isDeleted ? '' : content,
+    createdAt,
+    updatedAt,
+    isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
+    deletedAt,
+    deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+    isDeleted,
+    attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+    format: row?.format === 'plaintext' ? 'plaintext' : 'markdown',
+    mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
+    reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+    parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
+    threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+    threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+    threadLastReplyAt,
+  }
+}
 
 interface UseRealtimeMessagesOptions {
   workspaceId: string | null
@@ -34,6 +58,8 @@ interface UseRealtimeMessagesOptions {
   setMessagesError: React.Dispatch<React.SetStateAction<string | null>>
   onError: (channel: Channel) => void
 }
+
+const FALLBACK_POLL_INTERVAL_MS = 30000
 
 export function useRealtimeMessages({
   workspaceId,
@@ -46,44 +72,104 @@ export function useRealtimeMessages({
 }: UseRealtimeMessagesOptions) {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
-  const channelUnsubscribeRef = useRef<(() => void) | null>(null)
-  
-  // Store channel in ref for use in error callback without adding to deps
+
   const channelRef = useRef(selectedChannel)
   channelRef.current = selectedChannel
-  
-  // Store onError in ref to avoid it affecting deps
+
   const onErrorRef = useRef(onError)
   onErrorRef.current = onError
-  
-  // Extract stable channel properties to use in deps instead of full object
+
   const channelId = selectedChannel?.id ?? null
   const channelType = selectedChannel?.type ?? null
   const channelClientId = selectedChannel?.clientId ?? null
   const channelProjectId = selectedChannel?.projectId ?? null
 
+  const convexEnabled =
+    !isPreviewMode &&
+    Boolean(workspaceId) &&
+    Boolean(channelId) &&
+    Boolean(channelType)
+
+  const convexRows = useQuery(
+    (collaborationApi as any).listChannel,
+    convexEnabled
+      ? {
+          workspaceId: String(workspaceId),
+          channelType: String(channelType),
+          clientId: channelType === 'client' ? (channelClientId ?? null) : null,
+          projectId: channelType === 'project' ? (channelProjectId ?? null) : null,
+          limit: REALTIME_MESSAGE_LIMIT + 1,
+        }
+      : 'skip'
+  ) as Array<any> | undefined
+
   useEffect(() => {
-    channelUnsubscribeRef.current?.()
-    channelUnsubscribeRef.current = null
+    if (!convexEnabled || !channelId) {
+      return
+    }
+
+    setLoadingChannelId(channelId)
+    setMessagesError(null)
+  }, [channelId, convexEnabled, setLoadingChannelId, setMessagesError])
+
+  useEffect(() => {
+    if (!convexEnabled || !channelId) {
+      return
+    }
+
+    if (!convexRows) {
+      return
+    }
+
+    const rows = Array.isArray(convexRows) ? convexRows : []
+    const hasMore = rows.length > REALTIME_MESSAGE_LIMIT
+    const pageRows = hasMore ? rows.slice(0, REALTIME_MESSAGE_LIMIT) : rows
+
+    const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
+    const nextCursor =
+      hasMore && oldestRow && typeof oldestRow.createdAtMs === 'number'
+        ? encodeTimestampIdCursor(new Date(oldestRow.createdAtMs).toISOString(), String(oldestRow.legacyId ?? ''))
+        : null
+
+    const next = pageRows
+      .map(mapConvexRealtimeMessageRow)
+      .filter((message) => message.id)
+      // `listChannel` is ordered desc; UI expects oldest->newest.
+      .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
+
+    setMessagesByChannel((prev) => ({
+      ...prev,
+      [channelId]: next,
+    }))
+    setNextCursorByChannel((prev) => ({
+      ...prev,
+      [channelId]: nextCursor,
+    }))
+    setLoadingChannelId((current) => (current === channelId ? null : current))
+    setMessagesError(null)
+  }, [
+    channelId,
+    convexEnabled,
+    convexRows,
+    setLoadingChannelId,
+    setMessagesByChannel,
+    setMessagesError,
+    setNextCursorByChannel,
+  ])
+
+  useEffect(() => {
+    if (convexEnabled) {
+      return
+    }
 
     if (!channelId || !channelType) {
       return
     }
 
-    // Handle preview mode
     if (isPreviewMode) {
-      const previewMessages = getPreviewCollaborationMessages(
-        channelClientId,
-        channelProjectId
-      )
-      // Only update state if not already set for this channel to prevent loops
+      const previewMessages = getPreviewCollaborationMessages(channelClientId, channelProjectId)
       setMessagesByChannel((prev) => {
         const existing = prev[channelId]
-        // Skip update if we already have preview data for this channel
-        if (existing && existing.length > 0 && existing === previewMessages) {
-          return prev
-        }
-        // Also skip if lengths match (preview data is stable)
         if (existing && existing.length === previewMessages.length) {
           return prev
         }
@@ -101,84 +187,9 @@ export function useRealtimeMessages({
       })
       setLoadingChannelId(null)
       setMessagesError(null)
-      return
     }
-
-    if (!workspaceId) {
-      return
-    }
-
-    setLoadingChannelId(channelId)
-    setMessagesError(null)
-
-    const baseCollection = collection(db, 'workspaces', workspaceId, 'collaborationMessages')
-    const constraints: QueryConstraint[] = [where('channelType', '==', channelType)]
-
-    if (channelType === 'client') {
-      if (!channelClientId) {
-        setMessagesError('Client channel is missing an identifier')
-        setLoadingChannelId((current) => (current === channelId ? null : current))
-        return
-      }
-      constraints.push(where('clientId', '==', channelClientId))
-    }
-
-    if (channelType === 'project') {
-      if (!channelProjectId) {
-        setMessagesError('Project channel is missing an identifier')
-        setLoadingChannelId((current) => (current === channelId ? null : current))
-        return
-      }
-      constraints.push(where('projectId', '==', channelProjectId))
-    }
-
-    constraints.push(orderBy('createdAt', 'asc'), limit(REALTIME_MESSAGE_LIMIT))
-    const channelQuery = query(baseCollection, ...constraints)
-
-    const unsubscribe = onSnapshot(
-      channelQuery,
-      (snapshot) => {
-        const next = snapshot.docs.map((doc) => mapRealtimeMessage(doc))
-        setMessagesByChannel((prev) => ({
-          ...prev,
-          [channelId]: next,
-        }))
-        setNextCursorByChannel((prev) => ({
-          ...prev,
-          [channelId]: prev[channelId] ?? null,
-        }))
-        setLoadingChannelId((current) => (current === channelId ? null : current))
-        setMessagesError(null)
-      },
-      (error) => {
-        console.error('[collaboration] realtime subscription error', error)
-        const message = error instanceof Error ? error.message : 'Unable to subscribe to messages'
-        setMessagesError(message)
-        setLoadingChannelId((current) => (current === channelId ? null : current))
-        toast({
-          title: 'Connection lost',
-          description: 'Messages may be delayed. Trying to reconnect...',
-          variant: 'destructive',
-        })
-        // Use refs for callback and channel to avoid dep issues
-        if (channelRef.current) {
-          onErrorRef.current(channelRef.current)
-        }
-      }
-    )
-
-    channelUnsubscribeRef.current = unsubscribe
-
-    return () => {
-      unsubscribe()
-      if (channelUnsubscribeRef.current === unsubscribe) {
-        channelUnsubscribeRef.current = null
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, channelType, channelClientId, channelProjectId, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel, toast, workspaceId])
+  }, [channelClientId, channelId, channelProjectId, channelType, convexEnabled, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel])
 }
-
 
 interface UseRealtimeTypingOptions {
   userId: string | null
@@ -186,84 +197,71 @@ interface UseRealtimeTypingOptions {
   selectedChannel: Channel | null
 }
 
-export function useRealtimeTyping({
-  userId,
-  workspaceId,
-  selectedChannel,
-}: UseRealtimeTypingOptions) {
+export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseRealtimeTypingOptions) {
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([])
-  
-  // Extract stable channel id to use in deps
+
   const channelId = selectedChannel?.id ?? null
 
+  const convexEnabled =
+    Boolean(userId) &&
+    Boolean(workspaceId) &&
+    Boolean(channelId)
+
+  const typingRows = useQuery(
+    (collaborationApi as any).listTyping,
+    convexEnabled
+      ? {
+          workspaceId: String(workspaceId),
+          channelId: String(channelId),
+          limit: 20,
+        }
+      : 'skip'
+  ) as Array<any> | undefined
+
   useEffect(() => {
-    if (!userId || !workspaceId || !channelId) {
+    if (!convexEnabled) {
+      return
+    }
+
+    if (!typingRows) {
       setTypingParticipants([])
       return
     }
 
-    const typingDocRef = doc(db, 'workspaces', workspaceId, 'collaborationTyping', channelId)
+    const list = typingRows
+      .filter((row) => typeof row?.userId === 'string' && row.userId !== userId)
+      .map((row) => {
+        const name = typeof row?.name === 'string' ? row.name : null
+        if (!name || name.trim().length === 0) return null
+        const role = typeof row?.role === 'string' ? row.role : null
+        return { name, role } as TypingParticipant
+      })
+      .filter(Boolean) as TypingParticipant[]
 
-    const unsubscribe = onSnapshot(
-      typingDocRef,
-      (snapshot) => {
-        const data = snapshot.data() as { typers?: Record<string, unknown> } | undefined
-        const entries = data && typeof data.typers === 'object' && data.typers !== null ? data.typers : undefined
-
-        if (!entries) {
-          setTypingParticipants([])
-          return
-        }
-
-        const now = Date.now()
-        const list: TypingParticipant[] = []
-
-        Object.entries(entries).forEach(([actorId, rawEntry]) => {
-          if (!rawEntry || typeof rawEntry !== 'object' || actorId === userId) {
-            return
-          }
-
-          const entry = rawEntry as Record<string, unknown>
-          const name = typeof entry.name === 'string' ? entry.name : null
-          if (!name || name.trim().length === 0) {
-            return
-          }
-
-          const expires = entry.expiresAt
-          let expiresAtMs: number | null = null
-
-          if (expires instanceof Timestamp) {
-            expiresAtMs = expires.toMillis()
-          } else if (
-            typeof expires === 'object' &&
-            expires !== null &&
-            typeof (expires as { toMillis?: () => number }).toMillis === 'function'
-          ) {
-            expiresAtMs = (expires as { toMillis: () => number }).toMillis()
-          } else if (typeof expires === 'number') {
-            expiresAtMs = expires
-          }
-
-          if (expiresAtMs && expiresAtMs < now) {
-            return
-          }
-
-          const role = typeof entry.role === 'string' ? entry.role : null
-          list.push({ name, role })
-        })
-
-        setTypingParticipants(list)
-      },
-      (error) => {
-        console.warn('[collaboration] typing subscription error', error)
-        setTypingParticipants([])
-      }
-    )
-
-    return () => {
-      unsubscribe()
-    }
-  }, [channelId, userId, workspaceId])
+    setTypingParticipants(list)
+  }, [convexEnabled, typingRows, userId])
 
   return { typingParticipants }
+}
+
+export function useTypingTimeout(typingParticipants: TypingParticipant[]) {
+  const [freshTypingParticipants, setFreshTypingParticipants] = useState<TypingParticipant[]>(typingParticipants)
+
+  useEffect(() => {
+    setFreshTypingParticipants(typingParticipants)
+
+    if (typingParticipants.length === 0) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFreshTypingParticipants([])
+    }, TYPING_TIMEOUT_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [typingParticipants])
+
+  return freshTypingParticipants
 }

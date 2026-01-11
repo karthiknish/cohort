@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { ProposalFormData } from "@/lib/proposals"
-import { ProposalPresentationDeck } from "@/services/proposals"
+import type { ProposalPresentationDeck } from "@/types/proposals"
 import { cn } from "@/lib/utils"
 
 import { motion } from "framer-motion"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Download, LoaderCircle } from 'lucide-react'
@@ -8,53 +8,50 @@ import { ArrowLeft, Download, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { ProposalDraft } from '@/services/proposals'
-import { getProposalById } from '@/services/proposals'
+import type { ProposalDraft } from '@/types/proposals'
+import { mergeProposalForm } from '@/lib/proposals'
+import { useAuth } from '@/contexts/auth-context'
+import { useQuery } from 'convex/react'
+import { proposalsApi } from '@/lib/convex-api'
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
   const proposalId = params?.proposalId
-  const [proposal, setProposal] = useState<ProposalDraft | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let active = true
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
 
-    async function loadProposal() {
-      if (!proposalId) {
-        setError('Proposal not found')
-        setIsLoading(false)
-        return
-      }
+  const proposalRow = useQuery(
+    proposalsApi.getByLegacyId,
+    workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip'
+  )
 
-      setIsLoading(true)
-      setError(null)
-      try {
-        const result = await getProposalById(proposalId)
-        if (!active) return
-        setProposal(result)
-      } catch (err: unknown) {
-        if (!active) return
-        const message = err instanceof Error ? err.message : 'Failed to load proposal'
-        setError(message)
-        setProposal(null)
-      } finally {
-        if (active) {
-          setIsLoading(false)
-        }
-      }
+  const isLoading = proposalRow === undefined
+  const error = !isLoading && proposalRow === null ? 'Proposal not found' : null
+
+  const proposal: ProposalDraft | null = useMemo(() => {
+    if (!proposalRow) return null
+
+    return {
+      id: proposalRow.legacyId,
+      status: proposalRow.status,
+      stepProgress: proposalRow.stepProgress,
+      formData: mergeProposalForm(proposalRow.formData),
+      aiInsights: proposalRow.aiInsights ?? null,
+      aiSuggestions: proposalRow.aiSuggestions ?? null,
+      pdfUrl: proposalRow.pdfUrl ?? null,
+      pptUrl: proposalRow.pptUrl ?? null,
+      createdAt: proposalRow.createdAtMs ? new Date(proposalRow.createdAtMs).toISOString() : null,
+      updatedAt: proposalRow.updatedAtMs ? new Date(proposalRow.updatedAtMs).toISOString() : null,
+      lastAutosaveAt: proposalRow.lastAutosaveAtMs ? new Date(proposalRow.lastAutosaveAtMs).toISOString() : null,
+      clientId: proposalRow.clientId ?? null,
+      clientName: proposalRow.clientName ?? null,
+      presentationDeck: proposalRow.presentationDeck ?? null,
+      gammaDeck: proposalRow.presentationDeck ?? null,
     }
+  }, [proposalRow])
 
-    void loadProposal()
-
-    return () => {
-      active = false
-    }
-  }, [proposalId])
-
-
-  // PDF storage URL from Firebase (preferred for viewing)
+  // PDF storage URL (preferred for viewing)
   const pdfStorageUrl = useMemo(() => {
     if (!proposal) return null
     const deck = proposal.presentationDeck ?? proposal.gammaDeck
@@ -68,15 +65,8 @@ export default function ProposalDeckPage() {
     return proposal.pdfUrl ?? deck?.pdfUrl ?? null
   }, [proposal])
 
-  // Use proxy for Firebase Storage URLs to avoid CORS issues
   const pdfViewerUrl = useMemo(() => {
-    const url = pdfStorageUrl ?? pdfUrl
-    if (!url) return null
-    // If it's a Firebase Storage URL, route through our proxy
-    if (url.includes('firebasestorage.googleapis.com')) {
-      return `/api/proxy/file?url=${encodeURIComponent(url)}`
-    }
-    return url
+    return pdfStorageUrl ?? pdfUrl
   }, [pdfStorageUrl, pdfUrl])
 
   // Best PDF download URL (prefer storage URL for reliability)

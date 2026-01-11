@@ -2,10 +2,27 @@
 // ALERT PROCESSOR - Orchestration for workspace-level alerts
 // =============================================================================
 
-import { adminDb } from '@/lib/firebase-admin'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../../convex/_generated/api'
 import { evaluateAlerts, formatAlertsForEmail } from './evaluator'
 import { sendTransactionalEmail } from '../notifications'
 import type { AlertRule, AlertEvaluationInput, DailyMetricData } from './types'
+
+// -----------------------------------------------------------------------------
+// Convex client (lazy singleton for server-side use)
+// -----------------------------------------------------------------------------
+let _convexClient: ConvexHttpClient | null = null
+
+function getConvexClient(): ConvexHttpClient | null {
+    if (_convexClient) return _convexClient
+    const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+    if (!url) {
+        console.error('[AlertProcessor] CONVEX_URL not configured')
+        return null
+    }
+    _convexClient = new ConvexHttpClient(url)
+    return _convexClient
+}
 
 /**
  * Process all alert rules for a specific workspace/client and send notifications
@@ -17,19 +34,15 @@ export async function processWorkspaceAlerts(options: {
 }) {
     const { userId, workspaceId, recipientEmail } = options
 
-    try {
-        // 1. Fetch Alert Rules for this workspace
-        const rulesSnapshot = await adminDb
-            .collection('workspaces')
-            .doc(workspaceId)
-            .collection('alertRules')
-            .where('enabled', '==', true)
-            .get()
+    const convex = getConvexClient()
+    if (!convex) {
+        console.error('[AlertProcessor] Convex client not available')
+        return { evaluated: 0, triggered: 0, results: [] }
+    }
 
-        const rules = rulesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as AlertRule))
+    try {
+        // 1. Fetch Alert Rules for this workspace from Convex
+        const rules = await convex.query(api.alertRules.listEnabled, { workspaceId }) as AlertRule[]
 
         if (rules.length === 0) {
             return { evaluated: 0, triggered: 0, results: [] }
@@ -37,23 +50,10 @@ export async function processWorkspaceAlerts(options: {
 
         // 2. Fetch Custom Formulas if needed
         const formulaRules = rules.filter(r => r.metric === 'custom_formula')
-        const formulas: Record<string, { formula: string; inputs: string[] }> = {}
+        let formulas: Record<string, { formula: string; inputs: string[] }> = {}
 
         if (formulaRules.length > 0) {
-            const formulasSnapshot = await adminDb
-                .collection('workspaces')
-                .doc(workspaceId)
-                .collection('customFormulas')
-                .where('isActive', '==', true)
-                .get()
-
-            formulasSnapshot.docs.forEach(doc => {
-                const data = doc.data()
-                formulas[doc.id] = {
-                    formula: data.formula,
-                    inputs: data.inputs || []
-                }
-            })
+            formulas = await convex.query(api.customFormulas.listActiveForAlerts, { workspaceId })
         }
 
         // 3. Fetch Recent Metrics for evaluation
@@ -64,34 +64,16 @@ export async function processWorkspaceAlerts(options: {
             return 0
         }), 7)
 
-        const metricsSnapshot = await adminDb
-            .collection('users')
-            .doc(userId)
-            .collection('adMetrics')
-            .where('clientId', '==', workspaceId)
-            .orderBy('date', 'desc')
-            .limit(maxBaseline + 1)
-            .get()
+        // Use workspaceId as clientId for metrics lookup (legacy pattern)
+        const metricsData: DailyMetricData[] = await convex.query(api.adsMetrics.listRecentForAlerts, {
+            workspaceId,
+            clientId: workspaceId,
+            limit: maxBaseline + 1,
+        })
 
-        if (metricsSnapshot.empty) {
+        if (metricsData.length === 0) {
             return { evaluated: rules.length, triggered: 0, results: [] }
         }
-
-        const metricsData: DailyMetricData[] = metricsSnapshot.docs.map(doc => {
-            const data = doc.data()
-            return {
-                date: data.date,
-                spend: Number(data.spend || 0),
-                impressions: Number(data.impressions || 0),
-                clicks: Number(data.clicks || 0),
-                conversions: Number(data.conversions || 0),
-                revenue: Number(data.revenue || 0),
-                cpc: Number(data.cpc || 0),
-                ctr: Number(data.ctr || 0),
-                roas: Number(data.roas || 0),
-                cpa: Number(data.cpa || 0)
-            }
-        }).reverse() // Chronological order
 
         const current = metricsData[metricsData.length - 1]
         const history = metricsData.slice(0, -1)
@@ -108,10 +90,13 @@ export async function processWorkspaceAlerts(options: {
 
         // 5. Send Notification if triggers exist
         if (triggeredAlerts.length > 0 && recipientEmail) {
-            // Check preference
-            const userDoc = await adminDb.collection('users').doc(userId).get()
-            const userData = userDoc.data()
-            const emailPref = userData?.notificationPreferences?.email?.adAlerts !== false
+            // Check preference from Convex
+            const prefResult = await convex.query(api.users.getNotificationPreferencesByEmail, {
+                email: recipientEmail
+            })
+
+            const prefs = prefResult?.notificationPreferences
+            const emailPref = prefs?.emailAdAlerts !== false
 
             if (emailPref) {
                 const { subject, htmlContent } = formatAlertsForEmail(triggeredAlerts, workspaceId)

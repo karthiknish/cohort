@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { CreditCard, LoaderCircle, RefreshCw } from 'lucide-react'
+import { useAction } from 'convex/react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -16,7 +17,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
-import { createBillingPortalSession } from '@/services/finance'
+import { billingApi } from '@/lib/convex-api'
 import { formatCurrency, formatCurrencyDistribution, getPrimaryCurrencyTotals } from '@/app/dashboard/finance/utils'
 import { useFinanceData } from '@/app/dashboard/finance/hooks/use-finance-data'
 import { FinanceInvoiceTable } from '@/app/dashboard/finance/components/finance-invoice-table'
@@ -37,6 +38,7 @@ export default function FinancePaymentsPage() {
     refresh,
   } = useFinanceData()
 
+  const createPortalSession = useAction(billingApi.createPortalSession)
   const [openingPortal, setOpeningPortal] = useState(false)
 
   const isInitialLoading = !hasAttemptedLoad && isLoading
@@ -54,7 +56,7 @@ export default function FinancePaymentsPage() {
 
     try {
       setOpeningPortal(true)
-      const { url } = await createBillingPortalSession(selectedClientId)
+      const { url } = await createPortalSession({ clientId: selectedClientId })
       window.location.href = url
     } catch (error: unknown) {
       toast({
@@ -65,7 +67,7 @@ export default function FinancePaymentsPage() {
     } finally {
       setOpeningPortal(false)
     }
-  }, [selectedClientId, toast])
+  }, [selectedClientId, toast, createPortalSession])
 
   const primaryCurrencyTotals = useMemo(
     () =>

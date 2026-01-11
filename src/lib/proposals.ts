@@ -1,4 +1,4 @@
-import { Timestamp, serverTimestamp } from 'firebase/firestore'
+const serverTimestamp = () => new Date().toISOString()
 import { z } from 'zod'
 
 export const proposalFormSchema = z.object({
@@ -224,7 +224,7 @@ export function sanitizeProposalUpdate(data: ProposalDraftUpdateInput, timestamp
   return updates
 }
 
-type TimestampLike = Timestamp | Date | { toDate: () => Date } | string | null | undefined
+type TimestampLike = Date | { toDate: () => Date } | { toMillis: () => number } | string | number | null | undefined
 
 interface FirestoreProposalDoc {
   id?: string | null
@@ -263,9 +263,6 @@ function serializeTimestamp(value: TimestampLike): string | null {
     return null
   }
 
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString()
-  }
 
   if (value instanceof Date) {
     return value.toISOString()
@@ -275,9 +272,20 @@ function serializeTimestamp(value: TimestampLike): string | null {
     return value
   }
 
-  if (typeof value === 'object' && typeof value.toDate === 'function') {
-    const date = value.toDate()
-    return date instanceof Date ? date.toISOString() : null
+  if (typeof value === 'object' && value !== null) {
+    if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
+      const date = (value as { toDate: () => Date }).toDate()
+      return date instanceof Date ? date.toISOString() : null
+    }
+    if (typeof (value as { toMillis?: () => number }).toMillis === 'function') {
+      const millis = (value as { toMillis: () => number }).toMillis()
+      return Number.isFinite(millis) ? new Date(millis).toISOString() : null
+    }
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const millis = value < 1_000_000_000_000 ? value * 1000 : value
+    return new Date(millis).toISOString()
   }
 
   return null

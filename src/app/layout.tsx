@@ -10,6 +10,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from 'sonner'
 import { PWAProvider } from '@/components/providers/pwa-provider'
 import { AppProviders } from '@/components/providers/app-providers'
+import { GoogleAnalyticsScript } from '@/components/providers/google-analytics-script'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -50,6 +51,7 @@ export default function RootLayout({
         )}
       >
         <Suspense fallback={null}>
+          <GoogleAnalyticsScript />
           <AppProviders>
             <div className="flex min-h-screen flex-col">
               <SiteHeader />

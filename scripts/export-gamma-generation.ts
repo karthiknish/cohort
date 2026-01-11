@@ -4,7 +4,7 @@ import { access, mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve as resolvePath } from 'node:path'
 
 import { gammaService } from '../src/services/gamma'
-import { downloadGammaPresentation, findGammaFile } from '../src/app/api/proposals/utils/gamma'
+import { downloadGammaPresentation, findGammaFile } from '../src/services/gamma-utils'
 
 type SupportedFormat = 'pptx' | 'pdf'
 
@@ -139,7 +139,7 @@ async function pollForExport(options: CliOptions): Promise<NormalizedFile> {
 
     const status = await gammaService.getGeneration(options.generationId)
     const files = normalizeFiles(status.generatedFiles)
-    const desired = findGammaFile(files, options.format)
+    const desired = await findGammaFile({ generationId: options.generationId, fileType: options.format })
 
     console.log('[GammaExport] Status snapshot:', {
       status: status.status,
@@ -149,7 +149,7 @@ async function pollForExport(options: CliOptions): Promise<NormalizedFile> {
     })
 
     if (desired) {
-      return { fileType: options.format, fileUrl: desired }
+      return { fileType: options.format, fileUrl: desired.fileUrl }
     }
 
     if (!options.watch) {

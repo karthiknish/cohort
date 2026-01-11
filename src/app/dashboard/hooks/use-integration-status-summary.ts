@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
-import { fetchIntegrationStatuses } from '@/app/dashboard/ads/components/utils'
+import { adsIntegrationsApi } from '@/lib/convex-api'
 
 export type IntegrationStatusSummary = {
   totalTargets: number
@@ -25,12 +26,10 @@ const EMPTY: IntegrationStatusSummary = {
 
 export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
   const { clientIds } = options
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { isPreviewMode } = usePreview()
 
-  const [summary, setSummary] = useState<IntegrationStatusSummary>(EMPTY)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
   const stableClientIds = useMemo(() => {
     const uniq = Array.from(new Set(clientIds.filter(Boolean)))
@@ -38,106 +37,79 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
     return uniq
   }, [clientIds])
 
-  useEffect(() => {
-    let cancelled = false
-
-    if (!user?.id) {
-      setSummary(EMPTY)
-      setLoading(false)
-      setError(null)
-      return () => {
-        cancelled = true
-      }
+  const previewSummary = useMemo<{
+    summary: IntegrationStatusSummary
+    loading: boolean
+    error: string | null
+  }>(() => {
+    if (!isPreviewMode) {
+      return { summary: EMPTY, loading: false, error: null }
     }
 
-    if (stableClientIds.length === 0) {
-      setSummary(EMPTY)
-      setLoading(false)
-      setError(null)
-      return () => {
-        cancelled = true
-      }
+    const statuses = getPreviewAdsIntegrationStatuses()
+    const failed = statuses.filter((s) => s.status === 'error').length
+    const pending = statuses.filter((s) => s.status === 'pending').length
+    const never = statuses.filter((s) => s.status === 'never').length
+
+    return {
+      summary: {
+        totalTargets: stableClientIds.length,
+        totalIntegrations: statuses.length * stableClientIds.length,
+        failedCount: failed * stableClientIds.length,
+        pendingCount: pending * stableClientIds.length,
+        neverCount: never * stableClientIds.length,
+        lastErrorProviders: [],
+      },
+      loading: false,
+      error: null,
+    }
+  }, [isPreviewMode, stableClientIds.length])
+
+  // We don’t have a multi-client Convex endpoint yet, so this hook summarizes
+  // integrations at the workspace scope (clientId = null).
+  const statusesByClient = useQuery(
+    adsIntegrationsApi.listStatuses,
+    isPreviewMode || !workspaceId || !user?.id || stableClientIds.length === 0
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: null,
+        }
+  ) as Array<any> | undefined
+
+  const liveSummary = useMemo(() => {
+    if (isPreviewMode) return previewSummary
+
+    if (!workspaceId || !user?.id || stableClientIds.length === 0) {
+      return { summary: EMPTY, loading: false, error: null }
     }
 
-    const run = async () => {
-      setLoading(true)
-      setError(null)
-
-      try {
-        if (isPreviewMode) {
-          const statuses = getPreviewAdsIntegrationStatuses()
-          const failed = statuses.filter((s) => s.status === 'error').length
-          const pending = statuses.filter((s) => s.status === 'pending').length
-          const never = statuses.filter((s) => s.status === 'never').length
-
-          if (!cancelled) {
-            setSummary({
-              totalTargets: stableClientIds.length,
-              totalIntegrations: statuses.length * stableClientIds.length,
-              failedCount: failed * stableClientIds.length,
-              pendingCount: pending * stableClientIds.length,
-              neverCount: never * stableClientIds.length,
-              lastErrorProviders: [],
-            })
-          }
-          return
-        }
-
-        const token = await getIdToken()
-
-        const results = await Promise.all(
-          stableClientIds.map(async (clientId) => {
-            const resp = await fetchIntegrationStatuses(token, user.id, clientId)
-            return { clientId, statuses: resp.statuses }
-          })
-        )
-
-        let totalIntegrations = 0
-        let failedCount = 0
-        let pendingCount = 0
-        let neverCount = 0
-        const lastErrorProviders: IntegrationStatusSummary['lastErrorProviders'] = []
-
-        for (const entry of results) {
-          totalIntegrations += entry.statuses.length
-          for (const status of entry.statuses) {
-            if (status.status === 'error') {
-              failedCount += 1
-              lastErrorProviders.push({ clientId: entry.clientId, providerId: status.providerId, message: status.message ?? null })
-            } else if (status.status === 'pending') {
-              pendingCount += 1
-            } else if (status.status === 'never') {
-              neverCount += 1
-            }
-          }
-        }
-
-        if (!cancelled) {
-          setSummary({
-            totalTargets: stableClientIds.length,
-            totalIntegrations,
-            failedCount,
-            pendingCount,
-            neverCount,
-            lastErrorProviders: lastErrorProviders.slice(0, 5),
-          })
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setSummary(EMPTY)
-          setError(e instanceof Error ? e.message : 'Unable to load integration status')
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
+    if (statusesByClient === undefined) {
+      return { summary: EMPTY, loading: true, error: null }
     }
 
-    void run()
+    const statuses = Array.isArray(statusesByClient) ? statusesByClient : []
 
-    return () => {
-      cancelled = true
+    const totalTargets = stableClientIds.length
+    const totalIntegrations = statuses.length * totalTargets
+
+    const failedCount = statuses.filter((s: any) => s?.lastSyncStatus === 'error').length * totalTargets
+    const pendingCount = statuses.filter((s: any) => s?.lastSyncStatus === 'pending').length * totalTargets
+    const neverCount = statuses.filter((s: any) => (s?.lastSyncStatus ?? 'never') === 'never').length * totalTargets
+
+    return {
+      summary: {
+        totalTargets,
+        totalIntegrations,
+        failedCount,
+        pendingCount,
+        neverCount,
+        lastErrorProviders: [],
+      },
+      loading: false,
+      error: null,
     }
-  }, [getIdToken, isPreviewMode, stableClientIds, user?.id])
+  }, [isPreviewMode, previewSummary, stableClientIds.length, statusesByClient, user?.id, workspaceId])
 
-  return { summary, loading, error }
+  return liveSummary
 }

@@ -138,6 +138,7 @@ export default function TasksPage() {
     clientId: selectedClientId ?? undefined,
     authLoading,
     isPreviewMode,
+    workspaceId: user?.agencyId ?? null,
   })
 
   // Debounced search for filters

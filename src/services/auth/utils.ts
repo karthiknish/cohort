@@ -1,4 +1,6 @@
-import type { OAuthCredential } from 'firebase/auth'
+export type OAuthCredential = {
+  refreshToken?: unknown
+}
 
 import type { AuthRole, AuthStatus, AuthUser } from './types'
 

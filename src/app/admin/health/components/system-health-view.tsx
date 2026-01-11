@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
     Activity,
     CheckCircle2,
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
+import { useQuery } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,44 +46,43 @@ interface HealthData {
 }
 
 export function SystemHealthView() {
-    const { getIdToken } = useAuth()
-    const [data, setData] = useState<HealthData | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [refreshing, setRefreshing] = useState(false)
+    void useAuth
+
     const [error, setError] = useState<string | null>(null)
     const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
 
-    const fetchHealth = useCallback(async (isRefresh = false) => {
-        if (isRefresh) setRefreshing(true)
-        else setLoading(true)
-        setError(null)
+    const convexPing = useQuery(api.health.ping)
 
-        try {
-            const token = await getIdToken()
-            const res = await fetch('/api/admin/health', {
-                headers: { Authorization: `Bearer ${token}` },
-                cache: 'no-store'
-            })
+    const data: HealthData | null = useMemo(() => {
+        if (convexPing === undefined) return null
 
-            if (!res.ok) throw new Error('Failed to fetch health status')
+        const now = new Date().toISOString()
+        const ok = convexPing?.ok === true
 
-            const payload = await res.json()
-            if (payload.success) {
-                setData(payload.data)
-            } else {
-                throw new Error(payload.error || 'Unknown error')
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load system health')
-        } finally {
-            setLoading(false)
-            setRefreshing(false)
+        return {
+            status: ok ? 'healthy' : 'unhealthy',
+            timestamp: now,
+            uptime: 0,
+            responseTime: 0,
+            checks: {
+                Convex: {
+                    status: ok ? 'ok' : 'error',
+                    message: ok ? 'Convex reachable' : 'Convex ping failed',
+                },
+            },
+            environment: {
+                nodeEnv: process.env.NODE_ENV ?? 'unknown',
+                version: process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown',
+            },
         }
-    }, [getIdToken])
+    }, [convexPing])
 
-    useEffect(() => {
-        fetchHealth()
-    }, [fetchHealth])
+    const loading = convexPing === undefined
+    const refreshing = false
+
+    const fetchHealth = () => {
+        setError(null)
+    }
 
     const toggleExpand = (service: string) => {
         setExpandedServices(prev => {
@@ -107,7 +108,7 @@ export function SystemHealthView() {
 
     const getServiceIcon = (name: string) => {
         switch (name.toLowerCase()) {
-            case 'firebase': return <Server className="h-4 w-4" />
+            case 'convex': return <Server className="h-4 w-4" />
             case 'stripe': return <ShieldCheck className="h-4 w-4" />
             case 'redis': return <Zap className="h-4 w-4" />
             case 'brevo': return <Mail className="h-4 w-4" />
@@ -162,7 +163,7 @@ export function SystemHealthView() {
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => fetchHealth(true)}
+                    onClick={() => fetchHealth()}
                     disabled={refreshing}
                 >
                     <RefreshCw className={cn("mr-2 h-4 w-4", refreshing && "animate-spin")} />

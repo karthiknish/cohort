@@ -159,6 +159,56 @@ The in-app billing experience (Settings → Billing & Payments) relies on three 
 
 Once configured, users can self-manage subscriptions, update payment methods, and download invoices directly from the Settings page.
 
+### Convex Setup (WIP migration)
+
+This repo is being migrated from Firebase (Firestore/Auth/Storage) to Convex.
+
+Your Convex endpoints:
+
+- Dev deployment URL: `https://grand-sparrow-698.convex.cloud`
+- Dev HTTP Actions URL: `https://grand-sparrow-698.convex.site`
+- Prod deployment URL: `https://deafening-impala-890.convex.cloud`
+- Prod HTTP Actions URL: `https://deafening-impala-890.convex.site`
+
+1. Add your *dev* values to `.env.local` (and set the *prod* values in your hosting provider env vars):
+	```bash
+	NEXT_PUBLIC_CONVEX_URL=https://grand-sparrow-698.convex.cloud
+	NEXT_PUBLIC_CONVEX_HTTP_URL=https://grand-sparrow-698.convex.site
+	CONVEX_DEPLOYMENT=grand-sparrow-698
+	```
+2. Start Convex in dev (first run will prompt you to log in/link the project):
+	```bash
+	npm run convex:dev
+	```
+3. Deploy Convex functions:
+	```bash
+	npm run convex:deploy
+	```
+
+The app is now wired with a `ConvexProvider` (see `src/components/providers/convex-provider.tsx`). Once you start adding Convex functions, you can incrementally replace Firestore-backed API routes/services with Convex queries/mutations.
+
+### Better Auth (WIP migration)
+
+This repo is adopting the Convex Labs Better Auth component so Better Auth can store users/sessions in Convex.
+
+- Convex component registration: [convex/convex.config.ts](convex/convex.config.ts)
+- Convex Better Auth config: [convex/auth.config.ts](convex/auth.config.ts)
+- Convex Better Auth instance + helpers: [convex/auth.ts](convex/auth.ts)
+- Convex HTTP routes for auth: [convex/http.ts](convex/http.ts)
+- Next.js proxy handler: [src/app/api/auth/%5B...all%5D/route.ts](src/app/api/auth/%5B...all%5D/route.ts)
+- Next.js utilities: [src/lib/auth-server.ts](src/lib/auth-server.ts)
+- Client auth client: [src/lib/auth-client.ts](src/lib/auth-client.ts)
+
+Env vars (Next.js):
+- `NEXT_PUBLIC_CONVEX_URL` (ends in `.convex.cloud`)
+- `NEXT_PUBLIC_CONVEX_SITE_URL` (ends in `.convex.site`)
+- `NEXT_PUBLIC_SITE_URL` (e.g. `http://localhost:3000`)
+- Optional: `NEXT_PUBLIC_USE_BETTER_AUTH=true` (enables client-side syncing of `cohorts_role`/`cohorts_session_expires`)
+
+Env vars (Convex dashboard / `npx convex env set`):
+- `BETTER_AUTH_SECRET` (>= 32 chars)
+- `SITE_URL` (your site URL, e.g. `http://localhost:3000` in dev)
+
 ### Firebase Setup
 
 This project now includes hardened Firestore and Storage rules for production deployments.
@@ -188,23 +238,11 @@ This project now includes hardened Firestore and Storage rules for production de
 
 #### Expense APIs (Finance)
 
-- `GET /api/finance/expense-categories`
-- `POST /api/finance/expense-categories` (admin)
-- `PATCH /api/finance/expense-categories/:id` (admin)
-- `DELETE /api/finance/expense-categories/:id` (admin)
-- `POST /api/finance/expense-categories/seed-defaults` (admin)
+Expense tracking is backed by the (non-legacy) finance API routes under `/api/finance/*`:
 
-- `GET /api/finance/vendors`
-- `POST /api/finance/vendors` (admin)
-- `PATCH /api/finance/vendors/:id` (admin)
-- `DELETE /api/finance/vendors/:id` (admin)
-
-- `GET /api/finance/expenses`
-- `POST /api/finance/expenses`
-- `PATCH /api/finance/expenses/:id`
-- `POST /api/finance/expenses/:id` (status transitions)
-- `DELETE /api/finance/expenses/:id`
-- `GET /api/finance/expenses/report` (admin)
+- Expense categories (`/api/finance/expense-categories`)
+- Vendors (`/api/finance/vendors`)
+- Expenses (`/api/finance/expenses`, plus reporting)
 
 Receipt uploads use Firebase client SDK and store files under `users/{uid}/expenses/...`.
 

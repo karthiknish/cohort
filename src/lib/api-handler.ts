@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import { createHash } from 'crypto'
-import { adminDb } from './firebase-admin'
+import { ConvexHttpClient } from 'convex/browser'
 import { authenticateRequest, AuthenticationError, AuthResult, assertAdmin } from './server-auth'
 import { resolveWorkspaceContext, WorkspaceContext } from './workspace'
 import { UnifiedError } from '@/lib/errors'
@@ -14,10 +14,20 @@ import {
   RATE_LIMITS, 
   RateLimitPreset 
 } from './rate-limiter'
-import { checkDistributedRateLimit } from './rate-limiter-distributed'
+import { checkConvexRateLimit } from './rate-limiter-convex'
 import { sanitizeInput } from './utils'
 import { logger } from './logger'
-import { toISO } from './dates'
+import { api } from '../../convex/_generated/api'
+
+// Lazy-init Convex client for idempotency
+let _convexClient: ConvexHttpClient | null = null
+function getConvexIdempotencyClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 /**
  * Standard API Response structure
@@ -116,7 +126,7 @@ export function createApiHandler<
   return async (req: NextRequest, context: { params: Promise<Record<string, string | string[]>> }) => {
     const requestId = req.headers.get('x-request-id') || uuidv4()
     const startTime = Date.now()
-    let idempotencyRef: FirebaseFirestore.DocumentReference | null = null
+    let idempotencyKey: string | null = null
     let auth: AuthResult = { uid: null, email: null, name: null, claims: {}, isCron: false }
     let workspace: WorkspaceContext | undefined
     
@@ -140,9 +150,9 @@ export function createApiHandler<
         
         const identifier = getClientIdentifier(req)
         const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, identifier)
-        
-        // Always prefer distributed Redis-backed rate limiting (falls back to in-memory if Redis unavailable)
-        const result = await checkDistributedRateLimit(rateLimitKey, config)
+
+        // Prefer Convex-backed rate limiting (falls back to in-memory if Convex unavailable)
+        const result = await checkConvexRateLimit(rateLimitKey, options.rateLimit)
         
         if (!result.allowed) {
           return NextResponse.json(
@@ -219,9 +229,9 @@ export function createApiHandler<
       // 3.5 Idempotency Check (Enforced/Automatic)
       const isWriteMethod = ['POST', 'PATCH'].includes(req.method)
       if (isWriteMethod && !options.skipIdempotency) {
-        const idempotencyKey = req.headers.get('x-idempotency-key')
+        const headerIdempotencyKey = req.headers.get('x-idempotency-key')
         
-        if (options.requireIdempotency && !idempotencyKey) {
+        if (options.requireIdempotency && !headerIdempotencyKey) {
           return NextResponse.json({
             success: false,
             error: 'Idempotency key required for this operation',
@@ -231,65 +241,60 @@ export function createApiHandler<
         }
 
         let effectiveKey: string | null = null
-        if (idempotencyKey) {
-          // Ensure the key doesn't contain slashes which Firestore interprets as subcollections
-          const safeKey = idempotencyKey.replace(/\//g, '_')
+        if (headerIdempotencyKey) {
+          // Sanitize key (replace special chars)
+          const safeKey = headerIdempotencyKey.replace(/[^a-zA-Z0-9_-]/g, '_')
           effectiveKey = `key_${auth.uid || 'anon'}_${safeKey}`
         } else if (rawBody) {
           const bodyHash = createHash('sha256').update(rawBody).digest('hex')
-          const safePath = req.nextUrl.pathname.replace(/\//g, '_')
+          const safePath = req.nextUrl.pathname.replace(/[^a-zA-Z0-9_-]/g, '_')
           // Use path + method + body hash for automatic deduplication
           effectiveKey = `auto_${auth.uid || 'anon'}_${req.method}_${safePath}_${bodyHash}`
         }
 
         if (effectiveKey) {
-          idempotencyRef = adminDb.collection('_apiIdempotency').doc(effectiveKey)
-          
-          const result = await adminDb.runTransaction(async (transaction) => {
-            const existing = await transaction.get(idempotencyRef!)
-            if (existing.exists) {
-              const data = existing.data()
-              if (data?.idempotencyStatus === 'pending') {
-                return { type: 'pending' }
-              }
-              return { type: 'completed', data: data?.response, status: data?.status }
-            }
-            
-            // Mark as pending to prevent concurrent processing
-            transaction.set(idempotencyRef!, {
-              idempotencyStatus: 'pending',
-              createdAt: toISO(),
-              requestId,
-              method: req.method,
-              path: req.nextUrl.pathname,
-            })
-            return { type: 'new' }
-          })
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            try {
+              const result = await convex.mutation(api.apiIdempotency.checkAndClaim, {
+                key: effectiveKey,
+                requestId,
+                method: req.method,
+                path: req.nextUrl.pathname,
+              })
 
-          if (result.type === 'completed') {
-            return NextResponse.json(result.data, { 
-              status: result.status || 200,
-              headers: { 
-                'X-Idempotency-Hit': 'true', 
-                'X-Idempotency-Key': effectiveKey,
-                'X-Request-ID': requestId 
+              if (result.type === 'completed') {
+                return NextResponse.json(result.response, { 
+                  status: result.httpStatus || 200,
+                  headers: { 
+                    'X-Idempotency-Hit': 'true', 
+                    'X-Idempotency-Key': effectiveKey,
+                    'X-Request-ID': requestId 
+                  }
+                })
               }
-            })
-          }
-          
-          if (result.type === 'pending') {
-            return NextResponse.json({
-              success: false,
-              error: 'Request already in progress',
-              code: 'IDEMPOTENCY_CONFLICT',
-              requestId,
-            }, { 
-              status: 409,
-              headers: { 
-                'X-Request-ID': requestId,
-                'Retry-After': '1'
+              
+              if (result.type === 'pending') {
+                return NextResponse.json({
+                  success: false,
+                  error: 'Request already in progress',
+                  code: 'IDEMPOTENCY_CONFLICT',
+                  requestId,
+                }, { 
+                  status: 409,
+                  headers: { 
+                    'X-Request-ID': requestId,
+                    'Retry-After': '1'
+                  }
+                })
               }
-            })
+
+              // result.type === 'new' - proceed with handling, store key for later
+              idempotencyKey = effectiveKey
+            } catch (err) {
+              // If Convex is unavailable, log and continue without idempotency
+              logger.warn('Idempotency check failed, proceeding without', { error: err })
+            }
           }
         }
       }
@@ -343,20 +348,22 @@ export function createApiHandler<
           workspaceId: workspace?.workspaceId,
         })
 
-        if (!payload.success && idempotencyRef) {
-          await idempotencyRef.delete().catch(() => {})
+        if (!payload.success && idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          }
         }
 
-        if (payload.success && idempotencyRef) {
-          await idempotencyRef.set(
-            {
+        if (payload.success && idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.complete, {
+              key: idempotencyKey,
               response: payload,
-              status,
-              idempotencyStatus: 'completed',
-              updatedAt: toISO(),
-            },
-            { merge: true }
-          )
+              httpStatus: status,
+            }).catch(() => {})
+          }
         }
 
         return NextResponse.json(payload, {
@@ -381,13 +388,15 @@ export function createApiHandler<
         workspaceId: workspace?.workspaceId,
       })
 
-      if (idempotencyRef) {
-        await idempotencyRef.set({
-          response: successResponse,
-          status: 200,
-          idempotencyStatus: 'completed',
-          updatedAt: toISO(),
-        }, { merge: true })
+      if (idempotencyKey) {
+        const convex = getConvexIdempotencyClient()
+        if (convex) {
+          await convex.mutation(api.apiIdempotency.complete, {
+            key: idempotencyKey,
+            response: successResponse,
+            httpStatus: 200,
+          }).catch(() => {})
+        }
       }
 
       return NextResponse.json(successResponse, {
@@ -406,8 +415,11 @@ export function createApiHandler<
       if (error instanceof UnifiedError) {
         logApiError(error, req, { ...logContext })
 
-        if (idempotencyRef) {
-          await idempotencyRef.delete().catch(() => {})
+        if (idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          }
         }
 
         const status = typeof error.status === 'number' ? error.status : 500
@@ -426,8 +438,11 @@ export function createApiHandler<
       if (error instanceof ApiError) {
         logApiError(error, req, { ...logContext })
         
-        if (idempotencyRef) {
-          await idempotencyRef.delete().catch(() => {})
+        if (idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          }
         }
 
         return NextResponse.json({ 
@@ -445,8 +460,11 @@ export function createApiHandler<
       if (error instanceof z.ZodError) {
         logApiError(error, req, { ...logContext })
 
-        if (idempotencyRef) {
-          await idempotencyRef.delete().catch(() => {})
+        if (idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          }
         }
 
         return NextResponse.json({ 
@@ -469,8 +487,11 @@ export function createApiHandler<
       
       logApiError(error, req, { ...logContext, includeStack: isDev })
 
-      if (idempotencyRef) {
-        await idempotencyRef.delete().catch(() => {})
+      if (idempotencyKey) {
+        const convex = getConvexIdempotencyClient()
+        if (convex) {
+          await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+        }
       }
 
       return NextResponse.json({ 

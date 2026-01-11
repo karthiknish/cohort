@@ -5,8 +5,9 @@
  */
 
 import * as Brevo from '@getbrevo/brevo'
+import { ConvexHttpClient } from 'convex/browser'
 
-import { adminDb } from '@/lib/firebase-admin'
+import { api } from '@/../convex/_generated/api'
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
 import {
   invoicePaidTemplate,
@@ -30,6 +31,16 @@ import type { IntegrationAlertTemplateParams, WorkspaceInviteTemplateParams, Per
 export const BREVO_API_KEY = process.env.BREVO_API_KEY
 export const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL ?? 'notifications@cohorts.app'
 export const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME ?? 'Cohorts'
+
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 // =============================================================================
 // TYPES
@@ -71,16 +82,24 @@ function getBrevoClient(): Brevo.TransactionalEmailsApi | null {
  */
 async function isEmailNotificationEnabled(recipientEmail: string, prefKey: 'adAlerts' | 'performanceDigest' | 'taskActivity'): Promise<boolean> {
   try {
-    const usersRef = adminDb.collection('users')
-    const snapshot = await usersRef.where('email', '==', recipientEmail).limit(1).get()
+    const convex = getConvexClient()
+    if (!convex) return true // Default to true if Convex unavailable
 
-    if (snapshot.empty) return true // Default to true for non-system users/legacy
+    const result = await convex.query(api.users.getNotificationPreferencesByEmail, { email: recipientEmail })
+    
+    if (!result || !result.notificationPreferences) return true
 
-    const userData = snapshot.docs[0].data()
-    const prefs = userData?.notificationPreferences?.email
-
-    if (!prefs) return true
-    return prefs[prefKey] !== false
+    // Map prefKey to notification preference field names
+    const keyMap: Record<string, keyof typeof result.notificationPreferences> = {
+      'adAlerts': 'emailAdAlerts',
+      'performanceDigest': 'emailPerformanceDigest',
+      'taskActivity': 'emailTaskActivity',
+    }
+    
+    const actualKey = keyMap[prefKey]
+    if (!actualKey) return true
+    
+    return result.notificationPreferences[actualKey] !== false
   } catch (error) {
     console.error('[brevo] error checking preferences', error)
     return true // Default to true on error to ensure critical emails are sent

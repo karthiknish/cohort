@@ -15,10 +15,31 @@ import { useToast } from '@/components/ui/use-toast'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { apiFetch } from '@/lib/api-client'
+import { useMutation, useQuery } from 'convex/react'
+
+import { notificationsApi } from '@/lib/convex-api'
+import { parsePageSize } from '@/lib/pagination'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
 const PAGE_SIZE = 25
+
+type NotificationsCursor = {
+  createdAtMs: number
+  legacyId: string
+}
+
+function encodeCursor(input: NotificationsCursor | null) {
+  return input ? Buffer.from(JSON.stringify(input), 'utf8').toString('base64url') : null
+}
+
+function decodeCursor(input: string | null): NotificationsCursor | null {
+  if (!input) return null
+  try {
+    return JSON.parse(Buffer.from(input, 'base64url').toString('utf8')) as NotificationsCursor
+  } catch {
+    return null
+  }
+}
 
 type NotificationResponse = {
   notifications?: WorkspaceNotification[]
@@ -31,7 +52,7 @@ type AckAction = 'read' | 'dismiss'
 type FilterType = 'all' | 'unread' | 'mentions' | 'system'
 
 export default function NotificationsPage() {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
 
@@ -45,82 +66,75 @@ export default function NotificationsPage() {
 
   const activeFilter = filterTabs.value
   const setActiveFilter = filterTabs.setValue
-  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([])
+  const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [ackInFlight, setAckInFlight] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const workspaceId = user?.agencyId
+  const decodedCursor = useMemo(() => decodeCursor(cursor), [cursor])
+
+  const notificationsQuery = useQuery(
+    notificationsApi.list,
+    workspaceId
+      ? {
+          workspaceId,
+          pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
+          role: user?.role ?? undefined,
+          clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
+          unread: activeFilter === 'unread' ? true : undefined,
+          afterCreatedAtMs: decodedCursor?.createdAtMs,
+          afterLegacyId: decodedCursor?.legacyId,
+        }
+      : 'skip'
+  ) as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null } | undefined
+
+  const notifications = useMemo(() => {
+    let items = notificationsQuery?.notifications ?? []
+
+    if (activeFilter === 'mentions') {
+      items = items.filter((n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
+    } else if (activeFilter === 'system') {
+      items = items.filter((n: WorkspaceNotification) => n.kind === 'invoice.sent' || n.kind === 'invoice.paid' || n.kind === 'proposal.deck.ready')
+    }
+
+    return items
+  }, [activeFilter, notificationsQuery?.notifications])
+
   const fetchNotifications = useCallback(
-    async ({ append = false, cursor, filter = activeFilter }: { append?: boolean; cursor?: string | null; filter?: FilterType } = {}) => {
-      if (!user?.id) {
-        return
-      }
-
-      const params = new URLSearchParams()
-      params.set('pageSize', String(PAGE_SIZE))
-      if (user.role) {
-        params.set('role', user.role)
-      }
-      if (user.role === 'client' && selectedClientId) {
-        params.set('clientId', selectedClientId)
-      }
-      if (cursor) {
-        params.set('after', cursor)
-      }
-      if (filter === 'unread') {
-        params.set('unread', 'true')
-      }
-
-      const payload = await apiFetch<NotificationResponse>(`/api/notifications?${params.toString()}`, {
-        cache: 'no-store',
-      })
-
-      let items = Array.isArray(payload.notifications) ? payload.notifications : []
-
-      // Client-side filtering for mentions and system
-      if (filter === 'mentions') {
-        items = items.filter((n) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
-      } else if (filter === 'system') {
-        items = items.filter((n) => 
-          n.kind === 'invoice.sent' || 
-          n.kind === 'invoice.paid' || 
-          n.kind === 'proposal.deck.ready'
-        )
-      }
-
-      setNotifications((prev) => (append ? [...prev, ...items] : items))
-      setNextCursor(payload.nextCursor ?? null)
-      setError(null)
+    async ({ cursor }: { cursor?: string | null } = {}) => {
+      setLoading(true)
+      setCursor(cursor ?? null)
     },
-    [getIdToken, selectedClientId, user?.id, user?.role, activeFilter]
+    []
   )
+
+  useEffect(() => {
+    if (!notificationsQuery) return
+
+    setLoading(false)
+    setLoadingMore(false)
+    setError(null)
+    setNextCursor(encodeCursor(notificationsQuery.nextCursor))
+  }, [notificationsQuery])
+
+  const ackNotifications = useMutation(notificationsApi.ack)
 
   const updateNotificationStatus = useCallback(
     async (ids: string[], action: AckAction) => {
-      if (!user?.id || ids.length === 0) {
+      if (!workspaceId || ids.length === 0) {
         return
       }
 
       try {
         setAckInFlight(true)
-        await apiFetch('/api/notifications/ack', {
-          method: 'PATCH',
-          body: JSON.stringify({ ids, action }),
-        })
+        await ackNotifications({ workspaceId, ids, action })
 
-        setNotifications((prev) => {
-          if (action === 'dismiss') {
-            return prev.filter((item) => !ids.includes(item.id))
-          }
-
-          return prev.map((item) => (ids.includes(item.id) ? { ...item, read: true } : item))
-        })
-
-        toast({ 
+        toast({
           title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
-          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`
+          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Notification update failed'
@@ -129,7 +143,7 @@ export default function NotificationsPage() {
         setAckInFlight(false)
       }
     },
-    [getIdToken, toast, user?.id]
+    [ackNotifications, toast, workspaceId]
   )
 
   useEffect(() => {
@@ -138,25 +152,13 @@ export default function NotificationsPage() {
     }
 
     setLoading(true)
-    fetchNotifications({ filter: activeFilter })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        setError(message)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [user?.id, activeFilter, fetchNotifications])
+    void fetchNotifications()
+  }, [fetchNotifications, user?.id])
 
   const handleRefresh = useCallback(() => {
+    setCursor(null)
     setLoading(true)
-    fetchNotifications({ filter: activeFilter })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        setError(message)
-      })
-      .finally(() => setLoading(false))
-  }, [fetchNotifications, activeFilter])
+  }, [])
 
   const handleLoadMore = useCallback(() => {
     if (!nextCursor || loadingMore) {
@@ -164,13 +166,8 @@ export default function NotificationsPage() {
     }
 
     setLoadingMore(true)
-    fetchNotifications({ append: true, cursor: nextCursor, filter: activeFilter })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: 'Loading failed', description: `${message}. Try refreshing the page.`, variant: 'destructive' })
-      })
-      .finally(() => setLoadingMore(false))
-  }, [fetchNotifications, loadingMore, nextCursor, toast, activeFilter])
+    fetchNotifications({ cursor: nextCursor }).finally(() => setLoadingMore(false))
+  }, [fetchNotifications, loadingMore, nextCursor])
 
   const handleDismiss = useCallback(
     (id: string) => {

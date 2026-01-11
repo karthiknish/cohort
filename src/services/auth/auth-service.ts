@@ -1,67 +1,39 @@
-import { auth } from '@/lib/firebase'
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onIdTokenChanged,
-  setPersistence,
-  browserLocalPersistence,
-  updateProfile as updateFirebaseProfile,
-  User as FirebaseUser,
-} from 'firebase/auth'
-
-import type { AuthUser, SignUpData } from './types'
-import { getFriendlyAuthErrorMessage } from './error-utils'
+import type { AuthRole, AuthStatus, AuthUser, SignUpData } from './types'
+import { authClient } from '@/lib/auth-client'
 import { isValidRedirectUrl } from '@/lib/utils'
 import {
   UnauthorizedError,
   ValidationError,
   BadRequestError,
-  ServiceUnavailableError
+  ServiceUnavailableError,
+  InvalidCredentialsError,
+  InvalidEmailError,
+  WeakPasswordError,
+  EmailAlreadyExistsError,
+  AccountDisabledError,
+  AccountSuspendedError,
+  AccountPendingError,
+  SessionExpiredError,
+  NetworkError,
+  NetworkTimeoutError,
+  RateLimitError,
 } from '@/lib/api-errors'
+import { parseAuthError, isNetworkError, isRetryableError } from './error-utils'
 
-import {
-  cacheIdToken,
-  fetchAndCacheIdToken,
-  TokenCache,
-} from './token-management'
+function normalizeRole(value: unknown): AuthRole {
+  return value === 'admin' || value === 'team' || value === 'client' ? value : 'client'
+}
 
-import {
-  mapFirebaseUser,
-  ensureUserBootstrap,
-} from './user-bootstrap'
-
-import {
-  connectGoogleAdsViaPopup,
-  connectFacebookAdsViaPopup,
-  connectLinkedInAdsViaPopup,
-  signInWithFacebookViaPopup,
-  signInWithLinkedInViaPopup,
-  signInWithGoogleViaPopup,
-} from './oauth-providers'
-import { connectGoogleAnalyticsViaPopup } from './oauth-providers'
-
-import {
-  sendPasswordResetEmail,
-  verifyPasswordResetCode as verifyResetCode,
-  confirmPasswordReset as confirmReset,
-  updateProfile as updateProfileOp,
-  changePassword as changePasswordOp,
-  deleteAccount as deleteAccountOp,
-  disconnectProvider as disconnectProviderOp,
-  validatePasswordStrength,
-} from './account-operations'
+function normalizeStatus(value: unknown): AuthStatus {
+  return value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended'
+    ? value
+    : 'active'
+}
 
 export class AuthService {
   private static instance: AuthService
-  private static readonly TOKEN_EXPIRATION_BUFFER_MS = 60 * 1000
-  private static readonly TOKEN_DEFAULT_TTL_MS = 55 * 60 * 1000
   private currentUser: AuthUser | null = null
   private authStateListeners: Array<(user: AuthUser | null) => void> = []
-  private bootstrapPromises = new Map<string, Promise<void>>()
-  private idTokenCache: TokenCache | null = null
-  private idTokenRefreshPromise: Promise<string> | null = null
-  private refreshTimeout: NodeJS.Timeout | null = null
 
   private initialAuthResolved = false
   private readonly initialAuthPromise: Promise<void>
@@ -73,40 +45,12 @@ export class AuthService {
     })
 
     if (typeof window !== 'undefined') {
-      setPersistence(auth, browserLocalPersistence).catch((error) => {
-        console.warn('[AuthService] Failed to set auth persistence:', error)
-      })
+      // Get initial session from Better Auth (single call)
+      this.initSession()
+    } else {
+      this.initialAuthResolved = true
+      this.resolveInitialAuth()
     }
-
-    onIdTokenChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      this.clearIdTokenCache()
-      if (this.refreshTimeout) {
-        clearTimeout(this.refreshTimeout)
-        this.refreshTimeout = null
-      }
-
-      if (firebaseUser) {
-        try {
-          await this.ensureUserBootstrap(firebaseUser, firebaseUser.displayName)
-          const authUser = await mapFirebaseUser(firebaseUser)
-          this.currentUser = authUser
-          this.notifyListeners(authUser)
-          this.scheduleTokenRefresh(firebaseUser)
-        } catch (error) {
-          console.error('Error mapping Firebase user:', error)
-          this.currentUser = null
-          this.notifyListeners(null)
-        }
-      } else {
-        this.currentUser = null
-        this.notifyListeners(null)
-      }
-
-      if (!this.initialAuthResolved) {
-        this.initialAuthResolved = true
-        this.resolveInitialAuth()
-      }
-    })
   }
 
   static getInstance(): AuthService {
@@ -116,149 +60,245 @@ export class AuthService {
     return AuthService.instance
   }
 
-  private scheduleTokenRefresh(firebaseUser: FirebaseUser): void {
-    if (this.refreshTimeout) clearTimeout(this.refreshTimeout)
+  private async initSession() {
+    try {
+      const sessionResult = await authClient.getSession().catch(() => null)
+      const session =
+        sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult
+          ? (sessionResult as any).data
+          : null
 
-    const buffer = 5 * 60 * 1000
-    const now = Date.now()
-    const expiresAt = this.idTokenCache?.expiresAt ?? (now + AuthService.TOKEN_DEFAULT_TTL_MS)
-    const delay = Math.max(0, expiresAt - now - buffer)
-
-    this.refreshTimeout = setTimeout(async () => {
-      try {
-        await this.getIdToken(true)
-      } catch (error) {
-        const isNetworkError =
-          (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('network'))) ||
-          (typeof error === 'object' && error !== null && 'code' in error && (error as { code: string }).code === 'auth/network-request-failed')
-
-        if (!isNetworkError) {
-          console.error('Background token refresh failed:', error)
-        }
-
-        // Retry in 1 minute regardless of error type
-        this.refreshTimeout = setTimeout(() => this.scheduleTokenRefresh(firebaseUser), 60000)
+      const nextUser = session?.user
+        ? this.mapBetterAuthUser(session.user)
+        : null
+      
+      this.currentUser = nextUser
+      this.notifyListeners(nextUser)
+    } finally {
+      if (!this.initialAuthResolved) {
+        this.initialAuthResolved = true
+        this.resolveInitialAuth()
       }
-    }, delay)
+    }
   }
 
-  private clearIdTokenCache(): void {
-    this.idTokenCache = null
-    this.idTokenRefreshPromise = null
+  mapBetterAuthUser(user: Record<string, unknown>): AuthUser {
+    const id = typeof user.id === 'string' ? user.id : ''
+    const email = typeof user.email === 'string' ? user.email : ''
+    const name = typeof user.name === 'string' ? user.name : email
+
+    return {
+      id,
+      email,
+      name,
+      phoneNumber: null,
+      photoURL: typeof user.image === 'string' ? user.image : null,
+      role: normalizeRole((user as { role?: unknown }).role),
+      status: normalizeStatus((user as { status?: unknown }).status),
+      agencyId: typeof (user as { agencyId?: unknown }).agencyId === 'string' ? String((user as { agencyId?: unknown }).agencyId) : '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
   }
 
-  async getIdToken(forceRefresh = false): Promise<string> {
-    const currentUser = auth.currentUser
-    if (!currentUser) {
-      throw new UnauthorizedError('No authenticated user')
+
+  getCurrentUser(): AuthUser | null {
+    return this.currentUser
+  }
+
+  onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
+    this.authStateListeners.push(callback)
+    if (this.initialAuthResolved) {
+      callback(this.currentUser)
     }
 
-    const now = Date.now()
-    const buffer = AuthService.TOKEN_EXPIRATION_BUFFER_MS
-
-    if (!forceRefresh && this.idTokenCache && this.idTokenCache.expiresAt - buffer > now) {
-      return this.idTokenCache.token
+    return () => {
+      const index = this.authStateListeners.indexOf(callback)
+      if (index > -1) {
+        this.authStateListeners.splice(index, 1)
+      }
     }
+  }
 
-    if (this.idTokenRefreshPromise) {
-      return this.idTokenRefreshPromise
+  async waitForInitialAuth(): Promise<void> {
+    await this.initialAuthPromise
+  }
+
+  private notifyListeners(user: AuthUser | null): void {
+    this.authStateListeners.forEach((listener) => listener(user))
+  }
+
+  private validateEmail(email: string): void {
+    if (!email || !email.trim()) {
+      throw new InvalidEmailError('Email is required')
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      throw new InvalidEmailError('Please enter a valid email address')
+    }
+  }
 
-    const shouldForceRefresh =
-      forceRefresh ||
-      !this.idTokenCache ||
-      this.idTokenCache.expiresAt - buffer <= now
+  private validatePassword(password: string, isSignUp = false): void {
+    if (!password) {
+      throw new InvalidCredentialsError('Password is required')
+    }
+    if (isSignUp && password.length < 8) {
+      throw new WeakPasswordError('Password must be at least 8 characters')
+    }
+  }
 
-    this.idTokenRefreshPromise = (async () => {
-      try {
-        return await fetchAndCacheIdToken(
-          currentUser,
-          shouldForceRefresh,
-          (token, expiresAt) => {
-            this.idTokenCache = cacheIdToken(token, expiresAt)
-          }
-        )
-      } catch (error) {
-        this.clearIdTokenCache()
+  private checkUserStatus(user: AuthUser): void {
+    if (user.status === 'disabled') {
+      throw new AccountDisabledError()
+    }
+    if (user.status === 'suspended') {
+      throw new AccountSuspendedError()
+    }
+  }
+
+  async signIn(email: string, password: string): Promise<AuthUser> {
+    this.validateEmail(email)
+    this.validatePassword(password)
+
+    try {
+      const result = await authClient.signIn.email({ email: email.trim(), password })
+      const data = result && typeof result === 'object' && 'data' in result ? (result as any).data : null
+      const errorInResult = result && typeof result === 'object' && 'error' in result ? (result as any).error : null
+
+      if (errorInResult) {
+        throw parseAuthError(errorInResult)
+      }
+
+      if (!data?.user) {
+        throw new InvalidCredentialsError()
+      }
+
+      const user = this.mapBetterAuthUser(data.user as unknown as Record<string, unknown>)
+      this.checkUserStatus(user)
+      return user
+    } catch (error: unknown) {
+      if (
+        error instanceof InvalidCredentialsError ||
+        error instanceof InvalidEmailError ||
+        error instanceof AccountDisabledError ||
+        error instanceof AccountSuspendedError ||
+        error instanceof AccountPendingError ||
+        error instanceof RateLimitError ||
+        error instanceof NetworkError ||
+        error instanceof NetworkTimeoutError ||
+        error instanceof SessionExpiredError
+      ) {
         throw error
-      } finally {
-        this.idTokenRefreshPromise = null
       }
-    })()
 
-    return this.idTokenRefreshPromise
-  }
-
-  private ensureUserBootstrap(firebaseUser: FirebaseUser, name?: string | null): Promise<void> {
-    const uid = firebaseUser.uid
-    if (!uid) return Promise.resolve()
-
-    const existingPromise = this.bootstrapPromises.get(uid)
-    if (existingPromise) return existingPromise
-
-    const promise = (async () => {
-      const result = await ensureUserBootstrap(
-        firebaseUser,
-        (force) => this.getIdToken(force),
-        name
-      )
-
-      if (result.claimsUpdated) {
-        await this.getIdToken(true)
+      if (isNetworkError(error)) {
+        throw new NetworkError()
       }
-    })().finally(() => {
-      this.bootstrapPromises.delete(uid)
-    })
 
-    this.bootstrapPromises.set(uid, promise)
-    return promise
+      throw parseAuthError(error)
+    }
   }
 
-  /**
-   * AD ACCOUNT CONNECTIONS
-   */
+  async signUp(signUpData: SignUpData): Promise<AuthUser> {
+    this.validateEmail(signUpData.email)
+    this.validatePassword(signUpData.password, true)
 
-  async connectGoogleAdsAccount(clientId?: string | null): Promise<void> {
-    const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectGoogleAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
+    try {
+      const result = await authClient.signUp.email({
+        email: signUpData.email.trim(),
+        password: signUpData.password,
+        name: signUpData.displayName ?? signUpData.email,
+      })
+
+      const payload = result && typeof result === 'object' && 'data' in result ? (result as any).data : null
+      const errorInResult = result && typeof result === 'object' && 'error' in result ? (result as any).error : null
+
+      if (errorInResult) {
+        throw parseAuthError(errorInResult)
+      }
+
+      if (!payload?.user) {
+        throw new BadRequestError('Sign-up failed. Please try again.')
+      }
+
+      return this.mapBetterAuthUser(payload.user as unknown as Record<string, unknown>)
+    } catch (error: unknown) {
+      if (
+        error instanceof InvalidCredentialsError ||
+        error instanceof InvalidEmailError ||
+        error instanceof WeakPasswordError ||
+        error instanceof EmailAlreadyExistsError ||
+        error instanceof RateLimitError ||
+        error instanceof NetworkError ||
+        error instanceof NetworkTimeoutError ||
+        error instanceof BadRequestError
+      ) {
+        throw error
+      }
+
+      if (isNetworkError(error)) {
+        throw new NetworkError()
+      }
+
+      throw parseAuthError(error)
+    }
   }
 
-  async connectGoogleAnalyticsAccount(clientId?: string | null): Promise<void> {
-    const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectGoogleAnalyticsViaPopup({ currentUser, authUser: this.currentUser, clientId })
+  async signOut(): Promise<void> {
+    try {
+      await authClient.signOut()
+      this.currentUser = null
+      this.notifyListeners(null)
+    } catch (error: unknown) {
+      if (isNetworkError(error)) {
+        throw new NetworkError('Failed to sign out. Please check your connection.')
+      }
+      throw new ServiceUnavailableError('Failed to sign out. Please try again.')
+    }
   }
 
-  async connectFacebookAdsAccount(clientId?: string | null): Promise<void> {
-    const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectFacebookAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
+  async signInWithGoogle(): Promise<AuthUser> {
+    // If Better Auth is configured with Google OAuth, this triggers the flow.
+    // Depending on your Better Auth setup, you may want to use redirect-based auth.
+    throw new ServiceUnavailableError('Google sign-in not configured in Better Auth')
   }
 
-  async connectLinkedInAdsAccount(clientId?: string | null): Promise<void> {
-    const currentUser = this.ensureAuthenticatedFirebaseUser()
-    await connectLinkedInAdsViaPopup({ currentUser, authUser: this.currentUser, clientId })
+  async connectGoogleAdsAccount(): Promise<void> {
+    throw new ServiceUnavailableError('Popup integrations require Better Auth OAuth setup')
+  }
+
+  async connectGoogleAnalyticsAccount(): Promise<void> {
+    throw new ServiceUnavailableError('Popup integrations require Better Auth OAuth setup')
+  }
+
+  async connectFacebookAdsAccount(): Promise<void> {
+    throw new ServiceUnavailableError('Popup integrations require Better Auth OAuth setup')
+  }
+
+  async connectLinkedInAdsAccount(): Promise<void> {
+    throw new ServiceUnavailableError('Popup integrations require Better Auth OAuth setup')
   }
 
   async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new ValidationError('Invalid redirect URL')
     }
-    const idToken = await this.getIdToken()
+
     const params = new URLSearchParams()
     if (redirect) params.set('redirect', redirect)
     if (clientId) params.set('clientId', clientId)
     const search = params.toString() ? `?${params.toString()}` : ''
+
     const response = await fetch(`/api/integrations/meta/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${idToken}`,
       },
+      credentials: 'same-origin',
     })
 
     const payload = (await response.json().catch(() => ({}))) as unknown
 
-    // Most endpoints in this codebase use createApiHandler which wraps responses
-    // in { success, data, error }. Support both wrapped and legacy shapes.
     if (payload && typeof payload === 'object' && 'success' in payload) {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
       if (!record.success) {
@@ -289,17 +329,18 @@ export class AuthService {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new ValidationError('Invalid redirect URL')
     }
-    const idToken = await this.getIdToken()
+
     const params = new URLSearchParams()
     if (redirect) params.set('redirect', redirect)
     if (clientId) params.set('clientId', clientId)
     const search = params.toString() ? `?${params.toString()}` : ''
+
     const response = await fetch(`/api/integrations/tiktok/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${idToken}`,
       },
+      credentials: 'same-origin',
     })
 
     const payload = (await response.json().catch(() => ({}))) as unknown
@@ -330,159 +371,37 @@ export class AuthService {
     throw new ServiceUnavailableError('TikTok OAuth did not return a URL')
   }
 
-  /**
-   * AUTHENTICATION METHODS
-   */
-
-  async signInWithFacebook(): Promise<AuthUser> {
-    const { firebaseUser, displayName } = await signInWithFacebookViaPopup()
-    await this.ensureUserBootstrap(firebaseUser, displayName)
-    return await mapFirebaseUser(firebaseUser)
+  async resetPassword(): Promise<void> {
+    throw new ServiceUnavailableError('Password reset must be implemented with Better Auth')
   }
 
-  async signInWithLinkedIn(): Promise<AuthUser> {
-    const { firebaseUser, displayName } = await signInWithLinkedInViaPopup()
-    await this.ensureUserBootstrap(firebaseUser, displayName)
-    return await mapFirebaseUser(firebaseUser)
+  async verifyPasswordResetCode(): Promise<string> {
+    throw new ServiceUnavailableError('Password reset must be implemented with Better Auth')
   }
 
-  async signInWithGoogle(): Promise<AuthUser> {
-    const { firebaseUser, displayName } = await signInWithGoogleViaPopup()
-    await this.ensureUserBootstrap(firebaseUser, displayName)
-    return await mapFirebaseUser(firebaseUser)
-  }
-
-  async signIn(email: string, password: string): Promise<AuthUser> {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      await this.ensureUserBootstrap(userCredential.user, userCredential.user.displayName)
-      return await mapFirebaseUser(userCredential.user)
-    } catch (error: unknown) {
-      const message = getFriendlyAuthErrorMessage(error)
-      throw new UnauthorizedError(message)
-    }
-  }
-
-  async signUp(data: SignUpData): Promise<AuthUser> {
-    try {
-      validatePasswordStrength(data.password)
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
-
-      if (data.displayName && userCredential.user) {
-        try {
-          await updateFirebaseProfile(userCredential.user, { displayName: data.displayName })
-        } catch (error) {
-          console.warn('Failed to set display name during sign up:', error)
-        }
-      }
-
-      await this.ensureUserBootstrap(userCredential.user, data.displayName ?? userCredential.user.displayName ?? data.email)
-      return await mapFirebaseUser(userCredential.user)
-    } catch (error: unknown) {
-      const message = getFriendlyAuthErrorMessage(error)
-      throw new BadRequestError(message)
-    }
-  }
-
-  async signOut(): Promise<void> {
-    try {
-      await firebaseSignOut(auth)
-      this.clearIdTokenCache()
-    } catch (error: unknown) {
-      console.error('Sign out error:', error)
-      throw new ServiceUnavailableError('Failed to sign out')
-    }
-  }
-
-  /**
-   * ACCOUNT MANAGEMENT
-   */
-
-  async resetPassword(email: string): Promise<void> {
-    await sendPasswordResetEmail(email)
-  }
-
-  async verifyPasswordResetCode(oobCode: string): Promise<string> {
-    return await verifyResetCode(oobCode)
-  }
-
-  async confirmPasswordReset(oobCode: string, newPassword: string): Promise<void> {
-    await confirmReset(oobCode, newPassword)
+  async confirmPasswordReset(): Promise<void> {
+    throw new ServiceUnavailableError('Password reset must be implemented with Better Auth')
   }
 
   async updateProfile(data: Partial<AuthUser>): Promise<AuthUser> {
     if (!this.currentUser) throw new UnauthorizedError('No authenticated user')
-    return await updateProfileOp(
-      this.currentUser,
-      data,
-      (updatedUser) => {
-        this.currentUser = updatedUser
-        this.notifyListeners(updatedUser)
-      }
-    )
-  }
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    if (!this.currentUser) throw new UnauthorizedError('No authenticated user')
-    await changePasswordOp(currentPassword, newPassword)
-  }
-
-  async deleteAccount(password?: string): Promise<void> {
-    if (!this.currentUser) throw new UnauthorizedError('No authenticated user')
-    await deleteAccountOp(
-      (force) => this.getIdToken(force),
-      () => {
-        this.clearIdTokenCache()
-        this.currentUser = null
-        this.notifyListeners(null)
-      },
-      password
-    )
-  }
-
-  async disconnectProvider(providerId: string, clientId?: string | null): Promise<void> {
-    await disconnectProviderOp(() => this.getIdToken(), providerId, clientId)
-  }
-
-  /**
-   * HELPERS
-   */
-
-  getCurrentUser(): AuthUser | null {
-    return this.currentUser
-  }
-
-  onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
-    this.authStateListeners.push(callback)
-    if (this.initialAuthResolved) {
-      callback(this.currentUser)
-    }
-    return () => {
-      const index = this.authStateListeners.indexOf(callback)
-      if (index > -1) {
-        this.authStateListeners.splice(index, 1)
-      }
+    return {
+      ...this.currentUser,
+      ...data,
+      updatedAt: new Date().toISOString(),
     }
   }
 
-  /**
-   * Resolves once Firebase has finished restoring the initial auth state.
-   * Useful to avoid treating the pre-restore null user as a sign-out.
-   */
-  async waitForInitialAuth(): Promise<void> {
-    await this.initialAuthPromise
+  async changePassword(): Promise<void> {
+    throw new ServiceUnavailableError('Password change must be implemented with Better Auth')
   }
 
-  private notifyListeners(user: AuthUser | null): void {
-    this.authStateListeners.forEach((listener) => listener(user))
+  async deleteAccount(): Promise<void> {
+    throw new ServiceUnavailableError('Account deletion must be implemented with Better Auth')
   }
 
-  private ensureAuthenticatedFirebaseUser(): FirebaseUser {
-    const currentUser = auth.currentUser
-    if (!currentUser) {
-      throw new UnauthorizedError('You must be signed in to connect ad accounts')
-    }
-    return currentUser
+  async disconnectProvider(): Promise<void> {
+    throw new ServiceUnavailableError('Provider disconnect must be implemented with Better Auth')
   }
 }
 

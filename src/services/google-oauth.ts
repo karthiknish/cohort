@@ -1,5 +1,5 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
+import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/ads-admin'
 import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
 
 // =============================================================================

@@ -2,17 +2,12 @@ import { formatDistanceToNow } from 'date-fns'
 import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-import type {
-  IntegrationStatusResponse,
-  MetricRecord,
-  MetricsResponse,
-  MetricsSummary,
-} from './types'
+import type { MetricRecord } from './types'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
-import { retryFetch, ApiError, NetworkError, getRetryableErrorMessage, type RetryOptions } from './retry-fetch'
+import { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
 
 // Re-export from retry-fetch for convenience
-export { ApiError, NetworkError, retryFetch, getRetryableErrorMessage } from './retry-fetch'
+export { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
 export type { RetryOptions } from './retry-fetch'
 
 // Constants
@@ -65,149 +60,6 @@ export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric',
 })
-
-// API Functions with retry support
-interface FetchOptions {
-  /** Callback fired before each retry attempt */
-  onRetry?: RetryOptions['onRetry']
-  /** AbortSignal to cancel the request */
-  signal?: AbortSignal
-}
-
-type ApiEnvelope<T> = {
-  success?: boolean
-  data?: T
-  error?: string
-}
-
-function unwrapApiData<T>(payload: unknown): { data: T | null; error: string | null } {
-  if (!payload || typeof payload !== 'object') {
-    return { data: null, error: 'Invalid server response' }
-  }
-
-  const record = payload as ApiEnvelope<T> & Record<string, unknown>
-
-  if (typeof record.success === 'boolean') {
-    if (record.success) {
-      return { data: (record.data as T | undefined) ?? null, error: null }
-    }
-    return { data: null, error: typeof record.error === 'string' ? record.error : 'Request failed' }
-  }
-
-  // Backward compatibility: some callers might receive unwrapped payloads.
-  return { data: payload as T, error: null }
-}
-
-export async function fetchIntegrationStatuses(
-  token: string,
-  userId?: string | null,
-  clientId?: string | null,
-  options: FetchOptions = {}
-): Promise<IntegrationStatusResponse> {
-  const params = new URLSearchParams()
-  if (userId) params.set('userId', userId)
-  if (clientId) params.set('clientId', clientId)
-  const queryString = params.toString()
-  const url = queryString.length > 0 ? `/api/integrations/status?${queryString}` : '/api/integrations/status'
-
-  const response = await retryFetch(
-    url,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: 'no-store',
-    },
-    {
-      maxRetries: 3,
-      onRetry: options.onRetry,
-      signal: options.signal,
-    }
-  )
-
-  const payload = await response.json().catch(() => null)
-  const { data, error } = unwrapApiData<IntegrationStatusResponse>(payload)
-
-  if (!data || !Array.isArray((data as IntegrationStatusResponse).statuses)) {
-    throw new ApiError(error ?? 'Failed to load integration status', 200)
-  }
-
-  return data
-}
-
-export async function fetchMetrics(
-  token: string,
-  options: { 
-    userId?: string | null
-    clientId?: string | null
-    cursor?: string | null
-    pageSize?: number
-    startDate?: string | null
-    endDate?: string | null
-    aggregate?: boolean
-    onRetry?: RetryOptions['onRetry']
-    signal?: AbortSignal
-  } = {}
-): Promise<MetricsResponse> {
-  const params = new URLSearchParams()
-  if (options.userId) {
-    params.set('userId', options.userId)
-  }
-  if (options.clientId) {
-    // Server supports `clientIds` (comma-separated). For a single selected client, send one.
-    params.set('clientIds', options.clientId)
-  }
-  if (typeof options.pageSize === 'number') {
-    params.set('pageSize', String(options.pageSize))
-  }
-  if (options.cursor) {
-    params.set('after', options.cursor)
-  }
-  if (options.startDate) {
-    params.set('startDate', options.startDate)
-  }
-  if (options.endDate) {
-    params.set('endDate', options.endDate)
-  }
-  if (options.aggregate) {
-    params.set('aggregate', 'true')
-  }
-
-  const queryString = params.toString()
-  const url = queryString.length > 0 ? `/api/metrics?${queryString}` : '/api/metrics'
-
-  const response = await retryFetch(
-    url,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: 'no-store',
-    },
-    {
-      maxRetries: 3,
-      onRetry: options.onRetry,
-      signal: options.signal,
-    }
-  )
-
-  const raw = await response.json().catch(() => null)
-  const { data, error } = unwrapApiData<{
-    metrics?: MetricRecord[]
-    nextCursor?: string | null
-    summary?: MetricsSummary | null
-  }>(raw)
-
-  if (!data || !Array.isArray(data.metrics)) {
-    throw new ApiError(error ?? 'Failed to load ad metrics', 200)
-  }
-
-  return {
-    metrics: data.metrics,
-    nextCursor: typeof data.nextCursor === 'string' && data.nextCursor.length > 0 ? data.nextCursor : null,
-    summary: data.summary ?? null,
-  }
-}
 
 // Utility Functions
 export function normalizeFrequency(value?: number | null): number {

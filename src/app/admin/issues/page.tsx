@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/contexts/auth-context'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
 import {
   Card,
   CardContent,
@@ -56,54 +58,25 @@ interface ProblemReport {
 
 export default function AdminIssuesPage() {
   const { toast } = useToast()
-  
-  const [reports, setReports] = useState<ProblemReport[]>([])
-  const [loading, setLoading] = useState(true)
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter !== 'all') params.set('status', statusFilter)
-      
-      const res = await fetch(`/api/admin/problem-reports?${params.toString()}`)
-      if (!res.ok) throw new Error('Failed to fetch reports')
-      
-      const { data } = await res.json()
-      setReports(data)
-    } catch (error) {
-      console.error('Error fetching reports:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load problem reports',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [statusFilter, toast])
+  const reports = useQuery(api.problemReports.list, {
+    status: statusFilter === 'all' ? null : statusFilter,
+    limit: 200,
+  })
 
-  useEffect(() => {
-    fetchReports()
-  }, [fetchReports])
+  const updateReport = useMutation(api.problemReports.update)
+  const removeReport = useMutation(api.problemReports.remove)
+
+  const loading = reports === undefined
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     setUpdatingId(id)
     try {
-      const res = await fetch('/api/admin/problem-reports', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus }),
-      })
-      
-      if (!res.ok) throw new Error('Failed to update status')
-      
-      setReports((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: newStatus as any } : r))
-      )
+      await updateReport({ legacyId: id, status: newStatus })
       toast({ title: 'Status updated', description: `Report marked as ${newStatus}` })
     } catch (error) {
       console.error('Error updating status:', error)
@@ -119,15 +92,9 @@ export default function AdminIssuesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this report?')) return
-    
+
     try {
-      const res = await fetch(`/api/admin/problem-reports?id=${id}`, {
-        method: 'DELETE',
-      })
-      
-      if (!res.ok) throw new Error('Failed to delete report')
-      
-      setReports((prev) => prev.filter((r) => r.id !== id))
+      await removeReport({ legacyId: id })
       toast({ title: 'Report deleted', description: 'The report has been removed.' })
     } catch (error) {
       console.error('Error deleting report:', error)
@@ -139,11 +106,14 @@ export default function AdminIssuesPage() {
     }
   }
 
-  const filteredReports = reports.filter((r) =>
-    r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.userName.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredReports = (reports ?? []).filter((r) => {
+    const search = searchTerm.toLowerCase()
+    return (
+      r.title.toLowerCase().includes(search) ||
+      (r.userEmail ?? '').toLowerCase().includes(search) ||
+      (r.userName ?? '').toLowerCase().includes(search)
+    )
+  })
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
@@ -166,9 +136,8 @@ export default function AdminIssuesPage() {
 
   const formatDate = (date: any) => {
     if (!date) return 'N/A'
-    // Handle both Firestore timestamps and ISO strings
-    const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date)
-    return format(d, 'MMM d, h:mm a')
+    const parsed = typeof date === 'string' ? new Date(date) : new Date(date)
+    return format(parsed, 'MMM d, h:mm a')
   }
 
   return (
@@ -178,7 +147,7 @@ export default function AdminIssuesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Reported Issues</h1>
           <p className="text-muted-foreground">Manage and track user-submitted problem reports.</p>
         </div>
-        <Button onClick={fetchReports} variant="outline" size="sm" disabled={loading}>
+        <Button onClick={() => { /* Convex is realtime */ }} variant="outline" size="sm" disabled={loading}>
           <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
           Refresh
         </Button>
@@ -210,7 +179,7 @@ export default function AdminIssuesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading && reports.length === 0 ? (
+          {loading && (reports ?? []).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <LoaderCircle className="mb-4 h-8 w-8 animate-spin" />
               <p>Loading reports...</p>

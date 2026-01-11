@@ -49,5 +49,4 @@ export {
   sanitizeAttachment,
   sanitizeMention,
   sanitizeReaction,
-  mapRealtimeMessage,
 } from './utils'

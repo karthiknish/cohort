@@ -37,10 +37,6 @@ export type ProviderId = typeof PROVIDER_IDS[keyof typeof PROVIDER_IDS]
 
 export const API_ENDPOINTS = {
   INTEGRATIONS: {
-    STATUS: '/api/integrations/status',
-    SETTINGS: '/api/integrations/settings',
-    MANUAL_SYNC: '/api/integrations/manual-sync',
-    PROCESS: '/api/integrations/process',
     GOOGLE_INIT: '/api/integrations/google/initialize',
     LINKEDIN_INIT: '/api/integrations/linkedin/initialize',
     META_INIT: '/api/integrations/meta/initialize',

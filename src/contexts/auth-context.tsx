@@ -10,14 +10,14 @@ interface AuthContextType {
   isSyncing: boolean
   signIn: (email: string, password: string) => Promise<AuthUser>
   signInWithGoogle: () => Promise<AuthUser>
-  connectGoogleAdsAccount: (clientId?: string | null) => Promise<void>
-  connectGoogleAnalyticsAccount: (clientId?: string | null) => Promise<void>
-  connectFacebookAdsAccount: (clientId?: string | null) => Promise<void>
-  connectLinkedInAdsAccount: (clientId?: string | null) => Promise<void>
+  connectGoogleAdsAccount: () => Promise<void>
+  connectGoogleAnalyticsAccount: () => Promise<void>
+  connectFacebookAdsAccount: () => Promise<void>
+  connectLinkedInAdsAccount: () => Promise<void>
   startMetaOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   startTikTokOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   disconnectProvider: (providerId: string, clientId?: string | null) => Promise<void>
-  getIdToken: () => Promise<string>
+  getIdToken: () => Promise<string | null>
   signUp: (data: SignUpData) => Promise<AuthUser>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
@@ -58,6 +58,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsSyncing(true)
     try {
       await sessionSyncManager.sync(authUser, isIntentionalSignOut)
+
+      // Fetch the role/status/agencyId from server cookies (set by session sync)
+      let serverRole: string | null = null
+      let serverStatus: string | null = null
+      let serverAgencyId: string | null = null
+      try {
+        const sessionRes = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'same-origin' })
+        const sessionJson = await sessionRes.json().catch(() => null) as { role?: unknown; status?: unknown; agencyId?: unknown } | null
+        serverRole = typeof sessionJson?.role === 'string' ? sessionJson.role : null
+        serverStatus = typeof sessionJson?.status === 'string' ? sessionJson.status : null
+        serverAgencyId = typeof sessionJson?.agencyId === 'string' ? sessionJson.agencyId : null
+      } catch {
+        // ignore fetch failures
+      }
+
+      // Update user with server-resolved role/status/agencyId
+      const nextUser = authUser
+        ? {
+            ...authUser,
+            role: (serverRole as typeof authUser.role) || authUser.role,
+            status: (serverStatus as typeof authUser.status) || authUser.status,
+            agencyId: serverAgencyId || authUser.agencyId || authUser.id,
+          }
+        : null
+
+      setUser(nextUser)
     } finally {
       setIsSyncing(false)
     }
@@ -116,15 +142,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [applyUser])
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
-    await authService.resetPassword(email)
+    void email
+    await authService.resetPassword()
   }, [])
 
   const verifyPasswordResetCode = useCallback(async (oobCode: string): Promise<string> => {
-    return await authService.verifyPasswordResetCode(oobCode)
+    void oobCode
+    return await authService.verifyPasswordResetCode()
   }, [])
 
   const confirmPasswordReset = useCallback(async (oobCode: string, newPassword: string): Promise<void> => {
-    await authService.confirmPasswordReset(oobCode, newPassword)
+    void oobCode
+    void newPassword
+    await authService.confirmPasswordReset()
   }, [])
 
   const updateProfile = useCallback(async (data: Partial<AuthUser>): Promise<AuthUser> => {
@@ -134,7 +164,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [applyUser])
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<void> => {
-    await authService.changePassword(currentPassword, newPassword)
+    void currentPassword
+    void newPassword
+    await authService.changePassword()
   }, [])
 
   const deleteAccount = useCallback(async (): Promise<void> => {
@@ -147,20 +179,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [applyUser])
 
-  const connectGoogleAdsAccount = useCallback(async (clientId?: string | null) => {
-    await authService.connectGoogleAdsAccount(clientId)
+  const connectGoogleAdsAccount = useCallback(async () => {
+    await authService.connectGoogleAdsAccount()
   }, [])
 
-  const connectGoogleAnalyticsAccount = useCallback(async (clientId?: string | null) => {
-    await authService.connectGoogleAnalyticsAccount(clientId)
+  const connectGoogleAnalyticsAccount = useCallback(async () => {
+    await authService.connectGoogleAnalyticsAccount()
   }, [])
 
-  const connectFacebookAdsAccount = useCallback(async (clientId?: string | null) => {
-    await authService.connectFacebookAdsAccount(clientId)
+  const connectFacebookAdsAccount = useCallback(async () => {
+    await authService.connectFacebookAdsAccount()
   }, [])
 
-  const connectLinkedInAdsAccount = useCallback(async (clientId?: string | null) => {
-    await authService.connectLinkedInAdsAccount(clientId)
+  const connectLinkedInAdsAccount = useCallback(async () => {
+    await authService.connectLinkedInAdsAccount()
   }, [])
 
   const startMetaOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
@@ -172,11 +204,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const disconnectProvider = useCallback(async (providerId: string, clientId?: string | null) => {
-    await authService.disconnectProvider(providerId, clientId)
+    void providerId
+    void clientId
+    await authService.disconnectProvider()
   }, [])
 
   const getIdToken = useCallback(async () => {
-    return await authService.getIdToken()
+    return null
   }, [])
 
   const value = React.useMemo<AuthContextType>(

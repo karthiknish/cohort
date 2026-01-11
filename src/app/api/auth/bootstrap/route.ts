@@ -1,9 +1,10 @@
-import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { logAuditAction } from '@/lib/audit-logger'
+import { ConvexHttpClient } from 'convex/browser'
+import { getToken as getConvexBetterAuthToken } from '@convex-dev/better-auth/utils'
+import { getToken as getNextJsConvexToken } from '@/lib/auth-server'
 
 const payloadSchema = z
   .object({
@@ -14,35 +15,6 @@ const payloadSchema = z
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'pending', 'invited', 'disabled', 'suspended'])
 
-/**
- * Create a notification for admins when a new user signs up
- */
-async function notifyAdminsOfNewSignup(
-  userId: string,
-  email: string,
-  name: string
-): Promise<void> {
-  try {
-    const serverTimestamp = FieldValue.serverTimestamp()
-
-    // Create notification record in admin_notifications collection
-    await adminDb.collection('admin_notifications').add({
-      type: 'new_user_signup',
-      title: 'New User Signup',
-      message: `${name || email} has signed up for an account.`,
-      userId,
-      userEmail: email,
-      userName: name || 'New User',
-      read: false,
-      createdAt: serverTimestamp,
-    })
-
-    console.log(`[auth/bootstrap] Admin notification created for new user: ${email}`)
-  } catch (error) {
-    // Log but don't fail the signup process
-    console.error('[auth/bootstrap] Failed to create admin notification:', error)
-  }
-}
 
 export const POST = createApiHandler(
   {
@@ -55,95 +27,124 @@ export const POST = createApiHandler(
     const claimedRole = typeof auth.claims?.role === 'string' ? normalizeRole(auth.claims.role) : null
     const claimedStatus = typeof auth.claims?.status === 'string' ? normalizeStatus(auth.claims.status, 'active') : null
 
-    const userRef = adminDb.collection('users').doc(auth.uid!)
-    const snapshot = await userRef.get()
-    const existingData = snapshot.exists ? (snapshot.data() as Record<string, unknown>) : {}
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+    const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
 
-    const storedRole = snapshot.exists ? normalizeRole(existingData.role) : null
-    const storedStatus = snapshot.exists ? normalizeStatus(existingData.status, 'active') : null
+    if (!convexUrl || !convexSiteUrl) {
+      return { ok: false, error: 'Convex auth not configured' }
+    }
 
-    const finalRole = claimedRole ?? storedRole ?? 'client'
+    // Prefer Next.js integration helper (it knows Better Auth cookie names).
+    // Fallback to direct util extraction.
+    const convexToken =
+      (await getNextJsConvexToken().catch(() => null)) ??
+      (await getConvexBetterAuthToken(convexSiteUrl, req.headers).then((r) => r?.token).catch(() => null))
+
+    if (!convexToken) {
+      return { ok: false, error: 'No Better Auth session' }
+    }
+
+    const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
+
+    const currentUser = (await convex.query('auth:getCurrentUser' as any, {})) as
+      | { id?: string; email?: string | null; name?: string | null }
+      | null
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[BootstrapRoute] currentUser', {
+        hasUser: Boolean(currentUser),
+        email: currentUser?.email ?? null,
+        id: currentUser?.id ?? null,
+      })
+    }
+
+    // Better Auth sessions are the source of truth for email/name.
+    // `auth.email` here refers to the legacy auth bridge and can be null.
+    const email = currentUser?.email ? String(currentUser.email) : null
+    const name = providedName ?? (currentUser?.name ? String(currentUser.name) : null) ?? email ?? 'Pending user'
+
+    if (!email) {
+      return { ok: false, error: 'Missing email' }
+    }
+
+    const normalizedEmail = email.toLowerCase()
+
+    const existing = (await convex.query('users:getByEmail' as any, {
+      email: normalizedEmail,
+    })) as
+      | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
+      | null
+
+    const storedRole = existing ? normalizeRole(existing.role) : null
+    const storedStatus = existing ? normalizeStatus(existing.status, 'active') : null
+
+    const admins = (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean)
+
+    const isAdminEmail = admins.includes(normalizedEmail)
+
+    const finalRole = claimedRole ?? (isAdminEmail ? 'admin' : null) ?? storedRole ?? 'client'
     let finalStatus = claimedStatus ?? storedStatus ?? (finalRole === 'admin' ? 'active' : 'pending')
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[BootstrapRoute] roleResolution', {
+        normalizedEmail,
+        isAdminEmail,
+        claimedRole,
+        claimedStatus,
+        storedRole,
+        storedStatus,
+        finalRole,
+        finalStatus,
+      })
+    }
     if (finalRole === 'admin' && finalStatus !== 'active') {
       finalStatus = 'active'
     }
 
-    const serverTimestamp = FieldValue.serverTimestamp()
-    const updatePayload: Record<string, unknown> = {
-      updatedAt: serverTimestamp,
-      lastLoginAt: serverTimestamp,
+    const legacyId = currentUser?.id
+    if (!legacyId) {
+      return { ok: false, error: 'Missing Better Auth user id' }
     }
 
-    const isNewUser = !snapshot.exists
+    await convex.mutation('users:bulkUpsert' as any, {
+      users: [
+        {
+          legacyId: String(legacyId),
+          email: normalizedEmail,
+          name,
+          role: finalRole,
+          status: finalStatus,
+          agencyId: existing?.agencyId ?? String(legacyId),
+        },
+      ],
+    })
 
-    if (isNewUser) {
-      updatePayload.createdAt = serverTimestamp
-      updatePayload.email = auth.email ?? ''
-      updatePayload.agencyId = existingData?.agencyId ?? null
-      updatePayload.role = finalRole
-      updatePayload.status = finalStatus
-      updatePayload.name = providedName ?? auth.email ?? 'Pending user'
-    } else {
-      if (existingData.role !== finalRole) {
-        updatePayload.role = finalRole
-      }
-      if (existingData.status !== finalStatus) {
-        updatePayload.status = finalStatus
-      }
-      if (providedName) {
-        updatePayload.name = providedName
-      }
-    }
-
-    await userRef.set(updatePayload, { merge: true })
-
-    // Notify admins of new user signup
-    if (isNewUser) {
-      await notifyAdminsOfNewSignup(
-        auth.uid!,
-        auth.email ?? '',
-        providedName ?? auth.email ?? 'New User'
-      )
-    }
-
-    const userRecord = await adminAuth.getUser(auth.uid!)
-    const customClaims = userRecord.customClaims ?? {}
-    const claimRoleExisting = typeof customClaims.role === 'string' ? normalizeRole(customClaims.role) : null
-    const claimStatusExisting = typeof customClaims.status === 'string' ? normalizeStatus(customClaims.status, 'active') : null
-
-    const claimsNeedUpdate = claimRoleExisting !== finalRole || claimStatusExisting !== finalStatus
+    const claimsNeedUpdate = Boolean(existing?.role !== finalRole || existing?.status !== finalStatus)
 
     if (claimsNeedUpdate) {
-      const nextClaims = {
-        ...Object.fromEntries(
-          Object.entries(customClaims).filter(([key]) => key !== 'role' && key !== 'status')
-        ),
-        role: finalRole,
-        status: finalStatus,
-      }
-      await adminAuth.setCustomUserClaims(auth.uid!, nextClaims)
-
-      // Log role/status change
       await logAuditAction({
         action: 'ADMIN_ROLE_CHANGE',
         actorId: 'SYSTEM_BOOTSTRAP',
-        targetId: auth.uid!,
+        targetId: String(legacyId),
         metadata: {
-          oldRole: claimRoleExisting,
+          oldRole: existing?.role ?? null,
           newRole: finalRole,
-          oldStatus: claimStatusExisting,
+          oldStatus: existing?.status ?? null,
           newStatus: finalStatus,
         },
         requestId: req.headers.get('x-request-id') || undefined,
       })
     }
 
-    return { 
-      ok: true, 
-      role: finalRole, 
-      status: finalStatus, 
+    return {
+      ok: true,
+      role: finalRole,
+      status: finalStatus,
       claimsUpdated: claimsNeedUpdate,
-      agencyId: existingData?.agencyId || auth.uid
+      agencyId: existing?.agencyId || String(legacyId),
     }
   }
 )

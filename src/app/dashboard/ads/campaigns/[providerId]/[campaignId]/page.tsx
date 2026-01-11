@@ -1,14 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAction } from 'convex/react'
 import { useParams, useSearchParams } from 'next/navigation'
 
 import { type DateRange } from '@/app/dashboard/ads/components/date-range-picker'
 import { Card, CardContent } from '@/components/ui/card'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
+import { useAuth } from '@/contexts/auth-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { getPreviewCampaigns, getPreviewCampaignInsights } from '@/lib/preview-data'
+import { adsCampaignInsightsApi, adsCampaignsApi } from '@/lib/convex-api'
 
 // Modular Components
 import { CampaignHeader } from '../../components/campaign-header'
@@ -77,7 +80,15 @@ type CampaignInsightsResponse = {
 
 function unwrapApiData(payload: unknown): unknown {
   const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-  return record && 'data' in record ? record.data : payload
+  if (!record) return payload
+
+  // `createApiHandler` wraps successful responses as `{ success: true, data: ... }`.
+  // Some legacy handlers may still return `{ data: ... }`.
+  if ('success' in record && record.success === true && 'data' in record) {
+    return record.data
+  }
+
+  return 'data' in record ? record.data : payload
 }
 
 function toIsoDateOnly(date: Date): string {
@@ -119,6 +130,11 @@ export default function CampaignInsightsPage() {
   const searchParams = useSearchParams()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const listCampaigns = useAction(adsCampaignsApi.listCampaigns)
+  const getCampaignInsights = useAction(adsCampaignInsightsApi.getCampaignInsights)
 
   const providerId = params.providerId
   const campaignId = params.campaignId
@@ -219,20 +235,17 @@ export default function CampaignInsightsPage() {
         return
       }
 
-      const qp = new URLSearchParams({ providerId })
-      if (selectedClientId) qp.set('clientId', selectedClientId)
-
-      const response = await fetch(`/api/integrations/campaigns?${qp.toString()}`)
-      const payload = await response.json().catch(() => ({})) as unknown
-      const data = unwrapApiData(payload) as { campaigns?: Campaign[] } | undefined
-
-      if (!response.ok) {
-        const errorPayload = payload as { error?: string } | undefined
-        throw new Error(errorPayload?.error || 'Failed to load campaign')
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
 
-      const campaigns = Array.isArray(data?.campaigns) ? data.campaigns : []
-      const match = campaigns.find((c) => c.id === campaignId) ?? null
+      const campaigns = await listCampaigns({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: selectedClientId ?? null,
+      })
+
+      const match = (Array.isArray(campaigns) ? campaigns : []).find((c: any) => c.id === campaignId) ?? null
 
       if (!match) {
         throw new Error('Campaign not found')
@@ -244,7 +257,7 @@ export default function CampaignInsightsPage() {
     } finally {
       setCampaignLoading(false)
     }
-  }, [campaignId, isPreviewMode, providerId, selectedClientId])
+  }, [campaignId, isPreviewMode, listCampaigns, providerId, selectedClientId, workspaceId])
 
   const loadInsights = useCallback(async () => {
     // In preview mode, allow all providers to show preview data
@@ -269,29 +282,24 @@ export default function CampaignInsightsPage() {
         return
       }
 
-      const qp = new URLSearchParams({ providerId, campaignId, startDate, endDate })
-      if (selectedClientId) qp.set('clientId', selectedClientId)
-
-      const response = await fetch(`/api/integrations/campaign-insights?${qp.toString()}`)
-      const payload = await response.json().catch(() => ({})) as unknown
-      const data = unwrapApiData(payload) as CampaignInsightsResponse
-      const dataRecord = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
-
-      if (!response.ok) {
-        const errorMessage =
-          (dataRecord && typeof dataRecord.error === 'string' && dataRecord.error) ||
-          (typeof (payload as Record<string, unknown> | null)?.error === 'string'
-            ? ((payload as Record<string, unknown>).error as string)
-            : null) ||
-          'Failed to load insights'
-        throw new Error(errorMessage)
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
 
-      setInsights(data as CampaignInsightsResponse)
+      const data = (await getCampaignInsights({
+        workspaceId,
+        providerId: providerId as any,
+        campaignId,
+        clientId: selectedClientId ?? null,
+        startDate,
+        endDate,
+      })) as CampaignInsightsResponse
+
+      setInsights(data)
 
       // Update campaign currency if we have it and it's missing or defaulting to USD
       if (data.currency && (!campaign?.currency || campaign.currency === 'USD')) {
-        setCampaign(prev => prev ? { ...prev, currency: data.currency } : null)
+        setCampaign((prev) => (prev ? { ...prev, currency: data.currency } : null))
       }
     } catch (err) {
       setInsightsError(err instanceof Error ? err.message : 'Failed to load insights')
@@ -299,7 +307,7 @@ export default function CampaignInsightsPage() {
     } finally {
       setInsightsLoading(false)
     }
-  }, [campaignId, dateRange.end, dateRange.start, isPreviewMode, providerId, selectedClientId])
+  }, [campaign?.currency, campaignId, dateRange.end, dateRange.start, getCampaignInsights, isPreviewMode, providerId, selectedClientId, workspaceId])
 
   useEffect(() => {
     void loadCampaign()

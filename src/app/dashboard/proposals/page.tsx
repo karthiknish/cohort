@@ -9,7 +9,7 @@ import {
   CardContent,
   CardHeader,
 } from '@/components/ui/card'
-import type { ProposalDraft, ProposalPresentationDeck } from '@/services/proposals'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'

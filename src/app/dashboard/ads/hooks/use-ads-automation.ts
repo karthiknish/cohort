@@ -1,9 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMutation } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
+import { adsIntegrationsApi } from '@/lib/convex-api'
 
 import type { IntegrationStatus, ProviderAutomationFormState } from '../components/types'
 import { parseApiError } from '../components/types'
@@ -14,15 +16,10 @@ import {
   normalizeTimeframe,
   getErrorMessage,
   formatProviderName,
-  retryFetch,
-  getRetryableErrorMessage,
-  NetworkError,
 } from '../components/utils'
-import { 
-  API_ENDPOINTS, 
-  HTTP_NO_CONTENT,
-  ERROR_MESSAGES, 
-  SUCCESS_MESSAGES, 
+import {
+  ERROR_MESSAGES,
+  SUCCESS_MESSAGES,
   TOAST_TITLES,
 } from '../components/constants'
 
@@ -61,8 +58,11 @@ export interface UseAdsAutomationReturn {
 export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutomationReturn {
   const { automationStatuses, onRefresh } = options
   
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { toast } = useToast()
+
+  const updateAutomationSettings = useMutation(adsIntegrationsApi.updateAutomationSettings)
+  const requestManualSync = useMutation(adsIntegrationsApi.requestManualSync)
 
   // State
   const [automationDraft, setAutomationDraft] = useState<Record<string, ProviderAutomationFormState>>({})
@@ -149,21 +149,18 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
       setSettingsErrors((prev) => ({ ...prev, [providerId]: '' }))
 
       try {
-        const token = await getIdToken()
-        const response = await fetch(API_ENDPOINTS.INTEGRATIONS.SETTINGS, {
-          method: 'PATCH',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            providerId,
-            autoSyncEnabled: draft.autoSyncEnabled,
-            syncFrequencyMinutes: draft.syncFrequencyMinutes,
-            scheduledTimeframeDays: draft.scheduledTimeframeDays,
-          }),
-        })
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}))
-          throw new Error(parseApiError(payload) ?? ERROR_MESSAGES.SAVE_SETTINGS_FAILED)
+        if (!user?.agencyId) {
+          throw new Error('Missing workspace id')
         }
+
+        await updateAutomationSettings({
+          workspaceId: String(user.agencyId),
+          providerId,
+          clientId: null,
+          autoSyncEnabled: draft.autoSyncEnabled,
+          syncFrequencyMinutes: draft.syncFrequencyMinutes,
+          scheduledTimeframeDays: draft.scheduledTimeframeDays,
+        })
         toast({
           title: TOAST_TITLES.AUTOMATION_UPDATED,
           description: SUCCESS_MESSAGES.AUTOMATION_UPDATED(formatProviderName(providerId)),
@@ -177,7 +174,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         setSavingSettings((prev) => ({ ...prev, [providerId]: false }))
       }
     },
-    [automationDraft, getIdToken, toast, user?.id, onRefresh]
+    [automationDraft, toast, user?.agencyId, updateAutomationSettings, onRefresh]
   )
 
   const toggleAdvanced = useCallback((providerId: string) => {
@@ -191,89 +188,38 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         return
       }
       setSyncingProvider(providerId)
-      let retryCount = 0
 
       try {
-        const token = await getIdToken()
-        
-        // Schedule the sync with retry
-        const scheduleResponse = await retryFetch(
-          API_ENDPOINTS.INTEGRATIONS.MANUAL_SYNC,
-          {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ providerId, force: true }),
-          },
-          {
-            maxRetries: 3,
-            onRetry: (attempt: number, error: Error, delayMs: number) => {
-              retryCount = attempt
-              toast({
-                title: `Retrying sync... (${attempt}/3)`,
-                description: error instanceof NetworkError 
-                  ? 'Connection issue. Retrying...' 
-                  : `Server busy. Waiting ${Math.round(delayMs / 1000)}s...`,
-              })
-            },
-          }
-        )
-        
-        const schedulePayload = (await scheduleResponse.json().catch(() => ({}))) as { scheduled?: boolean; message?: string }
-        if (!schedulePayload?.scheduled) {
-          toast({
-            title: TOAST_TITLES.NOTHING_TO_SYNC,
-            description: schedulePayload?.message ?? 'A sync is already running for this provider.',
-          })
-          return
+        if (!user?.agencyId) {
+          throw new Error('Missing workspace id')
         }
-        
-        // Process the sync with retry
-        const processResponse = await retryFetch(
-          API_ENDPOINTS.INTEGRATIONS.PROCESS,
-          {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          },
-          {
-            maxRetries: 3,
-            onRetry: (attempt: number, error: Error, delayMs: number) => {
-              retryCount = attempt
-              toast({
-                title: `Processing sync... (retry ${attempt}/3)`,
-                description: error instanceof NetworkError 
-                  ? 'Connection issue. Retrying...' 
-                  : `Server busy. Waiting ${Math.round(delayMs / 1000)}s...`,
-              })
-            },
-          }
-        )
-        
-        if (!processResponse.ok && processResponse.status !== HTTP_NO_CONTENT) {
-          const payload = await processResponse.json().catch(() => ({}))
-          throw new Error(parseApiError(payload) ?? ERROR_MESSAGES.PROCESS_SYNC_FAILED)
-        }
-        
+
+        // Queue sync job in Convex.
+        await requestManualSync({
+          workspaceId: String(user.agencyId),
+          providerId,
+          clientId: null,
+          force: true,
+        })
+
         const providerName = formatProviderName(providerId)
-        const successMessage = retryCount > 0 
-          ? SUCCESS_MESSAGES.SYNC_COMPLETE_WITH_RETRIES(providerName, retryCount)
-          : SUCCESS_MESSAGES.SYNC_COMPLETE(providerName)
+        const successMessage = SUCCESS_MESSAGES.SYNC_COMPLETE(providerName)
         
         toast({ title: TOAST_TITLES.SYNC_COMPLETE, description: successMessage })
         onRefresh?.()
       } catch (error: unknown) {
-        const message = getRetryableErrorMessage(error)
-        const isNetworkIssue = error instanceof NetworkError
-        
-        toast({ 
-          variant: 'destructive', 
-          title: isNetworkIssue ? TOAST_TITLES.CONNECTION_FAILED : TOAST_TITLES.SYNC_FAILED, 
+        const message = getErrorMessage(error, ERROR_MESSAGES.PROCESS_SYNC_FAILED)
+
+        toast({
+          variant: 'destructive',
+          title: TOAST_TITLES.SYNC_FAILED,
           description: message,
         })
       } finally {
         setSyncingProvider(null)
       }
     },
-    [getIdToken, toast, user?.id, onRefresh]
+    [toast, user?.agencyId, requestManualSync, onRefresh]
   )
 
   return {

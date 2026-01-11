@@ -29,11 +29,7 @@ export function SiteHeader() {
     ? marketingLinks
     : marketingLinks.filter((link) => !['Home', 'Features', 'Integrations'].includes(link.name))
 
-  const sessionLinks: SessionLink[] = user
-    ? []
-    : [{ name: 'Sign in', href: '/' }]
-
-  const mobileLinks = [...marketingLinksDisplay, ...sessionLinks]
+  const mobileLinks = marketingLinksDisplay
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -109,9 +105,8 @@ export function SiteHeader() {
             </SheetContent>
           </Sheet>
 
-          <div className="hidden items-center gap-3 md:flex">
-            {user ? (
-              <>
+            <div className="hidden items-center gap-3 md:flex">
+              {user ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -122,13 +117,9 @@ export function SiteHeader() {
                 >
                   {signingOut ? 'Signing out…' : 'Sign out'}
                 </Button>
-              </>
-            ) : (
-              <Button asChild>
-                <Link href="/">Sign in</Link>
-              </Button>
-            )}
-          </div>
+              ) : null}
+            </div>
+
         </div>
       </div>
     </header>

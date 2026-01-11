@@ -2,17 +2,21 @@
 
 import { useState, useCallback } from 'react'
 import { LoaderCircle, Download } from 'lucide-react'
+import { useAction } from 'convex/react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
+import { authActionsApi } from '@/lib/convex-api'
 import { useAuth } from '@/contexts/auth-context'
 
 export function DataExportCard() {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { toast } = useToast()
   const [exportingData, setExportingData] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+
+  const exportUserData = useAction(authActionsApi.exportUserData)
 
   const handleExportData = useCallback(async () => {
     if (!user) {
@@ -24,25 +28,11 @@ export function DataExportCard() {
     setExportError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/auth/export', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const exportData = await exportUserData()
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: string }
-        throw new Error(payload.error ?? 'Failed to export data')
-      }
+      const filename = `cohort-data-export-${new Date().toISOString().split('T')[0]}.json`
 
-      // Get the filename from Content-Disposition header or generate one
-      const contentDisposition = response.headers.get('Content-Disposition')
-      const filenameMatch = contentDisposition?.match(/filename="(.+)"/)
-      const filename = filenameMatch?.[1] ?? `cohort-data-export-${new Date().toISOString().split('T')[0]}.json`
-
-      const blob = await response.blob()
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -63,7 +53,7 @@ export function DataExportCard() {
     } finally {
       setExportingData(false)
     }
-  }, [getIdToken, toast, user])
+  }, [toast, user, exportUserData])
 
   return (
     <Card>

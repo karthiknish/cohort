@@ -1,14 +1,18 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useConvex, useMutation, useQuery } from 'convex/react'
+import { v4 as uuidv4 } from 'uuid'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { apiFetch } from '@/lib/api-client'
+import { projectsApi } from '@/lib/convex-api'
+import { collaborationApi } from '@/lib/convex-api'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationMessageFormat } from '@/types/collaboration'
 import type { ProjectRecord } from '@/types/projects'
 
 import { aggregateTeamMembers, collectSharedFiles, normalizeTeamMembers } from '../utils'
@@ -22,15 +26,15 @@ import type {
   SendMessageOptions,
   UseCollaborationDataReturn,
 } from './types'
-import { readSessionTokenCookie } from './utils'
 import { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
 import { useThreads } from './use-threads'
 import { useTyping } from './use-typing'
 import { useAttachments } from './use-attachments'
 import { useMessageActions } from './use-message-actions'
+import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
 
 export function useCollaborationData(): UseCollaborationDataReturn {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { clients, selectedClient, loading: clientsLoading } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
@@ -42,6 +46,22 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   // ─────────────────────────────────────────────────────────────────────────────
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
+
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const convex = useConvex()
+  const createMessage = useMutation((collaborationApi as any).createMessage)
+
+  const projectsRealtime = useQuery(
+    projectsApi.list,
+    isPreviewMode || !workspaceId || !userId
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: selectedClient?.id ?? undefined,
+          limit: 100,
+        }
+  ) as Array<any> | undefined
 
   // ─────────────────────────────────────────────────────────────────────────────
   // User identity
@@ -139,64 +159,6 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Session token state
-  // ─────────────────────────────────────────────────────────────────────────────
-  const [sessionToken, setSessionToken] = useState<string | null>(null)
-  const sessionTokenRef = useRef<string | null>(null)
-  const pendingSessionPromiseRef = useRef<Promise<string> | null>(null)
-
-  useEffect(() => {
-    sessionTokenRef.current = sessionToken
-  }, [sessionToken])
-
-  useEffect(() => {
-    if (!user) {
-      pendingSessionPromiseRef.current = null
-      sessionTokenRef.current = null
-      setSessionToken(null)
-      return
-    }
-
-    const cookieToken = readSessionTokenCookie()
-    if (cookieToken) {
-      sessionTokenRef.current = cookieToken
-      setSessionToken(cookieToken)
-    } else {
-      sessionTokenRef.current = null
-      setSessionToken(null)
-    }
-  }, [user])
-
-  const ensureSessionToken = useCallback(async (): Promise<string> => {
-    if (!user) throw new Error('You must be signed in to access collaboration data.')
-    if (sessionTokenRef.current) return sessionTokenRef.current
-
-    const cookieToken = readSessionTokenCookie()
-    if (cookieToken) {
-      sessionTokenRef.current = cookieToken
-      setSessionToken(cookieToken)
-      return cookieToken
-    }
-
-    if (pendingSessionPromiseRef.current) return pendingSessionPromiseRef.current
-
-    const promise = getIdToken()
-      .then((token) => {
-        sessionTokenRef.current = token
-        setSessionToken(token)
-        pendingSessionPromiseRef.current = null
-        return token
-      })
-      .catch((error) => {
-        pendingSessionPromiseRef.current = null
-        throw error
-      })
-
-    pendingSessionPromiseRef.current = promise
-    return promise
-  }, [getIdToken, user])
-
-  // ─────────────────────────────────────────────────────────────────────────────
   // Derived state
   // ─────────────────────────────────────────────────────────────────────────────
   const channelMessages = selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []
@@ -273,61 +235,79 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       return
     }
 
-    const controller = new AbortController()
-    const parsed = parseSearchQuery(normalizedMessageSearch)
-    const params = new URLSearchParams({
-      channelType: selectedChannel.type,
-      limit: '200',
-    })
-    if (selectedChannel.type === 'client' && selectedChannel.clientId) {
-      params.set('clientId', selectedChannel.clientId)
-    }
-    if (selectedChannel.type === 'project' && selectedChannel.projectId) {
-      params.set('projectId', selectedChannel.projectId)
-    }
-    if (parsed.q) params.set('q', parsed.q)
-    if (parsed.sender) params.set('sender', parsed.sender)
-    if (parsed.attachment) params.set('attachment', parsed.attachment)
-    if (parsed.mention) params.set('mention', parsed.mention)
-    if (parsed.start) params.set('start', parsed.start)
-    if (parsed.end) params.set('end', parsed.end)
-
+    // Search is done via Convex query (no Next.js API dependency)
     setSearchingMessages(true)
     setSearchError(null)
 
-    fetch(`/api/collaboration/messages/search?${params.toString()}`, {
-      method: 'GET',
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}))
-          throw new Error(payload.error || 'Unable to search messages')
-        }
-        return response.json() as Promise<{ messages?: CollaborationMessage[]; highlights?: string[] }>
+    const parsed = parseSearchQuery(normalizedMessageSearch)
+
+    const startMs = parsed.start ? Date.parse(parsed.start) : NaN
+    const endMs = parsed.end ? Date.parse(parsed.end) : NaN
+
+    void convex
+      .query((collaborationApi as any).searchChannel, {
+        workspaceId: String(workspaceId),
+        channelType: selectedChannel.type,
+        clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+        projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+        q: parsed.q || null,
+        sender: parsed.sender ?? null,
+        attachment: parsed.attachment ?? null,
+        mention: parsed.mention ?? null,
+        startMs: Number.isFinite(startMs) ? startMs : null,
+        endMs: Number.isFinite(endMs) ? endMs : null,
+        limit: 200,
       })
-      .then((payload) => {
-        setSearchResults(payload.messages ?? [])
-        setSearchHighlights(payload.highlights ?? parsed.highlights)
+      .then((payload: any) => {
+        const rows = Array.isArray(payload?.rows) ? payload.rows : []
+        const highlights = Array.isArray(payload?.highlights) ? payload.highlights : parsed.highlights
+
+        const mapped: CollaborationMessage[] = rows
+          .map((row: any) => ({
+            id: String(row?.legacyId ?? ''),
+            channelType: typeof row?.channelType === 'string' ? row.channelType : 'team',
+            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
+            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
+            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
+            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
+            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
+            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
+            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
+            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
+            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? (row.attachments as any) : undefined,
+            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
+            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
+            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+            threadLastReplyAt:
+              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
+          }))
+          .filter((m: CollaborationMessage) => m.id)
+          .sort(
+            (a: CollaborationMessage, b: CollaborationMessage) =>
+              new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime(),
+          )
+
+        setSearchResults(mapped)
+        setSearchHighlights(highlights)
+        setSearchError(null)
       })
-      .catch((error) => {
-        // Aborts are expected when query/channel changes quickly, on navigation,
-        // and in React dev StrictMode (effects mount/unmount twice).
-        if (controller.signal.aborted) return
-        if (error && typeof error === 'object' && 'name' in error && (error as any).name === 'AbortError') {
-          return
-        }
+      .catch((error: any) => {
         const message = error instanceof Error ? error.message : 'Unable to search messages'
         setSearchError(message)
         setSearchResults([])
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setSearchingMessages(false)
-        }
+        setSearchingMessages(false)
       })
 
-    return () => controller.abort()
+    return
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedMessageSearch, parseSearchQuery, selectedChannelId])
 
@@ -402,7 +382,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     handleRemoveAttachment,
     clearAttachments,
     uploadAttachments: uploadAttachmentsBase,
-  } = useAttachments({ userId: currentUserId })
+  } = useAttachments({ userId: currentUserId, workspaceId: user?.agencyId ?? null })
 
   // Typing
   const {
@@ -426,7 +406,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     loadThreadReplies,
     loadMoreThreadReplies,
     clearThreadReplies,
-  } = useThreads({ ensureSessionToken })
+  } = useThreads({ workspaceId: user?.agencyId ?? null })
 
   // Mutate channel messages helper
   const mutateChannelMessages = useCallback(
@@ -450,7 +430,8 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     handleDeleteMessage: handleDeleteMessageBase,
     handleToggleReaction: handleToggleReactionBase,
   } = useMessageActions({
-    ensureSessionToken,
+    workspaceId: user?.agencyId ?? null,
+    userId: currentUserId,
     channels,
     channelParticipants,
     mutateChannelMessages,
@@ -537,32 +518,94 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
         // Extract mentions
         const mentionMatches = extractMentionsFromContent(trimmedContent)
-        const mentionMetadata = mentionMatches.map((mention) => {
+         const mentionMetadata = mentionMatches.map((mention: any) => {
           const participant = channelParticipants.find(
             (member) => member.name.toLowerCase() === mention.name.toLowerCase()
           )
           return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
         })
 
-        const serverMessage = await apiFetch<CollaborationMessage>('/api/collaboration/messages', {
-          method: 'POST',
-          body: JSON.stringify({
-            channelType: selectedChannel.type,
-            clientId: selectedChannel.clientId,
-            projectId: selectedChannel.projectId,
-            content: trimmedContent,
-            format: 'markdown',
-            senderName: resolveSenderDetails().senderName,
-            senderRole: resolveSenderDetails().senderRole,
-            attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-            mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
-            parentMessageId: options?.parentMessageId,
-          }),
+        if (!workspaceId || !currentUserId) {
+          throw new Error('You must be signed in to send messages')
+        }
+
+        const messageId = uuidv4()
+        await createMessage({
+          workspaceId: String(workspaceId),
+          legacyId: messageId,
+          channelType: selectedChannel.type,
+          clientId: selectedChannel.clientId ?? null,
+          projectId: selectedChannel.projectId ?? null,
+          senderId: String(currentUserId),
+          senderName: resolveSenderDetails().senderName,
+          senderRole: resolveSenderDetails().senderRole,
+          content: trimmedContent,
+          attachments: (uploadedAttachments as CollaborationAttachment[]) ?? [],
+          format: 'markdown',
+          mentions: mentionMetadata,
+          parentMessageId: options?.parentMessageId ?? null,
+          threadRootId: null,
+          isThreadRoot: options?.parentMessageId ? false : true,
         })
 
+        const createdRow = await convex.query((collaborationApi as any).getByLegacyId, {
+          workspaceId: String(workspaceId),
+          legacyId: messageId,
+        })
+
+        const createdMessage: CollaborationMessage = createdRow
+          ? {
+              id: String(createdRow?.legacyId ?? messageId),
+              channelType: typeof createdRow?.channelType === 'string' ? createdRow.channelType : selectedChannel.type,
+              clientId: typeof createdRow?.clientId === 'string' ? createdRow.clientId : selectedChannel.clientId ?? null,
+              projectId: typeof createdRow?.projectId === 'string' ? createdRow.projectId : selectedChannel.projectId ?? null,
+              senderId: typeof createdRow?.senderId === 'string' ? createdRow.senderId : String(currentUserId),
+              senderName: typeof createdRow?.senderName === 'string' ? createdRow.senderName : resolveSenderDetails().senderName,
+              senderRole: typeof createdRow?.senderRole === 'string' ? createdRow.senderRole : resolveSenderDetails().senderRole,
+              content: Boolean(createdRow?.deleted || createdRow?.deletedAtMs) ? '' : String(createdRow?.content ?? ''),
+              createdAt: typeof createdRow?.createdAtMs === 'number' ? new Date(createdRow.createdAtMs).toISOString() : new Date().toISOString(),
+              updatedAt: typeof createdRow?.updatedAtMs === 'number' ? new Date(createdRow.updatedAtMs).toISOString() : null,
+              isEdited: Boolean(createdRow?.updatedAtMs && createdRow?.createdAtMs && createdRow.updatedAtMs !== createdRow.createdAtMs),
+              deletedAt: typeof createdRow?.deletedAtMs === 'number' ? new Date(createdRow.deletedAtMs).toISOString() : null,
+              deletedBy: typeof createdRow?.deletedBy === 'string' ? createdRow.deletedBy : null,
+              isDeleted: Boolean(createdRow?.deleted || createdRow?.deletedAtMs),
+              attachments:
+                Array.isArray(createdRow?.attachments) && createdRow.attachments.length > 0 ? createdRow.attachments : undefined,
+              format: createdRow?.format === 'plaintext' ? 'plaintext' : 'markdown',
+              mentions: Array.isArray(createdRow?.mentions) && createdRow.mentions.length > 0 ? createdRow.mentions : undefined,
+              reactions: Array.isArray(createdRow?.reactions) && createdRow.reactions.length > 0 ? createdRow.reactions : undefined,
+              parentMessageId: typeof createdRow?.parentMessageId === 'string' ? createdRow.parentMessageId : null,
+              threadRootId: typeof createdRow?.threadRootId === 'string' ? createdRow.threadRootId : null,
+              threadReplyCount: typeof createdRow?.threadReplyCount === 'number' ? createdRow.threadReplyCount : undefined,
+              threadLastReplyAt:
+                typeof createdRow?.threadLastReplyAtMs === 'number' ? new Date(createdRow.threadLastReplyAtMs).toISOString() : null,
+            }
+          : {
+              id: messageId,
+              channelType: selectedChannel.type,
+              clientId: selectedChannel.clientId ?? null,
+              projectId: selectedChannel.projectId ?? null,
+              senderId: String(currentUserId),
+              senderName: resolveSenderDetails().senderName,
+              senderRole: resolveSenderDetails().senderRole,
+              content: trimmedContent,
+              createdAt: new Date().toISOString(),
+              updatedAt: null,
+              isEdited: false,
+              deletedAt: null,
+              deletedBy: null,
+              isDeleted: false,
+              attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+              format: 'markdown',
+              mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
+              reactions: [],
+              parentMessageId: options?.parentMessageId ?? null,
+              threadRootId: null,
+            }
+
         mutateChannelMessages(channelId, (messages) => {
-          if (messages.some((m) => m.id === serverMessage.id)) return messages
-          return [...messages, serverMessage]
+          if (messages.some((m) => m.id === createdMessage.id)) return messages
+          return [...messages, createdMessage]
         })
 
         clearAttachments()
@@ -580,7 +623,9 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       channels,
       channelParticipants,
       clearAttachments,
-      ensureSessionToken,
+      createMessage,
+      convex,
+      currentUserId,
       messageInput,
       mutateChannelMessages,
       pendingAttachments,
@@ -589,6 +634,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       stopTyping,
       toast,
       uploadAttachmentsBase,
+      workspaceId,
     ]
   )
 
@@ -606,25 +652,62 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         const channel = channels.find((c) => c.id === channelId)
         if (!channel) throw new Error('Channel not found')
 
-        const params = new URLSearchParams({
+        if (!workspaceId) throw new Error('Workspace unavailable')
+
+        const decoded = decodeTimestampIdCursor(nextCursor)
+        const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
+        const afterLegacyId = decoded ? decoded.id : undefined
+
+        const rows = (await convex.query((collaborationApi as any).listChannel, {
+          workspaceId: String(workspaceId),
           channelType: channel.type,
-          pageSize: '50',
-          after: nextCursor,
-        })
+          clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
+          projectId: channel.type === 'project' ? (channel.projectId ?? null) : null,
+          limit: 50 + 1,
+          afterCreatedAtMs,
+          afterLegacyId,
+        })) as any[]
 
-        if (channel.clientId) params.set('clientId', channel.clientId)
-        if (channel.projectId) params.set('projectId', channel.projectId)
+        const hasMore = rows.length > 50
+        const pageRows = hasMore ? rows.slice(0, 50) : rows
 
-        const payload = await apiFetch<{ messages: CollaborationMessage[]; nextCursor: string | null }>(
-          `/api/collaboration/messages?${params.toString()}`
-        )
+        const mapped: CollaborationMessage[] = pageRows
+          .map((row: any) => ({
+            id: String(row?.legacyId ?? ''),
+            channelType: typeof row?.channelType === 'string' ? row.channelType : channel.type,
+            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
+            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
+            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
+            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
+            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
+            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
+            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
+            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
+            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
+            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
+            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+            threadLastReplyAt:
+              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
+          }))
+          .filter((m) => m.id)
 
-        const messages = Array.isArray(payload.messages) ? payload.messages : []
-        const newCursor = payload.nextCursor ?? null
+        const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
+        const newCursor =
+          hasMore && oldestRow && typeof oldestRow.createdAtMs === 'number'
+            ? encodeTimestampIdCursor(new Date(oldestRow.createdAtMs).toISOString(), String(oldestRow.legacyId ?? ''))
+            : null
 
         mutateChannelMessages(channelId, (existing) => {
           const existingIds = new Set(existing.map((m) => m.id))
-          const newMessages = messages.filter((m) => !existingIds.has(m.id))
+          const newMessages = mapped.filter((m) => !existingIds.has(m.id))
           return [...newMessages, ...existing]
         })
 
@@ -636,30 +719,47 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         setLoadingMoreChannelId(null)
       }
     },
-    [ensureSessionToken, mutateChannelMessages, nextCursorByChannel, toast]
+    [channels, convex, mutateChannelMessages, nextCursorByChannel, toast, workspaceId]
   )
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Fetch projects
+  // Projects (realtime)
   // ─────────────────────────────────────────────────────────────────────────────
-  const fetchProjects = useCallback(async () => {
-    // Allow preview mode even without user
-    if (!userId && !isPreviewMode) return
-
-    setProjectsLoading(true)
-    try {
-      const payload = await apiFetch<{ projects?: ProjectRecord[] }>('/api/projects')
-      setProjects(Array.isArray(payload.projects) ? payload.projects : [])
-    } catch (error) {
-      console.error('[collaboration] failed to fetch projects', error)
-    } finally {
-      setProjectsLoading(false)
-    }
-  }, [isPreviewMode, userId])
-
   useEffect(() => {
-    void fetchProjects()
-  }, [fetchProjects])
+    if (isPreviewMode || !workspaceId || !userId) {
+      setProjects([])
+      setProjectsLoading(false)
+      return
+    }
+
+    if (!projectsRealtime) {
+      setProjectsLoading(true)
+      return
+    }
+
+    const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
+    const mapped: ProjectRecord[] = rows.map((row: any) => ({
+      id: String(row.legacyId),
+      name: String(row.name ?? ''),
+      description: typeof row.description === 'string' ? row.description : null,
+      status: row.status,
+      clientId: typeof row.clientId === 'string' ? row.clientId : null,
+      clientName: typeof row.clientName === 'string' ? row.clientName : null,
+      startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+      endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+      updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+      taskCount: 0,
+      openTaskCount: 0,
+      recentActivityAt: null,
+      deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+    }))
+
+    setProjects(mapped)
+    setProjectsLoading(false)
+  }, [isPreviewMode, projectsRealtime, userId, workspaceId])
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Auto-select sender when channel changes

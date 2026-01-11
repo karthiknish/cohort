@@ -44,6 +44,9 @@ export type AttachmentValidationResult = {
 // Send message options
 export type SendMessageOptions = {
   parentMessageId?: string
+  threadRootId?: string
+  senderName?: string
+  senderRole?: string | null
   attachmentPaths?: string[]
   skipAttachmentUpload?: boolean
 }

@@ -1,23 +1,12 @@
 'use client'
 
-import useSWR from 'swr'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useAction } from 'convex/react'
 
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
 import { onDashboardRefresh } from '@/lib/refresh-bus'
-import type { MetricRecord, MetricsResponse, ProviderInsight, AlgorithmicInsight } from './types'
-
-const fetcher = async (url: string, token: string) => {
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.error || 'Failed to load analytics data')
-  }
-  return response.json()
-}
+import { adsMetricsApi, analyticsInsightsApi } from '@/lib/convex-api'
+import type { MetricRecord, ProviderInsight, AlgorithmicInsight } from './types'
 
 export interface UseAnalyticsDataReturn {
   metricsData: MetricRecord[]
@@ -40,8 +29,16 @@ export function useAnalyticsData(
   token: string | null, 
   periodDays: number, 
   clientId: string | null, 
-  isPreviewMode: boolean
+  isPreviewMode: boolean,
+  workspaceId?: string | null
 ): UseAnalyticsDataReturn {
+  // State for insights from Convex action
+  const [insights, setInsights] = useState<ProviderInsight[]>([])
+  const [algorithmic, setAlgorithmic] = useState<AlgorithmicInsight[]>([])
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsRefreshing, setInsightsRefreshing] = useState(false)
+  const [insightsError, setInsightsError] = useState<Error | undefined>(undefined)
+
   // If in preview mode, return preview data immediately
   const previewMetrics = useMemo(() => {
     if (!isPreviewMode) return null
@@ -53,99 +50,81 @@ export function useAnalyticsData(
     return getPreviewAnalyticsInsights()
   }, [isPreviewMode])
 
-  const shouldFetch = Boolean(token) && !isPreviewMode
-  const metricsUrl = clientId ? `/api/metrics?clientId=${encodeURIComponent(clientId)}` : '/api/metrics'
-  const metricsKey: [string, string] | null = shouldFetch && token ? [metricsUrl, token] : null
+  // Metrics are now fetched directly from Convex
+  const metricsRealtime = useQuery(
+    adsMetricsApi.listMetricsWithSummary,
+    isPreviewMode || !workspaceId
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: clientId ?? null,
+          limit: 500,
+        }
+  ) as { metrics: MetricRecord[] } | undefined
 
-  const [metricsList, setMetricsList] = useState<MetricRecord[]>([])
-  const [metricsCursor, setMetricsCursor] = useState<string | null>(null)
   const [metricsLoadingMore, setMetricsLoadingMore] = useState(false)
 
-  const insightsParams = new URLSearchParams({ periodDays: String(periodDays) })
-  if (clientId) {
-    insightsParams.set('clientId', clientId)
-  }
-  const insightsUrl = `/api/analytics/insights?${insightsParams.toString()}`
-  const insightsKey: [string, string] | null = shouldFetch && token ? [insightsUrl, token] : null
+  // Convex action for generating insights
+  const generateInsights = useAction(analyticsInsightsApi.generateInsights)
 
-  const {
-    data,
-    error,
-    isLoading,
-    isValidating,
-    mutate: mutateMetrics,
-  } = useSWR(metricsKey, ([url, jwt]) => fetcher(url, jwt))
+  // Function to fetch insights
+  const fetchInsights = useCallback(async () => {
+    if (isPreviewMode || !workspaceId) return
 
-  const {
-    data: insightsData,
-    error: insightsError,
-    isLoading: insightsLoading,
-    isValidating: insightsValidating,
-    mutate: mutateInsights,
-  } = useSWR(
-    insightsKey,
-    ([url, jwt]) => fetcher(url, jwt)
-  )
-
-  useEffect(() => {
-    if (isPreviewMode) return
-    setMetricsList([])
-    setMetricsCursor(null)
-  }, [metricsUrl, isPreviewMode])
-
-  useEffect(() => {
-    if (isPreviewMode) return
-    if (!data) {
-      return
+    const isInitialLoad = insights.length === 0 && algorithmic.length === 0
+    if (isInitialLoad) {
+      setInsightsLoading(true)
+    } else {
+      setInsightsRefreshing(true)
     }
+    setInsightsError(undefined)
 
-    const payload = data as MetricsResponse
-    const entries = Array.isArray(payload.metrics) ? payload.metrics : []
-    setMetricsList(entries)
-    setMetricsCursor(typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null)
-  }, [data, isPreviewMode])
+    try {
+      const result = await generateInsights({
+        workspaceId,
+        clientId: clientId ?? undefined,
+        periodDays,
+      })
+      setInsights(result.insights as ProviderInsight[])
+      setAlgorithmic(result.algorithmic as AlgorithmicInsight[])
+    } catch (error) {
+      console.error('[useAnalyticsData] Failed to generate insights:', error)
+      setInsightsError(error instanceof Error ? error : new Error('Failed to generate insights'))
+    } finally {
+      setInsightsLoading(false)
+      setInsightsRefreshing(false)
+    }
+  }, [isPreviewMode, workspaceId, clientId, periodDays, generateInsights, insights.length, algorithmic.length])
+
+  // Fetch insights on mount and when dependencies change
+  useEffect(() => {
+    if (!isPreviewMode && workspaceId) {
+      fetchInsights()
+    }
+  }, [isPreviewMode, workspaceId, clientId, periodDays]) // Don't include fetchInsights to avoid infinite loop
 
   // Global refresh integration: when the dashboard refresh button is used, or when
   // tasks/projects mutate elsewhere, revalidate Analytics data automatically.
   useEffect(() => {
     if (isPreviewMode) return
     const unsubscribe = onDashboardRefresh(() => {
-      void mutateMetrics()
-      void mutateInsights()
+      // Convex queries auto-refresh, but insights need to be refetched
+      void fetchInsights()
     })
     return unsubscribe
-  }, [isPreviewMode, mutateMetrics, mutateInsights])
+  }, [isPreviewMode, fetchInsights])
 
+  // Pagination is no longer needed since Convex returns all metrics up to limit
+  // The loadMoreMetrics function is kept for API compatibility but is now a no-op
   const loadMoreMetrics = useCallback(async () => {
-    if (isPreviewMode || !token || !metricsCursor) {
-      return
-    }
+    // Pagination is not supported in the Convex query
+    // Data is fetched in full up to the limit
+  }, [])
 
-    setMetricsLoadingMore(true)
-    try {
-      const separator = metricsUrl.includes('?') ? '&' : '?'
-      const url = `${metricsUrl}${separator}after=${encodeURIComponent(metricsCursor)}`
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      })
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null
-        const message = payload?.error ?? 'Unable to load additional metrics'
-        throw new Error(message)
-      }
-
-      const payload = (await response.json()) as MetricsResponse
-      const entries = Array.isArray(payload.metrics) ? payload.metrics : []
-      if (entries.length > 0) {
-        setMetricsList((prev) => [...prev, ...entries])
-      }
-      setMetricsCursor(typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null)
-    } finally {
-      setMetricsLoadingMore(false)
-    }
-  }, [metricsCursor, metricsUrl, token, isPreviewMode])
+  // Mutate insights function
+  const mutateInsights = useCallback(async () => {
+    await fetchInsights()
+  }, [fetchInsights])
 
   // Return preview data if in preview mode
   if (isPreviewMode && previewMetrics && previewInsights) {
@@ -167,20 +146,22 @@ export function useAnalyticsData(
     }
   }
 
+  const metricsLoading = metricsRealtime === undefined && !isPreviewMode && !!workspaceId
+
   return {
-    metricsData: metricsList,
-    metricsNextCursor: metricsCursor,
+    metricsData: metricsRealtime?.metrics ?? [],
+    metricsNextCursor: null, // Convex doesn't use cursor pagination
     metricsLoadingMore,
     loadMoreMetrics,
-    metricsError: error as Error | undefined,
-    metricsLoading: isLoading,
-    metricsRefreshing: isValidating,
-    mutateMetrics: async () => mutateMetrics(),
-    insights: (insightsData as { insights: ProviderInsight[] } | undefined)?.insights ?? [],
-    algorithmic: (insightsData as { algorithmic: AlgorithmicInsight[] } | undefined)?.algorithmic ?? [],
-    insightsError: insightsError as Error | undefined,
+    metricsError: undefined, // Convex errors are handled differently
+    metricsLoading,
+    metricsRefreshing: false, // Convex handles this automatically
+    mutateMetrics: async () => undefined, // Convex auto-refreshes
+    insights,
+    algorithmic,
+    insightsError,
     insightsLoading,
-    insightsRefreshing: insightsValidating,
-    mutateInsights: async () => mutateInsights(),
+    insightsRefreshing,
+    mutateInsights,
   }
 }

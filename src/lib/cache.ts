@@ -75,27 +75,26 @@ export class TtlCache {
 }
 
 // =============================================================================
-// Distributed cache manager (Firestore-backed by default)
+// Distributed cache manager (Convex-backed by default)
 // =============================================================================
 
-import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { CacheManager, workspaceCacheKey, type CacheBackend } from '@/lib/cache/cache-manager'
 import { MemoryCacheBackend } from '@/lib/cache/memory-backend'
-import { FirestoreCacheBackend } from '@/lib/cache/firebase-backend'
+import { ConvexCacheBackend } from '@/lib/cache/convex-backend'
 
 function createServerCacheBackend(): { backend: CacheBackend; name: string } {
-  const selection = (process.env.CACHE_BACKEND || 'firestore').toLowerCase()
+  const selection = (process.env.CACHE_BACKEND || 'convex').toLowerCase()
 
   if (selection === 'memory') {
     return { backend: new MemoryCacheBackend({ maxEntries: 1000 }), name: 'memory' }
   }
 
-  // Default: Firestore-backed cache for cross-instance consistency
+  // Default: Convex-backed cache for cross-instance consistency
   try {
-    return { backend: new FirestoreCacheBackend(adminDb), name: 'firestore' }
+    return { backend: new ConvexCacheBackend(), name: 'convex' }
   } catch (error) {
-    logger.warn('[cache] Failed to initialize Firestore cache backend, falling back to memory', { error })
+    logger.warn('[cache] Failed to initialize Convex cache backend, falling back to memory', { error })
     return { backend: new MemoryCacheBackend({ maxEntries: 1000 }), name: 'memory' }
   }
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { CircleCheck, Eye, EyeOff, Lock, Mail, User, CircleAlert, Check, X, Shield, LoaderCircle } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { authClient } from "@/lib/auth-client"
 import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -120,7 +120,10 @@ export default function HomePage() {
     confirmPassword: "",
     displayName: "",
   })
-  const { user, signIn, signInWithGoogle, signUp, loading, isSyncing } = useAuth()
+  const { data: session, isPending: sessionPending } = authClient.useSession()
+  const user = session?.user ?? null
+  const loading = sessionPending
+  const isSyncing = false
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -352,10 +355,10 @@ export default function HomePage() {
           return
         }
 
-        await signUp({
+        await authClient.signUp.email({
           email: signUpData.email,
           password: signUpData.password,
-          displayName: signUpData.displayName.trim() || undefined,
+          name: signUpData.displayName.trim() || signUpData.email,
         })
         toast({
           title: "Welcome to Cohorts!",
@@ -369,7 +372,10 @@ export default function HomePage() {
           return
         }
 
-        await signIn(signInData.email, signInData.password)
+        await authClient.signIn.email({
+          email: signInData.email,
+          password: signInData.password,
+        })
         
         // Handle remember me
         if (rememberMe && typeof window !== "undefined") {
@@ -407,32 +413,17 @@ export default function HomePage() {
   }
 
   const handleGoogleSignIn = async () => {
-    setIsSubmitting(true)
     try {
-      await signInWithGoogle()
-      toast({
-        title: "Welcome!",
-        description: "Signed in with Google. Loading your workspace...",
+      await authClient.signIn.social({
+        provider: "google",
       })
-      const redirect = searchParams.get("redirect")
-      // Restore last visited tab if no explicit redirect
-      let destination = redirect || "/dashboard"
-      if (!redirect && typeof window !== 'undefined') {
-        const lastTab = window.localStorage.getItem('cohorts_last_tab')
-        if (lastTab && lastTab.startsWith('/dashboard')) {
-          destination = lastTab
-        }
-      }
-      router.push(destination)
     } catch (error) {
       const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
         title: "Google sign-in failed",
-        description: `${errorMessage}. Please try again.`,
+        description: errorMessage,
         variant: "destructive",
       })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 

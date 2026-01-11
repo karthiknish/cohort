@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -8,17 +9,34 @@ import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
+import { adsIntegrationsApi } from '@/lib/convex-api'
+
 
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
-import { parseApiError } from '../components/types'
-import { fetchIntegrationStatuses, getErrorMessage, formatProviderName } from '../components/utils'
-import {
-  API_ENDPOINTS,
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
-  TOAST_TITLES,
-  PROVIDER_IDS,
-} from '../components/constants'
+
+import { getErrorMessage, formatProviderName } from '../components/utils'
+  import {
+    ERROR_MESSAGES,
+    SUCCESS_MESSAGES,
+    TOAST_TITLES,
+    PROVIDER_IDS,
+  } from '../components/constants'
+
+
+type ConvexIntegrationStatusRow = {
+  providerId: string
+  clientId: string | null
+  accountId: string | null
+  accountName: string | null
+  lastSyncStatus: string | null
+  lastSyncMessage: string | null
+  lastSyncedAtMs: number | null
+  lastSyncRequestedAtMs: number | null
+  linkedAtMs: number | null
+  autoSyncEnabled: boolean | null
+  syncFrequencyMinutes: number | null
+  scheduledTimeframeDays: number | null
+}
 
 // =============================================================================
 // TYPES
@@ -81,12 +99,46 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     connectLinkedInAdsAccount,
     startMetaOauth,
     startTikTokOauth,
-    disconnectProvider,
-    getIdToken,
   } = useAuth()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
+
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const convexStatuses = useQuery(
+    adsIntegrationsApi.listStatuses,
+    isPreviewMode || !workspaceId || !user?.id ? 'skip' : { workspaceId, clientId: selectedClientId ?? null }
+  ) as ConvexIntegrationStatusRow[] | undefined
+
+  const mappedStatuses = useMemo<IntegrationStatusResponse | null>(() => {
+    if (isPreviewMode) {
+      return { statuses: getPreviewAdsIntegrationStatuses() }
+    }
+
+    if (!workspaceId || !user?.id) return null
+
+    const rows = Array.isArray(convexStatuses) ? convexStatuses : []
+
+    const statuses = rows.map((row) => ({
+      providerId: String(row.providerId),
+      status: String(row.lastSyncStatus ?? 'never'),
+      message: row.lastSyncMessage ?? null,
+      lastSyncedAt: typeof row.lastSyncedAtMs === 'number' ? new Date(row.lastSyncedAtMs).toISOString() : null,
+      lastSyncRequestedAt:
+        typeof row.lastSyncRequestedAtMs === 'number'
+          ? new Date(row.lastSyncRequestedAtMs).toISOString()
+          : null,
+      linkedAt: typeof row.linkedAtMs === 'number' ? new Date(row.linkedAtMs).toISOString() : null,
+      accountId: row.accountId ?? null,
+      accountName: row.accountName ?? null,
+      autoSyncEnabled: row.autoSyncEnabled ?? null,
+      syncFrequencyMinutes: row.syncFrequencyMinutes ?? null,
+      scheduledTimeframeDays: row.scheduledTimeframeDays ?? null,
+    }))
+
+    return { statuses }
+  }, [convexStatuses, isPreviewMode, user?.id, workspaceId])
 
   // Connection state
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
@@ -100,12 +152,8 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [initializingMeta, setInitializingMeta] = useState(false)
   const [initializingTikTok, setInitializingTikTok] = useState(false)
 
-  // Internal refresh trigger
-  const [refreshTick, setRefreshTick] = useState(0)
-
   // Trigger refresh
   const triggerRefresh = useCallback(() => {
-    setRefreshTick((tick) => tick + 1)
     onRefresh?.()
   }, [onRefresh])
 
@@ -131,14 +179,14 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const tiktokNeedsAccountSelection = Boolean(tiktokStatus?.linkedAt && !tiktokStatus.accountId)
 
   // Platform definitions with clientId passed to connect functions
-  const adPlatforms: AdPlatform[] = [
-    {
-      id: PROVIDER_IDS.GOOGLE,
-      name: 'Google Ads',
-      description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
-      icon: Search,
-      connect: () => connectGoogleAdsAccount(selectedClientId ?? null),
-    },
+   const adPlatforms: AdPlatform[] = [
+     {
+       id: PROVIDER_IDS.GOOGLE,
+       name: 'Google Ads',
+       description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
+       icon: Search,
+       connect: () => connectGoogleAdsAccount(),
+     },
     {
       id: PROVIDER_IDS.FACEBOOK,
       name: 'Meta Ads Manager',
@@ -146,13 +194,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       icon: Facebook,
       mode: 'oauth',
     },
-    {
-      id: PROVIDER_IDS.LINKEDIN,
-      name: 'LinkedIn Ads',
-      description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
-      icon: Linkedin,
-      connect: () => connectLinkedInAdsAccount(selectedClientId ?? null),
-    },
+     {
+       id: PROVIDER_IDS.LINKEDIN,
+       name: 'LinkedIn Ads',
+       description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
+       icon: Linkedin,
+       connect: () => connectLinkedInAdsAccount(),
+     },
     {
       id: PROVIDER_IDS.TIKTOK,
       name: 'TikTok Ads',
@@ -162,87 +210,58 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     },
   ]
 
+  const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount)
+  const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration)
+  const deleteSyncJobsMutation = useMutation(adsIntegrationsApi.deleteSyncJobs)
+
   // Initialize integration helpers
   const initializeGoogleIntegration = useCallback(async () => {
-    const token = await getIdToken()
-
-    const params = new URLSearchParams()
-    const effectiveClientId = selectedClientId ?? null
-    if (effectiveClientId) params.set('clientId', effectiveClientId)
-    const url = params.toString().length > 0
-      ? `${API_ENDPOINTS.INTEGRATIONS.GOOGLE_INIT}?${params.toString()}`
-      : API_ENDPOINTS.INTEGRATIONS.GOOGLE_INIT
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({}),
-    })
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      throw new Error(parseApiError(payload) ?? ERROR_MESSAGES.GOOGLE_INIT_FAILED)
+    if (!workspaceId) {
+      throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
     }
-    return response.json()
-  }, [getIdToken, selectedClientId])
+
+    try {
+      return await initializeAdAccount({
+        workspaceId,
+        providerId: 'google',
+        clientId: selectedClientId ?? null,
+      })
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, ERROR_MESSAGES.GOOGLE_INIT_FAILED))
+    }
+  }, [initializeAdAccount, selectedClientId, workspaceId])
 
   const initializeLinkedInIntegration = useCallback(async () => {
-    const token = await getIdToken()
-
-    const params = new URLSearchParams()
-    const effectiveClientId = selectedClientId ?? null
-    if (effectiveClientId) params.set('clientId', effectiveClientId)
-    const url = params.toString().length > 0
-      ? `${API_ENDPOINTS.INTEGRATIONS.LINKEDIN_INIT}?${params.toString()}`
-      : API_ENDPOINTS.INTEGRATIONS.LINKEDIN_INIT
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({}),
-    })
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      throw new Error(parseApiError(payload) ?? ERROR_MESSAGES.LINKEDIN_INIT_FAILED)
+    if (!workspaceId) {
+      throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
     }
-    return response.json()
-  }, [getIdToken, selectedClientId])
+
+    try {
+      return await initializeAdAccount({
+        workspaceId,
+        providerId: 'linkedin',
+        clientId: selectedClientId ?? null,
+      })
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error, ERROR_MESSAGES.LINKEDIN_INIT_FAILED))
+    }
+  }, [initializeAdAccount, selectedClientId, workspaceId])
 
   const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setMetaSetupMessage(null)
     setInitializingMeta(true)
 
-    // Add timeout to prevent hanging indefinitely
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-
     try {
-      const token = await getIdToken()
-      const params = new URLSearchParams()
-      const effectiveClientId = clientIdOverride ?? selectedClientId ?? null
-      if (effectiveClientId) params.set('clientId', effectiveClientId)
-      const url = params.toString().length > 0
-        ? `${API_ENDPOINTS.INTEGRATIONS.META_INIT}?${params.toString()}`
-        : API_ENDPOINTS.INTEGRATIONS.META_INIT
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal,
-        body: JSON.stringify({}),
-      })
-      const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
-      if (!response.ok) {
-        throw new Error(payload?.error ?? ERROR_MESSAGES.META_INIT_FAILED)
+      if (!workspaceId) {
+        throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
       }
+
+      const payload = (await initializeAdAccount({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientIdOverride ?? selectedClientId ?? null,
+      })) as { accountName?: string }
+
       toast({
         title: SUCCESS_MESSAGES.META_CONNECTED,
         description: payload?.accountName
@@ -251,64 +270,30 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       })
       triggerRefresh()
 
-      // Trigger initial sync processing immediately so user doesn't have to wait for cron
-      try {
-        await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({}),
-        })
-      } catch {
-        // Sync will be picked up by cron if this fails - non-critical
-        console.log('[initializeMetaIntegration] Initial sync trigger failed, will be processed by cron')
-      }
     } catch (error: unknown) {
-      // Handle abort error specifically
-      const isTimeout = error instanceof Error && error.name === 'AbortError'
-      const message = isTimeout
-        ? 'Request timed out. Please try again.'
-        : getErrorMessage(error, 'Unable to complete Meta setup')
+      const message = getErrorMessage(error, 'Unable to complete Meta setup')
       setMetaSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
     } finally {
-      clearTimeout(timeoutId)
       setInitializingMeta(false)
     }
-  }, [getIdToken, toast, selectedClientId, triggerRefresh])
+  }, [initializeAdAccount, toast, selectedClientId, triggerRefresh, workspaceId])
 
   const initializeTikTokIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setTiktokSetupMessage(null)
     setInitializingTikTok(true)
 
-    // Add timeout to prevent hanging indefinitely
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-
     try {
-      const token = await getIdToken()
-      const effectiveClientId = clientIdOverride ?? selectedClientId ?? null
-      const params = new URLSearchParams()
-      if (effectiveClientId) params.set('clientId', effectiveClientId)
-      const url = params.toString().length > 0
-        ? `${API_ENDPOINTS.INTEGRATIONS.TIKTOK_INIT}?${params.toString()}`
-        : API_ENDPOINTS.INTEGRATIONS.TIKTOK_INIT
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal,
-        body: JSON.stringify({}),
-      })
-      const payload = (await response.json().catch(() => ({}))) as { accountName?: string; error?: string }
-      if (!response.ok) {
-        throw new Error(payload?.error ?? ERROR_MESSAGES.TIKTOK_INIT_FAILED)
+      if (!workspaceId) {
+        throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
       }
+
+      const payload = (await initializeAdAccount({
+        workspaceId,
+        providerId: 'tiktok',
+        clientId: clientIdOverride ?? selectedClientId ?? null,
+      })) as { accountName?: string }
+
       toast({
         title: SUCCESS_MESSAGES.TIKTOK_CONNECTED,
         description: payload?.accountName
@@ -317,62 +302,19 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       })
       triggerRefresh()
 
-      // Trigger initial sync processing immediately so user doesn't have to wait for cron
-      try {
-        await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({}),
-        })
-      } catch {
-        // Sync will be picked up by cron if this fails - non-critical
-        console.log('[initializeTikTokIntegration] Initial sync trigger failed, will be processed by cron')
-      }
     } catch (error: unknown) {
-      // Handle abort error specifically
-      const isTimeout = error instanceof Error && error.name === 'AbortError'
-      const message = isTimeout
-        ? 'Request timed out. Please try again.'
-        : getErrorMessage(error, 'Unable to complete TikTok setup')
+      const message = getErrorMessage(error, 'Unable to complete TikTok setup')
       setTiktokSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.TIKTOK_SETUP_FAILED, description: message })
     } finally {
-      clearTimeout(timeoutId)
       setInitializingTikTok(false)
     }
-  }, [getIdToken, toast, selectedClientId, triggerRefresh])
+  }, [initializeAdAccount, toast, selectedClientId, triggerRefresh, workspaceId])
 
-  // Load integration statuses
+  // Keep local state in sync with Convex/preview.
   useEffect(() => {
-    if (isPreviewMode) {
-      const previewStatuses = getPreviewAdsIntegrationStatuses()
-      setIntegrationStatuses({ statuses: previewStatuses })
-      return
-    }
-
-    if (!user?.id) {
-      setIntegrationStatuses(null)
-      return
-    }
-
-    let isSubscribed = true
-    const loadStatuses = async () => {
-      try {
-        const token = await getIdToken()
-        const statusResponse = await fetchIntegrationStatuses(token, user.id, selectedClientId ?? null)
-        if (isSubscribed) {
-          setIntegrationStatuses(statusResponse)
-        }
-      } catch {
-        // Silently fail - metrics will still work
-      }
-    }
-    void loadStatuses()
-    return () => { isSubscribed = false }
-  }, [user?.id, refreshTick, getIdToken, isPreviewMode, selectedClientId])
+    setIntegrationStatuses(mappedStatuses)
+  }, [mappedStatuses])
 
   // Sync connected providers from statuses
   useEffect(() => {
@@ -423,45 +365,17 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         void initializeMetaIntegration(oauthClientId)
       } else if (providerId === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
-      } else if (providerId === PROVIDER_IDS.GOOGLE) {
+       } else if (providerId === PROVIDER_IDS.GOOGLE) {
         void initializeGoogleIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
-          // Trigger initial sync processing immediately
-          const token = await getIdToken()
-          try {
-            await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
-              method: 'POST',
-              headers: { 
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({}),
-            })
-          } catch {
-            console.log('[initializeGoogleIntegration] Initial sync trigger failed, will be processed by cron')
-          }
         }).catch(err => {
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize Google Ads') })
         })
-      } else if (providerId === PROVIDER_IDS.LINKEDIN) {
+       } else if (providerId === PROVIDER_IDS.LINKEDIN) {
         void initializeLinkedInIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
-          // Trigger initial sync processing immediately
-          const token = await getIdToken()
-          try {
-            await fetch(API_ENDPOINTS.INTEGRATIONS.PROCESS, {
-              method: 'POST',
-              headers: { 
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({}),
-            })
-          } catch {
-            console.log('[initializeLinkedInIntegration] Initial sync trigger failed, will be processed by cron')
-          }
         }).catch(err => {
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize LinkedIn Ads') })
         })
@@ -486,7 +400,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
       setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
     }
-  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast, initializeGoogleIntegration, initializeLinkedInIntegration, getIdToken])
+  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast, initializeGoogleIntegration, initializeLinkedInIntegration])
 
   // Handlers
   const handleConnect = useCallback(async (providerId: string, action: () => Promise<void>) => {
@@ -588,10 +502,17 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const handleDisconnect = useCallback(async (providerId: string) => {
     const providerName = formatProviderName(providerId)
 
+    if (!workspaceId) {
+      toast({ variant: 'destructive', title: TOAST_TITLES.DISCONNECT_FAILED, description: ERROR_MESSAGES.SIGN_IN_REQUIRED })
+      return
+    }
+
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
-      await disconnectProvider(providerId, selectedClientId ?? null)
+      // Delete sync jobs first, then the integration
+      await deleteSyncJobsMutation({ workspaceId, providerId, clientId: selectedClientId ?? null })
+      await deleteAdIntegrationMutation({ workspaceId, providerId, clientId: selectedClientId ?? null })
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
       toast({ title: TOAST_TITLES.DISCONNECTED, description: SUCCESS_MESSAGES.DISCONNECTED(providerName) })
       triggerRefresh()
@@ -602,7 +523,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [disconnectProvider, toast, triggerRefresh, selectedClientId])
+  }, [deleteAdIntegrationMutation, deleteSyncJobsMutation, toast, triggerRefresh, selectedClientId, workspaceId])
 
   return {
     // State

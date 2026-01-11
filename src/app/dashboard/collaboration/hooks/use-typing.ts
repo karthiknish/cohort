@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { Timestamp, deleteField, doc, setDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { useMutation } from 'convex/react'
+import { collaborationApi } from '@/lib/convex-api'
 import type { Channel } from '../types'
 import { TYPING_TIMEOUT_MS, TYPING_UPDATE_INTERVAL_MS } from './constants'
 
@@ -19,6 +19,8 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
   const lastTypingUpdateRef = useRef(0)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  const setTyping = useMutation((collaborationApi as any).setTyping)
+
   const sendTypingUpdate = useCallback(
     async (isTyping: boolean) => {
       if (!userId || !workspaceId || !selectedChannel) {
@@ -30,41 +32,24 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
         return
       }
 
-      const typingDocRef = doc(db, 'workspaces', workspaceId, 'collaborationTyping', selectedChannel.id)
-      const now = Date.now()
-
       try {
-        if (isTyping) {
-          const payload = {
-            channelType: selectedChannel.type,
-            clientId: selectedChannel.clientId ?? null,
-            projectId: selectedChannel.projectId ?? null,
-            typers: {
-              [userId]: {
-                name: senderName,
-                role: senderRole,
-                updatedAt: Timestamp.fromMillis(now),
-                expiresAt: Timestamp.fromMillis(now + TYPING_TIMEOUT_MS),
-              },
-            },
-          }
-          await setDoc(typingDocRef, payload, { merge: true })
-        } else {
-          await setDoc(
-            typingDocRef,
-            {
-              typers: {
-                [userId]: deleteField(),
-              },
-            },
-            { merge: true }
-          )
-        }
+        await setTyping({
+          workspaceId,
+          channelId: selectedChannel.id,
+          channelType: selectedChannel.type,
+          clientId: selectedChannel.clientId ?? null,
+          projectId: selectedChannel.projectId ?? null,
+          userId,
+          name: senderName,
+          role: senderRole,
+          isTyping,
+          ttlMs: TYPING_TIMEOUT_MS,
+        })
       } catch (error) {
         console.warn('[collaboration] failed to update typing status', error)
       }
     },
-    [resolveSenderDetails, selectedChannel, userId, workspaceId]
+    [resolveSenderDetails, selectedChannel, setTyping, userId, workspaceId]
   )
 
   const stopTyping = useCallback(() => {

@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
+import { useAuth } from '@/contexts/auth-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
+import { useAction } from 'convex/react'
+import { adsAdMetricsApi, adsCreativesApi, creativesCopyApi } from '@/lib/convex-api'
 
 import { CreativeHeader } from './components/creative-header'
 import { CreativeSocialPreview } from './components/creative-social-preview'
@@ -32,15 +35,16 @@ type NormalizedAdMetric = {
   roas?: number
 }
 
-function unwrapApiData(payload: unknown): unknown {
-  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-  return record && 'data' in record ? record.data : payload
-}
-
 export default function CreativeDetailPage() {
   const params = useParams<{ providerId: string; campaignId: string; creativeId: string }>()
   const searchParams = useSearchParams()
   const { selectedClientId } = useClientContext()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const listCreatives = useAction(adsCreativesApi.listCreatives)
+  const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
+  const generateCopyAction = useAction(creativesCopyApi.generateCopy)
 
   const [creative, setCreative] = useState<Creative | null>(null)
   const [loading, setLoading] = useState(true)
@@ -65,23 +69,19 @@ export default function CreativeDetailPage() {
   const fetchCreative = useCallback(async () => {
     setLoading(true)
     try {
-      const queryParams = new URLSearchParams({
-        providerId: params.providerId,
-        campaignId: params.campaignId,
-      })
-      if (selectedClientId) queryParams.set('clientId', selectedClientId)
-      if (params.providerId === 'facebook') queryParams.set('includeMedia', '1')
-
-      const response = await fetch(`/api/integrations/creatives?${queryParams.toString()}`)
-      const payload = await response.json().catch(() => ({})) as unknown
-
-      if (!response.ok) {
-        throw new Error('Failed to load creatives')
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
 
-      const data = unwrapApiData(payload) as { creatives?: Creative[] } | undefined
-      const creatives = Array.isArray(data?.creatives) ? data.creatives : []
-      const match = creatives.find((c) => c.creativeId === params.creativeId)
+      const creatives = await listCreatives({
+        workspaceId,
+        providerId: params.providerId as any,
+        clientId: selectedClientId ?? null,
+        campaignId: params.campaignId,
+        includeMedia: params.providerId === 'facebook',
+      })
+
+      const match = (Array.isArray(creatives) ? creatives : []).find((c: any) => c.creativeId === params.creativeId)
 
       if (!match) {
         throw new Error('Creative not found')
@@ -97,7 +97,7 @@ export default function CreativeDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [params.providerId, params.campaignId, params.creativeId, selectedClientId])
+  }, [listCreatives, params.providerId, params.campaignId, params.creativeId, selectedClientId, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
     if (params.providerId === 'facebook') {
@@ -109,23 +109,21 @@ export default function CreativeDetailPage() {
     setMetricsError(null)
 
     try {
-      const queryParams = new URLSearchParams({
-        providerId: params.providerId,
+      if (!workspaceId) {
+        throw new Error('Sign in required')
+      }
+
+      const response = await listAdMetrics({
+        workspaceId,
+        providerId: params.providerId as any,
+        clientId: selectedClientId ?? null,
         campaignId: params.campaignId,
+        adGroupId: creative?.adGroupId,
         days,
         level: params.providerId === 'linkedin' ? 'creative' : 'ad',
       })
-      if (selectedClientId) queryParams.set('clientId', selectedClientId)
-      if (creative?.adGroupId) queryParams.set('adGroupId', creative.adGroupId)
 
-      const response = await fetch(`/api/integrations/metrics/ads?${queryParams.toString()}`)
-      const payload = await response.json().catch(() => ({})) as unknown
-      if (!response.ok) {
-        throw new Error('Failed to load performance metrics')
-      }
-
-      const data = unwrapApiData(payload) as { metrics?: NormalizedAdMetric[] } | undefined
-      const allMetrics = Array.isArray(data?.metrics) ? data.metrics : []
+      const allMetrics = Array.isArray((response as any)?.metrics) ? ((response as any).metrics as NormalizedAdMetric[]) : []
       const filtered = allMetrics.filter((m) => m.adId === params.creativeId)
       setCreativeMetrics(filtered)
     } catch (error) {
@@ -134,7 +132,7 @@ export default function CreativeDetailPage() {
     } finally {
       setMetricsLoading(false)
     }
-  }, [params.providerId, params.campaignId, params.creativeId, days, selectedClientId, creative?.adGroupId])
+  }, [listAdMetrics, params.providerId, params.campaignId, params.creativeId, days, selectedClientId, creative?.adGroupId, workspaceId])
 
   useEffect(() => {
     void fetchCreative()
@@ -210,8 +208,8 @@ export default function CreativeDetailPage() {
     setLoading(true)
 
     try {
-      const payload: Record<string, unknown> = {
-        providerId: params.providerId,
+      const result = await generateCopyAction({
+        providerId: params.providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
         clientId: selectedClientId ?? undefined,
         campaignId: params.campaignId,
         creativeId: params.creativeId,
@@ -225,26 +223,10 @@ export default function CreativeDetailPage() {
         existingCaptions: (editedDescriptions.length ? editedDescriptions : (creative.descriptions ?? [])).filter(Boolean),
         kind: kind === 'headlines' ? 'headlines' : 'captions',
         count: 5,
-      }
-
-      const res = await fetch('/api/integrations/creatives/generate-copy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': `${params.creativeId}-gen-${kind}-${Date.now()}`,
-        },
-        body: JSON.stringify(payload),
       })
 
-      const resp = await res.json().catch(() => ({})) as unknown
-      const rec = resp && typeof resp === 'object' ? (resp as Record<string, unknown>) : null
-      if (!res.ok) {
-        const msg = (rec && typeof rec.error === 'string' && rec.error) || (rec && typeof rec.message === 'string' && rec.message) || 'AI generation failed'
-        throw new Error(msg)
-      }
-
-      const headlines = Array.isArray(rec?.headlines) ? (rec!.headlines as unknown[]).filter((v): v is string => typeof v === 'string') : []
-      const captions = Array.isArray(rec?.captions) ? (rec!.captions as unknown[]).filter((v): v is string => typeof v === 'string') : []
+      const headlines = result.headlines
+      const captions = result.captions
 
       if (kind === 'headlines') {
         if (headlines.length === 0) {
@@ -254,7 +236,7 @@ export default function CreativeDetailPage() {
         setEditedHeadlines((prev) => {
           const base = prev.length ? prev : []
           const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
-          const additions = headlines.filter((h) => {
+          const additions = headlines.filter((h: string) => {
             const key = h.trim().toLowerCase()
             if (!key) return false
             if (existing.has(key)) return false
@@ -272,7 +254,7 @@ export default function CreativeDetailPage() {
         setEditedDescriptions((prev) => {
           const base = prev.length ? prev : []
           const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
-          const additions = captions.filter((c) => {
+          const additions = captions.filter((c: string) => {
             const key = c.trim().toLowerCase()
             if (!key) return false
             if (existing.has(key)) return false
@@ -292,7 +274,7 @@ export default function CreativeDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, params.campaignId, params.creativeId, params.providerId, selectedClientId])
+  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
 
   const handleSave = async () => {
     setIsSaving(true)

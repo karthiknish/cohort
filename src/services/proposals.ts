@@ -1,151 +1,130 @@
-import { ProposalFormData, mergeProposalForm } from '@/lib/proposals'
+import type { ProposalDraft, ProposalStatus } from '@/types/proposals'
+import { mergeProposalForm } from '@/lib/proposals'
+import { resolveProposalDeck } from '@/types/proposals'
+import { ConvexReactClient } from 'convex/react'
+import { api as convexApi } from '@/lib/convex-api'
 
-export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'sent'
-
-export interface ProposalPresentationDeck {
-  generationId: string | null
-  status: string
-  instructions: string | null
-  webUrl: string | null
-  shareUrl: string | null
-  pptxUrl: string | null
-  pdfUrl: string | null
-  generatedFiles: Array<{ fileType: string; fileUrl: string }>
-  storageUrl: string | null
-  pdfStorageUrl?: string | null
+type ConvexAuthArgs = {
+  workspaceId: string
+  convexToken: string
 }
 
-/** @deprecated Use ProposalPresentationDeck instead */
-export type ProposalGammaDeck = ProposalPresentationDeck
-
-export interface ProposalDraft {
-  id: string
-  status: ProposalStatus
-  stepProgress: number
-  formData: ProposalFormData
-  aiInsights: unknown
-  aiSuggestions: string | null
-  pdfUrl?: string | null
-  pptUrl?: string | null
-  createdAt: string | null
-  updatedAt: string | null
-  lastAutosaveAt: string | null
-  clientId: string | null
-  clientName: string | null
-  presentationDeck?: ProposalPresentationDeck | null
-  /** @deprecated Use presentationDeck instead */
-  gammaDeck?: ProposalPresentationDeck | null
+function requireConvexUrl(): string {
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!convexUrl) {
+    throw new Error('Convex URL is missing')
+  }
+  return convexUrl
 }
 
-import { apiFetch } from '@/lib/api-client'
-
-function normalizeProposalDraft(input: ProposalDraft): ProposalDraft {
-  // The API payload may contain partial/missing formData depending on legacy docs.
-  // Normalise to full shape so consumers can safely read nested fields.
-  return {
-    ...input,
-    formData: mergeProposalForm((input as { formData?: unknown })?.formData ?? null),
-  }
+function createAuthedConvexClient(token: string): ConvexReactClient {
+  const convex = new ConvexReactClient(requireConvexUrl())
+  convex.setAuth(async () => token)
+  return convex
 }
 
-
-export async function listProposals(params: { status?: ProposalStatus; clientId?: string; pageSize?: number } = {}) {
-  const search = new URLSearchParams()
-  if (params.status) {
-    search.set('status', params.status)
-  }
-  if (params.clientId) {
-    search.set('clientId', params.clientId)
-  }
-  if (typeof params.pageSize === 'number' && Number.isFinite(params.pageSize)) {
-    search.set('pageSize', String(params.pageSize))
-  }
-
-  const payload = await apiFetch<{ proposals: ProposalDraft[] }>(`/api/proposals${search.toString() ? `?${search}` : ''}`, {
-    cache: 'no-store',
+function mapConvexProposalToDraft(row: any): ProposalDraft {
+  return resolveProposalDeck({
+    id: String(row.legacyId),
+    status: (row.status ?? 'draft') as ProposalDraft['status'],
+    stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
+    formData: mergeProposalForm(row.formData ?? null),
+    aiInsights: row.aiInsights ?? null,
+    aiSuggestions: row.aiSuggestions ?? null,
+    pdfUrl: row.pdfUrl ?? null,
+    pptUrl: row.pptUrl ?? null,
+    createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+    updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+    lastAutosaveAt: typeof row.lastAutosaveAtMs === 'number' ? new Date(row.lastAutosaveAtMs).toISOString() : null,
+    clientId: row.clientId ?? null,
+    clientName: row.clientName ?? null,
+    presentationDeck: row.presentationDeck
+      ? { ...row.presentationDeck, storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null }
+      : null,
   })
-
-  return payload.proposals.map((proposal) => resolveProposalDeck(normalizeProposalDraft(proposal)))
 }
 
-export async function getProposalById(id: string) {
-  const payload = await apiFetch<{ proposal: ProposalDraft }>(`/api/proposals?id=${encodeURIComponent(id)}`, {
-    cache: 'no-store',
-  })
+export async function listProposals(
+  params: { status?: ProposalStatus; clientId?: string; pageSize?: number } & ConvexAuthArgs
+) {
+  const convex = createAuthedConvexClient(params.convexToken)
 
-  if (!payload.proposal) {
+  const rows = (await convex.query(convexApi.proposals.list, {
+    workspaceId: params.workspaceId,
+    limit: typeof params.pageSize === 'number' && Number.isFinite(params.pageSize) ? params.pageSize : 100,
+    status: params.status,
+    clientId: params.clientId,
+  })) as any[]
+
+  return rows.map(mapConvexProposalToDraft)
+}
+
+export async function getProposalById(id: string, auth: ConvexAuthArgs) {
+  const convex = createAuthedConvexClient(auth.convexToken)
+
+  const row = (await convex.query(convexApi.proposals.getByLegacyId, {
+    workspaceId: auth.workspaceId,
+    legacyId: id,
+  })) as any
+
+  if (!row) {
     throw new Error('Proposal not found')
   }
 
-  return resolveProposalDeck(normalizeProposalDraft(payload.proposal))
+  return mapConvexProposalToDraft(row)
 }
 
-export async function createProposalDraft(body: Partial<ProposalDraft> = {}) {
-  const payload = await apiFetch<{ id: string }>('/api/proposals', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
+export async function createProposalDraft(body: Partial<ProposalDraft> = {}, auth: ConvexAuthArgs) {
+  const convex = createAuthedConvexClient(auth.convexToken)
 
-  return payload.id
+  const res = (await convex.mutation(convexApi.proposals.create, {
+    workspaceId: auth.workspaceId,
+    ownerId: (body as any).ownerId ?? null,
+    status: (body.status ?? 'draft') as string,
+    stepProgress: typeof body.stepProgress === 'number' ? body.stepProgress : 0,
+    formData: body.formData ?? mergeProposalForm(null),
+    clientId: body.clientId ?? null,
+    clientName: body.clientName ?? null,
+  })) as any
+
+  return String(res.legacyId)
 }
 
-export async function updateProposalDraft(id: string, body: Partial<ProposalDraft>) {
-  await apiFetch(`/api/proposals/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: JSON.stringify(body),
+export async function updateProposalDraft(id: string, body: Partial<ProposalDraft>, auth: ConvexAuthArgs) {
+  const convex = createAuthedConvexClient(auth.convexToken)
+  const timestamp = Date.now()
+
+  await convex.mutation(convexApi.proposals.update, {
+    workspaceId: auth.workspaceId,
+    legacyId: id,
+    status: body.status as any,
+    stepProgress: body.stepProgress as any,
+    formData: body.formData as any,
+    clientId: body.clientId as any,
+    clientName: body.clientName as any,
+    updatedAtMs: timestamp,
+    lastAutosaveAtMs: timestamp,
   })
 
   return true
 }
 
-export async function submitProposalDraft(id: string, delivery: 'summary' | 'summary_and_pdf' = 'summary') {
-  const payload = await apiFetch<ProposalDraft>(`/api/proposals/${id}/submit`, {
-    method: 'POST',
-    body: JSON.stringify({ delivery }),
-  })
+export async function deleteProposalDraft(id: string, auth: ConvexAuthArgs) {
+  const convex = createAuthedConvexClient(auth.convexToken)
 
-  return resolveProposalDeck(normalizeProposalDraft(payload))
-}
-
-export async function deleteProposalDraft(id: string) {
-  await apiFetch(`/api/proposals/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
+  await convex.mutation(convexApi.proposals.remove, {
+    workspaceId: auth.workspaceId,
+    legacyId: id,
   })
 
   return true
 }
 
-export async function prepareProposalDeck(id: string) {
-  const payload = await apiFetch<ProposalDraft>(`/api/proposals/${id}/deck`, {
-    method: 'POST',
-  })
-
-  return resolveProposalDeck(normalizeProposalDraft(payload))
+export async function refreshProposalDraft(id: string, auth: ConvexAuthArgs) {
+  return getProposalById(id, auth)
 }
 
-function resolveProposalDeck<T extends { pptUrl?: string | null; presentationDeck?: ProposalPresentationDeck | null; gammaDeck?: ProposalPresentationDeck | null; aiSuggestions?: string | null }>(payload: T): T & { presentationDeck?: ProposalPresentationDeck | null } {
-  // Support both new presentationDeck and legacy gammaDeck
-  const deck = payload.presentationDeck ?? payload.gammaDeck
-  if (!deck) {
-    const fallbackUrl = payload.pptUrl ?? null
-    if (fallbackUrl && payload.pptUrl !== fallbackUrl) {
-      return { ...payload, pptUrl: fallbackUrl, aiSuggestions: payload.aiSuggestions ?? null }
-    }
-    return { ...payload, aiSuggestions: payload.aiSuggestions ?? null }
-  }
-
-  const resolvedStorage = deck.storageUrl ?? payload.pptUrl ?? null
-  if (!resolvedStorage || (deck.storageUrl === resolvedStorage && payload.pptUrl === resolvedStorage)) {
-    return { ...payload, presentationDeck: deck, aiSuggestions: payload.aiSuggestions ?? null }
-  }
-
-  return {
-    ...payload,
-    pptUrl: payload.pptUrl ?? resolvedStorage,
-    presentationDeck: {
-      ...deck,
-      storageUrl: resolvedStorage,
-    },
-    aiSuggestions: payload.aiSuggestions ?? null,
-  }
+export async function requestProposalDeckPreparation(_id: string) {
+  // Deck preparation is handled server-side; keep this helper for future triggers.
+  return { ok: true }
 }

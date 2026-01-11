@@ -1,10 +1,11 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/constants/currencies'
-import { apiFetch } from '@/lib/api-client'
+import { settingsApi } from '@/lib/convex-api'
 
 interface UserPreferences {
   currency: CurrencyCode
@@ -40,47 +41,52 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
   const [error, setError] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
 
-  const fetchPreferences = useCallback(async () => {
+  void initialized
+
+  const regional = useQuery(settingsApi.getMyRegionalPreferences) as
+    | { currency?: string | null; timezone?: string | null; locale?: string | null }
+    | null
+    | undefined
+
+  const updateRegional = useMutation(settingsApi.updateMyRegionalPreferences)
+
+  // Sync preferences from Convex
+  useEffect(() => {
     if (!user) {
       setPreferences(DEFAULT_PREFERENCES)
-      setInitialized(true)
+      setInitialized(false)
+      setLoading(false)
+      setError(null)
       return
     }
 
-    try {
+    if (regional === undefined) {
       setLoading(true)
-      setError(null)
-      
-      const payload = await apiFetch<{ preferences?: UserPreferences }>('/api/settings/preferences', {
-        cache: 'no-store',
-      })
-
-      const prefs = payload.preferences
-      setPreferences({
-        currency: prefs?.currency ?? DEFAULT_CURRENCY,
-        timezone: prefs?.timezone ?? null,
-        locale: prefs?.locale ?? null,
-      })
-    } catch (err) {
-      console.error('Failed to fetch preferences:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load preferences')
-      // Use defaults on error
-      setPreferences(DEFAULT_PREFERENCES)
-    } finally {
-      setLoading(false)
-      setInitialized(true)
+      return
     }
-  }, [user])
 
-  // Fetch preferences on mount and when user changes
-  useEffect(() => {
-    if (user && !initialized) {
-      void fetchPreferences()
-    } else if (!user) {
+    setLoading(false)
+    setInitialized(true)
+
+    if (regional === null) {
       setPreferences(DEFAULT_PREFERENCES)
-      setInitialized(false)
+      return
     }
-  }, [user, initialized, fetchPreferences])
+
+    setPreferences({
+      currency: (regional.currency as CurrencyCode) ?? DEFAULT_CURRENCY,
+      timezone: regional.timezone ?? null,
+      locale: regional.locale ?? null,
+    })
+  }, [regional, user])
+
+  const fetchPreferences = useCallback(async () => {
+    // Backwards-compat shim: keep signature used by callers.
+    // Convex `useQuery` already keeps this data fresh.
+    return
+  }, [])
+
+  // Convex query drives preferences; no manual fetch needed.
 
   const updatePreferences = useCallback(
     async (updates: Partial<Omit<UserPreferences, 'updatedAt'>>) => {
@@ -90,17 +96,17 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
 
       try {
         setError(null)
-        
-        const payload = await apiFetch<{ preferences?: UserPreferences }>('/api/settings/preferences', {
-          method: 'POST',
-          body: JSON.stringify(updates),
+
+        await updateRegional({
+          currency: updates.currency,
+          timezone: updates.timezone,
+          locale: updates.locale,
         })
 
-        const prefs = payload.preferences
         setPreferences({
-          currency: prefs?.currency ?? preferences.currency,
-          timezone: prefs?.timezone ?? preferences.timezone,
-          locale: prefs?.locale ?? preferences.locale,
+          currency: updates.currency ?? preferences.currency,
+          timezone: updates.timezone ?? preferences.timezone,
+          locale: updates.locale ?? preferences.locale,
         })
       } catch (err) {
         console.error('Failed to update preferences:', err)
@@ -108,7 +114,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         throw err
       }
     },
-    [user, preferences]
+    [updateRegional, user, preferences]
   )
 
   const updateCurrency = useCallback(

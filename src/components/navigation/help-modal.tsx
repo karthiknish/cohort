@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import Link from 'next/link'
 import {
   BarChart3,
@@ -33,8 +34,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/auth-context'
 import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/hooks/use-keyboard-shortcuts'
-import { db } from '@/lib/firebase'
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { apiFetch } from '@/lib/api-client'
+import { onboardingApi } from '@/lib/convex-api'
 import { useOnboardingTour } from '@/hooks/use-onboarding-tour'
 
 interface HelpModalProps {
@@ -355,6 +356,13 @@ export function useHelpModal() {
   const userId = user?.id
   const userCreatedAt = user?.createdAt
 
+  const onboardingState = useQuery(
+    onboardingApi.getByUserId,
+    userId ? { userId } : 'skip'
+  ) as { welcomeSeenAtMs?: number | null; welcomeSeen?: boolean } | null | undefined
+
+  const upsertOnboarding = useMutation(onboardingApi.upsert)
+
   useEffect(() => {
     if (!userId) return
 
@@ -369,29 +377,21 @@ export function useHelpModal() {
         ? window.localStorage.getItem('cohorts_welcome_seen')
         : null
 
-      // Check Firestore completion state
-      let hasSeenWelcomeRemote = false
-      try {
-        const snap = await getDoc(doc(db, 'users', uid))
-        if (snap.exists()) {
-          const data = snap.data() as { onboarding?: { completedAt?: unknown; welcomeSeenAt?: unknown } }
-          hasSeenWelcomeRemote = Boolean(data?.onboarding?.completedAt || data?.onboarding?.welcomeSeenAt)
-        }
-      } catch (error) {
-        console.warn('Failed to read onboarding state from Firestore', error)
-      }
+      let hasSeenWelcomeRemote = Boolean(onboardingState?.welcomeSeen || onboardingState?.welcomeSeenAtMs)
 
-      // Backfill Firestore if the user already saw the welcome (local-only legacy)
+      // Backfill remote state if the user already saw the welcome (local-only legacy)
       if (hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
         try {
-          await setDoc(
-            doc(db, 'users', uid),
-            { onboarding: { welcomeSeenAt: serverTimestamp(), version: 1 } },
-            { merge: true },
-          )
+          await upsertOnboarding({
+            userId: uid,
+            onboardingTourCompleted: Boolean((onboardingState as any)?.onboardingTourCompleted),
+            onboardingTourCompletedAtMs: (onboardingState as any)?.onboardingTourCompletedAtMs ?? null,
+            welcomeSeen: true,
+            welcomeSeenAtMs: Date.now(),
+          })
           hasSeenWelcomeRemote = true
         } catch (error) {
-          console.warn('Failed to backfill onboarding state to Firestore', error)
+          console.warn('Failed to persist onboarding state', error)
         }
       }
 
@@ -411,9 +411,9 @@ export function useHelpModal() {
     return () => {
       cancelled = true
     }
-  }, [userId, userCreatedAt])
+  }, [userId, userCreatedAt, onboardingState, upsertOnboarding])
 
-  const markWelcomeSeen = async (uid: string) => {
+  const markWelcomeSeen = async () => {
     try {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('cohorts_welcome_seen', '1')
@@ -422,14 +422,18 @@ export function useHelpModal() {
       // Ignore localStorage failures.
     }
 
+    if (!userId) return
+
     try {
-      await setDoc(
-        doc(db, 'users', uid),
-        { onboarding: { completedAt: serverTimestamp(), version: 1 } },
-        { merge: true },
-      )
+      await upsertOnboarding({
+        userId,
+        onboardingTourCompleted: Boolean((onboardingState as any)?.onboardingTourCompleted),
+        onboardingTourCompletedAtMs: (onboardingState as any)?.onboardingTourCompletedAtMs ?? null,
+        welcomeSeen: true,
+        welcomeSeenAtMs: Date.now(),
+      })
     } catch (error) {
-      console.warn('Failed to persist onboarding completion to Firestore', error)
+      console.warn('Failed to persist onboarding completion', error)
     }
   }
 
@@ -438,7 +442,7 @@ export function useHelpModal() {
 
     if (!nextOpen && showWelcome && userId) {
       setShowWelcome(false)
-      void markWelcomeSeen(userId)
+      void markWelcomeSeen()
     }
   }
 

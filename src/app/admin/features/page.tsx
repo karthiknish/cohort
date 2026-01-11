@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/contexts/auth-context'
-import { apiFetch } from '@/lib/api-client'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
@@ -23,11 +23,11 @@ import {
 } from '@/components/ui/alert-dialog'
 
 export default function AdminFeaturesPage() {
-  const { getIdToken } = useAuth()
+  // Convex identity auth is handled by Convex client.
+  // This page no longer calls `/api/admin/*`.
+  
   const { toast } = useToast()
 
-  const [features, setFeatures] = useState<FeatureItem[]>([])
-  const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   // Dialog states
@@ -40,35 +40,37 @@ export default function AdminFeaturesPage() {
   const [featureToDelete, setFeatureToDelete] = useState<FeatureItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  const featuresResponse = useQuery(api.adminFeatures.listFeatures)
+  const createFeature = useMutation(api.adminFeatures.createFeature)
+  const updateFeature = useMutation(api.adminFeatures.updateFeature)
+  const deleteFeature = useMutation(api.adminFeatures.deleteFeature)
+
+  const features: FeatureItem[] = useMemo(() => {
+    const raw = featuresResponse?.features ?? []
+    return raw.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      priority: row.priority,
+      imageUrl: row.imageUrl,
+      references: row.references,
+      createdAt: new Date(row.createdAtMs).toISOString(),
+      updatedAt: new Date(row.updatedAtMs).toISOString(),
+    }))
+  }, [featuresResponse])
+
+  const loading = featuresResponse === undefined
+
   const fetchFeatures = useCallback(
     async (isRefresh = false) => {
-      if (isRefresh) {
-        setRefreshing(true)
-      } else {
-        setLoading(true)
-      }
-
-      try {
-        const data = await apiFetch<{ features: FeatureItem[] }>('/api/admin/features')
-        setFeatures(data.features ?? [])
-      } catch (error) {
-        console.error('Failed to fetch features:', error)
-        toast({
-          title: 'Failed to load features',
-          description: 'Please try refreshing the page.',
-          variant: 'destructive',
-        })
-      } finally {
-        setLoading(false)
-        setRefreshing(false)
-      }
+      if (!isRefresh) return
+      setRefreshing(true)
+      // Convex is realtime; keep button for UX.
+      setTimeout(() => setRefreshing(false), 400)
     },
-    [getIdToken, toast]
+    []
   )
-
-  useEffect(() => {
-    fetchFeatures()
-  }, [fetchFeatures])
 
   const handleAddFeature = useCallback((status: FeatureStatus) => {
     setEditingFeature(null)
@@ -93,11 +95,7 @@ export default function AdminFeaturesPage() {
     setIsDeleting(true)
 
     try {
-      await apiFetch(`/api/admin/features/${featureToDelete.id}`, {
-        method: 'DELETE',
-      })
-
-      setFeatures((prev) => prev.filter((f) => f.id !== featureToDelete.id))
+      await deleteFeature({ id: featureToDelete.id as any })
       toast({
         title: 'Feature deleted',
         description: 'The feature has been removed from the board.',
@@ -114,23 +112,15 @@ export default function AdminFeaturesPage() {
       setDeleteConfirmOpen(false)
       setFeatureToDelete(null)
     }
-  }, [featureToDelete, getIdToken, toast])
+  }, [featureToDelete, toast])
 
   const handleMoveFeature = useCallback(
     async (featureId: string, newStatus: FeatureStatus) => {
       const feature = features.find((f) => f.id === featureId)
       if (!feature || feature.status === newStatus) return
 
-      // Optimistic update
-      setFeatures((prev) =>
-        prev.map((f) => (f.id === featureId ? { ...f, status: newStatus } : f))
-      )
-
       try {
-        await apiFetch(`/api/admin/features/${featureId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: newStatus }),
-        })
+        await updateFeature({ id: featureId as any, status: newStatus as any })
 
         toast({
           title: 'Status updated',
@@ -138,10 +128,7 @@ export default function AdminFeaturesPage() {
         })
       } catch (error) {
         console.error('Failed to move feature:', error)
-        // Revert optimistic update
-        setFeatures((prev) =>
-          prev.map((f) => (f.id === featureId ? { ...f, status: feature.status } : f))
-        )
+        // Convex is source of truth; UI will settle automatically.
         toast({
           title: 'Move failed',
           description: 'Unable to update the feature status.',
@@ -149,7 +136,7 @@ export default function AdminFeaturesPage() {
         })
       }
     },
-    [features, getIdToken, toast]
+    [features, toast]
   )
 
   const handleSubmitFeature = useCallback(
@@ -161,18 +148,17 @@ export default function AdminFeaturesPage() {
       imageUrl: string | null
       references: FeatureReference[]
     }) => {
-      const token = await getIdToken()
-
       if (editingFeature) {
         // Update existing feature
-        const result = await apiFetch<{ feature: FeatureItem }>(`/api/admin/features/${editingFeature.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(data),
+        await updateFeature({
+          id: editingFeature.id as any,
+          title: data.title,
+          description: data.description,
+          status: data.status as any,
+          priority: data.priority as any,
+          imageUrl: data.imageUrl,
+          references: data.references,
         })
-
-        setFeatures((prev) =>
-          prev.map((f) => (f.id === editingFeature.id ? result.feature : f))
-        )
 
         toast({
           title: 'Feature updated',
@@ -180,12 +166,14 @@ export default function AdminFeaturesPage() {
         })
       } else {
         // Create new feature
-        const result = await apiFetch<{ feature: FeatureItem }>('/api/admin/features', {
-          method: 'POST',
-          body: JSON.stringify(data),
+        await createFeature({
+          title: data.title,
+          description: data.description,
+          status: data.status as any,
+          priority: data.priority as any,
+          imageUrl: data.imageUrl,
+          references: data.references,
         })
-
-        setFeatures((prev) => [result.feature, ...prev])
 
         toast({
           title: 'Feature added',
@@ -193,7 +181,7 @@ export default function AdminFeaturesPage() {
         })
       }
     },
-    [editingFeature, getIdToken, toast]
+    [editingFeature, toast]
   )
 
   if (loading) {

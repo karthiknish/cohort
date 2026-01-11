@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { FieldValue } from 'firebase-admin/firestore'
+import { ConvexHttpClient } from 'convex/browser'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { ValidationError } from '@/lib/api-errors'
 import { IntegrationTokenError } from '@/lib/integration-token-refresh'
-import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore/admin'
+import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin'
 import { logger } from '@/lib/logger'
 
 // NOTE: We reuse the existing ad integrations storage for GA tokens.
@@ -24,6 +24,23 @@ function formatGaDate(raw: string): string {
   // GA4 date dimension is YYYYMMDD
   if (!raw || raw.length !== 8) return raw
   return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+}
+
+function getConvexClient(): ConvexHttpClient | null {
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  const deployKey = process.env.CONVEX_DEPLOY_KEY ?? process.env.CONVEX_ADMIN_KEY
+
+  if (!url || !deployKey) {
+    return null
+  }
+
+  const client = new ConvexHttpClient(url)
+  ;(client as any).setAdminAuth(deployKey, {
+    issuer: 'system',
+    subject: 'ga-sync',
+  })
+
+  return client
 }
 
 async function ensureGoogleAnalyticsAccessToken(options: {
@@ -203,37 +220,35 @@ export const POST = createApiHandler(
 
     const reportRows = await runGaReport({ accessToken, propertyId, days })
 
-    const metricsCollection = workspace.metricsCollection
+    // Write metrics to Convex
+    const convex = getConvexClient()
+    if (!convex) {
+      throw new Error('Convex client not configured')
+    }
 
+    const metrics = reportRows.map((row) => ({
+      providerId: 'google-analytics',
+      clientId: clientId ?? null,
+      accountId: propertyId,
+      date: row.date,
+      // Map GA metrics into the existing unified metrics schema.
+      spend: 0,
+      impressions: row.totalUsers,
+      clicks: row.sessions,
+      conversions: row.conversions,
+      revenue: row.totalRevenue,
+    }))
+
+    // Write in chunks to avoid oversized payloads
+    const chunkSize = 100
     let written = 0
-    const chunkSize = 400
 
-    for (let i = 0; i < reportRows.length; i += chunkSize) {
-      const chunk = reportRows.slice(i, i + chunkSize)
-      const batch = metricsCollection.firestore.batch()
-
-      chunk.forEach((row) => {
-        const scope = clientId ?? 'workspace'
-        const docId = `ga_${scope}_${propertyId}_${row.date}`
-        const ref = metricsCollection.doc(docId)
-
-        batch.set(ref, {
-          providerId: 'google-analytics',
-          date: row.date,
-          // Map GA metrics into the existing unified metrics schema.
-          spend: 0,
-          impressions: row.totalUsers,
-          clicks: row.sessions,
-          conversions: row.conversions,
-          revenue: row.totalRevenue,
-          clientId: clientId ?? null,
-          createdAt: FieldValue.serverTimestamp(),
-          source: 'google-analytics',
-          gaPropertyId: propertyId,
-        }, { merge: true })
+    for (let i = 0; i < metrics.length; i += chunkSize) {
+      const chunk = metrics.slice(i, i + chunkSize)
+      await convex.mutation('adsIntegrations:writeMetricsBatch' as any, {
+        workspaceId: workspace.workspaceId,
+        metrics: chunk,
       })
-
-      await batch.commit()
       written += chunk.length
     }
 

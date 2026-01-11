@@ -4,14 +4,8 @@ import { CacheManager } from '@/lib/cache/cache-manager'
 import { MemoryCacheBackend } from '@/lib/cache/memory-backend'
 import {
   getPreviewClients,
-  getPreviewFinanceSummary,
-  getPreviewMetrics,
-  getPreviewTasks,
-  getPreviewProjects,
-  getPreviewProposals,
   getPreviewActivity,
   getPreviewNotifications,
-  getPreviewCollaborationMessages,
   isPreviewModeEnabled,
 } from '@/lib/preview-data'
 
@@ -34,34 +28,13 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
       const resolved = new URL(url, window.location.origin)
       const path = resolved.pathname
       const clientId = resolved.searchParams.get('clientId')
-      const clientIds = resolved.searchParams.get('clientIds')
 
       if (path === '/api/clients') {
         return { clients: getPreviewClients(), nextCursor: null } as T
       }
 
-      if (path === '/api/finance') {
-        return getPreviewFinanceSummary(clientId) as T
-      }
-
-      if (path === '/api/metrics') {
-        // Support either single clientId or the server's clientIds CSV param.
-        const resolvedClientId = clientId || (clientIds && clientIds.split(',').map((v) => v.trim()).filter(Boolean)[0]) || null
-        return { metrics: getPreviewMetrics(resolvedClientId), nextCursor: null } as T
-      }
-
-      if (path === '/api/tasks') {
-        return { tasks: getPreviewTasks(clientId), nextCursor: null } as T
-      }
-
-      if (path === '/api/projects') {
-        return { projects: getPreviewProjects(clientId) } as T
-      }
-
-      if (path === '/api/proposals') {
-        return { proposals: getPreviewProposals(clientId) } as T
-      }
-
+      // Legacy preview shortcut (REST activity route removed).
+      // Keep temporarily in case other screens still call the old endpoint.
       if (path === '/api/activity') {
         const activities = getPreviewActivity(clientId)
         return { activities, hasMore: false, total: activities.length } as T
@@ -71,20 +44,6 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
         return { notifications: getPreviewNotifications(), nextCursor: null } as T
       }
 
-      if (path === '/api/collaboration/messages') {
-        const projectId = resolved.searchParams.get('projectId')
-        return { messages: getPreviewCollaborationMessages(clientId, projectId), nextCursor: null } as T
-      }
-
-      if (path === '/api/integrations/formulas') {
-        return { formulas: [], count: 0 } as T
-      }
-
-      // Proposal versions are stored per-user in Firestore; preview mode proposals are synthetic.
-      // Return an empty list to avoid noisy 404s + console errors in preview/demo flows.
-      if (path === '/api/proposal-versions') {
-        return { versions: [] } as T
-      }
     } catch {
       // Fall through to live fetch.
     }
@@ -114,12 +73,7 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
         await authService.waitForInitialAuth().catch(() => {})
       }
 
-      const token = await authService.getIdToken().catch(() => null)
       const headers = new Headers(init.headers)
-
-      if (token) {
-        headers.set('Authorization', `Bearer ${token}`)
-      }
 
       if (!headers.has('Content-Type') && init.method && init.method !== 'GET') {
         headers.set('Content-Type', 'application/json')
@@ -130,6 +84,7 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
         response = await fetch(input, {
           ...init,
           headers,
+          credentials: init.credentials ?? 'same-origin',
         })
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {

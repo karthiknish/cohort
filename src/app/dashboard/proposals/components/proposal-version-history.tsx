@@ -23,14 +23,11 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
+import { useMutation, useQuery } from 'convex/react'
+import { proposalVersionsApi } from '@/lib/convex-api'
 import type { ProposalVersion } from '@/types/proposal-versions'
 import type { ProposalFormData } from '@/lib/proposals'
 import { isPreviewModeEnabled } from '@/lib/preview-data'
-import {
-  fetchProposalVersions,
-  createProposalVersion,
-  restoreProposalVersion,
-} from '@/services/proposal-versions'
 
 interface ProposalVersionHistoryProps {
   proposalId: string | null
@@ -41,7 +38,7 @@ interface ProposalVersionHistoryProps {
 
 function formatRelativeTime(dateString: string | null): string {
   if (!dateString) return 'Unknown'
-  
+
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -53,13 +50,13 @@ function formatRelativeTime(dateString: string | null): string {
   if (diffMins < 60) return `${diffMins}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   if (diffDays < 7) return `${diffDays}d ago`
-  
+
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function formatFullDate(dateString: string | null): string {
   if (!dateString) return 'Unknown date'
-  
+
   const date = new Date(dateString)
   return date.toLocaleString('en-US', {
     month: 'short',
@@ -72,51 +69,49 @@ function formatFullDate(dateString: string | null): string {
 
 export function ProposalVersionHistory({
   proposalId,
+  currentFormData,
   onVersionRestored,
   disabled = false,
 }: ProposalVersionHistoryProps) {
-  const { getIdToken } = useAuth()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
 
-  const [versions, setVersions] = useState<ProposalVersion[]>([])
-  const [loading, setLoading] = useState(false)
+  const rows = useQuery(
+    proposalVersionsApi.list,
+    workspaceId && proposalId ? { workspaceId, proposalLegacyId: proposalId, limit: 50 } : 'skip',
+  )
+
+  const createSnapshot = useMutation(proposalVersionsApi.createSnapshot)
+  const restoreToVersion = useMutation(proposalVersionsApi.restoreToVersion)
+
+  const versions: ProposalVersion[] = useMemo(() => {
+    if (!rows) return []
+    return rows.map((row: any) => ({
+      id: String(row.legacyId),
+      proposalId: String(row.proposalLegacyId ?? ''),
+      versionNumber: typeof row.versionNumber === 'number' ? row.versionNumber : 1,
+      formData: row.formData as ProposalFormData,
+      status: typeof row.status === 'string' ? row.status : 'draft',
+      stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
+      changeDescription: typeof row.changeDescription === 'string' ? row.changeDescription : null,
+      createdBy: typeof row.createdBy === 'string' ? row.createdBy : '',
+      createdByName: typeof row.createdByName === 'string' ? row.createdByName : null,
+      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+    }))
+  }, [rows])
+
+  const loading = rows === undefined
+
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [restoring, setRestoring] = useState(false)
   const [previewVersion, setPreviewVersion] = useState<ProposalVersion | null>(null)
   const [restoreConfirmVersion, setRestoreConfirmVersion] = useState<ProposalVersion | null>(null)
 
-  const loadVersions = useCallback(async () => {
-    if (!proposalId) return
-
-    if (typeof window !== 'undefined' && isPreviewModeEnabled()) {
-      setVersions([])
-      return
-    }
-
-    try {
-      setLoading(true)
-      await getIdToken()
-      const data = await fetchProposalVersions(proposalId)
-      setVersions(data)
-    } catch (error) {
-      console.error('Failed to load versions:', error)
-      toast({
-        title: 'Failed to load versions',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [proposalId, getIdToken, toast])
-
   const handleOpenChange = useCallback((isOpen: boolean) => {
     setOpen(isOpen)
-    if (isOpen && proposalId) {
-      loadVersions()
-    }
-  }, [proposalId, loadVersions])
+  }, [])
 
   const handleSaveVersion = useCallback(async () => {
     if (!proposalId) {
@@ -138,15 +133,26 @@ export function ProposalVersionHistory({
 
     try {
       setSaving(true)
-      await getIdToken()
-      const version = await createProposalVersion({
-        proposalId,
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+
+      const res = await createSnapshot({
+        workspaceId,
+        proposalLegacyId: proposalId,
         changeDescription: 'Manual save point',
+        createdBy: user?.id ?? '',
+        createdByName: user?.email ?? null,
       })
-      setVersions((prev) => [version, ...prev])
+
+      const created = res?.version
+      if (!created) {
+        throw new Error('Failed to create version')
+      }
+
       toast({
         title: 'Version saved',
-        description: `Version ${version.versionNumber} has been saved.`,
+        description: `Version ${created.versionNumber} has been saved.`,
       })
     } catch (error) {
       console.error('Failed to save version:', error)
@@ -158,7 +164,7 @@ export function ProposalVersionHistory({
     } finally {
       setSaving(false)
     }
-  }, [proposalId, getIdToken, toast])
+  }, [proposalId, toast])
 
   const handleRestoreVersion = useCallback(async () => {
     if (!proposalId || !restoreConfirmVersion) return
@@ -174,19 +180,26 @@ export function ProposalVersionHistory({
 
     try {
       setRestoring(true)
-      await getIdToken()
-      const result = await restoreProposalVersion(proposalId, restoreConfirmVersion.id)
-      
-      // Update local state with restored form data
+      if (!workspaceId) {
+        throw new Error('Workspace context missing')
+      }
+
+      const result = await restoreToVersion({
+        workspaceId,
+        proposalLegacyId: proposalId,
+        versionLegacyId: restoreConfirmVersion.id,
+        createdBy: user?.id ?? '',
+        createdByName: user?.email ?? null,
+      })
+
       onVersionRestored(restoreConfirmVersion.formData)
-      
+
       toast({
         title: 'Version restored',
         description: `Restored to version ${result.restoredFromVersion}. Your previous state was saved as version ${result.newVersion - 1}.`,
       })
-      
+
       setRestoreConfirmVersion(null)
-      await loadVersions()
     } catch (error) {
       console.error('Failed to restore version:', error)
       toast({
@@ -197,23 +210,20 @@ export function ProposalVersionHistory({
     } finally {
       setRestoring(false)
     }
-  }, [proposalId, restoreConfirmVersion, getIdToken, onVersionRestored, toast, loadVersions])
+  }, [proposalId, restoreConfirmVersion, onVersionRestored, toast, restoreToVersion, user?.email, user?.id, workspaceId])
 
   const versionSummary = useMemo(() => {
     if (versions.length === 0) return null
     return `${versions.length} version${versions.length === 1 ? '' : 's'}`
   }, [versions.length])
 
+  const latestVersion = versions[0]
+
   return (
     <>
       <DropdownMenu open={open} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled || !proposalId}
-            className="gap-2"
-          >
+          <Button variant="outline" size="sm" disabled={disabled || !proposalId} className="gap-2">
             <History className="h-4 w-4" />
             <span className="hidden sm:inline">History</span>
             {versionSummary && open && (
@@ -234,16 +244,12 @@ export function ProposalVersionHistory({
               disabled={saving || !proposalId}
               className="h-7 gap-1 text-xs"
             >
-              {saving ? (
-                <LoaderCircle className="h-3 w-3 animate-spin" />
-              ) : (
-                <Save className="h-3 w-3" />
-              )}
+              {saving ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               Save Point
             </Button>
           </div>
           <DropdownMenuSeparator />
-          
+
           {loading ? (
             <div className="flex items-center justify-center py-6">
               <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -265,181 +271,96 @@ export function ProposalVersionHistory({
                       <Badge variant="outline" className="text-xs">
                         v{version.versionNumber}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatRelativeTime(version.createdAt)}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{formatRelativeTime(version.createdAt)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
+                        size="icon"
+                        className="h-6 w-6"
                         onClick={() => setPreviewVersion(version)}
-                        title="Preview version"
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={restoring}
                         onClick={() => setRestoreConfirmVersion(version)}
-                        title="Restore version"
                       >
                         <RotateCcw className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                  {version.changeDescription && (
-                    <p className="line-clamp-1 text-xs text-muted-foreground">
-                      {version.changeDescription}
-                    </p>
-                  )}
-                  {version.createdByName && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      {version.createdByName}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatFullDate(version.createdAt)}</span>
+                    {version.createdBy && (
+                      <>
+                        <span className="text-muted-foreground/40">·</span>
+                        <User className="h-3 w-3" />
+                        <span>{version.createdBy}</span>
+                      </>
+                    )}
+                  </div>
                 </DropdownMenuItem>
               ))}
             </ScrollArea>
           )}
+
+          {latestVersion?.createdAt && (
+            <div className="mt-2 px-2 pb-1 text-xs text-muted-foreground">
+              Latest: {formatFullDate(latestVersion.createdAt)}
+            </div>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Preview Dialog */}
-      <Dialog open={Boolean(previewVersion)} onOpenChange={() => setPreviewVersion(null)}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={Boolean(previewVersion)} onOpenChange={(v) => !v && setPreviewVersion(null)}>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Version {previewVersion?.versionNumber} Preview
+              <Eye className="h-4 w-4" /> Version {previewVersion?.versionNumber}
             </DialogTitle>
-            <DialogDescription className="flex items-center gap-4 text-sm">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatFullDate(previewVersion?.createdAt ?? null)}
-              </span>
-              {previewVersion?.createdByName && (
-                <span className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {previewVersion.createdByName}
-                </span>
-              )}
+            <DialogDescription>
+              Saved {formatFullDate(previewVersion?.createdAt ?? null)}
             </DialogDescription>
           </DialogHeader>
-          
-          <ScrollArea className="max-h-96">
-            <div className="space-y-4 pr-4">
-              {previewVersion && (
-                <>
-                  <PreviewSection title="Company" data={previewVersion.formData.company} />
-                  <PreviewSection title="Marketing" data={previewVersion.formData.marketing} />
-                  <PreviewSection title="Goals" data={previewVersion.formData.goals} />
-                  <PreviewSection title="Scope" data={previewVersion.formData.scope} />
-                  <PreviewSection title="Timelines" data={previewVersion.formData.timelines} />
-                  <PreviewSection title="Value" data={previewVersion.formData.value} />
-                </>
-              )}
-            </div>
-          </ScrollArea>
-
+          <div className="rounded-md border bg-muted/30 p-4">
+            <pre className="max-h-[50vh] overflow-auto text-xs">
+              {JSON.stringify(previewVersion?.formData ?? currentFormData, null, 2)}
+            </pre>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreviewVersion(null)}>
               Close
-            </Button>
-            <Button
-              onClick={() => {
-                if (previewVersion) {
-                  setRestoreConfirmVersion(previewVersion)
-                  setPreviewVersion(null)
-                }
-              }}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Restore This Version
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Restore Confirmation Dialog */}
-      <Dialog open={Boolean(restoreConfirmVersion)} onOpenChange={() => setRestoreConfirmVersion(null)}>
-        <DialogContent>
+      <Dialog open={Boolean(restoreConfirmVersion)} onOpenChange={(v) => !v && setRestoreConfirmVersion(null)}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CircleAlert className="h-5 w-5 text-amber-500" />
-              Restore Version {restoreConfirmVersion?.versionNumber}?
+              <CircleAlert className="h-4 w-4 text-destructive" /> Restore version?
             </DialogTitle>
             <DialogDescription>
-              This will replace your current proposal content with the content from version {restoreConfirmVersion?.versionNumber}.
-              Your current state will be automatically saved as a new version before restoring.
+              This will replace the current proposal form with version {restoreConfirmVersion?.versionNumber}. Your current state will be saved as a new version.
             </DialogDescription>
           </DialogHeader>
-          
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRestoreConfirmVersion(null)}
-              disabled={restoring}
-            >
+            <Button variant="outline" onClick={() => setRestoreConfirmVersion(null)} disabled={restoring}>
               Cancel
             </Button>
-            <Button onClick={handleRestoreVersion} disabled={restoring}>
-              {restoring ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Restoring...
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Restore Version
-                </>
-              )}
+            <Button onClick={() => void handleRestoreVersion()} disabled={restoring}>
+              {restoring ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Restore
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
-}
-
-interface PreviewSectionProps {
-  title: string
-  data: Record<string, unknown>
-}
-
-function PreviewSection({ title, data }: PreviewSectionProps) {
-  const entries = Object.entries(data).filter(([, value]) => {
-    if (value === '' || value === null || value === undefined) return false
-    if (Array.isArray(value) && value.length === 0) return false
-    if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value as object).length === 0) return false
-    return true
-  })
-
-  if (entries.length === 0) return null
-
-  return (
-    <div className="rounded-md border border-muted/50 p-3">
-      <h4 className="mb-2 text-sm font-semibold text-foreground">{title}</h4>
-      <dl className="space-y-1 text-sm">
-        {entries.map(([key, value]) => (
-          <div key={key} className="flex gap-2">
-            <dt className="min-w-24 capitalize text-muted-foreground">
-              {key.replace(/([A-Z])/g, ' $1').trim()}:
-            </dt>
-            <dd className="text-foreground">
-              {Array.isArray(value)
-                ? value.join(', ')
-                : typeof value === 'object'
-                ? JSON.stringify(value)
-                : String(value)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
   )
 }

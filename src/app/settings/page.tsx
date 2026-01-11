@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { User, CreditCard, Shield } from 'lucide-react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/contexts/auth-context'
+import { settingsApi, billingApi } from '@/lib/convex-api'
 
 import {
   ProfileCard,
@@ -28,8 +29,29 @@ import {
 } from './components'
 
 export default function SettingsPage() {
-  const { user, getIdToken } = useAuth()
   const { toast } = useToast()
+  const profile = useQuery(settingsApi.getMyProfile)
+  const user = profile
+
+  const notificationPrefs = useQuery(settingsApi.getMyNotificationPreferences) as
+    | {
+        whatsappTasks: boolean
+        whatsappCollaboration: boolean
+        emailAdAlerts: boolean
+        emailPerformanceDigest: boolean
+        emailTaskActivity: boolean
+        phoneNumber: string | null
+      }
+    | null
+    | undefined
+
+  const updateNotificationPrefs = useMutation(settingsApi.updateMyNotificationPreferences)
+
+  // Billing actions
+  const getBillingStatus = useAction(billingApi.getStatus)
+  const createCheckoutSession = useAction(billingApi.createCheckoutSession)
+  const createPortalSession = useAction(billingApi.createPortalSession)
+
   const isAdmin = user?.role === 'admin'
 
   // Mount tracking
@@ -59,12 +81,12 @@ export default function SettingsPage() {
   const [emailPerformanceDigestEnabled, setEmailPerformanceDigestEnabled] = useState(true)
   const [emailTaskActivityEnabled, setEmailTaskActivityEnabled] = useState(true)
   const [savingPreferences, setSavingPreferences] = useState(false)
-  const [profilePhone, setProfilePhone] = useState(user?.phoneNumber ?? '')
+  const [profilePhone, setProfilePhone] = useState('')
 
   // Update phone when user changes
   useEffect(() => {
-    setProfilePhone(user?.phoneNumber ?? '')
-  }, [user?.phoneNumber])
+    setProfilePhone('')
+  }, [user?.legacyId])
 
   // Clear notification error when phone length is valid
   useEffect(() => {
@@ -75,74 +97,42 @@ export default function SettingsPage() {
 
   const currentPlanId = subscription?.plan?.id ?? null
 
-  // Fetch notification preferences
-  const fetchNotificationPreferences = useCallback(async () => {
+  // Sync notification preferences from Convex
+  useEffect(() => {
     if (!user) {
-      if (isMountedRef.current) {
-        setNotificationsLoading(false)
-        setWhatsappTasksEnabled(false)
-        setWhatsappCollaborationEnabled(false)
-        setNotificationError(null)
-      }
+      setNotificationsLoading(false)
+      setWhatsappTasksEnabled(false)
+      setWhatsappCollaborationEnabled(false)
+      setEmailAdAlertsEnabled(true)
+      setEmailPerformanceDigestEnabled(true)
+      setEmailTaskActivityEnabled(true)
+      setNotificationError(null)
       return
     }
 
-    if (isMountedRef.current) {
+    if (notificationPrefs === undefined) {
       setNotificationsLoading(true)
-      setNotificationError(null)
+      return
     }
 
-    try {
-      const token = await getIdToken()
-      const response = await fetch('/api/settings/notifications', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null
-
-      if (!response.ok || !payload) {
-        const message = payload && typeof payload.error === 'string' ? payload.error : 'Unable to load notification preferences'
-        throw new Error(message)
-      }
-
-      const preferences: NotificationPreferencesResponse = {
-        whatsappTasks: Boolean(payload.whatsappTasks),
-        whatsappCollaboration: Boolean(payload.whatsappCollaboration),
-        emailAdAlerts: Boolean(payload.emailAdAlerts),
-        emailPerformanceDigest: Boolean(payload.emailPerformanceDigest),
-        emailTaskActivity: Boolean(payload.emailTaskActivity),
-        phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
-      }
-
-      if (isMountedRef.current) {
-        setWhatsappTasksEnabled(preferences.whatsappTasks)
-        setWhatsappCollaborationEnabled(preferences.whatsappCollaboration)
-        setEmailAdAlertsEnabled(preferences.emailAdAlerts)
-        setEmailPerformanceDigestEnabled(preferences.emailPerformanceDigest)
-        setEmailTaskActivityEnabled(preferences.emailTaskActivity)
-        setNotificationError(null)
-        setNotificationsLoading(false)
-
-        if ((!user.phoneNumber || user.phoneNumber.length === 0) && preferences.phoneNumber) {
-          setProfilePhone(preferences.phoneNumber)
-        }
-      }
-    } catch (fetchError) {
-      const message = fetchError instanceof Error ? fetchError.message : 'Failed to load notification preferences'
-      console.error('[settings/notifications] load failed', fetchError)
-      if (isMountedRef.current) {
-        setNotificationError(message)
-        setNotificationsLoading(false)
-      }
+    if (notificationPrefs === null) {
+      setNotificationsLoading(false)
+      setNotificationError('Unable to load notification preferences')
+      return
     }
-  }, [getIdToken, user])
 
-  useEffect(() => {
-    void fetchNotificationPreferences()
-  }, [fetchNotificationPreferences])
+    setWhatsappTasksEnabled(Boolean(notificationPrefs.whatsappTasks))
+    setWhatsappCollaborationEnabled(Boolean(notificationPrefs.whatsappCollaboration))
+    setEmailAdAlertsEnabled(Boolean(notificationPrefs.emailAdAlerts))
+    setEmailPerformanceDigestEnabled(Boolean(notificationPrefs.emailPerformanceDigest))
+    setEmailTaskActivityEnabled(Boolean(notificationPrefs.emailTaskActivity))
+    setNotificationError(null)
+    setNotificationsLoading(false)
+
+    if (!profilePhone.trim() && notificationPrefs.phoneNumber) {
+      setProfilePhone(notificationPrefs.phoneNumber)
+    }
+  }, [notificationPrefs, profilePhone, user])
 
   // Save notification preferences
   const saveNotificationPreferences = useCallback(
@@ -180,29 +170,16 @@ export default function SettingsPage() {
       }
 
       try {
-        const token = await getIdToken()
-        const response = await fetch('/api/settings/notifications', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            whatsappTasks: input.tasks,
-            whatsappCollaboration: input.collaboration,
-            emailAdAlerts: input.emailAdAlerts,
-            emailPerformanceDigest: input.emailPerformanceDigest,
-            emailTaskActivity: input.emailTaskActivity,
-            phoneNumber: trimmedPhone.length ? trimmedPhone : null,
-          }),
-        })
+        const updated = (await updateNotificationPrefs({
+          whatsappTasks: input.tasks,
+          whatsappCollaboration: input.collaboration,
+          emailAdAlerts: input.emailAdAlerts,
+          emailPerformanceDigest: input.emailPerformanceDigest,
+          emailTaskActivity: input.emailTaskActivity,
+          phoneNumber: trimmedPhone.length ? trimmedPhone : null,
+        })) as unknown
 
-        const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null
-
-        if (!response.ok || !payload) {
-          const message = payload && typeof payload.error === 'string' ? payload.error : 'Failed to update notification preferences'
-          throw new Error(message)
-        }
+        const payload = updated && typeof updated === 'object' ? (updated as Record<string, unknown>) : {}
 
         const preferences: NotificationPreferencesResponse = {
           whatsappTasks: Boolean(payload.whatsappTasks),
@@ -245,7 +222,7 @@ export default function SettingsPage() {
         }
       }
     },
-    [getIdToken, profilePhone, toast, user]
+    [profilePhone, toast, updateNotificationPrefs, user]
   )
 
   // Toggle notification preference
@@ -334,20 +311,7 @@ export default function SettingsPage() {
     }
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/billing/status', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: string }
-        throw new Error(payload.error ?? 'Failed to load billing data')
-      }
-
-      const payload = (await response.json()) as BillingStatusResponse
+      const payload = await getBillingStatus()
 
       if (isMountedRef.current) {
         setPlans(payload.plans ?? [])
@@ -365,7 +329,7 @@ export default function SettingsPage() {
         setLoading(false)
       }
     }
-  }, [getIdToken, user])
+  }, [user, getBillingStatus])
 
   useEffect(() => {
     void refreshBilling()
@@ -380,22 +344,8 @@ export default function SettingsPage() {
       setError(null)
 
       try {
-        const token = await getIdToken()
-        const response = await fetch('/api/billing/checkout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ planId }),
-        })
+        const payload = await createCheckoutSession({ planId })
 
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => ({}))) as { error?: string }
-          throw new Error(payload.error ?? 'Unable to start checkout session')
-        }
-
-        const payload = (await response.json()) as { url?: string }
         if (!payload.url) {
           throw new Error('Checkout session did not return a redirect URL')
         }
@@ -408,7 +358,7 @@ export default function SettingsPage() {
         setActionState(null)
       }
     },
-    [getIdToken, user],
+    [user, createCheckoutSession],
   )
 
   // Handle billing portal
@@ -419,22 +369,8 @@ export default function SettingsPage() {
     setError(null)
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/billing/portal', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ returnUrl: '/settings?portal=return' }),
-      })
+      const payload = await createPortalSession({ returnUrl: '/settings?portal=return' })
 
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as { error?: string }
-        throw new Error(payload.error ?? 'Unable to open billing portal')
-      }
-
-      const payload = (await response.json()) as { url?: string }
       if (!payload.url) {
         throw new Error('Billing portal session missing redirect URL')
       }
@@ -446,7 +382,7 @@ export default function SettingsPage() {
     } finally {
       setActionState(null)
     }
-  }, [getIdToken, user])
+  }, [user, createPortalSession])
 
   return (
     <div className="container mx-auto max-w-6xl py-10">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAction } from 'convex/react'
 import { Pause, Play, Trash2, DollarSign, RefreshCw, TrendingUp } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -39,8 +40,10 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs'
 import { useClientContext } from '@/contexts/client-context'
+import { useAuth } from '@/contexts/auth-context'
 import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
 import type { DateRange } from './date-range-picker'
+import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api'
 
 // =============================================================================
 // TYPES
@@ -148,7 +151,14 @@ function formatCampaignDateRange(startTime?: string, stopTime?: string): string 
 
 export function CampaignManagementCard({ providerId, providerName, isConnected, dateRange, onRefresh }: Props) {
   const { selectedClientId } = useClientContext()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const router = useRouter()
+  const listCampaigns = useAction(adsCampaignsApi.listCampaigns)
+  const updateCampaign = useAction(adsCampaignsApi.updateCampaign)
+  const listCampaignGroups = useAction(adsCampaignGroupsApi.listCampaignGroups)
+  const updateCampaignGroup = useAction(adsCampaignGroupsApi.updateCampaignGroup)
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -186,19 +196,17 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
     setLoading(true)
     try {
-      const params = new URLSearchParams({ providerId })
-      if (selectedClientId) params.set('clientId', selectedClientId)
-      const response = await fetch(`/api/integrations/campaigns?${params.toString()}`)
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.error || error.message || 'Failed to fetch campaigns')
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
-      const payload: unknown = await response.json().catch(() => ({}))
-      const payloadRecord = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-      const data = payloadRecord && 'data' in payloadRecord ? payloadRecord.data : payload
-      const dataRecord = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
-      const campaignsRaw = dataRecord?.campaigns
-      setCampaigns(Array.isArray(campaignsRaw) ? (campaignsRaw as Campaign[]) : [])
+
+      const result = await listCampaigns({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: selectedClientId ?? null,
+      })
+
+      setCampaigns(Array.isArray(result) ? (result as Campaign[]) : [])
     } catch (error) {
       toast({
         title: 'Error',
@@ -208,24 +216,29 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setLoading(false)
     }
-  }, [providerId, isConnected, selectedClientId])
+  }, [isConnected, listCampaigns, providerId, selectedClientId, workspaceId])
 
   const fetchGroups = useCallback(async () => {
     if (!isConnected || providerId !== 'linkedin') return
     setGroupsLoading(true)
     try {
-      const params = new URLSearchParams({ providerId })
-      if (selectedClientId) params.set('clientId', selectedClientId)
-      const response = await fetch(`/api/integrations/campaign-groups?${params.toString()}`)
-      if (!response.ok) throw new Error('Failed to fetch campaign groups')
-      const data = await response.json()
-      setGroups(data.groups || [])
+      if (!workspaceId) {
+        throw new Error('Sign in required')
+      }
+
+      const result = await listCampaignGroups({
+        workspaceId,
+        providerId: 'linkedin',
+        clientId: selectedClientId ?? null,
+      })
+
+      setGroups(Array.isArray(result) ? (result as CampaignGroup[]) : [])
     } catch (error) {
       console.error('Fetch groups error:', error)
     } finally {
       setGroupsLoading(false)
     }
-  }, [providerId, isConnected, selectedClientId])
+  }, [isConnected, listCampaignGroups, providerId, selectedClientId, workspaceId])
 
   // Auto-load campaigns on mount when connected
   useEffect(() => {
@@ -249,18 +262,17 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
     setActionLoading(campaignId)
     try {
-      const payload: Record<string, unknown> = { providerId, campaignId, action }
-      if (selectedClientId) payload.clientId = selectedClientId
-      const response = await fetch('/api/integrations/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${campaignId}-${action}-${Date.now()}` },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.error || error.message || 'Action failed')
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
+
+      await updateCampaign({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: selectedClientId ?? null,
+        campaignId,
+        action,
+      })
 
       toast({
         title: 'Success',
@@ -278,23 +290,22 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [providerId, fetchCampaigns, onRefresh, selectedClientId])
+  }, [fetchCampaigns, onRefresh, providerId, selectedClientId, updateCampaign, workspaceId])
 
   const handleGroupAction = useCallback(async (groupId: string, action: 'enable' | 'pause') => {
     setActionLoading(groupId)
     try {
-      const payload: Record<string, unknown> = { providerId, campaignGroupId: groupId, action }
-      if (selectedClientId) payload.clientId = selectedClientId
-      const response = await fetch('/api/integrations/campaign-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.error || error.message || 'Action failed')
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
+
+      await updateCampaignGroup({
+        workspaceId,
+        providerId: 'linkedin',
+        clientId: selectedClientId ?? null,
+        campaignGroupId: groupId,
+        action,
+      })
 
       toast({
         title: 'Success',
@@ -312,7 +323,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [providerId, fetchGroups, onRefresh, selectedClientId])
+  }, [fetchGroups, onRefresh, selectedClientId, updateCampaignGroup, workspaceId])
 
   const handleBudgetUpdate = useCallback(async () => {
     const isGroup = view === 'groups'
@@ -321,28 +332,32 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
     setActionLoading(targetId)
     try {
-      const payload: Record<string, unknown> = {
-        providerId,
-        action: 'updateBudget',
-        budget: parseFloat(newBudget),
+      const parsedBudget = parseFloat(newBudget)
+
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
-      if (isGroup) payload.campaignGroupId = targetId
-      else payload.campaignId = targetId
 
-      if (selectedClientId) payload.clientId = selectedClientId
-
-      const endpoint = isGroup ? '/api/integrations/campaign-groups' : '/api/integrations/campaigns'
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Budget update failed')
+      if (isGroup) {
+        await updateCampaignGroup({
+          workspaceId,
+          providerId: 'linkedin',
+          clientId: selectedClientId ?? null,
+          campaignGroupId: targetId,
+          action: 'updateBudget',
+          budget: parsedBudget,
+        })
+      } else {
+        await updateCampaign({
+          workspaceId,
+          providerId: providerId as any,
+          clientId: selectedClientId ?? null,
+          campaignId: targetId,
+          action: 'updateBudget',
+          budget: parsedBudget,
+        })
       }
+
 
       toast({
         title: 'Success',
@@ -365,31 +380,26 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view])
+  }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
 
     setActionLoading(selectedCampaign.id)
     try {
-      const payload: Record<string, unknown> = {
-        providerId,
+      if (!workspaceId) {
+        throw new Error('Sign in required')
+      }
+
+      await updateCampaign({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: selectedClientId ?? null,
         campaignId: selectedCampaign.id,
         action: 'updateBidding',
         biddingType: newBidding.type,
         biddingValue: parseFloat(newBidding.value || '0'),
-      }
-      if (selectedClientId) payload.clientId = selectedClientId
-      const response = await fetch('/api/integrations/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': `${selectedCampaign.id}-bidding-${Date.now()}` },
-        body: JSON.stringify(payload),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Bidding update failed')
-      }
 
       toast({
         title: 'Success',
@@ -409,7 +419,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId])
+  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId])
 
   const getStatusBadge = (status: string) => {
     const statusLower = status.toLowerCase()

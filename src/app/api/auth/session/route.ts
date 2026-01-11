@@ -1,24 +1,20 @@
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
-import { z } from 'zod'
-import { createApiHandler } from '@/lib/api-handler'
-import { adminAuth } from '@/lib/firebase-admin'
+import { cookies, headers } from 'next/headers'
+import { NextRequest, NextResponse } from 'next/server'
+import { ConvexHttpClient } from 'convex/browser'
+import { getToken } from '@convex-dev/better-auth/utils'
+import { betterFetch } from '@better-fetch/fetch'
 
 // CSRF token header must match a cookie value (double-submit pattern)
 const CSRF_COOKIE = 'cohorts_csrf'
 const CSRF_HEADER = 'x-csrf-token'
-
-const SessionSchema = z.object({
-  token: z.string().optional(),
-  role: z.string().optional(),
-  status: z.string().optional(),
-})
+const BETTER_AUTH_COOKIE = 'better-auth.session_token'
 
 export const GET = async () => {
   const cookieStore = await cookies()
-  const token = cookieStore.get('cohorts_token')?.value
+  const betterAuthToken = cookieStore.get(BETTER_AUTH_COOKIE)?.value
   const role = cookieStore.get('cohorts_role')?.value ?? null
   const status = cookieStore.get('cohorts_status')?.value ?? null
+  const agencyId = cookieStore.get('cohorts_agency_id')?.value ?? null
   const expiresAt = cookieStore.get('cohorts_session_expires')?.value ?? null
 
   // Generate a new CSRF token for the client to use in subsequent requests
@@ -27,9 +23,10 @@ export const GET = async () => {
   const response = NextResponse.json(
     {
       success: true,
-      hasSession: Boolean(token),
+      hasSession: Boolean(betterAuthToken),
       role,
       status,
+      agencyId,
       expiresAt: expiresAt ? parseInt(expiresAt, 10) : null,
       csrfToken,
     },
@@ -58,7 +55,11 @@ function generateCsrfToken(): string {
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-function validateCsrfToken(request: Request, cookieStore: Awaited<ReturnType<typeof cookies>>, isCreatingSession: boolean): boolean {
+function validateCsrfToken(
+  request: NextRequest,
+  cookieStore: Awaited<ReturnType<typeof cookies>>,
+  isCreatingSession: boolean
+): boolean {
   const headerToken = request.headers.get(CSRF_HEADER)
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value
 
@@ -73,7 +74,9 @@ function validateCsrfToken(request: Request, cookieStore: Awaited<ReturnType<typ
   // - If header is not provided but we're creating a fresh session, allow it
   //   (the old CSRF token from a previous session shouldn't block new logins)
   if (isCreatingSession && !headerToken) {
-    console.log('[SessionRoute] Allowing session creation without CSRF header (new login)')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[SessionRoute] Allowing session creation without CSRF header (new login)')
+    }
     return true
   }
 
@@ -81,133 +84,266 @@ function validateCsrfToken(request: Request, cookieStore: Awaited<ReturnType<typ
   return Boolean(headerToken && cookieToken && headerToken === cookieToken)
 }
 
-export const POST = createApiHandler(
-  {
-    auth: 'none',
-    rateLimit: 'sensitive', // Stricter rate limit for auth endpoints
-    bodySchema: SessionSchema,
-    skipIdempotency: true,
-  },
-  async (request, context) => {
-    const cookieStore = await cookies()
-    const { token, role, status } = context.body
-    
-    // Check if this is a new session creation (has token) vs clearing session (no token)
-    const isCreatingSession = Boolean(token)
+export async function POST(request: NextRequest) {
+  const cookieStore = await cookies()
+  const headersList = await headers()
+  
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[SessionRoute][POST] Starting session sync')
+  }
 
-    // Validate CSRF token (double-submit cookie pattern)
-    // Be more lenient for new session creation (login flow)
-    if (!validateCsrfToken(request, cookieStore, isCreatingSession)) {
-      console.warn('[SessionRoute] CSRF validation failed')
-      return NextResponse.json(
-        { success: false, error: 'Invalid CSRF token' },
-        { status: 403 }
-      )
-    }
-
-    const response = NextResponse.json(
-      { success: true },
+  // Validate CSRF token (double-submit cookie pattern)
+  // Be more lenient for new session creation (login flow)
+  if (!validateCsrfToken(request, cookieStore, true)) {
+    console.warn('[SessionRoute] CSRF validation failed')
+    return NextResponse.json(
       { 
-        headers: { 'Cache-Control': 'no-store, max-age=0' }
-      }
+        success: false, 
+        error: 'Invalid CSRF token',
+        code: 'CSRF_VALIDATION_FAILED',
+        message: 'Security validation failed. Please refresh and try again.'
+      },
+      { status: 403 }
     )
+  }
 
-    const isProduction = process.env.NODE_ENV === 'production'
-    const maxAge = 2 * 60 * 60 // 2 hours in seconds
-    const cookieOptions = {
-      maxAge,
-      path: '/',
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax' as const,
+  const response = NextResponse.json(
+    { success: true },
+    { 
+      headers: { 'Cache-Control': 'no-store, max-age=0' }
+    }
+  )
+
+  const isProduction = process.env.NODE_ENV === 'production'
+  const maxAge = 2 * 60 * 60 // 2 hours in seconds
+  const cookieOptions = {
+    maxAge,
+    path: '/',
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax' as const,
+  }
+
+  // Get the Better Auth session cookie
+  const betterAuthSessionToken = cookieStore.get(BETTER_AUTH_COOKIE)?.value
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[SessionRoute][POST] betterAuthSessionToken present:', Boolean(betterAuthSessionToken))
+  }
+
+  if (!betterAuthSessionToken) {
+    // No Better Auth session - clear our app cookies
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[SessionRoute][POST] No Better Auth session, clearing cookies')
+    }
+    response.cookies.delete('cohorts_role')
+    response.cookies.delete('cohorts_status')
+    response.cookies.delete('cohorts_agency_id')
+    response.cookies.delete('cohorts_session_expires')
+    response.cookies.delete(CSRF_COOKIE)
+    return response
+  }
+
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+  const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
+
+  if (!convexUrl || !convexSiteUrl) {
+    console.error('[SessionRoute][POST] Missing CONVEX_URL or CONVEX_SITE_URL')
+    response.cookies.delete('cohorts_role')
+    response.cookies.delete('cohorts_status')
+    response.cookies.delete('cohorts_agency_id')
+    response.cookies.delete('cohorts_session_expires')
+    response.cookies.delete(CSRF_COOKIE)
+    return response
+  }
+
+  try {
+    // Debug: log what headers we're passing to getToken
+    if (process.env.NODE_ENV !== 'production') {
+      const cookieHeader = headersList.get('cookie')
+      console.log('[SessionRoute][POST] headers for getToken:', {
+        convexSiteUrl,
+        hasCookieHeader: Boolean(cookieHeader),
+        cookiePreview: cookieHeader?.substring(0, 100) + (cookieHeader && cookieHeader.length > 100 ? '...' : ''),
+        hasBetterAuthInCookie: cookieHeader?.includes('better-auth.session_token'),
+      })
     }
 
-    if (!token) {
-      response.cookies.delete('cohorts_token')
+    // Use the official Better Auth helper to get a Convex token
+    // This calls {convexSiteUrl}/api/auth/convex/token with the session cookie
+    let tokenResult = await getToken(convexSiteUrl, headersList)
+
+    // If getToken failed, try a direct fetch with explicit cookie header
+    if (!tokenResult?.token) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SessionRoute][POST] getToken returned no token, trying direct fetch')
+      }
+      
+      // Try direct fetch with cookie explicitly
+      const cookieHeader = headersList.get('cookie')
+      if (cookieHeader) {
+        const directResult = await betterFetch<{ token?: string }>('/api/auth/convex/token', {
+          baseURL: convexSiteUrl,
+          headers: {
+            cookie: cookieHeader,
+          },
+        })
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[SessionRoute][POST] direct fetch result:', {
+            hasData: Boolean(directResult?.data),
+            hasToken: Boolean(directResult?.data?.token),
+            error: directResult?.error,
+          })
+        }
+        if (directResult?.data?.token) {
+          tokenResult = { isFresh: true, token: directResult.data.token }
+        }
+      }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[SessionRoute][POST] getToken result:', {
+        hasToken: Boolean(tokenResult?.token),
+        isFresh: tokenResult?.isFresh,
+        tokenPreview: tokenResult?.token?.substring(0, 50) + '...',
+      })
+    }
+
+    const convexToken = tokenResult?.token
+
+    if (!convexToken) {
+      // Can't get Convex token - clear cookies
       response.cookies.delete('cohorts_role')
       response.cookies.delete('cohorts_status')
+      response.cookies.delete('cohorts_agency_id')
       response.cookies.delete('cohorts_session_expires')
       response.cookies.delete(CSRF_COOKIE)
       return response
     }
 
-    try {
-      // Verify the ID token first to extract claims
-      const decodedToken = await adminAuth.verifyIdToken(token)
-      
-      // Exchange the ID token for a session cookie
-      const sessionCookie = await adminAuth.createSessionCookie(token, { 
-        expiresIn: maxAge * 1000 
-      })
-      response.cookies.set('cohorts_token', sessionCookie, cookieOptions)
-      
-      // Use role/status from verified token claims, falling back to client values only if claims are missing
-      const verifiedRole = (decodedToken.role as string) || role || 'client'
-      const verifiedStatus = (decodedToken.status as string) || status || 'pending'
-      
-      response.cookies.set('cohorts_role', verifiedRole, cookieOptions)
-      response.cookies.set('cohorts_status', verifiedStatus, cookieOptions)
+    // Now query Convex for user info
+    const convex = new ConvexHttpClient(convexUrl)
+    convex.setAuth(convexToken)
 
-      // Set session expiry timestamp (client-readable) for proactive refresh
-      const expiresAt = Date.now() + (maxAge * 1000)
-      response.cookies.set('cohorts_session_expires', expiresAt.toString(), {
-        ...cookieOptions,
-        httpOnly: false, // Client needs to read this for proactive refresh
-        sameSite: 'strict',
-      })
+    const user = await convex.query('auth:getCurrentUser' as any, {}).catch(() => null) as { id?: string; email?: string | null } | null
+    const email = user?.email ? String(user.email) : null
 
-      // Generate and set new CSRF token
-      const csrfToken = generateCsrfToken()
-      response.cookies.set(CSRF_COOKIE, csrfToken, {
-        maxAge,
-        path: '/',
-        httpOnly: false, // Client needs to read this
-        secure: isProduction,
-        sameSite: 'strict',
-      })
-    } catch (error) {
-      console.error('[SessionRoute] Failed to create session cookie:', error)
-      return NextResponse.json(
-        { success: false, error: 'Failed to create secure session' },
-        { status: 500 }
-      )
+    if (!email) {
+      // No email from Convex - clear cookies
+      response.cookies.delete('cohorts_role')
+      response.cookies.delete('cohorts_status')
+      response.cookies.delete('cohorts_agency_id')
+      response.cookies.delete('cohorts_session_expires')
+      response.cookies.delete(CSRF_COOKIE)
+      return response
     }
+
+    const normalizedEmail = email.toLowerCase()
+
+    // Get role/status/agencyId from our users table
+    let resolvedRole: string | null = null
+    let resolvedStatus: string | null = null
+    let resolvedAgencyId: string | null = null
+
+    try {
+      const convexUser = await convex.query('users:getByEmail' as any, {
+        email: normalizedEmail,
+      }).catch(() => null) as { role?: string | null; status?: string | null; agencyId?: string | null; legacyId?: string | null } | null
+
+      resolvedRole = typeof convexUser?.role === 'string' ? convexUser.role : null
+      resolvedStatus = typeof convexUser?.status === 'string' ? convexUser.status : null
+      resolvedAgencyId = typeof convexUser?.agencyId === 'string' ? convexUser.agencyId : (convexUser?.legacyId ?? null)
+    } catch {
+      // Ignore lookup failures
+    }
+
+    // Check admin whitelist
+    const admins = (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean)
+
+    const isAdminEmail = admins.includes(normalizedEmail)
+
+    // If this email is an admin, always treat it as such.
+    if (!resolvedRole || isAdminEmail) {
+      resolvedRole = isAdminEmail ? 'admin' : 'client'
+    }
+
+    if (!resolvedStatus) {
+      resolvedStatus = 'active'
+    }
+
+    // Use Better Auth user id as fallback for agencyId
+    if (!resolvedAgencyId && user?.id) {
+      resolvedAgencyId = String(user.id)
+    }
+
+    // Set the role/status/agencyId cookies
+    response.cookies.set('cohorts_role', resolvedRole, cookieOptions)
+    response.cookies.set('cohorts_status', resolvedStatus, cookieOptions)
+    if (resolvedAgencyId) {
+      response.cookies.set('cohorts_agency_id', resolvedAgencyId, cookieOptions)
+    }
+
+    const expiresAt = Date.now() + maxAge * 1000
+    response.cookies.set('cohorts_session_expires', expiresAt.toString(), {
+      ...cookieOptions,
+      httpOnly: false,
+      sameSite: 'strict',
+    })
+
+    const csrfToken = generateCsrfToken()
+    response.cookies.set(CSRF_COOKIE, csrfToken, {
+      maxAge,
+      path: '/',
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'strict',
+    })
 
     return response
-  }
-)
-
-export const DELETE = createApiHandler(
-  {
-    auth: 'none',
-    rateLimit: 'standard',
-  },
-  async (request) => {
-    const cookieStore = await cookies()
-
-    // Validate CSRF token for logout (not creating session, so stricter validation)
-    if (!validateCsrfToken(request, cookieStore, false)) {
-      console.warn('[SessionRoute] CSRF validation failed on DELETE')
-      return NextResponse.json(
-        { success: false, error: 'Invalid CSRF token' },
-        { status: 403 }
-      )
-    }
-
-    const response = NextResponse.json(
-      { success: true },
-      {
-        headers: { 'Cache-Control': 'no-store, max-age=0' },
-      }
-    )
-
-    // Delete all session-related cookies
-    response.cookies.delete('cohorts_token')
+  } catch (error) {
+    console.error('[SessionRoute][POST] Unexpected error:', error)
     response.cookies.delete('cohorts_role')
     response.cookies.delete('cohorts_status')
+    response.cookies.delete('cohorts_agency_id')
     response.cookies.delete('cohorts_session_expires')
     response.cookies.delete(CSRF_COOKIE)
-
     return response
   }
-)
+}
+
+export async function DELETE(request: NextRequest) {
+  const cookieStore = await cookies()
+
+  // Validate CSRF token for logout (not creating session, so stricter validation)
+  if (!validateCsrfToken(request, cookieStore, false)) {
+    console.warn('[SessionRoute] CSRF validation failed on DELETE')
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Invalid CSRF token',
+        code: 'CSRF_VALIDATION_FAILED',
+        message: 'Security validation failed. Please refresh and try again.'
+      },
+      { status: 403 }
+    )
+  }
+
+  const response = NextResponse.json(
+    { success: true },
+    {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    }
+  )
+
+  // Delete all session-related cookies
+  response.cookies.delete('cohorts_role')
+  response.cookies.delete('cohorts_status')
+  response.cookies.delete('cohorts_agency_id')
+  response.cookies.delete('cohorts_session_expires')
+  response.cookies.delete(CSRF_COOKIE)
+
+  return response
+}

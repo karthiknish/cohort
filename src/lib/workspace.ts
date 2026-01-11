@@ -1,28 +1,6 @@
-import { FieldValue } from 'firebase-admin/firestore'
+import { ConvexHttpClient } from 'convex/browser'
 
-import { adminDb } from '@/lib/firebase-admin'
-import type { AuthResult } from '@/lib/server-auth'
-import { AuthenticationError } from '@/lib/server-auth'
-
-export type WorkspaceContext = {
-  workspaceId: string
-  workspaceRef: FirebaseFirestore.DocumentReference
-  clientsCollection: FirebaseFirestore.CollectionReference
-  tasksCollection: FirebaseFirestore.CollectionReference
-  collaborationCollection: FirebaseFirestore.CollectionReference
-  financeInvoicesCollection: FirebaseFirestore.CollectionReference
-  financeRevenueCollection: FirebaseFirestore.CollectionReference
-  financeCostsCollection: FirebaseFirestore.CollectionReference
-  financeExpenseCategoriesCollection: FirebaseFirestore.CollectionReference
-  financeVendorsCollection: FirebaseFirestore.CollectionReference
-  financeExpensesCollection: FirebaseFirestore.CollectionReference
-  financePurchaseOrdersCollection: FirebaseFirestore.CollectionReference
-  projectsCollection: FirebaseFirestore.CollectionReference
-  proposalsCollection: FirebaseFirestore.CollectionReference
-  integrationsCollection: FirebaseFirestore.CollectionReference
-  metricsCollection: FirebaseFirestore.CollectionReference
-  agentConversationsCollection: FirebaseFirestore.CollectionReference
-}
+import { ValidationError } from './api-errors'
 
 function normalizeCandidate(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -32,96 +10,79 @@ function normalizeCandidate(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-export async function resolveWorkspaceContext(auth: AuthResult): Promise<WorkspaceContext> {
-  if (!auth.uid) {
-    throw new AuthenticationError('Authentication required', 401)
+function getConvexClient(): ConvexHttpClient | null {
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  const deployKey = process.env.CONVEX_DEPLOY_KEY ?? process.env.CONVEX_ADMIN_KEY
+
+  if (!url || !deployKey) {
+    return null
   }
 
-  const userRef = adminDb.collection('users').doc(auth.uid)
-  const userSnapshot = await userRef.get()
-  const userData = (userSnapshot.data() ?? {}) as Record<string, unknown>
+  const client = new ConvexHttpClient(url)
+  ;(client as any).setAdminAuth(deployKey, {
+    issuer: 'system',
+    subject: 'workspace-resolver',
+  })
 
-  const claimAgency = normalizeCandidate(auth.claims?.agencyId)
-  const storedAgency = normalizeCandidate(userData.agencyId)
-  const workspaceId = claimAgency ?? storedAgency ?? auth.uid
-
-  if (!userSnapshot.exists || storedAgency !== workspaceId) {
-    const updatePayload: Record<string, unknown> = {
-      agencyId: workspaceId,
-      updatedAt: FieldValue.serverTimestamp(),
-    }
-
-    if (!userSnapshot.exists) {
-      updatePayload.createdAt = FieldValue.serverTimestamp()
-      updatePayload.email = normalizeCandidate(auth.email) ?? ''
-      updatePayload.role = userData.role ?? auth.claims?.role ?? 'client'
-      updatePayload.status = userData.status ?? auth.claims?.status ?? 'pending'
-      updatePayload.name = normalizeCandidate(userData.name) ?? normalizeCandidate(auth.email) ?? 'Pending user'
-    }
-
-    await userRef.set(updatePayload, { merge: true })
-  }
-
-  const workspaceRef = adminDb.collection('workspaces').doc(workspaceId)
-  const workspaceSnapshot = await workspaceRef.get()
-
-  if (!workspaceSnapshot.exists) {
-    await workspaceRef.set(
-      {
-        createdAt: FieldValue.serverTimestamp(),
-        createdBy: auth.uid,
-      },
-      { merge: true }
-    )
-  }
-
-  const clientsCollection = workspaceRef.collection('clients')
-  const tasksCollection = workspaceRef.collection('tasks')
-  const collaborationCollection = workspaceRef.collection('collaborationMessages')
-  const financeInvoicesCollection = workspaceRef.collection('financeInvoices')
-  const financeRevenueCollection = workspaceRef.collection('financeRevenue')
-  const financeCostsCollection = workspaceRef.collection('financeCosts')
-  const financeExpenseCategoriesCollection = workspaceRef.collection('financeExpenseCategories')
-  const financeVendorsCollection = workspaceRef.collection('financeVendors')
-  const financeExpensesCollection = workspaceRef.collection('financeExpenses')
-  const financePurchaseOrdersCollection = workspaceRef.collection('financePurchaseOrders')
-  const projectsCollection = workspaceRef.collection('projects')
-  const proposalsCollection = workspaceRef.collection('proposals')
-  const integrationsCollection = workspaceRef.collection('adIntegrations')
-  const metricsCollection = workspaceRef.collection('adMetrics')
-  const agentConversationsCollection = workspaceRef.collection('agentConversations')
-
-  return {
-    workspaceId,
-    workspaceRef,
-    clientsCollection,
-    tasksCollection,
-    collaborationCollection,
-    financeInvoicesCollection,
-    financeRevenueCollection,
-    financeCostsCollection,
-    financeExpenseCategoriesCollection,
-    financeVendorsCollection,
-    financeExpensesCollection,
-    financePurchaseOrdersCollection,
-    projectsCollection,
-    proposalsCollection,
-    integrationsCollection,
-    metricsCollection,
-    agentConversationsCollection,
-  }
+  return client
 }
 
-import { ValidationError } from './api-errors'
-
+/**
+ * Resolve workspace ID for a given user ID.
+ * Uses Convex to look up the user's agencyId, falling back to userId if not found.
+ */
 export async function resolveWorkspaceIdForUser(userId: string): Promise<string> {
   if (!userId) {
     throw new ValidationError('User id is required to resolve workspace id')
   }
 
-  const userRef = adminDb.collection('users').doc(userId)
-  const snapshot = await userRef.get()
-  const data = (snapshot.data() ?? {}) as Record<string, unknown>
-  const storedAgency = normalizeCandidate(data.agencyId)
-  return storedAgency ?? userId
+  const convex = getConvexClient()
+  if (!convex) {
+    // Fallback to userId if Convex is not configured
+    console.warn('[workspace] Convex not configured, falling back to userId as workspaceId')
+    return userId
+  }
+
+  try {
+    const result = (await convex.query('users:getWorkspaceIdForUser' as any, {
+      userId,
+    })) as { workspaceId: string; userExists: boolean } | null
+
+    return result?.workspaceId ?? userId
+  } catch (error) {
+    console.error('[workspace] Failed to resolve workspace ID from Convex:', error)
+    // Fallback to userId on error
+    return userId
+  }
+}
+
+/**
+ * Simplified workspace context - just the workspaceId.
+ * Legacy collection references are no longer needed since we use Convex.
+ */
+export type WorkspaceContext = {
+  workspaceId: string
+}
+
+/**
+ * Resolve workspace context from auth claims.
+ * This is a simplified version that only returns workspaceId.
+ */
+export async function resolveWorkspaceContext(auth: {
+  uid: string | null
+  claims?: Record<string, unknown>
+}): Promise<WorkspaceContext> {
+  if (!auth.uid) {
+    throw new ValidationError('Authentication required')
+  }
+
+  // Check claims first for agencyId
+  const claimAgency = normalizeCandidate(auth.claims?.agencyId)
+  if (claimAgency) {
+    return { workspaceId: claimAgency }
+  }
+
+  // Fall back to database lookup
+  const workspaceId = await resolveWorkspaceIdForUser(auth.uid)
+  return { workspaceId }
 }

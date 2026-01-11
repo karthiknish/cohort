@@ -1,10 +1,12 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useMutation } from 'convex/react'
 import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X } from 'lucide-react'
 import { format } from 'date-fns'
+import { v4 as uuidv4 } from 'uuid'
 
-import { apiFetch } from '@/lib/api-client'
+import { projectsApi } from '@/lib/convex-api'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -58,6 +60,9 @@ type CreateProjectPayload = {
 
 export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProjectDialogProps) {
   const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
+
+  const createProject = useMutation(projectsApi.create)
   const { clients, selectedClient, selectedClientId } = useClientContext()
   const { toast } = useToast()
 
@@ -115,7 +120,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!user?.id) {
+    if (!user?.id || !workspaceId) {
       toast({ title: 'Authentication required', description: 'Please sign in to create a project.', variant: 'destructive' })
       return
     }
@@ -141,10 +146,40 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         tags,
       }
 
-      const createdProject = await apiFetch<ProjectRecord>('/api/projects', {
-        method: 'POST',
-        body: JSON.stringify(payload),
+      const legacyId = uuidv4()
+      await createProject({
+        workspaceId,
+        legacyId,
+        name: payload.name,
+        description: payload.description ?? null,
+        status: payload.status,
+        clientId: payload.clientId ?? null,
+        clientName: payload.clientName ?? null,
+        startDateMs: payload.startDate ? new Date(payload.startDate).getTime() : null,
+        endDateMs: payload.endDate ? new Date(payload.endDate).getTime() : null,
+        tags: payload.tags,
+        ownerId: null,
       })
+
+      const nowMs = Date.now()
+      const createdProject: ProjectRecord = {
+        id: legacyId,
+        name: payload.name,
+        description: payload.description ?? null,
+        status: payload.status,
+        clientId: payload.clientId ?? null,
+        clientName: payload.clientName ?? null,
+        startDate: payload.startDate ? new Date(payload.startDate).toISOString() : null,
+        endDate: payload.endDate ? new Date(payload.endDate).toISOString() : null,
+        tags: payload.tags,
+        ownerId: null,
+        createdAt: new Date(nowMs).toISOString(),
+        updatedAt: new Date(nowMs).toISOString(),
+        taskCount: 0,
+        openTaskCount: 0,
+        recentActivityAt: null,
+        deletedAt: null,
+      }
 
       toast({
         title: 'Project created!',
@@ -161,7 +196,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     } finally {
       setLoading(false)
     }
-  }, [user?.id, name, description, status, clientId, clients, startDate, endDate, tags, toast, onProjectCreated, resetForm])
+  }, [user?.id, workspaceId, name, description, status, clientId, clients, startDate, endDate, tags, toast, onProjectCreated, resetForm, createProject])
 
   const formatStatusLabel = (value: ProjectStatus): string => {
     return value

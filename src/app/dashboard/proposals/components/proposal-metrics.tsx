@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { FileText, CircleCheck, DollarSign, Send } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { ProposalDraft } from "@/services/proposals"
+import type { ProposalDraft } from "@/types/proposals"
 
 interface ProposalMetricsProps {
   proposals: ProposalDraft[]

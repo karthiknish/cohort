@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { RefreshCw, Download } from 'lucide-react'
 
@@ -11,7 +11,9 @@ import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 
-import { fetchExpenseReport } from '@/services/expenses'
+import { useQuery } from 'convex/react'
+import { useClientContext } from '@/contexts/client-context'
+import { financeExpensesApi } from '@/lib/convex-api'
 import type { ExpenseReportResponse, ExpenseStatus } from '@/types/expenses'
 import { formatCurrency } from '../utils'
 
@@ -31,9 +33,25 @@ export function FinanceExpenseReportCard({ currency, embedded = false }: { curre
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
 
+  const { workspaceId } = useClientContext()
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [report, setReport] = useState<ExpenseReportResponse | null>(null)
+
+  const [queryFrom, setQueryFrom] = useState<string | undefined>(undefined)
+  const [queryTo, setQueryTo] = useState<string | undefined>(undefined)
+
+  const convexReport = useQuery(
+    financeExpensesApi.report,
+    workspaceId
+      ? {
+          workspaceId,
+          from: queryFrom,
+          to: queryTo,
+        }
+      : 'skip'
+  )
 
   const resolvedCurrency = (currency ?? 'USD').toUpperCase()
 
@@ -42,17 +60,28 @@ export function FinanceExpenseReportCard({ currency, embedded = false }: { curre
     setError(null)
 
     try {
+      if (!workspaceId) {
+        throw new Error('Missing workspace')
+      }
+
       const from = isoFromDateInput(fromDate, 'start') ?? undefined
       const to = isoFromDateInput(toDate, 'end') ?? undefined
-      const res = await fetchExpenseReport({ from, to })
-      setReport(res)
+
+      setQueryFrom(from)
+      setQueryTo(to)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to load expense report'
       setError(message)
     } finally {
       setLoading(false)
     }
-  }, [fromDate, toDate])
+  }, [fromDate, toDate, workspaceId])
+
+  useEffect(() => {
+    if (convexReport === undefined) return
+    if (!convexReport) return
+    setReport(convexReport as ExpenseReportResponse)
+  }, [convexReport])
 
   const totals = useMemo(() => {
     const rows = report?.rows ?? []

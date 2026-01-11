@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CircleAlert, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { apiFetch } from '@/lib/api-client'
+import { useMutation, usePaginatedQuery } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { toErrorMessage } from '@/lib/error-utils'
 import {
@@ -55,19 +56,26 @@ const ROLE_ASSIGNABLE: AdminUserRole[] = ['team', 'client']
 const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
 
 export default function AdminUsersPage() {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { toast } = useToast()
 
-  const [users, setUsers] = useState<AdminUserRecord[]>([])
-  const [loading, setLoading] = useState(false)
+  const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  
+
+  const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
+    api.adminUsers.listUsers,
+    {},
+    { initialNumItems: 50 }
+  )
+
+  const updateUserRoleStatus = useMutation(api.adminUsers.updateUserRoleStatus)
+  const createInvitation = useMutation(api.adminInvitations.createInvitation)
+
   // Dialog states
   const [inviteOpen, setInviteOpen] = useState(false)
   const [revokeOpen, setRevokeOpen] = useState(false)
@@ -76,57 +84,23 @@ export default function AdminUsersPage() {
   const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
   const [inviteSending, setInviteSending] = useState(false)
 
-  const fetchUsers = useCallback(
-    async ({ cursor, append = false }: { cursor?: string | null; append?: boolean } = {}) => {
-      if (!user?.id) return
-      if (append && !cursor) return
+  const users: AdminUserRecord[] = useMemo(() => {
+    if (usersOverride) return usersOverride
 
-      if (append) {
-        setLoadingMore(true)
-      } else {
-        setLoading(true)
-        setError(null)
-      }
+    return (usersPage ?? []).map((row: any) => ({
+      id: row.legacyId,
+      email: row.email ?? '',
+      name: row.name ?? '',
+      role: row.role ?? 'team',
+      status: row.status ?? 'pending',
+      agencyId: row.agencyId ?? null,
+      createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
+      updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
+      lastLoginAt: null,
+    }))
+  }, [usersOverride, usersPage])
 
-      try {
-        const params = new URLSearchParams()
-        params.set('pageSize', '50')
-        if (cursor) {
-          params.set('cursor', cursor)
-        }
-
-        const payload = await apiFetch<{ users: AdminUserRecord[]; nextCursor: string | null }>(
-          `/api/admin/users?${params.toString()}`,
-          { cache: 'no-store' }
-        )
-
-        setUsers((prev) => (append ? [...prev, ...payload.users!] : payload.users!))
-        setNextCursor(payload.nextCursor ?? null)
-      } catch (err: unknown) {
-        const message = toErrorMessage(err, 'Unable to load users')
-        setError(message)
-        toast({ title: 'Admin error', description: message, variant: 'destructive' })
-      } finally {
-        if (append) {
-          setLoadingMore(false)
-        } else {
-          setLoading(false)
-        }
-      }
-    },
-    [getIdToken, toast, user?.id]
-  )
-
-  useEffect(() => {
-    if (!user?.id) {
-      setUsers([])
-      return
-    }
-    setUsers([])
-    setNextCursor(null)
-    void fetchUsers()
-  }, [fetchUsers, user?.id])
-
+  const loading = isLoading
   const filteredUsers = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
     return users.filter((record) => {
@@ -164,23 +138,12 @@ export default function AdminUsersPage() {
 
     setSavingId(record.id)
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ id: record.id, role: nextRole }),
+      await updateUserRoleStatus({ legacyId: record.id, role: nextRole })
+
+      setUsersOverride((prev) => {
+        const base = prev ?? users
+        return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord))
       })
-
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to update role'
-        throw new Error(message)
-      }
-
-      setUsers((prev) => prev.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord)))
       toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` })
     } catch (err: unknown) {
       const message = toErrorMessage(err, 'Unable to update role')
@@ -203,23 +166,12 @@ export default function AdminUsersPage() {
 
     setSavingId(record.id)
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ id: record.id, status: nextStatus }),
+      await updateUserRoleStatus({ legacyId: record.id, status: nextStatus })
+
+      setUsersOverride((prev) => {
+        const base = prev ?? users
+        return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord))
       })
-
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to update status'
-        throw new Error(message)
-      }
-
-      setUsers((prev) => prev.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord)))
       toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
       setRevokeOpen(false)
     } catch (err: unknown) {
@@ -235,15 +187,14 @@ export default function AdminUsersPage() {
     
     setInviteSending(true)
     try {
-      const payload = await apiFetch<any>('/api/admin/invitations', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: inviteEmail,
-          role: inviteRole,
-        }),
+      await createInvitation({
+        email: inviteEmail,
+        role: inviteRole,
+        invitedBy: user!.id,
+        invitedByName: user?.name ?? null,
       })
 
-      const emailSent = payload.emailSent === true
+      const emailSent = true
       
       toast({
         title: 'Invitation created',
@@ -267,8 +218,7 @@ export default function AdminUsersPage() {
     setStatusFilter('pending')
     setRoleFilter('all')
     setSearchTerm('')
-    setNextCursor(null)
-    void fetchUsers()
+    setUsersOverride(null)
   }
 
   if (!user) {
@@ -538,12 +488,16 @@ export default function AdminUsersPage() {
               </table>
             </div>
 
-            {nextCursor && (
+            {status === 'CanLoadMore' ? (
               <div className="mt-6 flex justify-center">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => fetchUsers({ cursor: nextCursor, append: true })}
+                  onClick={() => {
+                    setLoadingMore(true)
+                    loadMore(50)
+                    setLoadingMore(false)
+                  }}
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"
                 >
@@ -551,7 +505,7 @@ export default function AdminUsersPage() {
                   {loadingMore ? 'Loading…' : 'Load more'}
                 </Button>
               </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </div>

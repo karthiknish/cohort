@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useAction } from 'convex/react'
+import { useAuth } from '@/contexts/auth-context'
+import { financeInvoicesApi, projectsApi, proposalsApi, tasksApi, api } from '@/lib/convex-api'
 import {
   Briefcase,
   CheckSquare,
@@ -18,8 +21,7 @@ import {
 import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { useAuth } from '@/contexts/auth-context'
-import { apiFetch } from '@/lib/api-client'
+
 import { getPreviewProjects, getPreviewTasks, getPreviewProposals, getPreviewFinanceSummary } from '@/lib/preview-data'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
@@ -59,7 +61,6 @@ import {
   type CreateInvoiceForm,
   type InvoiceSummary,
 } from './components'
-import { fetchIntegrationStatuses } from '@/app/dashboard/ads/components/utils'
 import type { ClientRecord } from '@/types/clients'
 
 // Types for client stats
@@ -83,7 +84,6 @@ function ClientsDashboardContent() {
   const searchParams = useSearchParams()
   const { selectedClient, refreshClients, clients, selectClient, selectedClientId, loading } = useClientContext()
   const { isPreviewMode } = usePreview()
-  const { getIdToken } = useAuth()
   const { toast } = useToast()
 
   const [refreshing, setRefreshing] = useState(false)
@@ -91,7 +91,38 @@ function ClientsDashboardContent() {
   const [stats, setStats] = useState<ClientStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
 
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
+
+  const proposalsRealtime = useQuery(
+    proposalsApi.list,
+    workspaceId && selectedClient ? { workspaceId, clientId: selectedClient.id, limit: 100 } : 'skip'
+  )
+
+  const tasksRealtime = useQuery(
+    tasksApi.listByClient,
+    !isPreviewMode && workspaceId && selectedClient ? { workspaceId, clientId: selectedClient.id } : 'skip'
+  ) as Array<any> | undefined
+
+  const projectsRealtime = useQuery(
+    projectsApi.list,
+    !isPreviewMode && workspaceId && selectedClient
+      ? { workspaceId, clientId: selectedClient.id, limit: 200 }
+      : 'skip'
+  ) as Array<any> | undefined
+
   // Invoice management state
+  const invoicesRealtime = useQuery(
+    financeInvoicesApi.list,
+    !isPreviewMode && workspaceId && selectedClient
+      ? { workspaceId, clientId: selectedClient.id, limit: 10 }
+      : 'skip'
+  )
+
+  const remindInvoice = useAction(financeInvoicesApi.remind)
+  const refundInvoice = useAction(financeInvoicesApi.refund)
+  const createInvoice = useAction(financeInvoicesApi.createAndSend)
+
   const [invoiceHistory, setInvoiceHistory] = useState<InvoiceData[]>([])
   const [invoiceHistoryLoading, setInvoiceHistoryLoading] = useState(false)
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false)
@@ -137,15 +168,14 @@ function ClientsDashboardContent() {
         tasks = getPreviewTasks(selectedClient.id)
         proposals = getPreviewProposals(selectedClient.id)
       } else {
-        const [projectsData, tasksData, proposalsData] = await Promise.all([
-          apiFetch<{ projects: any[] }>(`/api/projects?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ projects: [] })),
-          apiFetch<{ tasks: any[] }>(`/api/tasks?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ tasks: [] })),
-          apiFetch<{ proposals: any[] }>(`/api/proposals?clientId=${selectedClient.id}&pageSize=100`).catch(() => ({ proposals: [] })),
-        ])
+        const projectsData = projectsRealtime
+        projects = Array.isArray(projectsData) ? projectsData : []
 
-        projects = Array.isArray(projectsData.projects) ? projectsData.projects : []
-        tasks = Array.isArray(tasksData.tasks) ? tasksData.tasks : []
-        proposals = Array.isArray(proposalsData.proposals) ? proposalsData.proposals : []
+        const tasksData = tasksRealtime
+        tasks = Array.isArray(tasksData) ? tasksData : []
+
+        const proposalsData = proposalsRealtime
+        proposals = Array.isArray(proposalsData) ? proposalsData : []
       }
 
       const totalProjects = projects.length
@@ -171,7 +201,7 @@ function ClientsDashboardContent() {
     } finally {
       setStatsLoading(false)
     }
-  }, [selectedClient, isPreviewMode])
+  }, [selectedClient, isPreviewMode, proposalsRealtime, tasksRealtime, projectsRealtime])
 
   useEffect(() => {
     fetchClientStats()
@@ -192,12 +222,10 @@ function ClientsDashboardContent() {
         // Use preview finance data
         const previewFinance = getPreviewFinanceSummary(selectedClient.id)
         invoices = previewFinance.invoices ?? []
-      } else {
-        const data = await apiFetch<{ invoices: any[] }>(`/api/finance/summary?clientId=${selectedClient.id}&pageSize=10`, {
-          cache: 'no-store',
-        })
-        invoices = Array.isArray(data.invoices) ? data.invoices : []
+       } else {
+        invoices = invoicesRealtime?.invoices ?? []
       }
+
 
       setInvoiceHistory(invoices.map((inv: Record<string, unknown>) => ({
         id: inv.id as string || '',
@@ -220,7 +248,8 @@ function ClientsDashboardContent() {
     } finally {
       setInvoiceHistoryLoading(false)
     }
-  }, [selectedClient, isPreviewMode])
+   }, [selectedClient, isPreviewMode, invoicesRealtime])
+
 
   // Initialize email from client when opening create invoice dialog
   useEffect(() => {
@@ -232,95 +261,70 @@ function ClientsDashboardContent() {
     }
   }, [selectedClient])
 
-  // Check ad account connectivity for onboarding checklist
+  // Check formulas connectivity for onboarding checklist
+  const formulasConnectivity = useQuery(
+    (api as any).customFormulas.listByWorkspace,
+    selectedClient ? { workspaceId: selectedClient.id, activeOnly: true } : 'skip'
+  )
+
   useEffect(() => {
     if (!selectedClient) {
       setAdAccountsConnected(null)
       return
     }
 
-    let isActive = true
-    const loadStatuses = async () => {
+    if (formulasConnectivity === undefined) {
       setAdStatusLoading(true)
-      try {
-        const token = await getIdToken()
-        const response = await fetchIntegrationStatuses(token)
-        if (!isActive) return
-        const connected = response.statuses.some((status) => status.status === 'success' || Boolean(status.linkedAt))
-        setAdAccountsConnected(connected)
-      } catch {
-        if (isActive) {
-          setAdAccountsConnected(false)
-        }
-      } finally {
-        if (isActive) {
-          setAdStatusLoading(false)
-        }
-      }
+      // Query still loading.
+      return
     }
 
-    void loadStatuses()
+    setAdAccountsConnected(Array.isArray(formulasConnectivity) ? formulasConnectivity.length > 0 : false)
+    setAdStatusLoading(false)
+  }, [selectedClient, formulasConnectivity])
 
-    return () => {
-      isActive = false
-    }
-  }, [selectedClient, getIdToken])
-
-  // Create a new invoice
   const handleCreateInvoice = async () => {
-    if (!selectedClient) return
+    if (!selectedClient || !workspaceId) return
 
-    const lineItemsTotal = createInvoiceForm.lineItems.reduce((sum, item) => {
-      const value = parseFloat(item.amount)
-      return Number.isFinite(value) ? sum + value : sum
-    }, 0)
-
-    const amount = lineItemsTotal > 0 ? lineItemsTotal : parseFloat(createInvoiceForm.amount)
-    if (!Number.isFinite(amount) || amount < 1) {
+    const amountValue = Number(createInvoiceForm.amount)
+    if (!amountValue || Number.isNaN(amountValue) || amountValue <= 0) {
       toast({
         title: 'Invalid amount',
-        description: 'Please enter an amount of at least $1.',
+        description: 'Enter a positive amount for the invoice.',
         variant: 'destructive',
       })
       return
     }
 
-    if (!createInvoiceForm.email || !createInvoiceForm.email.includes('@')) {
+    if (!createInvoiceForm.email?.trim()) {
       toast({
-        title: 'Invalid email',
-        description: 'Please enter a valid billing email.',
+        title: 'Billing email required',
+        description: 'Add a billing email before sending an invoice.',
         variant: 'destructive',
       })
       return
     }
-
-    const lineItemSummary = lineItemsTotal > 0 && createInvoiceForm.lineItems.length > 0
-      ? createInvoiceForm.lineItems
-        .filter((item) => item.label.trim().length > 0 || parseFloat(item.amount) > 0)
-        .map((item) => `${item.label || 'Line item'} — $${parseFloat(item.amount || '0').toFixed(2)}`)
-        .join('; ')
-      : ''
-    const mergedDescription = createInvoiceForm.description.trim() || lineItemSummary || undefined
 
     setCreateInvoiceLoading(true)
     try {
-      const result = await apiFetch<{ invoice?: { number?: string } }>(`/api/clients/${selectedClient.id}/invoice`, {
-        method: 'POST',
-        body: JSON.stringify({
-          amount,
-          email: createInvoiceForm.email.trim(),
-          description: mergedDescription,
-          dueDate: createInvoiceForm.dueDate || undefined,
-        }),
+      await createInvoice({
+        workspaceId,
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        amount: amountValue,
+        email: createInvoiceForm.email.trim(),
+        description: createInvoiceForm.description?.trim() || undefined,
+        dueDate: createInvoiceForm.dueDate || undefined,
+        stripeCustomerId: selectedClient.stripeCustomerId ?? null,
       })
 
       toast({
         title: 'Invoice created',
-        description: `Invoice ${result.invoice?.number || ''} has been sent to ${createInvoiceForm.email}.`,
+        description: 'Your invoice has been created and sent.',
       })
 
       setCreateInvoiceOpen(false)
-      setCreateInvoiceForm({ amount: '', email: selectedClient.billingEmail || '', description: '', dueDate: '', lineItems: [] })
+      setCreateInvoiceForm((prev) => ({ ...prev, amount: '', description: '', dueDate: '', lineItems: [] }))
       await Promise.all([refreshClients(), fetchInvoiceHistory()])
     } catch (error) {
       console.error('Failed to create invoice:', error)
@@ -341,8 +345,9 @@ function ClientsDashboardContent() {
 
     setSendingReminder(true)
     try {
-      await apiFetch(`/api/finance/invoices/${targetInvoiceId}/remind`, {
-        method: 'POST',
+      await remindInvoice({
+        workspaceId: workspaceId as string,
+        invoiceId: targetInvoiceId,
       })
 
       toast({
@@ -368,14 +373,17 @@ function ClientsDashboardContent() {
 
     setRefundLoading(true)
     try {
-      const result = await apiFetch<{ refund?: { amount?: number; currency?: string } }>(`/api/finance/invoices/${invoiceId}/refund`, {
-        method: 'POST',
-        body: JSON.stringify({}),
+      const result = await refundInvoice({
+        workspaceId: workspaceId as string,
+        invoiceId,
       })
+
+      const refundAmount = typeof result?.refund?.amount === 'number' ? result.refund.amount : 0
+      const refundCurrency = typeof result?.refund?.currency === 'string' ? result.refund.currency : 'usd'
 
       toast({
         title: 'Refund issued',
-        description: `Refund of ${formatCurrency(result.refund?.amount || 0, result.refund?.currency || 'usd')} has been processed.`,
+        description: `Refund of ${formatCurrency(refundAmount, refundCurrency)} has been processed.`,
       })
 
       setRefundDialogOpen(false)

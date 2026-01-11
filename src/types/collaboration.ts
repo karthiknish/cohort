@@ -11,6 +11,7 @@ export type CollaborationMention = {
 export type CollaborationAttachment = {
   name: string
   url: string
+  storageId?: string
   type?: string | null
   size?: string | null
 }

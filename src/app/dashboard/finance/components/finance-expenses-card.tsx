@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { LoaderCircle, Plus, Trash, CheckCircle2, XCircle, Send, DollarSign, Settings, RefreshCw } from 'lucide-react'
+import { useMutation } from 'convex/react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +31,7 @@ import { useExpensesData } from '../hooks/use-expenses-data'
 import { useAuth } from '@/contexts/auth-context'
 import { uploadExpenseReceipt } from '@/services/expense-attachments'
 import { formatCurrency } from '../utils'
+import { filesApi } from '@/lib/convex-api'
 
 function StatusBadge({ status }: { status: string }) {
   const variant = status === 'approved' ? 'default' : status === 'rejected' ? 'destructive' : 'secondary'
@@ -61,6 +63,9 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
     adminVendorActions,
   } = useExpensesData()
 
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const getPublicUrl = useMutation(filesApi.getPublicUrl)
+
   const [managingCategories, setManagingCategories] = useState(false)
   const [managingVendors, setManagingVendors] = useState(false)
   const [categoryForm, setCategoryForm] = useState({ name: '', code: '', isActive: true })
@@ -81,10 +86,15 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
   const handleAddReceipt = useCallback(
     async (file: File | null) => {
       if (!file || !user?.id) return
-      const attachment = await uploadExpenseReceipt({ userId: user.id, file })
+      const attachment = await uploadExpenseReceipt({
+        userId: user.id,
+        file,
+        generateUploadUrl,
+        getPublicUrl,
+      })
       setNewExpense((prev) => ({ ...prev, attachments: [...prev.attachments, attachment] }))
     },
-    [setNewExpense, user?.id]
+    [setNewExpense, user?.id, generateUploadUrl, getPublicUrl]
   )
 
   const canApprove = isAdmin

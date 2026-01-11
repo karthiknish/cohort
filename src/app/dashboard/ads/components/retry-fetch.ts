@@ -156,9 +156,10 @@ export async function retryFetch(
         throw new DOMException('Aborted', 'AbortError')
       }
 
-      // Merge abort signal into request
+      // Merge abort signal into request and ensure credentials are sent
       const response = await fetch(input, {
         ...init,
+        credentials: init?.credentials ?? 'same-origin',
         signal: signal ?? init?.signal,
       })
 

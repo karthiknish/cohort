@@ -1,15 +1,27 @@
 import { differenceInMinutes } from 'date-fns'
+import { ConvexHttpClient } from 'convex/browser'
 
-import { adminDb } from '@/lib/firebase-admin'
+import { api } from '../../convex/_generated/api'
 import {
   enqueueSyncJob,
   getAdIntegration,
   hasPendingSyncJob,
   markIntegrationSyncRequested,
-} from '@/lib/firestore/admin'
+} from '@/lib/ads-admin'
+import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 
 const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60 // every 6 hours
 const DEFAULT_TIMEFRAME_DAYS = 90
+
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 function minutesSince(date: Date | null | undefined): number | null {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return null
@@ -50,6 +62,10 @@ function resolveTimestamp(value: unknown): Date | null {
   if (typeof value === 'string') {
     const parsed = Date.parse(value)
     return Number.isNaN(parsed) ? null : new Date(parsed)
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return new Date(value)
   }
 
   return null
@@ -151,13 +167,18 @@ export async function scheduleSyncsForUser(options: {
 }
 
 async function getUserIntegrationIds(userId: string): Promise<string[]> {
-  const snapshot = await adminDb
-    .collection('users')
-    .doc(userId)
-    .collection('adIntegrations')
-    .get()
+  const convex = getConvexClient()
+  if (!convex) {
+    console.warn('[integration-auto-sync] convex client not available')
+    return []
+  }
 
-  return snapshot.docs.map((doc) => doc.id)
+  const workspaceId = await resolveWorkspaceIdForUser(userId)
+  const providerIds = await convex.query(api.adsIntegrations.listWorkspaceIntegrationIds, {
+    workspaceId,
+  })
+
+  return providerIds
 }
 
 export async function scheduleSyncsForAllUsers(options: {
@@ -171,23 +192,34 @@ export async function scheduleSyncsForAllUsers(options: {
 }> {
   const { force = false, providerIds, maxUsers, timeframeDays } = options
 
-  const query = adminDb.collection('users')
-  const usersSnapshot = await (typeof maxUsers === 'number' && Number.isFinite(maxUsers) && maxUsers > 0
-    ? query.limit(Math.max(1, Math.floor(maxUsers)))
-    : query
-  ).select().get()
+  const convex = getConvexClient()
+  if (!convex) {
+    console.warn('[integration-auto-sync] convex client not available')
+    return { scheduled: [], skipped: [] }
+  }
+
+  // Get all workspaces with integrations
+  const limit = typeof maxUsers === 'number' && Number.isFinite(maxUsers) && maxUsers > 0
+    ? Math.max(1, Math.floor(maxUsers))
+    : 1000
+
+  const workspaceIds = await convex.query(api.adsIntegrations.listAllWorkspacesWithIntegrations, {
+    limit,
+  })
+
   const scheduled: Array<{ userId: string; providerIds: string[] }> = []
   const skipped: Array<{ userId: string; providerIds: string[] }> = []
 
+  // Note: workspaceId is used as userId for scheduling since the workspace owns the integrations
   await Promise.all(
-    usersSnapshot.docs.map(async (userDoc) => {
-      const userId = userDoc.id
-      const result = await scheduleSyncsForUser({ userId, providerIds, force, timeframeDays })
+    workspaceIds.map(async (workspaceId) => {
+      // Use workspaceId as the userId context for scheduling
+      const result = await scheduleSyncsForUser({ userId: workspaceId, providerIds, force, timeframeDays })
       if (result.scheduled.length > 0) {
-        scheduled.push({ userId, providerIds: result.scheduled })
+        scheduled.push({ userId: workspaceId, providerIds: result.scheduled })
       }
       if (result.skipped.length > 0) {
-        skipped.push({ userId, providerIds: result.skipped })
+        skipped.push({ userId: workspaceId, providerIds: result.skipped })
       }
     })
   )

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useMutation } from 'convex/react'
 import { AlertCircle, LoaderCircle, MessageSquare } from 'lucide-react'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
+import { problemReportsApi } from '@/lib/convex-api'
 import {
   Dialog,
   DialogContent,
@@ -41,23 +41,26 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
   const [severity, setSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium')
   const [submitting, setSubmitting] = useState(false)
 
+  const createProblemReport = useMutation(problemReportsApi.create)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
 
     setSubmitting(true)
     try {
-      await addDoc(collection(db, 'problemReports'), {
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.name,
+      await createProblemReport({
+        legacyId: `pr_${Date.now()}_${user.id ?? 'anon'}`,
+        userId: user.id ?? null,
+        userEmail: user.email ?? null,
+        userName: user.name ?? null,
         workspaceId: selectedClientId || null,
         title,
         description,
         severity,
         status: 'open',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+        updatedAtMs: Date.now(),
       })
 
       toast({

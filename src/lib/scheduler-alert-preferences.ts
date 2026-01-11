@@ -1,8 +1,7 @@
-import { FieldValue } from 'firebase-admin/firestore'
+import { ConvexHttpClient } from 'convex/browser'
 
-import { adminDb } from '@/lib/firebase-admin'
+import { api } from '../../convex/_generated/api'
 
-const COLLECTION_PATH = ['admin', 'scheduler', 'alertPreferences'] as const
 const CACHE_TTL_MS = 5 * 60 * 1000
 
 type CachedPreference = {
@@ -12,12 +11,18 @@ type CachedPreference = {
 
 const preferenceCache = new Map<string, CachedPreference>()
 
-export type SchedulerAlertPreference = {
-  failureThreshold: number | null
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
 }
 
-function getCollectionRef() {
-  return adminDb.collection(COLLECTION_PATH[0]).doc(COLLECTION_PATH[1]).collection(COLLECTION_PATH[2])
+export type SchedulerAlertPreference = {
+  failureThreshold: number | null
 }
 
 function isValidThreshold(value: unknown): value is number {
@@ -30,47 +35,53 @@ export async function getSchedulerAlertPreference(providerId: string): Promise<S
     return cached.value
   }
 
-  const snapshot = await getCollectionRef().doc(providerId).get()
-  if (!snapshot.exists) {
+  const convex = getConvexClient()
+  if (!convex) {
     preferenceCache.delete(providerId)
     return null
   }
 
-  const data = snapshot.data() as Record<string, unknown>
-  const failureThreshold = isValidThreshold(data.failureThreshold) ? data.failureThreshold : null
-  const preference: SchedulerAlertPreference = { failureThreshold }
+  const result = await convex.query(api.schedulerAlertPreferences.get, { providerId })
+  if (!result) {
+    preferenceCache.delete(providerId)
+    return null
+  }
 
+  const preference: SchedulerAlertPreference = { failureThreshold: result.failureThreshold }
   preferenceCache.set(providerId, { value: preference, expiresAt: Date.now() + CACHE_TTL_MS })
   return preference
 }
 
 export async function listSchedulerAlertPreferences(): Promise<Record<string, SchedulerAlertPreference>> {
-  const snapshot = await getCollectionRef().get()
-  const result: Record<string, SchedulerAlertPreference> = {}
+  const convex = getConvexClient()
+  if (!convex) {
+    return {}
+  }
 
-  snapshot.forEach((doc) => {
-    const data = doc.data() as Record<string, unknown>
-    const failureThreshold = isValidThreshold(data.failureThreshold) ? data.failureThreshold : null
-    result[doc.id] = { failureThreshold }
-    preferenceCache.set(doc.id, { value: result[doc.id], expiresAt: Date.now() + CACHE_TTL_MS })
-  })
+  const result = await convex.query(api.schedulerAlertPreferences.list, {})
+  
+  // Update cache for each returned preference
+  for (const [providerId, pref] of Object.entries(result)) {
+    preferenceCache.set(providerId, { value: pref, expiresAt: Date.now() + CACHE_TTL_MS })
+  }
 
   return result
 }
 
 export async function upsertSchedulerAlertPreference(providerId: string, preference: SchedulerAlertPreference): Promise<void> {
-  const payload: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-  }
-
-  if (preference.failureThreshold === null) {
-    payload.failureThreshold = null
-  } else if (isValidThreshold(preference.failureThreshold)) {
-    payload.failureThreshold = preference.failureThreshold
-  } else {
+  if (preference.failureThreshold !== null && !isValidThreshold(preference.failureThreshold)) {
     throw new Error('failureThreshold must be a non-negative number or null')
   }
 
-  await getCollectionRef().doc(providerId).set(payload, { merge: true })
+  const convex = getConvexClient()
+  if (!convex) {
+    throw new Error('Convex client not available')
+  }
+
+  await convex.mutation(api.schedulerAlertPreferences.upsert, {
+    providerId,
+    failureThreshold: preference.failureThreshold,
+  })
+
   preferenceCache.set(providerId, { value: { failureThreshold: preference.failureThreshold }, expiresAt: Date.now() + CACHE_TTL_MS })
 }

@@ -2,7 +2,14 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
-import type { CollaborationMessage, CollaborationAttachment, CollaborationMention } from '@/types/collaboration'
+import { useMutation } from 'convex/react'
+import { collaborationApi } from '@/lib/convex-api'
+import type {
+  CollaborationMessage,
+  CollaborationAttachment,
+  CollaborationMention,
+  CollaborationMessageFormat,
+} from '@/types/collaboration'
 import type { Channel } from '../types'
 import type { SendMessageOptions, MessagesByChannelState } from './types'
 import { MESSAGE_PAGE_SIZE } from './constants'
@@ -10,6 +17,7 @@ import { extractMentionsFromContent } from '../utils/mentions'
 import type { ClientTeamMember } from '@/types/clients'
 
 interface UseSendMessageOptions {
+  workspaceId: string | null
   ensureSessionToken: () => Promise<string>
   currentUserId: string | null
   channels: Channel[]
@@ -22,6 +30,7 @@ interface UseSendMessageOptions {
 }
 
 export function useSendMessage({
+  workspaceId,
   ensureSessionToken,
   currentUserId,
   channels,
@@ -33,7 +42,9 @@ export function useSendMessage({
   mutateChannelMessages,
 }: UseSendMessageOptions) {
   const { toast } = useToast()
-  
+
+  const createMessage = useMutation((collaborationApi as any).createMessage)
+
   const [sendingMessage, setSendingMessage] = useState(false)
   const sendingMessageRef = useRef(false)
 
@@ -79,33 +90,58 @@ export function useSendMessage({
           }
         })
 
-        const token = await ensureSessionToken()
-        const response = await fetch('/api/collaboration/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            channelId,
-            content: trimmedContent,
-            format: 'markdown',
-            attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-            mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
-            parentMessageId: options?.parentMessageId,
-          }),
-        })
-
-        const payload = (await response.json().catch(() => null)) as
-          | { message?: CollaborationMessage; error?: string }
-          | null
-
-        if (!response.ok || !payload?.message) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to send message'
-          throw new Error(message)
+        if (!workspaceId) {
+          throw new Error('Workspace unavailable')
         }
 
-        const serverMessage = payload.message
+        const { clientId, projectId, type: channelType } = channels.find((channel) => channel.id === channelId) ?? {
+          clientId: null,
+          projectId: null,
+          type: 'team',
+        }
+
+        const legacyId = crypto.randomUUID()
+
+        await createMessage({
+          workspaceId: String(workspaceId),
+          legacyId,
+          channelType,
+          clientId: channelType === 'client' ? (clientId ?? null) : null,
+          projectId: channelType === 'project' ? (projectId ?? null) : null,
+          senderId: currentUserId,
+          senderName: options?.senderName ?? 'Unknown User',
+          senderRole: options?.senderRole ?? null,
+          content: trimmedContent,
+          attachments: uploadedAttachments,
+          format: 'markdown',
+          mentions: mentionMetadata,
+          parentMessageId: options?.parentMessageId ?? null,
+          threadRootId: options?.threadRootId ?? null,
+          isThreadRoot: options?.parentMessageId ? false : true,
+        })
+
+        const serverMessage: CollaborationMessage = {
+          id: legacyId,
+          channelType,
+          clientId: channelType === 'client' ? (clientId ?? null) : null,
+          projectId: channelType === 'project' ? (projectId ?? null) : null,
+          senderId: currentUserId,
+          senderName: options?.senderName ?? 'Unknown User',
+          senderRole: options?.senderRole ?? null,
+          content: trimmedContent,
+          createdAt: new Date().toISOString(),
+          updatedAt: null,
+          isEdited: false,
+          deletedAt: null,
+          deletedBy: null,
+          isDeleted: false,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+          format: 'markdown',
+          mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
+          reactions: undefined,
+          parentMessageId: options?.parentMessageId ?? null,
+          threadRootId: options?.threadRootId ?? null,
+        }
 
         mutateChannelMessages(channelId, (messages) => {
           const exists = messages.some((entry) => entry.id === serverMessage.id)
@@ -130,12 +166,14 @@ export function useSendMessage({
       channels,
       channelParticipants,
       clearAttachments,
-      ensureSessionToken,
+      createMessage,
+      currentUserId,
       mutateChannelMessages,
       selectedChannelId,
       stopTyping,
       toast,
       uploadAttachments,
+      workspaceId,
     ]
   )
 
@@ -146,18 +184,22 @@ export function useSendMessage({
 }
 
 interface UseFetchMessagesOptions {
+  workspaceId: string | null
   ensureSessionToken: () => Promise<string>
   channels: Channel[]
   setMessagesByChannel: React.Dispatch<React.SetStateAction<MessagesByChannelState>>
 }
 
 export function useFetchMessages({
+  workspaceId,
   ensureSessionToken,
   channels,
   setMessagesByChannel,
 }: UseFetchMessagesOptions) {
   const { toast } = useToast()
-  
+
+  const listChannel = useMutation((collaborationApi as any).listChannel)
+
   const [fetchingMessages, setFetchingMessages] = useState(false)
   const [channelCursors, setChannelCursors] = useState<Record<string, string | null>>({})
   const [hasMoreByChannel, setHasMoreByChannel] = useState<Record<string, boolean>>({})
@@ -171,30 +213,57 @@ export function useFetchMessages({
       setFetchingMessages(true)
 
       try {
-        const token = await ensureSessionToken()
-        const params = new URLSearchParams({ channelId, pageSize: String(MESSAGE_PAGE_SIZE) })
-        if (after) {
-          params.set('after', after)
+        if (!workspaceId) {
+          throw new Error('Workspace unavailable')
         }
 
-        const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        const payload = (await response.json().catch(() => null)) as
-          | { messages?: CollaborationMessage[]; nextCursor?: string | null; error?: string }
-          | null
-
-        if (!response.ok || !payload) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to fetch messages'
-          throw new Error(message)
+        const channel = channels.find((item) => item.id === channelId)
+        if (!channel) {
+          return
         }
 
-        const messages = Array.isArray(payload.messages) ? payload.messages : []
-        const nextCursor = typeof payload.nextCursor === 'string' ? payload.nextCursor : null
+        // Convex expects channelType/clientId/projectId; REST used channelId only.
+        const fetchLimit = MESSAGE_PAGE_SIZE + 1
+        const rows = (await listChannel({
+          workspaceId: String(workspaceId),
+          channelType: channel.type,
+          clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
+          projectId: channel.type === 'project' ? (channel.projectId ?? null) : null,
+          limit: fetchLimit,
+        })) as any[]
+
+        const mapped: CollaborationMessage[] = rows
+          .map((row) => ({
+            id: String(row?.legacyId ?? ''),
+            channelType: typeof row?.channelType === 'string' ? row.channelType : channel.type,
+            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
+            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
+            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
+            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
+            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
+            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
+            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
+            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
+            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
+            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
+            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+            threadLastReplyAt:
+              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
+          }))
+          // Convex listChannel is desc; UI expects asc(old->new)
+          .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
+
+        const page = mapped.slice(0, MESSAGE_PAGE_SIZE)
+        const nextCursor = mapped.length > MESSAGE_PAGE_SIZE ? mapped[MESSAGE_PAGE_SIZE].id : null
+        const messages = after ? page.filter((m) => m.id !== after) : page
 
         setMessagesByChannel((prev) => {
           const existing = prev[channelId] ?? []
@@ -217,8 +286,9 @@ export function useFetchMessages({
         setFetchingMessages(false)
       }
     },
-    [channels, ensureSessionToken, setMessagesByChannel, toast]
-  )
+     [channels, listChannel, setMessagesByChannel, toast, workspaceId]
+   )
+
 
   const loadMoreMessages = useCallback(
     async (channelId: string) => {

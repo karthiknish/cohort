@@ -2,15 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Paperclip, Send, X } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 
-import { apiFetch } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
+import { api, filesApi } from '@/lib/convex-api'
+import { isConvexRealtimeEnabled } from '@/lib/convex-realtime'
 
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
 
 import type { ClientTeamMember } from '@/types/clients'
 import type { TaskComment } from '@/types/task-comments'
@@ -61,6 +61,22 @@ export function TaskCommentsPanel(props: {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const convexEnabled = isConvexRealtimeEnabled() && Boolean(workspaceId)
+  const convexRows = useQuery(
+    (api as any).taskComments.listForTask,
+    convexEnabled
+      ? {
+          workspaceId: String(workspaceId),
+          taskLegacyId: String(taskId),
+          limit: 200,
+        }
+      : 'skip'
+  ) as Array<any> | undefined
+
+  const createComment = useMutation((api as any).taskComments.create)
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const getPublicUrl = useMutation(filesApi.getPublicUrl)
+
   const [loading, setLoading] = useState(true)
   const [comments, setComments] = useState<TaskComment[]>([])
   const [composerValue, setComposerValue] = useState('')
@@ -87,79 +103,61 @@ export function TaskCommentsPanel(props: {
   }, [participants, userName, userRole])
 
   const refresh = useCallback(async () => {
-    setLoading(true)
-    try {
-      const payload = await apiFetch<{ comments: TaskComment[] }>(`/api/tasks/${taskId}/comments?limit=200`)
-      setComments(payload.comments ?? [])
-    } catch (error) {
-      toast({
-        title: 'Failed to load comments',
-        description: error instanceof Error ? error.message : 'Unexpected error',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [taskId, toast])
+    // Convex-enabled flows update in real time; nothing to refresh.
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
-    if (!workspaceId) {
-      void refresh()
+    if (!convexEnabled) {
       return
     }
 
-    setLoading(true)
+    if (!convexRows) {
+      setLoading(true)
+      return
+    }
 
-    const q = query(
-      collection(db, 'workspaces', workspaceId, 'tasks', taskId, 'comments'),
-      orderBy('createdAt', 'asc')
-    )
+    const next = convexRows
+      .map((row) => {
+        const createdAt = typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null
+        const updatedAt = typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null
+        const deletedAt = typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null
+        const isDeleted = Boolean(row?.deleted || deletedAt)
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const next = snapshot.docs
-          .map((doc) => {
-            const data = doc.data() as any
-            const createdAt = data?.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data?.createdAt ?? null)
-            const updatedAt = data?.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : (data?.updatedAt ?? null)
-            const deletedAt = typeof data?.deletedAt === 'string' ? data.deletedAt : null
-            const isDeleted = Boolean(data?.deleted || deletedAt)
+        return {
+          id: String(row?.legacyId ?? ''),
+          taskId,
+          content: typeof row?.content === 'string' ? row.content : '',
+          format: row?.format === 'plaintext' ? 'plaintext' : 'markdown',
+          authorId: typeof row?.authorId === 'string' ? row.authorId : null,
+          authorName:
+            typeof row?.authorName === 'string' && row.authorName.trim().length > 0 ? row.authorName : 'Teammate',
+          authorRole: typeof row?.authorRole === 'string' ? row.authorRole : null,
+          createdAt,
+          updatedAt,
+          isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
+          isDeleted,
+          deletedAt,
+          deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+          attachments: Array.isArray(row?.attachments) ? row.attachments : undefined,
+          mentions: Array.isArray(row?.mentions) ? row.mentions : undefined,
+          parentCommentId: typeof row?.parentCommentId === 'string' ? row.parentCommentId : null,
+          threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+        } as TaskComment
+      })
+      .filter((comment) => comment.id && !comment.isDeleted)
 
-            return {
-              id: doc.id,
-              taskId,
-              content: typeof data?.content === 'string' ? data.content : '',
-              format: data?.format === 'plaintext' ? 'plaintext' : 'markdown',
-              authorId: typeof data?.authorId === 'string' ? data.authorId : null,
-              authorName: typeof data?.authorName === 'string' && data.authorName.trim().length > 0 ? data.authorName : 'Teammate',
-              authorRole: typeof data?.authorRole === 'string' ? data.authorRole : null,
-              createdAt: typeof createdAt === 'string' ? createdAt : null,
-              updatedAt: typeof updatedAt === 'string' ? updatedAt : null,
-              isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
-              isDeleted,
-              deletedAt,
-              deletedBy: typeof data?.deletedBy === 'string' ? data.deletedBy : null,
-              attachments: Array.isArray(data?.attachments) ? data.attachments : undefined,
-              mentions: Array.isArray(data?.mentions) ? data.mentions : undefined,
-              parentCommentId: typeof data?.parentCommentId === 'string' ? data.parentCommentId : null,
-              threadRootId: typeof data?.threadRootId === 'string' ? data.threadRootId : null,
-            } as TaskComment
-          })
-          .filter((comment) => !comment.isDeleted)
+    setComments(next)
+    setLoading(false)
+  }, [convexEnabled, convexRows, taskId])
 
-        setComments(next)
-        setLoading(false)
-      },
-      (error) => {
-        console.error('[task-comments] realtime subscription failed', error)
-        setLoading(false)
-        void refresh()
-      }
-    )
+  useEffect(() => {
+    if (convexEnabled) {
+      return
+    }
 
-    return () => unsubscribe()
-  }, [refresh, taskId, workspaceId])
+    void refresh()
+  }, [convexEnabled, refresh])
 
   const handleAddAttachments = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -187,7 +185,13 @@ export function TaskCommentsPanel(props: {
       if (pendingAttachments.length > 0) {
         const uploads = await Promise.all(
           pendingAttachments.map((attachment) =>
-            uploadTaskCommentAttachment({ userId, taskId, file: attachment.file })
+            uploadTaskCommentAttachment({
+              userId,
+              taskId,
+              file: attachment.file,
+              generateUploadUrl,
+              getPublicUrl,
+            })
           )
         )
         uploadedAttachments.push(...uploads)
@@ -201,18 +205,32 @@ export function TaskCommentsPanel(props: {
         return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
       })
 
-      const created = await apiFetch<TaskComment>(`/api/tasks/${taskId}/comments`, {
-        method: 'POST',
-        body: JSON.stringify({
-          content,
-          format: 'markdown',
-          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-          mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
-          parentCommentId: replyTo?.id ?? undefined,
-        }),
+      if (!workspaceId) {
+        throw new Error('Workspace not available')
+      }
+
+      const legacyId = `task-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+      const res = await createComment({
+        workspaceId: String(workspaceId),
+        taskLegacyId: String(taskId),
+        legacyId,
+        content,
+        format: 'markdown',
+        authorId: userId,
+        authorName: userName,
+        authorRole: userRole,
+        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+        mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
+        parentCommentId: replyTo?.id ?? undefined,
+        threadRootId: replyTo?.threadRootId ?? replyTo?.id ?? undefined,
       })
 
-      setComments((prev) => [...prev, created])
+      if (!res?.ok) {
+        throw new Error('Failed to post comment')
+      }
+
+      // Convex query will update `comments` automatically.
       setComposerValue('')
       setReplyTo(null)
       setPendingAttachments([])

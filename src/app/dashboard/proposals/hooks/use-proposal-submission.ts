@@ -1,13 +1,11 @@
 import { useState, useCallback, useRef } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
-import {
-    getProposalById,
-    submitProposalDraft,
-    updateProposalDraft,
-    prepareProposalDeck,
-    type ProposalPresentationDeck,
-} from '@/services/proposals'
+import { useAuth } from '@/contexts/auth-context'
+import { useMutation, useQuery } from 'convex/react'
+import { proposalsApi } from '@/lib/convex-api'
+import { refreshProposalDraft } from '@/services/proposals'
+import type { ProposalPresentationDeck } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 import {
@@ -80,7 +78,21 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     } = options
 
     const { toast } = useToast()
+    const { user, getIdToken } = useAuth()
     const { selectedClient, selectedClientId } = useClientContext()
+
+    const workspaceId = user?.agencyId ?? null
+    const convexUpdateProposal = useMutation(proposalsApi.update)
+
+    const activeConvexProposal = useQuery(
+        proposalsApi.getByLegacyId,
+        !workspaceId || !draftId
+            ? 'skip'
+            : {
+                workspaceId,
+                legacyId: draftId,
+            }
+    )
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
@@ -119,9 +131,18 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             try {
                 setAutosaveStatus('saving')
-                await updateProposalDraft(activeDraftId, {
+                if (!workspaceId) {
+                    throw new Error('Workspace is required to save a proposal')
+                }
+
+                const timestamp = Date.now()
+                await convexUpdateProposal({
+                    workspaceId,
+                    legacyId: activeDraftId,
                     formData: formState,
                     stepProgress: currentStep,
+                    updatedAtMs: timestamp,
+                    lastAutosaveAtMs: timestamp,
                 })
                 setAutosaveStatus('saved')
             } catch (updateError: unknown) {
@@ -140,18 +161,45 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             // Track AI generation start for analytics
             const aiStartTime = Date.now()
-            trackAiGenerationStarted(activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+            if (workspaceId) {
+                trackAiGenerationStarted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+            }
 
-            const response = await submitProposalDraft(activeDraftId, 'summary')
-            const isReady = response.status === 'ready'
+            // AI generation happens server-side (Convex + integrations).
+            // Here we just poll Convex for status changes.
+            let response = activeConvexProposal
             const aiDuration = Date.now() - aiStartTime
+
+            const maxAttempts = 30
+            const pollIntervalMs = 2000
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const latest = await refreshProposalDraft(activeDraftId, {
+                    workspaceId: workspaceId ?? '',
+                            convexToken: (await getIdToken()) ?? '',
+
+                })
+                response = latest as any
+
+                if (latest.status === 'ready' || latest.status === 'in_progress') {
+                    break
+                }
+
+                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+            }
+
+            const isReady = response?.status === 'ready'
 
             // Track AI generation completion or failure
             if (isReady) {
-                trackAiGenerationCompleted(activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
-                trackProposalSubmitted(activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                if (workspaceId) {
+                    trackAiGenerationCompleted(workspaceId, activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
+                    trackProposalSubmitted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                }
             } else {
-                trackAiGenerationFailed(activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch(console.error)
+                if (workspaceId) {
+                    trackAiGenerationFailed(workspaceId, activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch(console.error)
+                }
             }
 
             // Poll for presentation deck if AI summary is ready but deck isn't
@@ -167,7 +215,11 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                     await new Promise(resolve => setTimeout(resolve, pollInterval))
 
                     try {
-                        const refreshedProposal = await getProposalById(activeDraftId)
+                        const refreshedProposal = await refreshProposalDraft(activeDraftId, {
+                            workspaceId: workspaceId ?? '',
+                    convexToken: (await getIdToken()) ?? '',
+
+                        })
                         const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
 
                         if (deckUrl) {
@@ -211,7 +263,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             if (finalPptUrl) {
                 toast({
                     title: 'Presentation ready',
-                    description: 'We saved the presentation in Firebase storage for instant download.',
+                    description: 'We saved the presentation for instant download.',
                 })
             } else {
                 toast({
@@ -239,7 +291,9 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             // Track AI generation failure
             if (draftId) {
-                trackAiGenerationFailed(draftId, message, selectedClientId, selectedClient?.name).catch(console.error)
+                if (workspaceId) {
+                    trackAiGenerationFailed(workspaceId, draftId, message, selectedClientId, selectedClient?.name).catch(console.error)
+                }
             }
 
             setSubmitted(false)
@@ -250,7 +304,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } finally {
             setIsSubmitting(false)
         }
-    }, [draftId, formState, currentStep, ensureDraftId, refreshProposals, selectedClientId, selectedClient, toast, clearErrors, setAutosaveStatus, setDraftId, setFormState, setCurrentStep])
+    }, [draftId, formState, currentStep, ensureDraftId, refreshProposals, selectedClientId, selectedClient, toast, clearErrors, setAutosaveStatus, setDraftId, setFormState, setCurrentStep, workspaceId, convexUpdateProposal])
 
     const handleContinueEditingFromSnapshot = useCallback(async () => {
         if (!lastSubmissionSnapshot) {
@@ -279,10 +333,19 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         setAutosaveStatus('idle')
 
         try {
-            await updateProposalDraft(lastSubmissionSnapshot.draftId, {
+            if (!workspaceId) {
+                throw new Error('Workspace is required to save a proposal')
+            }
+
+            const timestamp = Date.now()
+            await convexUpdateProposal({
+                workspaceId,
+                legacyId: lastSubmissionSnapshot.draftId,
                 formData: restoredForm,
                 stepProgress: restoredStep,
                 status: 'draft',
+                updatedAtMs: timestamp,
+                lastAutosaveAtMs: timestamp,
             })
             await refreshProposals()
             toast({ title: 'Editing restored', description: 'Your previous responses have been reloaded.' })
@@ -291,7 +354,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             const message = getErrorMessage(error, 'Failed to reopen proposal for editing')
             toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
         }
-    }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast, setFormState, setCurrentStep, setDraftId, setAutosaveStatus])
+    }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast, setFormState, setCurrentStep, setDraftId, setAutosaveStatus, workspaceId, convexUpdateProposal])
 
     const handleRecheckDeck = useCallback(async () => {
         const proposalId = lastSubmissionSnapshot?.draftId ?? draftId
@@ -306,17 +369,17 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
         setIsRecheckingDeck(true)
         try {
-            // First, try to fetch the latest proposal data from Firebase
-            const refreshedProposal = await getProposalById(proposalId)
-            const deckUrl = refreshedProposal.pptUrl ?? refreshedProposal.presentationDeck?.storageUrl ?? null
+            const convexDeckUrl = activeConvexProposal?.pptUrl ?? null
 
-            if (deckUrl) {
-                // Deck is ready in Firebase
+            if (convexDeckUrl) {
                 setPresentationDeck(
-                    refreshedProposal.presentationDeck
-                        ? { ...refreshedProposal.presentationDeck, storageUrl: deckUrl }
+                    activeConvexProposal?.presentationDeck
+                        ? {
+                            ...(activeConvexProposal.presentationDeck as any),
+                            storageUrl: (activeConvexProposal.presentationDeck as any)?.storageUrl ?? convexDeckUrl,
+                        }
                         : presentationDeck
-                            ? { ...presentationDeck, storageUrl: deckUrl, status: 'ready' }
+                            ? { ...presentationDeck, storageUrl: convexDeckUrl, status: 'ready' }
                             : null
                 )
                 await refreshProposals()
@@ -328,8 +391,11 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             }
 
             // If not in Firebase yet, try to trigger Gamma to check/generate
-            const result = await prepareProposalDeck(proposalId)
-            const newDeckUrl = result.pptUrl ?? result.presentationDeck?.storageUrl ?? result.presentationDeck?.pptxUrl ?? null
+            const result = await refreshProposalDraft(proposalId, {
+                workspaceId: workspaceId ?? '',
+                convexToken: (await getIdToken()) ?? '',
+            })
+            const newDeckUrl = result.pptUrl ?? result.presentationDeck?.storageUrl ?? null
 
             if (newDeckUrl) {
                 setPresentationDeck(
@@ -358,7 +424,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } finally {
             setIsRecheckingDeck(false)
         }
-    }, [draftId, lastSubmissionSnapshot, presentationDeck, refreshProposals, toast])
+    }, [draftId, lastSubmissionSnapshot, presentationDeck, refreshProposals, toast, activeConvexProposal])
 
     return {
         isSubmitting,

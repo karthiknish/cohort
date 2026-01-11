@@ -1,17 +1,14 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
-import {
-    createProposalDraft,
-    deleteProposalDraft,
-    listProposals,
-    updateProposalDraft,
-    type ProposalDraft,
-    type ProposalPresentationDeck,
-} from '@/services/proposals'
+import { useAuth } from '@/contexts/auth-context'
+import { useQuery, useMutation } from 'convex/react'
+import { proposalsApi } from '@/lib/convex-api'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 import { trackDraftCreated } from '@/services/proposal-analytics'
+
 import { createInitialProposalFormState } from '../utils/form-steps'
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -82,11 +79,53 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     } = options
 
     const { toast } = useToast()
+    const { user } = useAuth()
     const { selectedClient, selectedClientId } = useClientContext()
 
+    const workspaceId = user?.agencyId ?? null
+
+    const convexProposals = useQuery(
+        proposalsApi.list,
+        !workspaceId || !selectedClientId
+            ? 'skip'
+            : {
+                workspaceId,
+                clientId: selectedClientId,
+                limit: 100,
+            }
+    )
+
+    const convexCreateProposal = useMutation(proposalsApi.create)
+    const convexRemoveProposal = useMutation(proposalsApi.remove)
+
+    const proposals: ProposalDraft[] = useMemo(() => {
+        if (!workspaceId || !selectedClientId) return []
+        const rows = convexProposals ?? []
+
+        return rows.map((row: any) => ({
+            id: String(row.legacyId),
+            status: (row.status ?? 'draft') as ProposalDraft['status'],
+            stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
+            formData: mergeProposalForm(row.formData ?? null),
+            aiInsights: row.aiInsights ?? null,
+            aiSuggestions: row.aiSuggestions ?? null,
+            pdfUrl: row.pdfUrl ?? null,
+            pptUrl: row.pptUrl ?? null,
+            createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+            lastAutosaveAt: typeof row.lastAutosaveAtMs === 'number' ? new Date(row.lastAutosaveAtMs).toISOString() : null,
+            clientId: row.clientId ?? null,
+            clientName: row.clientName ?? null,
+            presentationDeck: row.presentationDeck
+                ? {
+                    ...row.presentationDeck,
+                    storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
+                }
+                : null,
+        }))
+    }, [workspaceId, selectedClientId, convexProposals])
+
     const [draftId, setDraftId] = useState<string | null>(null)
-    const [proposals, setProposals] = useState<ProposalDraft[]>([])
-    const [isLoadingProposals, setIsLoadingProposals] = useState(false)
     const [isCreatingDraft, setIsCreatingDraft] = useState(false)
     const [isBootstrapping, setIsBootstrapping] = useState(true)
     const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -103,38 +142,12 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         draftIdRef.current = draftId
     }, [draftId])
 
+    const isLoadingProposals = Boolean(selectedClientId && workspaceId && convexProposals === undefined)
+
     const refreshProposals = useCallback(async () => {
-        if (!selectedClientId) {
-            setProposals([])
-            setIsLoadingProposals(false)
-            onAiSuggestionsChange(null)
-            return []
-        }
-
-        setIsLoadingProposals(true)
-        try {
-            const result = await listProposals({ clientId: selectedClientId })
-            setProposals(result)
-
-            const activeId = draftIdRef.current
-            if (activeId) {
-                const active = result.find((proposal) => proposal.id === activeId)
-                if (active) {
-                    onAiSuggestionsChange(active.aiSuggestions ?? null)
-                }
-            } else if (!submittedRef.current) {
-                onAiSuggestionsChange(null)
-            }
-
-            return result
-        } catch (err: unknown) {
-            const message = getErrorMessage(err, 'Failed to load proposals')
-            toast({ title: 'Unable to load proposals', description: message, variant: 'destructive' })
-            return []
-        } finally {
-            setIsLoadingProposals(false)
-        }
-    }, [selectedClientId, toast, onAiSuggestionsChange])
+        // Proposals are realtime via Convex; keep this for callers.
+        return proposals
+    }, [proposals])
 
     const ensureDraftId = useCallback(async () => {
         if (draftId) {
@@ -161,15 +174,22 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         try {
             setIsCreatingDraft(true)
             setAutosaveStatus('saving')
-            const newDraftId = await createProposalDraft({
-                formData: formState,
+            if (!workspaceId) {
+                throw new Error('Workspace is required to create a proposal draft')
+            }
+
+            const res = await convexCreateProposal({
+                workspaceId,
+                ownerId: user?.id ?? null,
+                status: 'draft',
                 stepProgress: currentStep,
-                clientId: selectedClientId ?? undefined,
-                clientName: selectedClient?.name ?? undefined,
+                formData: formState,
+                clientId: selectedClientId ?? null,
+                clientName: selectedClient?.name ?? null,
             })
+            const newDraftId = res.legacyId
             setDraftId(newDraftId)
             setAutosaveStatus('saved')
-            await refreshProposals()
             return newDraftId
         } catch (error: unknown) {
             setAutosaveStatus('error')
@@ -182,7 +202,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } finally {
             setIsCreatingDraft(false)
         }
-    }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, refreshProposals, toast])
+    }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, toast, workspaceId, convexCreateProposal, user?.id])
 
     const handleCreateNewProposal = useCallback(async () => {
         if (!selectedClientId) {
@@ -206,13 +226,20 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setIsCreatingDraft(true)
             setAutosaveStatus('saving')
             const initialForm = createInitialProposalFormState()
-            const newDraftId = await createProposalDraft({
-                formData: initialForm,
-                stepProgress: 0,
+            if (!workspaceId) {
+                throw new Error('Workspace is required to create a proposal draft')
+            }
+
+            const res = await convexCreateProposal({
+                workspaceId,
+                ownerId: user?.id ?? null,
                 status: 'draft',
-                clientId: selectedClientId ?? undefined,
-                clientName: selectedClient?.name ?? undefined,
+                stepProgress: 0,
+                formData: initialForm,
+                clientId: selectedClientId ?? null,
+                clientName: selectedClient?.name ?? null,
             })
+            const newDraftId = res.legacyId
 
             setDraftId(newDraftId)
             onFormStateChange(initialForm)
@@ -224,9 +251,10 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setAutosaveStatus('saved')
 
             // Track draft creation for analytics
-            trackDraftCreated(newDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+            if (workspaceId) {
+                trackDraftCreated(workspaceId, newDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+            }
 
-            await refreshProposals()
 
             toast({
                 title: 'New proposal started',
@@ -244,7 +272,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } finally {
             setIsCreatingDraft(false)
         }
-    }, [isCreatingDraft, refreshProposals, selectedClient, selectedClientId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange])
+    }, [isCreatingDraft, selectedClient, selectedClientId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, workspaceId, convexCreateProposal, user?.id])
 
     const handleResumeProposal = useCallback((proposal: ProposalDraft) => {
         const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)
@@ -279,9 +307,11 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
         try {
             setDeletingProposalId(proposal.id)
-            await deleteProposalDraft(proposal.id)
+            if (!workspaceId) {
+                throw new Error('Workspace is required to delete a proposal')
+            }
 
-            setProposals((prev) => prev.filter((candidate) => candidate.id !== proposal.id))
+            await convexRemoveProposal({ workspaceId, legacyId: proposal.id })
 
             if (draftId === proposal.id) {
                 setDraftId(null)
@@ -302,7 +332,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setProposalPendingDelete(null)
             setIsDeleteDialogOpen(false)
         }
-    }, [deletingProposalId, draftId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange])
+    }, [deletingProposalId, draftId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, workspaceId, convexRemoveProposal])
 
     const requestDeleteProposal = useCallback((proposal: ProposalDraft) => {
         setProposalPendingDelete(proposal)
@@ -331,12 +361,11 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     onSubmittedChange(false)
                     onPresentationDeckChange(null)
                     onAiSuggestionsChange(null)
-                    setProposals([])
                     onLastSubmissionSnapshotChange(null)
                     return
                 }
 
-                const allProposals = await refreshProposals()
+                const allProposals = proposals
                 if (cancelled) {
                     return
                 }
@@ -379,7 +408,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         return () => {
             cancelled = true
         }
-    }, [refreshProposals, selectedClientId, steps, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange])
+    }, [proposals, selectedClientId, steps, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange])
 
     return {
         draftId,

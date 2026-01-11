@@ -1,16 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery } from 'convex/react'
 import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { authService } from '@/services/auth'
+
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
 import { usePreview } from '@/contexts/preview-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/contexts/auth-context'
+import { adsIntegrationsApi } from '@/lib/convex-api'
 
 // Extracted hooks and types
 import {
@@ -31,6 +34,7 @@ export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
+  const { user } = useAuth()
   const searchParams = useSearchParams()
 
   const [selectedPeriod, setSelectedPeriod] = useState<typeof PERIOD_OPTIONS[number]['value']>(() => {
@@ -62,28 +66,24 @@ export default function AnalyticsPage() {
   const [gaLoading, setGaLoading] = useState(false)
   const [gaSyncing, setGaSyncing] = useState(false)
 
-  const [token, setToken] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const fetchToken = async () => {
-      if (token) return
-      await authService.waitForInitialAuth().catch(() => {})
-      const jwt = await authService.getIdToken().catch(() => null)
-      if (!cancelled) {
-        setToken(jwt)
-      }
-    }
-    void fetchToken()
-    return () => {
-      cancelled = true
-    }
-  }, [token])
 
   const periodDays = useMemo(() => {
     const option = PERIOD_OPTIONS.find((opt) => opt.value === selectedPeriod)
     return option?.days ?? 7
   }, [selectedPeriod])
+
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const integrationStatuses = useQuery(
+    adsIntegrationsApi.listStatuses,
+    isPreviewMode || !workspaceId || !user?.id
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: selectedClientId ?? null,
+        }
+  ) as Array<any> | undefined
 
   const refreshGoogleAnalyticsStatus = useCallback(async () => {
     if (isPreviewMode) {
@@ -92,41 +92,16 @@ export default function AnalyticsPage() {
       return
     }
 
-    await authService.waitForInitialAuth().catch(() => {})
-    const jwt = await authService.getIdToken().catch(() => null)
-    if (!jwt) return
+    const rows = Array.isArray(integrationStatuses) ? integrationStatuses : []
+    const ga = rows.find((s: any) => s?.providerId === 'google-analytics')
 
-    try {
-      const params = new URLSearchParams()
-      if (selectedClientId) params.set('clientId', selectedClientId)
-      const url = params.toString().length > 0
-        ? `/api/integrations/status?${params.toString()}`
-        : '/api/integrations/status'
+    const linkedAtMs = typeof ga?.linkedAtMs === 'number' ? ga.linkedAtMs : null
+    const accountName = typeof ga?.accountName === 'string' ? ga.accountName : null
+    const accountId = typeof ga?.accountId === 'string' ? ga.accountId : null
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${jwt}` },
-        cache: 'no-store',
-      })
-
-      const payload = (await response.json().catch(() => ({}))) as any
-      const statuses = payload && typeof payload === 'object' && 'success' in payload
-        ? (payload.data?.statuses ?? [])
-        : (payload.statuses ?? [])
-
-      const ga = Array.isArray(statuses)
-        ? statuses.find((s: any) => s?.providerId === 'google-analytics')
-        : null
-
-      const linkedAt = ga?.linkedAt
-      const accountName = typeof ga?.accountName === 'string' ? ga.accountName : null
-      const accountId = typeof ga?.accountId === 'string' ? ga.accountId : null
-
-      setGaConnected(Boolean(linkedAt))
-      setGaAccountLabel(accountName ?? accountId ?? null)
-    } catch {
-      // Silent; analytics can still load.
-    }
-  }, [isPreviewMode, selectedClientId])
+    setGaConnected(Boolean(linkedAtMs))
+    setGaAccountLabel(accountName ?? accountId ?? null)
+  }, [integrationStatuses, isPreviewMode])
 
   useEffect(() => {
     void refreshGoogleAnalyticsStatus()
@@ -147,7 +122,7 @@ export default function AnalyticsPage() {
     insightsLoading,
     insightsRefreshing,
     mutateInsights,
-  } = useAnalyticsData(token, periodDays, selectedClientId ?? null, isPreviewMode)
+  } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId)
 
   const metrics = metricsData
 
@@ -171,8 +146,8 @@ export default function AnalyticsPage() {
     }
 
     setGaLoading(true)
-    try {
-      await authService.connectGoogleAnalyticsAccount(selectedClientId ?? null)
+      try {
+        window.location.href = '/api/integrations/google-analytics/oauth/start'
       toast({
         title: 'Google Analytics connected',
         description: 'Account access granted. You can sync data now.',
@@ -192,12 +167,6 @@ export default function AnalyticsPage() {
       return
     }
 
-    await authService.waitForInitialAuth().catch(() => {})
-    const jwt = await authService.getIdToken().catch(() => null)
-    if (!jwt) {
-      toast({ title: 'Auth required', description: 'Please sign in again and retry.', variant: 'destructive' })
-      return
-    }
 
     setGaSyncing(true)
     try {
@@ -207,7 +176,7 @@ export default function AnalyticsPage() {
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${jwt}` },
+        credentials: 'same-origin',
       })
 
       const payload = (await response.json().catch(() => ({}))) as any

@@ -1,7 +1,17 @@
-import { FieldValue, DocumentReference } from 'firebase-admin/firestore'
+import { ConvexHttpClient } from 'convex/browser'
 
-import { adminDb } from '@/lib/firebase-admin'
 import { getStripeClient } from '@/lib/stripe'
+import { api } from '../../convex/_generated/api'
+
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 interface PlanConfigInput {
   id: string
@@ -92,15 +102,19 @@ export async function ensureStripeCustomer(options: {
   uid: string
   email?: string | null
   name?: string | null
-}): Promise<{ customerId: string; userRef: DocumentReference }> {
+}): Promise<{ customerId: string }> {
   const { uid, email, name } = options
   const stripe = getStripeClient()
-  const userRef = adminDb.collection('users').doc(uid)
-  const userSnapshot = await userRef.get()
-  let customerId = userSnapshot.exists
-    ? ((userSnapshot.get('stripeCustomerId') as string | undefined) ?? undefined)
-    : undefined
+  const convex = getConvexClient()
 
+  // Get existing Stripe customer ID from Convex
+  let customerId: string | undefined
+  if (convex) {
+    const result = await convex.query(api.users.getStripeCustomerId, { legacyId: uid })
+    customerId = result.stripeCustomerId ?? undefined
+  }
+
+  // Verify customer still exists in Stripe
   if (customerId) {
     try {
       const existing = await stripe.customers.retrieve(customerId)
@@ -115,38 +129,29 @@ export async function ensureStripeCustomer(options: {
     }
   }
 
+  // Create new Stripe customer if needed
   if (!customerId) {
     const customer = await stripe.customers.create({
       email: email ?? undefined,
       name: name ?? undefined,
       metadata: {
-        firebaseUid: uid,
+        userId: uid,
       },
     })
     customerId = customer.id
 
-    await userRef.set(
-      {
+    // Save to Convex
+    if (convex) {
+      await convex.mutation(api.users.setStripeCustomerId, {
+        legacyId: uid,
         stripeCustomerId: customerId,
-        billingProfile: {
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-      },
-      { merge: true },
-    )
-  } else {
-    await userRef.set(
-      {
-        billingProfile: {
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-      },
-      { merge: true },
-    )
+        email: email ?? null,
+        name: name ?? null,
+      })
+    }
   }
 
-  return { customerId, userRef }
+  return { customerId }
 }
 
 function isResourceMissingError(error: unknown): boolean {

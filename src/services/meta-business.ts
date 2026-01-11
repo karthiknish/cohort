@@ -1,5 +1,5 @@
 import { decrypt, encrypt } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/firestore/admin'
+import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/ads-admin'
 import { fetchMetaAdAccounts } from '@/services/integrations/meta-ads'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'

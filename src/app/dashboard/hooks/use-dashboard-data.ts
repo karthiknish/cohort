@@ -7,7 +7,10 @@ import type { TaskRecord } from '@/types/tasks'
 import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
 import { getErrorMessage, mapTasksForDashboard } from '@/lib/dashboard-utils'
 import { summarizeTasks, DEFAULT_TASK_SUMMARY, type TaskSummary } from '../components'
-import { listProposals, type ProposalDraft } from '@/services/proposals'
+import { mergeProposalForm } from '@/lib/proposals'
+import type { ProposalDraft } from '@/types/proposals'
+import { useQuery } from 'convex/react'
+import { adsMetricsApi, financeSummaryApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
 
 export interface UseDashboardDataOptions {
@@ -46,6 +49,7 @@ export interface UseDashboardDataReturn {
 export function useDashboardData(options: UseDashboardDataOptions): UseDashboardDataReturn {
     const { selectedClientId } = options
     const { user, getIdToken } = useAuth()
+    const workspaceId = user?.agencyId ?? null
     const { isPreviewMode } = usePreview()
 
     const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
@@ -66,8 +70,54 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const [proposalsLoading, setProposalsLoading] = useState(true)
     const [proposalsError, setProposalsError] = useState<string | null>(null)
 
+    const convexProposals = useQuery(
+        proposalsApi.list,
+        isPreviewMode || !workspaceId || !user?.id
+            ? 'skip'
+            : {
+                workspaceId,
+                clientId: selectedClientId ?? undefined,
+                limit: user?.role === 'client' ? 50 : 25,
+            }
+    )
+
+    const convexTasks = useQuery(
+        tasksApi.listByClient,
+        isPreviewMode || !workspaceId || !user?.id
+            ? 'skip'
+            : {
+                workspaceId,
+                clientId: selectedClientId ?? null,
+            }
+    ) as Array<any> | undefined
+
     const [refreshKey, setRefreshKey] = useState(0)
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
+
+    const financeRealtime = useQuery(
+        financeSummaryApi.get,
+        isPreviewMode || !workspaceId || !user?.id
+            ? 'skip'
+            : {
+                workspaceId,
+                clientId: selectedClientId ?? null,
+                invoiceLimit: 200,
+                costLimit: 200,
+                revenueLimit: 36,
+            }
+    ) as FinanceSummaryResponse | undefined
+
+    // Metrics are now fetched directly from Convex
+    const metricsRealtime = useQuery(
+        adsMetricsApi.listMetricsWithSummary,
+        isPreviewMode || !workspaceId || !user?.id
+            ? 'skip'
+            : {
+                workspaceId,
+                clientId: selectedClientId ?? null,
+                limit: 100,
+            }
+    ) as { metrics: MetricRecord[] } | undefined
 
     const triggerReload = useCallback(() => {
         setRefreshKey((prev) => prev + 1)
@@ -96,6 +146,32 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
 
     useEffect(() => {
         let isCancelled = false
+
+        if (!isPreviewMode && workspaceId && user?.id && convexTasks !== undefined) {
+            const mapped = convexTasks.map((row: any) => ({
+                id: String(row.legacyId),
+                title: String(row.title ?? ''),
+                description: typeof row.description === 'string' ? row.description : null,
+                status: row.status,
+                priority: row.priority,
+                assignedTo: Array.isArray(row.assignedTo) ? row.assignedTo : [],
+                clientId: row.clientId ?? null,
+                client: row.client ?? null,
+                projectId: row.projectId ?? null,
+                projectName: row.projectName ?? null,
+                dueDate: typeof row.dueDateMs === 'number' ? new Date(row.dueDateMs).toISOString() : null,
+                tags: Array.isArray(row.tags) ? row.tags : [],
+                createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+                updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+                deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+            })) as TaskRecord[]
+
+            setRawTasks(mapped)
+            setTaskItems(mapTasksForDashboard(mapped))
+            setTaskSummary(summarizeTasks(mapped))
+            setTasksError(null)
+            setTasksLoading(false)
+        }
 
         if (!user?.id) {
             setFinanceSummary(null)
@@ -146,38 +222,15 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             }
         }
 
-        const query = selectedClientId ? `?clientId=${encodeURIComponent(selectedClientId)}` : ''
-        const tasksQuery = query ? `${query}&includeSummary=1` : '?includeSummary=1'
-
         const loadFinance = async () => {
             setFinanceLoading(true)
             setFinanceError(null)
             try {
-                const token = await getIdToken()
-                const response = await fetch(`/api/finance${query}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    cache: 'no-store',
-                })
-
-                if (!response.ok) {
-                    let message = 'Failed to load finance data'
-                    try {
-                        const payload = (await response.json()) as { error?: unknown }
-                        if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
-                            message = payload.error
-                        }
-                    } catch {
-                        // ignore JSON parse errors
-                    }
-                    throw new Error(message)
+                if (financeRealtime === undefined) {
+                    return
                 }
-
-                const payload = (await response.json()) as Record<string, unknown>
-                const data = payload.data || payload
                 if (!isCancelled) {
-                    setFinanceSummary(data as FinanceSummaryResponse)
+                    setFinanceSummary(financeRealtime)
                 }
             } catch (error) {
                 if (!isCancelled) {
@@ -192,113 +245,25 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         }
 
         const loadMetrics = async () => {
-            setMetricsLoading(true)
-            setMetricsError(null)
-            try {
-                const token = await getIdToken()
-                const response = await fetch(`/api/metrics${query}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    cache: 'no-store',
-                })
-
-                if (!response.ok) {
-                    let message = 'Failed to load marketing data'
-                    try {
-                        const payload = (await response.json()) as { error?: unknown }
-                        if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
-                            message = payload.error
-                        }
-                    } catch {
-                        // ignore JSON parse errors
-                    }
-                    throw new Error(message)
-                }
-
-                const payload = (await response.json()) as Record<string, unknown>
-                const data = payload.data || payload
-                if (!isCancelled) {
-                    const dataRecord = data as Record<string, unknown>
-                    const entries = Array.isArray(dataRecord?.metrics) ? dataRecord.metrics : Array.isArray(data) ? data : []
-                    setMetrics(entries as MetricRecord[])
-                }
-            } catch (error) {
-                if (!isCancelled) {
-                    setMetrics([])
-                    setMetricsError(getErrorMessage(error, 'Unable to load marketing performance'))
-                }
-            } finally {
-                if (!isCancelled) {
-                    setMetricsLoading(false)
-                }
+            // Metrics are now realtime via Convex
+            if (metricsRealtime === undefined) {
+                setMetricsLoading(true)
+                return
+            }
+            if (!isCancelled) {
+                const entries = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
+                setMetrics(entries as MetricRecord[])
+                setMetricsError(null)
+                setMetricsLoading(false)
             }
         }
 
         const loadTasks = async () => {
-            setTasksLoading(true)
-            setTasksError(null)
-            try {
-                const token = await getIdToken()
-                const response = await fetch(`/api/tasks${tasksQuery}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    cache: 'no-store',
-                })
-
-                if (!response.ok) {
-                    let message = 'Failed to load tasks'
-                    try {
-                        const payload = (await response.json()) as { error?: unknown }
-                        if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
-                            message = payload.error
-                        }
-                    } catch {
-                        // ignore JSON parse errors
-                    }
-                    throw new Error(message)
-                }
-
-                const payload = (await response.json()) as Record<string, unknown>
-                const data = payload.data || payload
-                if (!isCancelled) {
-                    const dataRecord = data as Record<string, unknown>
-                    const tasks = Array.isArray(dataRecord?.tasks) ? dataRecord.tasks : Array.isArray(data) ? data : []
-                    const summary = dataRecord?.summary as TaskSummary | undefined
-                    setRawTasks(tasks as TaskRecord[])
-                    const entries = mapTasksForDashboard(tasks as TaskRecord[])
-                    setTaskItems(entries)
-
-                    if (
-                        summary &&
-                        typeof summary.total === 'number' &&
-                        typeof summary.overdue === 'number' &&
-                        typeof summary.dueSoon === 'number' &&
-                        typeof summary.highPriority === 'number'
-                    ) {
-                        setTaskSummary(summary)
-                    } else {
-                        setTaskSummary(summarizeTasks(tasks as TaskRecord[]))
-                    }
-                }
-            } catch (error) {
-                if (!isCancelled) {
-                    setRawTasks([])
-                    setTaskItems([])
-                    setTaskSummary(DEFAULT_TASK_SUMMARY)
-                    setTasksError(getErrorMessage(error, 'Unable to load tasks'))
-                }
-            } finally {
-                if (!isCancelled) {
-                    setTasksLoading(false)
-                }
-            }
+            // Tasks are realtime via Convex; this function is a no-op.
+            setTasksLoading(false)
         }
 
         const loadProposals = async () => {
-            // For clients: always load proposals for the selected workspace (or all, if none selected).
-            // For admin/team: load a limited set so we can surface "upcoming proposals" in cross-feature insights.
             const shouldLoad = user?.role === 'client' || user?.role === 'admin' || user?.role === 'team'
             if (!shouldLoad) {
                 setProposals([])
@@ -306,25 +271,41 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
                 return
             }
 
-            setProposalsLoading(true)
+            // Proposals list is realtime via Convex. We just mirror it into local state
+            // to preserve the existing hook shape.
+            if (convexProposals === undefined) {
+                setProposalsLoading(true)
+                return
+            }
+
+            setProposalsLoading(false)
             setProposalsError(null)
-            try {
-                const results = await listProposals({
-                    clientId: selectedClientId ?? undefined,
-                    pageSize: user?.role === 'client' ? 50 : 25,
-                })
-                if (!isCancelled) {
-                    setProposals(results)
-                }
-            } catch (error) {
-                if (!isCancelled) {
-                    setProposals([])
-                    setProposalsError(getErrorMessage(error, 'Unable to load proposals'))
-                }
-            } finally {
-                if (!isCancelled) {
-                    setProposalsLoading(false)
-                }
+
+            const rows = convexProposals ?? []
+            const mapped: ProposalDraft[] = rows.map((row: any) => ({
+                id: String(row.legacyId),
+                status: (row.status ?? 'draft') as ProposalDraft['status'],
+                stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
+                formData: mergeProposalForm(row.formData ?? null),
+                aiInsights: row.aiInsights ?? null,
+                aiSuggestions: row.aiSuggestions ?? null,
+                pdfUrl: row.pdfUrl ?? null,
+                pptUrl: row.pptUrl ?? null,
+                createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+                updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+                lastAutosaveAt: typeof row.lastAutosaveAtMs === 'number' ? new Date(row.lastAutosaveAtMs).toISOString() : null,
+                clientId: row.clientId ?? null,
+                clientName: row.clientName ?? null,
+                presentationDeck: row.presentationDeck
+                    ? {
+                        ...row.presentationDeck,
+                        storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
+                    }
+                    : null,
+            }))
+
+            if (!isCancelled) {
+                setProposals(mapped)
             }
         }
 
@@ -339,7 +320,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         return () => {
             isCancelled = true
         }
-    }, [user?.id, selectedClientId, getIdToken, refreshKey, isPreviewMode])
+    }, [user?.id, workspaceId, selectedClientId, getIdToken, refreshKey, isPreviewMode, convexProposals, financeRealtime, metricsRealtime])
 
     return {
         financeSummary,

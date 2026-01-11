@@ -1,8 +1,8 @@
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import type Stripe from 'stripe'
+import { ConvexHttpClient } from 'convex/browser'
 
 import { formatDate, parseDate } from '@/lib/dates'
-import { adminDb } from '@/lib/firebase-admin'
+import { api } from '../../convex/_generated/api'
 
 export type SyncOptions = {
   eventType?: string
@@ -18,13 +18,29 @@ export type SyncOutcome = {
   deltaRefunded: number
 }
 
-export function parseTimestampMillis(value: Timestamp | Date | string | null | undefined): number | null {
+// -----------------------------------------------------------------------------
+// Convex client (lazy singleton for server-side use)
+// -----------------------------------------------------------------------------
+let _convexClient: ConvexHttpClient | null = null
+
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) {
+    console.error('[finance-sync] CONVEX_URL not configured')
+    return null
+  }
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
+
+export function parseTimestampMillis(value: Date | string | number | null | undefined): number | null {
   if (!value) {
     return null
   }
 
-  if (value instanceof Timestamp) {
-    return value.toMillis()
+  if (typeof value === 'number') {
+    return Number.isNaN(value) ? null : value
   }
 
   if (value instanceof Date) {
@@ -148,39 +164,48 @@ export async function recordInvoiceRevenue(params: {
     return
   }
 
+  const convex = getConvexClient()
+  if (!convex) {
+    console.error('[finance-sync] Convex client not available for revenue recording')
+    return
+  }
+
   const effectiveDate = paidAt ?? new Date()
   const period = formatDate(effectiveDate, 'yyyy-MM')
   const label = formatDate(effectiveDate, 'MMMM yyyy')
   const docId = clientId ? `${period}_${clientId}` : `${period}_workspace`
 
-  const revenueRef = adminDb.collection('workspaces').doc(workspaceId).collection('financeRevenue').doc(docId)
-
   try {
-    await adminDb.runTransaction(async (transaction) => {
-      const snapshot = await transaction.get(revenueRef)
-      const payload: Record<string, unknown> = {
-        clientId: clientId || null,
-        period,
-        label,
-        currency,
-        revenue: FieldValue.increment(roundedDelta),
-        operatingExpenses: FieldValue.increment(0),
-        updatedAt: FieldValue.serverTimestamp(),
-      }
+    // Get existing revenue record to calculate new total
+    const existing = await convex.query(api.financeRevenue.getByLegacyId, {
+      workspaceId,
+      legacyId: docId,
+    })
 
-      if (!snapshot.exists) {
-        payload.createdAt = FieldValue.serverTimestamp()
-      }
+    const existingRevenue = existing?.revenue ?? 0
+    const existingOperatingExpenses = existing?.operatingExpenses ?? 0
 
-      transaction.set(revenueRef, payload, { merge: true })
+    // Upsert with new total (atomic increment replacement)
+    await convex.mutation(api.financeRevenue.upsertServer, {
+      workspaceId,
+      legacyId: docId,
+      clientId: clientId || null,
+      period,
+      label,
+      revenue: existingRevenue + roundedDelta,
+      operatingExpenses: existingOperatingExpenses,
+      currency: currency.toUpperCase(),
     })
   } catch (error) {
-    console.error('[finance-sync] Failed to record invoice revenue transaction:', error)
-    throw error // Re-throw to allow caller to handle or for transaction to fail properly
+    console.error('[finance-sync] Failed to record invoice revenue:', error)
+    throw error
   }
 }
 
-export async function syncInvoiceRecords(invoice: Stripe.Invoice, options: SyncOptions = {}): Promise<SyncOutcome | null> {
+export async function syncInvoiceRecords(
+  invoice: Stripe.Invoice,
+  options: SyncOptions = {}
+): Promise<SyncOutcome | null> {
   const ownerUid = typeof invoice.metadata?.ownerUid === 'string' ? invoice.metadata.ownerUid : null
   const clientId = typeof invoice.metadata?.clientId === 'string' ? invoice.metadata.clientId : null
   const workspaceId = typeof invoice.metadata?.workspaceId === 'string' ? invoice.metadata.workspaceId : null
@@ -191,6 +216,19 @@ export async function syncInvoiceRecords(invoice: Stripe.Invoice, options: SyncO
       ownerUid,
       clientId,
     })
+    return null
+  }
+
+  if (!workspaceId) {
+    console.warn('[finance-sync] Invoice missing workspaceId metadata, skipping', {
+      invoiceId: invoice.id,
+    })
+    return null
+  }
+
+  const convex = getConvexClient()
+  if (!convex) {
+    console.error('[finance-sync] Convex client not available')
     return null
   }
 
@@ -229,137 +267,102 @@ export async function syncInvoiceRecords(invoice: Stripe.Invoice, options: SyncO
   const stripeStatus = invoice.status ?? options.eventType ?? 'unknown'
   const financeStatus = determineFinanceStatus(invoice)
   const invoiceWithIntent = invoice as InvoiceWithOptionalPaymentIntent
-  const paymentIntentId = typeof invoiceWithIntent.payment_intent === 'string'
-    ? invoiceWithIntent.payment_intent
-    : invoiceWithIntent.payment_intent?.id ?? null
+  const paymentIntentId =
+    typeof invoiceWithIntent.payment_intent === 'string'
+      ? invoiceWithIntent.payment_intent
+      : invoiceWithIntent.payment_intent?.id ?? null
   const collectionMethod = invoice.collection_method ?? null
-
-  const workspaceRef = workspaceId ? adminDb.collection('workspaces').doc(workspaceId) : null
-  const financeInvoiceRef = workspaceRef
-    ? workspaceRef.collection('financeInvoices').doc(invoice.id)
-    : adminDb.collection('users').doc(ownerUid).collection('financeInvoices').doc(invoice.id)
-  const clientRef = workspaceRef
-    ? workspaceRef.collection('clients').doc(clientId)
-    : adminDb.collection('users').doc(ownerUid).collection('clients').doc(clientId)
 
   let deltaPaid = 0
   let deltaRefunded = 0
 
   try {
-    await adminDb.runTransaction(async (transaction) => {
-      const financeSnapshot = await transaction.get(financeInvoiceRef)
-      const existingData = financeSnapshot.exists ? (financeSnapshot.data() as Record<string, unknown>) : {}
+    // 1. Upsert invoice record and get previous values for delta calculation
+    const invoiceResult = await convex.mutation(api.financeInvoices.upsertServer, {
+      workspaceId,
+      legacyId: invoice.id,
+      clientId,
+      clientName: clientNameFallback,
+      amount: amountTotal,
+      status: financeStatus,
+      stripeStatus: typeof stripeStatus === 'string' ? stripeStatus : null,
+      issuedDate: issuedAt.toISOString(),
+      dueDate: dueDate ? dueDate.toISOString() : null,
+      paidDate: paidAt ? paidAt.toISOString() : null,
+      amountPaid,
+      amountRemaining,
+      amountRefunded: resolvedRefunded ?? 0,
+      currency: currency.toUpperCase(),
+      description: invoiceDescription,
+      hostedInvoiceUrl: hostedUrl,
+      number: invoiceNumber,
+      paymentIntentId,
+      collectionMethod,
+    })
 
-      const previousPaid = typeof existingData.amountPaid === 'number' ? existingData.amountPaid : 0
-      const previousRefunded = typeof existingData.amountRefunded === 'number' ? existingData.amountRefunded : 0
+    const previousPaid = invoiceResult.previousAmountPaid ?? 0
+    const previousRefunded = invoiceResult.previousAmountRefunded ?? 0
 
-      if (resolvedRefunded === null) {
-        resolvedRefunded = previousRefunded
-      }
+    if (resolvedRefunded === null) {
+      resolvedRefunded = previousRefunded
+    }
 
-      const incomingRefundTotal = resolvedRefunded ?? previousRefunded
+    const incomingRefundTotal = resolvedRefunded ?? previousRefunded
 
-      deltaPaid = Math.max(amountPaid - previousPaid, 0)
-      deltaRefunded = incomingRefundTotal > previousRefunded ? incomingRefundTotal - previousRefunded : 0
+    deltaPaid = Math.max(amountPaid - previousPaid, 0)
+    deltaRefunded = incomingRefundTotal > previousRefunded ? incomingRefundTotal - previousRefunded : 0
 
-      const baseFinanceData: Record<string, unknown> = {
-        clientId,
-        clientName: clientNameFallback,
-        amount: amountTotal,
-        amountPaid,
-        amountRemaining,
-        amountRefunded: incomingRefundTotal,
-        status: financeStatus,
-        stripeStatus,
-        issuedDate: issuedAt,
-        dueDate,
-        paidDate: paidAt,
-        description: invoiceDescription,
-        hostedInvoiceUrl: hostedUrl,
-        stripeInvoiceId: invoice.id,
-        number: invoiceNumber,
-        currency,
-        paymentIntentId,
-        collectionMethod,
-        updatedAt: FieldValue.serverTimestamp(),
-      }
+    // 2. Update client record with latest invoice info
+    const existingClient = await convex.query(api.clients.getByLegacyIdServer, {
+      workspaceId,
+      legacyId: clientId,
+    })
 
-      if (workspaceId) {
-        baseFinanceData.workspaceId = workspaceId
-        baseFinanceData.updatedBy = ownerUid
-      }
+    const existingIssuedAtMillis = existingClient?.lastInvoiceIssuedAtMs ?? null
 
-      if (financeSnapshot.exists) {
-        transaction.set(financeInvoiceRef, baseFinanceData, { merge: true })
-      } else {
-        transaction.set(
-          financeInvoiceRef,
-          {
-            ...baseFinanceData,
-            createdAt: FieldValue.serverTimestamp(),
-            createdBy: ownerUid,
-          },
-          { merge: true }
-        )
-      }
+    let shouldUpdateClient = true
+    if (existingIssuedAtMillis !== null) {
+      shouldUpdateClient = issuedAt.getTime() >= existingIssuedAtMillis
+    }
 
-      const clientSnapshot = await transaction.get(clientRef)
-      const clientData = clientSnapshot.exists ? (clientSnapshot.data() as Record<string, unknown>) : {}
-      const existingIssuedAtMillis = parseTimestampMillis(clientData?.lastInvoiceIssuedAt as Timestamp | Date | string | null | undefined)
+    const clientName =
+      existingClient?.name && existingClient.name.trim().length > 0
+        ? existingClient.name
+        : clientNameFallback
 
-      let shouldUpdateClient = true
-      if (existingIssuedAtMillis !== null) {
-        shouldUpdateClient = issuedAt.getTime() >= existingIssuedAtMillis
-      }
-
-      const clientName =
-        typeof clientData?.name === 'string' && clientData.name.trim().length > 0
-          ? (clientData.name as string)
-          : clientNameFallback
-
-      const clientPayload: Record<string, unknown> = {
+    if (shouldUpdateClient) {
+      await convex.mutation(api.clients.updateInvoiceFieldsServer, {
+        workspaceId,
+        legacyId: clientId,
         name: clientName,
         lastInvoiceStatus: financeStatus,
         lastInvoiceAmount: amountTotal,
         lastInvoiceCurrency: currency,
-        lastInvoiceIssuedAt: issuedAt,
+        lastInvoiceIssuedAtMs: issuedAt.getTime(),
         lastInvoiceNumber: invoiceNumber,
         lastInvoiceUrl: hostedUrl,
-        lastInvoicePaidAt: paidAt ?? null,
-        updatedAt: FieldValue.serverTimestamp(),
+        lastInvoicePaidAtMs: paidAt ? paidAt.getTime() : null,
+        createIfMissing: true,
+      })
+    } else if (existingClient) {
+      // Check if this is an update to the same invoice number
+      const storedNumber = existingClient.lastInvoiceNumber
+      if (storedNumber && storedNumber === invoiceNumber) {
+        await convex.mutation(api.clients.updateInvoiceFieldsServer, {
+          workspaceId,
+          legacyId: clientId,
+          lastInvoiceStatus: financeStatus,
+          lastInvoiceAmount: amountTotal,
+          lastInvoiceCurrency: currency,
+          lastInvoiceIssuedAtMs: issuedAt.getTime(),
+          lastInvoiceNumber: invoiceNumber,
+          lastInvoiceUrl: hostedUrl,
+          lastInvoicePaidAtMs: paidAt ? paidAt.getTime() : null,
+        })
       }
-
-      if (workspaceId) {
-        clientPayload.workspaceId = workspaceId
-        clientPayload.updatedBy = ownerUid
-      }
-
-      if (shouldUpdateClient) {
-        transaction.set(clientRef, clientPayload, { merge: true })
-      } else if (clientSnapshot.exists) {
-        const storedNumber = typeof clientData?.lastInvoiceNumber === 'string' ? (clientData.lastInvoiceNumber as string) : null
-        if (storedNumber && storedNumber === invoiceNumber) {
-          const deltaPayload: Record<string, unknown> = {
-            lastInvoiceStatus: financeStatus,
-            lastInvoiceAmount: amountTotal,
-            lastInvoiceCurrency: currency,
-            lastInvoiceIssuedAt: issuedAt,
-            lastInvoiceUrl: hostedUrl,
-            lastInvoicePaidAt: paidAt ?? null,
-            updatedAt: FieldValue.serverTimestamp(),
-          }
-
-          if (workspaceId) {
-            deltaPayload.workspaceId = workspaceId
-            deltaPayload.updatedBy = ownerUid
-          }
-
-          transaction.set(clientRef, deltaPayload, { merge: true })
-        }
-      }
-    })
+    }
   } catch (error) {
-    console.error('[finance-sync] Failed to sync invoice records transaction:', error)
+    console.error('[finance-sync] Failed to sync invoice records:', error)
     throw error
   }
 

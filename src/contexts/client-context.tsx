@@ -2,12 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
+import { useQuery, useMutation } from 'convex/react'
+
 import { useAuth } from '@/contexts/auth-context'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { apiFetch } from '@/lib/api-client'
+import { clientsApi } from '@/lib/convex-api'
 import { getPreviewClients, isPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data'
 
 type ClientContextValue = {
+  workspaceId: string | null
   clients: ClientRecord[]
   selectedClientId: string | null
   selectedClient: ClientRecord | null
@@ -41,13 +45,28 @@ function parseError(error: unknown, fallback: string): string {
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth()
 
-  const [clients, setClients] = useState<ClientRecord[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
   const mountedRef = useRef(false)
   const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
   const selectionBeforePreviewRef = useRef<string | null>(null)
+
+  const workspaceId = user?.agencyId ?? null
+
+  const convexClients = useQuery(
+    clientsApi.list,
+    previewEnabled || !workspaceId
+      ? 'skip'
+      : {
+          workspaceId,
+          limit: 100,
+        }
+  )
+
+  const convexCreateClient = useMutation(clientsApi.create)
+  const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
 
   useEffect(() => {
     if (mountedRef.current) {
@@ -101,13 +120,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Entering preview mode: snapshot selection and inject demo clients.
+    // Entering preview mode: snapshot selection.
     if (selectionBeforePreviewRef.current === null) {
       selectionBeforePreviewRef.current = selectedClientId
     }
 
     const previewClients = getPreviewClients()
-    setClients(previewClients)
     setSelectedClientId(previewClients[0]?.id ?? null)
     setError(null)
     setLoading(false)
@@ -137,63 +155,63 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   const fetchClients = useCallback(async (): Promise<ClientRecord[]> => {
     if (previewEnabled) {
-      const previewClients = getPreviewClients()
-      setClients(previewClients)
-      setSelectedClientId(previewClients[0]?.id ?? null)
-      setError(null)
-      setLoading(false)
-      return previewClients
+      return getPreviewClients()
     }
 
-    if (!user?.id) {
-      setClients([])
-      setSelectedClientId(null)
+    if (!workspaceId) {
       return []
     }
 
-    setLoading(true)
-    setError(null)
+    const rows = convexClients ?? []
+    const list: ClientRecord[] = rows.map((row: any) => ({
+      id: row.legacyId,
+      name: row.name,
+      accountManager: row.accountManager,
+      teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
+      billingEmail: row.billingEmail ?? null,
+      stripeCustomerId: row.stripeCustomerId ?? null,
+      lastInvoiceStatus: row.lastInvoiceStatus ?? null,
+      lastInvoiceAmount: row.lastInvoiceAmount ?? null,
+      lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
+      lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
+      lastInvoiceNumber: row.lastInvoiceNumber ?? null,
+      lastInvoiceUrl: row.lastInvoiceUrl ?? null,
+      lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
+      createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
+      updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
+    }))
 
-    try {
-      // For the dashboard, we start with the first page. 
-      // We can implement recursive loading or a "load more" if needed later.
-      const data = await apiFetch<{ clients: ClientRecord[]; nextCursor: string | null }>('/api/clients', {
-        cache: 'no-store',
-      })
-
-      const list = Array.isArray(data.clients) ? data.clients : []
-      setClients(list)
-      return list
-    } catch (fetchError: unknown) {
-      const message = parseError(fetchError, 'Unable to load clients')
-      setError(message)
-      setClients([])
-      return []
-    } finally {
-      setLoading(false)
-    }
-  }, [previewEnabled, user?.id])
+    list.sort((a, b) => a.name.localeCompare(b.name))
+    return list
+  }, [previewEnabled, workspaceId, convexClients])
 
   useEffect(() => {
+    if (previewEnabled) {
+      setSelectedClientId((current) => current ?? getPreviewClients()[0]?.id ?? null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+
     if (authLoading) {
       return
     }
 
-    if (previewEnabled) {
-      void fetchClients()
-      return
-    }
-
-    if (!user?.id) {
-      setClients([])
+    if (!workspaceId) {
       setSelectedClientId(null)
       setError(null)
       setLoading(false)
       return
     }
 
-    void fetchClients()
-  }, [authLoading, user?.id, fetchClients, previewEnabled])
+    if (convexClients === undefined) {
+      setLoading(true)
+      return
+    }
+
+    setLoading(false)
+    setError(null)
+  }, [authLoading, previewEnabled, workspaceId, convexClients])
 
   useEffect(() => {
     if (previewEnabled) {
@@ -212,8 +230,40 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
   }, [previewEnabled, authLoading, user?.id, fetchClients])
 
+  const resolvedClients = useMemo<ClientRecord[]>(() => {
+    if (previewEnabled) {
+      return getPreviewClients()
+    }
+
+    if (!workspaceId) {
+      return []
+    }
+
+    const rows = convexClients ?? []
+    const list: ClientRecord[] = rows.map((row: any) => ({
+      id: row.legacyId,
+      name: row.name,
+      accountManager: row.accountManager,
+      teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
+      billingEmail: row.billingEmail ?? null,
+      stripeCustomerId: row.stripeCustomerId ?? null,
+      lastInvoiceStatus: row.lastInvoiceStatus ?? null,
+      lastInvoiceAmount: row.lastInvoiceAmount ?? null,
+      lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
+      lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
+      lastInvoiceNumber: row.lastInvoiceNumber ?? null,
+      lastInvoiceUrl: row.lastInvoiceUrl ?? null,
+      lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
+      createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
+      updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
+    }))
+
+    list.sort((a, b) => a.name.localeCompare(b.name))
+    return list
+  }, [previewEnabled, workspaceId, convexClients])
+
   useEffect(() => {
-    if (clients.length === 0) {
+    if (resolvedClients.length === 0) {
       if (selectedClientId !== null) {
         setSelectedClientId(null)
       }
@@ -221,25 +271,19 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
 
     setSelectedClientId((current) => {
-      // If we already have a valid selection from the current client list, stick with it
-      if (current && clients.some((client) => client.id === current)) {
+      if (current && resolvedClients.some((client) => client.id === current)) {
         return current
       }
 
-      // Try to recover from local storage
       const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY_SELECTED) : null
-      if (stored && clients.some((client) => client.id === stored)) {
-        // If the stored value matches what we already have (null -> null cases), don't trigger update
+      if (stored && resolvedClients.some((client) => client.id === stored)) {
         if (stored === current) return current
         return stored
       }
 
-      // Default to the first client
-      const firstId = clients[0]?.id ?? null
-      if (firstId === current) return current
-      return firstId
+      return resolvedClients[0]?.id ?? null
     })
-  }, [clients, selectedClientId])
+  }, [resolvedClients, selectedClientId])
 
   const refreshClients = useCallback(async () => {
     return await fetchClients()
@@ -251,21 +295,14 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    setSelectedClientId((current) => {
-      if (current === clientId) {
-        return current
-      }
-
-      const exists = clients.some((client) => client.id === clientId)
-      return exists ? clientId : clients[0]?.id ?? null
-    })
-  }, [clients])
+    setSelectedClientId(clientId)
+  }, [])
 
   const createClient = useCallback(async (
     input: { name: string; accountManager: string; teamMembers: ClientTeamMember[] }
   ): Promise<ClientRecord> => {
-    if (!user?.id) {
-      throw new Error('You must be signed in to create a client')
+    if (!workspaceId) {
+      throw new Error('Workspace is required to create a client')
     }
 
     const name = input.name.trim()
@@ -285,54 +322,61 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       teamMembers.unshift({ name: accountManager, role: 'Account Manager' })
     }
 
-    const created = await apiFetch<ClientRecord>('/api/clients', {
-      method: 'POST',
-      body: JSON.stringify({ name, accountManager, teamMembers }),
+    const res = await convexCreateClient({
+      workspaceId,
+      name,
+      accountManager,
+      teamMembers,
+      billingEmail: null,
+      createdBy: user?.id ?? null,
     })
 
-    if (!created) {
-      throw new Error('Failed to create client: no client returned')
+    const created: ClientRecord = {
+      id: res.legacyId,
+      name,
+      accountManager,
+      teamMembers,
+      billingEmail: null,
+      stripeCustomerId: null,
+      lastInvoiceStatus: null,
+      lastInvoiceAmount: null,
+      lastInvoiceCurrency: null,
+      lastInvoiceIssuedAt: null,
+      lastInvoiceNumber: null,
+      lastInvoiceUrl: null,
+      lastInvoicePaidAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
 
-    setClients((prev) => {
-      const next = [...prev, created]
-      return next.sort((a, b) => a.name.localeCompare(b.name))
-    })
     setSelectedClientId(created.id)
-
     return created
-  }, [user?.id])
+  }, [workspaceId, convexCreateClient, user?.id])
 
   const removeClient = useCallback(async (clientId: string) => {
-    if (!user?.id) {
-      throw new Error('You must be signed in to remove a client')
+    if (!workspaceId) {
+      throw new Error('Workspace is required to remove a client')
     }
 
-    await apiFetch(`/api/clients/${encodeURIComponent(clientId)}`, {
-      method: 'DELETE',
+    await convexSoftDeleteClient({
+      workspaceId,
+      legacyId: clientId,
+      deletedAtMs: Date.now(),
     })
 
-    setClients((prev) => {
-      const next = prev.filter((client) => client.id !== clientId)
-      setSelectedClientId((current) => {
-        if (current !== clientId) {
-          return current
-        }
-        return next[0]?.id ?? null
-      })
-      return next
-    })
-  }, [user?.id])
+    setSelectedClientId((current) => (current === clientId ? null : current))
+  }, [workspaceId, convexSoftDeleteClient])
 
   const selectedClient = useMemo(() => {
     if (!selectedClientId) {
       return null
     }
-    return clients.find((client) => client.id === selectedClientId) ?? null
-  }, [clients, selectedClientId])
+    return resolvedClients.find((client) => client.id === selectedClientId) ?? null
+  }, [resolvedClients, selectedClientId])
 
   const value = useMemo<ClientContextValue>(() => ({
-    clients,
+    workspaceId,
+    clients: resolvedClients,
     selectedClientId,
     selectedClient,
     loading,
@@ -341,7 +385,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     selectClient,
     createClient,
     removeClient,
-  }), [clients, selectedClientId, selectedClient, loading, error, refreshClients, selectClient, createClient, removeClient])
+  }), [workspaceId, resolvedClients, selectedClientId, selectedClient, loading, error, refreshClients, selectClient, createClient, removeClient])
 
   return <ClientContext.Provider value={value}>{children}</ClientContext.Provider>
 }

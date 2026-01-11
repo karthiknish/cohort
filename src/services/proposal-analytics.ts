@@ -1,4 +1,5 @@
-import { apiFetch } from '@/lib/api-client'
+import { ConvexHttpClient } from 'convex/browser'
+
 import type {
   ProposalAnalyticsEvent,
   ProposalAnalyticsSummary,
@@ -8,25 +9,77 @@ import type {
   ProposalAnalyticsFilters,
 } from '@/types/proposal-analytics'
 
+type WorkspaceScopedInput = ProposalAnalyticsInput & { workspaceId: string }
+
+type AnalyticsEventRow = {
+  legacyId: string
+  eventType: string
+  proposalId: string
+  userId: string
+  clientId: string | null
+  clientName: string | null
+  metadata: Record<string, unknown>
+  duration: number | null
+  error: string | null
+  createdAtMs: number
+}
+
+function getConvexHttpClient(): ConvexHttpClient {
+  const url = process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) throw new Error('NEXT_PUBLIC_CONVEX_URL not set')
+  return new ConvexHttpClient(url)
+}
+
+async function queryConvex(functionName: string, args: any) {
+  const client = getConvexHttpClient()
+
+  // NOTE: ConvexHttpClient uses fetch under the hood.
+  // This relies on cookie-based auth (Convex auth integration).
+  return client.query(functionName as any, args)
+}
+
+async function mutateConvex(functionName: string, args: any) {
+  const client = getConvexHttpClient()
+  return client.mutation(functionName as any, args)
+}
+
+function parseDateOnlyToMs(dateOnly: string | undefined, endOfDay = false): number | undefined {
+  if (!dateOnly) return undefined
+  const d = new Date(dateOnly)
+  if (Number.isNaN(d.getTime())) return undefined
+  if (endOfDay) d.setHours(23, 59, 59, 999)
+  return d.getTime()
+}
+
 /**
  * Track a proposal analytics event
  */
-export async function trackProposalEvent(input: ProposalAnalyticsInput): Promise<{ id: string }> {
-  return apiFetch<{ id: string }>('/api/proposal-analytics', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  })
+export async function trackProposalEvent(input: WorkspaceScopedInput): Promise<{ id: string }> {
+  const res = (await mutateConvex('proposalAnalytics:addEvent' as any, {
+    workspaceId: input.workspaceId,
+    eventType: input.eventType,
+    proposalId: input.proposalId,
+    clientId: input.clientId ?? null,
+    clientName: input.clientName ?? null,
+    metadata: input.metadata ?? {},
+    duration: input.duration ?? null,
+    error: input.error ?? null,
+  })) as { legacyId: string }
+
+  return { id: res.legacyId }
 }
 
 /**
  * Track draft creation event
  */
 export async function trackDraftCreated(
+  workspaceId: string,
   proposalId: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'draft_created',
     proposalId,
     clientId,
@@ -38,11 +91,13 @@ export async function trackDraftCreated(
  * Track AI generation start
  */
 export async function trackAiGenerationStarted(
+  workspaceId: string,
   proposalId: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'ai_generation_started',
     proposalId,
     clientId,
@@ -54,12 +109,14 @@ export async function trackAiGenerationStarted(
  * Track AI generation completion
  */
 export async function trackAiGenerationCompleted(
+  workspaceId: string,
   proposalId: string,
   duration: number,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'ai_generation_completed',
     proposalId,
     duration,
@@ -72,12 +129,14 @@ export async function trackAiGenerationCompleted(
  * Track AI generation failure
  */
 export async function trackAiGenerationFailed(
+  workspaceId: string,
   proposalId: string,
   error: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'ai_generation_failed',
     proposalId,
     error,
@@ -90,11 +149,13 @@ export async function trackAiGenerationFailed(
  * Track deck generation start
  */
 export async function trackDeckGenerationStarted(
+  workspaceId: string,
   proposalId: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'deck_generation_started',
     proposalId,
     clientId,
@@ -106,12 +167,14 @@ export async function trackDeckGenerationStarted(
  * Track deck generation completion
  */
 export async function trackDeckGenerationCompleted(
+  workspaceId: string,
   proposalId: string,
   duration: number,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'deck_generation_completed',
     proposalId,
     duration,
@@ -124,12 +187,14 @@ export async function trackDeckGenerationCompleted(
  * Track deck generation failure
  */
 export async function trackDeckGenerationFailed(
+  workspaceId: string,
   proposalId: string,
   error: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'deck_generation_failed',
     proposalId,
     error,
@@ -142,11 +207,13 @@ export async function trackDeckGenerationFailed(
  * Track proposal submission
  */
 export async function trackProposalSubmitted(
+  workspaceId: string,
   proposalId: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'proposal_submitted',
     proposalId,
     clientId,
@@ -158,11 +225,13 @@ export async function trackProposalSubmitted(
  * Track proposal sent to client
  */
 export async function trackProposalSent(
+  workspaceId: string,
   proposalId: string,
   clientId?: string | null,
-  clientName?: string | null
+  clientName?: string | null,
 ): Promise<void> {
   await trackProposalEvent({
+    workspaceId,
     eventType: 'proposal_sent',
     proposalId,
     clientId,
@@ -174,58 +243,80 @@ export async function trackProposalSent(
  * Fetch proposal analytics summary
  */
 export async function fetchProposalAnalyticsSummary(
-  filters?: ProposalAnalyticsFilters
+  workspaceId: string,
+  filters?: ProposalAnalyticsFilters,
 ): Promise<ProposalAnalyticsSummary> {
-  const params = new URLSearchParams({ view: 'summary' })
-  if (filters?.startDate) params.set('startDate', filters.startDate)
-  if (filters?.endDate) params.set('endDate', filters.endDate)
-  if (filters?.clientId) params.set('clientId', filters.clientId)
+  const res = (await queryConvex('proposalAnalytics:summarize' as any, {
+    workspaceId,
+    startDateMs: parseDateOnlyToMs(filters?.startDate),
+    endDateMs: parseDateOnlyToMs(filters?.endDate, true),
+    clientId: filters?.clientId ?? undefined,
+    limit: 1000,
+  })) as { summary: ProposalAnalyticsSummary }
 
-  const data = await apiFetch<{ summary: ProposalAnalyticsSummary }>(`/api/proposal-analytics?${params}`)
-  return data.summary
+  return res.summary
 }
 
 /**
  * Fetch proposal analytics time series
  */
 export async function fetchProposalAnalyticsTimeSeries(
-  filters?: ProposalAnalyticsFilters
+  workspaceId: string,
+  filters?: ProposalAnalyticsFilters,
 ): Promise<ProposalAnalyticsTimeSeriesPoint[]> {
-  const params = new URLSearchParams({ view: 'timeseries' })
-  if (filters?.startDate) params.set('startDate', filters.startDate)
-  if (filters?.endDate) params.set('endDate', filters.endDate)
-  if (filters?.clientId) params.set('clientId', filters.clientId)
+  const res = (await queryConvex('proposalAnalytics:timeSeries' as any, {
+    workspaceId,
+    startDateMs: parseDateOnlyToMs(filters?.startDate),
+    endDateMs: parseDateOnlyToMs(filters?.endDate, true),
+    clientId: filters?.clientId ?? undefined,
+    limit: 1000,
+  })) as { timeseries: ProposalAnalyticsTimeSeriesPoint[] }
 
-  const data = await apiFetch<{ timeseries: ProposalAnalyticsTimeSeriesPoint[] }>(`/api/proposal-analytics?${params}`)
-  return data.timeseries
+  return res.timeseries
 }
 
 /**
  * Fetch proposal analytics by client
  */
 export async function fetchProposalAnalyticsByClient(
-  filters?: ProposalAnalyticsFilters
+  workspaceId: string,
+  filters?: ProposalAnalyticsFilters,
 ): Promise<ProposalAnalyticsByClient[]> {
-  const params = new URLSearchParams({ view: 'by-client' })
-  if (filters?.startDate) params.set('startDate', filters.startDate)
-  if (filters?.endDate) params.set('endDate', filters.endDate)
+  const res = (await queryConvex('proposalAnalytics:byClient' as any, {
+    workspaceId,
+    startDateMs: parseDateOnlyToMs(filters?.startDate),
+    endDateMs: parseDateOnlyToMs(filters?.endDate, true),
+    limit: 1000,
+  })) as { byClient: ProposalAnalyticsByClient[] }
 
-  const data = await apiFetch<{ byClient: ProposalAnalyticsByClient[] }>(`/api/proposal-analytics?${params}`)
-  return data.byClient
+  return res.byClient
 }
 
 /**
  * Fetch raw proposal analytics events
  */
 export async function fetchProposalAnalyticsEvents(
-  filters?: ProposalAnalyticsFilters & { limit?: number }
+  workspaceId: string,
+  filters?: ProposalAnalyticsFilters & { limit?: number },
 ): Promise<ProposalAnalyticsEvent[]> {
-  const params = new URLSearchParams({ view: 'events' })
-  if (filters?.startDate) params.set('startDate', filters.startDate)
-  if (filters?.endDate) params.set('endDate', filters.endDate)
-  if (filters?.clientId) params.set('clientId', filters.clientId)
-  if (filters?.limit) params.set('limit', filters.limit.toString())
+  const res = (await queryConvex('proposalAnalytics:listEvents' as any, {
+    workspaceId,
+    startDateMs: parseDateOnlyToMs(filters?.startDate),
+    endDateMs: parseDateOnlyToMs(filters?.endDate, true),
+    clientId: filters?.clientId ?? undefined,
+    limit: filters?.limit,
+  })) as AnalyticsEventRow[]
 
-  const data = await apiFetch<{ events: ProposalAnalyticsEvent[] }>(`/api/proposal-analytics?${params}`)
-  return data.events
+  return res.map((row) => ({
+    id: row.legacyId,
+    eventType: row.eventType as any,
+    proposalId: row.proposalId,
+    userId: row.userId,
+    clientId: row.clientId ?? null,
+    clientName: row.clientName ?? null,
+    metadata: row.metadata ?? {},
+    duration: row.duration,
+    error: row.error,
+    createdAt: new Date(row.createdAtMs).toISOString(),
+  }))
 }

@@ -1,6 +1,3 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-
-import { storage } from '@/lib/firebase'
 import type { TaskCommentAttachment } from '@/types/task-comments'
 
 const ALLOWED_MIME_TYPES = new Set<string>([
@@ -35,8 +32,10 @@ export async function uploadTaskCommentAttachment(args: {
   userId: string
   taskId: string
   file: File
+  generateUploadUrl: () => Promise<{ url: string }>
+  getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
 }): Promise<TaskCommentAttachment> {
-  const { userId, taskId, file } = args
+  const { userId, taskId, file, generateUploadUrl, getPublicUrl } = args
 
   if (!userId) throw new Error('userId is required')
   if (!taskId) throw new Error('taskId is required')
@@ -51,17 +50,34 @@ export async function uploadTaskCommentAttachment(args: {
     throw new Error('Unsupported attachment file type')
   }
 
-  const timestamp = Date.now()
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-  const storagePath = `users/${userId}/tasks/${taskId}/${timestamp}-${safeName}`
-  const fileRef = ref(storage, storagePath)
+  const { url: uploadUrl } = await generateUploadUrl()
 
-  await uploadBytes(fileRef, file, { contentType })
-  const url = await getDownloadURL(fileRef)
+  const uploadResponse = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': contentType,
+    },
+    body: file,
+  })
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload file (${uploadResponse.status})`)
+  }
+
+  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+  if (!json?.storageId) {
+    throw new Error('Upload did not return storageId')
+  }
+
+  const publicUrl = await getPublicUrl({ storageId: json.storageId })
+
+  if (!publicUrl?.url) {
+    throw new Error('Unable to resolve uploaded file URL')
+  }
 
   return {
     name: file.name,
-    url,
+    url: publicUrl.url,
     type: contentType,
     size: formatFileSize(file.size),
   }

@@ -2,7 +2,8 @@
 // STORAGE LAYER - Type Definitions
 // =============================================================================
 
-import type { FieldValue, Timestamp } from 'firebase/firestore'
+export type FieldValue = unknown
+export type Timestamp = { toMillis?: () => number; toDate?: () => Date } | Date | string | number
 
 // =============================================================================
 // DERIVED METRICS TYPES

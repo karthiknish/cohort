@@ -1,4 +1,3 @@
-import { apiFetch } from '@/lib/api-client'
 import type { PurchaseOrder, PurchaseOrderLineItem } from '@/types/purchase-orders'
 
 export type CreatePurchaseOrderInput = {
@@ -12,34 +11,45 @@ export type CreatePurchaseOrderInput = {
 
 export type UpdatePurchaseOrderInput = Partial<CreatePurchaseOrderInput>
 
+export type PurchaseOrderServices = {
+  listPurchaseOrders: (options?: { status?: string; vendorId?: string; createdBy?: string; limit?: number }) => Promise<{ purchaseOrders: PurchaseOrder[] }>
+  createPurchaseOrder: (input: CreatePurchaseOrderInput) => Promise<{ purchaseOrder: PurchaseOrder }>
+  updatePurchaseOrder: (id: string, input: UpdatePurchaseOrderInput) => Promise<{ ok: true }>
+  deletePurchaseOrder: (id: string) => Promise<{ ok: true }>
+  transitionPurchaseOrder: (
+    id: string,
+    action: 'submit' | 'approve' | 'reject' | 'mark_ordered' | 'mark_received' | 'close' | 'cancel',
+    note?: string | null
+  ) => Promise<{ ok: true }>
+}
+
+let provider: PurchaseOrderServices | null = null
+
+export function setPurchaseOrderServices(next: PurchaseOrderServices) {
+  provider = next
+}
+
+function requireProvider(): PurchaseOrderServices {
+  if (!provider) {
+    throw new Error('Purchase order services not initialised (missing Convex provider)')
+  }
+  return provider
+}
+
 export async function listPurchaseOrders(options?: { status?: string; vendorId?: string; createdBy?: string; limit?: number }) {
-  const search = new URLSearchParams()
-  if (options?.status) search.set('status', options.status)
-  if (options?.vendorId) search.set('vendorId', options.vendorId)
-  if (options?.createdBy) search.set('createdBy', options.createdBy)
-  if (typeof options?.limit === 'number') search.set('limit', String(options.limit))
-  const url = search.size ? `/api/finance/purchase-orders?${search.toString()}` : '/api/finance/purchase-orders'
-  return apiFetch<{ purchaseOrders: PurchaseOrder[] }>(url)
+  return requireProvider().listPurchaseOrders(options)
 }
 
 export async function createPurchaseOrder(input: CreatePurchaseOrderInput) {
-  return apiFetch<{ purchaseOrder: PurchaseOrder }>('/api/finance/purchase-orders', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  })
+  return requireProvider().createPurchaseOrder(input)
 }
 
 export async function updatePurchaseOrder(id: string, input: UpdatePurchaseOrderInput) {
-  return apiFetch<{ ok: true }>(`/api/finance/purchase-orders/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: JSON.stringify(input),
-  })
+  return requireProvider().updatePurchaseOrder(id, input)
 }
 
 export async function deletePurchaseOrder(id: string) {
-  return apiFetch<{ ok: true }>(`/api/finance/purchase-orders/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  })
+  return requireProvider().deletePurchaseOrder(id)
 }
 
 export async function transitionPurchaseOrder(
@@ -47,8 +57,5 @@ export async function transitionPurchaseOrder(
   action: 'submit' | 'approve' | 'reject' | 'mark_ordered' | 'mark_received' | 'close' | 'cancel',
   note?: string | null
 ) {
-  return apiFetch<{ ok: true }>(`/api/finance/purchase-orders/${encodeURIComponent(id)}`, {
-    method: 'POST',
-    body: JSON.stringify({ action, note: note ?? null }),
-  })
+  return requireProvider().transitionPurchaseOrder(id, action, note)
 }

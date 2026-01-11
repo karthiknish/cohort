@@ -4,7 +4,10 @@
 
 import * as Sentry from "@sentry/nextjs";
 
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+
 Sentry.init({
+  enabled: !isLocalhost,
   dsn: "https://75814de78acad983b605b451d7e805d8@o4510657820033024.ingest.de.sentry.io/4510657821278288",
 
   // Add optional integrations for additional features

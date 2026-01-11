@@ -1,10 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMutation } from 'convex/react'
+import { v4 as uuidv4 } from 'uuid'
 import { Calendar as CalendarIcon, LoaderCircle, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { useAuth } from '@/contexts/auth-context'
+import { projectMilestonesApi } from '@/lib/convex-api'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,7 +55,8 @@ export type CreateMilestoneDialogProps = {
 }
 
 export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onCreated }: CreateMilestoneDialogProps) {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
+  const createMilestone = useMutation(projectMilestonesApi.create)
   const { toast } = useToast()
 
   const [open, setOpen] = useState(false)
@@ -97,36 +101,36 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
 
     setLoading(true)
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/projects/${projectId}/milestones`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: title.trim(),
-          status,
-          startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
-          endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
-          description: description.trim() || undefined,
-        }),
+      if (!user?.agencyId) throw new Error('Missing workspace')
+
+      const legacyId = uuidv4()
+      await createMilestone({
+        workspaceId: user.agencyId,
+        legacyId,
+        projectId,
+        title: title.trim(),
+        status,
+        description: description.trim() || undefined,
+        startDateMs: startDate ? startDate.getTime() : undefined,
+        endDateMs: endDate ? endDate.getTime() : undefined,
       })
 
-      if (!response.ok) {
-        let message = 'Failed to create milestone'
-        try {
-          const payload = (await response.json()) as { error?: string }
-          if (payload?.error) message = payload.error
-        } catch {
-          // ignore
-        }
-        throw new Error(message)
+      const milestone: MilestoneRecord = {
+        id: legacyId,
+        projectId,
+        title: title.trim(),
+        description: description.trim() || null,
+        status,
+        startDate: startDate ? startDate.toISOString() : null,
+        endDate: endDate ? endDate.toISOString() : null,
+        ownerId: user.id,
+        order: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
 
-      const data = (await response.json()) as { milestone: MilestoneRecord }
-      onCreated?.(data.milestone)
-      toast({ title: 'Milestone created', description: `“${data.milestone.title}” added to the timeline.` })
+      onCreated?.(milestone)
+      toast({ title: 'Milestone created', description: `“${milestone.title}” added to the timeline.` })
       setOpen(false)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create milestone'
@@ -134,7 +138,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
     } finally {
       setLoading(false)
     }
-  }, [projectId, title, status, startDate, endDate, description, user?.id, getIdToken, toast, onCreated])
+  }, [projectId, title, status, startDate, endDate, description, user?.id, user?.agencyId, toast, onCreated, createMilestone])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

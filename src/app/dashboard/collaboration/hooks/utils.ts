@@ -1,6 +1,5 @@
 // Collaboration hook utility functions
 
-import { Timestamp, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore'
 import type {
   CollaborationAttachment,
   CollaborationMention,
@@ -129,10 +128,6 @@ export function convertToIso(value: unknown): string | null {
     return null
   }
 
-  if (value instanceof Timestamp) {
-    return toISO(value.toDate())
-  }
-
   if (
     typeof value === 'object' &&
     value !== null &&
@@ -259,67 +254,3 @@ export function sanitizeReaction(input: unknown): CollaborationReaction | null {
   }
 }
 
-/**
- * Map realtime Firestore document to CollaborationMessage
- */
-export function mapRealtimeMessage(doc: QueryDocumentSnapshot<DocumentData>): CollaborationMessage {
-  const data = doc.data()
-  const channelType = parseChannelType(data?.channelType)
-
-  const attachments = Array.isArray(data?.attachments)
-    ? data.attachments
-        .map((entry: unknown) => sanitizeAttachment(entry))
-        .filter((entry): entry is CollaborationAttachment => Boolean(entry))
-    : undefined
-
-  const mentions = Array.isArray(data?.mentions)
-    ? data.mentions
-        .map((entry: unknown) => sanitizeMention(entry))
-        .filter((entry): entry is CollaborationMention => Boolean(entry))
-    : undefined
-
-  const reactions = Array.isArray(data?.reactions)
-    ? data.reactions
-        .map((entry: unknown) => sanitizeReaction(entry))
-        .filter((entry): entry is CollaborationReaction => Boolean(entry))
-    : []
-
-  const deletedAt = convertToIso(data?.deletedAt)
-  const deletedBy = typeof data?.deletedBy === 'string' ? data.deletedBy : null
-  const isDeleted = Boolean(deletedAt) || data?.deleted === true
-  const updatedAt = convertToIso(data?.updatedAt)
-  const createdAt = convertToIso(data?.createdAt)
-  const content = typeof data?.content === 'string' ? data.content : ''
-  const resolvedContent = isDeleted ? '' : content
-  const parentMessageId = typeof data?.parentMessageId === 'string' ? data.parentMessageId : null
-  const threadRootId = typeof data?.threadRootId === 'string' ? data.threadRootId : null
-  const threadReplyCountRaw = typeof data?.threadReplyCount === 'number' ? data.threadReplyCount : null
-  const threadReplyCount = threadReplyCountRaw !== null ? Math.max(0, Math.trunc(threadReplyCountRaw)) : undefined
-  const threadLastReplyAt = convertToIso(data?.threadLastReplyAt)
-
-  return {
-    id: doc.id,
-    channelType,
-    clientId: typeof data?.clientId === 'string' ? data.clientId : null,
-    projectId: typeof data?.projectId === 'string' ? data.projectId : null,
-    content: resolvedContent,
-    senderId: typeof data?.senderId === 'string' ? data.senderId : null,
-    senderName:
-      typeof data?.senderName === 'string' && data.senderName.trim().length > 0 ? data.senderName : 'Teammate',
-    senderRole: typeof data?.senderRole === 'string' ? data.senderRole : null,
-    createdAt,
-    updatedAt,
-    isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
-    deletedAt,
-    deletedBy,
-    isDeleted,
-    attachments,
-    format: parseMessageFormat(data?.format),
-    mentions,
-    reactions,
-    parentMessageId,
-    threadRootId,
-    threadReplyCount,
-    threadLastReplyAt,
-  }
-}

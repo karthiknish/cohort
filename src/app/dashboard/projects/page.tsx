@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import {
   TriangleAlert,
   ArrowDown,
@@ -68,7 +69,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { apiFetch } from '@/lib/api-client'
+import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import type { MilestoneRecord } from '@/types/milestones'
@@ -100,7 +101,11 @@ type ProjectResponse = {
 }
 
 export default function ProjectsPage() {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
+
+  const softDeleteProject = useMutation(projectsApi.softDelete)
+  const updateProject = useMutation(projectsApi.update)
+  const workspaceId = user?.agencyId ?? null
   const { selectedClient, selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
@@ -133,6 +138,28 @@ export default function ProjectsPage() {
 
   const debouncedQuery = useDebouncedValue(searchInput, 350)
 
+  const projectsRealtime = useQuery(
+    projectsApi.list,
+    isPreviewMode || !workspaceId || !user?.id
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: selectedClientId ?? undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          limit: 100,
+        }
+  ) as Array<any> | undefined
+
+  const milestonesRealtime = useQuery(
+    projectMilestonesApi.listByProjectIds,
+    isPreviewMode || viewMode !== 'gantt' || !workspaceId || !user?.id
+      ? 'skip'
+      : {
+          workspaceId,
+          projectIds: projects.map((p) => p.id),
+        }
+  ) as Record<string, Array<any>> | undefined
+
   const loadProjects = useCallback(async (retryAttempt = 0) => {
     // Use preview data when in preview mode
     if (isPreviewMode) {
@@ -159,7 +186,7 @@ export default function ProjectsPage() {
       return
     }
 
-    if (!user?.id) {
+    if (!user?.id || !workspaceId) {
       setProjects([])
       setLoading(false)
       setError(null)
@@ -178,24 +205,41 @@ export default function ProjectsPage() {
     }
 
     try {
-      const params = new URLSearchParams()
-      params.set('includeStats', 'true')
-      if (selectedClientId) {
-        params.set('clientId', selectedClientId)
-      }
-      if (statusFilter !== 'all') {
-        params.set('status', statusFilter)
-      }
-      if (debouncedQuery.trim().length > 0) {
-        params.set('query', debouncedQuery.trim())
+      if (!projectsRealtime) {
+        return
       }
 
-      const queryString = params.toString()
-      const data = await apiFetch<ProjectResponse>(`/api/projects${queryString ? `?${queryString}` : ''}`, {
-        cache: 'no-store',
-        signal: abortControllerRef.current.signal,
-      })
-      setProjects(Array.isArray(data.projects) ? data.projects : [])
+      let rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
+
+      if (debouncedQuery.trim().length > 0) {
+        const query = debouncedQuery.trim().toLowerCase()
+        rows = rows.filter((p: any) =>
+          String(p.name ?? '').toLowerCase().includes(query) ||
+          String(p.description ?? '').toLowerCase().includes(query) ||
+          (Array.isArray(p.tags) ? p.tags : []).some((tag: any) => String(tag ?? '').toLowerCase().includes(query))
+        )
+      }
+
+      const mapped: ProjectRecord[] = rows.map((row: any) => ({
+        id: String(row.legacyId),
+        name: String(row.name ?? ''),
+        description: typeof row.description === 'string' ? row.description : null,
+        status: row.status as ProjectStatus,
+        clientId: typeof row.clientId === 'string' ? row.clientId : null,
+        clientName: typeof row.clientName === 'string' ? row.clientName : null,
+        startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+        endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+        tags: Array.isArray(row.tags) ? row.tags : [],
+        ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+        createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+        updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+        taskCount: 0,
+        openTaskCount: 0,
+        recentActivityAt: null,
+        deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+      }))
+
+      setProjects(mapped)
       setError(null)
       setRetryCount(0)
     } catch (fetchError: unknown) {
@@ -226,32 +270,12 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedQuery, getIdToken, isPreviewMode, selectedClientId, statusFilter, user?.id, toast])
+  }, [debouncedQuery, isPreviewMode, selectedClientId, statusFilter, user?.id, workspaceId, toast, projectsRealtime])
 
-  const loadMilestones = useCallback(async (projectIds: string[]) => {
-    if (!user?.id || projectIds.length === 0) {
-      setMilestonesByProject({})
-      setMilestonesError(null)
-      return
-    }
-
-    setMilestonesLoading(true)
-    setMilestonesError(null)
-    try {
-      const params = new URLSearchParams()
-      params.set('projectIds', projectIds.join(','))
-      const data = await apiFetch<{ milestones: Record<string, MilestoneRecord[]> }>(
-        `/api/projects/milestones?${params.toString()}`
-      )
-      setMilestonesByProject(data.milestones ?? {})
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to load milestones'
-      setMilestonesError(message)
-      setMilestonesByProject({})
-    } finally {
-      setMilestonesLoading(false)
-    }
-  }, [getIdToken, user?.id])
+  const loadMilestones = useCallback(async (_projectIds: string[]) => {
+    // Milestones are realtime via Convex; this function is effectively a no-op.
+    return
+  }, [])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -267,10 +291,44 @@ export default function ProjectsPage() {
   }, [loadProjects])
 
   useEffect(() => {
-    if (viewMode !== 'gantt') return
-    const ids = projects.map((p) => p.id)
-    void loadMilestones(ids)
-  }, [viewMode, projects, loadMilestones])
+    if (isPreviewMode || viewMode !== 'gantt') return
+
+    setMilestonesLoading(true)
+    setMilestonesError(null)
+
+    if (!milestonesRealtime) {
+      return
+    }
+
+    try {
+      const mapped: Record<string, MilestoneRecord[]> = {}
+
+      for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
+        const list = Array.isArray(rows) ? rows : []
+        mapped[projectId] = list.map((row: any) => ({
+          id: String(row.legacyId),
+          projectId: String(row.projectId),
+          title: String(row.title ?? ''),
+          description: typeof row.description === 'string' ? row.description : null,
+          status: row.status,
+          startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+          endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+          ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+          order: typeof row.order === 'number' ? row.order : null,
+          createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+          updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+        }))
+      }
+
+      setMilestonesByProject(mapped)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to load milestones'
+      setMilestonesError(message)
+      setMilestonesByProject({})
+    } finally {
+      setMilestonesLoading(false)
+    }
+  }, [isPreviewMode, viewMode, milestonesRealtime])
 
   // Keyboard shortcuts
   useKeyboardShortcut({
@@ -326,8 +384,11 @@ export default function ProjectsPage() {
 
     setDeleting(true)
     try {
-      await apiFetch(`/api/projects/${projectToDelete.id}`, {
-        method: 'DELETE',
+      if (!workspaceId) throw new Error('Missing workspace')
+      await softDeleteProject({
+        workspaceId,
+        legacyId: projectToDelete.id,
+        deletedAtMs: Date.now(),
       })
 
       setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
@@ -344,7 +405,7 @@ export default function ProjectsPage() {
       setDeleteDialogOpen(false)
       setProjectToDelete(null)
     }
-  }, [projectToDelete, isPreviewMode, user?.id, getIdToken, toast])
+  }, [projectToDelete, isPreviewMode, user?.id, workspaceId, softDeleteProject, toast])
 
   const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
     // In preview mode, just update local state (won't persist)
@@ -372,13 +433,15 @@ export default function ProjectsPage() {
     setPendingStatusUpdates((prev) => new Set(prev).add(project.id))
 
     try {
-      const updatedProject = await apiFetch<ProjectRecord>(`/api/projects/${project.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
+      if (!workspaceId) throw new Error('Missing workspace')
+      await updateProject({
+        workspaceId,
+        legacyId: project.id,
+        status: newStatus,
+        updatedAtMs: Date.now(),
       })
 
-      setProjects((prev) => prev.map((p) => p.id === project.id ? updatedProject : p))
-      emitDashboardRefresh({ reason: 'project-mutated', clientId: updatedProject.clientId ?? null })
+      emitDashboardRefresh({ reason: 'project-mutated', clientId: project.clientId ?? null })
       toast({
         title: 'Status updated',
         description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
@@ -397,7 +460,7 @@ export default function ProjectsPage() {
         return next
       })
     }
-  }, [isPreviewMode, user?.id, getIdToken, toast, pendingStatusUpdates])
+  }, [isPreviewMode, user?.id, workspaceId, updateProject, toast, pendingStatusUpdates])
 
   const openDeleteDialog = useCallback((project: ProjectRecord) => {
     setProjectToDelete(project)

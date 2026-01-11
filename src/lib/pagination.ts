@@ -1,4 +1,9 @@
-import { Timestamp } from 'firebase-admin/firestore'
+// IMPORTANT: keep this module usable in the browser.
+// Do not import server-only modules here.
+
+type FirestoreTimestamp = {
+  toDate(): Date
+}
 
 export type PageSizeOptions = {
   defaultValue: number
@@ -12,17 +17,17 @@ export function parsePageSize(raw: string | number | null | undefined, opts: Pag
 }
 
 export type TimestampIdCursor = {
-  time: Timestamp
+  time: Date
   id: string
 }
 
-export function encodeTimestampIdCursor(time: Timestamp | Date | string, id: string): string {
+export function encodeTimestampIdCursor(time: FirestoreTimestamp | Date | string, id: string): string {
   const iso =
     typeof time === 'string'
       ? time
       : time instanceof Date
         ? time.toISOString()
-        : (time as Timestamp).toDate().toISOString()
+        : time.toDate().toISOString()
   return `${iso}|${id}`
 }
 
@@ -34,7 +39,7 @@ export function decodeTimestampIdCursor(cursor: string | null | undefined): Time
   const date = new Date(cursorTime)
   if (Number.isNaN(date.getTime())) return null
 
-  return { time: Timestamp.fromDate(date), id: cursorId }
+  return { time: date, id: cursorId }
 }
 
 export type StringIdCursor = {

@@ -1,6 +1,3 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-
-import { storage } from '@/lib/firebase'
 import type { ExpenseAttachment } from '@/types/expenses'
 
 const ALLOWED_RECEIPT_MIME_TYPES = new Set<string>([
@@ -16,8 +13,10 @@ const MAX_RECEIPT_BYTES = 15 * 1024 * 1024
 export async function uploadExpenseReceipt(args: {
   userId: string
   file: File
+  generateUploadUrl: () => Promise<{ url: string }>
+  getPublicUrl: (args: { storageId: string }) => Promise<{ url: string | null }>
 }): Promise<ExpenseAttachment> {
-  const { userId, file } = args
+  const { userId, file, generateUploadUrl, getPublicUrl } = args
 
   if (!userId) {
     throw new Error('userId is required')
@@ -36,17 +35,34 @@ export async function uploadExpenseReceipt(args: {
     throw new Error('Unsupported receipt file type')
   }
 
-  const timestamp = Date.now()
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-')
-  const storagePath = `users/${userId}/expenses/${timestamp}-${safeName}`
-  const fileRef = ref(storage, storagePath)
+  const { url: uploadUrl } = await generateUploadUrl()
 
-  await uploadBytes(fileRef, file, { contentType })
-  const url = await getDownloadURL(fileRef)
+  const uploadResponse = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': contentType,
+    },
+    body: file,
+  })
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload file (${uploadResponse.status})`)
+  }
+
+  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+  if (!json?.storageId) {
+    throw new Error('Upload did not return storageId')
+  }
+
+  const publicUrl = await getPublicUrl({ storageId: json.storageId })
+
+  if (!publicUrl?.url) {
+    throw new Error('Unable to resolve uploaded file URL')
+  }
 
   return {
     name: file.name,
-    url,
+    url: publicUrl.url,
     type: contentType,
     size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
   }

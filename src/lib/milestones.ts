@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { Timestamp } from 'firebase-admin/firestore'
 
 import { MILESTONE_STATUSES, type MilestoneRecord, type MilestoneStatus } from '@/types/milestones'
 import { toISO } from '@/lib/utils'
@@ -38,7 +37,11 @@ export function mapMilestoneDoc(docId: string, data: StoredMilestone): Milestone
   }
 }
 
-export function normalizeTimestamp(value: string | null | undefined): Timestamp | null {
+/**
+ * Normalizes a date string to milliseconds.
+ * Returns null if the value is empty or invalid.
+ */
+export function normalizeDateToMs(value: string | null | undefined): number | null {
   if (value === undefined || value === null) return null
   const trimmed = value.trim()
   if (!trimmed) return null
@@ -46,5 +49,5 @@ export function normalizeTimestamp(value: string | null | undefined): Timestamp 
   if (Number.isNaN(parsed.getTime())) {
     throw new Error('Invalid date')
   }
-  return Timestamp.fromDate(parsed)
+  return parsed.getTime()
 }

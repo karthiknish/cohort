@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAction } from 'convex/react'
 import { DollarSign, RefreshCw, Save } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from '@/components/ui/use-toast'
+import { useAuth } from '@/contexts/auth-context'
+import { adsCampaignsApi } from '@/lib/convex-api'
 import { cn } from '@/lib/utils'
 import { formatMoney, normalizeCurrencyCode } from '@/constants/currencies'
 
@@ -90,6 +93,10 @@ export function BudgetControlSection({
   const initialMode = useMemo(() => parseBudgetMode(providerId, budgetType) ?? modeOptions[0]?.value ?? null, [budgetType, modeOptions, providerId])
 
   const [amount, setAmount] = useState<string>('')
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const updateCampaign = useAction(adsCampaignsApi.updateCampaign)
+
   const [mode, setMode] = useState<BudgetUiMode | null>(initialMode)
   const [saving, setSaving] = useState(false)
 
@@ -125,31 +132,21 @@ export function BudgetControlSection({
 
     setSaving(true)
     try {
-      const payload: Record<string, unknown> = {
-        providerId,
+      const apiMode = toApiBudgetMode(providerId, mode)
+
+      if (!workspaceId) {
+        throw new Error('Sign in required')
+      }
+
+      await updateCampaign({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: clientId ?? null,
         campaignId,
         action: 'updateBudget',
         budget: parsed,
-      }
-
-      const apiMode = toApiBudgetMode(providerId, mode)
-      if (apiMode) payload.budgetMode = apiMode
-      if (clientId) payload.clientId = clientId
-
-      const response = await fetch('/api/integrations/campaigns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': `${campaignId}-budget-${Date.now()}`,
-        },
-        body: JSON.stringify(payload),
+        budgetMode: apiMode,
       })
-
-      const respPayload = await response.json().catch(() => ({})) as unknown
-
-      if (!response.ok) {
-        throw new Error(unwrapApiErrorMessage(respPayload) || 'Failed to update budget')
-      }
 
       toast({
         title: 'Budget updated',
@@ -166,7 +163,7 @@ export function BudgetControlSection({
     } finally {
       setSaving(false)
     }
-  }, [amount, canEdit, campaignId, clientId, mode, onReloadCampaign, providerId])
+  }, [amount, canEdit, campaignId, clientId, mode, onReloadCampaign, providerId, updateCampaign, workspaceId])
 
   const handleRefresh = useCallback(async () => {
     try {

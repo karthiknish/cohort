@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useProjectContext } from '@/contexts/project-context'
-import { auth } from '@/lib/firebase'
+
 
 interface LogEntry {
   id: string
@@ -35,9 +35,14 @@ export function DebugWindow() {
   const { selectedProject } = useProjectContext()
 
   const copyToken = async () => {
-    if (!auth.currentUser) return
-    const token = await auth.currentUser.getIdToken()
-    await navigator.clipboard.writeText(token)
+    // Better Auth is cookie-based; no client JWT to copy.
+    const response = await fetch('/api/auth/session', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
+
+    const text = await response.text().catch(() => '')
+    await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

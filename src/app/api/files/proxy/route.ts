@@ -6,12 +6,11 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Proxy endpoint for serving PPTX files to the in-app deck viewer.
- * This makes authenticated Firebase Storage / Gamma URLs accessible via same-origin
+ * This makes authenticated Storage / Gamma URLs accessible via same-origin
  * so the client can fetch (and occasionally HEAD) the file without CORS issues.
  */
 
 const ALLOWED_DOMAINS = [
-  'firebasestorage.googleapis.com',
   'storage.googleapis.com',
   'public-api.gamma.app',
   'gamma.app',

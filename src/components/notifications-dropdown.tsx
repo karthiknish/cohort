@@ -19,9 +19,31 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useQuery, useMutation } from 'convex/react'
+
+import { notificationsApi } from '@/lib/convex-api'
+import { parsePageSize } from '@/lib/pagination'
 import { useToast } from '@/components/ui/use-toast'
 
 const PAGE_SIZE = 20
+
+type NotificationsCursor = {
+  createdAtMs: number
+  legacyId: string
+}
+
+function encodeCursor(input: NotificationsCursor | null) {
+  return input ? Buffer.from(JSON.stringify(input), 'utf8').toString('base64url') : null
+}
+
+function decodeCursor(input: string | null): NotificationsCursor | null {
+  if (!input) return null
+  try {
+    return JSON.parse(Buffer.from(input, 'base64url').toString('utf8')) as NotificationsCursor
+  } catch {
+    return null
+  }
+}
 
 type NotificationResponse = {
   notifications?: WorkspaceNotification[]
@@ -36,94 +58,77 @@ type AckOptions = {
 }
 
 export function NotificationsDropdown() {
-  const { user, getIdToken } = useAuth()
+  const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
 
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [cursor, setCursor] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [ackInFlight, setAckInFlight] = useState(false)
 
-  const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications])
+  const workspaceId = user?.agencyId
+
+  const decodedCursor = useMemo(() => decodeCursor(cursor), [cursor])
+
+  const notificationsQuery = useQuery(
+    notificationsApi.list,
+    open && workspaceId
+      ? {
+          workspaceId,
+          pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
+          role: user?.role ?? undefined,
+          clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
+          afterCreatedAtMs: decodedCursor?.createdAtMs,
+          afterLegacyId: decodedCursor?.legacyId,
+        }
+      : 'skip'
+  ) as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null } | undefined
+
+  const notifications = notificationsQuery?.notifications ?? []
+
+  const unreadCountQuery = useQuery(
+    notificationsApi.getUnreadCount,
+    workspaceId
+      ? {
+          workspaceId,
+          role: user?.role ?? undefined,
+          clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
+        }
+      : 'skip'
+  ) as { unreadCount: number } | undefined
+
+  const unreadCount = unreadCountQuery?.unreadCount ?? notifications.filter((item) => !item.read).length
+
+  useEffect(() => {
+    if (!notificationsQuery) return
+
+    setLoading(false)
+    setLoadingMore(false)
+    setNextCursor(encodeCursor(notificationsQuery.nextCursor))
+  }, [notificationsQuery])
 
   const fetchNotifications = useCallback(
-    async ({ append = false, cursor }: { append?: boolean; cursor?: string | null } = {}) => {
-      if (!user?.id) {
-        return
-      }
-
-      const params = new URLSearchParams()
-      params.set('pageSize', String(PAGE_SIZE))
-      if (user.role) {
-        params.set('role', user.role)
-      }
-      if (user.role === 'client' && selectedClientId) {
-        params.set('clientId', selectedClientId)
-      }
-      if (cursor) {
-        params.set('after', cursor)
-      }
-
-      const token = await getIdToken()
-
-      const response = await fetch(`/api/notifications?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: 'no-store',
-      })
-
-      const payload = (await response.json().catch(() => null)) as NotificationResponse | null
-
-      if (!response.ok || !payload) {
-        const message = payload?.error ?? 'Failed to load notifications'
-        throw new Error(message)
-      }
-
-      const items = Array.isArray(payload.notifications) ? payload.notifications : []
-
-      setNotifications((prev) => (append ? [...prev, ...items] : items))
-      setNextCursor(payload.nextCursor ?? null)
+    async ({ cursor }: { cursor?: string | null } = {}) => {
+      setLoading(true)
+      setCursor(cursor ?? null)
     },
-    [getIdToken, selectedClientId, user?.id, user?.role]
+    []
   )
+
+  const ackNotifications = useMutation(notificationsApi.ack)
 
   const updateNotificationStatus = useCallback(
     async (ids: string[], action: AckAction, options: AckOptions = {}) => {
-      if (!user?.id || ids.length === 0) {
+      if (!workspaceId || ids.length === 0) {
         return
       }
 
-      const token = await getIdToken()
-
       try {
         setAckInFlight(true)
-        const response = await fetch('/api/notifications/ack', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ ids, action }),
-        })
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null
-          const message = payload?.error ?? 'Failed to update notifications'
-          throw new Error(message)
-        }
-
-        setNotifications((prev) => {
-          if (action === 'dismiss') {
-            return prev.filter((item) => !ids.includes(item.id))
-          }
-
-          return prev.map((item) => (ids.includes(item.id) ? { ...item, read: true } : item))
-        })
+        await ackNotifications({ workspaceId, ids, action })
 
         if (!options.silent) {
           toast({ title: action === 'dismiss' ? 'Dismissed' : 'Marked as read' })
@@ -135,25 +140,18 @@ export function NotificationsDropdown() {
         setAckInFlight(false)
       }
     },
-    [getIdToken, toast, user?.id]
+    [ackNotifications, toast, workspaceId]
   )
 
   const handleOpenChange = useCallback(
     (value: boolean) => {
       setOpen(value)
-      if (value && !loading) {
+      if (value) {
         setLoading(true)
-        fetchNotifications()
-          .catch((error) => {
-            const message = error instanceof Error ? error.message : 'Unable to load notifications'
-            toast({ title: 'Loading failed', description: message, variant: 'destructive' })
-          })
-          .finally(() => {
-            setLoading(false)
-          })
+        void fetchNotifications()
       }
     },
-    [fetchNotifications, loading, toast]
+    [fetchNotifications]
   )
 
   useEffect(() => {
@@ -170,14 +168,9 @@ export function NotificationsDropdown() {
   }, [ackInFlight, notifications, open, updateNotificationStatus])
 
   const handleRefresh = useCallback(() => {
+    setCursor(null)
     setLoading(true)
-    fetchNotifications()
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: 'Refresh failed', description: message, variant: 'destructive' })
-      })
-      .finally(() => setLoading(false))
-  }, [fetchNotifications, toast])
+  }, [])
 
   const handleLoadMore = useCallback(() => {
     if (!nextCursor || loadingMore) {
@@ -185,13 +178,8 @@ export function NotificationsDropdown() {
     }
 
     setLoadingMore(true)
-    fetchNotifications({ append: true, cursor: nextCursor })
-      .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Unable to load notifications'
-        toast({ title: "Couldn't load more", description: message, variant: 'destructive' })
-      })
-      .finally(() => setLoadingMore(false))
-  }, [fetchNotifications, loadingMore, nextCursor, toast])
+    fetchNotifications({ cursor: nextCursor }).finally(() => setLoadingMore(false))
+  }, [fetchNotifications, loadingMore, nextCursor])
 
   const handleDismiss = useCallback(
     (id: string) => {

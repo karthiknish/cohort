@@ -5,7 +5,7 @@ import {
   buildRateLimitHeaders, 
   RATE_LIMITS 
 } from '@/lib/rate-limiter'
-import { checkDistributedRateLimit } from '@/lib/rate-limiter-distributed'
+import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 
 const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, RATE_LIMITS.standard.maxRequests)
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, RATE_LIMITS.standard.windowMs)
@@ -14,6 +14,7 @@ const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
 const ADMIN_ONLY_ROUTE_PREFIX = '/admin'
 const AUTH_ROUTE_PREFIX = '/auth'
 const AUTH_COOKIE = 'cohorts_token'
+const BETTER_AUTH_SESSION_COOKIE = 'better-auth.session_token'
 const ROLE_COOKIE = 'cohorts_role'
 const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
@@ -37,7 +38,7 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api/')) {
     const identifier = getClientIdentifier(request)
-    const rateLimit = await checkDistributedRateLimit(`api:${identifier}`, {
+    const rateLimit = await checkConvexRateLimit(`api:${identifier}`, {
       maxRequests: API_RATE_LIMIT_MAX,
       windowMs: API_RATE_LIMIT_WINDOW_MS,
     })
@@ -62,7 +63,9 @@ export async function middleware(request: NextRequest) {
     })
     return response
   }
-  const token = request.cookies.get(AUTH_COOKIE)?.value
+  const token =
+    request.cookies.get(AUTH_COOKIE)?.value ??
+    request.cookies.get(BETTER_AUTH_SESSION_COOKIE)?.value
   const role = request.cookies.get(ROLE_COOKIE)?.value
 
   console.log(`[Middleware] Path: ${pathname} | Token present: ${!!token} (${token?.slice(0, 10)}...) | Role: ${role}`)
@@ -75,7 +78,9 @@ export async function middleware(request: NextRequest) {
   // For the home page (/), redirect authenticated users to dashboard
   // This eliminates the brief flash of home page before client-side redirect
   if (pathname === '/') {
-    const token = request.cookies.get(AUTH_COOKIE)?.value
+    const token =
+      request.cookies.get(AUTH_COOKIE)?.value ??
+      request.cookies.get(BETTER_AUTH_SESSION_COOKIE)?.value
     // Only redirect if we have a valid, non-expired session
     if (token && !isSessionExpired(request)) {
       const redirectUrl = request.nextUrl.clone()

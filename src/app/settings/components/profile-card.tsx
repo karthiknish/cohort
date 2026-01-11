@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,9 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/contexts/auth-context'
-import { storage } from '@/lib/firebase'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { settingsApi } from '@/lib/convex-api'
 import { getAvatarInitials } from './utils'
 import { validateFile } from '@/lib/utils'
 
@@ -31,14 +30,17 @@ export function ProfileCard({
   whatsappCollaborationEnabled = false,
   saveNotificationPreferences,
 }: ProfileCardProps) {
-  const { user, updateProfile } = useAuth()
   const { toast } = useToast()
-  
+  const profile = useQuery(settingsApi.getMyProfile)
+  const updateMyProfile = useMutation(settingsApi.updateMyProfile)
+
+  const user = profile
+
   const [profileName, setProfileName] = useState(user?.name ?? '')
   const [profilePhone, setProfilePhone] = useState(user?.phoneNumber ?? '')
   const [profileError, setProfileError] = useState<string | null>(null)
   const [savingProfile, setSavingProfile] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoURL ?? null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoUrl ?? null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   
@@ -52,8 +54,8 @@ export function ProfileCard({
   }, [user?.name, user?.phoneNumber])
 
   useEffect(() => {
-    setAvatarPreview(user?.photoURL ?? null)
-  }, [user?.photoURL])
+    setAvatarPreview(user?.photoUrl ?? null)
+  }, [user?.photoUrl])
 
   useEffect(() => {
     return () => {
@@ -102,7 +104,7 @@ export function ProfileCard({
       setProfileError(null)
 
       try {
-        await updateProfile({
+        await updateMyProfile({
           name: nextName,
           phoneNumber: nextPhone.length ? nextPhone : null,
         })
@@ -124,7 +126,7 @@ export function ProfileCard({
         setSavingProfile(false)
       }
     },
-    [profileName, profilePhone, saveNotificationPreferences, toast, updateProfile, user, whatsappCollaborationEnabled, whatsappTasksEnabled],
+    [profileName, profilePhone, saveNotificationPreferences, toast, updateMyProfile, user, whatsappCollaborationEnabled, whatsappTasksEnabled],
   )
 
   const handleAvatarButtonClick = useCallback(() => {
@@ -167,16 +169,10 @@ export function ProfileCard({
       tempAvatarUrlRef.current = objectUrl
       setAvatarPreview(objectUrl)
 
-      try {
-        const storageKey = `users/${user.id}/avatar/${Date.now()}-${file.name}`
-        const fileRef = ref(storage, storageKey)
-        await uploadBytes(fileRef, file, { contentType: file.type })
-        const downloadUrl = await getDownloadURL(fileRef)
-
-        await updateProfile({ photoURL: downloadUrl })
-        setAvatarPreview(downloadUrl)
-        toast({ title: 'Profile photo updated', description: 'Your avatar has been saved.' })
-      } catch (uploadError) {
+       try {
+         setAvatarError('Avatar uploads are temporarily disabled during migration.')
+         setAvatarPreview(previousUrl ?? null)
+       } catch (uploadError) {
         console.error('[settings/profile] avatar upload failed', uploadError)
         setAvatarError('Failed to upload image. Try again.')
         setAvatarPreview(previousUrl ?? null)
@@ -190,7 +186,7 @@ export function ProfileCard({
         event.target.value = ''
       }
     },
-    [avatarPreview, toast, updateProfile, user],
+    [avatarPreview, toast, updateMyProfile, user],
   )
 
   const handleAvatarRemove = useCallback(async () => {
@@ -208,7 +204,7 @@ export function ProfileCard({
     }
 
     try {
-      await updateProfile({ photoURL: null })
+      await updateMyProfile({ photoUrl: null })
       setAvatarPreview(null)
       toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
     } catch (removeError) {
@@ -218,7 +214,7 @@ export function ProfileCard({
     } finally {
       setAvatarUploading(false)
     }
-  }, [toast, updateProfile, user])
+  }, [toast, updateMyProfile, user])
 
   return (
     <Card>

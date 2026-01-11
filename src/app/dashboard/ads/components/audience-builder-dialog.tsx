@@ -2,6 +2,12 @@
 
 import { useState, useCallback } from 'react'
 import { Plus, X, Users, MapPin, Tag, Heart, Globe, Sparkles, ChevronRight } from 'lucide-react'
+
+import { useAction } from 'convex/react'
+
+import { adsAudiencesApi } from '@/lib/convex-api'
+import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
 import {
   Dialog,
   DialogContent,
@@ -53,6 +59,11 @@ const AGE_PRESETS = [
 ]
 
 export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Props) {
+  const { user } = useAuth()
+  const { selectedClientId } = useClientContext()
+
+  const createAudience = useAction(adsAudiencesApi.createAudience)
+
   const [activeTab, setActiveTab] = useState('basics')
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<AudienceFormData>({
@@ -150,27 +161,26 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
 
     setLoading(true)
     try {
-      const response = await fetch('/api/integrations/audiences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId,
-          name: formData.name,
-          description: formData.description,
-          segments: formData.segments,
-          locations: formData.locations.map(l => ({ id: l.id, name: l.name, lat: l.lat, lng: l.lng })),
-          interests: formData.interests,
-          demographics: {
-            ageMin: formData.ageMin,
-            ageMax: formData.ageMax,
-            genders: formData.genders,
-          },
-        }),
-      })
+      const workspaceId = user?.agencyId ? String(user.agencyId) : null
+      if (!workspaceId) {
+        throw new Error('Missing workspace id')
+      }
 
-      if (!response.ok) throw new Error('Failed to create audience')
-      
-      const result = await response.json()
+      const result = await createAudience({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: selectedClientId ?? null,
+        name: formData.name,
+        description: formData.description,
+        segments: formData.segments,
+        locations: formData.locations.map((l) => ({ id: l.id, name: l.name, lat: l.lat, lng: l.lng })),
+        interests: formData.interests,
+        demographics: {
+          ageMin: formData.ageMin,
+          ageMax: formData.ageMax,
+          genders: formData.genders,
+        },
+      })
       
       toast({
         title: 'Success',

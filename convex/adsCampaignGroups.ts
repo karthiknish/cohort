@@ -1,0 +1,146 @@
+import { action } from './_generated/server'
+import { v } from 'convex/values'
+
+function requireIdentity(identity: unknown): asserts identity {
+  if (!identity) {
+    throw new Error('Unauthorized')
+  }
+}
+
+function normalizeClientId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
+  if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
+  const fiveMinutes = 5 * 60 * 1000
+  return expiresAtMs - Date.now() <= fiveMinutes
+}
+
+function asErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  return 'Unknown error'
+}
+
+export type CampaignGroup = {
+  id: string
+  name: string
+  status: string
+  totalBudget?: number
+  currency?: string
+}
+
+export const listCampaignGroups = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('linkedin'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    requireIdentity(identity)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration) {
+      throw new Error('linkedin integration not found')
+    }
+
+    if (!integration.accessToken || !integration.accountId) {
+      throw new Error('LinkedIn credentials not configured')
+    }
+
+    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      throw new Error('LinkedIn token expired; reconnect integration')
+    }
+
+    try {
+      const { listLinkedInCampaignGroups } = await import('@/services/integrations/linkedin-ads')
+
+      const groups = await listLinkedInCampaignGroups({
+        accessToken: integration.accessToken,
+        accountId: integration.accountId,
+      })
+
+      return groups.map(
+        (group: any): CampaignGroup => ({
+          id: group.id,
+          name: group.name,
+          status: group.status,
+          totalBudget: group.totalBudget,
+          currency: group.currency,
+        })
+      )
+    } catch (err) {
+      throw new Error(asErrorMessage(err))
+    }
+  },
+})
+
+export const updateCampaignGroup = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('linkedin'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    campaignGroupId: v.string(),
+    action: v.union(v.literal('enable'), v.literal('pause'), v.literal('updateBudget')),
+    budget: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    requireIdentity(identity)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration) {
+      throw new Error('linkedin integration not found')
+    }
+
+    if (!integration.accessToken) {
+      throw new Error('LinkedIn access token missing')
+    }
+
+    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      throw new Error('LinkedIn token expired; reconnect integration')
+    }
+
+    try {
+      const { updateLinkedInCampaignGroupBudget, updateLinkedInCampaignGroupStatus } = await import(
+        '@/services/integrations/linkedin-ads'
+      )
+
+      if (args.action === 'enable' || args.action === 'pause') {
+        await updateLinkedInCampaignGroupStatus({
+          accessToken: integration.accessToken,
+          campaignGroupId: args.campaignGroupId,
+          status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
+        })
+      } else if (args.action === 'updateBudget' && args.budget !== undefined) {
+        await updateLinkedInCampaignGroupBudget({
+          accessToken: integration.accessToken,
+          campaignGroupId: args.campaignGroupId,
+          totalBudget: args.budget,
+        })
+      }
+
+      return { success: true }
+    } catch (err) {
+      throw new Error(asErrorMessage(err))
+    }
+  },
+})

@@ -6,7 +6,8 @@
  */
 
 import type { AuthUser } from '@/services/auth'
-import { authService } from '@/services/auth'
+
+const USE_BETTER_AUTH = true
 
 const LAST_SYNC_TOKEN_KEY = 'cohorts.auth.lastSyncToken'
 const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
@@ -74,20 +75,27 @@ export class SessionSyncManager {
             return true
         }
 
-        // If we're offline, don't even try to sync
-        if (!navigator.onLine) {
-            return false
-        }
-
         // If a server session already exists and is still fresh, avoid re-syncing on reload.
         // This prevents an auth-session POST on every hard refresh.
+        //
+        // Important: we also need to ensure the server role cookie matches the client role.
+        // Otherwise we can get stuck showing a stale role (e.g. `client`) forever.
         const existingSessionExpiresAt = getSessionExpiresAt()
         const hasFreshServerSession =
             authUser &&
             typeof existingSessionExpiresAt === 'number' &&
             Date.now() < existingSessionExpiresAt - SESSION_SYNC_BUFFER_MS
 
-        if (hasFreshServerSession && retryCount === 0) {
+        const cookieRole = getCookieValue('cohorts_role')
+        const cookieStatus = getCookieValue('cohorts_status')
+        
+        // If cookies are missing entirely, we MUST sync regardless of session freshness
+        const cookiesMissing = !cookieRole || !cookieStatus
+        const cookieRoleMismatch = Boolean(authUser && cookieRole && cookieRole !== authUser.role)
+        const cookieStatusMismatch = Boolean(authUser && cookieStatus && cookieStatus !== authUser.status)
+
+        // Skip sync if we have fresh session AND cookies exist AND no mismatch
+        if (hasFreshServerSession && !cookiesMissing && !cookieRoleMismatch && !cookieStatusMismatch && retryCount === 0) {
             return true
         }
 
@@ -102,8 +110,9 @@ export class SessionSyncManager {
             }
         }
 
-        // Dedup (when we actually intend to sync)
-        if (token === getStoredSyncToken() && retryCount === 0) {
+        // Dedup: skip if token matches and cookies exist
+        const storedToken = getStoredSyncToken()
+        if (token === storedToken && retryCount === 0 && !cookiesMissing) {
             return true
         }
 
@@ -115,7 +124,7 @@ export class SessionSyncManager {
                     return this.handleDeleteSession(csrfToken)
                 }
 
-                return this.handleCreateSession(token, authUser, csrfToken, retryCount)
+                return this.handleCreateSession(token, authUser, csrfToken, retryCount, cookiesMissing)
             } catch (error) {
                 return this.handleSyncError(error, authUser, retryCount)
             }
@@ -133,11 +142,8 @@ export class SessionSyncManager {
 
     private async getTargetToken(authUser: AuthUser | null): Promise<string | null> {
         if (!authUser) return null
-        try {
-            return await authService.getIdToken()
-        } catch {
-            return null
-        }
+        if (USE_BETTER_AUTH) return 'better-auth'
+        return null
     }
 
     private async handleDeleteSession(csrfToken: string | null): Promise<boolean> {
@@ -157,7 +163,8 @@ export class SessionSyncManager {
         token: string,
         authUser: AuthUser | null,
         csrfToken: string | null,
-        retryCount: number
+        retryCount: number,
+        cookiesMissing: boolean = false
     ): Promise<boolean> {
         const headers: HeadersInit = { 'Content-Type': 'application/json' }
         if (csrfToken) {
@@ -167,11 +174,9 @@ export class SessionSyncManager {
         const response = await fetch('/api/auth/session', {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-                token,
-                role: authUser?.role,
-                status: authUser?.status,
-            }),
+            body: USE_BETTER_AUTH ? JSON.stringify({}) : JSON.stringify({}),
+            cache: 'no-store',
+            credentials: 'same-origin',
         })
 
         if (!response.ok) {
@@ -197,7 +202,30 @@ export class SessionSyncManager {
             return false
         }
 
-        setStoredSyncToken(token)
+        // Bootstrap creates/updates user in Convex if needed.
+        // Only call if cookies were missing (new user or first sync).
+        if (cookiesMissing) {
+            try {
+                const bootstrapHeaders: HeadersInit = { 'Content-Type': 'application/json' }
+                if (csrfToken) {
+                    bootstrapHeaders['x-csrf-token'] = csrfToken
+                }
+                
+                const bootstrapRes = await fetch('/api/auth/bootstrap', {
+                    method: 'POST',
+                    headers: bootstrapHeaders,
+                    body: JSON.stringify({}),
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                })
+
+                // Bootstrap failure is non-fatal - user can still use the app
+            } catch {
+                // Silently ignore bootstrap failures
+            }
+        }
+
+        setStoredSyncToken(USE_BETTER_AUTH ? 'better-auth' : token)
         return true
     }
 

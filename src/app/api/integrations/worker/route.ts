@@ -1,15 +1,25 @@
 import { z } from 'zod'
-import { adminDb } from '@/lib/firebase-admin'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../../../../convex/_generated/api'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError } from '@/lib/api-errors'
-import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
-  maxUsers: z.number().optional(),
+  maxWorkspaces: z.number().optional(),
 })
+
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) throw new Error('CONVEX_URL is not configured')
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 /**
  * Background worker that processes sync jobs continuously.
@@ -29,54 +39,48 @@ export const POST = createApiHandler(
 
     const startedAt = Date.now()
     const maxJobs = Math.min(body.maxJobs || 10, 25) // Process up to 25 jobs per invocation
-    const maxUsers = Math.min(body.maxUsers || 50, 100) // Check up to 100 users
+    const maxWorkspaces = Math.min(body.maxWorkspaces || 50, 100) // Check up to 100 workspaces
     const origin = req.nextUrl.origin
     const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
 
     if (!cronSecret) {
       throw new Error('INTEGRATIONS_CRON_SECRET is not configured')
     }
+
+    const convex = getConvexClient()
   
   let processedJobs = 0
   let successfulJobs = 0
   let failedJobs = 0
   let hadQueuedJobs = false
   let inspectedQueuedJobs = 0
-  const jobResults: Array<{ userId: string; jobId: string; providerId: string; status: string; error?: string }> = []
+  const jobResults: Array<{ workspaceId: string; jobId: string; providerId: string; status: string; error?: string }> = []
 
-    // Get users with queued sync jobs
-    // Note: sync jobs are stored under workspaces/<workspaceId>/syncJobs.
-    const usersSnapshot = await adminDb
-      .collection('users')
-      .limit(maxUsers)
-      .get()
+    // Get workspaces with queued sync jobs directly from Convex
+    const workspaceIds = await convex.query(api.adsIntegrations.listWorkspacesWithQueuedJobs, {
+      limit: maxWorkspaces,
+    })
 
-    for (const userDoc of usersSnapshot.docs) {
+    for (const workspaceId of workspaceIds) {
       if (processedJobs >= maxJobs) {
         break // Stop if we've hit the job limit
       }
 
-      const userId = userDoc.id
+      // Count queued jobs for this workspace
+      const { count: queuedCount, hasMore } = await convex.query(
+        api.adsIntegrations.countQueuedJobsForWorkspace,
+        { workspaceId, limit: Math.min(3, maxJobs - processedJobs) }
+      )
 
-      // Resolve workspaceId for this user (agency workspace support)
-      const workspaceId = await resolveWorkspaceIdForUser(userId)
-
-      // Check for queued jobs for this workspace
-      const queuedJobsSnapshot = await adminDb
-        .collection('workspaces')
-        .doc(workspaceId)
-        .collection('syncJobs')
-        .where('status', '==', 'queued')
-        .orderBy('createdAt', 'asc')
-        .limit(Math.min(3, maxJobs - processedJobs)) // Max 3 jobs per workspace per run
-        .get()
-
-      if (!queuedJobsSnapshot.empty) {
+      if (queuedCount > 0) {
         hadQueuedJobs = true
-        inspectedQueuedJobs += queuedJobsSnapshot.size
+        inspectedQueuedJobs += queuedCount
       }
 
-      for (const jobDoc of queuedJobsSnapshot.docs) {
+      // Process up to 3 jobs per workspace per run
+      const jobsToProcess = Math.min(queuedCount, 3, maxJobs - processedJobs)
+      
+      for (let i = 0; i < jobsToProcess; i++) {
         try {
           processedJobs++
 
@@ -87,7 +91,7 @@ export const POST = createApiHandler(
               'Content-Type': 'application/json',
               'x-cron-key': cronSecret
             },
-            body: JSON.stringify({ userId })
+            body: JSON.stringify({ workspaceId })
           })
 
           const result = await processResponse.json().catch(() => ({ error: 'Invalid response' }))
@@ -95,16 +99,16 @@ export const POST = createApiHandler(
           if (processResponse.ok) {
             successfulJobs++
             jobResults.push({
-              userId,
-              jobId: result.jobId || jobDoc.id,
+              workspaceId,
+              jobId: result.jobId || 'unknown',
               providerId: result.providerId || 'unknown',
               status: 'success'
             })
           } else {
             failedJobs++
             jobResults.push({
-              userId,
-              jobId: jobDoc.id,
+              workspaceId,
+              jobId: 'unknown',
               providerId: 'unknown',
               status: 'failed',
               error: result.error || 'Unknown error'
@@ -118,8 +122,8 @@ export const POST = createApiHandler(
           failedJobs++
           const message = error instanceof Error ? error.message : 'Unknown processing error'
           jobResults.push({
-            userId,
-            jobId: jobDoc.id,
+            workspaceId,
+            jobId: 'unknown',
             providerId: 'unknown',
             status: 'failed',
             error: message
@@ -142,7 +146,7 @@ export const POST = createApiHandler(
 
   const errorSummaries = jobResults
     .filter((job) => job.status === 'failed' && typeof job.error === 'string')
-    .map((job) => `${job.providerId ?? 'unknown'}@${job.userId}: ${job.error}`)
+    .map((job) => `${job.providerId ?? 'unknown'}@${job.workspaceId}: ${job.error}`)
 
   const providerFailureCounts = jobResults.reduce<Record<string, number>>((acc, job) => {
     if (job.status === 'failed') {
@@ -153,19 +157,19 @@ export const POST = createApiHandler(
   }, {})
 
   const providerFailureThresholds = await Promise.all(
-    Object.entries(providerFailureCounts).map(async ([providerId, failedJobs]) => {
+    Object.entries(providerFailureCounts).map(async ([providerId, failedJobCount]) => {
       try {
         const preference = await getSchedulerAlertPreference(providerId)
         return {
           providerId,
-          failedJobs,
+          failedJobs: failedJobCount,
           threshold: preference?.failureThreshold ?? null,
         }
       } catch (error) {
         console.error('[integrations/worker] failed to load alert preference', providerId, error)
         return {
           providerId,
-          failedJobs,
+          failedJobs: failedJobCount,
           threshold: null,
         }
       }

@@ -1,12 +1,13 @@
 import { useCallback, useMemo } from 'react'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
-import { db } from '@/lib/firebase'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
+import { onboardingApi } from '@/lib/convex-api'
 
 export function useOnboardingTour() {
     const { user } = useAuth()
+    const upsertOnboarding = useMutation(onboardingApi.upsert)
 
     const tourSteps = useMemo(() => [
         {
@@ -88,21 +89,22 @@ export function useOnboardingTour() {
                 // Optional: Add custom animations or glow effects to highlighted element
             },
             onDestroyed: async () => {
-                if (user?.id) {
-                    try {
-                        await setDoc(doc(db, 'userPreferences', user.id), {
-                            onboardingTourCompleted: true,
-                            onboardingTourCompletedAt: serverTimestamp(),
-                        }, { merge: true })
-                    } catch (error) {
-                        console.error('Failed to save onboarding tour state:', error)
-                    }
+                if (!user?.id) return
+
+                try {
+                    await upsertOnboarding({
+                        userId: user.id,
+                        onboardingTourCompleted: true,
+                        onboardingTourCompletedAtMs: Date.now(),
+                    })
+                } catch (error) {
+                    console.error('Failed to save onboarding tour state:', error)
                 }
             }
         })
 
         driverObj.drive()
-    }, [tourSteps, user?.id])
+    }, [tourSteps, upsertOnboarding, user?.id])
 
     return { startTour }
 }

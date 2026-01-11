@@ -1,5 +1,6 @@
-import { Timestamp } from 'firebase-admin/firestore'
-import { adminDb } from './firebase-admin'
+import { ConvexHttpClient } from 'convex/browser'
+
+import { api } from '../../convex/_generated/api'
 import { logger } from './logger'
 
 export type AuditAction = 
@@ -31,8 +32,18 @@ export interface AuditLogEntry {
   timestamp: Date
 }
 
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
+
 /**
- * Logs a sensitive action to the audit_logs collection in Firestore
+ * Logs a sensitive action to the audit_logs collection in Convex
  */
 export async function logAuditAction(entry: Omit<AuditLogEntry, 'timestamp'>) {
   try {
@@ -41,11 +52,21 @@ export async function logAuditAction(entry: Omit<AuditLogEntry, 'timestamp'>) {
       timestamp: new Date(),
     }
 
-    // 1. Log to Firestore for permanent record
-    await adminDb.collection('audit_logs').add({
-      ...logEntry,
-      timestamp: Timestamp.fromDate(logEntry.timestamp)
-    })
+    // 1. Log to Convex for permanent record
+    const convex = getConvexClient()
+    if (convex) {
+      await convex.mutation(api.auditLogs.log, {
+        action: entry.action,
+        actorId: entry.actorId,
+        actorEmail: entry.actorEmail ?? null,
+        targetId: entry.targetId ?? null,
+        workspaceId: entry.workspaceId ?? null,
+        metadata: entry.metadata,
+        ip: entry.ip ?? null,
+        userAgent: entry.userAgent ?? null,
+        requestId: entry.requestId ?? null,
+      })
+    }
 
     // 2. Also log to structured logger for real-time monitoring
     logger.info(`Audit Log: ${entry.action}`, {

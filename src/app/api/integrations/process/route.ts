@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { adminDb } from '@/lib/firebase-admin'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../../../../convex/_generated/api'
 import {
   claimNextSyncJob,
   completeSyncJob,
@@ -7,7 +8,7 @@ import {
   getAdIntegration,
   updateIntegrationStatus,
   writeMetricsBatch,
-} from '@/lib/firestore/admin'
+} from '@/lib/ads-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
@@ -24,6 +25,16 @@ import {
 } from '@/lib/integration-token-refresh'
 import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 import { processWorkspaceAlerts } from '@/lib/alerts'
+
+// Convex client for user lookup
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 const processSchema = z.object({
   userId: z.string().optional(),
@@ -243,9 +254,13 @@ export const POST = createApiHandler(
       // Trigger alert evaluation after successful sync if it's for a specific client/workspace
       if (clientId) {
         try {
-          const userDoc = await adminDb.collection('users').doc(targetUserId).get()
-          const userData = userDoc.data()
-          const recipientEmail = userData?.email
+          const convex = getConvexClient()
+          let recipientEmail: string | null = null
+          
+          if (convex) {
+            const userResult = await convex.query(api.users.getByLegacyId, { legacyId: targetUserId })
+            recipientEmail = userResult?.email ?? null
+          }
 
           if (recipientEmail) {
             await processWorkspaceAlerts({

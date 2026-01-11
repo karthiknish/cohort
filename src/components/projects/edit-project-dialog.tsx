@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useMutation } from 'convex/react'
 import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X, CircleAlert } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
 
-import { apiFetch } from '@/lib/api-client'
+import { projectsApi } from '@/lib/convex-api'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -60,6 +61,9 @@ type UpdateProjectPayload = {
 
 export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdated }: EditProjectDialogProps) {
   const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
+
+  const updateProject = useMutation(projectsApi.update)
   const { clients } = useClientContext()
   const { toast } = useToast()
 
@@ -158,7 +162,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
   const handleSubmit = useCallback(async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!user?.id || !project) {
+    if (!user?.id || !workspaceId || !project) {
       toast({ title: 'Authentication required', description: 'Please sign in to update the project.', variant: 'destructive' })
       return
     }
@@ -203,10 +207,32 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
         payload.tags = tags
       }
 
-      const updatedProject = await apiFetch<ProjectRecord>(`/api/projects/${project.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload),
+      await updateProject({
+        workspaceId,
+        legacyId: project.id,
+        ...('name' in payload ? { name: payload.name } : {}),
+        ...('description' in payload ? { description: payload.description ?? null } : {}),
+        ...('status' in payload ? { status: payload.status } : {}),
+        ...('clientId' in payload ? { clientId: payload.clientId ?? null } : {}),
+        ...('clientName' in payload ? { clientName: payload.clientName ?? null } : {}),
+        ...('startDate' in payload ? { startDateMs: payload.startDate ? new Date(payload.startDate).getTime() : null } : {}),
+        ...('endDate' in payload ? { endDateMs: payload.endDate ? new Date(payload.endDate).getTime() : null } : {}),
+        ...('tags' in payload ? { tags: payload.tags ?? [] } : {}),
+        updatedAtMs: Date.now(),
       })
+
+      const updatedProject: ProjectRecord = {
+        ...project,
+        ...('name' in payload ? { name: payload.name ?? project.name } : {}),
+        ...('description' in payload ? { description: payload.description ?? null } : {}),
+        ...('status' in payload ? { status: (payload.status ?? project.status) as ProjectStatus } : {}),
+        ...('clientId' in payload ? { clientId: payload.clientId ?? null } : {}),
+        ...('clientName' in payload ? { clientName: payload.clientName ?? null } : {}),
+        ...('startDate' in payload ? { startDate: payload.startDate ?? null } : {}),
+        ...('endDate' in payload ? { endDate: payload.endDate ?? null } : {}),
+        ...('tags' in payload ? { tags: payload.tags ?? [] } : {}),
+        updatedAt: new Date().toISOString(),
+      }
 
       toast({
         title: 'Project updated!',
@@ -223,7 +249,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     } finally {
       setLoading(false)
     }
-  }, [user?.id, project, name, description, status, clientId, clients, startDate, endDate, tags, hasChanges, validate, toast, onProjectUpdated, onOpenChange])
+  }, [user?.id, workspaceId, project, name, description, status, clientId, clients, startDate, endDate, tags, hasChanges, validate, toast, onProjectUpdated, onOpenChange, updateProject])
 
   const formatStatusLabel = (value: ProjectStatus): string => {
     return value

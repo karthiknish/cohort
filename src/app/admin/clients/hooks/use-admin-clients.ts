@@ -1,10 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
 import { toErrorMessage } from '@/lib/error-utils'
 import { useToast } from '@/components/ui/use-toast'
+import { clientsApi } from '@/lib/convex-api'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
 export interface TeamMemberField extends ClientTeamMember {
@@ -94,9 +96,19 @@ export function useAdminClients(): UseAdminClientsReturn {
     const { user } = useAuth()
     const { toast } = useToast()
 
-    // Client list state
-    const [clients, setClients] = useState<ClientRecord[]>([])
-    const [clientsLoading, setClientsLoading] = useState(false)
+    const workspaceId = user?.agencyId ?? null
+
+    // Convex queries and mutations
+    const convexClients = useQuery(
+        clientsApi.list,
+        workspaceId ? { workspaceId, limit: 100 } : 'skip'
+    )
+
+    const convexCreateClient = useMutation(clientsApi.create)
+    const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
+    const convexAddTeamMember = useMutation(clientsApi.addTeamMember)
+
+    // Client list state (derived from Convex query)
     const [clientsError, setClientsError] = useState<string | null>(null)
     const [nextCursor, setNextCursor] = useState<string | null>(null)
     const [loadingMore, setLoadingMore] = useState(false)
@@ -130,67 +142,54 @@ export function useAdminClients(): UseAdminClientsReturn {
     const [invoiceError, setInvoiceError] = useState<string | null>(null)
     const [selectedInvoiceClientId, setSelectedInvoiceClientId] = useState<string | undefined>(undefined)
 
+    // Transform Convex data to ClientRecord format
+    const clients = useMemo<ClientRecord[]>(() => {
+        if (!convexClients) return []
+
+        const list: ClientRecord[] = convexClients.map((row: any) => ({
+            id: row.legacyId,
+            name: row.name,
+            accountManager: row.accountManager,
+            teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
+            billingEmail: row.billingEmail ?? null,
+            stripeCustomerId: row.stripeCustomerId ?? null,
+            lastInvoiceStatus: row.lastInvoiceStatus ?? null,
+            lastInvoiceAmount: row.lastInvoiceAmount ?? null,
+            lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
+            lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
+            lastInvoiceNumber: row.lastInvoiceNumber ?? null,
+            lastInvoiceUrl: row.lastInvoiceUrl ?? null,
+            lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
+            createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
+        }))
+
+        list.sort((a, b) => a.name.localeCompare(b.name))
+        return list
+    }, [convexClients])
+
+    // Dummy setClients for backward compatibility (Convex handles state)
+    const setClients = useCallback((_updater: React.SetStateAction<ClientRecord[]>) => {
+        // No-op: Convex query automatically updates
+    }, [])
+
+    const clientsLoading = convexClients === undefined && workspaceId !== null
+
     const existingTeamMembers = useMemo(
         () => clients.reduce((total, client) => total + client.teamMembers.length, 0),
         [clients]
     )
 
-    // Load clients
+    // Load clients (no-op since Convex handles this reactively)
     const loadClients = useCallback(async () => {
-        if (!user?.id) {
-            setClients([])
-            setNextCursor(null)
-            return
-        }
+        // Convex query auto-updates, nothing to do
+    }, [])
 
-        setClientsLoading(true)
-        setClientsError(null)
-
-        try {
-            const data = await apiFetch<{ clients: ClientRecord[]; nextCursor: string | null }>('/api/clients', {
-                cache: 'no-store',
-            })
-
-            setClients(data.clients)
-            setNextCursor(data.nextCursor)
-        } catch (err: unknown) {
-            const message = toErrorMessage(err, 'Unable to load clients')
-            setClientsError(message)
-            toast({ title: 'Client load failed', description: message, variant: 'destructive' })
-        } finally {
-            setClientsLoading(false)
-        }
-    }, [user?.id, toast])
-
-    // Load more clients
+    // Load more clients (pagination - simplified for now)
     const handleLoadMore = useCallback(async () => {
-        if (!nextCursor || loadingMore) return
-
-        setLoadingMore(true)
-        try {
-            const data = await apiFetch<{ clients: ClientRecord[]; nextCursor: string | null }>(
-                `/api/clients?after=${encodeURIComponent(nextCursor)}`,
-                { cache: 'no-store' }
-            )
-
-            setClients((prev) => [...prev, ...data.clients])
-            setNextCursor(data.nextCursor)
-        } catch (err: unknown) {
-            const message = toErrorMessage(err, 'Unable to load more clients')
-            toast({ title: 'Load more failed', description: message, variant: 'destructive' })
-        } finally {
-            setLoadingMore(false)
-        }
-    }, [nextCursor, loadingMore, toast])
-
-    // Auto-load on mount
-    useEffect(() => {
-        if (!user?.id) {
-            setClients([])
-            return
-        }
-        void loadClients()
-    }, [loadClients, user?.id])
+        // Convex pagination would require implementing cursor-based loading
+        // For now, this is a no-op as we load all clients
+    }, [])
 
     // Sync invoice client selection
     useEffect(() => {
@@ -220,15 +219,16 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [])
 
     const handleDeleteClient = useCallback(async () => {
-        if (!clientPendingDelete) return
+        if (!clientPendingDelete || !workspaceId) return
 
         try {
             setDeletingClientId(clientPendingDelete.id)
-            await apiFetch(`/api/clients/${encodeURIComponent(clientPendingDelete.id)}`, {
-                method: 'DELETE',
+            await convexSoftDeleteClient({
+                workspaceId,
+                legacyId: clientPendingDelete.id,
+                deletedAtMs: Date.now(),
             })
 
-            setClients((prev) => prev.filter((client) => client.id !== clientPendingDelete.id))
             toast({ title: 'Client deleted', description: `${clientPendingDelete.name} has been removed.` })
             setClientPendingDelete(null)
             setIsDeleteDialogOpen(false)
@@ -238,7 +238,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setDeletingClientId(null)
         }
-    }, [clientPendingDelete, toast])
+    }, [clientPendingDelete, workspaceId, convexSoftDeleteClient, toast])
 
     // Team member dialog handlers
     const handleTeamDialogChange = useCallback((open: boolean) => {
@@ -259,7 +259,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [])
 
     const handleAddTeamMember = useCallback(async () => {
-        if (!clientPendingMembers) return
+        if (!clientPendingMembers || !workspaceId) return
 
         const name = memberName.trim()
         if (!name) {
@@ -271,16 +271,12 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         try {
             setAddingMember(true)
-            const teamMembers = await apiFetch<ClientTeamMember[]>('/api/clients', {
-                method: 'PATCH',
-                body: JSON.stringify({ action: 'addTeamMember', id: clientPendingMembers.id, name, role }),
+            await convexAddTeamMember({
+                workspaceId,
+                legacyId: clientPendingMembers.id,
+                name,
+                role: role || undefined,
             })
-
-            setClients((prev) =>
-                prev.map((client) =>
-                    client.id === clientPendingMembers.id ? { ...client, teamMembers: teamMembers ?? [] } : client
-                )
-            )
 
             toast({ title: 'Teammate added', description: `${name} joined ${clientPendingMembers.name}.` })
             setMemberName('')
@@ -293,7 +289,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setAddingMember(false)
         }
-    }, [clientPendingMembers, memberName, memberRole, toast])
+    }, [clientPendingMembers, workspaceId, memberName, memberRole, convexAddTeamMember, toast])
 
     // Invoice dialog handlers
     const handleInvoiceDialogChange = useCallback(
@@ -346,7 +342,8 @@ export function useAdminClients(): UseAdminClientsReturn {
         setInvoiceError(null)
 
         try {
-            const { invoice, client } = await apiFetch<{
+            // Invoice creation still uses API route (Stripe integration requires server-side)
+            const { invoice } = await apiFetch<{
                 invoice: {
                     id: string
                     number: string | null
@@ -377,33 +374,6 @@ export function useAdminClients(): UseAdminClientsReturn {
                     email: normalizedEmail,
                 }),
             })
-
-            setClients((prev) =>
-                prev.map((record) => {
-                    if (record.id !== clientPendingInvoice.id) return record
-
-                    const amountFromPayload =
-                        typeof client?.lastInvoiceAmount === 'number'
-                            ? client.lastInvoiceAmount
-                            : typeof invoice.amountDue === 'number'
-                                ? invoice.amountDue / 100
-                                : amountValue
-
-                    const issuedAtFromPayload = client?.lastInvoiceIssuedAt ?? invoice.issuedAt ?? record.lastInvoiceIssuedAt ?? new Date().toISOString()
-
-                    return {
-                        ...record,
-                        billingEmail: client?.billingEmail ?? normalizedEmail,
-                        stripeCustomerId: client?.stripeCustomerId ?? record.stripeCustomerId ?? null,
-                        lastInvoiceStatus: client?.lastInvoiceStatus ?? invoice.status ?? record.lastInvoiceStatus ?? null,
-                        lastInvoiceAmount: amountFromPayload,
-                        lastInvoiceCurrency: client?.lastInvoiceCurrency ?? invoice.currency ?? record.lastInvoiceCurrency ?? 'usd',
-                        lastInvoiceIssuedAt: issuedAtFromPayload,
-                        lastInvoiceNumber: client?.lastInvoiceNumber ?? invoice.number ?? record.lastInvoiceNumber ?? null,
-                        lastInvoiceUrl: client?.lastInvoiceUrl ?? invoice.hostedInvoiceUrl ?? record.lastInvoiceUrl ?? null,
-                    }
-                })
-            )
 
             const invoiceLabel = invoice.number ?? invoice.id
             toast({
@@ -449,6 +419,8 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [])
 
     const handleCreateClient = useCallback(async () => {
+        if (!workspaceId) return
+
         const name = clientName.trim()
         const accountManager = clientAccountManager.trim()
 
@@ -465,19 +437,24 @@ export function useAdminClients(): UseAdminClientsReturn {
             .filter((member) => member.name.length > 0)
             .map((member) => ({ ...member, role: member.role || 'Contributor' }))
 
+        // Add account manager if not in team
+        if (!teamMembers.some((member) => member.name.toLowerCase() === accountManager.toLowerCase())) {
+            teamMembers.unshift({ name: accountManager, role: 'Account Manager' })
+        }
+
         setClientSaving(true)
 
         try {
-            const client = await apiFetch<ClientRecord>('/api/clients', {
-                method: 'POST',
-                body: JSON.stringify({ name, accountManager, teamMembers }),
+            const result = await convexCreateClient({
+                workspaceId,
+                name,
+                accountManager,
+                teamMembers,
+                billingEmail: null,
+                createdBy: user?.id ?? null,
             })
 
-            setClients((prev) => {
-                const next = [...prev, client]
-                return next.sort((a, b) => a.name.localeCompare(b.name))
-            })
-            toast({ title: 'Client created', description: `${client.name} is ready to use.` })
+            toast({ title: 'Client created', description: `${name} is ready to use.` })
             resetClientForm()
         } catch (err: unknown) {
             const message = toErrorMessage(err, 'Unable to create client')
@@ -485,7 +462,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setClientSaving(false)
         }
-    }, [clientAccountManager, clientName, resetClientForm, teamMemberFields, toast])
+    }, [workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, convexCreateClient, user?.id, toast])
 
     return {
         // Client list

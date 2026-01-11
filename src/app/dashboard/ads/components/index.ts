@@ -39,8 +39,6 @@ export {
   TIMEFRAME_OPTIONS,
   PROVIDER_ICON_MAP,
   DISPLAY_DATE_FORMATTER,
-  fetchIntegrationStatuses,
-  fetchMetrics,
   normalizeFrequency,
   normalizeTimeframe,
   getErrorMessage,

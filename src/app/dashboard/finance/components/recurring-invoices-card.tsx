@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import {
   CalendarClock,
   Plus,
@@ -16,9 +16,14 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import { useQuery, useMutation } from 'convex/react'
 
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { toErrorMessage } from '@/lib/error-utils'
+import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
+import { recurringInvoicesApi } from '@/lib/convex-api'
+import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -62,16 +67,6 @@ import { Calendar as ShadcnCalendar } from '@/components/ui/calendar'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/contexts/auth-context'
-import { useClientContext } from '@/contexts/client-context'
-import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
-import {
-  fetchRecurringSchedules,
-  createRecurringSchedule,
-  updateRecurringSchedule,
-  deleteRecurringSchedule,
-  triggerRecurringInvoice,
-} from '@/services/recurring-invoices'
 
 const FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
   weekly: 'Weekly',
@@ -102,12 +97,11 @@ function formatDate(dateString: string | null): string {
 }
 
 export function RecurringInvoicesCard() {
-  const { getIdToken } = useAuth()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? null
   const { clients } = useClientContext()
   const { toast } = useToast()
 
-  const [schedules, setSchedules] = useState<RecurringInvoiceSchedule[]>([])
-  const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [scheduleToDelete, setScheduleToDelete] = useState<RecurringInvoiceSchedule | null>(null)
@@ -124,27 +118,19 @@ export function RecurringInvoicesCard() {
   const [dayOfWeek, setDayOfWeek] = useState('1')
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
 
-  const loadSchedules = useCallback(async () => {
-    try {
-      setLoading(true)
-      await getIdToken()
-      const data = await fetchRecurringSchedules()
-      setSchedules(data)
-    } catch (error) {
-      console.error('Failed to load schedules:', error)
-      toast({
-        title: 'Failed to load recurring invoices',
-        description: toErrorMessage(error, 'An error occurred'),
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [getIdToken, toast])
+  // Convex queries and mutations
+  const schedulesResult = useQuery(
+    recurringInvoicesApi.list,
+    workspaceId ? { workspaceId } : 'skip'
+  )
 
-  useEffect(() => {
-    loadSchedules()
-  }, [loadSchedules])
+  const createScheduleMutation = useMutation(recurringInvoicesApi.create)
+  const updateScheduleMutation = useMutation(recurringInvoicesApi.update)
+  const deleteScheduleMutation = useMutation(recurringInvoicesApi.remove)
+  const triggerScheduleMutation = useMutation(recurringInvoicesApi.trigger)
+
+  const schedules: RecurringInvoiceSchedule[] = schedulesResult?.schedules ?? []
+  const loading = schedulesResult === undefined
 
   const resetForm = () => {
     setSelectedClientId('')
@@ -158,7 +144,7 @@ export function RecurringInvoicesCard() {
   }
 
   const handleCreate = useCallback(async () => {
-    if (!selectedClientId || !amount || !startDate) {
+    if (!selectedClientId || !amount || !startDate || !workspaceId) {
       toast({
         title: 'Missing fields',
         description: 'Please fill in all required fields.',
@@ -171,8 +157,8 @@ export function RecurringInvoicesCard() {
 
     try {
       setCreating(true)
-      await getIdToken()
-      const schedule = await createRecurringSchedule({
+      await createScheduleMutation({
+        workspaceId,
         clientId: selectedClientId,
         clientName: selectedClient?.name,
         amount: parseFloat(amount),
@@ -184,7 +170,6 @@ export function RecurringInvoicesCard() {
         startDate: startDate ? format(startDate, 'yyyy-MM-dd') : '',
       })
 
-      setSchedules((prev) => [schedule, ...prev])
       setCreateDialogOpen(false)
       resetForm()
 
@@ -202,18 +187,17 @@ export function RecurringInvoicesCard() {
     } finally {
       setCreating(false)
     }
-  }, [selectedClientId, amount, startDate, clients, currency, description, frequency, dayOfMonth, dayOfWeek, getIdToken, toast])
+  }, [selectedClientId, amount, startDate, clients, currency, description, frequency, dayOfMonth, dayOfWeek, toast, workspaceId, createScheduleMutation])
 
   const handleToggleActive = useCallback(async (schedule: RecurringInvoiceSchedule) => {
+    if (!workspaceId) return
+
     try {
-      await getIdToken()
-      const updated = await updateRecurringSchedule(schedule.id, {
+      await updateScheduleMutation({
+        workspaceId,
+        scheduleId: schedule.id,
         isActive: !schedule.isActive,
       })
-
-      setSchedules((prev) =>
-        prev.map((s) => (s.id === schedule.id ? updated : s))
-      )
 
       toast({
         title: schedule.isActive ? 'Schedule paused' : 'Schedule activated',
@@ -227,16 +211,17 @@ export function RecurringInvoicesCard() {
         variant: 'destructive',
       })
     }
-  }, [getIdToken, toast])
+  }, [toast, workspaceId, updateScheduleMutation])
 
   const handleDelete = useCallback(async () => {
-    if (!scheduleToDelete) return
+    if (!scheduleToDelete || !workspaceId) return
 
     try {
-      await getIdToken()
-      await deleteRecurringSchedule(scheduleToDelete.id)
+      await deleteScheduleMutation({
+        workspaceId,
+        scheduleId: scheduleToDelete.id,
+      })
 
-      setSchedules((prev) => prev.filter((s) => s.id !== scheduleToDelete.id))
       setDeleteDialogOpen(false)
       setScheduleToDelete(null)
 
@@ -252,27 +237,17 @@ export function RecurringInvoicesCard() {
         variant: 'destructive',
       })
     }
-  }, [scheduleToDelete, getIdToken, toast])
+  }, [scheduleToDelete, toast, workspaceId, deleteScheduleMutation])
 
   const handleGenerateNow = useCallback(async (schedule: RecurringInvoiceSchedule) => {
+    if (!workspaceId) return
+
     try {
       setGeneratingId(schedule.id)
-      await getIdToken()
-      const result = await triggerRecurringInvoice(schedule.id)
-
-      setSchedules((prev) =>
-        prev.map((s) =>
-          s.id === schedule.id
-            ? {
-              ...s,
-              lastRunDate: new Date().toISOString(),
-              lastInvoiceId: result.invoiceId,
-              nextRunDate: result.nextRunDate,
-              totalInvoicesGenerated: s.totalInvoicesGenerated + 1,
-            }
-            : s
-        )
-      )
+      await triggerScheduleMutation({
+        workspaceId,
+        scheduleId: schedule.id,
+      })
 
       toast({
         title: 'Invoice generated',
@@ -288,7 +263,7 @@ export function RecurringInvoicesCard() {
     } finally {
       setGeneratingId(null)
     }
-  }, [getIdToken, toast])
+  }, [toast, workspaceId, triggerScheduleMutation])
 
   const activeCount = schedules.filter((s) => s.isActive).length
 

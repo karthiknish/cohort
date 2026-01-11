@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -24,6 +24,9 @@ import {
   Bot,
 } from 'lucide-react'
 
+import { useQuery } from 'convex/react'
+
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from '@/contexts/auth-context'
 import {
   Card,
@@ -89,112 +92,106 @@ type AdminSection = {
 }
 
 export default function AdminPage() {
-  const { user, getIdToken } = useAuth()
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [usageStats, setUsageStats] = useState<UsageStats | null>(null)
-  const [activities, setActivities] = useState<RecentActivity[]>([])
-  const [loading, setLoading] = useState(true)
-  const [usageLoading, setUsageLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const { user } = useAuth()
+  const usersRealtime = useQuery((api as any).adminUsers.list, {
+    pageSize: 1,
+  }) as any
 
-  const fetchDashboardData = useCallback(async (isRefresh = false) => {
-    if (!user?.id) return
+  const clientsRealtime = useQuery((api as any).clients.list, {
+    includeTotals: true,
+    pageSize: 1,
+  }) as any
 
-    if (isRefresh) {
-      setRefreshing(true)
-    } else {
-      setLoading(true)
+  const schedulerEventsRealtime = useQuery((api as any).schedulerEvents.list, {
+    limit: 10,
+  }) as any
+
+  const adminNotificationsRealtime = useQuery((api as any).adminNotifications.list, {
+    limit: 10,
+  }) as any
+
+  const usageStatsRealtime = useQuery((api as any).adminUsage.getStats, {}) as any
+
+  const statsLoading =
+    usersRealtime === undefined ||
+    clientsRealtime === undefined ||
+    schedulerEventsRealtime === undefined ||
+    adminNotificationsRealtime === undefined
+
+  const usageLoading = usageStatsRealtime === undefined
+
+  const derived = useCallback(() => {
+    const usersPayload = usersRealtime
+    const usersData = usersPayload && typeof usersPayload === 'object' && 'data' in usersPayload ? usersPayload.data : usersPayload
+
+    const clientsPayload = clientsRealtime
+    const clientsData = clientsPayload && typeof clientsPayload === 'object' && 'data' in clientsPayload ? clientsPayload.data : clientsPayload
+
+    const schedulerPayload = schedulerEventsRealtime
+    const schedulerData = schedulerPayload && typeof schedulerPayload === 'object' && 'data' in schedulerPayload ? schedulerPayload.data : schedulerPayload
+
+    const notificationsPayload = adminNotificationsRealtime
+    const notificationsData = notificationsPayload && typeof notificationsPayload === 'object' && 'data' in notificationsPayload ? notificationsPayload.data : notificationsPayload
+
+    let totalUsers = 0
+    let activeUsers = 0
+    if (usersData) {
+      totalUsers = typeof usersData.total === 'number' ? usersData.total : Array.isArray(usersData.users) ? usersData.users.length : 0
+      activeUsers =
+        typeof usersData.activeTotal === 'number'
+          ? usersData.activeTotal
+          : Array.isArray(usersData.users)
+            ? usersData.users.filter((u: { status: string }) => u.status === 'active').length
+            : 0
     }
 
-    try {
-      const token = await getIdToken()
+    let totalClients = 0
+    let activeClients = 0
+    if (clientsData) {
+      totalClients = typeof clientsData.total === 'number' ? clientsData.total : Array.isArray(clientsData.clients) ? clientsData.clients.length : 0
+      activeClients = totalClients
+    }
 
-      // Fetch stats from multiple endpoints in parallel
-      const [usersRes, clientsRes, schedulerRes, notificationsRes] = await Promise.allSettled([
-        fetch('/api/admin/users?pageSize=1', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('/api/clients?pageSize=1&includeTotals=true', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('/api/admin/scheduler/events?limit=10', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('/api/admin/notifications?limit=10', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ])
+    const recentActivities: RecentActivity[] = []
 
-      // Process users
-      let totalUsers = 0
-      let activeUsers = 0
-      if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
-        const payload = await usersRes.value.json()
-        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        if (data) {
-          totalUsers = typeof data.total === 'number' ? data.total : (Array.isArray(data.users) ? data.users.length : 0)
-          activeUsers =
-            typeof data.activeTotal === 'number'
-              ? data.activeTotal
-              : (Array.isArray(data.users) ? data.users.filter((u: { status: string }) => u.status === 'active').length : 0)
+    let schedulerHealth: 'healthy' | 'warning' | 'error' = 'healthy'
+    let lastSyncTime: string | null = null
+    let recentErrors = 0
+    {
+      const events = Array.isArray(schedulerData?.events) ? schedulerData.events : Array.isArray(schedulerPayload?.events) ? schedulerPayload.events : []
+      recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
+      if (recentErrors > 5) schedulerHealth = 'error'
+      else if (recentErrors > 0) schedulerHealth = 'warning'
+
+      const lastSync = events.find((e: { source: string }) => e.source === 'cron' || e.source === 'worker')
+      if (lastSync?.createdAt) {
+        lastSyncTime = lastSync.createdAt
+      }
+    }
+
+    {
+      const notifications = Array.isArray(notificationsData?.notifications)
+        ? notificationsData.notifications
+        : Array.isArray(notificationsPayload?.notifications)
+          ? notificationsPayload.notifications
+          : []
+      notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
+        if (n.type === 'new_user_signup') {
+          recentActivities.push({
+            id: `notification-${n.id}`,
+            type: 'new_user_signup',
+            title: n.title || 'New User Signup',
+            description: n.message,
+            timestamp: n.createdAt,
+          })
         }
-      }
+      })
+    }
 
-      // Process clients
-      let totalClients = 0
-      let activeClients = 0
-      if (clientsRes.status === 'fulfilled' && clientsRes.value.ok) {
-        const payload = await clientsRes.value.json()
-        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        if (data) {
-          totalClients = typeof data.total === 'number' ? data.total : (Array.isArray(data.clients) ? data.clients.length : 0)
-          // Client records do not currently include a `status` field; treat all as active.
-          activeClients = totalClients
-        }
-      }
+    recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-      const recentActivities: RecentActivity[] = []
-
-      // Process scheduler
-      let schedulerHealth: 'healthy' | 'warning' | 'error' = 'healthy'
-      let lastSyncTime: string | null = null
-      let recentErrors = 0
-      if (schedulerRes.status === 'fulfilled' && schedulerRes.value.ok) {
-        const payload = await schedulerRes.value.json()
-        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        const events = Array.isArray(data?.events) ? data.events : []
-        recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
-        if (recentErrors > 5) schedulerHealth = 'error'
-        else if (recentErrors > 0) schedulerHealth = 'warning'
-
-        const lastSync = events.find((e: { source: string }) => e.source === 'cron' || e.source === 'worker')
-        if (lastSync?.createdAt) {
-          lastSyncTime = lastSync.createdAt
-        }
-      }
-
-      // Process admin notifications (new signups)
-      if (notificationsRes.status === 'fulfilled' && notificationsRes.value.ok) {
-        const payload = await notificationsRes.value.json()
-        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        const notifications = Array.isArray(data?.notifications) ? data.notifications : []
-        notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
-          if (n.type === 'new_user_signup') {
-            recentActivities.push({
-              id: `notification-${n.id}`,
-              type: 'new_user_signup',
-              title: n.title || 'New User Signup',
-              description: n.message,
-              timestamp: n.createdAt,
-            })
-          }
-        })
-      }
-
-      // Sort activities by timestamp (most recent first)
-      recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-      setStats({
+    return {
+      stats: {
         totalUsers,
         activeUsers,
         totalClients,
@@ -202,43 +199,20 @@ export default function AdminPage() {
         schedulerHealth,
         lastSyncTime,
         recentErrors,
-      })
-
-      setActivities(recentActivities.slice(0, 5))
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
+      } satisfies DashboardStats,
+      activities: recentActivities.slice(0, 5),
     }
-  }, [user?.id, getIdToken])
+  }, [usersRealtime, clientsRealtime, schedulerEventsRealtime, adminNotificationsRealtime])
 
-  const fetchUsageStats = useCallback(async () => {
-    if (!user?.id) return
+  const derivedResult = derived()
+  const stats = derivedResult.stats
+  const activities = derivedResult.activities
+  const refreshing = false
+  const usageStats = usageStatsRealtime as UsageStats | null
 
-    setUsageLoading(true)
-    try {
-      const token = await getIdToken()
-      const res = await fetch('/api/admin/usage', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (res.ok) {
-        const payload = await res.json()
-        const data = payload && typeof payload === 'object' && 'data' in payload ? (payload as any).data : payload
-        setUsageStats(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch usage stats:', error)
-    } finally {
-      setUsageLoading(false)
-    }
-  }, [user?.id, getIdToken])
-
-  useEffect(() => {
-    fetchDashboardData()
-    fetchUsageStats()
-  }, [fetchDashboardData, fetchUsageStats])
+  const fetchDashboardData = useCallback(async () => {
+    // Convex subscriptions are realtime; no manual refresh required.
+  }, [])
 
   const adminSections: AdminSection[] = [
     {
@@ -301,15 +275,15 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fetchDashboardData(true)}
-              disabled={refreshing}
-            >
-              <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} />
-              Refresh
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                title="Convex is realtime; refresh not needed"
+              >
+                <RefreshCw className={cn('mr-2 h-4 w-4')} />
+                Refresh
+              </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard">
                 <ArrowUpRight className="mr-2 h-4 w-4" />
@@ -327,7 +301,7 @@ export default function AdminPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {statsLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <>
@@ -346,7 +320,7 @@ export default function AdminPage() {
               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {statsLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <>
@@ -366,7 +340,7 @@ export default function AdminPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {statsLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <>
@@ -699,7 +673,7 @@ export default function AdminPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {loading ? (
+              {statsLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="flex gap-3">

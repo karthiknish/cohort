@@ -1,8 +1,9 @@
-// Workspace notification functions (Firestore-based)
+// Workspace notification functions (Convex-based)
 
-import { FieldValue } from 'firebase-admin/firestore'
+import { ConvexHttpClient } from 'convex/browser'
+import { nanoid } from 'nanoid'
 
-import { adminDb } from '@/lib/firebase-admin'
+import { api } from '../../../convex/_generated/api'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
 import type { ProjectRecord } from '@/types/projects'
@@ -10,6 +11,22 @@ import type { WorkspaceNotificationRole } from '@/types/notifications'
 
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
 import type { WorkspaceNotificationInput, WorkspaceNotificationRecipients } from './types'
+
+// Lazy-init Convex client with admin auth
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  const deployKey = process.env.CONVEX_DEPLOY_KEY ?? process.env.CONVEX_ADMIN_KEY ?? process.env.CONVEX_ADMIN_TOKEN
+  if (!url || !deployKey) return null
+  _convexClient = new ConvexHttpClient(url)
+  // Set admin auth for server-side mutations
+  ;(_convexClient as any).setAdminAuth(deployKey, {
+    issuer: 'system',
+    subject: 'notification-service',
+  })
+  return _convexClient
+}
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -47,7 +64,7 @@ function sanitizeIdList(values?: unknown[]): string[] | undefined {
 }
 
 // =============================================================================
-// FIRESTORE NOTIFICATION CREATION WITH RETRY
+// CONVEX NOTIFICATION CREATION WITH RETRY
 // =============================================================================
 
 async function createWorkspaceNotification(input: WorkspaceNotificationInput): Promise<void> {
@@ -55,6 +72,12 @@ async function createWorkspaceNotification(input: WorkspaceNotificationInput): P
 
   if (!workspaceId) {
     console.warn('[notifications] missing workspaceId, skipping notification creation')
+    return
+  }
+
+  const convexClient = getConvexClient()
+  if (!convexClient) {
+    console.warn('[notifications] convex client not available, skipping notification creation')
     return
   }
 
@@ -86,32 +109,40 @@ async function createWorkspaceNotification(input: WorkspaceNotificationInput): P
     normalizedRecipients.roles = ['team']
   }
 
-  const payload = {
-    ...rest,
-    workspaceId,
-    recipients: normalizedRecipients,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    readBy: [] as string[],
-    acknowledgedBy: [] as string[],
-  }
-
   let lastError: Error | null = null
 
   for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
     try {
-      await adminDb.collection('workspaces').doc(workspaceId).collection('notifications').add(payload)
+      const nowMs = Date.now()
+      const legacyId = nanoid() // Generate unique ID for the notification
+
+      await convexClient.mutation(api.notifications.create, {
+        workspaceId,
+        legacyId,
+        kind: rest.kind,
+        title: rest.title,
+        body: rest.body,
+        actorId: rest.actor.id,
+        actorName: rest.actor.name,
+        resourceType: rest.resource.type,
+        resourceId: rest.resource.id,
+        recipientRoles: normalizedRecipients.roles,
+        recipientClientId: normalizedRecipients.clientId ?? null,
+        recipientClientIds: normalizedRecipients.clientIds,
+        recipientUserIds: normalizedRecipients.userIds,
+        metadata: rest.metadata,
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs,
+      })
+
       console.log(`[notifications] workspace notification created: ${rest.kind}`)
       return
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error')
 
-      // Check if it's a retryable Firestore error
-      const errorCode = (error as { code?: string })?.code
-      const retryableErrors = ['unavailable', 'deadline-exceeded', 'resource-exhausted', 'aborted']
-
-      if (retryableErrors.includes(errorCode ?? '') && attempt < RETRY_CONFIG.maxRetries - 1) {
-        console.warn(`[notifications] Firestore write failed (${errorCode}), retrying...`)
+      // Retry on transient errors
+      if (attempt < RETRY_CONFIG.maxRetries - 1) {
+        console.warn(`[notifications] Convex write failed, retrying...`, error)
         await sleep(calculateBackoffDelay(attempt))
         continue
       }
@@ -489,7 +520,7 @@ export async function recordProposalDeckReadyNotification(options: {
   }
   details.push('Your Gamma presentation is ready to download.')
   if (options.storageUrl) {
-    details.push('Stored in Firebase Storage for quick access.')
+    details.push('Stored for quick access.')
   }
 
   const recipients: WorkspaceNotificationRecipients = {

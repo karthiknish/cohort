@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAction } from 'convex/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   RefreshCw,
@@ -42,6 +43,8 @@ import { toast } from '@/components/ui/use-toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/contexts/auth-context'
+import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
 
 export type CampaignAd = {
   providerId: string
@@ -87,11 +90,6 @@ type Props = {
 
 type ViewMode = 'grid' | 'list'
 
-function unwrapApiData(payload: unknown): unknown {
-  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-  return record && 'data' in record ? record.data : payload
-}
-
 function getCreativeTypeIcon(type: string, className?: string) {
   const lowerType = type.toLowerCase()
   if (lowerType.includes('video')) return <Video className={className || "h-4 w-4"} />
@@ -113,6 +111,12 @@ function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' |
 export function CampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const listCreatives = useAction(adsCreativesApi.listCreatives)
+  const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus)
+  const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
   const [ads, setAds] = useState<CampaignAd[]>([])
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -134,22 +138,19 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     setLoading(true)
     try {
-      const params = new URLSearchParams({ providerId, campaignId })
-      if (clientId) params.set('clientId', clientId)
-
-      const response = await fetch(`/api/integrations/creatives?${params.toString()}`)
-      const payload = await response.json().catch(() => ({})) as unknown
-
-      if (!response.ok) {
-        const rec = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-        const msg = (rec && typeof rec.error === 'string' && rec.error) || (rec && typeof rec.message === 'string' && rec.message) || 'Failed to load ads'
-        throw new Error(msg)
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
 
-      const data = unwrapApiData(payload) as { creatives?: CampaignAd[]; summary?: Summary } | undefined
-      const creatives = Array.isArray(data?.creatives) ? (data!.creatives as CampaignAd[]) : []
-      setAds(creatives)
-      setSummary((data?.summary ?? null) as Summary | null)
+      const creatives = (await listCreatives({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: clientId ?? null,
+        campaignId,
+      })) as CampaignAd[]
+
+      setAds(Array.isArray(creatives) ? creatives : [])
+      setSummary(null)
       setHasLoaded(true)
     } catch (error) {
       toast({
@@ -160,17 +161,26 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     } finally {
       setLoading(false)
     }
-  }, [canLoad, providerId, campaignId, clientId])
-
+  }, [canLoad, campaignId, clientId, listCreatives, providerId, workspaceId])
+ 
   const fetchMetrics = useCallback(async () => {
+
     if (!canLoad) return
     setMetricsLoading(true)
     try {
-      const params = new URLSearchParams({ providerId, campaignId, days: '30' })
-      if (clientId) params.set('clientId', clientId)
-      const response = await fetch(`/api/integrations/metrics/ads?${params.toString()}`)
-      const data = await response.json()
-      const metrics = data.metrics || []
+      if (!workspaceId) {
+        throw new Error('Sign in required')
+      }
+
+      const data = await listAdMetrics({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: clientId ?? null,
+        campaignId,
+        days: '30',
+      })
+
+      const metrics = Array.isArray((data as any)?.metrics) ? ((data as any).metrics as any[]) : []
 
       const aggregated: Record<string, any> = {}
       metrics.forEach((m: any) => {
@@ -189,9 +199,10 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     } finally {
       setMetricsLoading(false)
     }
-  }, [canLoad, providerId, campaignId, clientId])
-
+  }, [canLoad, campaignId, clientId, listAdMetrics, providerId, workspaceId])
+ 
   useEffect(() => {
+
     void fetchAds()
     void fetchMetrics()
   }, [fetchAds, fetchMetrics])
@@ -232,22 +243,18 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     )
 
     try {
-      const response = await fetch('/api/integrations/creatives', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          providerId,
-          clientId,
-          creativeId: ad.creativeId,
-          adGroupId: ad.adGroupId,
-          status: newStatus,
-        }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({})) as { error?: string }
-        throw new Error(data.error || 'Failed to update ad status')
+      if (!workspaceId) {
+        throw new Error('Sign in required')
       }
+
+      await updateCreativeStatus({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: clientId ?? null,
+        creativeId: ad.creativeId,
+        adGroupId: ad.adGroupId,
+        status: newStatus as any,
+      })
 
       toast({
         title: 'Status Updated',

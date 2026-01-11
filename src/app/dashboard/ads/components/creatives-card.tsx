@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useAction } from 'convex/react'
 import { RefreshCw, Image, Video, FileText, ExternalLink, BarChart2, CheckSquare, Square } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/use-toast'
+import { useAuth } from '@/contexts/auth-context'
+import { adsCreativesApi } from '@/lib/convex-api'
 
 // =============================================================================
 // TYPES
@@ -69,6 +72,10 @@ type Props = {
 // =============================================================================
 
 export function CreativesCard({ providerId, providerName, isConnected }: Props) {
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const listCreatives = useAction(adsCreativesApi.listCreatives)
+
   const [creatives, setCreatives] = useState<Creative[]>([])
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState<{ total: number; byType: Record<string, number> } | null>(null)
@@ -80,11 +87,18 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/integrations/creatives?providerId=${providerId}`)
-      if (!response.ok) throw new Error('Failed to fetch creatives')
-      const data = await response.json()
-      setCreatives(data.creatives || [])
-      setSummary(data.summary || null)
+      if (!workspaceId) {
+        throw new Error('Sign in required')
+      }
+
+      const creativesList = await listCreatives({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: null,
+      })
+
+      setCreatives(Array.isArray(creativesList) ? (creativesList as Creative[]) : [])
+      setSummary(null)
     } catch (error) {
       toast({
         title: 'Error',
@@ -94,7 +108,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
     } finally {
       setLoading(false)
     }
-  }, [providerId, isConnected])
+  }, [isConnected, listCreatives, providerId, workspaceId])
 
   const getTypeIcon = (type: string) => {
     const t = type.toLowerCase()

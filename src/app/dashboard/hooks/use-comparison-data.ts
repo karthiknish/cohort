@@ -5,7 +5,6 @@ import { getPreviewFinanceSummary, getPreviewMetrics } from '@/lib/preview-data'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { MetricRecord, ClientComparisonSummary, ComparisonInsight } from '@/types/dashboard'
 import {
-    resolveJson,
     buildClientComparisonSummary,
     groupMetricsByClient,
     formatRoas,
@@ -15,6 +14,8 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ClientRecord } from '@/types/clients'
+import { ConvexReactClient } from 'convex/react'
+import { adsMetricsApi, financeSummaryApi } from '@/lib/convex-api'
 
 export interface UseComparisonDataOptions {
     clients: ClientRecord[]
@@ -131,41 +132,38 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
             setComparisonLoading(true)
             setComparisonError(null)
             try {
+                 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+                 if (!convexUrl) {
+                     throw new Error('Convex URL is missing')
+                 }
+
+                 const convex = new ConvexReactClient(convexUrl)
+
                 const token = await getIdToken()
+                if (token) {
+                    convex.setAuth(async () => token)
+                }
 
-                const params = new URLSearchParams()
-                targets.forEach((clientId) => {
-                    if (clientId) {
-                        params.append('clientIds', clientId)
-                    }
-                })
-                params.set('pageSize', '250')
+                const financeRequests = targets.map((clientId) =>
+                    convex.query(financeSummaryApi.get, {
+                        workspaceId: user?.agencyId as string,
+                        clientId,
+                        invoiceLimit: 200,
+                        costLimit: 200,
+                        revenueLimit: 36,
+                    }) as Promise<FinanceSummaryResponse>
+                )
 
-                const financeRequests = targets.map((clientId) => {
-                    const financeParams = new URLSearchParams()
-                    if (clientId) {
-                        financeParams.set('clientId', clientId)
-                    }
-                    const endpoint = financeParams.toString() ? `/api/finance?${financeParams.toString()}` : '/api/finance'
-                    return fetch(endpoint, {
-                        headers: { Authorization: `Bearer ${token}` },
-                        cache: 'no-store',
-                    }).then((response) => resolveJson(response, 'Unable to load finance data for comparison') as Promise<FinanceSummaryResponse>)
-                })
+                // Fetch metrics from Convex - use clientIds array for multi-client query
+                const metricsPromise = convex.query(adsMetricsApi.listMetricsWithSummary, {
+                    workspaceId: user?.agencyId as string,
+                    clientIds: targets,
+                    limit: 250,
+                }) as Promise<{ metrics: MetricRecord[] }>
 
-                const metricsEndpoint = params.toString() ? `/api/metrics?${params.toString()}` : '/api/metrics'
-                const metricsPromise = fetch(metricsEndpoint, {
-                    headers: { Authorization: `Bearer ${token}` },
-                    cache: 'no-store',
-                }).then((response) => resolveJson(response, 'Unable to load metrics for comparison') as Promise<{ metrics?: MetricRecord[] }>)
+                const [financeResponses, metricsData] = await Promise.all([Promise.all(financeRequests), metricsPromise])
 
-                const [financeEnvelopes, metricsEnvelope] = await Promise.all([Promise.all(financeRequests), metricsPromise])
-
-                // Extract data from envelopes
-                const financeResponses = financeEnvelopes.map(env => (env as Record<string, unknown>)?.data || env) as FinanceSummaryResponse[]
-                const metricsData = ((metricsEnvelope as Record<string, unknown>)?.data || metricsEnvelope) as { metrics?: MetricRecord[] }
-
-                const groupedMetrics = groupMetricsByClient(metricsData.metrics ?? [])
+                const groupedMetrics = groupMetricsByClient(metricsData?.metrics ?? [])
 
                 const summaries = targets.map((clientId, index) => {
                     const financeData = financeResponses[index] ?? null
@@ -207,7 +205,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         return () => {
             isCancelled = true
         }
-    }, [clients, comparisonClientIds, comparisonPeriodDays, getIdToken, selectedClientId, user?.id, isPreviewMode])
+    }, [clients, comparisonClientIds, comparisonPeriodDays, selectedClientId, user?.id, isPreviewMode, getIdToken])
 
     const comparisonInsights = useMemo<ComparisonInsight[]>(() => {
         if (comparisonSummaries.length === 0) {

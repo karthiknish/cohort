@@ -3,6 +3,11 @@
 import { useCallback, useState } from 'react'
 import { RefreshCw, Users, MapPin, Target, Briefcase, ChevronDown, ChevronUp, Plus, Settings2 } from 'lucide-react'
 
+import { useAction } from 'convex/react'
+
+import { adsTargetingApi } from '@/lib/convex-api'
+import { useAuth } from '@/contexts/auth-context'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -73,7 +78,11 @@ type Props = {
 // =============================================================================
 
 export function AudienceTargetingCard({ providerId, providerName, isConnected }: Props) {
+  const { user } = useAuth()
   const { selectedClientId } = useClientContext()
+
+  const getTargeting = useAction(adsTargetingApi.getTargeting)
+
   const [targeting, setTargeting] = useState<TargetingData[]>([])
   const [insights, setInsights] = useState<Insights | null>(null)
   const [loading, setLoading] = useState(false)
@@ -82,20 +91,27 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
 
   const fetchTargeting = useCallback(async () => {
     if (!isConnected) return
-    
+
+    const workspaceId = user?.agencyId ? String(user.agencyId) : null
+    if (!workspaceId) {
+      toast({
+        title: 'Error',
+        description: 'Missing workspace id',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
     try {
-      const params = new URLSearchParams({ providerId })
-      if (selectedClientId) params.set('clientId', selectedClientId)
-      const response = await fetch(`/api/integrations/targeting?${params.toString()}`)
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.error || error.message || 'Failed to fetch targeting')
-      }
-      const payload = await response.json().catch(() => ({})) as any
-      const data = payload?.data ?? payload
-      setTargeting(data?.targeting || [])
-      setInsights(data?.insights || null)
+      const data = await getTargeting({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: selectedClientId ?? null,
+      })
+
+      setTargeting((data as any)?.targeting || [])
+      setInsights((data as any)?.insights || null)
     } catch (error) {
       toast({
         title: 'Error',
@@ -105,7 +121,7 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
     } finally {
       setLoading(false)
     }
-  }, [providerId, isConnected, selectedClientId])
+  }, [getTargeting, isConnected, providerId, selectedClientId, user?.agencyId])
 
   const formatAgeRange = (range: string) => {
     return range.replace(/_/g, '-').replace('AGE', '').replace('RANGE', '').trim()

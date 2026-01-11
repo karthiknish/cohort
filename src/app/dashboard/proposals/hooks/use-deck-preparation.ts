@@ -1,11 +1,10 @@
 import { useState, useCallback, useRef } from 'react'
 import { useToast } from '@/components/ui/use-toast'
-import {
-    getProposalById,
-    prepareProposalDeck,
-    type ProposalDraft,
-    type ProposalPresentationDeck,
-} from '@/services/proposals'
+import { useAuth } from '@/contexts/auth-context'
+import { refreshProposalDraft } from '@/services/proposals'
+import { useQuery } from 'convex/react'
+import { proposalsApi } from '@/lib/convex-api'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
 import {
     trackDeckGenerationStarted,
@@ -45,6 +44,9 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
     } = options
 
     const { toast } = useToast()
+    const { user, getIdToken } = useAuth()
+
+    const workspaceId = user?.agencyId ?? null
 
     const [downloadingDeckId, setDownloadingDeckId] = useState<string | null>(null)
     const [deckProgressStage, setDeckProgressStage] = useState<DeckProgressStage | null>(null)
@@ -70,6 +72,16 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         anchor.click()
         document.body.removeChild(anchor)
     }, [])
+
+    const activeConvexProposal = useQuery(
+        proposalsApi.getByLegacyId,
+        !workspaceId || !draftId
+            ? 'skip'
+            : {
+                workspaceId,
+                legacyId: draftId,
+            }
+    )
 
     const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
         const localDeckUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
@@ -97,8 +109,9 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
 
         setDeckProgressStage('initializing')
 
-        if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
-            pendingDeckWindowRef.current.close()
+        const pendingWindow = pendingDeckWindowRef.current
+        if (pendingWindow && !pendingWindow.closed) {
+            pendingWindow.close()
         }
         pendingDeckWindowRef.current = null
 
@@ -127,96 +140,84 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
 
             // Track deck generation start for analytics
             const deckStartTime = Date.now()
-            trackDeckGenerationStarted(proposal.id, proposal.clientId, proposal.clientName).catch(console.error)
-
-            const result = await prepareProposalDeck(proposal.id)
-            const deckDuration = Date.now() - deckStartTime
-            console.log('[ProposalDownload] Deck preparation result:', {
-                pptUrl: result.pptUrl,
-                deckStorageUrl: result.presentationDeck?.storageUrl,
-                deckPptxUrl: result.presentationDeck?.pptxUrl,
-                deckShareUrl: result.presentationDeck?.shareUrl
-            })
-
-            const deckUrl = result.pptUrl
-                ?? result.presentationDeck?.storageUrl
-                ?? result.presentationDeck?.pptxUrl
-                ?? result.presentationDeck?.shareUrl
-                ?? null
-
-            console.log('[ProposalDownload] Final selected deck URL:', deckUrl)
-
-            // Track deck generation success
-            if (deckUrl) {
-                trackDeckGenerationCompleted(proposal.id, deckDuration, proposal.clientId, proposal.clientName).catch(console.error)
+            if (workspaceId) {
+                trackDeckGenerationStarted(workspaceId, proposal.id, proposal.clientId, proposal.clientName).catch(console.error)
             }
 
-            if (deckUrl) {
-                setDeckProgressStage('launching')
-                console.log('[ProposalDownload] Opening deck URL:', deckUrl)
-                openDeckUrl(deckUrl, pendingDeckWindowRef.current ?? undefined)
-                pendingDeckWindowRef.current = null
-            } else {
-                setDeckProgressStage('queued')
-                if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
-                    pendingDeckWindowRef.current.close()
-                }
-                pendingDeckWindowRef.current = null
+            const token = await getIdToken()
+            if (!token || !workspaceId) {
+                throw new Error('Missing auth token or workspace')
             }
 
-            if (deckUrl) {
-                console.log('[ProposalDownload] Updating proposal state with deck URL:', deckUrl)
-                setProposals((prev) =>
-                    prev.map((item) => {
-                        if (item.id !== proposal.id) {
-                            return item
-                        }
-                        const nextDeck = result.presentationDeck
-                            ? { ...result.presentationDeck, storageUrl: deckUrl }
-                            : item.presentationDeck
-                                ? { ...item.presentationDeck, storageUrl: deckUrl }
-                                : null
-                        return {
-                            ...item,
-                            pptUrl: deckUrl,
-                            presentationDeck: nextDeck,
-                        }
-                    })
-                )
-            }
+            // Deck preparation happens server-side; poll Convex for updated pptUrl.
+            const pollMaxAttempts = 30
+            const pollIntervalMs = 2000
 
-            console.log('[ProposalDownload] Refreshing proposals list')
-            const refreshed = await refreshProposals()
-            if (proposal.id === draftId && Array.isArray(refreshed)) {
-                const latest = (refreshed as ProposalDraft[]).find((candidate) => candidate.id === proposal.id)
-                if (latest) {
-                    console.log('[ProposalDownload] Updating presentation deck for active draft')
-                    setPresentationDeck(
-                        latest.presentationDeck
-                            ? { ...latest.presentationDeck, storageUrl: latest.pptUrl ?? latest.presentationDeck?.storageUrl ?? null }
-                            : null
+            for (let attempt = 0; attempt < pollMaxAttempts; attempt++) {
+                const row = await refreshProposalDraft(proposal.id, {
+                    workspaceId,
+                    convexToken: token,
+                })
+
+                const deckUrl = row.pptUrl ?? row.presentationDeck?.storageUrl ?? null
+                if (deckUrl) {
+                    const result = row
+                    const deckDuration = Date.now() - deckStartTime
+                    if (workspaceId) {
+                        trackDeckGenerationCompleted(workspaceId, proposal.id, deckDuration, proposal.clientId, proposal.clientName).catch(console.error)
+                    }
+
+                    setDeckProgressStage('launching')
+                    openDeckUrl(deckUrl, pendingDeckWindowRef.current ?? undefined)
+                    pendingDeckWindowRef.current = null
+
+                    setProposals((prev) =>
+                        prev.map((item) =>
+                            item.id !== proposal.id
+                                ? item
+                                : {
+                                    ...item,
+                                    pptUrl: deckUrl,
+                                    presentationDeck: result.presentationDeck
+                                        ? { ...result.presentationDeck, storageUrl: deckUrl }
+                                        : item.presentationDeck
+                                            ? { ...item.presentationDeck, storageUrl: deckUrl }
+                                            : null,
+                                },
+                        ),
                     )
-                    setAiSuggestions(latest.aiSuggestions ?? null)
+
+                    await refreshProposals()
+                    toast({
+                        title: 'Deck ready',
+                        description: 'We saved the PPT and opened it in a new tab.',
+                    })
+                    return
                 }
+
+                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
             }
 
-            toast({
-                title: deckUrl ? 'Deck ready' : 'Deck still generating',
-                description: deckUrl
-                    ? 'We saved the PPT in Firebase storage and opened it in a new tab.'
-                    : 'The presentation export is still processing. We will save it automatically once it finishes.',
-            })
+            setDeckProgressStage('queued')
+            const pendingWindow = pendingDeckWindowRef.current
+            if (pendingWindow && !pendingWindow.closed) {
+                pendingWindow.close()
+            }
+            pendingDeckWindowRef.current = null
         } catch (error: unknown) {
             setDeckProgressStage('error')
             console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
             const message = getErrorMessage(error, 'Failed to prepare the presentation deck')
 
             // Track deck generation failure
-            trackDeckGenerationFailed(proposal.id, message, proposal.clientId, proposal.clientName).catch(console.error)
+            if (workspaceId) {
+                trackDeckGenerationFailed(workspaceId, proposal.id, message, proposal.clientId, proposal.clientName).catch(console.error)
+            }
 
             toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })
-            if (pendingDeckWindowRef.current && !pendingDeckWindowRef.current.closed) {
-                pendingDeckWindowRef.current.close()
+            const pendingWindow = pendingDeckWindowRef.current
+            if (pendingWindow && !pendingWindow.closed) {
+                pendingWindow.close()
             }
             pendingDeckWindowRef.current = null
         } finally {
@@ -224,7 +225,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
             setDownloadingDeckId(null)
             setDeckProgressStage(null)
         }
-    }, [downloadingDeckId, draftId, openDeckUrl, refreshProposals, toast, setPresentationDeck, setAiSuggestions, setProposals])
+    }, [downloadingDeckId, draftId, openDeckUrl, refreshProposals, toast, setPresentationDeck, setAiSuggestions, setProposals, activeConvexProposal])
 
     return {
         downloadingDeckId,

@@ -3,14 +3,12 @@ import { createApiHandler } from '@/lib/api-handler'
 import { ValidationError, ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
 
 const ALLOWED_DOMAINS = new Set([
-  'firebasestorage.googleapis.com',
   'storage.googleapis.com',
   'storage.cloud.google.com',
 ])
 
 function isAllowedHostname(hostname: string): boolean {
   // Only allow exact matches or subdomains of the allowlist.
-  // Prevents things like "firebasestorage.googleapis.com.evil.com".
   for (const domain of ALLOWED_DOMAINS) {
     if (hostname === domain) return true
     if (hostname.endsWith(`.${domain}`)) return true
@@ -32,7 +30,7 @@ export const GET = createApiHandler({
     throw new ForbiddenError('URL domain not allowed')
   }
 
-  // Fetch the file from Firebase Storage
+  // Fetch the file from Cloud Storage
   const upstream = await fetch(fileUrl, {
     headers: {
       // Help upstream pick the right representation.

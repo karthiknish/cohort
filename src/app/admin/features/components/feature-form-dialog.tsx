@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useAction, useMutation } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
 import { LoaderCircle, Plus, Sparkles, X } from 'lucide-react'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 import { useAuth } from '@/contexts/auth-context'
 
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/select'
 import { ImageUploader } from '@/components/ui/image-uploader'
 import { useToast } from '@/components/ui/use-toast'
-import { storage } from '@/lib/firebase'
+import { filesApi } from '@/lib/convex-api'
 import { validateFile } from '@/lib/utils'
 import type {
   FeatureItem,
@@ -65,7 +66,7 @@ export function FeatureFormDialog({
   onSubmit,
 }: FeatureFormDialogProps) {
   const { toast } = useToast()
-  const { getIdToken } = useAuth()
+  useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
@@ -81,6 +82,10 @@ export function FeatureFormDialog({
   // Reference input state
   const [newRefUrl, setNewRefUrl] = useState('')
   const [newRefLabel, setNewRefLabel] = useState('')
+
+  const generateFeatureAi = useAction(api.adminFeaturesAi.generate)
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const getPublicUrl = useMutation(filesApi.getPublicUrl)
 
   const isEditing = !!feature
 
@@ -117,16 +122,33 @@ export function FeatureFormDialog({
       throw new Error(validation.error || 'Invalid image file')
     }
 
-    const timestamp = Date.now()
-    const fileName = `${timestamp}-${file.name}`
-    const storagePath = `features/temp/${fileName}`
-    const fileRef = ref(storage, storagePath)
+    const { url: uploadUrl } = await generateUploadUrl()
 
-    await uploadBytes(fileRef, file, { contentType: file.type })
-    const downloadUrl = await getDownloadURL(fileRef)
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    })
 
-    return downloadUrl
-  }, [])
+    if (!uploadResponse.ok) {
+      throw new Error(`Failed to upload file (${uploadResponse.status})`)
+    }
+
+    const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+    if (!json?.storageId) {
+      throw new Error('Upload did not return storageId')
+    }
+
+    const publicUrl = await getPublicUrl({ storageId: json.storageId })
+
+    if (!publicUrl?.url) {
+      throw new Error('Unable to resolve uploaded file URL')
+    }
+
+    return publicUrl.url
+  }, [generateUploadUrl, getPublicUrl])
 
   const handleGenerateAI = useCallback(async (field: 'title' | 'description') => {
     if (field === 'title') {
@@ -136,29 +158,15 @@ export function FeatureFormDialog({
     }
 
     try {
-      const token = await getIdToken()
-      const response = await fetch('/api/admin/features/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+      const data = await generateFeatureAi({
+        field,
+        context: {
+          currentTitle: title,
+          currentDescription: description,
+          status,
+          priority,
         },
-        body: JSON.stringify({
-          field,
-          context: {
-            currentTitle: title,
-            currentDescription: description,
-            status,
-            priority,
-          },
-        }),
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate content')
-      }
-
-      const data = await response.json()
       
       if (field === 'title' && data.title) {
         setTitle(data.title)
@@ -178,7 +186,7 @@ export function FeatureFormDialog({
       setIsGeneratingTitle(false)
       setIsGeneratingDescription(false)
     }
-  }, [getIdToken, title, description, status, priority, toast])
+  }, [title, description, status, priority, toast])
 
   const handleAddReference = useCallback(() => {
     if (!newRefUrl.trim()) return

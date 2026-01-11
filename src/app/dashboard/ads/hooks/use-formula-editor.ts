@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
-import { apiFetch } from '@/lib/api-client'
+import { customFormulasApi } from '@/lib/convex-api'
 import { extractFormulaVariables, safeEvaluateFormula } from '@/lib/metrics'
 
 // =============================================================================
@@ -24,6 +25,8 @@ export type CustomFormula = {
     createdBy: string
     createdAt?: string | null
     updatedAt?: string | null
+    createdAtMs?: number
+    updatedAtMs?: number
 }
 
 export type CreateCustomFormulaInput = {
@@ -151,26 +154,50 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Load formulas from storage
+    const formulasResult = useQuery(
+        customFormulasApi.listByWorkspace,
+        selectedClientId ? { workspaceId: selectedClientId } : 'skip'
+    )
+
+    const createFormulaMutation = useMutation(customFormulasApi.create)
+    const updateFormulaMutation = useMutation(customFormulasApi.update)
+    const removeFormulaMutation = useMutation(customFormulasApi.remove)
+
+    const formulasFromQuery = useMemo(() => {
+        if (!Array.isArray(formulasResult)) return []
+
+        return formulasResult.map((formula: any) => {
+            const createdAtMs = typeof formula.createdAtMs === 'number' ? formula.createdAtMs : undefined
+            const updatedAtMs = typeof formula.updatedAtMs === 'number' ? formula.updatedAtMs : undefined
+
+            return {
+                ...formula,
+                createdAtMs,
+                updatedAtMs,
+                createdAt: createdAtMs ? new Date(createdAtMs).toISOString() : null,
+                updatedAt: updatedAtMs ? new Date(updatedAtMs).toISOString() : null,
+            } satisfies CustomFormula
+        })
+    }, [formulasResult])
+
+    useEffect(() => {
+        setFormulas(formulasFromQuery)
+    }, [formulasFromQuery])
+
+    // Load formulas from storage (compat shim)
     const loadFormulas = useCallback(async () => {
         if (!selectedClientId) return
-
         setLoading(true)
         setError(null)
-
         try {
-            const result = await apiFetch<{ formulas: CustomFormula[]; count: number }>(
-                `/api/integrations/formulas?workspaceId=${encodeURIComponent(selectedClientId)}`,
-                { cache: 'no-store' }
-            )
-            setFormulas(Array.isArray(result.formulas) ? result.formulas : [])
+            setFormulas(formulasFromQuery)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load formulas'
             setError(message)
         } finally {
             setLoading(false)
         }
-    }, [selectedClientId])
+    }, [selectedClientId, formulasFromQuery])
 
     // Create a new formula
     const handleCreateFormula = useCallback(async (
@@ -188,25 +215,30 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
             return null
         }
 
+        const legacyId = `formula_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
         try {
-            const record = await apiFetch<CustomFormula>('/api/integrations/formulas', {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...input,
-                    workspaceId: selectedClientId,
-                    inputs: validation.inputs ?? input.inputs,
-                }),
+            await createFormulaMutation({
+                workspaceId: selectedClientId,
+                legacyId,
+                name: input.name,
+                description: input.description ?? null,
+                formula: input.formula,
+                inputs: validation.inputs ?? input.inputs,
+                outputMetric: input.outputMetric,
+                createdBy: user.id,
             })
 
-            setFormulas((prev) => [...prev, record])
             toast({ title: 'Formula Created', description: `"${input.name}" saved successfully` })
-            return record
+
+            const created = formulasFromQuery.find((f) => f.formulaId === legacyId) ?? null
+            return created
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to create formula'
             toast({ title: 'Error', description: message, variant: 'destructive' })
             return null
         }
-    }, [selectedClientId, user?.id, toast])
+    }, [selectedClientId, user?.id, toast, createFormulaMutation, formulasFromQuery])
 
     // Update an existing formula
     const handleUpdateFormula = useCallback(async (
@@ -224,41 +256,36 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
         }
 
         try {
-            const updated = await apiFetch<CustomFormula>(
-                `/api/integrations/formulas/${encodeURIComponent(input.formulaId)}`,
-                {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                        workspaceId: selectedClientId,
-                        ...input,
-                    }),
-                }
-            )
+            await updateFormulaMutation({
+                workspaceId: selectedClientId,
+                legacyId: input.formulaId,
+                name: input.name,
+                description: input.description,
+                formula: input.formula,
+                inputs: input.inputs,
+                outputMetric: input.outputMetric,
+                isActive: input.isActive,
+            })
 
-            setFormulas((prev) => prev.map((f) => (f.formulaId === input.formulaId ? updated : f)))
             toast({ title: 'Formula Updated' })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to update formula'
             toast({ title: 'Error', description: message, variant: 'destructive' })
         }
-    }, [selectedClientId, toast])
+    }, [selectedClientId, toast, updateFormulaMutation])
 
     // Delete a formula
     const handleDeleteFormula = useCallback(async (formulaId: string): Promise<void> => {
         if (!selectedClientId) return
 
         try {
-            await apiFetch<{ ok: true }>(
-                `/api/integrations/formulas/${encodeURIComponent(formulaId)}?workspaceId=${encodeURIComponent(selectedClientId)}`,
-                { method: 'DELETE' }
-            )
-            setFormulas((prev) => prev.filter((f) => f.formulaId !== formulaId))
+            await removeFormulaMutation({ workspaceId: selectedClientId, legacyId: formulaId })
             toast({ title: 'Formula Deleted' })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to delete formula'
             toast({ title: 'Error', description: message, variant: 'destructive' })
         }
-    }, [selectedClientId, toast])
+    }, [selectedClientId, toast, removeFormulaMutation])
 
     // Validate a formula
     const validateFormula = useCallback((formula: string): FormulaValidationResult => {

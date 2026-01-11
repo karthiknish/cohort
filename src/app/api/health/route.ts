@@ -10,22 +10,35 @@ export const GET = createApiHandler(
     const startTime = Date.now()
     const checks: Record<string, { status: 'ok' | 'error'; message?: string; responseTime?: number }> = {}
 
-    // Check Firebase connectivity
+    // Check Convex connectivity
     try {
       const checkStart = Date.now()
-      const { adminDb } = await import('@/lib/firebase-admin')
+      const { createConvexAdminClient } = await import('@/lib/convex-admin')
 
-      // Simple read to test Firebase connectivity
-      await adminDb.collection('_health').limit(1).get()
+      const convex = createConvexAdminClient({
+        auth: {
+          uid: 'healthcheck',
+          email: null,
+          name: null,
+          claims: { provider: 'system', role: 'admin' },
+          isCron: true,
+        } as any,
+      })
 
-      checks.firebase = {
+      if (!convex) {
+        throw new Error('Convex admin client is not configured')
+      }
+
+      await convex.query('health:ping' as any, {})
+
+      checks.convex = {
         status: 'ok',
         responseTime: Date.now() - checkStart
       }
     } catch (error) {
-      checks.firebase = {
+      checks.convex = {
         status: 'error',
-        message: error instanceof Error ? error.message : 'Firebase connection failed'
+        message: error instanceof Error ? error.message : 'Convex connection failed'
       }
     }
 
@@ -57,25 +70,7 @@ export const GET = createApiHandler(
       }
     }
 
-    // Check Redis connectivity
-    try {
-      const checkStart = Date.now()
-      const { checkDistributedRateLimit } = await import('@/lib/rate-limiter-distributed')
-
-      // Perform a dummy rate limit check to verify Redis connectivity
-      // We use a helper from rate-limiter-distributed
-      await checkDistributedRateLimit('health-check', { maxRequests: 1, windowMs: 1000 })
-
-      checks.redis = {
-        status: 'ok',
-        responseTime: Date.now() - checkStart
-      }
-    } catch (error) {
-      checks.redis = {
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Redis connection failed'
-      }
-    }
+    // Note: Rate limiting is enforced via Convex; we don't separately health-check it here.
 
     // Check Brevo connectivity
     try {
@@ -110,10 +105,8 @@ export const GET = createApiHandler(
 
     // Check environment variables
     const requiredEnvVars = [
-      'NEXT_PUBLIC_FIREBASE_API_KEY',
-      'FIREBASE_PROJECT_ID',
-      'FIREBASE_CLIENT_EMAIL',
-      'FIREBASE_PRIVATE_KEY'
+      'NEXT_PUBLIC_CONVEX_URL',
+      'CONVEX_URL'
     ]
 
     const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName])

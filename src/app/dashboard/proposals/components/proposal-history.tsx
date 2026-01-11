@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils'
 import { FileText, Sparkles, Plus, Clock, Trash2, Layout, Download, ExternalLink, RefreshCw } from 'lucide-react'
 
-import type { ProposalDraft } from '@/services/proposals'
+import type { ProposalDraft } from '@/types/proposals'
 
 function extractAiSummary(insights: unknown, depth = 0): string | null {
   if (!insights || depth > 4) {

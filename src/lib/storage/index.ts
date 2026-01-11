@@ -6,6 +6,7 @@
 export * from './types'
 
 // Derived Metrics
+// Deprecated: client-side Firestore storage has been removed.
 export {
     writeDerivedMetrics,
     writeDerivedMetric,

@@ -1,7 +1,7 @@
-import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../../../../convex/_generated/api'
 
-import { adminDb } from '@/lib/firebase-admin'
 import {
   scheduleIntegrationSync,
   scheduleSyncsForAllUsers,
@@ -10,6 +10,16 @@ import {
 import { createApiHandler } from '@/lib/api-handler'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { UnauthorizedError, ValidationError } from '@/lib/api-errors'
+
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) throw new Error('CONVEX_URL is not configured')
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 const cronSchema = z.object({
   operation: z.string().optional(),
@@ -69,41 +79,21 @@ export const POST = createApiHandler(
       // Clean up old completed/failed sync jobs (older than 7 days)
       const cutoffDate = new Date()
       cutoffDate.setDate(cutoffDate.getDate() - 7)
+      const cutoffMs = cutoffDate.getTime()
 
-      const usersSnapshot = await adminDb
-        .collection('users')
-        .limit(maxUsers)
-        .get()
+      const convex = getConvexClient()
+      const cronKey = process.env.INTEGRATIONS_CRON_SECRET
 
-      for (const userDoc of usersSnapshot.docs) {
-        try {
-          const oldJobsSnapshot = await adminDb
-            .collection('users')
-            .doc(userDoc.id)
-            .collection('syncJobs')
-            .where('status', 'in', ['success', 'error'])
-            .where('processedAt', '<', cutoffDate)
-            .limit(50)
-            .get()
-
-          const batch = adminDb.batch()
-          let batchCount = 0
-
-          oldJobsSnapshot.docs.forEach((jobDoc) => {
-            batch.delete(jobDoc.ref)
-            batchCount++
-          })
-
-          if (batchCount > 0) {
-            await batch.commit()
-            enqueuedJobs += batchCount
-          }
-
-          processedCount++
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown error'
-          errors.push(`User ${userDoc.id}: ${message}`)
-        }
+      try {
+        const result = await convex.mutation(api.adsIntegrations.cleanupOldJobsServer, {
+          cutoffMs,
+          cronKey,
+        })
+        enqueuedJobs = result.deleted
+        processedCount = 1
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        errors.push(`Cleanup failed: ${message}`)
       }
       break
     }
@@ -112,46 +102,21 @@ export const POST = createApiHandler(
       // Reset jobs that have been running for too long (over 30 minutes)
       const staleThreshold = new Date()
       staleThreshold.setMinutes(staleThreshold.getMinutes() - 30)
+      const startedBeforeMs = staleThreshold.getTime()
 
-      const usersSnapshot = await adminDb
-        .collection('users')
-        .limit(maxUsers)
-        .get()
+      const convex = getConvexClient()
+      const cronKey = process.env.INTEGRATIONS_CRON_SECRET
 
-      for (const userDoc of usersSnapshot.docs) {
-        try {
-          const staleJobsSnapshot = await adminDb
-            .collection('users')
-            .doc(userDoc.id)
-            .collection('syncJobs')
-            .where('status', '==', 'running')
-            .where('startedAt', '<', staleThreshold)
-            .limit(10)
-            .get()
-
-          const batch = adminDb.batch()
-          let batchCount = 0
-
-          staleJobsSnapshot.docs.forEach((jobDoc) => {
-            batch.update(jobDoc.ref, {
-              status: 'queued',
-              startedAt: null,
-              errorMessage: 'Reset due to stale execution',
-              updatedAt: FieldValue.serverTimestamp()
-            })
-            batchCount++
-          })
-
-          if (batchCount > 0) {
-            await batch.commit()
-            enqueuedJobs += batchCount
-          }
-
-          processedCount++
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown error'
-          errors.push(`User ${userDoc.id}: ${message}`)
-        }
+      try {
+        const result = await convex.mutation(api.adsIntegrations.resetStaleJobsServer, {
+          startedBeforeMs,
+          cronKey,
+        })
+        enqueuedJobs = result.reset
+        processedCount = 1
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        errors.push(`Reset stale jobs failed: ${message}`)
       }
       break
     }

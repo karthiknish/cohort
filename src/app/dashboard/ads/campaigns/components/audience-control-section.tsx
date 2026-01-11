@@ -25,6 +25,11 @@ import {
   Zap
 } from 'lucide-react'
 
+import { useAction } from 'convex/react'
+
+import { adsTargetingApi } from '@/lib/convex-api'
+import { useAuth } from '@/contexts/auth-context'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -105,11 +110,6 @@ type Props = {
   campaignId: string
   clientId?: string | null
   isPreviewMode?: boolean
-}
-
-function unwrapApiData(payload: unknown): unknown {
-  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-  return record && 'data' in record ? record.data : payload
 }
 
 function formatAgeRange(range: string) {
@@ -211,6 +211,10 @@ function findLocationCoordinates(name: string): { lat: number; lng: number } | n
 }
 
 export function AudienceControlSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
+  const { user } = useAuth()
+
+  const getTargeting = useAction(adsTargetingApi.getTargeting)
+
   const [targeting, setTargeting] = useState<TargetingData[]>([])
   const [insights, setInsights] = useState<Insights | null>(null)
   const [loading, setLoading] = useState(true)
@@ -230,22 +234,28 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       return
     }
 
+    const workspaceId = user?.agencyId ? String(user.agencyId) : null
+    if (!workspaceId) {
+      toast({
+        title: 'Error',
+        description: 'Missing workspace id',
+        variant: 'destructive',
+      })
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     try {
-      const params = new URLSearchParams({ providerId, campaignId })
-      if (clientId) params.set('clientId', clientId)
-      const response = await fetch(`/api/integrations/targeting?${params.toString()}`)
-      const payload = await response.json().catch(() => ({})) as unknown
+      const data = await getTargeting({
+        workspaceId,
+        providerId: providerId as any,
+        clientId: clientId ?? null,
+        campaignId,
+      })
 
-      if (!response.ok) {
-        const rec = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-        const msg = (rec && typeof rec.error === 'string' && rec.error) || (rec && typeof rec.message === 'string' && rec.message) || 'Failed to load audience targeting'
-        throw new Error(msg)
-      }
-
-      const data = unwrapApiData(payload) as { targeting?: TargetingData[]; insights?: Insights } | undefined
-      setTargeting(Array.isArray(data?.targeting) ? data!.targeting! : [])
-      setInsights((data?.insights ?? null) as Insights | null)
+      setTargeting(Array.isArray((data as any)?.targeting) ? (data as any).targeting : [])
+      setInsights(((data as any)?.insights ?? null) as Insights | null)
       setHasLoaded(true)
     } catch (error) {
       toast({
@@ -256,7 +266,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     } finally {
       setLoading(false)
     }
-  }, [canLoad, providerId, campaignId, clientId])
+  }, [campaignId, canLoad, clientId, getTargeting, providerId, user?.agencyId])
 
   useEffect(() => {
     void fetchTargeting()

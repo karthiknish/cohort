@@ -36,6 +36,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { authService } from '@/services/auth'
 import type { TaskRecord } from '@/types/tasks'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
+import { useMutation } from 'convex/react'
+import { tasksApi } from '@/lib/convex-api'
 
 interface TaskCreationModalProps {
   isOpen: boolean
@@ -59,6 +61,8 @@ export function TaskCreationModal({
   const { selectedClientId, selectedClient } = useClientContext()
   const { toast } = useToast()
   const { taskDefaults, contextInfo } = useSmartDefaults()
+
+  const createTask = useMutation(tasksApi.createTask)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -86,37 +90,59 @@ export function TaskCreationModal({
     setError(null)
 
     try {
-      const token = await authService.getIdToken()
+        const payload = {
+          title: formData.title.trim(),
+          description: formData.description.trim() || undefined,
+          priority: formData.priority,
+          status: 'todo' as const,
+          dueDate: formData.dueDate || undefined,
+          assignedTo: formData.assignedTo,
+          clientId: selectedClientId || undefined,
+          client: selectedClient?.name || undefined,
+          projectId: formData.projectId || undefined,
+          projectName: formData.projectName || undefined,
+          tags: [] as string[],
+        }
 
-      const payload = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
-        priority: formData.priority,
-        status: 'todo',
-        dueDate: formData.dueDate || undefined,
-        assignedTo: formData.assignedTo,
-        clientId: selectedClientId || undefined,
-        client: selectedClient?.name || undefined,
-        projectId: formData.projectId || undefined,
-        tags: [],
+
+      if (!user?.agencyId) {
+        throw new Error('Workspace context missing')
       }
 
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+      const result = await createTask({
+        workspaceId: user.agencyId,
+        title: payload.title,
+        description: payload.description ?? null,
+        status: payload.status,
+        priority: payload.priority,
+        assignedTo: payload.assignedTo,
+        clientId: payload.clientId ?? '',
+        client: payload.client ?? null,
+        dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
+        tags: payload.tags,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const message = typeof errorData?.error === 'string' ? errorData.error : 'Failed to create task'
-        throw new Error(message)
+      if (!result?.legacyId) {
+        throw new Error('Failed to create task')
       }
 
-      const createdTask = (await response.json()) as TaskRecord
+      const createdTask: TaskRecord = {
+        id: result.legacyId,
+        title: payload.title,
+        description: payload.description ?? null,
+        status: payload.status,
+        priority: payload.priority as TaskRecord['priority'],
+        assignedTo: payload.assignedTo,
+        clientId: payload.clientId ?? null,
+        client: payload.client ?? null,
+        projectId: payload.projectId ?? null,
+        projectName: payload.projectName ?? null,
+        dueDate: payload.dueDate ?? null,
+        tags: payload.tags,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        deletedAt: null,
+      }
 
       toast({
         title: 'Task created!',

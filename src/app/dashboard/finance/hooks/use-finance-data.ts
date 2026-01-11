@@ -9,13 +9,10 @@ import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { toErrorMessage } from '@/lib/error-utils'
-import {
-  createFinanceCost,
-  deleteFinanceCost,
-  fetchFinanceSummary,
-  issueInvoiceRefund,
-  sendInvoiceReminder,
-} from '@/services/finance'
+import { useAction, useMutation, useQuery } from 'convex/react'
+
+import { api } from '../../../../../convex/_generated/api'
+import { financeInvoicesApi } from '@/lib/convex-api'
 import type {
   FinanceCostEntry,
   FinanceBudget,
@@ -119,32 +116,63 @@ type FinanceHookReturn = {
 }
 
 export function useFinanceData(): FinanceHookReturn {
-  const { clients, selectedClientId } = useClientContext()
-  const { isPreviewMode } = usePreview()
+  const { clients, selectedClientId, workspaceId } = useClientContext()
   const { toast } = useToast()
 
   const [selectedPeriod, setSelectedPeriod] = useState('6m')
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<FinanceInvoiceStatus | 'all'>('all')
-  const [revenueRecords, setRevenueRecords] = useState<FinanceRevenueRecord[]>([])
-  const [invoices, setInvoices] = useState<FinanceInvoice[]>([])
-  const [companyCosts, setCompanyCosts] = useState<FinanceCostEntry[]>([])
-  const [paymentSummary, setPaymentSummary] = useState<FinancePaymentSummary>(EMPTY_PAYMENT_SUMMARY)
   const [newCost, setNewCost] = useState<CostFormState>(INITIAL_COST_FORM)
-  const [isLoading, setIsLoading] = useState(false)
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isSubmittingCost, setIsSubmittingCost] = useState(false)
   const [removingCostId, setRemovingCostId] = useState<string | null>(null)
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null)
   const [refundingInvoiceId, setRefundingInvoiceId] = useState<string | null>(null)
-  const [invoiceNextCursor, setInvoiceNextCursor] = useState<string | null>(null)
-  const [costNextCursor, setCostNextCursor] = useState<string | null>(null)
-  const [loadingMoreInvoices, setLoadingMoreInvoices] = useState(false)
-  const [loadingMoreCosts, setLoadingMoreCosts] = useState(false)
   const [budget, setBudget] = useState<FinanceBudget>({ totalMonthlyBudget: 0, categoryBudgets: {} })
 
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const retryCountRef = useRef(0)
+
+  const resolvedWorkspaceId = workspaceId ? String(workspaceId) : null
+
+  const revenue = useQuery(
+    api.financeRevenue.list,
+    resolvedWorkspaceId
+      ? {
+          workspaceId: resolvedWorkspaceId,
+          clientId: selectedClientId ?? null,
+          limit: 36,
+        }
+      : 'skip'
+  )
+
+  const invoicePage = useQuery(
+    api.financeInvoices.list,
+    resolvedWorkspaceId
+      ? {
+          workspaceId: resolvedWorkspaceId,
+          clientId: selectedClientId ?? null,
+          limit: 200,
+        }
+      : 'skip'
+  )
+
+  const costPage = useQuery(
+    api.financeCosts.list,
+    resolvedWorkspaceId
+      ? {
+          workspaceId: resolvedWorkspaceId,
+          clientId: selectedClientId ?? null,
+          limit: 200,
+        }
+      : 'skip'
+  )
+
+  const createCostMutation = useMutation(api.financeCosts.create)
+  const deleteCostMutation = useMutation(api.financeCosts.remove)
+
+  const remindInvoiceAction = useAction(financeInvoicesApi.remind)
+  const refundInvoiceAction = useAction(financeInvoicesApi.refund)
 
   const clientNameLookup = useMemo(() => new Map(clients.map((client) => [client.id, client.name])), [clients])
 
@@ -157,184 +185,48 @@ export function useFinanceData(): FinanceHookReturn {
     }
   }, [])
 
-  const loadFinanceSummary = useCallback(async (options?: { quiet?: boolean; isRetry?: boolean }) => {
-    setIsLoading(true)
-    if (!options?.isRetry) {
-      setLoadError(null)
-      retryCountRef.current = 0
-    }
-
-    try {
-      const summary = await fetchFinanceSummary({ clientId: selectedClientId ?? null })
-      const revenueEntries = Array.isArray(summary.revenue) ? summary.revenue : []
-      const invoiceEntries = Array.isArray(summary.invoices) ? summary.invoices : []
-      const costEntries = Array.isArray(summary.costs) ? summary.costs : []
-
-      setRevenueRecords(revenueEntries)
-      setInvoices(invoiceEntries)
-      setCompanyCosts(costEntries)
-      if (summary.payments && Array.isArray(summary.payments.totals)) {
-        setPaymentSummary(summary.payments)
-      } else {
-        setPaymentSummary(calculatePaymentSummary(invoiceEntries))
-      }
-      if (summary.budget) {
-        setBudget({
-          totalMonthlyBudget: summary.budget.totalMonthlyBudget ?? 0,
-          categoryBudgets: summary.budget.categoryBudgets ?? {},
-        })
-      }
-      setInvoiceNextCursor(typeof summary.invoiceNextCursor === 'string' && summary.invoiceNextCursor.length > 0 ? summary.invoiceNextCursor : null)
-      setCostNextCursor(typeof summary.costNextCursor === 'string' && summary.costNextCursor.length > 0 ? summary.costNextCursor : null)
-      setLoadError(null)
-      retryCountRef.current = 0
-    } catch (error: unknown) {
-      const message = toErrorMessage(error, 'Failed to load finance data')
-
-      // Implement retry logic
-      const currentRetry = retryCountRef.current + 1
-      if (currentRetry < RETRY_CONFIG.maxAttempts) {
-        retryCountRef.current = currentRetry
-
-        const delay = Math.min(
-          RETRY_CONFIG.baseDelay * Math.pow(2, currentRetry - 1),
-          RETRY_CONFIG.maxDelay
-        )
-
-        retryTimeoutRef.current = setTimeout(() => {
-          void loadFinanceSummary({ quiet: true, isRetry: true })
-        }, delay)
-
-        if (!options?.quiet) {
-          toast({
-            title: 'Retrying...',
-            description: `Attempt ${currentRetry + 1} of ${RETRY_CONFIG.maxAttempts}`,
-          })
-        }
-        return
-      }
-
-      setLoadError(message)
-      setRevenueRecords([])
-      setInvoices([])
-      setCompanyCosts([])
-      setPaymentSummary(EMPTY_PAYMENT_SUMMARY)
-      setInvoiceNextCursor(null)
-      setCostNextCursor(null)
-
-      if (!options?.quiet) {
-        toast({ title: 'Failed to load finance data', description: `${message}. Please try again.`, variant: 'destructive' })
-      }
-    } finally {
-      setIsLoading(false)
-      setHasAttemptedLoad(true)
-    }
-  // Note: toast is stable; dependency limited to selectedClientId to avoid re-running
-  // the loader when the toast state updates (which could trigger extra renders).
-  }, [selectedClientId])
-
+  // With Convex, data loads reactively via `useQuery`, so we no longer
+  // need imperative loaders. We preserve the old retry/toast scaffolding
+  // by surfacing a simple `loadError` based on query results.
   useEffect(() => {
-    void loadFinanceSummary({ quiet: true })
-  }, [loadFinanceSummary])
-
-  const loadMoreInvoices = useCallback(async () => {
-    if (!invoiceNextCursor || loadingMoreInvoices) {
+    if (revenue === undefined || invoicePage === undefined || costPage === undefined) {
       return
     }
 
-    try {
-      setLoadingMoreInvoices(true)
-      const summary = await fetchFinanceSummary({
-        clientId: selectedClientId ?? null,
-        invoiceAfter: invoiceNextCursor,
-      })
+    setHasAttemptedLoad(true)
+    setLoadError(null)
+    retryCountRef.current = 0
+  }, [costPage, invoicePage, revenue])
 
-      const nextInvoices = Array.isArray(summary.invoices) ? summary.invoices : []
-      if (nextInvoices.length === 0) {
-        setInvoiceNextCursor(null)
-        return
-      }
+  // TODO(convex): implement cursor-based pagination in the UI.
+  const loadMoreInvoices = useCallback(async () => {}, [])
+  const loadMoreCosts = useCallback(async () => {}, [])
 
-      setInvoices((prev) => {
-        const map = new Map(prev.map((invoice) => [invoice.id, invoice]))
-        nextInvoices.forEach((invoice) => {
-          map.set(invoice.id, invoice)
-        })
-
-        const merged = Array.from(map.values()).sort((a, b) => {
-          const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0
-          const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0
-          return bCreated - aCreated
-        })
-
-        setPaymentSummary(calculatePaymentSummary(merged))
-        return merged
-      })
-
-      setInvoiceNextCursor(
-        typeof summary.invoiceNextCursor === 'string' && summary.invoiceNextCursor.length > 0
-          ? summary.invoiceNextCursor
-          : null
-      )
-    } catch (error: unknown) {
-      toast({
-        title: 'Couldn\'t load more invoices',
-        description: toErrorMessage(error, 'Unable to load additional invoices'),
-        variant: 'destructive',
-      })
-    } finally {
-      setLoadingMoreInvoices(false)
-    }
-  }, [invoiceNextCursor, loadingMoreInvoices, selectedClientId, toast])
-
-  const loadMoreCosts = useCallback(async () => {
-    if (!costNextCursor || loadingMoreCosts) {
-      return
-    }
-
-    try {
-      setLoadingMoreCosts(true)
-      const summary = await fetchFinanceSummary({
-        clientId: selectedClientId ?? null,
-        costAfter: costNextCursor,
-      })
-
-      const nextCosts = Array.isArray(summary.costs) ? summary.costs : []
-      if (nextCosts.length === 0) {
-        setCostNextCursor(null)
-        return
-      }
-
-      setCompanyCosts((prev) => {
-        const map = new Map(prev.map((cost) => [cost.id, cost]))
-        nextCosts.forEach((cost) => {
-          map.set(cost.id, cost)
-        })
-
-        const merged = Array.from(map.values()).sort((a, b) => {
-          const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0
-          const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0
-          return bCreated - aCreated
-        })
-
-        return merged
-      })
-
-      setCostNextCursor(
-        typeof summary.costNextCursor === 'string' && summary.costNextCursor.length > 0
-          ? summary.costNextCursor
-          : null
-      )
-    } catch (error: unknown) {
-      toast({
-        title: 'Couldn\'t load more costs',
-        description: toErrorMessage(error, 'Unable to load additional costs'),
-        variant: 'destructive',
-      })
-    } finally {
-      setLoadingMoreCosts(false)
-    }
-  }, [costNextCursor, loadingMoreCosts, selectedClientId, toast])
+  const invoices: FinanceInvoice[] = useMemo(() => {
+    if (!invoicePage) return []
+    return invoicePage.invoices.map((row) => ({
+      id: row.legacyId,
+      clientId: row.clientId,
+      clientName: row.clientName,
+      amount: row.amount,
+      status: row.status as FinanceInvoice['status'],
+      stripeStatus: row.stripeStatus,
+      issuedDate: row.issuedDate,
+      dueDate: row.dueDate,
+      paidDate: row.paidDate,
+      amountPaid: row.amountPaid,
+      amountRemaining: row.amountRemaining,
+      amountRefunded: row.amountRefunded,
+      currency: row.currency,
+      description: row.description,
+      hostedInvoiceUrl: row.hostedInvoiceUrl,
+      number: row.number,
+      paymentIntentId: row.paymentIntentId,
+      collectionMethod: row.collectionMethod,
+      createdAt: new Date(row.createdAt).toISOString(),
+      updatedAt: new Date(row.updatedAt).toISOString(),
+    }))
+  }, [invoicePage])
 
   const filteredInvoices = useMemo(() => {
     if (invoiceStatusFilter === 'all') {
@@ -342,6 +234,35 @@ export function useFinanceData(): FinanceHookReturn {
     }
     return invoices.filter((invoice) => invoice.status === invoiceStatusFilter)
   }, [invoices, invoiceStatusFilter])
+
+  const companyCosts: FinanceCostEntry[] = useMemo(() => {
+    if (!costPage) return []
+    return costPage.costs.map((row) => ({
+      id: row.legacyId,
+      clientId: row.clientId,
+      category: row.category,
+      amount: row.amount,
+      cadence: row.cadence as FinanceCostEntry['cadence'],
+      currency: row.currency,
+      createdAt: new Date(row.createdAt).toISOString(),
+      updatedAt: new Date(row.updatedAt).toISOString(),
+    }))
+  }, [costPage])
+
+  const revenueRecords: FinanceRevenueRecord[] = useMemo(() => {
+    if (!revenue) return []
+    return revenue.revenue.map((row) => ({
+      id: row.legacyId,
+      clientId: row.clientId,
+      period: row.period,
+      label: row.label,
+      revenue: row.revenue,
+      operatingExpenses: row.operatingExpenses,
+      currency: row.currency,
+      createdAt: new Date(row.createdAt).toISOString(),
+      updatedAt: new Date(row.updatedAt).toISOString(),
+    }))
+  }, [revenue])
 
   const monthlyCostTotal = useMemo(
     () => companyCosts.reduce((sum, cost) => sum + normalizeMonthly(cost.amount, cost.cadence), 0),
@@ -381,6 +302,8 @@ export function useFinanceData(): FinanceHookReturn {
     [monthlyCostTotal, revenueRecords.length]
   )
   const categorySpend = useMemo(() => sumByCategory(companyCosts), [companyCosts])
+  const paymentSummary = useMemo(() => calculatePaymentSummary(invoices), [invoices])
+
   const primaryCurrencyTotals = useMemo(
     () =>
       getPrimaryCurrencyTotals(paymentSummary.totals) ?? {
@@ -547,24 +470,21 @@ export function useFinanceData(): FinanceHookReturn {
 
       try {
         setIsSubmittingCost(true)
-        const created = await createFinanceCost({
+        if (!resolvedWorkspaceId) {
+          throw new Error('Missing workspace')
+        }
+
+        const result = await createCostMutation({
+          workspaceId: resolvedWorkspaceId,
+          clientId: selectedClientId ?? null,
           category: newCost.category.trim(),
           amount: amountValue,
           cadence: newCost.cadence,
           currency: newCost.currency || 'USD',
-          clientId: selectedClientId ?? null,
         })
 
-        setCompanyCosts((prev) => {
-          const next = [...prev, created]
-          return next.sort((a, b) => {
-            const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0
-            const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0
-            return bCreated - aCreated
-          })
-        })
         setNewCost(INITIAL_COST_FORM)
-        toast({ title: 'Cost added', description: `"${created.category}" has been recorded.` })
+        toast({ title: 'Cost added', description: `"${result.legacyId}" has been recorded.` })
       } catch (error: unknown) {
         toast({
           title: 'Failed to add cost',
@@ -582,8 +502,12 @@ export function useFinanceData(): FinanceHookReturn {
     async (id: string) => {
       try {
         setRemovingCostId(id)
-        await deleteFinanceCost(id)
-        setCompanyCosts((prev) => prev.filter((cost) => cost.id !== id))
+        if (!resolvedWorkspaceId) {
+          throw new Error('Missing workspace')
+        }
+
+        await deleteCostMutation({ workspaceId: resolvedWorkspaceId, legacyId: id })
+
         toast({ title: 'Cost removed', description: 'The cost entry has been deleted.' })
       } catch (error: unknown) {
         toast({
@@ -605,12 +529,15 @@ export function useFinanceData(): FinanceHookReturn {
 
     try {
       setSendingInvoiceId(invoiceId)
-      await sendInvoiceReminder(invoiceId)
+      if (!resolvedWorkspaceId) {
+        throw new Error('Missing workspace')
+      }
+
+      await remindInvoiceAction({ workspaceId: resolvedWorkspaceId, invoiceId })
       toast({
         title: 'Reminder sent!',
         description: 'Payment reminder email will be sent to the client shortly.',
       })
-      await loadFinanceSummary({ quiet: true })
     } catch (error: unknown) {
       toast({
         title: 'Reminder failed',
@@ -620,7 +547,7 @@ export function useFinanceData(): FinanceHookReturn {
     } finally {
       setSendingInvoiceId(null)
     }
-  }, [loadFinanceSummary, toast, primaryCurrencyTotals.currency])
+  }, [remindInvoiceAction, toast])
 
   const handleIssueInvoiceRefund = useCallback(async (invoiceId: string) => {
     if (!invoiceId) {
@@ -629,12 +556,15 @@ export function useFinanceData(): FinanceHookReturn {
 
     try {
       setRefundingInvoiceId(invoiceId)
-      const result = await issueInvoiceRefund(invoiceId)
+      if (!resolvedWorkspaceId) {
+        throw new Error('Missing workspace')
+      }
+
+      const result = await refundInvoiceAction({ workspaceId: resolvedWorkspaceId, invoiceId })
       toast({
         title: 'Refund initiated',
-        description: `${formatCurrency(result.amount, primaryCurrencyTotals.currency)} refund is being processed.`,
+        description: `${formatCurrency(result.refund.amount, primaryCurrencyTotals.currency)} refund is being processed.`,
       })
-      await loadFinanceSummary({ quiet: true })
     } catch (error: unknown) {
       toast({
         title: 'Refund failed',
@@ -644,7 +574,7 @@ export function useFinanceData(): FinanceHookReturn {
     } finally {
       setRefundingInvoiceId(null)
     }
-  }, [loadFinanceSummary, toast])
+  }, [refundInvoiceAction, toast, primaryCurrencyTotals.currency])
 
   const costsWithMonthly = useMemo(
     () =>
@@ -715,16 +645,16 @@ export function useFinanceData(): FinanceHookReturn {
     handleRemoveCost,
     removingCostId,
     isSubmittingCost,
-    isLoading,
+    isLoading: revenue === undefined || invoicePage === undefined || costPage === undefined,
     hasAttemptedLoad,
     loadError,
-    refresh: () => loadFinanceSummary(),
-    hasMoreInvoices: Boolean(invoiceNextCursor),
-    hasMoreCosts: Boolean(costNextCursor),
+    refresh: async () => {},
+    hasMoreInvoices: false,
+    hasMoreCosts: false,
     loadMoreInvoices,
     loadMoreCosts,
-    loadingMoreInvoices,
-    loadingMoreCosts,
+    loadingMoreInvoices: false,
+    loadingMoreCosts: false,
     sendingInvoiceId,
     refundingInvoiceId,
     sendInvoiceReminder: handleSendInvoiceReminder,

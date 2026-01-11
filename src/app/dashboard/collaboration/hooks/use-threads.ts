@@ -2,7 +2,10 @@
 
 import { useCallback, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
+import { useConvex } from 'convex/react'
+import { collaborationApi } from '@/lib/convex-api'
 import type { CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationMessageFormat } from '@/types/collaboration'
 import type {
   ThreadMessagesState,
   ThreadCursorsState,
@@ -10,14 +13,17 @@ import type {
   ThreadErrorsState,
 } from './types'
 import { THREAD_PAGE_SIZE } from './constants'
+import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
 
 interface UseThreadsOptions {
-  ensureSessionToken: () => Promise<string>
+  workspaceId: string | null
 }
 
-export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
+export function useThreads({ workspaceId }: UseThreadsOptions) {
   const { toast } = useToast()
-  
+
+  const convex = useConvex()
+
   const [threadMessagesByRootId, setThreadMessagesByRootId] = useState<ThreadMessagesState>({})
   const [threadNextCursorByRootId, setThreadNextCursorByRootId] = useState<ThreadCursorsState>({})
   const [threadLoadingByRootId, setThreadLoadingByRootId] = useState<ThreadLoadingState>({})
@@ -46,35 +52,61 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
       }))
 
       try {
-        const token = await ensureSessionToken()
-        const params = new URLSearchParams()
-        params.set('threadRootId', trimmedId)
-        params.set('pageSize', THREAD_PAGE_SIZE.toString())
-        if (after) {
-          params.set('after', after)
+        if (!workspaceId) {
+          throw new Error('Workspace unavailable')
         }
 
-        const response = await fetch(`/api/collaboration/messages?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          cache: 'no-store',
-        })
+        const decoded = decodeTimestampIdCursor(after)
+        const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
+        const afterLegacyId = decoded ? decoded.id : undefined
 
-        const payload = (await response.json().catch(() => null)) as
-          | { messages?: CollaborationMessage[]; nextCursor?: string | null; error?: string }
-          | null
+        const rows = (await convex.query((collaborationApi as any).listThreadReplies, {
+          workspaceId: String(workspaceId),
+          threadRootId: trimmedId,
+          limit: THREAD_PAGE_SIZE + 1,
+          afterCreatedAtMs,
+          afterLegacyId,
+        })) as any[]
 
-        if (!response.ok || !payload) {
-          const message = typeof payload?.error === 'string' ? payload.error : 'Unable to load thread replies'
-          throw new Error(message)
-        }
-
-        const replies = Array.isArray(payload.messages) ? payload.messages : []
+        const replies: CollaborationMessage[] = rows
+          .slice(0, THREAD_PAGE_SIZE)
+          .map((row) => ({
+            id: String(row?.legacyId ?? ''),
+            channelType: typeof row?.channelType === 'string' ? row.channelType : 'team',
+            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
+            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
+            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
+            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
+            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
+            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
+            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
+            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
+            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
+            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
+            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+            threadLastReplyAt:
+              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
+          }))
+          .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
         const normalizedReplies = replies.map((message) => ({
           ...message,
           reactions: message.reactions ?? [],
         }))
+
+        const hasMore = rows.length > THREAD_PAGE_SIZE
+        const lastDisplayed = rows.length ? rows[Math.min(rows.length, THREAD_PAGE_SIZE) - 1] : null
+        const nextCursor =
+          hasMore && lastDisplayed && typeof lastDisplayed.createdAtMs === 'number'
+            ? encodeTimestampIdCursor(new Date(lastDisplayed.createdAtMs).toISOString(), String(lastDisplayed.legacyId ?? ''))
+            : null
 
         setThreadMessagesByRootId((prev) => {
           const existing = prev[trimmedId] ?? []
@@ -112,7 +144,6 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
         })
 
         setThreadNextCursorByRootId((prev) => {
-          const nextCursor = payload.nextCursor ?? null
           if (prev[trimmedId] === nextCursor) {
             return prev
           }
@@ -145,7 +176,7 @@ export function useThreads({ ensureSessionToken }: UseThreadsOptions) {
         }))
       }
     },
-    [ensureSessionToken, toast]
+    [convex, toast, workspaceId]
   )
 
   const loadThreadReplies = useCallback(

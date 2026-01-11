@@ -2,9 +2,12 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAction, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
-import { postWithRetry, getWithRetry, type FetchWithRetryOptions } from '@/lib/fetch-with-retry'
+import { agentApi } from '@/lib/convex-api'
 import { AgentError, AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
+
+
 
 export interface AgentMessageMetadata {
   action?: 'navigate' | 'execute' | 'response'
@@ -105,7 +108,15 @@ function validateInput(text: string): string | null {
 
 export function useAgentMode(): UseAgentModeReturn {
   const router = useRouter()
-  const { getIdToken } = useAuth()
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+
+  const sendMessage = useAction(agentApi.sendMessage)
+  const listConversations = useAction(agentApi.listConversations)
+  const getConversation = useAction(agentApi.getConversation)
+  const updateTitle = useMutation(agentApi.updateConversationTitle)
+  const deleteConversationMutation = useMutation(agentApi.deleteConversation)
+
   const [isOpen, setOpen] = useState(false)
   const [messages, setMessages] = useState<AgentMessage[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
@@ -192,7 +203,7 @@ export function useAgentMode(): UseAgentModeReturn {
   const handleError = useCallback((err: AgentError, failedMessage?: string) => {
     setError(err)
     setConnectionStatus(err.type === 'network' ? 'disconnected' : 'connected')
-    
+
     if (failedMessage) {
       setLastFailedMessage(failedMessage)
     }
@@ -207,21 +218,6 @@ export function useAgentMode(): UseAgentModeReturn {
     addMessage('agent', displayMessage, null, 'error', { action: 'response', success: false })
   }, [addMessage, startRateLimitCountdown])
 
-  /**
-   * Retry options for API calls
-   */
-  const getRetryOptions = useCallback((): FetchWithRetryOptions => ({
-    maxRetries: 3,
-    baseDelayMs: 1000,
-    getAuthToken: getIdToken,
-    onRetry: (attempt, err, delayMs) => {
-      console.log(`[useAgentMode] Retry attempt ${attempt}, waiting ${delayMs}ms`, err.type)
-      setConnectionStatus('retrying')
-    },
-    onFinalFailure: (err) => {
-      console.error('[useAgentMode] Final failure after retries:', err)
-    },
-  }), [getIdToken])
 
   const processInput = useCallback(async (text: string) => {
     // Debounce check
@@ -241,7 +237,7 @@ export function useAgentMode(): UseAgentModeReturn {
     }
 
     const trimmedText = text.trim()
-    
+
     // Clear previous errors
     clearError()
     setIsProcessing(true)
@@ -251,49 +247,23 @@ export function useAgentMode(): UseAgentModeReturn {
     addMessage('user', trimmedText)
 
     try {
-      // Get auth token
-      const token = await getIdToken()
+      if (!workspaceId) {
+        throw new Error('Workspace context is required')
+      }
 
-      // Build conversation context for the API
-      const previousMessages = messages.slice(-4).map(m => ({
+      const previousMessages = messages.slice(-4).map((m) => ({
         type: m.type,
         content: m.content,
       }))
 
-      const payload: Record<string, unknown> = {
+      const responseData = await sendMessage({
+        workspaceId,
         message: trimmedText,
+        conversationId,
         context: { previousMessages },
-      }
-
-      if (conversationId) {
-        payload.conversationId = conversationId
-      }
-
-      // Call the Agent API with retry logic
-      const { data, error: fetchError } = await postWithRetry<{ data?: Record<string, unknown> }>(
-        '/api/agent',
-        payload,
-        token,
-        getRetryOptions()
-      )
-
-      if (fetchError) {
-        handleError(fetchError, trimmedText)
-        return
-      }
+      })
 
       setConnectionStatus('connected')
-      
-      // Handle successful response
-      const rawData = data?.data || data
-      const responseData = rawData as {
-        conversationId?: string
-        action?: string
-        route?: string
-        message?: string
-        operation?: string
-        executeResult?: { success: boolean; data?: Record<string, unknown> }
-      }
 
       // Save conversationId for subsequent messages
       if (responseData?.conversationId && !conversationId) {
@@ -311,31 +281,20 @@ export function useAgentMode(): UseAgentModeReturn {
       if (responseData?.action === 'navigate' && responseData?.route) {
         status = 'success'
         metadata.success = true
-        // Add agent response with status
         addMessage('agent', responseData.message || 'Navigating...', responseData.route, status, metadata)
-        // Navigation action - go to the route after a brief delay
         setTimeout(() => {
           router.push(responseData.route!)
           setOpen(false)
         }, 800)
       } else if (responseData?.action === 'execute' && responseData?.executeResult) {
-        // Execute action - action was performed
         status = responseData.executeResult.success ? 'success' : 'error'
         metadata.success = responseData.executeResult.success
         metadata.data = responseData.executeResult.data
         addMessage('agent', responseData.message || 'Action completed', responseData.route, status, metadata)
-
-        if (responseData.executeResult.success) {
-          console.log('[useAgentMode] Action executed successfully:', responseData.operation, responseData.executeResult.data)
-        } else {
-          console.warn('[useAgentMode] Action execution failed:', responseData.message)
-        }
       } else {
-        // Regular response
         addMessage('agent', responseData?.message || 'I didn\'t quite understand that.', responseData?.route, 'info', metadata)
       }
 
-      // Clear failed message on success
       setLastFailedMessage(null)
     } catch (err) {
       console.error('[useAgentMode] Unexpected error:', err)
@@ -344,7 +303,7 @@ export function useAgentMode(): UseAgentModeReturn {
     } finally {
       setIsProcessing(false)
     }
-  }, [addMessage, clearError, conversationId, getIdToken, getRetryOptions, handleError, messages, router])
+  }, [addMessage, clearError, conversationId, handleError, messages, router, sendMessage, workspaceId])
 
   const retryLastMessage = useCallback(() => {
     if (lastFailedMessage) {
@@ -362,64 +321,43 @@ export function useAgentMode(): UseAgentModeReturn {
   const fetchHistory = useCallback(async () => {
     setIsHistoryLoading(true)
     try {
-      const token = await getIdToken()
-      const { data, error: fetchError } = await getWithRetry<{ data?: { conversations?: AgentConversationSummary[] } }>(
-        '/api/agent/conversations?limit=20',
-        token,
-        { maxRetries: 2 }
-      )
-
-      if (fetchError) {
-        console.error('[useAgentMode] Failed to fetch history:', fetchError)
-        return
+      if (!workspaceId) {
+        throw new Error('Workspace context is required')
       }
 
-      const rawData = data?.data || data
-      const conversations = Array.isArray((rawData as Record<string, unknown>)?.conversations) 
-        ? (rawData as { conversations: AgentConversationSummary[] }).conversations 
-        : []
-      setHistory(conversations)
+      const result = await listConversations({ workspaceId, limit: 20 })
+      setHistory(result.conversations)
     } catch (err) {
       console.error('[useAgentMode] Failed to fetch history:', err)
     } finally {
       setIsHistoryLoading(false)
     }
-  }, [getIdToken])
+  }, [listConversations, workspaceId])
 
   const loadConversation = useCallback(async (targetConversationId: string) => {
     if (!targetConversationId) return
 
     setIsProcessing(true)
     clearError()
-    
-    try {
-      const token = await getIdToken()
-      const { data, error: fetchError } = await getWithRetry<{ data?: { messages?: unknown[] } }>(
-        `/api/agent/conversations/${encodeURIComponent(targetConversationId)}?limit=500`,
-        token,
-        { maxRetries: 2 }
-      )
 
-      if (fetchError) {
-        handleError(fetchError)
-        return
+    try {
+      if (!workspaceId) {
+        throw new Error('Workspace context is required')
       }
 
-      const rawData = data?.data || data
-      const apiMessages = Array.isArray((rawData as Record<string, unknown>)?.messages) 
-        ? (rawData as { messages: unknown[] }).messages 
-        : []
-
-      const nextMessages: AgentMessage[] = apiMessages.map((m: unknown) => {
-        const msg = m as Record<string, unknown>
-        return {
-          id: typeof msg?.id === 'string' ? msg.id : generateId(),
-          type: msg?.type === 'user' ? 'user' as const : 'agent' as const,
-          content: typeof msg?.content === 'string' ? msg.content : '',
-          timestamp: msg?.timestamp ? new Date(msg.timestamp as string) : new Date(),
-          route: typeof msg?.route === 'string' ? msg.route : null,
-        }
+      const result = await getConversation({
+        workspaceId,
+        conversationId: targetConversationId,
+        limit: 500,
       })
+
+      const nextMessages: AgentMessage[] = result.messages.map((msg: any) => ({
+        id: msg.id,
+        type: msg.type,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+        route: msg.route,
+      }))
 
       setMessages(nextMessages)
       setConversationId(targetConversationId)
@@ -430,49 +368,34 @@ export function useAgentMode(): UseAgentModeReturn {
     } finally {
       setIsProcessing(false)
     }
-  }, [clearError, getIdToken, handleError])
+  }, [clearError, getConversation, handleError, workspaceId])
 
   const updateConversationTitle = useCallback(async (targetConversationId: string, title: string) => {
     const trimmed = title.trim()
     if (!targetConversationId || !trimmed) return
 
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/agent/conversations/${encodeURIComponent(targetConversationId)}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: trimmed }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update title')
+      if (!workspaceId) {
+        throw new Error('Workspace context is required')
       }
 
+      await updateTitle({ workspaceId, conversationId: targetConversationId, title: trimmed })
       setHistory((prev) => prev.map((c) => (c.id === targetConversationId ? { ...c, title: trimmed } : c)))
     } catch (err) {
       console.error('[useAgentMode] Failed to update title:', err)
-      addMessage('agent', 'Sorry — I couldn\'t update that chat title. Please try again.')
+      addMessage('agent', 'Sorry  I couldn\'t update that chat title. Please try again.')
     }
-  }, [addMessage, getIdToken])
+  }, [addMessage, updateTitle, workspaceId])
 
   const deleteConversation = useCallback(async (targetConversationId: string) => {
     if (!targetConversationId) return
 
     try {
-      const token = await getIdToken()
-      const response = await fetch(`/api/agent/conversations/${encodeURIComponent(targetConversationId)}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete conversation')
+      if (!workspaceId) {
+        throw new Error('Workspace context is required')
       }
+
+      await deleteConversationMutation({ workspaceId, conversationId: targetConversationId })
 
       setHistory((prev) => prev.filter((c) => c.id !== targetConversationId))
       if (conversationId === targetConversationId) {
@@ -481,9 +404,9 @@ export function useAgentMode(): UseAgentModeReturn {
       }
     } catch (err) {
       console.error('[useAgentMode] Failed to delete conversation:', err)
-      addMessage('agent', 'Sorry — I couldn\'t delete that chat. Please try again.')
+      addMessage('agent', 'Sorry  I couldn\'t delete that chat. Please try again.')
     }
-  }, [addMessage, conversationId, getIdToken])
+  }, [addMessage, conversationId, deleteConversationMutation, workspaceId])
 
   return {
     isOpen,

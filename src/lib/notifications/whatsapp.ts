@@ -1,6 +1,8 @@
 // WhatsApp notification functions
 
-import { adminDb } from '@/lib/firebase-admin'
+import { ConvexHttpClient } from 'convex/browser'
+
+import { api } from '../../../convex/_generated/api'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
 
@@ -17,6 +19,16 @@ import {
   sanitizeWhatsAppNumber,
 } from './config'
 import type { WhatsAppNotificationKind, WhatsAppSendResult, WhatsAppDispatchResult } from './types'
+
+// Lazy-init Convex client
+let _convexClient: ConvexHttpClient | null = null
+function getConvexClient(): ConvexHttpClient | null {
+  if (_convexClient) return _convexClient
+  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+  if (!url) return null
+  _convexClient = new ConvexHttpClient(url)
+  return _convexClient
+}
 
 // =============================================================================
 // SEND WHATSAPP MESSAGE
@@ -252,33 +264,37 @@ async function dispatchWorkspaceWhatsAppNotification(options: {
     return result
   }
 
-  const fieldPath =
+  // Map notification kind to preference type
+  const notificationType: 'tasks' | 'collaboration' | 'billing' =
     kind === 'task-created'
-      ? 'notificationPreferences.whatsapp.tasks'
+      ? 'tasks'
       : kind === 'invoice-sent' || kind === 'invoice-paid'
-        ? 'notificationPreferences.whatsapp.billing'
-        : 'notificationPreferences.whatsapp.collaboration'
+        ? 'billing'
+        : 'collaboration'
 
   try {
-    const snapshot = await adminDb
-      .collection('users')
-      .where('agencyId', '==', workspaceId)
-      .where(fieldPath, '==', true)
-      .limit(50)
-      .get()
+    const convex = getConvexClient()
+    if (!convex) {
+      console.warn('[notifications] convex client not available, skipping whatsapp dispatch')
+      return result
+    }
 
-    if (snapshot.empty) {
+    const queryResult = await convex.query(api.users.getWhatsAppRecipientsForWorkspace, {
+      workspaceId,
+      notificationType,
+    })
+
+    if (!queryResult.phoneNumbers.length) {
       return result
     }
 
     const numbers = new Set<string>()
-    snapshot.docs.forEach((doc) => {
-      const data = doc.data() as Record<string, unknown>
-      const sanitized = sanitizeWhatsAppNumber(data.phoneNumber)
+    for (const phoneNumber of queryResult.phoneNumbers) {
+      const sanitized = sanitizeWhatsAppNumber(phoneNumber)
       if (sanitized) {
         numbers.add(sanitized)
       }
-    })
+    }
 
     if (!numbers.size) {
       return result
@@ -326,7 +342,7 @@ async function dispatchWorkspaceWhatsAppNotification(options: {
     result.errors.push(
       new NotificationError({
         message: `Failed to resolve recipients: ${(error as Error)?.message ?? 'Unknown error'}`,
-        errorCode: NOTIFICATION_ERROR_CODES.FIRESTORE_WRITE_FAILED,
+        errorCode: NOTIFICATION_ERROR_CODES.CONVEX_QUERY_FAILED,
         channel: 'whatsapp',
       })
     )

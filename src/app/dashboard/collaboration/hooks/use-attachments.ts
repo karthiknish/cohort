@@ -1,20 +1,24 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { storage } from '@/lib/firebase'
 import { useToast } from '@/components/ui/use-toast'
+import { useMutation } from 'convex/react'
+import { collaborationApi } from '@/lib/convex-api'
 import type { CollaborationAttachment } from '@/types/collaboration'
 import type { PendingAttachment } from './types'
 import { MAX_ATTACHMENTS } from './constants'
-import { validateAttachments, formatFileSize } from './utils'
+import { validateAttachments } from './utils'
 
 interface UseAttachmentsOptions {
   userId: string | null
+  workspaceId: string | null
 }
 
-export function useAttachments({ userId }: UseAttachmentsOptions) {
+export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
   const { toast } = useToast()
+
+  const generateUploadUrl = useMutation((collaborationApi as any).generateUploadUrl)
+
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
   const [uploading, setUploading] = useState(false)
 
@@ -43,38 +47,58 @@ export function useAttachments({ userId }: UseAttachmentsOptions) {
   }, [])
 
   const uploadAttachments = useCallback(async (attachments: PendingAttachment[]): Promise<CollaborationAttachment[]> => {
-    if (!userId || attachments.length === 0) {
+    if (!userId || !workspaceId || attachments.length === 0) {
       return []
     }
 
     setUploading(true)
 
     try {
-      const uploadPromises = attachments.map(async (attachment) => {
-        const timestamp = Date.now()
-        const fileName = `${timestamp}-${attachment.file.name}`
-        const storagePath = `users/${userId}/collaboration/${fileName}`
-        const fileRef = ref(storage, storagePath)
+      const results: CollaborationAttachment[] = []
 
-        await uploadBytes(fileRef, attachment.file, {
-          contentType: attachment.mimeType,
+
+      for (const attachment of attachments) {
+        const uploadUrlPayload = (await generateUploadUrl({})) as { url?: string }
+        const uploadUrl = uploadUrlPayload?.url
+        if (!uploadUrl) throw new Error('Unable to create upload URL')
+
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': attachment.mimeType || 'application/octet-stream',
+          },
+          body: attachment.file,
         })
 
-        const downloadUrl = await getDownloadURL(fileRef)
+        const uploadResult = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+        const storageId = uploadResult?.storageId
+        if (!uploadResponse.ok || !storageId) {
+          throw new Error('Upload failed')
+        }
 
-        return {
+        results.push({
           name: attachment.name,
-          url: downloadUrl,
+          url: 'about:blank',
+          storageId,
           type: attachment.mimeType,
           size: attachment.sizeLabel,
-        }
-      })
+        })
 
-      return await Promise.all(uploadPromises)
+      }
+
+      return results
+    } catch (error) {
+      console.warn('[collaboration] failed to upload attachments', error)
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Unable to upload attachment',
+        variant: 'destructive',
+      })
+      return []
     } finally {
       setUploading(false)
     }
-  }, [userId])
+  }, [generateUploadUrl, toast, userId, workspaceId])
 
   return {
     pendingAttachments,

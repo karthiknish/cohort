@@ -1,6 +1,5 @@
-import { Timestamp } from 'firebase/firestore'
 
-import { getAdIntegration, updateIntegrationCredentials } from '@/lib/firestore/admin'
+import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin'
 import { logger } from '@/lib/logger'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 
@@ -84,15 +83,15 @@ export class IntegrationTokenError extends Error {
   }
 }
 
-type AnyTimestamp = Timestamp | { toMillis: () => number } | { toDate: () => Date }
+type AnyTimestamp = { toMillis: () => number } | { toDate: () => Date } | Date | string | number
 
 export function isTokenExpiringSoon(expiresAt?: AnyTimestamp | null | string, bufferMs = 5 * 60 * 1000): boolean {
   if (!expiresAt) return true
 
   let expiryMs: number | null = null
 
-  if (expiresAt instanceof Timestamp) {
-    expiryMs = expiresAt.toMillis()
+  if (expiresAt instanceof Date) {
+    expiryMs = expiresAt.getTime()
   } else if (typeof (expiresAt as { toMillis?: () => number }).toMillis === 'function') {
     try {
       expiryMs = (expiresAt as { toMillis: () => number }).toMillis()
@@ -106,6 +105,9 @@ export function isTokenExpiringSoon(expiresAt?: AnyTimestamp | null | string, bu
     } catch {
       expiryMs = null
     }
+  } else if (typeof expiresAt === 'number') {
+    // Convex-backed storage uses numeric millis (or occasionally seconds).
+    expiryMs = expiresAt < 1_000_000_000_000 ? expiresAt * 1000 : expiresAt
   } else if (typeof expiresAt === 'string') {
     const parsed = Date.parse(expiresAt)
     expiryMs = Number.isNaN(parsed) ? null : parsed

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 
 import type { TaskSummary } from '@/app/dashboard/components/utils'
 import type { FinanceSummaryResponse } from '@/types/finance'
-import type { ProposalDraft } from '@/services/proposals'
+import type { ProposalDraft } from '@/types/proposals'
 import type { IntegrationStatusSummary } from '@/app/dashboard/hooks/use-integration-status-summary'
 
 type Props = {

@@ -14,11 +14,11 @@ const deckStageMessages: Record<DeckProgressStage, { title: string; description:
   },
   polling: {
     title: "Generating slides & saving...",
-    description: "We are exporting the PPT and saving a copy for you in Firebase.",
+    description: "We are exporting the PPT and saving a copy for you.",
   },
   launching: {
     title: "Deck ready",
-    description: "We saved a copy to Firebase and are opening it for you now.",
+    description: "We saved a copy and are opening it for you now.",
   },
   queued: {
     title: "Still processing",

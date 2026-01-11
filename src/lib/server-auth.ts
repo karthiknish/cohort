@@ -9,8 +9,9 @@ export interface AuthResult {
 }
 
 import { ApiError } from './api-errors'
-import { adminAuth } from './firebase-admin'
-import { DecodedIdToken } from 'firebase-admin/auth'
+import { ConvexHttpClient } from 'convex/browser'
+
+import { getToken as getConvexBetterAuthToken } from '@convex-dev/better-auth/utils'
 
 class AuthenticationError extends ApiError {
   constructor(message: string, status = 401) {
@@ -18,54 +19,134 @@ class AuthenticationError extends ApiError {
   }
 }
 
-/**
- * Verifies a Firebase ID token (JWT).
- * Used for API requests coming from the client with an Authorization header.
- */
-async function verifyIdToken(idToken: string): Promise<AuthResult> {
+
+async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthResult | null> {
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+  const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
+  if (!convexUrl || !convexSiteUrl) return null
+
   try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
-    return mapDecodedTokenToAuthResult(decodedToken)
-  } catch (error) {
-    console.error('[server-auth] ID token verification failed:', error)
-    throw new AuthenticationError('Invalid or expired authentication token', 401)
+    const tokenResult = await getConvexBetterAuthToken(convexSiteUrl, request.headers)
+    const token = tokenResult?.token
+    if (!token) return null
+
+    const convex = new ConvexHttpClient(convexUrl, { auth: token })
+
+    const user = (await convex.query('auth:getCurrentUser' as any, {})) as
+      | { id?: string; email?: string | null; name?: string | null }
+      | null
+
+    if (!user) return null
+
+    const email = user.email ? String(user.email) : null
+    const name = user.name ? String(user.name) : null
+
+    if (!email) {
+      return null
+    }
+
+    // Bridge strategy: map Better Auth sessions to a stable user ID.
+    // Prefer Convex-migrated user profiles. If missing, create one in Convex.
+
+    const normalizedEmail = email.toLowerCase()
+
+    let resolvedUid: string | null = null
+    let role: string | undefined
+    let status: string | undefined
+    let agencyId: string | undefined
+
+    const betterAuthUserId = user.id ? String(user.id) : null
+
+    try {
+      const convexUser = (await convex.query('users:getByEmail' as any, {
+        email: normalizedEmail,
+      })) as
+        | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
+        | null
+
+      if (convexUser?.legacyId) {
+        resolvedUid = String(convexUser.legacyId)
+        role = typeof convexUser.role === 'string' ? convexUser.role : undefined
+        status = typeof convexUser.status === 'string' ? convexUser.status : undefined
+        agencyId = typeof convexUser.agencyId === 'string' ? convexUser.agencyId : undefined
+      }
+    } catch {
+      // ignore and fall back
+    }
+
+    if (!resolvedUid && betterAuthUserId) {
+      // Ensure the user exists in the Convex `users` table so role/status lookups
+      // and legacy-id bridging are stable going forward.
+      try {
+        await convex.mutation('users:bulkUpsert' as any, {
+          users: [
+            {
+              legacyId: betterAuthUserId,
+              email: normalizedEmail,
+              name,
+            },
+          ],
+        })
+
+        const convexUser = (await convex.query('users:getByEmail' as any, {
+          email: normalizedEmail,
+        })) as
+          | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
+          | null
+
+        if (convexUser?.legacyId) {
+          resolvedUid = String(convexUser.legacyId)
+          role = typeof convexUser.role === 'string' ? convexUser.role : role
+          status = typeof convexUser.status === 'string' ? convexUser.status : status
+          agencyId = typeof convexUser.agencyId === 'string' ? convexUser.agencyId : agencyId
+        }
+      } catch {
+        // If we can't upsert, still allow auth with Better Auth user id.
+      }
+    }
+
+    // Fallback to Better Auth user id if no profile exists yet.
+    const uid = resolvedUid ?? betterAuthUserId
+    if (!uid) return null
+
+    if (!role) {
+      const admins = (process.env.ADMIN_EMAILS ?? '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+
+      role = admins.includes(normalizedEmail) ? 'admin' : 'client'
+    }
+
+    if (!status) {
+      status = 'active'
+    }
+
+    return {
+      uid,
+      email,
+      name,
+      claims: {
+        provider: 'better-auth',
+        role,
+        status,
+        agencyId,
+      },
+      isCron: false,
+    }
+  } catch {
+    // If Better Auth is configured but the request has no session, treat as unauthenticated.
+    return null
   }
 }
 
-/**
- * Verifies a Firebase Session Cookie.
- * Used for server-side rendered pages and middleware using the cohorts_token cookie.
- */
-async function verifySessionCookie(sessionCookie: string): Promise<AuthResult> {
-  try {
-    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true)
-    return mapDecodedTokenToAuthResult(decodedToken)
-  } catch (error) {
-    console.error('[server-auth] Session cookie verification failed:', error)
-    throw new AuthenticationError('Invalid or expired session', 401)
-  }
-}
-
-/**
- * Helper to map Firebase decoded tokens to our internal AuthResult type.
- */
-function mapDecodedTokenToAuthResult(decodedToken: DecodedIdToken): AuthResult {
-  return {
-    uid: decodedToken.uid,
-    email: decodedToken.email || null,
-    name: (decodedToken.name as string) || null,
-    claims: decodedToken as unknown as Record<string, unknown>,
-    isCron: false,
-  }
-}
 
 /**
  * Authenticates an incoming request.
- * Priority:
- * 1. System Cron Key (header)
- * 2. ID Token (Authorization header)
- * 3. Session Cookie (cohorts_token cookie)
- */
+  * Priority:
+  * 1. System Cron Key (header)
+  * 2. Better Auth session (cookies)
+  */
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   // 1. Check for Cron Key
   const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
@@ -75,17 +156,10 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     return { uid: null, email: null, name: 'System Cron', claims: {}, isCron: true }
   }
 
-  // 2. Check for Authorization Header (ID Token)
-  const authHeader = request.headers.get('authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7)
-    return await verifyIdToken(token)
-  }
-
-  // 3. Check for Cookie (Session Cookie)
-  const sessionCookie = request.cookies.get('cohorts_token')?.value
-  if (sessionCookie) {
-    return await verifySessionCookie(sessionCookie)
+  // 2. Check for Better Auth session cookie
+  const betterAuthResult = await tryVerifyBetterAuthSession(request)
+  if (betterAuthResult) {
+    return betterAuthResult
   }
 
   throw new AuthenticationError('Authentication required', 401)

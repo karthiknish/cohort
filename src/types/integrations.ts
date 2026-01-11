@@ -1,7 +1,4 @@
-import type { Timestamp as ClientTimestamp } from 'firebase/firestore'
-import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore'
-
-export type AnyFirestoreTimestamp = ClientTimestamp | AdminTimestamp
+export type AnyFirestoreTimestamp = Date | string | number
 
 export type SyncJobStatus = 'queued' | 'running' | 'success' | 'error'
 export type SyncJobType = 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
