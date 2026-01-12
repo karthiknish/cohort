@@ -4,12 +4,7 @@ import Stripe from 'stripe'
 import { action, query } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw new Error('Unauthorized')
-  }
-}
+import { authenticatedAction } from './functions'
 
 function getStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY
@@ -169,7 +164,7 @@ async function ensureStripeCustomer(
   uid: string,
   email: string | null
 ): Promise<string> {
-  const user = await ctx.runQuery('users:getByLegacyId', { legacyId: uid })
+  const user = await ctx.runQuery(api.users.getByLegacyId, { legacyId: uid })
   const existingCustomerId = user?.stripeCustomerId
 
   if (existingCustomerId) {
@@ -188,17 +183,20 @@ async function ensureStripeCustomer(
     metadata: { userId: uid },
   })
 
+  // Update user with new customer ID
+  await ctx.runMutation(api.users.setStripeCustomerId, {
+    legacyId: uid,
+    stripeCustomerId: customer.id,
+  })
+
   return customer.id
 }
 
-export const getStatus = action({
+export const getStatus = authenticatedAction({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const uid = identity.subject
-    const email = identity.email ?? null
+  handler: async (ctx: any) => {
+    const uid = ctx.legacyId
+    const email = ctx.user.email ?? null
 
     const stripe = getStripeClient()
     const customerId = await ensureStripeCustomer(ctx, stripe, uid, email)
@@ -233,7 +231,7 @@ export const getStatus = action({
       createdAt: invoice.created ? toISO(invoice.created * 1000) : null,
     }))
 
-    const { subscriptionSummary, planIdForSubscription } = await mapSubscriptionSummary({
+    const { subscriptionSummary } = await mapSubscriptionSummary({
       subscription: activeSubscription,
       planSummaries,
       allowedPriceIds: priceIds,
@@ -248,18 +246,15 @@ export const getStatus = action({
   },
 })
 
-export const createCheckoutSession = action({
+export const createCheckoutSession = authenticatedAction({
   args: {
     planId: v.string(),
     successPath: v.optional(v.string()),
     cancelPath: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const uid = identity.subject
-    const email = identity.email ?? null
+  handler: async (ctx: any, args: any) => {
+    const uid = ctx.legacyId
+    const email = ctx.user.email ?? null
 
     const stripe = getStripeClient()
 
@@ -304,17 +299,14 @@ export const createCheckoutSession = action({
   },
 })
 
-export const createPortalSession = action({
+export const createPortalSession = authenticatedAction({
   args: {
     clientId: v.optional(v.string()),
     returnUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const uid = identity.subject
-    const email = identity.email ?? null
+  handler: async (ctx: any, args: any) => {
+    const uid = ctx.legacyId
+    const email = ctx.user.email ?? null
 
     const stripe = getStripeClient()
     const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -328,7 +320,7 @@ export const createPortalSession = action({
 
     if (args.clientId) {
       const client = await ctx.runQuery(api.clients.getByLegacyId, {
-        workspaceId: identity.subject,
+        workspaceId: ctx.legacyId,
         legacyId: args.clientId,
       })
 

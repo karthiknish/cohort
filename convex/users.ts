@@ -1,11 +1,7 @@
 import { mutation, query, internalQuery, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
+import { authenticatedMutation, authenticatedQuery } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw new Error('Unauthorized')
-  }
-}
 
 function nowMs() {
   return Date.now()
@@ -82,12 +78,9 @@ export const _updateUserRoleStatus = internalMutation({
   },
 })
 
-export const getByLegacyId = query({
+export const getByLegacyId = authenticatedQuery({
   args: { legacyId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('users')
       .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
@@ -112,12 +105,9 @@ export const getByLegacyId = query({
   },
 })
 
-export const getByEmail = query({
+export const getByEmail = authenticatedQuery({
   args: { email: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) return null
 
@@ -155,12 +145,9 @@ export const getByEmail = query({
   },
 })
 
-export const listWorkspaceMembers = query({
+export const listWorkspaceMembers = authenticatedQuery({
   args: { workspaceId: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
 
     const rows = await ctx.db
@@ -290,7 +277,7 @@ export const getWhatsAppRecipientsForWorkspace = query({
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = authenticatedMutation({
   args: {
     users: v.array(
       v.object({
@@ -325,9 +312,6 @@ export const bulkUpsert = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const timestamp = nowMs()
 
     for (const user of args.users) {

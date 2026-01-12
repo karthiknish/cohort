@@ -1,13 +1,11 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
-}
-
-function nowMs(): number {
-  return Date.now()
-}
+import {
+  authenticatedMutation,
+  workspaceMutation,
+  workspaceQuery,
+  workspaceQueryActive,
+} from './functions'
 
 function slugify(value: string): string {
   const base = value
@@ -30,11 +28,11 @@ function slugify(value: string): string {
  */
 export const getByLegacyIdServer = query({
   args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     // No auth required - called from server-side code
     const row = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -78,14 +76,14 @@ export const updateInvoiceFieldsServer = mutation({
     lastInvoicePaidAtMs: v.union(v.number(), v.null()),
     createIfMissing: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     // No auth required - called from server-side code
     const client = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    const timestamp = nowMs()
+    const timestamp = Date.now()
 
     if (!client) {
       if (args.createIfMissing && args.name) {
@@ -138,7 +136,7 @@ export const updateInvoiceFieldsServer = mutation({
   },
 })
 
-export const list = query({
+export const list = workspaceQueryActive({
   args: {
     workspaceId: v.string(),
     limit: v.number(),
@@ -146,21 +144,19 @@ export const list = query({
     afterNameLower: v.optional(v.string()),
     afterLegacyId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('clients')
-      .withIndex('by_workspace_nameLower_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
       .order('asc')
-      .filter((row) => row.eq(row.field('deletedAtMs'), null))
+    
+    // deletedAtMs filter is handled by workspaceQueryActive
 
     const afterNameLower = args.afterNameLower
     const afterLegacyId = args.afterLegacyId
 
     if (typeof afterNameLower === 'string' && typeof afterLegacyId === 'string') {
-      q = q.filter((row) =>
+      q = q.filter((row: any) =>
         row.or(
           row.gt(row.field('nameLower'), afterNameLower),
           row.and(row.eq(row.field('nameLower'), afterNameLower), row.gt(row.field('legacyId'), afterLegacyId))
@@ -169,7 +165,7 @@ export const list = query({
     }
 
     const rows = await q.take(args.limit)
-    return rows.map((row) => ({
+    return rows.map((row: any) => ({
       legacyId: row.legacyId,
       name: row.name,
       accountManager: row.accountManager,
@@ -190,27 +186,21 @@ export const list = query({
   },
 })
 
-export const countActive = query({
+export const countActive = workspaceQueryActive({
   args: { workspaceId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const rows = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_deletedAtMs', (q) => q.eq('workspaceId', args.workspaceId).eq('deletedAtMs', null))
+      .withIndex('by_workspace_deletedAtMs', (q: any) => q.eq('workspaceId', args.workspaceId).eq('deletedAtMs', null))
       .collect()
 
-    return { count: rows.length }
+    return rows.length
   },
 })
 
-export const getByLegacyId = query({
+export const getByLegacyId = workspaceQuery({
   args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -239,7 +229,7 @@ export const getByLegacyId = query({
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
     workspaceId: v.string(),
     name: v.string(),
@@ -253,12 +243,7 @@ export const create = mutation({
     billingEmail: v.union(v.string(), v.null()),
     createdBy: v.union(v.string(), v.null()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
-
+  handler: async (ctx: any, args: any) => {
     const baseId = slugify(args.name)
     let candidateId = baseId
     let attempt = 1
@@ -267,7 +252,7 @@ export const create = mutation({
     while (attempt <= 20) {
       const existing = await ctx.db
         .query('clients')
-        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', candidateId))
+        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', candidateId))
         .unique()
 
       if (!existing) {
@@ -280,7 +265,7 @@ export const create = mutation({
     }
 
     if (!finalId) {
-      finalId = `${baseId}-${Date.now()}`
+      finalId = `${baseId}-${ctx.now}`
     }
 
     const payload = {
@@ -300,8 +285,8 @@ export const create = mutation({
       lastInvoiceUrl: null,
       lastInvoicePaidAtMs: null,
       createdBy: args.createdBy,
-      createdAtMs: timestamp,
-      updatedAtMs: timestamp,
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
       deletedAtMs: null,
     }
 
@@ -310,17 +295,14 @@ export const create = mutation({
   },
 })
 
-export const addTeamMember = mutation({
+export const addTeamMember = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
     name: v.string(),
     role: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -333,30 +315,27 @@ export const addTeamMember = mutation({
     const normalizedName = args.name.trim()
     const normalizedRole = (args.role ?? '').trim() || 'Contributor'
 
-    const exists = client.teamMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())
+    const exists = client.teamMembers.some((member: any) => member.name.toLowerCase() === normalizedName.toLowerCase())
     if (exists) {
       throw new Error('Team member already exists')
     }
 
     await ctx.db.patch(client._id, {
       teamMembers: [...client.teamMembers, { name: normalizedName, role: normalizedRole }],
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     })
 
-    return { ok: true }
+    return client.legacyId
   },
 })
 
-export const softDelete = mutation({
+export const softDelete = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
     deletedAtMs: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -366,18 +345,18 @@ export const softDelete = mutation({
       throw new Error('Client not found')
     }
 
-    const timestamp = args.deletedAtMs ?? nowMs()
+    const timestamp = args.deletedAtMs ?? ctx.now
 
     await ctx.db.patch(client._id, {
       deletedAtMs: timestamp,
       updatedAtMs: timestamp,
     })
 
-    return { ok: true }
+    return client.legacyId
   },
 })
 
-export const updateInvoiceFields = mutation({
+export const updateInvoiceFields = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -391,10 +370,7 @@ export const updateInvoiceFields = mutation({
     lastInvoiceUrl: v.union(v.string(), v.null()),
     lastInvoicePaidAtMs: v.optional(v.union(v.number(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -414,14 +390,14 @@ export const updateInvoiceFields = mutation({
       lastInvoiceNumber: args.lastInvoiceNumber,
       lastInvoiceUrl: args.lastInvoiceUrl,
       lastInvoicePaidAtMs: args.lastInvoicePaidAtMs ?? client.lastInvoicePaidAtMs,
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     })
 
-    return { ok: true }
+    return client.legacyId
   },
 })
 
-export const upsert = mutation({
+export const upsert = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -447,10 +423,7 @@ export const upsert = mutation({
     updatedAtMs: v.number(),
     deletedAtMs: v.union(v.number(), v.null()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const existing = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -480,15 +453,15 @@ export const upsert = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload)
-      return { ok: true }
+      return args.legacyId
     }
 
     await ctx.db.insert('clients', payload)
-    return { ok: true }
+    return args.legacyId
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = authenticatedMutation({
   args: {
     clients: v.array(
       v.object({
@@ -518,16 +491,13 @@ export const bulkUpsert = mutation({
       })
     ),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     let upserted = 0
 
     for (const client of args.clients) {
       const existing = await ctx.db
         .query('clients')
-        .withIndex('by_workspace_legacyId', (q) =>
+        .withIndex('by_workspace_legacyId', (q: any) =>
           q.eq('workspaceId', client.workspaceId).eq('legacyId', client.legacyId)
         )
         .unique()

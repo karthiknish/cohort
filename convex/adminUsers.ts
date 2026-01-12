@@ -1,51 +1,46 @@
-import { mutation, query } from './_generated/server'
+import { adminMutation, adminQuery } from './functions'
 import { v } from 'convex/values'
-import { paginationOptsValidator } from 'convex/server'
 
-import { requireAdminFromUsersTable } from './authz'
-
-function nowMs() {
-  return Date.now()
-}
-
-export const listUsers = query({
-  args: {
-    paginationOpts: paginationOptsValidator,
-  },
+export const listUsers = adminQuery({
+  args: { paginationOpts: v.any() },
   handler: async (ctx, args) => {
-    await requireAdminFromUsersTable(ctx)
-
-    const page = await ctx.db.query('users').order('desc').paginate(args.paginationOpts)
-
-    return page
+    return await ctx.db.query('users').order('desc').paginate(args.paginationOpts)
   },
 })
 
-export const getUserCounts = query({
+export const getUserCounts = adminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdminFromUsersTable(ctx)
-
     const all = await ctx.db.query('users').collect()
     const total = all.length
-    const activeTotal = all.filter((row) => row.status === 'active').length
+    const activeTotal = all.filter((row: any) => row.status === 'active').length
+    const suspendedTotal = all.filter((row: any) => row.status === 'suspended').length
+    const disabledTotal = all.filter((row: any) => row.status === 'disabled').length
 
-    return { total, activeTotal }
+    return { total, activeTotal, suspendedTotal, disabledTotal }
   },
 })
 
-export const updateUserRoleStatus = mutation({
+export const setRole = adminMutation({
+  args: { userId: v.id('users'), role: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      role: args.role,
+      updatedAtMs: ctx.now,
+    })
+  },
+})
+
+export const updateUserRoleStatus = adminMutation({
   args: {
     legacyId: v.string(),
     role: v.optional(v.union(v.string(), v.null())),
     status: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    await requireAdminFromUsersTable(ctx)
-
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
       .unique()
 
     if (!existing) {
@@ -53,7 +48,7 @@ export const updateUserRoleStatus = mutation({
     }
 
     const patch: Record<string, unknown> = {
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     }
 
     if (args.role !== undefined) {

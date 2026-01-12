@@ -1,36 +1,41 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  adminMutation,
+  adminQuery,
+  workspaceQuery,
+  workspaceMutation,
+  zWorkspaceQuery,
+  zWorkspaceQueryActive,
+  zWorkspaceMutation,
+  type AuthenticatedQueryCtx,
+  type AuthenticatedMutationCtx,
+} from './functions'
+import { z } from 'zod/v4'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
-}
 
-function nowMs() {
-  return Date.now()
-}
 
-export const list = query({
+
+export const list = zWorkspaceQueryActive({
   args: {
-    workspaceId: v.string(),
-    limit: v.number(),
+    limit: z.number().min(1).max(200),
     // Cursor for pagination, based on (createdAtMs, legacyId)
-    afterCreatedAtMs: v.optional(v.number()),
-    afterLegacyId: v.optional(v.string()),
+    afterCreatedAtMs: z.number().optional(),
+    afterLegacyId: z.string().optional(),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('tasks')
-      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
       .order('desc')
 
     const afterCreatedAtMs = args.afterCreatedAtMs
     const afterLegacyId = args.afterLegacyId
 
     if (typeof afterCreatedAtMs === 'number' && typeof afterLegacyId === 'string') {
-      q = q.filter((row) =>
+      q = q.filter((row: any) =>
         row.or(
           row.lt(row.field('createdAtMs'), afterCreatedAtMs),
           row.and(
@@ -42,7 +47,7 @@ export const list = query({
     }
 
     const rows = await q.take(args.limit)
-    return rows.map((row) => ({
+    return rows.map((row: any) => ({
       legacyId: row.legacyId,
       title: row.title,
       description: row.description,
@@ -62,15 +67,12 @@ export const list = query({
   },
 })
 
-export const getByLegacyId = query({
-  args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+export const getByLegacyId = zWorkspaceQuery({
+  args: { legacyId: z.string() },
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -94,26 +96,22 @@ export const getByLegacyId = query({
   },
 })
 
-export const listForProject = query({
+export const listForProject = zWorkspaceQueryActive({
   args: {
-    workspaceId: v.string(),
-    projectId: v.string(),
-    limit: v.number(),
+    projectId: z.string(),
+    limit: z.number().min(1).max(200),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const rows = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_projectId_createdAtMs', (q) =>
+      .withIndex('by_workspace_projectId_deletedAtMs', (q: any) =>
         q.eq('workspaceId', args.workspaceId).eq('projectId', args.projectId),
       )
       .order('desc')
-      .filter((row) => row.eq(row.field('deletedAtMs'), null))
+      .filter((row: any) => row.eq(row.field('deletedAtMs'), null))
       .take(args.limit)
 
-    return rows.map((row) => ({
+    return rows.map((row: any) => ({
       legacyId: row.legacyId,
       title: row.title,
       description: row.description,
@@ -133,18 +131,15 @@ export const listForProject = query({
   },
 })
 
-export const listByClient = query({
+export const listByClient = zWorkspaceQueryActive({
   args: {
-    workspaceId: v.string(),
-    clientId: v.union(v.string(), v.null()),
+    clientId: z.string(),
+    limit: z.number().min(1).max(200),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const base = ctx.db
       .query('tasks')
-      .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+      .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q: any) =>
         q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId),
       )
       .order('desc')
@@ -152,8 +147,8 @@ export const listByClient = query({
     const rows = await base.take(500)
 
     return rows
-      .filter((row) => row.deletedAtMs === null)
-      .map((row) => ({
+      .filter((row: any) => row.deletedAtMs === null)
+      .map((row: any) => ({
         legacyId: row.legacyId,
         title: row.title,
         description: row.description,
@@ -173,7 +168,7 @@ export const listByClient = query({
   },
 })
 
-export const createTask = mutation({
+export const createTask = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     title: v.string(),
@@ -186,13 +181,8 @@ export const createTask = mutation({
     dueDateMs: v.union(v.number(), v.null()),
     tags: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
-
-    const legacyId = `task_${timestamp}_${Math.random().toString(16).slice(2)}`
+  handler: async (ctx: any, args: any) => {
+    const legacyId = `task_${ctx.now}_${Math.random().toString(16).slice(2)}`
 
     await ctx.db.insert('tasks', {
       workspaceId: args.workspaceId,
@@ -208,17 +198,17 @@ export const createTask = mutation({
       projectName: null,
       dueDateMs: args.dueDateMs,
       tags: args.tags,
-      createdBy: identity.subject,
-      createdAtMs: timestamp,
-      updatedAtMs: timestamp,
+      createdBy: ctx.legacyId,
+      updatedAtMs: ctx.now,
+      createdAtMs: ctx.now,
       deletedAtMs: null,
     })
 
-    return { ok: true, legacyId }
+    return legacyId
   },
 })
 
-export const patchTask = mutation({
+export const patchTask = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -232,23 +222,18 @@ export const patchTask = mutation({
       tags: v.optional(v.array(v.string())),
     }),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) {
       return { ok: false, error: 'not_found' as const }
     }
 
-    const timestamp = nowMs()
-
     const patch: Record<string, unknown> = {
-      updatedAtMs: timestamp,
+      updatedAtMs: ctx.now,
     }
 
     if (args.update.title !== undefined) patch.title = args.update.title
@@ -265,7 +250,7 @@ export const patchTask = mutation({
   },
 })
 
-export const bulkPatchTasks = mutation({
+export const bulkPatchTasks = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     ids: v.array(v.string()),
@@ -277,23 +262,19 @@ export const bulkPatchTasks = mutation({
       tags: v.optional(v.array(v.string())),
     }),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+  handler: async (ctx: any, args: any) => {
     const idSet = new Set(args.ids)
 
     const rows = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
       .order('desc')
       .take(1000)
 
-    const updates = rows.filter((row) => idSet.has(row.legacyId))
+    const updates = rows.filter((row: any) => idSet.has(row.legacyId))
 
     for (const row of updates) {
-      const patch: Record<string, unknown> = { updatedAtMs: timestamp }
+      const patch: Record<string, unknown> = { updatedAtMs: ctx.now }
       if (args.update.status !== undefined) patch.status = args.update.status
       if (args.update.priority !== undefined) patch.priority = args.update.priority
       if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
@@ -306,53 +287,45 @@ export const bulkPatchTasks = mutation({
   },
 })
 
-export const softDeleteTask = mutation({
+export const softDeleteTask = authenticatedMutation({
   args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) {
       return { ok: false, error: 'not_found' as const }
     }
 
-    const timestamp = nowMs()
-    await ctx.db.patch(row._id, { deletedAtMs: timestamp, updatedAtMs: timestamp })
+    await ctx.db.patch(row._id, { deletedAtMs: ctx.now, updatedAtMs: ctx.now })
     return { ok: true }
   },
 })
 
-export const bulkSoftDeleteTasks = mutation({
+export const bulkSoftDeleteTasks = authenticatedMutation({
   args: { workspaceId: v.string(), ids: v.array(v.string()) },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+  handler: async (ctx: any, args: any) => {
     const idSet = new Set(args.ids)
 
     const rows = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
       .order('desc')
       .take(1000)
 
-    const updates = rows.filter((row) => idSet.has(row.legacyId))
+    const updates = rows.filter((row: any) => idSet.has(row.legacyId))
 
     for (const row of updates) {
-      await ctx.db.patch(row._id, { deletedAtMs: timestamp, updatedAtMs: timestamp })
+      await ctx.db.patch(row._id, { deletedAtMs: ctx.now, updatedAtMs: ctx.now })
     }
 
     return { ok: true, deleted: updates.length }
   },
 })
 
-export const upsert = mutation({
+export const upsert = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -372,15 +345,10 @@ export const upsert = mutation({
     updatedAtMs: v.optional(v.number()),
     deletedAtMs: v.optional(v.union(v.number(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
-
+  handler: async (ctx: any, args: any) => {
     const existing = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     const payload = {
@@ -398,8 +366,8 @@ export const upsert = mutation({
       dueDateMs: args.dueDateMs,
       tags: args.tags,
       createdBy: args.createdBy,
-      createdAtMs: args.createdAtMs ?? timestamp,
-      updatedAtMs: args.updatedAtMs ?? timestamp,
+      createdAtMs: args.createdAtMs ?? ctx.now,
+      updatedAtMs: args.updatedAtMs ?? ctx.now,
       deletedAtMs: args.deletedAtMs ?? null,
     }
 
@@ -413,7 +381,7 @@ export const upsert = mutation({
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = authenticatedMutation({
   args: {
     tasks: v.array(
       v.object({
@@ -437,15 +405,12 @@ export const bulkUpsert = mutation({
       })
     ),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     let upserted = 0
     for (const task of args.tasks) {
       const existing = await ctx.db
         .query('tasks')
-        .withIndex('by_workspace_legacyId', (q) =>
+        .withIndex('by_workspace_legacyId', (q: any) =>
           q.eq('workspaceId', task.workspaceId).eq('legacyId', task.legacyId)
         )
         .unique()
@@ -483,7 +448,7 @@ export const bulkUpsert = mutation({
   },
 })
 
-export const bulkUpdate = mutation({
+export const bulkUpdate = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     ids: v.array(v.string()),
@@ -494,11 +459,8 @@ export const bulkUpdate = mutation({
       tags: v.optional(v.array(v.string())),
     }),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+  handler: async (ctx: any, args: any) => {
+    const idSet = new Set(args.ids)
 
     const results: Array<{ id: string; success: boolean; error?: string }> = []
     const tasks: Array<{
@@ -522,7 +484,7 @@ export const bulkUpdate = mutation({
     for (const legacyId of args.ids) {
       const row = await ctx.db
         .query('tasks')
-        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
+        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
         .unique()
 
       if (!row) {
@@ -535,7 +497,7 @@ export const bulkUpdate = mutation({
         ...(args.update.priority !== undefined ? { priority: args.update.priority } : {}),
         ...(args.update.assignedTo !== undefined ? { assignedTo: args.update.assignedTo } : {}),
         ...(args.update.tags !== undefined ? { tags: args.update.tags } : {}),
-        updatedAtMs: timestamp,
+        updatedAtMs: ctx.now,
       }
 
       await ctx.db.patch(row._id, patch)
@@ -554,7 +516,7 @@ export const bulkUpdate = mutation({
         dueDateMs: row.dueDateMs,
         tags: args.update.tags ?? row.tags,
         createdAtMs: row.createdAtMs,
-        updatedAtMs: timestamp,
+        updatedAtMs: ctx.now,
         deletedAtMs: row.deletedAtMs,
       })
 
@@ -565,18 +527,15 @@ export const bulkUpdate = mutation({
   },
 })
 
-export const bulkHardDelete = mutation({
+export const bulkHardDelete = adminMutation({
   args: { workspaceId: v.string(), ids: v.array(v.string()) },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const results: Array<{ id: string; success: boolean; error?: string }> = []
 
     for (const legacyId of args.ids) {
       const row = await ctx.db
         .query('tasks')
-        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
+        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
         .unique()
 
       if (!row) {
@@ -592,38 +551,31 @@ export const bulkHardDelete = mutation({
   },
 })
 
-export const softDelete = mutation({
+export const softDelete = authenticatedMutation({
   args: { workspaceId: v.string(), legacyId: v.string(), deletedAtMs: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return { ok: false, error: 'not_found' as const }
 
-    const timestamp = nowMs()
     await ctx.db.patch(row._id, {
-      deletedAtMs: args.deletedAtMs ?? timestamp,
-      updatedAtMs: timestamp,
+      deletedAtMs: args.deletedAtMs ?? ctx.now,
+      updatedAtMs: ctx.now,
     })
 
     return { ok: true }
   },
 })
 
-export const hardDelete = mutation({
+export const hardDelete = adminMutation({
   args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return { ok: false, error: 'not_found' as const }

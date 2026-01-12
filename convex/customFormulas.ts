@@ -1,11 +1,6 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw new Error('Unauthorized')
-  }
-}
+import { authenticatedMutation, authenticatedQuery } from './functions'
 
 function nowMs() {
   return Date.now()
@@ -61,15 +56,12 @@ export const listActiveForAlerts = query({
   },
 })
 
-export const listByWorkspace = query({
+export const listByWorkspace = authenticatedQuery({
   args: {
     workspaceId: v.string(),
     activeOnly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const activeOnly = args.activeOnly === true
 
     const baseQuery = ctx.db
@@ -101,12 +93,9 @@ export const listByWorkspace = query({
   },
 })
 
-export const getByLegacyId = query({
+export const getByLegacyId = authenticatedQuery({
   args: { workspaceId: v.string(), legacyId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('customFormulas')
       .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -130,7 +119,7 @@ export const getByLegacyId = query({
   },
 })
 
-export const create = mutation({
+export const create = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -142,9 +131,6 @@ export const create = mutation({
     createdBy: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const timestamp = nowMs()
 
     const existing = await ctx.db
@@ -176,7 +162,7 @@ export const create = mutation({
   },
 })
 
-export const update = mutation({
+export const update = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -188,9 +174,6 @@ export const update = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('customFormulas')
       .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -219,12 +202,9 @@ export const update = mutation({
   },
 })
 
-export const remove = mutation({
+export const remove = authenticatedMutation({
   args: { workspaceId: v.string(), legacyId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('customFormulas')
       .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))

@@ -1,7 +1,5 @@
-import { query } from './_generated/server'
+import { authenticatedQuery, adminQuery } from './functions'
 import { v } from 'convex/values'
-
-import { requireAdminFromUsersTable } from './authz'
 
 function summarizeIdentity(identity: any) {
   if (!identity) return { present: false }
@@ -16,25 +14,21 @@ function summarizeIdentity(identity: any) {
   }
 }
 
-export const whoami = query({
+export const whoami = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-
     return {
-      identity: summarizeIdentity(identity),
+      identity: summarizeIdentity(ctx.user),
       authInfo: {
-        hasAuth: Boolean((ctx as any).auth),
+        hasAuth: true, // If we're here, we're authenticated
       },
     }
   },
 })
 
-export const listAnyClients = query({
+export const listAnyClients = adminQuery({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    await requireAdminFromUsersTable(ctx)
-
     const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
 
     const items = await ctx.db.query('clients').order('desc').take(limit)
@@ -50,11 +44,9 @@ export const listAnyClients = query({
   },
 })
 
-export const countClientsByWorkspace = query({
+export const countClientsByWorkspace = adminQuery({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    await requireAdminFromUsersTable(ctx)
-
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 2000)
 
     const rows = await ctx.db.query('clients').take(limit)

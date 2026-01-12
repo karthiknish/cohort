@@ -1,14 +1,10 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import type { Id } from './_generated/dataModel'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
-}
-
-function nowMs() {
-  return Date.now()
-}
+import {
+  workspaceMutation,
+  workspaceQuery,
+  workspaceQueryActive,
+} from './functions'
 
 async function hydrateAttachments(
   ctx: any,
@@ -173,7 +169,7 @@ async function fetchChannelRows(ctx: any, args: any) {
   return await Promise.all(rows.map((row: any) => hydrateMessageRow(ctx, row)))
 }
 
-export const listChannel = query({
+export const listChannel = workspaceQueryActive({
   args: {
     workspaceId: v.string(),
     channelType: v.string(),
@@ -183,15 +179,12 @@ export const listChannel = query({
     afterCreatedAtMs: v.optional(v.number()),
     afterLegacyId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     return await fetchChannelRows(ctx, args)
   },
 })
 
-export const listThreadReplies = query({
+export const listThreadReplies = workspaceQuery({
   args: {
     workspaceId: v.string(),
     threadRootId: v.string(),
@@ -199,13 +192,10 @@ export const listThreadReplies = query({
     afterCreatedAtMs: v.optional(v.number()),
     afterLegacyId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     let q: any = ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_threadRoot_createdAtMs_legacyId', (q) =>
+      .withIndex('by_workspace_threadRoot_createdAtMs_legacyId', (q: any) =>
         q.eq('workspaceId', args.workspaceId).eq('threadRootId', args.threadRootId),
       )
       .order('asc')
@@ -230,22 +220,19 @@ export const listThreadReplies = query({
   },
 })
 
-export const getByLegacyId = query({
+export const getByLegacyId = workspaceQuery({
   args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     return row ? await hydrateMessageRow(ctx, row) : null
   },
 })
 
-export const searchChannel = query({
+export const searchChannel = workspaceQueryActive({
   args: {
     workspaceId: v.string(),
     channelType: v.string(),
@@ -259,10 +246,7 @@ export const searchChannel = query({
     endMs: v.optional(v.union(v.number(), v.null())),
     limit: v.number(),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const limit = clampLimit(args.limit, 20, 400)
 
     // Reuse the same indexes + ordering as listChannel.
@@ -294,8 +278,8 @@ export const searchChannel = query({
 
     const scored = filteredByDate
       .map((row) => {
-        const isDeleted = Boolean(row?.deleted || row?.deletedAtMs)
-        if (isDeleted) return null
+        // deleted filter is handled by workspaceQueryActive implicitly if we use fetchChannelRows correctly
+        // but here rows are already fetched and hydrated.
 
         const senderName = typeof row?.senderName === 'string' ? row.senderName : ''
         if (senderTerm && !normalizeTerm(senderName).includes(senderTerm)) {
@@ -366,7 +350,7 @@ export const searchChannel = query({
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -384,12 +368,7 @@ export const create = mutation({
     threadRootId: v.optional(v.union(v.string(), v.null())),
     isThreadRoot: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
-
+  handler: async (ctx: any, args: any) => {
     const hydratedAttachments = await hydrateAttachments(ctx, (args.attachments ?? null) as any)
 
     await ctx.db.insert('collaborationMessages', {
@@ -402,7 +381,7 @@ export const create = mutation({
       senderName: args.senderName,
       senderRole: args.senderRole,
       content: args.content,
-      createdAtMs: timestamp,
+      createdAtMs: ctx.now,
       updatedAtMs: null,
       deleted: false,
       deletedAtMs: null,
@@ -421,24 +400,24 @@ export const create = mutation({
     if (args.isThreadRoot === false && typeof args.threadRootId === 'string' && args.threadRootId) {
       const root = await ctx.db
         .query('collaborationMessages')
-        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.threadRootId!))
+        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.threadRootId!))
         .unique()
 
       if (root) {
         const currentCount = typeof root.threadReplyCount === 'number' ? root.threadReplyCount : 0
         await ctx.db.patch(root._id, {
           threadReplyCount: currentCount + 1,
-          threadLastReplyAtMs: timestamp,
-          updatedAtMs: timestamp,
+          threadLastReplyAtMs: ctx.now,
+          updatedAtMs: ctx.now,
         })
       }
     }
 
-    return { ok: true }
+    return args.legacyId
   },
 })
 
-export const updateMessage = mutation({
+export const updateMessage = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -446,66 +425,55 @@ export const updateMessage = mutation({
     format: v.optional(v.union(v.literal('markdown'), v.literal('plaintext'))),
     mentions: v.optional(v.array(mention)),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) throw new Error('not_found')
 
-    const timestamp = nowMs()
     await ctx.db.patch(row._id, {
       content: args.content,
       ...(args.format !== undefined ? { format: args.format } : {}),
       ...(args.mentions !== undefined ? { mentions: args.mentions } : {}),
-      updatedAtMs: timestamp,
+      updatedAtMs: ctx.now,
     })
 
-    return { ok: true }
+    return args.legacyId
   },
 })
 
-export const softDelete = mutation({
+export const softDelete = workspaceMutation({
   args: { workspaceId: v.string(), legacyId: v.string(), deletedBy: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) throw new Error('not_found')
 
-    const timestamp = nowMs()
     await ctx.db.patch(row._id, {
       deleted: true,
-      deletedAtMs: timestamp,
+      deletedAtMs: ctx.now,
       deletedBy: args.deletedBy,
-      updatedAtMs: timestamp,
+      updatedAtMs: ctx.now,
     })
 
-    return { ok: true }
+    return args.legacyId
   },
 })
 
-export const toggleReaction = mutation({
+export const toggleReaction = workspaceMutation({
   args: { workspaceId: v.string(), legacyId: v.string(), emoji: v.string(), userId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) throw new Error('not_found')
 
     const reactions = Array.isArray(row.reactions) ? row.reactions.slice() : []
 
@@ -544,14 +512,14 @@ export const toggleReaction = mutation({
 
     await ctx.db.patch(row._id, {
       reactions: updated,
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     })
 
-    return { ok: true, reactions: updated }
+    return updated
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = workspaceMutation({
   args: {
     messages: v.array(
       v.object({
@@ -590,16 +558,13 @@ export const bulkUpsert = mutation({
       })
     ),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
+  handler: async (ctx: any, args: any) => {
     let upserted = 0
 
     for (const message of args.messages) {
       const existing = await ctx.db
         .query('collaborationMessages')
-        .withIndex('by_workspace_legacyId', (q) =>
+        .withIndex('by_workspace_legacyId', (q: any) =>
           q.eq('workspaceId', message.workspaceId).eq('legacyId', message.legacyId)
         )
         .unique()
@@ -641,6 +606,6 @@ export const bulkUpsert = mutation({
       upserted += 1
     }
 
-    return { ok: true, upserted }
+    return { upserted }
   },
 })

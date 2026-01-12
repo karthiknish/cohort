@@ -1,58 +1,43 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import type { Id } from './_generated/dataModel'
+import { authenticatedMutation, authenticatedQuery } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
-}
-
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = authenticatedMutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const url = await ctx.storage.generateUploadUrl()
     return { url }
   },
 })
 
-export const getDownloadUrl = query({
+export const getDownloadUrl = authenticatedQuery({
   args: {
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const url = await ctx.storage.getUrl(args.storageId as Id<'_storage'>)
     return { url: url ?? null }
   },
 })
 
-export const getPublicUrl = query({
+export const getPublicUrl = authenticatedQuery({
   args: {
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const url = await ctx.storage.getUrl(args.storageId as Id<'_storage'>)
     return { url: url ?? null }
   },
 })
 
-export const getProposalFileDownloadUrl = query({
+export const getProposalFileDownloadUrl = authenticatedQuery({
   args: {
     workspaceId: v.string(),
     proposalId: v.string(),
     fileType: v.union(v.literal('pptx'), v.literal('pdf')),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const proposal = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.proposalId))
@@ -83,16 +68,13 @@ export const getProposalFileDownloadUrl = query({
   },
 })
 
-export const getCollaborationAttachmentDownloadUrl = query({
+export const getCollaborationAttachmentDownloadUrl = authenticatedQuery({
   args: {
     workspaceId: v.string(),
     messageId: v.string(),
     attachmentIndex: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const message = await ctx.db
       .query('collaborationMessages')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.messageId))

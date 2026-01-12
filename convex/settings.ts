@@ -1,9 +1,7 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { authenticatedMutation, authenticatedQuery } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
-}
 
 function nowMs() {
   return Date.now()
@@ -17,23 +15,10 @@ const defaultNotificationPreferences = {
   emailTaskActivity: true,
 }
 
-export const getMyProfile = query({
+export const getMyProfile = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const email = typeof identity.email === 'string' ? identity.email : null
-    const emailLower = email ? email.toLowerCase() : null
-
-    if (!emailLower) return null
-
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', emailLower))
-      .unique()
-
-    if (!row) return null
+    const row = ctx.user
 
     return {
       legacyId: row.legacyId,
@@ -51,27 +36,14 @@ export const getMyProfile = query({
   },
 })
 
-export const updateMyProfile = mutation({
+export const updateMyProfile = authenticatedMutation({
   args: {
     name: v.optional(v.union(v.string(), v.null())),
     phoneNumber: v.optional(v.union(v.string(), v.null())),
     photoUrl: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const email = typeof identity.email === 'string' ? identity.email : null
-    const emailLower = email ? email.toLowerCase() : null
-
-    if (!emailLower) throw new Error('Email required')
-
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', emailLower))
-      .unique()
-
-    if (!row) throw new Error('Profile not found')
+    const row = ctx.user
 
     await ctx.db.patch(row._id, {
       ...(args.name !== undefined ? { name: args.name } : {}),
@@ -84,23 +56,10 @@ export const updateMyProfile = mutation({
   },
 })
 
-export const getMyNotificationPreferences = query({
+export const getMyNotificationPreferences = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const email = typeof identity.email === 'string' ? identity.email : null
-    const emailLower = email ? email.toLowerCase() : null
-
-    if (!emailLower) return null
-
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', emailLower))
-      .unique()
-
-    if (!row) return null
+    const row = ctx.user
 
     const prefs = row.notificationPreferences ?? defaultNotificationPreferences
 
@@ -111,7 +70,7 @@ export const getMyNotificationPreferences = query({
   },
 })
 
-export const updateMyNotificationPreferences = mutation({
+export const updateMyNotificationPreferences = authenticatedMutation({
   args: {
     whatsappTasks: v.boolean(),
     whatsappCollaboration: v.boolean(),
@@ -121,20 +80,7 @@ export const updateMyNotificationPreferences = mutation({
     phoneNumber: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const email = typeof identity.email === 'string' ? identity.email : null
-    const emailLower = email ? email.toLowerCase() : null
-
-    if (!emailLower) throw new Error('Email required')
-
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', emailLower))
-      .unique()
-
-    if (!row) throw new Error('Profile not found')
+    const row = ctx.user
 
     const next = {
       whatsappTasks: args.whatsappTasks,
@@ -157,49 +103,21 @@ export const updateMyNotificationPreferences = mutation({
   },
 })
 
-export const getMyRegionalPreferences = query({
+export const getMyRegionalPreferences = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const email = typeof identity.email === 'string' ? identity.email : null
-    const emailLower = email ? email.toLowerCase() : null
-
-    if (!emailLower) return null
-
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', emailLower))
-      .unique()
-
-    if (!row) return null
-
-    return row.regionalPreferences ?? null
+    return ctx.user.regionalPreferences ?? null
   },
 })
 
-export const updateMyRegionalPreferences = mutation({
+export const updateMyRegionalPreferences = authenticatedMutation({
   args: {
     currency: v.optional(v.union(v.string(), v.null())),
     timezone: v.optional(v.union(v.string(), v.null())),
     locale: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const email = typeof identity.email === 'string' ? identity.email : null
-    const emailLower = email ? email.toLowerCase() : null
-
-    if (!emailLower) throw new Error('Email required')
-
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', emailLower))
-      .unique()
-
-    if (!row) throw new Error('Profile not found')
+    const row = ctx.user
 
     const existing = row.regionalPreferences ?? {}
 
