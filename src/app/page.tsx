@@ -16,6 +16,34 @@ import { FadeIn, FadeInItem, FadeInStagger } from "@/components/ui/animate-in"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 
+// Helper to bootstrap user in Convex and sync session cookies
+async function bootstrapAndSyncSession(): Promise<void> {
+  try {
+    // 1. Bootstrap: ensure user exists in Convex users table with role/status
+    const bootstrapRes = await fetch('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      credentials: 'include',
+    })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[HomePage] Bootstrap response:', bootstrapRes.status)
+    }
+
+    // 2. Sync session cookies so middleware can read role
+    const sessionRes = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[HomePage] Session sync response:', sessionRes.status)
+    }
+  } catch (err) {
+    console.error('[HomePage] bootstrapAndSyncSession error:', err)
+  }
+}
+
 // Password strength calculation
 interface PasswordStrength {
   score: number // 0-4
@@ -368,6 +396,10 @@ export default function HomePage() {
           password: signUpData.password,
           name: signUpData.displayName.trim() || signUpData.email,
         })
+        
+        // Bootstrap user in Convex and sync session cookies before redirect
+        await bootstrapAndSyncSession()
+        
         toast({
           title: "Welcome to Cohorts!",
           description: "Your account has been created. Taking you to your dashboard...",
@@ -391,6 +423,9 @@ export default function HomePage() {
         } else if (typeof window !== "undefined") {
           window.localStorage.removeItem(REMEMBER_ME_KEY)
         }
+
+        // Bootstrap user in Convex and sync session cookies before redirect
+        await bootstrapAndSyncSession()
 
         toast({
           title: "Welcome back!",
