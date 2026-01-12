@@ -3,6 +3,27 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { AuthUser, SignUpData, authService } from '@/services/auth'
 
+// Helper to sync session cookies (sets cohorts_role, cohorts_status, etc.)
+// This must be called after authentication to populate middleware-visible cookies.
+async function syncSessionCookies(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[AuthContext] Session sync response:', response.status)
+    }
+    return response.ok
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[AuthContext] Session sync error:', error)
+    }
+    return false
+  }
+}
+
 // Helper to call bootstrap API (ensures user exists in Convex users table)
 // Returns the user data from bootstrap if successful
 async function callBootstrap(retries = 3): Promise<{ role?: string; status?: string; agencyId?: string } | null> {
@@ -25,6 +46,9 @@ async function callBootstrap(retries = 3): Promise<{ role?: string; status?: str
         const data = json.data?.data ?? json.data ?? json
         
         if (data?.ok === true) {
+          // After bootstrap succeeds, sync session cookies so middleware can read role
+          await syncSessionCookies()
+          
           return {
             role: data.role,
             status: data.status,

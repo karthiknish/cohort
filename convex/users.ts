@@ -25,10 +25,23 @@ export const _getByEmailInternal = internalQuery({
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) return null
 
-    return await ctx.db
+    const rows = await ctx.db
       .query('users')
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .unique()
+      .collect()
+
+    if (rows.length === 0) return null
+
+    let best = rows[0]
+    for (const row of rows) {
+      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+      if (rowUpdated > bestUpdated) {
+        best = row
+      }
+    }
+
+    return best
   },
 })
 
@@ -43,20 +56,29 @@ export const _updateUserRoleStatus = internalMutation({
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) return { ok: false, error: 'Invalid email' }
 
-    const existing = await ctx.db
+    const matches = await ctx.db
       .query('users')
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .unique()
+      .collect()
 
-    if (!existing) return { ok: false, error: 'User not found' }
+    if (matches.length === 0) return { ok: false, error: 'User not found' }
 
-    await ctx.db.patch(existing._id, {
+    let best = matches[0]
+    for (const row of matches) {
+      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+      if (rowUpdated > bestUpdated) {
+        best = row
+      }
+    }
+
+    await ctx.db.patch(best._id, {
       role: args.role,
       status: args.status,
       updatedAtMs: nowMs(),
     })
 
-    return { ok: true, legacyId: existing.legacyId }
+    return { ok: true, legacyId: best.legacyId, updatedUserId: best._id, duplicateCount: matches.length }
   },
 })
 
@@ -99,26 +121,36 @@ export const getByEmail = query({
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) return null
 
-    const row = await ctx.db
+    // Historical data may contain duplicates; prefer the most recently updated record.
+    const rows = await ctx.db
       .query('users')
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .unique()
+      .collect()
 
-    if (!row) return null
+    if (rows.length === 0) return null
+
+    let best = rows[0]
+    for (const row of rows) {
+      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+      if (rowUpdated > bestUpdated) {
+        best = row
+      }
+    }
 
     return {
-      legacyId: row.legacyId,
-      email: row.email,
-      name: row.name,
-      role: row.role,
-      status: row.status,
-      agencyId: row.agencyId,
-      phoneNumber: row.phoneNumber ?? null,
-      photoUrl: row.photoUrl ?? null,
-      notificationPreferences: row.notificationPreferences ?? null,
-      regionalPreferences: row.regionalPreferences ?? null,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
+      legacyId: best.legacyId,
+      email: best.email,
+      name: best.name,
+      role: best.role,
+      status: best.status,
+      agencyId: best.agencyId,
+      phoneNumber: best.phoneNumber ?? null,
+      photoUrl: best.photoUrl ?? null,
+      notificationPreferences: best.notificationPreferences ?? null,
+      regionalPreferences: best.regionalPreferences ?? null,
+      createdAtMs: best.createdAtMs,
+      updatedAtMs: best.updatedAtMs,
     }
   },
 })
@@ -181,15 +213,24 @@ export const getNotificationPreferencesByEmail = query({
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) return null
 
-    const row = await ctx.db
+    const rows = await ctx.db
       .query('users')
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .unique()
+      .collect()
 
-    if (!row) return null
+    if (rows.length === 0) return null
+
+    let best = rows[0]
+    for (const row of rows) {
+      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+      if (rowUpdated > bestUpdated) {
+        best = row
+      }
+    }
 
     return {
-      notificationPreferences: row.notificationPreferences ?? null,
+      notificationPreferences: best.notificationPreferences ?? null,
     }
   },
 })
