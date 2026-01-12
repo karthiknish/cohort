@@ -93,13 +93,13 @@ type AdminSection = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const usersRealtime = useQuery((api as any).adminUsers.list, {
-    pageSize: 1,
+  const usersRealtime = useQuery((api as any).adminUsers.listUsers, {
+    paginationOpts: { numItems: 1, cursor: null },
   }) as any
 
   const clientsRealtime = useQuery((api as any).clients.list, {
-    includeTotals: true,
-    pageSize: 1,
+    workspaceId: user?.agencyId || user?.id || '',
+    limit: 100,
   }) as any
 
   const schedulerEventsRealtime = useQuery((api as any).schedulerEvents.list, {
