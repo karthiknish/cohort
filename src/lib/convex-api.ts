@@ -35,6 +35,7 @@ export const clientsApi = {
 }
 
 export const debugApi = {
+  whoami: (api as any).debug.whoami,
   listAnyClients: (api as any).debug.listAnyClients,
   countClientsByWorkspace: (api as any).debug.countClientsByWorkspace,
 }

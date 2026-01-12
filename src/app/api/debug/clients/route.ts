@@ -47,13 +47,19 @@ export async function GET(req: NextRequest) {
   const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
 
   try {
+    const whoami = await convex.query(debugApi.whoami, {})
+
+    if (mode === 'whoami') {
+      return NextResponse.json({ ok: true, requestId, mode, whoami })
+    }
+
     if (mode === 'list') {
       const rows = await convex.query(debugApi.listAnyClients, { limit: resolvedLimit })
-      return NextResponse.json({ ok: true, requestId, mode, rows })
+      return NextResponse.json({ ok: true, requestId, mode, whoami, rows })
     }
 
     const result = await convex.query(debugApi.countClientsByWorkspace, { limit: resolvedLimit })
-    return NextResponse.json({ ok: true, requestId, mode, result })
+    return NextResponse.json({ ok: true, requestId, mode, whoami, result })
   } catch (error) {
     return NextResponse.json(
       {

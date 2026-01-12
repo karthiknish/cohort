@@ -1,6 +1,19 @@
 import { query } from './_generated/server'
 import { v } from 'convex/values'
 
+function summarizeIdentity(identity: any) {
+  if (!identity) return { present: false }
+
+  return {
+    present: true,
+    issuer: typeof identity.issuer === 'string' ? identity.issuer : null,
+    subject: typeof identity.subject === 'string' ? identity.subject : null,
+    email: typeof identity.email === 'string' ? identity.email : null,
+    name: typeof identity.name === 'string' ? identity.name : null,
+    role: typeof identity.role === 'string' ? identity.role : null,
+  }
+}
+
 function requireAdmin(identity: unknown): asserts identity {
   if (!identity) {
     throw new Error('Unauthorized')
@@ -12,6 +25,20 @@ function requireAdmin(identity: unknown): asserts identity {
   }
 }
 
+export const whoami = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+
+    return {
+      identity: summarizeIdentity(identity),
+      authInfo: {
+        hasAuth: Boolean((ctx as any).auth),
+      },
+    }
+  },
+})
+
 export const listAnyClients = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
@@ -20,10 +47,7 @@ export const listAnyClients = query({
 
     const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
 
-    const items = await ctx.db
-      .query('clients')
-      .order('desc')
-      .take(limit)
+    const items = await ctx.db.query('clients').order('desc').take(limit)
 
     return items.map((row) => ({
       workspaceId: row.workspaceId,
