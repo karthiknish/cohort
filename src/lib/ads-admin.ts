@@ -62,7 +62,7 @@ function normalizeClientId(value: unknown): string | null {
 }
 
 function shouldUseConvexAds(): boolean {
-    return isConvexAdsEnabled()
+    return Boolean(process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL)
 }
 
 export async function persistIntegrationTokens(options: {

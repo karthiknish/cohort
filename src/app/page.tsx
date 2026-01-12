@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CircleCheck, Eye, EyeOff, Lock, Mail, User, CircleAlert, Check, X, Shield, LoaderCircle } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
-import { sessionSyncManager } from "@/lib/auth/session-sync"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -41,7 +40,7 @@ function calculatePasswordStrength(password: string): PasswordStrength {
   }
 
   const passedChecks = Object.values(checks).filter(Boolean).length
-  
+
   let score: number
   let label: string
   let color: string
@@ -128,14 +127,13 @@ export default function HomePage() {
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const user = session?.user ?? null
   const loading = sessionPending
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [sessionSynced, setSessionSynced] = useState(false)
+  const [sessionSynced, setSessionSynced] = useState(true) // Default to true now that manual sync is gone
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
 
   const redirectInProgressRef = (globalThis as any).__cohortsRedirectInProgressRef ?? { current: false }
-  ;(globalThis as any).__cohortsRedirectInProgressRef = redirectInProgressRef
+    ; (globalThis as any).__cohortsRedirectInProgressRef = redirectInProgressRef
 
   const REDIRECT_STATE_KEY = "cohorts.auth.redirectState"
   const REDIRECT_STATE_STALE_MS = 30_000
@@ -181,40 +179,7 @@ export default function HomePage() {
     setHasMounted(true)
   }, [])
 
-  // Sync session with server when user is authenticated
-  // This sets the cohorts_session_expires cookie needed by middleware
-  useEffect(() => {
-    if (loading || !user || sessionSynced) return
-
-    const syncSession = async () => {
-      setIsSyncing(true)
-      try {
-        // Map Better Auth user to AuthUser format for session sync
-        const authUser = {
-          id: user.id ?? '',
-          email: user.email ?? '',
-          name: user.name ?? user.email ?? '',
-          phoneNumber: null,
-          photoURL: (user as { image?: string }).image ?? null,
-          role: 'client' as const, // Will be resolved by server
-          status: 'active' as const, // Will be resolved by server
-          agencyId: '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        await sessionSyncManager.sync(authUser)
-        setSessionSynced(true)
-      } catch (error) {
-        console.error('[HomePage] Session sync failed:', error)
-        // Don't block redirect on sync failure, middleware will handle it
-        setSessionSynced(true)
-      } finally {
-        setIsSyncing(false)
-      }
-    }
-
-    syncSession()
-  }, [loading, user, sessionSynced])
+  // Session sync is now handled by Better Auth and our unified server helpers
 
   // Use stable disabled state: always disabled on server/before mount, then use actual loading state
   const isAuthLoading = !hasMounted || loading
@@ -239,7 +204,7 @@ export default function HomePage() {
 
   useEffect(() => {
     // Wait for session sync to complete before redirecting
-    if (loading || isSyncing || !user || !sessionSynced) return
+    if (loading || !user || !sessionSynced) return
     if (redirectInProgressRef.current) return
 
     const redirect = searchParams.get("redirect")
@@ -280,19 +245,19 @@ export default function HomePage() {
     }
 
     redirectInProgressRef.current = true
-    
+
     // Try Next.js router first
     router.replace(destination)
-    
+
     // Fallback: if router doesn't navigate within 3 seconds, force hard navigation
     const fallbackTimeout = setTimeout(() => {
       console.warn('[HomePage] Router navigation timeout, using fallback')
       window.location.href = destination
     }, 3000)
-    
+
     // Clean up timeout if component unmounts (navigation succeeded)
     return () => clearTimeout(fallbackTimeout)
-  }, [loading, isSyncing, user, sessionSynced, router, searchParams, toast])
+  }, [loading, user, sessionSynced, router, searchParams, toast])
 
   // When we're back on the home page without a user, clear any stale redirect-loop tracking.
   useEffect(() => {
@@ -313,7 +278,7 @@ export default function HomePage() {
       if (stored === "signin" || stored === "signup") {
         setActiveTab(stored)
       }
-      
+
       // Load remember me preference
       const rememberedEmail = window.localStorage.getItem(REMEMBER_ME_KEY)
       if (rememberedEmail) {
@@ -346,7 +311,7 @@ export default function HomePage() {
         <div className="flex flex-col items-center gap-4">
           <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
           <div className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-sm">
-            {isSyncing ? 'Setting up your session…' : 'Redirecting to your dashboard…'}
+            Redirecting to your dashboard…
           </div>
           <button
             type="button"
@@ -380,20 +345,20 @@ export default function HomePage() {
         // Validate password strength
         if (passwordStrength.score < 2) {
           toast({
-          title: "Password needs work",
-          description: "Create a stronger password with at least 8 characters, including letters and numbers.",
-          variant: "destructive",
-        })
+            title: "Password needs work",
+            description: "Create a stronger password with at least 8 characters, including letters and numbers.",
+            variant: "destructive",
+          })
           setIsSubmitting(false)
           return
         }
 
         if (signUpData.password !== signUpData.confirmPassword) {
           toast({
-          title: "Passwords don't match",
-          description: "Please make sure both passwords are identical.",
-          variant: "destructive",
-        })
+            title: "Passwords don't match",
+            description: "Please make sure both passwords are identical.",
+            variant: "destructive",
+          })
           setIsSubmitting(false)
           return
         }
@@ -419,14 +384,14 @@ export default function HomePage() {
           email: signInData.email,
           password: signInData.password,
         })
-        
+
         // Handle remember me
         if (rememberMe && typeof window !== "undefined") {
           window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
         } else if (typeof window !== "undefined") {
           window.localStorage.removeItem(REMEMBER_ME_KEY)
         }
-        
+
         toast({
           title: "Welcome back!",
           description: "Signed in successfully. Loading your workspace...",
@@ -721,7 +686,7 @@ export default function HomePage() {
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
-                      
+
                       {/* Password Strength Indicator */}
                       {signUpData.password.length > 0 && (
                         <div className="space-y-2 pt-1">

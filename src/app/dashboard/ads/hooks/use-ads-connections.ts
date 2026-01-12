@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useAction, useMutation, useQuery } from 'convex/react'
+import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -102,13 +102,17 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   } = useAuth()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const { toast } = useToast()
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const canQueryConvex = isAuthenticated && !convexAuthLoading && Boolean(user?.id)
 
   const convexStatuses = useQuery(
     adsIntegrationsApi.listStatuses,
-    isPreviewMode || !workspaceId || !user?.id ? 'skip' : { workspaceId, clientId: selectedClientId ?? null }
+    isPreviewMode || !workspaceId || !canQueryConvex
+      ? 'skip'
+      : { workspaceId, clientId: selectedClientId ?? null }
   ) as ConvexIntegrationStatusRow[] | undefined
 
   const mappedStatuses = useMemo<IntegrationStatusResponse | null>(() => {
@@ -116,7 +120,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       return { statuses: getPreviewAdsIntegrationStatuses() }
     }
 
-    if (!workspaceId || !user?.id) return null
+    if (!workspaceId || !canQueryConvex) return null
 
     const rows = Array.isArray(convexStatuses) ? convexStatuses : []
 
@@ -138,7 +142,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     }))
 
     return { statuses }
-  }, [convexStatuses, isPreviewMode, user?.id, workspaceId])
+  }, [convexStatuses, isPreviewMode, canQueryConvex, workspaceId])
 
   // Connection state
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)

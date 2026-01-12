@@ -1,10 +1,11 @@
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-
-import { createApiHandler } from '@/lib/api-handler'
-import { logAuditAction } from '@/lib/audit-logger'
+import { v4 as uuidv4 } from 'uuid'
 import { ConvexHttpClient } from 'convex/browser'
-import { getToken as getConvexBetterAuthToken } from '@convex-dev/better-auth/utils'
-import { getToken as getNextJsConvexToken } from '@/lib/auth-server'
+import { api } from '../../../../../convex/_generated/api'
+import { getToken } from '@/lib/auth-server'
+import { logAuditAction } from '@/lib/audit-logger'
+import * as jose from 'jose'
 
 const payloadSchema = z
   .object({
@@ -15,69 +16,106 @@ const payloadSchema = z
 const roleSchema = z.enum(['admin', 'team', 'client'])
 const statusSchema = z.enum(['active', 'pending', 'invited', 'disabled', 'suspended'])
 
+/**
+ * Bootstrap route - creates/updates user in Convex users table
+ * This route decodes the JWT token to get the Better Auth user ID (sub claim)
+ * and ensures the user exists in our users table with proper role/status.
+ */
+export async function POST(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || uuidv4()
+  const debug: Record<string, unknown> = {}
 
-export const POST = createApiHandler(
-  {
-    bodySchema: payloadSchema,
-    rateLimit: 'standard',
-  },
-  async (req, { auth, body }) => {
-    const providedName = body?.name
-
-    const claimedRole = typeof auth.claims?.role === 'string' ? normalizeRole(auth.claims.role) : null
-    const claimedStatus = typeof auth.claims?.status === 'string' ? normalizeStatus(auth.claims.status, 'active') : null
-
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-    const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
-
-    if (!convexUrl || !convexSiteUrl) {
-      return { ok: false, error: 'Convex auth not configured' }
+  try {
+    // 1. Parse optional body
+    let body: z.infer<typeof payloadSchema> = undefined
+    try {
+      const json = await req.json()
+      const result = payloadSchema.safeParse(json)
+      if (result.success) {
+        body = result.data
+      }
+    } catch {
+      // No body or invalid JSON - that's fine
     }
 
-    // Prefer Next.js integration helper (it knows Better Auth cookie names).
-    // Fallback to direct util extraction.
-    const convexToken =
-      (await getNextJsConvexToken().catch(() => null)) ??
-      (await getConvexBetterAuthToken(convexSiteUrl, req.headers).then((r) => r?.token).catch(() => null))
+    const providedName = body?.name
+
+    // 2. Get Convex token using official helper
+    const convexToken = await getToken()
+    debug.hasToken = Boolean(convexToken)
 
     if (!convexToken) {
-      return { ok: false, error: 'No Better Auth session' }
+      return NextResponse.json({
+        success: true,
+        data: { ok: false, error: 'No Better Auth session', debug },
+        requestId,
+      })
+    }
+
+    // 3. Decode the JWT to get the subject (Better Auth user ID)
+    let jwtPayload: jose.JWTPayload | null = null
+    try {
+      jwtPayload = jose.decodeJwt(convexToken)
+      debug.jwtSub = jwtPayload?.sub ?? null
+      debug.jwtEmail = (jwtPayload as any)?.email ?? null
+    } catch (err) {
+      debug.jwtDecodeError = String(err)
+    }
+
+    const jwtSubject = jwtPayload?.sub
+    if (!jwtSubject) {
+      return NextResponse.json({
+        success: true,
+        data: { ok: false, error: 'JWT missing subject claim', debug },
+        requestId,
+      })
+    }
+
+    // 4. Get Convex URL and create client
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+    if (!convexUrl) {
+      return NextResponse.json({
+        success: true,
+        data: { ok: false, error: 'Convex not configured', debug },
+        requestId,
+      })
     }
 
     const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
 
-    const currentUser = (await convex.query('auth:getCurrentUser' as any, {})) as
-      | { id?: string; email?: string | null; name?: string | null }
+    // 5. Get current user info from Better Auth (for email/name)
+    const currentUser = (await convex.query(api.auth.getCurrentUser, {})) as
+      | { email?: string | null; name?: string | null }
       | null
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[BootstrapRoute] currentUser', {
-        hasUser: Boolean(currentUser),
-        email: currentUser?.email ?? null,
-        id: currentUser?.id ?? null,
-      })
-    }
+    debug.currentUser = currentUser ? { email: currentUser.email, name: currentUser.name } : null
 
-    // Better Auth sessions are the source of truth for email/name.
-    // `auth.email` here refers to the legacy auth bridge and can be null.
     const email = currentUser?.email ? String(currentUser.email) : null
     const name = providedName ?? (currentUser?.name ? String(currentUser.name) : null) ?? email ?? 'Pending user'
 
     if (!email) {
-      return { ok: false, error: 'Missing email' }
+      return NextResponse.json({
+        success: true,
+        data: { ok: false, error: 'Missing email from session', debug },
+        requestId,
+      })
     }
 
     const normalizedEmail = email.toLowerCase()
 
-    const existing = (await convex.query('users:getByEmail' as any, {
+    // 6. Check if user already exists in our users table
+    const existing = (await convex.query(api.users.getByEmail, {
       email: normalizedEmail,
     })) as
       | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
       | null
 
+    debug.existingUser = existing ? { legacyId: existing.legacyId, role: existing.role, status: existing.status } : null
+
     const storedRole = existing ? normalizeRole(existing.role) : null
     const storedStatus = existing ? normalizeStatus(existing.status, 'active') : null
 
+    // 7. Determine final role/status
     const admins = (process.env.ADMIN_EMAILS ?? '')
       .split(',')
       .map((value) => value.trim().toLowerCase())
@@ -85,31 +123,20 @@ export const POST = createApiHandler(
 
     const isAdminEmail = admins.includes(normalizedEmail)
 
-    const finalRole = claimedRole ?? (isAdminEmail ? 'admin' : null) ?? storedRole ?? 'client'
-    let finalStatus = claimedStatus ?? storedStatus ?? (finalRole === 'admin' ? 'active' : 'pending')
+    const finalRole = (isAdminEmail ? 'admin' : null) ?? storedRole ?? 'client'
+    let finalStatus = storedStatus ?? (finalRole === 'admin' ? 'active' : 'pending')
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[BootstrapRoute] roleResolution', {
-        normalizedEmail,
-        isAdminEmail,
-        claimedRole,
-        claimedStatus,
-        storedRole,
-        storedStatus,
-        finalRole,
-        finalStatus,
-      })
-    }
     if (finalRole === 'admin' && finalStatus !== 'active') {
       finalStatus = 'active'
     }
 
-    const legacyId = currentUser?.id
-    if (!legacyId) {
-      return { ok: false, error: 'Missing Better Auth user id' }
-    }
+    debug.roleResolution = { isAdminEmail, storedRole, storedStatus, finalRole, finalStatus }
 
-    await convex.mutation('users:bulkUpsert' as any, {
+    // 8. Use JWT subject as the legacyId (this is the Better Auth user ID)
+    const legacyId = jwtSubject
+
+    // 9. Upsert user in Convex users table
+    await convex.mutation(api.users.bulkUpsert, {
       users: [
         {
           legacyId: String(legacyId),
@@ -135,19 +162,33 @@ export const POST = createApiHandler(
           oldStatus: existing?.status ?? null,
           newStatus: finalStatus,
         },
-        requestId: req.headers.get('x-request-id') || undefined,
+        requestId,
       })
     }
 
-    return {
-      ok: true,
-      role: finalRole,
-      status: finalStatus,
-      claimsUpdated: claimsNeedUpdate,
-      agencyId: existing?.agencyId || String(legacyId),
-    }
+    return NextResponse.json({
+      success: true,
+      data: {
+        ok: true,
+        role: finalRole,
+        status: finalStatus,
+        claimsUpdated: claimsNeedUpdate,
+        agencyId: existing?.agencyId || String(legacyId),
+        debug,
+      },
+      requestId,
+    })
+  } catch (error) {
+    console.error('[Bootstrap] Error:', error)
+    debug.error = error instanceof Error ? error.message : String(error)
+
+    return NextResponse.json({
+      success: true,
+      data: { ok: false, error: 'Bootstrap failed', debug },
+      requestId,
+    }, { status: 200 }) // Return 200 so client sees the debug info
   }
-)
+}
 
 function normalizeRole(value: unknown): z.infer<typeof roleSchema> {
   if (value === 'admin' || value === 'team' || value === 'client') {

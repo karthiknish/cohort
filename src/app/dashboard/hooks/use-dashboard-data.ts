@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useConvexAuth } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
 import { getPreviewFinanceSummary, getPreviewMetrics, getPreviewTasks } from '@/lib/preview-data'
@@ -49,8 +50,12 @@ export interface UseDashboardDataReturn {
 export function useDashboardData(options: UseDashboardDataOptions): UseDashboardDataReturn {
     const { selectedClientId } = options
     const { user, getIdToken } = useAuth()
+    const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
     const workspaceId = user?.agencyId ?? null
     const { isPreviewMode } = usePreview()
+    
+    // Don't run Convex queries until Convex auth is ready
+    const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id
 
     const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
     const [financeLoading, setFinanceLoading] = useState(true)
@@ -72,7 +77,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
 
     const convexProposals = useQuery(
         proposalsApi.list,
-        isPreviewMode || !workspaceId || !user?.id
+        isPreviewMode || !workspaceId || !canQueryConvex
             ? 'skip'
             : {
                 workspaceId,
@@ -83,7 +88,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
 
     const convexTasks = useQuery(
         tasksApi.listByClient,
-        isPreviewMode || !workspaceId || !user?.id
+        isPreviewMode || !workspaceId || !canQueryConvex
             ? 'skip'
             : {
                 workspaceId,
@@ -96,7 +101,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
 
     const financeRealtime = useQuery(
         financeSummaryApi.get,
-        isPreviewMode || !workspaceId || !user?.id
+        isPreviewMode || !workspaceId || !canQueryConvex
             ? 'skip'
             : {
                 workspaceId,
@@ -110,7 +115,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     // Metrics are now fetched directly from Convex
     const metricsRealtime = useQuery(
         adsMetricsApi.listMetricsWithSummary,
-        isPreviewMode || !workspaceId || !user?.id
+        isPreviewMode || !workspaceId || !canQueryConvex
             ? 'skip'
             : {
                 workspaceId,
@@ -244,19 +249,28 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             }
         }
 
-        const loadMetrics = async () => {
-            // Metrics are now realtime via Convex
-            if (metricsRealtime === undefined) {
-                setMetricsLoading(true)
-                return
-            }
-            if (!isCancelled) {
-                const entries = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
-                setMetrics(entries as MetricRecord[])
-                setMetricsError(null)
-                setMetricsLoading(false)
-            }
-        }
+         const loadMetrics = async () => {
+             // Metrics are now realtime via Convex
+             if (!canQueryConvex) {
+                 setMetrics([])
+                 setMetricsError(null)
+                 setMetricsLoading(false)
+                 return
+             }
+
+             if (metricsRealtime === undefined) {
+                 setMetricsLoading(true)
+                 return
+             }
+
+             if (!isCancelled) {
+                 const entries = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
+                 setMetrics(entries as MetricRecord[])
+                 setMetricsError(null)
+                 setMetricsLoading(false)
+             }
+         }
+
 
         const loadTasks = async () => {
             // Tasks are realtime via Convex; this function is a no-op.
@@ -320,7 +334,8 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         return () => {
             isCancelled = true
         }
-    }, [user?.id, workspaceId, selectedClientId, getIdToken, refreshKey, isPreviewMode, convexProposals, financeRealtime, metricsRealtime])
+     }, [user?.id, workspaceId, selectedClientId, getIdToken, refreshKey, isPreviewMode, convexProposals, financeRealtime, metricsRealtime, canQueryConvex])
+
 
     return {
         financeSummary,

@@ -10,8 +10,8 @@ export interface AuthResult {
 
 import { ApiError } from './api-errors'
 import { ConvexHttpClient } from 'convex/browser'
-
-import { getToken as getConvexBetterAuthToken } from '@convex-dev/better-auth/utils'
+import { isAuthenticated, getToken } from './auth-server'
+import { api } from '../../convex/_generated/api'
 
 class AuthenticationError extends ApiError {
   constructor(message: string, status = 401) {
@@ -22,17 +22,22 @@ class AuthenticationError extends ApiError {
 
 async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthResult | null> {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-  const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
-  if (!convexUrl || !convexSiteUrl) return null
+  if (!convexUrl) return null
 
   try {
-    const tokenResult = await getConvexBetterAuthToken(convexSiteUrl, request.headers)
-    const token = tokenResult?.token
+    // 1. Check if authenticated using official helper
+    if (!(await isAuthenticated())) {
+      return null
+    }
+
+    // 2. Get Convex token
+    const token = await getToken()
     if (!token) return null
 
     const convex = new ConvexHttpClient(convexUrl, { auth: token })
 
-    const user = (await convex.query('auth:getCurrentUser' as any, {})) as
+    // 3. Get user info from Convex
+    const user = (await convex.query(api.auth.getCurrentUser, {})) as
       | { id?: string; email?: string | null; name?: string | null }
       | null
 
@@ -55,10 +60,21 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
     let status: string | undefined
     let agencyId: string | undefined
 
-    const betterAuthUserId = user.id ? String(user.id) : null
+    const betterAuthUserId = (user as any).id ?? (user as any)._id ?? (user as any).userId ?? (user as any).sub ?? null
+    const betterAuthUserEmail = user.email ? String(user.email) : null
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[server-auth] resolved betterAuthUserId:', {
+        id: (user as any).id,
+        _id: (user as any)._id,
+        userId: (user as any).userId,
+        sub: (user as any).sub,
+        final: betterAuthUserId
+      })
+    }
 
     try {
-      const convexUser = (await convex.query('users:getByEmail' as any, {
+      const convexUser = (await convex.query(api.users.getByEmail, {
         email: normalizedEmail,
       })) as
         | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
@@ -78,7 +94,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
       // Ensure the user exists in the Convex `users` table so role/status lookups
       // and legacy-id bridging are stable going forward.
       try {
-        await convex.mutation('users:bulkUpsert' as any, {
+        await convex.mutation(api.users.bulkUpsert, {
           users: [
             {
               legacyId: betterAuthUserId,
@@ -88,7 +104,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
           ],
         })
 
-        const convexUser = (await convex.query('users:getByEmail' as any, {
+        const convexUser = (await convex.query(api.users.getByEmail, {
           email: normalizedEmail,
         })) as
           | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }

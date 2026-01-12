@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useAction } from 'convex/react'
+import { useQuery, useAction, useConvexAuth } from 'convex/react'
 
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
 import { onDashboardRefresh } from '@/lib/refresh-bus'
@@ -26,9 +26,9 @@ export interface UseAnalyticsDataReturn {
 }
 
 export function useAnalyticsData(
-  token: string | null, 
-  periodDays: number, 
-  clientId: string | null, 
+  token: string | null,
+  periodDays: number,
+  clientId: string | null,
   isPreviewMode: boolean,
   workspaceId?: string | null
 ): UseAnalyticsDataReturn {
@@ -50,10 +50,13 @@ export function useAnalyticsData(
     return getPreviewAnalyticsInsights()
   }, [isPreviewMode])
 
+  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
+  const canQueryConvex = isConvexAuthenticated && !isConvexLoading
+
   // Metrics are now fetched directly from Convex
   const metricsRealtime = useQuery(
     adsMetricsApi.listMetricsWithSummary,
-    isPreviewMode || !workspaceId
+    isPreviewMode || !workspaceId || !canQueryConvex
       ? 'skip'
       : {
           workspaceId,
@@ -146,14 +149,14 @@ export function useAnalyticsData(
     }
   }
 
-  const metricsLoading = metricsRealtime === undefined && !isPreviewMode && !!workspaceId
+  const metricsLoading = metricsRealtime === undefined && !isPreviewMode && !!workspaceId && canQueryConvex
 
   return {
     metricsData: metricsRealtime?.metrics ?? [],
     metricsNextCursor: null, // Convex doesn't use cursor pagination
     metricsLoadingMore,
     loadMoreMetrics,
-    metricsError: undefined, // Convex errors are handled differently
+    metricsError: undefined,
     metricsLoading,
     metricsRefreshing: false, // Convex handles this automatically
     mutateMetrics: async () => undefined, // Convex auto-refreshes

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
+import { useConvexAuth, useConvex } from 'convex/react'
 import { getPreviewFinanceSummary, getPreviewMetrics } from '@/lib/preview-data'
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { MetricRecord, ClientComparisonSummary, ComparisonInsight } from '@/types/dashboard'
@@ -11,10 +12,10 @@ import {
     formatCpa,
     getErrorMessage,
 } from '@/lib/dashboard-utils'
+import { isAuthError } from '@/lib/error-utils'
 import { formatCurrency } from '@/lib/utils'
 import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ClientRecord } from '@/types/clients'
-import { ConvexReactClient } from 'convex/react'
 import { adsMetricsApi, financeSummaryApi } from '@/lib/convex-api'
 
 export interface UseComparisonDataOptions {
@@ -46,8 +47,13 @@ export interface ComparisonAggregate {
 
 export function useComparisonData(options: UseComparisonDataOptions): UseComparisonDataReturn {
     const { clients, selectedClientId, comparisonClientIds, comparisonPeriodDays } = options
-    const { user, getIdToken } = useAuth()
+    const { user } = useAuth()
+    const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
+    const convex = useConvex()
     const { isPreviewMode } = usePreview()
+    
+    // Don't run queries until Convex auth is ready
+    const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id
 
     const [comparisonSummaries, setComparisonSummaries] = useState<ClientComparisonSummary[]>([])
     const [comparisonLoading, setComparisonLoading] = useState(false)
@@ -132,16 +138,10 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
             setComparisonLoading(true)
             setComparisonError(null)
             try {
-                 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-                 if (!convexUrl) {
-                     throw new Error('Convex URL is missing')
-                 }
-
-                 const convex = new ConvexReactClient(convexUrl)
-
-                const token = await getIdToken()
-                if (token) {
-                    convex.setAuth(async () => token)
+                // Wait for Convex auth to be ready
+                if (!canQueryConvex) {
+                    setComparisonLoading(false)
+                    return
                 }
 
                 const financeRequests = targets.map((clientId) =>
@@ -188,12 +188,16 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                     })
                     setComparisonSummaries(ordered)
                 }
-            } catch (error) {
-                if (!isCancelled) {
-                    setComparisonSummaries([])
-                    setComparisonError(getErrorMessage(error, 'Unable to build comparison view'))
-                }
-            } finally {
+             } catch (error) {
+                 if (!isCancelled) {
+                     setComparisonSummaries([])
+                     const message = isAuthError(error)
+                         ? 'Your session is not ready yet. Please refresh, or sign in again.'
+                         : getErrorMessage(error, 'Unable to build comparison view')
+                     setComparisonError(message)
+                 }
+             } finally {
+
                 if (!isCancelled) {
                     setComparisonLoading(false)
                 }
@@ -205,7 +209,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         return () => {
             isCancelled = true
         }
-    }, [clients, comparisonClientIds, comparisonPeriodDays, selectedClientId, user?.id, isPreviewMode, getIdToken])
+    }, [clients, comparisonClientIds, comparisonPeriodDays, selectedClientId, user?.id, user?.agencyId, isPreviewMode, canQueryConvex, convex])
 
     const comparisonInsights = useMemo<ComparisonInsight[]>(() => {
         if (comparisonSummaries.length === 0) {

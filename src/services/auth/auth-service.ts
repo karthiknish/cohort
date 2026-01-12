@@ -62,11 +62,31 @@ export class AuthService {
 
   private async initSession() {
     try {
-      const sessionResult = await authClient.getSession().catch(() => null)
+      const sessionResult = await authClient.getSession().catch((err) => {
+        console.error('[AuthService] getSession error:', err)
+        return null
+      })
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AuthService] getSession result:', {
+          hasResult: Boolean(sessionResult),
+          hasData: Boolean(sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult),
+          result: sessionResult,
+        })
+      }
+      
       const session =
         sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult
           ? (sessionResult as any).data
           : null
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AuthService] Parsed session:', {
+          hasSession: Boolean(session),
+          hasUser: Boolean(session?.user),
+          userEmail: session?.user?.email,
+        })
+      }
 
       const nextUser = session?.user
         ? this.mapBetterAuthUser(session.user)

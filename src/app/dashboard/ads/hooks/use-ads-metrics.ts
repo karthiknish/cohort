@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
 import { subDays, startOfDay, endOfDay } from 'date-fns'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -10,6 +10,7 @@ import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
 import { adsMetricsApi } from '@/lib/convex-api'
+import { isAuthError } from '@/lib/error-utils'
 
 import type { MetricRecord, ProviderSummary } from '../components/types'
 import type { MetricsSummary } from '../components/types'
@@ -73,7 +74,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
-  const { toast } = useToast()
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
 
   // State
   const [metrics, setMetrics] = useState<MetricRecord[]>([])
@@ -148,10 +149,23 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   }, [processedMetrics, serverSideSummary, metrics.length])
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const canQueryConvex = isAuthenticated && !convexAuthLoading && Boolean(user?.id)
+
+  // Note: `useQuery` will throw for hard errors (like Unauthorized).
+  // Waiting for `useConvexAuth` readiness prevents most of these.
+  useEffect(() => {
+    if (isPreviewMode) return
+    if (!workspaceId) return
+    if (canQueryConvex) return
+
+    // Keep initial auth boot silent, but if we previously surfaced an error,
+    // swap it to a session-expired message.
+    setMetricError((prev) => (prev ? ERROR_MESSAGES.SIGN_IN_REQUIRED : prev))
+  }, [canQueryConvex, isPreviewMode, workspaceId])
 
   const metricsRealtime = useQuery(
     adsMetricsApi.listMetrics,
-    isPreviewMode || !workspaceId || !user?.id
+    isPreviewMode || !workspaceId || !canQueryConvex
       ? 'skip'
       : {
           workspaceId,
@@ -165,7 +179,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   // Compute the full metric list from Convex (or preview)
   const metricsSource = useMemo(() => {
     if (isPreviewMode) return getPreviewAdsMetrics() as MetricRecord[]
-    if (!workspaceId || !user?.id) return [] as MetricRecord[]
+    if (!workspaceId || !canQueryConvex) return [] as MetricRecord[]
 
     const rows = Array.isArray(metricsRealtime) ? metricsRealtime : []
     return rows.map((row: any) => ({
@@ -180,15 +194,26 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       revenue: row.revenue === null || row.revenue === undefined ? null : Number(row.revenue),
       createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
     }))
-  }, [isPreviewMode, metricsRealtime, user?.id, workspaceId])
+  }, [isPreviewMode, metricsRealtime, canQueryConvex, workspaceId])
 
   // Keep local pagination state but page client-side.
   const isConvexLoading =
-    !isPreviewMode && Boolean(workspaceId && user?.id) && metricsRealtime === undefined
+    !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
 
   // Load/refresh local paged list from Convex/preview.
   // Important: avoid state updates during render.
   useEffect(() => {
+    // If auth isn't ready, don't show misleading loading/errors.
+    if (!isPreviewMode && workspaceId && !canQueryConvex) {
+      setMetricsLoading(false)
+      setMetricError(null)
+      setLoadMoreError(null)
+      setMetrics([])
+      setNextCursor(null)
+      setServerSideSummary(null)
+      return
+    }
+
     if (isConvexLoading) {
       setMetricsLoading(true)
       return
@@ -205,7 +230,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
     setMetrics(firstPage)
     setNextCursor(metricsSource.length > METRICS_PAGE_SIZE ? 'more' : null)
-  }, [isConvexLoading, metricsSource, refreshTick])
+  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsSource, refreshTick, workspaceId])
 
   // Keep nextCursor in sync with current visible count.
   useEffect(() => {
@@ -230,7 +255,10 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       setVisibleCount(nextCount)
       setMetrics(metricsSource.slice(0, nextCount))
     } catch (error: unknown) {
-      setLoadMoreError(getErrorMessage(error, ERROR_MESSAGES.LOAD_MORE_FAILED))
+      const message = isAuthError(error)
+        ? ERROR_MESSAGES.SIGN_IN_REQUIRED
+        : getErrorMessage(error, ERROR_MESSAGES.LOAD_MORE_FAILED)
+      setLoadMoreError(message)
     } finally {
       setLoadingMore(false)
     }

@@ -1,8 +1,67 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { AuthUser, SignUpData, authService } from '@/services/auth'
-import { sessionSyncManager } from '@/lib/auth'
+
+// Helper to call bootstrap API (ensures user exists in Convex users table)
+// Returns the user data from bootstrap if successful
+async function callBootstrap(retries = 3): Promise<{ role?: string; status?: string; agencyId?: string } | null> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch('/api/auth/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const json = await response.json()
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[AuthContext] Bootstrap response', json)
+        }
+        
+        // Handle both old format (data.role) and new format (data.data.role)
+        const data = json.data?.data ?? json.data ?? json
+        
+        if (data?.ok === true) {
+          return {
+            role: data.role,
+            status: data.status,
+            agencyId: data.agencyId,
+          }
+        }
+        
+        // Bootstrap returned ok: false - log the error
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[AuthContext] Bootstrap returned ok: false', data?.error, data?.debug)
+        }
+        return null
+      }
+
+      // If we get a 401/403, the session might not be ready yet - wait and retry
+      if (response.status === 401 || response.status === 403) {
+        if (attempt < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
+          continue
+        }
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[AuthContext] Bootstrap call failed:', response.status)
+      }
+      return null
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[AuthContext] Bootstrap call error:', error)
+      }
+      if (attempt < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
+      }
+    }
+  }
+  return null
+}
 
 interface AuthContextType {
   user: AuthUser | null
@@ -47,7 +106,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
 
+  const lastAppliedUserKeyRef = useRef<string | null>(null)
+
   const applyUser = useCallback(async (authUser: AuthUser | null, isIntentionalSignOut = false) => {
+    const userKey = authUser
+      ? `${authUser.id}|${authUser.email}|${authUser.role}|${authUser.status}|${authUser.agencyId}`
+      : 'anonymous'
+
+    // Deduplicate: Better Auth + StrictMode can invoke state changes multiple times.
+    // Skip if we've already applied this exact user snapshot.
+    if (lastAppliedUserKeyRef.current === userKey && !isIntentionalSignOut) {
+      return
+    }
+    lastAppliedUserKeyRef.current = userKey
+
     setUser(authUser)
 
     // Skip sync for passive null states (handled internally by SessionSyncManager)
@@ -57,33 +129,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setIsSyncing(true)
     try {
-      await sessionSyncManager.sync(authUser, isIntentionalSignOut)
+      // Call bootstrap to ensure user exists in Convex users table.
+      // This returns the user's role, status, and agencyId from Convex.
+      if (authUser) {
+        const bootstrapResult = await callBootstrap()
 
-      // Fetch the role/status/agencyId from server cookies (set by session sync)
-      let serverRole: string | null = null
-      let serverStatus: string | null = null
-      let serverAgencyId: string | null = null
-      try {
-        const sessionRes = await fetch('/api/auth/session', { cache: 'no-store', credentials: 'same-origin' })
-        const sessionJson = await sessionRes.json().catch(() => null) as { role?: unknown; status?: unknown; agencyId?: unknown } | null
-        serverRole = typeof sessionJson?.role === 'string' ? sessionJson.role : null
-        serverStatus = typeof sessionJson?.status === 'string' ? sessionJson.status : null
-        serverAgencyId = typeof sessionJson?.agencyId === 'string' ? sessionJson.agencyId : null
-      } catch {
-        // ignore fetch failures
+        // Update user with data from Convex (role, status, agencyId)
+        if (bootstrapResult) {
+          setUser((prev) => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              role: (bootstrapResult.role as AuthUser['role']) || prev.role,
+              status: (bootstrapResult.status as AuthUser['status']) || prev.status,
+              agencyId: bootstrapResult.agencyId || prev.agencyId || prev.id,
+            }
+          })
+        } else {
+          // Fallback: ensure agencyId is set to user id if not available
+          setUser((prev) => {
+            if (!prev) return prev
+            if (prev.agencyId && prev.agencyId.length > 0) return prev
+            return { ...prev, agencyId: prev.id }
+          })
+        }
       }
 
-      // Update user with server-resolved role/status/agencyId
-      const nextUser = authUser
-        ? {
-            ...authUser,
-            role: (serverRole as typeof authUser.role) || authUser.role,
-            status: (serverStatus as typeof authUser.status) || authUser.status,
-            agencyId: serverAgencyId || authUser.agencyId || authUser.id,
-          }
-        : null
-
-      setUser(nextUser)
+      // SessionSyncManager is no longer needed as we've unified the auth flow
+      // await sessionSyncManager.sync(authUser, isIntentionalSignOut)
     } finally {
       setIsSyncing(false)
     }

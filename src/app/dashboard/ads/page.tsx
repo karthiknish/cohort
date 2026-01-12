@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react'
 
+import { isAuthError } from '@/lib/error-utils'
+
 import { FadeIn } from '@/components/ui/animate-in'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { usePreview } from '@/contexts/preview-context'
@@ -112,7 +114,11 @@ export default function AdsPage() {
       )
     )
 
-  const suppressMetricsErrors = !isPreviewMode && !hasAnyAdIntegration
+  const suppressMetricsErrors =
+    !isPreviewMode &&
+    !hasAnyAdIntegration &&
+    !isAuthError(metricError) &&
+    !isAuthError(loadMoreError)
 
   // Surface notable errors as toasts once
   useEffect(() => {

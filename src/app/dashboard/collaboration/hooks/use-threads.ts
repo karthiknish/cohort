@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useConvex } from 'convex/react'
 
 import { useToast } from '@/components/ui/use-toast'
@@ -97,95 +97,85 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
   const [activeThreadIds, setActiveThreadIds] = useState<Set<string>>(new Set())
   const [threadErrorsByRootId, setThreadErrorsByRootId] = useState<ThreadErrorsState>({})
 
-  const threadQueries = useMemo(() => {
-    const result = new Map<string, ReturnType<typeof useInfiniteQuery>>()
+  const [threadMessagesByRootId, setThreadMessagesByRootId] = useState<ThreadMessagesState>({})
+  const [threadNextCursorByRootId, setThreadNextCursorByRootId] = useState<Record<string, string | null>>({})
+  const [threadLoadingByRootId, setThreadLoadingByRootId] = useState<Record<string, boolean>>({})
 
-    for (const threadRootId of activeThreadIds) {
-      const trimmedId = threadRootId.trim()
-      if (!trimmedId) continue
+  const fetchThreadRepliesPage = useCallback(
+    async (threadRootId: string, cursor: string | null) => {
+      if (!workspaceId) {
+        return {
+          replies: [] as CollaborationMessage[],
+          nextCursor: null as string | null,
+        }
+      }
 
-      const query = useInfiniteQuery({
-        queryKey: ['threadReplies', workspaceId, trimmedId],
-        enabled: Boolean(workspaceId) && Boolean(trimmedId),
-        initialPageParam: null as string | null,
-        queryFn: async ({ pageParam }) => {
-          if (!workspaceId) {
-            return {
-              replies: [] as CollaborationMessage[],
-              nextCursor: null as string | null,
-            }
-          }
+      const decoded = decodeTimestampIdCursor(cursor)
+      const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
+      const afterLegacyId = decoded ? decoded.id : undefined
 
-          const decoded = decodeTimestampIdCursor(pageParam)
-          const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
-          const afterLegacyId = decoded ? decoded.id : undefined
+      const rows = (await convex.query(collaborationApi.listThreadReplies, {
+        workspaceId: String(workspaceId),
+        threadRootId,
+        limit: THREAD_PAGE_SIZE + 1,
+        afterCreatedAtMs,
+        afterLegacyId,
+      })) as ConvexThreadRow[]
 
-          const rows = (await convex.query(collaborationApi.listThreadReplies, {
-            workspaceId: String(workspaceId),
-            threadRootId: trimmedId,
-            limit: THREAD_PAGE_SIZE + 1,
-            afterCreatedAtMs,
-            afterLegacyId,
-          })) as ConvexThreadRow[]
+      const mapped = rows
+        .slice(0, THREAD_PAGE_SIZE)
+        .map(mapThreadReplyRow)
+        .filter((message) => message.id)
+        .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
+        .map((message) => ({
+          ...message,
+          reactions: message.reactions ?? [],
+        }))
 
-          const mapped = rows
-            .slice(0, THREAD_PAGE_SIZE)
-            .map(mapThreadReplyRow)
-            .filter((message) => message.id)
-            .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
-            .map((message) => ({
-              ...message,
-              reactions: message.reactions ?? [],
-            }))
+      const hasMore = rows.length > THREAD_PAGE_SIZE
+      const lastDisplayed = rows.length ? rows[Math.min(rows.length, THREAD_PAGE_SIZE) - 1] : null
+      const nextCursor =
+        hasMore && lastDisplayed && typeof lastDisplayed.createdAtMs === 'number'
+          ? encodeTimestampIdCursor(
+              new Date(lastDisplayed.createdAtMs).toISOString(),
+              String(lastDisplayed.legacyId ?? '')
+            )
+          : null
 
-          const hasMore = rows.length > THREAD_PAGE_SIZE
-          const lastDisplayed = rows.length ? rows[Math.min(rows.length, THREAD_PAGE_SIZE) - 1] : null
-          const nextCursor =
-            hasMore && lastDisplayed && typeof lastDisplayed.createdAtMs === 'number'
-              ? encodeTimestampIdCursor(
-                  new Date(lastDisplayed.createdAtMs).toISOString(),
-                  String(lastDisplayed.legacyId ?? '')
-                )
-              : null
+      return {
+        replies: mapped,
+        nextCursor,
+      }
+    },
+    [convex, workspaceId]
+  )
 
-          return {
-            replies: mapped,
-            nextCursor,
-          }
-        },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? null,
-      })
-
-      result.set(trimmedId, query)
-    }
-
-    return result
-  }, [activeThreadIds, convex, workspaceId])
-
-  const threadMessagesByRootId = useMemo<ThreadMessagesState>(() => {
-    const next: ThreadMessagesState = {}
-    for (const [threadRootId, query] of threadQueries.entries()) {
-      const messages = (query.data as any)?.pages?.flatMap((page: any) => page.replies ?? []) ?? []
-      next[threadRootId] = messages
-    }
-    return next
-  }, [threadQueries])
-
-  const threadNextCursorByRootId = useMemo<Record<string, string | null>>(() => {
-    const next: Record<string, string | null> = {}
-    for (const [threadRootId, query] of threadQueries.entries()) {
-      next[threadRootId] = query.hasNextPage ? 'next' : null
-    }
-    return next
-  }, [threadQueries])
-
-  const threadLoadingByRootId = useMemo<Record<string, boolean>>(() => {
-    const next: Record<string, boolean> = {}
-    for (const [threadRootId, query] of threadQueries.entries()) {
-      next[threadRootId] = query.isLoading || query.isFetchingNextPage
-    }
-    return next
-  }, [threadQueries])
+  // Keep state maps aligned with active thread set.
+  useMemo(() => {
+    const ids = Array.from(activeThreadIds)
+    setThreadMessagesByRootId((prev) => {
+      const next: ThreadMessagesState = { ...prev }
+      for (const key of Object.keys(next)) {
+        if (!ids.includes(key)) delete next[key]
+      }
+      return next
+    })
+    setThreadNextCursorByRootId((prev) => {
+      const next = { ...prev }
+      for (const key of Object.keys(next)) {
+        if (!ids.includes(key)) delete next[key]
+      }
+      return next
+    })
+    setThreadLoadingByRootId((prev) => {
+      const next = { ...prev }
+      for (const key of Object.keys(next)) {
+        if (!ids.includes(key)) delete next[key]
+      }
+      return next
+    })
+    return null
+  }, [activeThreadIds])
 
   const loadThreadReplies = useCallback(
     async (threadRootId: string) => {
@@ -200,15 +190,21 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
 
       setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: null }))
 
+      setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: true }))
+
       try {
-        await queryClient.invalidateQueries({ queryKey: ['threadReplies', workspaceId, trimmedId] })
+        const firstPage = await fetchThreadRepliesPage(trimmedId, null)
+        setThreadMessagesByRootId((prev) => ({ ...prev, [trimmedId]: firstPage.replies }))
+        setThreadNextCursorByRootId((prev) => ({ ...prev, [trimmedId]: firstPage.nextCursor }))
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to load thread replies'
         setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: message }))
         toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })
+      } finally {
+        setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: false }))
       }
     },
-    [queryClient, toast, workspaceId]
+    [fetchThreadRepliesPage, toast]
   )
 
   const loadMoreThreadReplies = useCallback(
@@ -216,20 +212,30 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
       const trimmedId = threadRootId.trim()
       if (!trimmedId) return
 
-      const query = threadQueries.get(trimmedId)
-      if (!query?.hasNextPage || query.isFetchingNextPage) {
+      const cursor = threadNextCursorByRootId[trimmedId] ?? null
+      const isLoading = threadLoadingByRootId[trimmedId] ?? false
+      if (!cursor || isLoading) {
         return
       }
 
+      setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: true }))
+
       try {
-        await query.fetchNextPage()
+        const page = await fetchThreadRepliesPage(trimmedId, cursor)
+        setThreadMessagesByRootId((prev) => {
+          const existing = prev[trimmedId] ?? []
+          return { ...prev, [trimmedId]: [...existing, ...page.replies] }
+        })
+        setThreadNextCursorByRootId((prev) => ({ ...prev, [trimmedId]: page.nextCursor }))
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unable to load thread replies'
         setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: message }))
         toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })
+      } finally {
+        setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: false }))
       }
     },
-    [threadQueries, toast]
+    [fetchThreadRepliesPage, threadLoadingByRootId, threadNextCursorByRootId, toast]
   )
 
   const clearThreadReplies = useCallback((threadRootId?: string) => {

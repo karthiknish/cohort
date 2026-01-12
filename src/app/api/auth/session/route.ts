@@ -1,7 +1,6 @@
 import { cookies, headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
-import { getToken } from '@convex-dev/better-auth/utils'
 import { betterFetch } from '@better-fetch/fetch'
 
 // CSRF token header must match a cookie value (double-submit pattern)
@@ -17,7 +16,7 @@ export const GET = async () => {
 
   // Generate a new CSRF token for the client to use in subsequent requests
   const csrfToken = generateCsrfToken()
-  
+
   const response = NextResponse.json(
     {
       success: true,
@@ -82,21 +81,23 @@ function validateCsrfToken(
   return Boolean(headerToken && cookieToken && headerToken === cookieToken)
 }
 
+import { isAuthenticated, getToken } from '@/lib/auth-server'
+import { api } from '../../../../../convex/_generated/api'
+
+
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
-  const headersList = await headers()
-  
+
   if (process.env.NODE_ENV !== 'production') {
     console.log('[SessionRoute][POST] Starting session sync')
   }
 
   // Validate CSRF token (double-submit cookie pattern)
-  // Be more lenient for new session creation (login flow)
   if (!validateCsrfToken(request, cookieStore, true)) {
     console.warn('[SessionRoute] CSRF validation failed')
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Invalid CSRF token',
         code: 'CSRF_VALIDATION_FAILED',
         message: 'Security validation failed. Please refresh and try again.'
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json(
     { success: true },
-    { 
+    {
       headers: { 'Cache-Control': 'no-store, max-age=0' }
     }
   )
@@ -122,98 +123,12 @@ export async function POST(request: NextRequest) {
     sameSite: 'lax' as const,
   }
 
-  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-  const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
-
-  if (!convexUrl || !convexSiteUrl) {
-    console.error('[SessionRoute][POST] Missing CONVEX_URL or CONVEX_SITE_URL')
-    response.cookies.delete('cohorts_role')
-    response.cookies.delete('cohorts_status')
-    response.cookies.delete('cohorts_agency_id')
-    response.cookies.delete('cohorts_session_expires')
-    response.cookies.delete(CSRF_COOKIE)
-    return response
-  }
-
   try {
-    // Parse request body to get the Convex token (for cross-domain setups)
-    let bodyToken: string | null = null
-    try {
-      const body = await request.json().catch(() => ({})) as { convexToken?: string }
-      bodyToken = typeof body.convexToken === 'string' ? body.convexToken : null
-    } catch {
-      // Ignore JSON parse errors
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[SessionRoute][POST] Request body token:', {
-        hasBodyToken: Boolean(bodyToken),
-        tokenPreview: bodyToken?.substring(0, 50) + '...',
-      })
-    }
-
-    // First, try to use the token from the request body (cross-domain flow)
-    let convexToken = bodyToken
-
-    // If no body token, try the cookie-based approach (same-domain flow)
-    if (!convexToken) {
-      // Debug: log what headers we're passing to getToken
+    // 1. Check authentication using official helper
+    const isAuth = await isAuthenticated()
+    if (!isAuth) {
       if (process.env.NODE_ENV !== 'production') {
-        const cookieHeader = headersList.get('cookie')
-        console.log('[SessionRoute][POST] No body token, trying cookie-based getToken:', {
-          convexSiteUrl,
-          hasCookieHeader: Boolean(cookieHeader),
-          cookiePreview: cookieHeader?.substring(0, 100) + (cookieHeader && cookieHeader.length > 100 ? '...' : ''),
-        })
-      }
-
-      // Use the official Better Auth helper to get a Convex token
-      // This calls {convexSiteUrl}/api/auth/convex/token with the session cookie
-      let tokenResult = await getToken(convexSiteUrl, headersList)
-
-      // If getToken failed, try a direct fetch with explicit cookie header
-      if (!tokenResult?.token) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[SessionRoute][POST] getToken returned no token, trying direct fetch')
-        }
-        
-        // Try direct fetch with cookie explicitly
-        const cookieHeader = headersList.get('cookie')
-        if (cookieHeader) {
-          const directResult = await betterFetch<{ token?: string }>('/api/auth/convex/token', {
-            baseURL: convexSiteUrl,
-            headers: {
-              cookie: cookieHeader,
-            },
-          })
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[SessionRoute][POST] direct fetch result:', {
-              hasData: Boolean(directResult?.data),
-              hasToken: Boolean(directResult?.data?.token),
-              error: directResult?.error,
-            })
-          }
-          if (directResult?.data?.token) {
-            tokenResult = { isFresh: true, token: directResult.data.token }
-          }
-        }
-      }
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[SessionRoute][POST] getToken result:', {
-          hasToken: Boolean(tokenResult?.token),
-          isFresh: tokenResult?.isFresh,
-          tokenPreview: tokenResult?.token?.substring(0, 50) + '...',
-        })
-      }
-
-      convexToken = tokenResult?.token ?? null
-    }
-
-    if (!convexToken) {
-      // Can't get Convex token - clear cookies
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[SessionRoute][POST] No Convex token available, clearing session cookies')
+        console.log('[SessionRoute][POST] Not authenticated, clearing session cookies')
       }
       response.cookies.delete('cohorts_role')
       response.cookies.delete('cohorts_status')
@@ -223,15 +138,31 @@ export async function POST(request: NextRequest) {
       return response
     }
 
-    // Now query Convex for user info
+    // 2. Get Convex token
+    const convexToken = await getToken()
+    if (!convexToken) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SessionRoute][POST] No Convex token, clearing session cookies')
+      }
+      response.cookies.delete('cohorts_role')
+      response.cookies.delete('cohorts_status')
+      response.cookies.delete('cohorts_agency_id')
+      response.cookies.delete('cohorts_session_expires')
+      response.cookies.delete(CSRF_COOKIE)
+      return response
+    }
+
+    // 3. Query Convex for user info
+    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
+    if (!convexUrl) throw new Error('Missing CONVEX_URL')
+
     const convex = new ConvexHttpClient(convexUrl)
     convex.setAuth(convexToken)
 
-    const user = await convex.query('auth:getCurrentUser' as any, {}).catch(() => null) as { id?: string; email?: string | null } | null
+    const user = await convex.query(api.auth.getCurrentUser, {}).catch(() => null) as { id?: string; email?: string | null } | null
     const email = user?.email ? String(user.email) : null
 
     if (!email) {
-      // No email from Convex - clear cookies
       response.cookies.delete('cohorts_role')
       response.cookies.delete('cohorts_status')
       response.cookies.delete('cohorts_agency_id')
@@ -248,7 +179,7 @@ export async function POST(request: NextRequest) {
     let resolvedAgencyId: string | null = null
 
     try {
-      const convexUser = await convex.query('users:getByEmail' as any, {
+      const convexUser = await convex.query(api.users.getByEmail, {
         email: normalizedEmail,
       }).catch(() => null) as { role?: string | null; status?: string | null; agencyId?: string | null; legacyId?: string | null } | null
 
@@ -327,8 +258,8 @@ export async function DELETE(request: NextRequest) {
   if (!validateCsrfToken(request, cookieStore, false)) {
     console.warn('[SessionRoute] CSRF validation failed on DELETE')
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Invalid CSRF token',
         code: 'CSRF_VALIDATION_FAILED',
         message: 'Security validation failed. Please refresh and try again.'

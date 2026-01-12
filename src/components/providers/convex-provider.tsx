@@ -1,11 +1,21 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useMemo } from 'react'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { useMemo, useEffect } from 'react'
+import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react'
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 
 import { authClient } from '@/lib/auth-client'
+
+function AuthDebug() {
+  const { isLoading, isAuthenticated } = useConvexAuth()
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[ConvexAuth] State:', { isLoading, isAuthenticated })
+    }
+  }, [isLoading, isAuthenticated])
+  return null
+}
 
 interface ConvexClientProviderProps {
   children: ReactNode
@@ -33,6 +43,7 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
   if (useBetterAuth) {
     return (
       <ConvexBetterAuthProvider client={client} authClient={authClient} initialToken={initialToken ?? undefined}>
+        <AuthDebug />
         {children}
       </ConvexBetterAuthProvider>
     )

@@ -91,9 +91,28 @@ export const GET = createApiHandler(
 
       return NextResponse.redirect(new URL(redirectTarget, req.url))
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const rawMessage = error instanceof Error ? error.message : 'Unknown error'
+
+      const messageLower = rawMessage.toLowerCase()
+
+      const userFacingMessage = (() => {
+        if (messageLower.includes('convex ads are not enabled') || messageLower.includes('convex admin client is not configured')) {
+          return 'Ads integration is not configured on this environment.'
+        }
+
+        if (messageLower.includes('authentication required') || messageLower.includes('unauthorized')) {
+          return 'Your session expired. Please sign in again and retry connecting Meta.'
+        }
+
+        if (messageLower.includes('invalid state')) {
+          return 'Login session expired. Please try connecting again.'
+        }
+
+        return rawMessage
+      })()
+
       console.error('[meta.oauth.callback] Error completing OAuth flow:', {
-        error: errorMessage,
+        error: rawMessage,
         stack: error instanceof Error ? error.stack : undefined,
       })
 
@@ -101,8 +120,8 @@ export const GET = createApiHandler(
       const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'facebook')
-      errorUrl.searchParams.set('message', errorMessage)
-      
+      errorUrl.searchParams.set('message', userFacingMessage)
+
       return NextResponse.redirect(errorUrl.toString())
     }
   }

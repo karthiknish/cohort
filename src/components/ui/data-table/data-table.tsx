@@ -96,19 +96,24 @@ export function DataTable<TData, TValue>({
     pageSize,
   })
 
-  // Handle controlled search filtering
-  React.useEffect(() => {
-    if (searchKey && searchValue !== undefined) {
-      setColumnFilters((prev) => {
-        const otherFilters = prev.filter((f) => f.id !== searchKey)
-        if (searchValue) {
-          return [...otherFilters, { id: searchKey, value: searchValue }]
-        }
-        return otherFilters
-      })
-    }
-  }, [searchKey, searchValue])
+  // Controlled/uncontrolled search value
+  const [internalSearchValue, setInternalSearchValue] = React.useState('')
+  const effectiveSearchValue = searchValue ?? internalSearchValue
 
+  // Sync search value into column filters
+  React.useEffect(() => {
+    if (!searchKey) return
+
+    setColumnFilters((prev) => {
+      const otherFilters = prev.filter((filter) => filter.id !== searchKey)
+      if (effectiveSearchValue) {
+        return [...otherFilters, { id: searchKey, value: effectiveSearchValue }]
+      }
+      return otherFilters
+    })
+  }, [searchKey, effectiveSearchValue])
+
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -125,6 +130,18 @@ export function DataTable<TData, TValue>({
       const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater
       setColumnFilters(newFilters)
       onColumnFiltersChange?.(newFilters)
+
+      if (searchKey) {
+        const searchFilter = newFilters.find((filter) => filter.id === searchKey)
+        const nextSearch = typeof searchFilter?.value === 'string' ? searchFilter.value : ''
+
+        // Sync internal state only when uncontrolled
+        if (searchValue === undefined) {
+          setInternalSearchValue(nextSearch)
+        }
+
+        onSearchChange?.(nextSearch)
+      }
     },
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,

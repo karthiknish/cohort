@@ -1,7 +1,29 @@
 import { formatUserFacingErrorMessage } from './user-friendly-error'
+import { UnifiedError } from './errors/unified-error'
 
 export function getErrorMessage(error: unknown, fallback: string): string {
   return formatUserFacingErrorMessage(error, fallback)
+}
+
+export function isAuthError(error: unknown): boolean {
+  if (!error) return false
+
+  if (error instanceof UnifiedError) {
+    return error.isAuthError
+  }
+
+  if (error instanceof Error) {
+    const anyError = error as { status?: number; code?: string; isAuthError?: boolean }
+
+    if (anyError.isAuthError === true) return true
+    if (anyError.status === 401 || anyError.status === 403) return true
+    if (anyError.code === 'UNAUTHORIZED' || anyError.code === 'FORBIDDEN') return true
+
+    const message = (error.message || '').toLowerCase()
+    if (message.includes('unauthorized') || message.includes('not authenticated')) return true
+  }
+
+  return false
 }
 
 export function toErrorMessage(error: unknown, fallback = 'An error occurred'): string {

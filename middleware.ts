@@ -1,11 +1,13 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { 
-  getClientIdentifier, 
-  buildRateLimitHeaders, 
-  RATE_LIMITS 
+import {
+  getClientIdentifier,
+  buildRateLimitHeaders,
+  RATE_LIMITS
 } from '@/lib/rate-limiter'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
+import { getToken } from '@convex-dev/better-auth/utils'
+import { convexSiteUrl } from '@/lib/auth-server'
 
 const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, RATE_LIMITS.standard.maxRequests)
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, RATE_LIMITS.standard.windowMs)
@@ -14,23 +16,19 @@ const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
 const ADMIN_ONLY_ROUTE_PREFIX = '/admin'
 const AUTH_ROUTE_PREFIX = '/auth'
 const ROLE_COOKIE = 'cohorts_role'
-const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_MATCHER.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 }
 
-function hasValidSession(request: NextRequest): boolean {
-  // Check for cohorts_session_expires cookie which is set by /api/auth/session
-  // after validating the Better Auth session via Convex
-  const expiresAt = request.cookies.get(SESSION_EXPIRES_COOKIE)?.value
-  if (!expiresAt) return false
-  
-  const expiryTime = parseInt(expiresAt, 10)
-  if (isNaN(expiryTime)) return false
-  
-  // Add 30 second buffer to avoid race conditions
-  return Date.now() < (expiryTime - 30000)
+async function hasValidSession(request: NextRequest): Promise<boolean> {
+  try {
+    const tokenResult = await getToken(convexSiteUrl, request.headers)
+    return !!tokenResult?.token
+  } catch (err) {
+    console.error('[Middleware] session check error:', err)
+    return false
+  }
 }
 
 export async function middleware(request: NextRequest) {
@@ -64,7 +62,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  const hasSession = hasValidSession(request)
+  const hasSession = await hasValidSession(request)
   const role = request.cookies.get(ROLE_COOKIE)?.value
 
   console.log(`[Middleware] Path: ${pathname} | Has valid session: ${hasSession} | Role: ${role}`)
