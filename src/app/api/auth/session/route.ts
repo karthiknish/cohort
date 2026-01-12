@@ -190,21 +190,14 @@ export async function POST(request: NextRequest) {
       // Ignore lookup failures
     }
 
-    // Check admin whitelist
-    const admins = (process.env.ADMIN_EMAILS ?? '')
-      .split(',')
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean)
-
-    const isAdminEmail = admins.includes(normalizedEmail)
-
-    // If this email is an admin, always treat it as such.
-    if (!resolvedRole || isAdminEmail) {
-      resolvedRole = isAdminEmail ? 'admin' : 'client'
+    // If record missing, fall back conservatively.
+    if (!resolvedRole) {
+      resolvedRole = 'client'
     }
 
     if (!resolvedStatus) {
-      resolvedStatus = 'active'
+      // If no record/status yet, treat as pending until approved.
+      resolvedStatus = 'pending'
     }
 
     // Use Better Auth user id as fallback for agencyId

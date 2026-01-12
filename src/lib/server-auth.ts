@@ -126,16 +126,11 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
     if (!uid) return null
 
     if (!role) {
-      const admins = (process.env.ADMIN_EMAILS ?? '')
-        .split(',')
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean)
-
-      role = admins.includes(normalizedEmail) ? 'admin' : 'client'
+      role = 'client'
     }
 
     if (!status) {
-      status = 'active'
+      status = 'pending'
     }
 
     return {
@@ -190,15 +185,7 @@ export function assertAdmin(auth: AuthResult) {
     return
   }
 
-  // Fallback to email whitelist
-  const admins = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-
-  if (!auth.email || !admins.includes(auth.email.toLowerCase())) {
-    throw new AuthenticationError('Admin access required', 403)
-  }
+  throw new AuthenticationError('Admin access required', 403)
 }
 
 export { AuthenticationError }

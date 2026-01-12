@@ -40,9 +40,7 @@ export const POST = createApiHandler(
 
     let targetUserId = body.userId ?? query.userId ?? null
     if (!auth.isCron) {
-      const isAdmin = auth.claims?.role === 'admin' || (
-        auth.email && (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).includes(auth.email.toLowerCase())
-      )
+      const isAdmin = auth.claims?.role === 'admin'
 
       if (targetUserId && targetUserId !== auth.uid && !isAdmin) {
         throw new ForbiddenError('Admin access required')

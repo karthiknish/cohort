@@ -31,7 +31,8 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, isSyncing, signOut } = useAuth()
   const router = useRouter()
-  // Track if we're still waiting for Firebase to restore auth from a valid session
+  // Track if we're still waiting for Better Auth to restore auth from a valid session
+  // (cookie-based session restoration)
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
 
   // Clear awaiting state once user is loaded or auth loading completes
