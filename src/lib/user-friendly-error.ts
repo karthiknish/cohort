@@ -68,7 +68,7 @@ function isConflictError(status?: number, code?: string): boolean {
 }
 
 export function buildUserFacingError(error: unknown, fallback: string): UserFacingError {
-  const baseActions = ['Try again', 'Contact support', 'Report bug']
+  const baseActions = ['Try again', 'Contact support']
   const unified = UnifiedError.from(error, { message: fallback || 'Something went wrong.' })
   const status = unified.status
   const code = unified.code
@@ -94,18 +94,38 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isNetworkError(error)) {
     return {
-      message: 'We could not reach the server. Check your connection, then try again.',
-      actions: ['Check your connection', 'Try again', 'Contact support'],
+      message: "We can't reach the server right now. Please check your internet connection and try again.",
+      actions: ['Check your connection', 'Refresh page', 'Try again'],
       code: code || 'NETWORK_ERROR',
       status: status || undefined,
       details,
     }
   }
 
+  if (isTimeoutError(status, code, error)) {
+    return {
+      message: 'This is taking longer than expected. Please check your connection and try again.',
+      actions: ['Check connection', 'Refresh page', 'Try again'],
+      code: code || 'TIMEOUT',
+      status: status || 408,
+      details,
+    }
+  }
+
+  if (isFileSizeError(status, code, error)) {
+    return {
+      message: 'This file is too large to upload. Please try a smaller file or compress it first.',
+      actions: ['Use smaller file', 'Compress file', 'Try again'],
+      code: code || 'PAYLOAD_TOO_LARGE',
+      status: status || 413,
+      details,
+    }
+  }
+
   if (isPermissionError(status, code)) {
     return {
-      message: getUserFriendlyMessage(403),
-      actions: ['Contact your admin', 'Request access', 'Contact support'],
+      message: "You don't have permission to do this. If you need access, please contact your administrator.",
+      actions: ['Contact admin', 'Request access', 'Go back'],
       code: code || 'FORBIDDEN',
       status,
       details,
@@ -114,8 +134,8 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isUnauthorized(status, code)) {
     return {
-      message: getUserFriendlyMessage(401),
-      actions: ['Sign in', 'Contact support'],
+      message: 'Your session has expired. Please sign in again to continue.',
+      actions: ['Sign in', 'Reset password'],
       code: code || 'UNAUTHORIZED',
       status,
       details,
@@ -124,9 +144,19 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isRateLimit(status, code)) {
     return {
-      message: getUserFriendlyMessage(429),
-      actions: getSuggestedActions(429),
+      message: "You're making requests too quickly. Please wait a moment before trying again.",
+      actions: ['Wait 30 seconds', 'Try again'],
       code: code || 'RATE_LIMIT_EXCEEDED',
+      status,
+      details,
+    }
+  }
+
+  if (isConflictError(status, code)) {
+    return {
+      message: 'This item may have been modified by someone else. Please refresh the page to see the latest version.',
+      actions: ['Refresh page', 'Try again'],
+      code: code || 'CONFLICT',
       status,
       details,
     }
@@ -134,8 +164,8 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
 
   if (isValidationError(status, code, details)) {
     return {
-      message: getUserFriendlyMessage(422),
-      actions: ['Review highlighted fields', 'Try again'],
+      message: 'Please check the form for errors and correct the highlighted fields.',
+      actions: ['Review fields', 'Try again'],
       code: code || 'VALIDATION_ERROR',
       status,
       details,
@@ -143,7 +173,7 @@ export function buildUserFacingError(error: unknown, fallback: string): UserFaci
     }
   }
 
-  const message = status ? getUserFriendlyMessage(status) : fallback || 'Something went wrong.'
+  const message = status ? getUserFriendlyMessage(status) : fallback || "Something didn't work as expected. Please try again."
   return {
     message,
     actions: status ? getSuggestedActions(status) : baseActions,
