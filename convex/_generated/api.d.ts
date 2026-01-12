@@ -36,6 +36,7 @@ import type * as apiIdempotency from "../apiIdempotency.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as authActions from "../authActions.js";
+import type * as authz from "../authz.js";
 import type * as billing from "../billing.js";
 import type * as clients from "../clients.js";
 import type * as collaborationMessages from "../collaborationMessages.js";
@@ -114,6 +115,7 @@ declare const fullApi: ApiFromModules<{
   auditLogs: typeof auditLogs;
   auth: typeof auth;
   authActions: typeof authActions;
+  authz: typeof authz;
   billing: typeof billing;
   clients: typeof clients;
   collaborationMessages: typeof collaborationMessages;

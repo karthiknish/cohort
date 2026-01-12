@@ -2,16 +2,7 @@ import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 
-function requireAdmin(identity: unknown): asserts identity {
-  if (!identity) {
-    throw new Error('Unauthorized')
-  }
-
-  const role = (identity as any).role
-  if (role !== 'admin') {
-    throw new Error('Admin access required')
-  }
-}
+import { requireAdminFromUsersTable } from './authz'
 
 function nowMs() {
   return Date.now()
@@ -22,8 +13,7 @@ export const listUsers = query({
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
+    await requireAdminFromUsersTable(ctx)
 
     const page = await ctx.db.query('users').order('desc').paginate(args.paginationOpts)
 
@@ -34,8 +24,7 @@ export const listUsers = query({
 export const getUserCounts = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
+    await requireAdminFromUsersTable(ctx)
 
     const all = await ctx.db.query('users').collect()
     const total = all.length
@@ -52,8 +41,7 @@ export const updateUserRoleStatus = mutation({
     status: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
+    await requireAdminFromUsersTable(ctx)
 
     const existing = await ctx.db
       .query('users')

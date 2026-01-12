@@ -1,6 +1,8 @@
 import { query } from './_generated/server'
 import { v } from 'convex/values'
 
+import { requireAdminFromUsersTable } from './authz'
+
 function summarizeIdentity(identity: any) {
   if (!identity) return { present: false }
 
@@ -11,17 +13,6 @@ function summarizeIdentity(identity: any) {
     email: typeof identity.email === 'string' ? identity.email : null,
     name: typeof identity.name === 'string' ? identity.name : null,
     role: typeof identity.role === 'string' ? identity.role : null,
-  }
-}
-
-function requireAdmin(identity: unknown): asserts identity {
-  if (!identity) {
-    throw new Error('Unauthorized')
-  }
-
-  const role = (identity as any).role
-  if (role !== 'admin') {
-    throw new Error('Admin access required')
   }
 }
 
@@ -42,8 +33,7 @@ export const whoami = query({
 export const listAnyClients = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
+    await requireAdminFromUsersTable(ctx)
 
     const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
 
@@ -63,8 +53,7 @@ export const listAnyClients = query({
 export const countClientsByWorkspace = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
+    await requireAdminFromUsersTable(ctx)
 
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 2000)
 
