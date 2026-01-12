@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { CircleCheck, Eye, EyeOff, Lock, Mail, User, CircleAlert, Check, X, Shield, LoaderCircle } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
+import { sessionSyncManager } from "@/lib/auth/session-sync"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -102,6 +103,10 @@ const HERO_HIGHLIGHTS = [
     title: "Automated reporting",
     description: "Ship branded campaign recaps and alerts effortlessly to your clients.",
   },
+  {
+    title: "Secure client access",
+    description: "Protect every workspace with role-based access and session safeguards.",
+  },
 ] as const
 
 export default function HomePage() {
@@ -123,7 +128,8 @@ export default function HomePage() {
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const user = session?.user ?? null
   const loading = sessionPending
-  const isSyncing = false
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [sessionSynced, setSessionSynced] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -175,6 +181,41 @@ export default function HomePage() {
     setHasMounted(true)
   }, [])
 
+  // Sync session with server when user is authenticated
+  // This sets the cohorts_session_expires cookie needed by middleware
+  useEffect(() => {
+    if (loading || !user || sessionSynced) return
+
+    const syncSession = async () => {
+      setIsSyncing(true)
+      try {
+        // Map Better Auth user to AuthUser format for session sync
+        const authUser = {
+          id: user.id ?? '',
+          email: user.email ?? '',
+          name: user.name ?? user.email ?? '',
+          phoneNumber: null,
+          photoURL: (user as { image?: string }).image ?? null,
+          role: 'client' as const, // Will be resolved by server
+          status: 'active' as const, // Will be resolved by server
+          agencyId: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        await sessionSyncManager.sync(authUser)
+        setSessionSynced(true)
+      } catch (error) {
+        console.error('[HomePage] Session sync failed:', error)
+        // Don't block redirect on sync failure, middleware will handle it
+        setSessionSynced(true)
+      } finally {
+        setIsSyncing(false)
+      }
+    }
+
+    syncSession()
+  }, [loading, user, sessionSynced])
+
   // Use stable disabled state: always disabled on server/before mount, then use actual loading state
   const isAuthLoading = !hasMounted || loading
 
@@ -197,7 +238,8 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    if (loading || isSyncing || !user) return
+    // Wait for session sync to complete before redirecting
+    if (loading || isSyncing || !user || !sessionSynced) return
     if (redirectInProgressRef.current) return
 
     const redirect = searchParams.get("redirect")
@@ -250,13 +292,14 @@ export default function HomePage() {
     
     // Clean up timeout if component unmounts (navigation succeeded)
     return () => clearTimeout(fallbackTimeout)
-  }, [loading, isSyncing, user, router, searchParams, toast])
+  }, [loading, isSyncing, user, sessionSynced, router, searchParams, toast])
 
   // When we're back on the home page without a user, clear any stale redirect-loop tracking.
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!user) {
       clearRedirectState()
+      setSessionSynced(false) // Reset so re-login will sync again
     }
   }, [user])
 
@@ -303,7 +346,7 @@ export default function HomePage() {
         <div className="flex flex-col items-center gap-4">
           <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
           <div className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground shadow-sm">
-            Redirecting to your dashboard…
+            {isSyncing ? 'Setting up your session…' : 'Redirecting to your dashboard…'}
           </div>
           <button
             type="button"

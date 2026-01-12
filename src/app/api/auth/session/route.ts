@@ -7,11 +7,9 @@ import { betterFetch } from '@better-fetch/fetch'
 // CSRF token header must match a cookie value (double-submit pattern)
 const CSRF_COOKIE = 'cohorts_csrf'
 const CSRF_HEADER = 'x-csrf-token'
-const BETTER_AUTH_COOKIE = 'better-auth.session_token'
 
 export const GET = async () => {
   const cookieStore = await cookies()
-  const betterAuthToken = cookieStore.get(BETTER_AUTH_COOKIE)?.value
   const role = cookieStore.get('cohorts_role')?.value ?? null
   const status = cookieStore.get('cohorts_status')?.value ?? null
   const agencyId = cookieStore.get('cohorts_agency_id')?.value ?? null
@@ -23,7 +21,7 @@ export const GET = async () => {
   const response = NextResponse.json(
     {
       success: true,
-      hasSession: Boolean(betterAuthToken),
+      hasSession: Boolean(expiresAt && parseInt(expiresAt, 10) > Date.now()),
       role,
       status,
       agencyId,
@@ -124,26 +122,6 @@ export async function POST(request: NextRequest) {
     sameSite: 'lax' as const,
   }
 
-  // Get the Better Auth session cookie
-  const betterAuthSessionToken = cookieStore.get(BETTER_AUTH_COOKIE)?.value
-
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[SessionRoute][POST] betterAuthSessionToken present:', Boolean(betterAuthSessionToken))
-  }
-
-  if (!betterAuthSessionToken) {
-    // No Better Auth session - clear our app cookies
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[SessionRoute][POST] No Better Auth session, clearing cookies')
-    }
-    response.cookies.delete('cohorts_role')
-    response.cookies.delete('cohorts_status')
-    response.cookies.delete('cohorts_agency_id')
-    response.cookies.delete('cohorts_session_expires')
-    response.cookies.delete(CSRF_COOKIE)
-    return response
-  }
-
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
   const convexSiteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
 
@@ -158,61 +136,85 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Debug: log what headers we're passing to getToken
+    // Parse request body to get the Convex token (for cross-domain setups)
+    let bodyToken: string | null = null
+    try {
+      const body = await request.json().catch(() => ({})) as { convexToken?: string }
+      bodyToken = typeof body.convexToken === 'string' ? body.convexToken : null
+    } catch {
+      // Ignore JSON parse errors
+    }
+
     if (process.env.NODE_ENV !== 'production') {
-      const cookieHeader = headersList.get('cookie')
-      console.log('[SessionRoute][POST] headers for getToken:', {
-        convexSiteUrl,
-        hasCookieHeader: Boolean(cookieHeader),
-        cookiePreview: cookieHeader?.substring(0, 100) + (cookieHeader && cookieHeader.length > 100 ? '...' : ''),
-        hasBetterAuthInCookie: cookieHeader?.includes('better-auth.session_token'),
+      console.log('[SessionRoute][POST] Request body token:', {
+        hasBodyToken: Boolean(bodyToken),
+        tokenPreview: bodyToken?.substring(0, 50) + '...',
       })
     }
 
-    // Use the official Better Auth helper to get a Convex token
-    // This calls {convexSiteUrl}/api/auth/convex/token with the session cookie
-    let tokenResult = await getToken(convexSiteUrl, headersList)
+    // First, try to use the token from the request body (cross-domain flow)
+    let convexToken = bodyToken
 
-    // If getToken failed, try a direct fetch with explicit cookie header
-    if (!tokenResult?.token) {
+    // If no body token, try the cookie-based approach (same-domain flow)
+    if (!convexToken) {
+      // Debug: log what headers we're passing to getToken
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[SessionRoute][POST] getToken returned no token, trying direct fetch')
-      }
-      
-      // Try direct fetch with cookie explicitly
-      const cookieHeader = headersList.get('cookie')
-      if (cookieHeader) {
-        const directResult = await betterFetch<{ token?: string }>('/api/auth/convex/token', {
-          baseURL: convexSiteUrl,
-          headers: {
-            cookie: cookieHeader,
-          },
+        const cookieHeader = headersList.get('cookie')
+        console.log('[SessionRoute][POST] No body token, trying cookie-based getToken:', {
+          convexSiteUrl,
+          hasCookieHeader: Boolean(cookieHeader),
+          cookiePreview: cookieHeader?.substring(0, 100) + (cookieHeader && cookieHeader.length > 100 ? '...' : ''),
         })
+      }
+
+      // Use the official Better Auth helper to get a Convex token
+      // This calls {convexSiteUrl}/api/auth/convex/token with the session cookie
+      let tokenResult = await getToken(convexSiteUrl, headersList)
+
+      // If getToken failed, try a direct fetch with explicit cookie header
+      if (!tokenResult?.token) {
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[SessionRoute][POST] direct fetch result:', {
-            hasData: Boolean(directResult?.data),
-            hasToken: Boolean(directResult?.data?.token),
-            error: directResult?.error,
-          })
+          console.log('[SessionRoute][POST] getToken returned no token, trying direct fetch')
         }
-        if (directResult?.data?.token) {
-          tokenResult = { isFresh: true, token: directResult.data.token }
+        
+        // Try direct fetch with cookie explicitly
+        const cookieHeader = headersList.get('cookie')
+        if (cookieHeader) {
+          const directResult = await betterFetch<{ token?: string }>('/api/auth/convex/token', {
+            baseURL: convexSiteUrl,
+            headers: {
+              cookie: cookieHeader,
+            },
+          })
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[SessionRoute][POST] direct fetch result:', {
+              hasData: Boolean(directResult?.data),
+              hasToken: Boolean(directResult?.data?.token),
+              error: directResult?.error,
+            })
+          }
+          if (directResult?.data?.token) {
+            tokenResult = { isFresh: true, token: directResult.data.token }
+          }
         }
       }
-    }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[SessionRoute][POST] getToken result:', {
-        hasToken: Boolean(tokenResult?.token),
-        isFresh: tokenResult?.isFresh,
-        tokenPreview: tokenResult?.token?.substring(0, 50) + '...',
-      })
-    }
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SessionRoute][POST] getToken result:', {
+          hasToken: Boolean(tokenResult?.token),
+          isFresh: tokenResult?.isFresh,
+          tokenPreview: tokenResult?.token?.substring(0, 50) + '...',
+        })
+      }
 
-    const convexToken = tokenResult?.token
+      convexToken = tokenResult?.token ?? null
+    }
 
     if (!convexToken) {
       // Can't get Convex token - clear cookies
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[SessionRoute][POST] No Convex token available, clearing session cookies')
+      }
       response.cookies.delete('cohorts_role')
       response.cookies.delete('cohorts_status')
       response.cookies.delete('cohorts_agency_id')
@@ -301,6 +303,10 @@ export async function POST(request: NextRequest) {
       secure: isProduction,
       sameSite: 'strict',
     })
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[SessionRoute][POST] Session synced successfully:', { email: normalizedEmail, role: resolvedRole, status: resolvedStatus })
+    }
 
     return response
   } catch (error) {

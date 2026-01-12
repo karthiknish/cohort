@@ -13,8 +13,6 @@ const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_
 const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
 const ADMIN_ONLY_ROUTE_PREFIX = '/admin'
 const AUTH_ROUTE_PREFIX = '/auth'
-const AUTH_COOKIE = 'cohorts_token'
-const BETTER_AUTH_SESSION_COOKIE = 'better-auth.session_token'
 const ROLE_COOKIE = 'cohorts_role'
 const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
@@ -22,15 +20,17 @@ function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_MATCHER.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 }
 
-function isSessionExpired(request: NextRequest): boolean {
+function hasValidSession(request: NextRequest): boolean {
+  // Check for cohorts_session_expires cookie which is set by /api/auth/session
+  // after validating the Better Auth session via Convex
   const expiresAt = request.cookies.get(SESSION_EXPIRES_COOKIE)?.value
-  if (!expiresAt) return false // No expiry cookie means we can't check - let API verify
+  if (!expiresAt) return false
   
   const expiryTime = parseInt(expiresAt, 10)
   if (isNaN(expiryTime)) return false
   
   // Add 30 second buffer to avoid race conditions
-  return Date.now() > (expiryTime - 30000)
+  return Date.now() < (expiryTime - 30000)
 }
 
 export async function middleware(request: NextRequest) {
@@ -63,12 +63,11 @@ export async function middleware(request: NextRequest) {
     })
     return response
   }
-  const token =
-    request.cookies.get(AUTH_COOKIE)?.value ??
-    request.cookies.get(BETTER_AUTH_SESSION_COOKIE)?.value
+
+  const hasSession = hasValidSession(request)
   const role = request.cookies.get(ROLE_COOKIE)?.value
 
-  console.log(`[Middleware] Path: ${pathname} | Token present: ${!!token} (${token?.slice(0, 10)}...) | Role: ${role}`)
+  console.log(`[Middleware] Path: ${pathname} | Has valid session: ${hasSession} | Role: ${role}`)
 
   // Public auth pages should always be reachable without redirection.
   if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
@@ -78,11 +77,7 @@ export async function middleware(request: NextRequest) {
   // For the home page (/), redirect authenticated users to dashboard
   // This eliminates the brief flash of home page before client-side redirect
   if (pathname === '/') {
-    const token =
-      request.cookies.get(AUTH_COOKIE)?.value ??
-      request.cookies.get(BETTER_AUTH_SESSION_COOKIE)?.value
-    // Only redirect if we have a valid, non-expired session
-    if (token && !isSessionExpired(request)) {
+    if (hasSession) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/dashboard'
       return NextResponse.redirect(redirectUrl)
@@ -95,8 +90,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check if session cookie is missing or expired
-  if (!token || isSessionExpired(request)) {
+  // Check if session is missing or expired
+  if (!hasSession) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
     // Preserve querystring so users land back exactly where they intended.

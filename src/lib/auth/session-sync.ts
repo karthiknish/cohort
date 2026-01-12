@@ -1,11 +1,13 @@
 /**
  * Session Sync Manager
  * 
- * Manages synchronization of Firebase auth state with server-side session cookies.
- * Handles rate limiting, conflicts, retries, and network errors gracefully.
+ * Manages synchronization of Better Auth state with server-side session cookies.
+ * For cross-domain setups (Vercel + Convex), the session is stored in localStorage
+ * on the client, so we need to fetch the Convex token and pass it to our API route.
  */
 
 import type { AuthUser } from '@/services/auth'
+import { authClient } from '@/lib/auth-client'
 
 const USE_BETTER_AUTH = true
 
@@ -48,6 +50,23 @@ function getSessionExpiresAt(): number | null {
     const parsed = Number.parseInt(raw, 10)
     if (!Number.isFinite(parsed) || parsed <= 0) return null
     return parsed
+}
+
+/**
+ * Fetch the Convex token from the Better Auth server.
+ * In cross-domain setups, this uses the session stored in localStorage.
+ */
+async function fetchConvexToken(): Promise<string | null> {
+    try {
+        // Use the authClient to fetch the token - it will include the cross-domain session
+        const result = await authClient.$fetch<{ token?: string }>('/api/auth/convex/token', {
+            method: 'GET',
+        })
+        return result?.data?.token ?? null
+    } catch (error) {
+        console.error('[SessionSyncManager] Failed to fetch Convex token:', error)
+        return null
+    }
 }
 
 export class SessionSyncManager {
@@ -171,10 +190,20 @@ export class SessionSyncManager {
             headers['x-csrf-token'] = csrfToken
         }
 
+        // For cross-domain Better Auth, fetch the Convex token from the client
+        // and pass it to the server since cookies aren't shared across domains
+        let convexToken: string | null = null
+        if (USE_BETTER_AUTH) {
+            convexToken = await fetchConvexToken()
+            if (!convexToken) {
+                console.warn('[SessionSyncManager] Could not fetch Convex token, session sync may fail')
+            }
+        }
+
         const response = await fetch('/api/auth/session', {
             method: 'POST',
             headers,
-            body: USE_BETTER_AUTH ? JSON.stringify({}) : JSON.stringify({}),
+            body: JSON.stringify({ convexToken }),
             cache: 'no-store',
             credentials: 'same-origin',
         })
