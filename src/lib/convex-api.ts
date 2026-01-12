@@ -34,6 +34,11 @@ export const clientsApi = {
   softDelete: (api as any).clients.softDelete,
 }
 
+export const debugApi = {
+  listAnyClients: (api as any).debug.listAnyClients,
+  countClientsByWorkspace: (api as any).debug.countClientsByWorkspace,
+}
+
 export const notificationsApi = {
   list: (api as any).notifications.list,
   getUnreadCount: (api as any).notifications.getUnreadCount,

@@ -42,6 +42,7 @@ import type * as collaborationMessages from "../collaborationMessages.js";
 import type * as collaborationTyping from "../collaborationTyping.js";
 import type * as creativesCopy from "../creativesCopy.js";
 import type * as customFormulas from "../customFormulas.js";
+import type * as debug from "../debug.js";
 import type * as files from "../files.js";
 import type * as financeCosts from "../financeCosts.js";
 import type * as financeExpenseCategories from "../financeExpenseCategories.js";
@@ -119,6 +120,7 @@ declare const fullApi: ApiFromModules<{
   collaborationTyping: typeof collaborationTyping;
   creativesCopy: typeof creativesCopy;
   customFormulas: typeof customFormulas;
+  debug: typeof debug;
   files: typeof files;
   financeCosts: typeof financeCosts;
   financeExpenseCategories: typeof financeExpenseCategories;
