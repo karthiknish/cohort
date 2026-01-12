@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState,
 import { AuthUser, SignUpData, authService } from '@/services/auth'
 
 // Error types for better error handling
-export type AuthErrorCode = 
+export type AuthErrorCode =
   | 'BOOTSTRAP_FAILED'
   | 'SESSION_SYNC_FAILED'
   | 'NETWORK_ERROR'
@@ -451,6 +451,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('[AuthContext] Unexpected error in applyUser:', error)
       setAuthError(createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Unexpected error'))
     } finally {
+      if (typeof window !== 'undefined' && window.location.search.includes('debug=true')) {
+        console.log('[AuthContext] Syncing finished. User state:', currentUserRef.current)
+      }
       setIsSyncing(false)
     }
   }, [])

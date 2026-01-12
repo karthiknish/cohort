@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
+import { toErrorMessage } from '@/lib/error-utils'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
@@ -25,7 +26,7 @@ import {
 export default function AdminFeaturesPage() {
   // Convex identity auth is handled by Convex client.
   // This page no longer calls `/api/admin/*`.
-  
+
   const { toast } = useToast()
 
   const [refreshing, setRefreshing] = useState(false)
@@ -148,40 +149,49 @@ export default function AdminFeaturesPage() {
       imageUrl: string | null
       references: FeatureReference[]
     }) => {
-      if (editingFeature) {
-        // Update existing feature
-        await updateFeature({
-          id: editingFeature.id as any,
-          title: data.title,
-          description: data.description,
-          status: data.status as any,
-          priority: data.priority as any,
-          imageUrl: data.imageUrl,
-          references: data.references,
-        })
+      try {
+        if (editingFeature) {
+          // Update existing feature
+          await updateFeature({
+            id: editingFeature.id as any,
+            title: data.title,
+            description: data.description,
+            status: data.status as any,
+            priority: data.priority as any,
+            imageUrl: data.imageUrl,
+            references: data.references,
+          })
 
-        toast({
-          title: 'Feature updated',
-          description: 'Your changes have been saved.',
-        })
-      } else {
-        // Create new feature
-        await createFeature({
-          title: data.title,
-          description: data.description,
-          status: data.status as any,
-          priority: data.priority as any,
-          imageUrl: data.imageUrl,
-          references: data.references,
-        })
+          toast({
+            title: 'Feature updated',
+            description: 'Your changes have been saved.',
+          })
+        } else {
+          // Create new feature
+          await createFeature({
+            title: data.title,
+            description: data.description,
+            status: data.status as any,
+            priority: data.priority as any,
+            imageUrl: data.imageUrl,
+            references: data.references,
+          })
 
+          toast({
+            title: 'Feature added',
+            description: 'The new feature has been added to the board.',
+          })
+        }
+      } catch (error) {
+        console.error('Failed to save feature:', error)
         toast({
-          title: 'Feature added',
-          description: 'The new feature has been added to the board.',
+          title: 'Save failed',
+          description: toErrorMessage(error, 'Unable to save the feature. Please try again.'),
+          variant: 'destructive',
         })
       }
     },
-    [editingFeature, toast]
+    [editingFeature, toast, createFeature, updateFeature]
   )
 
   if (loading) {

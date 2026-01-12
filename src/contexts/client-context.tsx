@@ -51,13 +51,26 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     previewEnabled || !canQuery
       ? 'skip'
       : {
-          workspaceId,
-          limit: 100,
-        }
+        workspaceId,
+        limit: 100,
+      }
   )
 
   const convexCreateClient = useMutation(clientsApi.create)
   const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' || window.location.search.includes('debug=true')) {
+      console.log('[ClientProvider] State Update:', {
+        authLoading,
+        isSyncing,
+        workspaceId,
+        canQuery,
+        hasConvexResult: convexClients !== undefined,
+        convexResultLength: Array.isArray(convexClients) ? convexClients.length : 'N/A'
+      })
+    }
+  }, [authLoading, isSyncing, workspaceId, canQuery, convexClients])
 
   useEffect(() => {
     if (mountedRef.current) {

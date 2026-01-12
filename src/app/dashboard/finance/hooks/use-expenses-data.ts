@@ -46,9 +46,9 @@ export function useExpensesData() {
     financeExpenseCategoriesApi.list,
     workspaceId
       ? {
-          workspaceId,
-          includeInactive: isAdmin,
-        }
+        workspaceId,
+        includeInactive: isAdmin,
+      }
       : 'skip'
   )
 
@@ -56,9 +56,9 @@ export function useExpensesData() {
     financeVendorsApi.list,
     workspaceId
       ? {
-          workspaceId,
-          includeInactive: isAdmin,
-        }
+        workspaceId,
+        includeInactive: isAdmin,
+      }
       : 'skip'
   )
 
@@ -66,11 +66,11 @@ export function useExpensesData() {
     financeExpensesApi.list,
     workspaceId
       ? {
-          workspaceId,
-          status: statusFilter === 'all' ? undefined : statusFilter,
-          employeeId: employeeFilter.trim() ? employeeFilter.trim() : undefined,
-          limit: 100,
-        }
+        workspaceId,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        employeeId: employeeFilter.trim() ? employeeFilter.trim() : undefined,
+        limit: 100,
+      }
       : 'skip'
   )
 
@@ -261,9 +261,9 @@ export function useExpensesData() {
       } finally {
         setActingExpenseId(null)
       }
-  },
-  [convexRemoveExpense, toast, workspaceId]
-)
+    },
+    [convexRemoveExpense, toast, workspaceId]
+  )
 
 
   const handleTransition = useCallback(
@@ -318,9 +318,9 @@ export function useExpensesData() {
       } finally {
         setActingExpenseId(null)
       }
-  },
-  [expenses, convexUpsertExpense, isAdmin, toast, user?.id, workspaceId]
-)
+    },
+    [expenses, convexUpsertExpense, isAdmin, toast, user?.id, workspaceId]
+  )
 
 
   const adminCategoryActions = useMemo(() => {
@@ -331,17 +331,26 @@ export function useExpensesData() {
         const legacyId = crypto.randomUUID()
         const sortOrder = typeof input.sortOrder === 'number' ? input.sortOrder : 0
 
-        await convexUpsertCategory({
-          workspaceId,
-          legacyId,
-          name: input.name,
-          code: input.code ?? null,
-          description: input.description ?? null,
-          isActive: true,
-          isSystem: false,
-          sortOrder,
-          createdBy: user?.id ?? undefined,
-        })
+        try {
+          await convexUpsertCategory({
+            workspaceId,
+            legacyId,
+            name: input.name,
+            code: input.code ?? null,
+            description: input.description ?? null,
+            isActive: true,
+            isSystem: false,
+            sortOrder,
+            createdBy: user?.id ?? undefined,
+          })
+          toast({ title: 'Category created', description: `"${input.name}" added successfully.` })
+        } catch (error) {
+          toast({
+            title: 'Failed to create category',
+            description: toErrorMessage(error),
+            variant: 'destructive',
+          })
+        }
       },
       async update(id: string, input: Partial<Omit<ExpenseCategory, 'id'>>) {
         if (!workspaceId) throw new Error('Missing workspace')
@@ -350,17 +359,26 @@ export function useExpensesData() {
         if (!existing) throw new Error('Category not found')
         if (existing.isSystem) throw new Error('System categories cannot be modified')
 
-        await convexUpsertCategory({
-          workspaceId,
-          legacyId: id,
-          name: input.name ?? existing.name,
-          code: input.code ?? existing.code,
-          description: input.description ?? existing.description,
-          isActive: input.isActive ?? existing.isActive,
-          isSystem: existing.isSystem,
-          sortOrder: input.sortOrder ?? existing.sortOrder,
-          createdBy: user?.id ?? undefined,
-        })
+        try {
+          await convexUpsertCategory({
+            workspaceId,
+            legacyId: id,
+            name: input.name ?? existing.name,
+            code: input.code ?? existing.code,
+            description: input.description ?? existing.description,
+            isActive: input.isActive ?? existing.isActive,
+            isSystem: existing.isSystem,
+            sortOrder: input.sortOrder ?? existing.sortOrder,
+            createdBy: user?.id ?? undefined,
+          })
+          toast({ title: 'Category updated' })
+        } catch (error) {
+          toast({
+            title: 'Update failed',
+            description: toErrorMessage(error),
+            variant: 'destructive',
+          })
+        }
       },
       async remove(id: string) {
         if (!workspaceId) throw new Error('Missing workspace')
@@ -368,7 +386,16 @@ export function useExpensesData() {
         const existing = categories.find((category) => category.id === id)
         if (existing?.isSystem) throw new Error('System categories cannot be deleted')
 
-        await convexRemoveCategory({ workspaceId, legacyId: id })
+        try {
+          await convexRemoveCategory({ workspaceId, legacyId: id })
+          toast({ title: 'Category removed' })
+        } catch (error) {
+          toast({
+            title: 'Delete failed',
+            description: toErrorMessage(error),
+            variant: 'destructive',
+          })
+        }
       },
     }
   }, [categories, convexRemoveCategory, convexUpsertCategory, user?.id, workspaceId])
@@ -378,16 +405,25 @@ export function useExpensesData() {
       async create(input: { name: string; email?: string | null; phone?: string | null; website?: string | null; notes?: string | null }) {
         if (!workspaceId) throw new Error('Missing workspace')
 
-        await convexUpsertVendor({
-          workspaceId,
-          name: input.name,
-          email: input.email ?? null,
-          phone: input.phone ?? null,
-          website: input.website ?? null,
-          notes: input.notes ?? null,
-          isActive: true,
-          createdBy: user?.id ?? null,
-        })
+        try {
+          await convexUpsertVendor({
+            workspaceId,
+            name: input.name,
+            email: input.email ?? null,
+            phone: input.phone ?? null,
+            website: input.website ?? null,
+            notes: input.notes ?? null,
+            isActive: true,
+            createdBy: user?.id ?? null,
+          })
+          toast({ title: 'Vendor created', description: `"${input.name}" added successfully.` })
+        } catch (error) {
+          toast({
+            title: 'Failed to create vendor',
+            description: toErrorMessage(error),
+            variant: 'destructive',
+          })
+        }
       },
       async update(id: string, input: Partial<Omit<Vendor, 'id'>>) {
         if (!workspaceId) throw new Error('Missing workspace')
@@ -395,22 +431,40 @@ export function useExpensesData() {
         const existing = vendors.find((vendor) => vendor.id === id)
         if (!existing) throw new Error('Vendor not found')
 
-        await convexUpsertVendor({
-          workspaceId,
-          legacyId: id,
-          name: input.name ?? existing.name,
-          email: input.email ?? existing.email,
-          phone: input.phone ?? existing.phone,
-          website: input.website ?? existing.website,
-          notes: input.notes ?? existing.notes,
-          isActive: input.isActive ?? existing.isActive,
-          createdBy: user?.id ?? null,
-        })
+        try {
+          await convexUpsertVendor({
+            workspaceId,
+            legacyId: id,
+            name: input.name ?? existing.name,
+            email: input.email ?? existing.email,
+            phone: input.phone ?? existing.phone,
+            website: input.website ?? existing.website,
+            notes: input.notes ?? existing.notes,
+            isActive: input.isActive ?? existing.isActive,
+            createdBy: user?.id ?? null,
+          })
+          toast({ title: 'Vendor updated' })
+        } catch (error) {
+          toast({
+            title: 'Update failed',
+            description: toErrorMessage(error),
+            variant: 'destructive',
+          })
+        }
       },
       async remove(id: string) {
         if (!workspaceId) throw new Error('Missing workspace')
 
-        await convexRemoveVendor({ workspaceId, legacyId: id })
+        try {
+          await convexRemoveVendor({ workspaceId, legacyId: id })
+          toast({ title: 'Vendor removed' })
+        } catch (error) {
+          toast({
+            title: 'Delete failed',
+            description: toErrorMessage(error),
+            variant: 'destructive',
+          })
+        }
       },
     }
   }, [convexRemoveVendor, convexUpsertVendor, user?.id, vendors, workspaceId])
