@@ -3,6 +3,16 @@
 import { useState, useRef, useMemo, useCallback, memo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+import {
   BellRing,
   Calendar,
   Download,
@@ -13,6 +23,9 @@ import {
   RotateCcw,
   Search,
   FileText,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
@@ -206,7 +219,7 @@ const InvoiceRow = memo(function InvoiceRow({
               onClick={() => onSendReminder(invoice)}
             >
               <BellRing className={cn('h-4 w-4 mr-1.5', sendingInvoiceId === invoice.id && 'animate-pulse')} />
-              {sendingInvoiceId === invoice.id ? 'Sending…' : 'Remind'}
+              {sendingInvoiceId === invoice.id ? 'Sending...' : 'Remind'}
             </Button>
           )}
         </div>
@@ -318,6 +331,42 @@ function EmptyState({ selectedStatus, onShowAll }: EmptyStateProps) {
 }
 
 // =============================================================================
+// SORT BUTTON COMPONENT
+// =============================================================================
+
+interface SortButtonProps {
+  label: string
+  sortKey: string
+  currentSort: SortingState
+  onSort: (key: string) => void
+}
+
+function SortButton({ label, sortKey, currentSort, onSort }: SortButtonProps) {
+  const isActive = currentSort[0]?.id === sortKey
+  const direction = currentSort[0]?.desc ? 'desc' : 'asc'
+  
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 gap-1"
+      onClick={() => onSort(sortKey)}
+    >
+      {label}
+      {isActive ? (
+        direction === 'desc' ? (
+          <ArrowDown className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowUp className="h-3.5 w-3.5" />
+        )
+      ) : (
+        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+      )}
+    </Button>
+  )
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -349,18 +398,86 @@ export function FinanceInvoiceTable({
   embedded,
 }: FinanceInvoiceTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [sorting, setSorting] = useState<SortingState>([])
   const parentRef = useRef<HTMLDivElement>(null)
 
-  const filteredInvoices = useMemo(() => {
-    if (!searchQuery) return invoices
-    const query = searchQuery.toLowerCase()
-    return invoices.filter((invoice) =>
-      invoice.clientName?.toLowerCase().includes(query) ||
-      invoice.number?.toLowerCase().includes(query) ||
-      invoice.id.toLowerCase().includes(query) ||
-      invoice.description?.toLowerCase().includes(query)
-    )
-  }, [invoices, searchQuery])
+  // Define columns for TanStack Table (used for sorting/filtering logic)
+  const columns: ColumnDef<FinanceInvoice>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'clientName',
+        header: 'Client',
+        filterFn: 'includesString',
+      },
+      {
+        accessorKey: 'number',
+        header: 'Number',
+        filterFn: 'includesString',
+      },
+      {
+        accessorKey: 'amount',
+        header: 'Amount',
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+      },
+      {
+        accessorKey: 'issuedDate',
+        header: 'Issued Date',
+      },
+      {
+        accessorKey: 'dueDate',
+        header: 'Due Date',
+      },
+      {
+        accessorKey: 'description',
+        header: 'Description',
+        filterFn: 'includesString',
+      },
+    ],
+    []
+  )
+
+  // Use TanStack Table for sorting and filtering
+  const table = useReactTable({
+    data: invoices,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    state: {
+      sorting,
+      globalFilter: searchQuery,
+    },
+    globalFilterFn: (row, columnId, filterValue) => {
+      const searchLower = (filterValue as string).toLowerCase()
+      return Boolean(
+        row.original.clientName?.toLowerCase().includes(searchLower) ||
+        row.original.number?.toLowerCase().includes(searchLower) ||
+        row.original.id.toLowerCase().includes(searchLower) ||
+        row.original.description?.toLowerCase().includes(searchLower)
+      )
+    },
+    getRowId: (row) => row.id,
+  })
+
+  const filteredInvoices = table.getRowModel().rows.map((row) => row.original)
+
+  const handleSort = useCallback((key: string) => {
+    setSorting((prev) => {
+      const existing = prev[0]
+      if (existing?.id === key) {
+        // Toggle direction or remove
+        if (existing.desc) {
+          return [] // Remove sorting
+        }
+        return [{ id: key, desc: true }]
+      }
+      return [{ id: key, desc: false }]
+    })
+  }, [])
 
   const INVOICE_ITEM_HEIGHT = 120
 
@@ -460,9 +577,21 @@ export function FinanceInvoiceTable({
     </div>
   )
 
+  // Sort controls
+  const SortControls = filteredInvoices.length > 0 && (
+    <div className={cn('flex items-center gap-2 py-2 text-xs text-muted-foreground', embedded ? 'px-0' : 'px-6')}>
+      <span>Sort by:</span>
+      <SortButton label="Amount" sortKey="amount" currentSort={sorting} onSort={handleSort} />
+      <SortButton label="Date" sortKey="issuedDate" currentSort={sorting} onSort={handleSort} />
+      <SortButton label="Due" sortKey="dueDate" currentSort={sorting} onSort={handleSort} />
+      <SortButton label="Client" sortKey="clientName" currentSort={sorting} onSort={handleSort} />
+    </div>
+  )
+
   // Main content
   const TableBody = (
     <>
+      {SortControls}
       {filteredInvoices.length === 0 ? (
         <EmptyState 
           selectedStatus={selectedStatus} 

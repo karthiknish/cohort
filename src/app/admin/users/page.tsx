@@ -493,11 +493,16 @@ export default function AdminUsersPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setLoadingMore(true)
-                    loadMore(50)
-                    setLoadingMore(false)
-                  }}
+                   onClick={async () => {
+                     if (loadingMore) return
+                     setLoadingMore(true)
+                     try {
+                       await loadMore(50)
+                     } finally {
+                       setLoadingMore(false)
+                     }
+                   }}
+
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"
                 >

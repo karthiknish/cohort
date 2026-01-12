@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import useSWR from "swr"
+import { useQuery } from "@tanstack/react-query"
 import { ExternalLink, Image as ImageIcon, LoaderCircle } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,7 +20,7 @@ interface LinkPreviewResponse {
   siteName?: string | null
 }
 
-const fetchLinkPreview = async ([, requestUrl]: [string, string]): Promise<LinkPreviewResponse> => {
+const fetchLinkPreview = async (requestUrl: string): Promise<LinkPreviewResponse> => {
   const response = await fetch("/api/utils/link-preview", {
     method: "POST",
     headers: {
@@ -37,9 +37,12 @@ const fetchLinkPreview = async ([, requestUrl]: [string, string]): Promise<LinkP
 }
 
 export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
-  const { data, error, isLoading } = useSWR<LinkPreviewResponse, Error>(["link-preview", url], fetchLinkPreview, {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
+  const { data, error, isLoading } = useQuery<LinkPreviewResponse, Error>({
+    queryKey: ["link-preview", url],
+    queryFn: () => fetchLinkPreview(url),
+    refetchOnWindowFocus: false,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
 
   const parsedUrl = useMemo(() => {
@@ -98,7 +101,7 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
             {domain ? <p className="text-xs text-muted-foreground">{domain}</p> : null}
           </div>
           {isLoading ? (
-            <p className="text-xs text-muted-foreground">Fetching preview…</p>
+            <p className="text-xs text-muted-foreground">Fetching preview...</p>
           ) : error ? (
             <p className="text-xs text-muted-foreground">Preview unavailable</p>
           ) : description ? (

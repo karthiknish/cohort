@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { useConvex, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
 import { toErrorMessage } from '@/lib/error-utils'
@@ -97,12 +98,41 @@ export function useAdminClients(): UseAdminClientsReturn {
     const { toast } = useToast()
 
     const workspaceId = user?.agencyId ?? null
+    const convex = useConvex()
 
-    // Convex queries and mutations
-    const convexClients = useQuery(
-        clientsApi.list,
-        workspaceId ? { workspaceId, limit: 100 } : 'skip'
-    )
+    const clientsInfiniteQuery = useInfiniteQuery({
+        queryKey: ['adminClients', workspaceId],
+        enabled: Boolean(workspaceId),
+        initialPageParam: null as { nameLower: string; legacyId: string } | null,
+        queryFn: async ({ pageParam }) => {
+            if (!workspaceId) {
+                return [] as Array<any>
+            }
+
+            const page = await convex.query(clientsApi.list, {
+                workspaceId,
+                limit: 100,
+                afterNameLower: pageParam?.nameLower,
+                afterLegacyId: pageParam?.legacyId,
+            })
+
+            return page
+        },
+        getNextPageParam: (lastPage) => {
+            if (!Array.isArray(lastPage) || lastPage.length === 0) {
+                return null
+            }
+
+            const last = lastPage[lastPage.length - 1]
+            const name = typeof last?.name === 'string' ? last.name : ''
+            const legacyId = typeof last?.legacyId === 'string' ? last.legacyId : ''
+            if (!legacyId) {
+                return null
+            }
+
+            return { nameLower: name.toLowerCase(), legacyId }
+        },
+    })
 
     const convexCreateClient = useMutation(clientsApi.create)
     const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
@@ -110,8 +140,6 @@ export function useAdminClients(): UseAdminClientsReturn {
 
     // Client list state (derived from Convex query)
     const [clientsError, setClientsError] = useState<string | null>(null)
-    const [nextCursor, setNextCursor] = useState<string | null>(null)
-    const [loadingMore, setLoadingMore] = useState(false)
 
     // Delete dialog state
     const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null)
@@ -144,9 +172,9 @@ export function useAdminClients(): UseAdminClientsReturn {
 
     // Transform Convex data to ClientRecord format
     const clients = useMemo<ClientRecord[]>(() => {
-        if (!convexClients) return []
+        const rows = clientsInfiniteQuery.data?.pages.flatMap((page) => (Array.isArray(page) ? page : [])) ?? []
 
-        const list: ClientRecord[] = convexClients.map((row: any) => ({
+        const list: ClientRecord[] = rows.map((row: any) => ({
             id: row.legacyId,
             name: row.name,
             accountManager: row.accountManager,
@@ -166,30 +194,33 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         list.sort((a, b) => a.name.localeCompare(b.name))
         return list
-    }, [convexClients])
+    }, [clientsInfiniteQuery.data?.pages])
 
     // Dummy setClients for backward compatibility (Convex handles state)
     const setClients = useCallback((_updater: React.SetStateAction<ClientRecord[]>) => {
         // No-op: Convex query automatically updates
     }, [])
 
-    const clientsLoading = convexClients === undefined && workspaceId !== null
+    const clientsLoading = clientsInfiniteQuery.isLoading
+    const loadingMore = clientsInfiniteQuery.isFetchingNextPage
+    const nextCursor = clientsInfiniteQuery.hasNextPage ? 'more' : null
 
     const existingTeamMembers = useMemo(
         () => clients.reduce((total, client) => total + client.teamMembers.length, 0),
         [clients]
     )
 
-    // Load clients (no-op since Convex handles this reactively)
     const loadClients = useCallback(async () => {
-        // Convex query auto-updates, nothing to do
-    }, [])
+        await clientsInfiniteQuery.refetch()
+    }, [clientsInfiniteQuery])
 
-    // Load more clients (pagination - simplified for now)
     const handleLoadMore = useCallback(async () => {
-        // Convex pagination would require implementing cursor-based loading
-        // For now, this is a no-op as we load all clients
-    }, [])
+        if (!clientsInfiniteQuery.hasNextPage || clientsInfiniteQuery.isFetchingNextPage) {
+            return
+        }
+
+        await clientsInfiniteQuery.fetchNextPage()
+    }, [clientsInfiniteQuery])
 
     // Sync invoice client selection
     useEffect(() => {

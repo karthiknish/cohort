@@ -5,6 +5,9 @@ import { formatDistanceToNow } from 'date-fns'
 import { Bell, Check, LoaderCircle, Trash2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { useMutation, useQuery as useConvexQuery, useConvex } from 'convex/react'
+
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { WorkspaceNotification } from '@/types/notifications'
@@ -19,7 +22,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useQuery, useMutation } from 'convex/react'
 
 import { notificationsApi } from '@/lib/convex-api'
 import { parsePageSize } from '@/lib/pagination'
@@ -30,25 +32,6 @@ const PAGE_SIZE = 20
 type NotificationsCursor = {
   createdAtMs: number
   legacyId: string
-}
-
-function encodeCursor(input: NotificationsCursor | null) {
-  return input ? Buffer.from(JSON.stringify(input), 'utf8').toString('base64url') : null
-}
-
-function decodeCursor(input: string | null): NotificationsCursor | null {
-  if (!input) return null
-  try {
-    return JSON.parse(Buffer.from(input, 'base64url').toString('utf8')) as NotificationsCursor
-  } catch {
-    return null
-  }
-}
-
-type NotificationResponse = {
-  notifications?: WorkspaceNotification[]
-  nextCursor?: string | null
-  error?: string
 }
 
 type AckAction = 'read' | 'dismiss'
@@ -63,33 +46,13 @@ export function NotificationsDropdown() {
   const { toast } = useToast()
 
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [cursor, setCursor] = useState<string | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [ackInFlight, setAckInFlight] = useState(false)
 
   const workspaceId = user?.agencyId
 
-  const decodedCursor = useMemo(() => decodeCursor(cursor), [cursor])
+  const convex = useConvex()
 
-  const notificationsQuery = useQuery(
-    notificationsApi.list,
-    open && workspaceId
-      ? {
-          workspaceId,
-          pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
-          role: user?.role ?? undefined,
-          clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
-          afterCreatedAtMs: decodedCursor?.createdAtMs,
-          afterLegacyId: decodedCursor?.legacyId,
-        }
-      : 'skip'
-  ) as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null } | undefined
-
-  const notifications = notificationsQuery?.notifications ?? []
-
-  const unreadCountQuery = useQuery(
+  const unreadCountQuery = useConvexQuery(
     notificationsApi.getUnreadCount,
     workspaceId
       ? {
@@ -100,23 +63,39 @@ export function NotificationsDropdown() {
       : 'skip'
   ) as { unreadCount: number } | undefined
 
+  const notificationsInfiniteQuery = useInfiniteQuery({
+    queryKey: ['notifications', workspaceId, user?.role, selectedClientId],
+    enabled: Boolean(open && workspaceId),
+    initialPageParam: null as NotificationsCursor | null,
+    queryFn: async ({ pageParam }) => {
+      if (!workspaceId) {
+        return { notifications: [], nextCursor: null } as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null }
+      }
+
+      const data = (await convex.query(notificationsApi.list, {
+        workspaceId,
+        pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
+        role: user?.role ?? undefined,
+        clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
+        afterCreatedAtMs: pageParam?.createdAtMs,
+        afterLegacyId: pageParam?.legacyId,
+      })) as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null }
+
+      return data
+    },
+    getNextPageParam: (lastPage) => lastPage?.nextCursor ?? null,
+  })
+
+  const notifications = useMemo(
+    () => notificationsInfiniteQuery.data?.pages.flatMap((page) => page.notifications ?? []) ?? [],
+    [notificationsInfiniteQuery.data?.pages]
+  )
+
   const unreadCount = unreadCountQuery?.unreadCount ?? notifications.filter((item) => !item.read).length
 
-  useEffect(() => {
-    if (!notificationsQuery) return
-
-    setLoading(false)
-    setLoadingMore(false)
-    setNextCursor(encodeCursor(notificationsQuery.nextCursor))
-  }, [notificationsQuery])
-
-  const fetchNotifications = useCallback(
-    async ({ cursor }: { cursor?: string | null } = {}) => {
-      setLoading(true)
-      setCursor(cursor ?? null)
-    },
-    []
-  )
+  const fetchNotifications = useCallback(async () => {
+    await notificationsInfiniteQuery.refetch()
+  }, [notificationsInfiniteQuery])
 
   const ackNotifications = useMutation(notificationsApi.ack)
 
@@ -130,6 +109,8 @@ export function NotificationsDropdown() {
         setAckInFlight(true)
         await ackNotifications({ workspaceId, ids, action })
 
+        await notificationsInfiniteQuery.refetch()
+
         if (!options.silent) {
           toast({ title: action === 'dismiss' ? 'Dismissed' : 'Marked as read' })
         }
@@ -140,14 +121,13 @@ export function NotificationsDropdown() {
         setAckInFlight(false)
       }
     },
-    [ackNotifications, toast, workspaceId]
+    [ackNotifications, notificationsInfiniteQuery, toast, workspaceId]
   )
 
   const handleOpenChange = useCallback(
     (value: boolean) => {
       setOpen(value)
       if (value) {
-        setLoading(true)
         void fetchNotifications()
       }
     },
@@ -168,18 +148,16 @@ export function NotificationsDropdown() {
   }, [ackInFlight, notifications, open, updateNotificationStatus])
 
   const handleRefresh = useCallback(() => {
-    setCursor(null)
-    setLoading(true)
-  }, [])
+    void notificationsInfiniteQuery.refetch()
+  }, [notificationsInfiniteQuery])
 
   const handleLoadMore = useCallback(() => {
-    if (!nextCursor || loadingMore) {
+    if (!notificationsInfiniteQuery.hasNextPage || notificationsInfiniteQuery.isFetchingNextPage) {
       return
     }
 
-    setLoadingMore(true)
-    fetchNotifications({ cursor: nextCursor }).finally(() => setLoadingMore(false))
-  }, [fetchNotifications, loadingMore, nextCursor])
+    void notificationsInfiniteQuery.fetchNextPage()
+  }, [notificationsInfiniteQuery])
 
   const handleDismiss = useCallback(
     (id: string) => {
@@ -197,6 +175,8 @@ export function NotificationsDropdown() {
   }, [notifications, updateNotificationStatus])
 
   const triggerDisabled = !user
+
+  const isLoadingInitial = notificationsInfiniteQuery.isLoading && notifications.length === 0
 
   const renderTimestamp = (input: string | null) => {
     if (!input) {
@@ -227,7 +207,12 @@ export function NotificationsDropdown() {
         <DropdownMenuLabel className="flex items-center justify-between gap-3 border-b px-4 py-3 text-sm font-semibold">
           <span>Notifications</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={loading || loadingMore}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleRefresh}
+              disabled={notificationsInfiniteQuery.isFetching || notificationsInfiniteQuery.isFetchingNextPage}
+            >
               Refresh
             </Button>
             <Button size="sm" variant="ghost" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight}>
@@ -236,7 +221,7 @@ export function NotificationsDropdown() {
           </div>
         </DropdownMenuLabel>
         <ScrollArea className="max-h-80">
-          {loading && notifications.length === 0 ? (
+          {isLoadingInitial ? (
             <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
               <LoaderCircle className="h-4 w-4 animate-spin" /> Loading notifications…
             </div>
@@ -284,15 +269,17 @@ export function NotificationsDropdown() {
         <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground">
           <span>{notifications.length} shown</span>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLoadMore}
-              disabled={loadingMore || !nextCursor}
-            >
-              {loadingMore ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Load more
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLoadMore}
+                disabled={notificationsInfiniteQuery.isFetchingNextPage || !notificationsInfiniteQuery.hasNextPage}
+              >
+                {notificationsInfiniteQuery.isFetchingNextPage ? (
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Load more
+              </Button>
             <Link href="/dashboard/notifications">
               <Button variant="ghost" size="sm">
                 <ExternalLink className="mr-2 h-4 w-4" />

@@ -598,11 +598,11 @@ function ClientsDashboardContent() {
                     Payment Due
                   </Badge>
                 )}
-                {invoiceSummary?.isPaid && (
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20 shadow-sm">
-                    Paid
-                  </Badge>
-                )}
+                 {invoiceSummary?.isPaid && (
+                   <Badge variant="secondary" className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-primary/20 shadow-sm">
+                     Paid
+                   </Badge>
+                 )}
               </div>
               <p className="text-sm font-medium text-muted-foreground/70">
                 Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
@@ -831,10 +831,10 @@ function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelineBoardP
                       </div>
 
                       <div className="mt-4 flex items-center justify-between border-t border-muted/10 pt-3">
-                        <span className={cn(
-                          "text-[9px] font-black uppercase tracking-[0.15em]",
-                          client.lastInvoiceStatus === 'paid' ? "text-emerald-500" : "text-muted-foreground/40"
-                        )}>
+                          <span className={cn(
+                           "text-[9px] font-black uppercase tracking-[0.15em]",
+                           client.lastInvoiceStatus === 'paid' ? "text-primary" : "text-muted-foreground/40"
+                         )}>
                           {client.lastInvoiceStatus ?? 'No Billing'}
                         </span>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30">

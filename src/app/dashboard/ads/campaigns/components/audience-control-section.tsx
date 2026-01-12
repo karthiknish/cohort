@@ -50,6 +50,7 @@ import { toast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { AudienceBuilderDialog } from '@/app/dashboard/ads/components/audience-builder-dialog'
 import { LocationMap, type LocationMarker } from '@/components/ui/location-map'
+import { useGeocodeResolveBatch } from '@/hooks/use-geocode'
 
 type TargetingData = {
   providerId: string
@@ -224,9 +225,28 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [newInterest, setNewInterest] = useState('')
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null)
-  const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, { lat: number; lng: number }>>({})
 
   const canLoad = !isPreviewMode
+
+  // Collect unknown location names for batch geocoding
+  const unknownLocationNames = useMemo(() => {
+    const unknowns: string[] = []
+    targeting.forEach(t => {
+      t.locations.included.forEach(loc => {
+        const name = loc.name.toLowerCase().trim()
+        // Only add if not in static coordinates and doesn't already have lat/lng
+        if (!LOCATION_COORDINATES[name] && !findLocationCoordinates(loc.name) && !(loc.lat && loc.lng)) {
+          unknowns.push(loc.name)
+        }
+      })
+    })
+    return [...new Set(unknowns)] // Deduplicate
+  }, [targeting])
+
+  // Use TanStack Query for batch geocoding unknown locations
+  const { data: resolvedCoordinates = {} } = useGeocodeResolveBatch(unknownLocationNames, {
+    enabled: unknownLocationNames.length > 0 && hasLoaded,
+  })
 
   const fetchTargeting = useCallback(async () => {
     if (!canLoad) {
@@ -271,49 +291,6 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   useEffect(() => {
     void fetchTargeting()
   }, [fetchTargeting])
-
-  // Resolve unknown locations
-  useEffect(() => {
-    const unknownLocations = new Set<string>()
-    targeting.forEach(t => {
-      t.locations.included.forEach(loc => {
-        const name = loc.name.toLowerCase().trim()
-        if (!LOCATION_COORDINATES[name] && !resolvedCoordinates[name]) {
-          unknownLocations.add(loc.name)
-        }
-      })
-    })
-
-    if (unknownLocations.size === 0) return
-
-    const resolveLocations = async () => {
-      const newCoords: Record<string, { lat: number; lng: number }> = { ...resolvedCoordinates }
-      let changed = false
-
-      for (const name of Array.from(unknownLocations)) {
-        try {
-          const query = encodeURIComponent(name)
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`)
-          const data = await response.json()
-          if (data && data[0]) {
-            newCoords[name.toLowerCase().trim()] = {
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon)
-            }
-            changed = true
-          }
-        } catch (e) {
-          console.error(`Failed to geocode location: ${name}`, e)
-        }
-      }
-
-      if (changed) {
-        setResolvedCoordinates(newCoords)
-      }
-    }
-
-    void resolveLocations()
-  }, [targeting, resolvedCoordinates])
 
   const toggleSection = (section: string) => {
     const next = new Set(expandedSections)

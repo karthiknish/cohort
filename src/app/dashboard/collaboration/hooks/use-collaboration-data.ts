@@ -698,6 +698,10 @@ export function useCollaborationData(): UseCollaborationDataReturn {
               typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
           }))
           .filter((m) => m.id)
+          .sort(
+            (a: CollaborationMessage, b: CollaborationMessage) =>
+              new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime(),
+          )
 
         const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
         const newCursor =

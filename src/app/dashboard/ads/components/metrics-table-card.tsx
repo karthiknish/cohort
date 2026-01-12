@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Info, RefreshCw, Search, Filter, X } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 
 import {
   Card,
@@ -16,7 +17,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,6 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
 import { formatCurrency, cn } from '@/lib/utils'
 
 import type { MetricRecord } from './types'
@@ -47,6 +48,25 @@ interface MetricsTableCardProps {
   loadMoreError: string | null
   onRefresh: () => void
   onLoadMore: () => void
+}
+
+// Column header with tooltip helper
+function HeaderWithTooltip({ title, tooltip }: { title: string; tooltip: string }) {
+  return (
+    <div className="flex items-center gap-1">
+      {title}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <Info className="h-3 w-3 text-muted-foreground/70" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  )
 }
 
 export function MetricsTableCard({
@@ -94,6 +114,86 @@ export function MetricsTableCard({
   }
 
   const hasActiveFilters = searchQuery.length > 0 || selectedProviders.length > 0
+
+  // Define columns for TanStack Table
+  const columns: ColumnDef<MetricRecord>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'date',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Date" />
+        ),
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {formatDisplayDate(row.getValue('date'))}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'providerId',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Provider" />
+        ),
+        cell: ({ row }) => {
+          const providerId = row.getValue('providerId') as string
+          const ProviderIcon = PROVIDER_ICON_MAP[providerId]
+          return (
+            <div className="flex items-center gap-2">
+              {ProviderIcon ? (
+                <ProviderIcon
+                  className="h-4 w-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span>{formatProviderName(providerId)}</span>
+            </div>
+          )
+        },
+        filterFn: (row, id, value: string[]) => {
+          return value.length === 0 || value.includes(row.getValue(id))
+        },
+      },
+      {
+        accessorKey: 'spend',
+        header: () => (
+          <HeaderWithTooltip title="Spend" tooltip="Total amount spent on ads" />
+        ),
+        cell: ({ row }) => formatCurrency(row.getValue('spend')),
+      },
+      {
+        accessorKey: 'impressions',
+        header: () => (
+          <HeaderWithTooltip title="Impressions" tooltip="Number of times your ads were shown" />
+        ),
+        cell: ({ row }) => (row.getValue('impressions') as number).toLocaleString(),
+      },
+      {
+        accessorKey: 'clicks',
+        header: () => (
+          <HeaderWithTooltip title="Clicks" tooltip="Number of times your ads were clicked" />
+        ),
+        cell: ({ row }) => (row.getValue('clicks') as number).toLocaleString(),
+      },
+      {
+        accessorKey: 'conversions',
+        header: () => (
+          <HeaderWithTooltip title="Conversions" tooltip="Number of desired actions taken (e.g. purchases, signups)" />
+        ),
+        cell: ({ row }) => (row.getValue('conversions') as number).toLocaleString(),
+      },
+      {
+        accessorKey: 'revenue',
+        header: () => (
+          <HeaderWithTooltip title="Revenue" tooltip="Total revenue generated from ads" />
+        ),
+        cell: ({ row }) => {
+          const revenue = row.getValue('revenue') as number | null | undefined
+          return revenue != null ? formatCurrency(revenue) : '—'
+        },
+      },
+    ],
+    []
+  )
 
   return (
     <Card className="shadow-sm">
@@ -205,122 +305,16 @@ export function MetricsTableCard({
             </Button>
           </div>
         ) : (
-          <ScrollArea className="h-72">
-            <table className="w-full table-fixed text-left text-sm">
-              <thead className="sticky top-0 bg-background">
-                <tr className="border-b border-muted/60">
-                  <th className="py-2 pr-4 font-medium">Date</th>
-                  <th className="py-2 pr-4 font-medium">Provider</th>
-                  <th className="py-2 pr-4 font-medium">
-                    <div className="flex items-center gap-1">
-                      Spend
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-muted-foreground/70" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Total amount spent on ads</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </th>
-                  <th className="py-2 pr-4 font-medium">
-                    <div className="flex items-center gap-1">
-                      Impressions
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-muted-foreground/70" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Number of times your ads were shown</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </th>
-                  <th className="py-2 pr-4 font-medium">
-                    <div className="flex items-center gap-1">
-                      Clicks
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-muted-foreground/70" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Number of times your ads were clicked</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </th>
-                  <th className="py-2 pr-4 font-medium">
-                    <div className="flex items-center gap-1">
-                      Conversions
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-muted-foreground/70" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Number of desired actions taken (e.g. purchases, signups)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </th>
-                  <th className="py-2 font-medium">
-                    <div className="flex items-center gap-1">
-                      Revenue
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-3 w-3 text-muted-foreground/70" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Total revenue generated from ads</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMetrics.map((metric) => {
-                  const ProviderIcon = PROVIDER_ICON_MAP[metric.providerId]
-                  return (
-                    <tr key={metric.id} className="border-b border-muted/40">
-                      <td className="whitespace-nowrap py-2 pr-4">
-                        {formatDisplayDate(metric.date)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <div className="flex items-center gap-2">
-                          {ProviderIcon ? (
-                            <ProviderIcon
-                              className="h-4 w-4 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                          <span>{formatProviderName(metric.providerId)}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-4">{formatCurrency(metric.spend)}</td>
-                      <td className="py-2 pr-4">{metric.impressions.toLocaleString()}</td>
-                      <td className="py-2 pr-4">{metric.clicks.toLocaleString()}</td>
-                      <td className="py-2 pr-4">{metric.conversions.toLocaleString()}</td>
-                      <td className="py-2">
-                        {metric.revenue != null ? formatCurrency(metric.revenue) : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </ScrollArea>
+          <DataTable
+            columns={columns}
+            data={filteredMetrics}
+            showPagination={false}
+            maxHeight={288}
+            stickyHeader
+            getRowId={(row) => row.id}
+          />
         )}
+        
         {nextCursor && hasMetrics && (
           <div className="mt-4 flex flex-col items-center gap-2">
             {loadMoreError && <p className="text-xs text-destructive">{loadMoreError}</p>}
@@ -333,7 +327,7 @@ export function MetricsTableCard({
               className="inline-flex items-center gap-2"
             >
               <RefreshCw className={cn('h-4 w-4', loadingMore && 'animate-spin')} />
-              {loadingMore ? 'Loading rows…' : 'Load more rows'}
+              {loadingMore ? 'Loading rows...' : 'Load more rows'}
             </Button>
           </div>
         )}

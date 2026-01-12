@@ -1,8 +1,29 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, BellOff, Check, CheckCheck, LoaderCircle, Trash2, Filter, MessageSquare, DollarSign, BarChart, CircleCheck, Mail } from 'lucide-react'
+import {
+  Bell,
+  BellOff,
+  Check,
+  CheckCheck,
+  LoaderCircle,
+  Trash2,
+  Filter,
+  MessageSquare,
+  DollarSign,
+  BarChart,
+  CircleCheck,
+  Mail,
+} from 'lucide-react'
+
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { useConvex, useMutation } from 'convex/react'
+
+type NotificationsCursor = {
+  createdAtMs: number
+  legacyId: string
+}
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -15,7 +36,6 @@ import { useToast } from '@/components/ui/use-toast'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { useMutation, useQuery } from 'convex/react'
 
 import { notificationsApi } from '@/lib/convex-api'
 import { parsePageSize } from '@/lib/pagination'
@@ -23,29 +43,6 @@ import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
 const PAGE_SIZE = 25
 
-type NotificationsCursor = {
-  createdAtMs: number
-  legacyId: string
-}
-
-function encodeCursor(input: NotificationsCursor | null) {
-  return input ? Buffer.from(JSON.stringify(input), 'utf8').toString('base64url') : null
-}
-
-function decodeCursor(input: string | null): NotificationsCursor | null {
-  if (!input) return null
-  try {
-    return JSON.parse(Buffer.from(input, 'base64url').toString('utf8')) as NotificationsCursor
-  } catch {
-    return null
-  }
-}
-
-type NotificationResponse = {
-  notifications?: WorkspaceNotification[]
-  nextCursor?: string | null
-  error?: string
-}
 
 type AckAction = 'read' | 'dismiss'
 
@@ -66,61 +63,57 @@ export default function NotificationsPage() {
 
   const activeFilter = filterTabs.value
   const setActiveFilter = filterTabs.setValue
-  const [cursor, setCursor] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [ackInFlight, setAckInFlight] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
+  const convex = useConvex()
   const workspaceId = user?.agencyId
-  const decodedCursor = useMemo(() => decodeCursor(cursor), [cursor])
 
-  const notificationsQuery = useQuery(
-    notificationsApi.list,
-    workspaceId
-      ? {
-          workspaceId,
-          pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
-          role: user?.role ?? undefined,
-          clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
-          unread: activeFilter === 'unread' ? true : undefined,
-          afterCreatedAtMs: decodedCursor?.createdAtMs,
-          afterLegacyId: decodedCursor?.legacyId,
-        }
-      : 'skip'
-  ) as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null } | undefined
+  const notificationsInfiniteQuery = useInfiniteQuery({
+    queryKey: ['notificationsPage', workspaceId, user?.role, selectedClientId, activeFilter],
+    enabled: Boolean(workspaceId),
+    initialPageParam: null as NotificationsCursor | null,
+    queryFn: async ({ pageParam }) => {
+      if (!workspaceId) {
+        return { notifications: [], nextCursor: null as NotificationsCursor | null }
+      }
+
+      return convex.query(notificationsApi.list, {
+        workspaceId,
+        pageSize: parsePageSize(PAGE_SIZE, { defaultValue: PAGE_SIZE, max: 100 }),
+        role: user?.role ?? undefined,
+        clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
+        unread: activeFilter === 'unread' ? true : undefined,
+        afterCreatedAtMs: pageParam?.createdAtMs,
+        afterLegacyId: pageParam?.legacyId,
+      })
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
+  })
 
   const notifications = useMemo(() => {
-    let items = notificationsQuery?.notifications ?? []
+    let items = notificationsInfiniteQuery.data?.pages.flatMap((page) => page.notifications ?? []) ?? []
 
     if (activeFilter === 'mentions') {
       items = items.filter((n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
     } else if (activeFilter === 'system') {
-      items = items.filter((n: WorkspaceNotification) => n.kind === 'invoice.sent' || n.kind === 'invoice.paid' || n.kind === 'proposal.deck.ready')
+      items = items.filter(
+        (n: WorkspaceNotification) => n.kind === 'invoice.sent' || n.kind === 'invoice.paid' || n.kind === 'proposal.deck.ready'
+      )
     }
 
     return items
-  }, [activeFilter, notificationsQuery?.notifications])
-
-  const fetchNotifications = useCallback(
-    async ({ cursor }: { cursor?: string | null } = {}) => {
-      setLoading(true)
-      setCursor(cursor ?? null)
-    },
-    []
-  )
-
-  useEffect(() => {
-    if (!notificationsQuery) return
-
-    setLoading(false)
-    setLoadingMore(false)
-    setError(null)
-    setNextCursor(encodeCursor(notificationsQuery.nextCursor))
-  }, [notificationsQuery])
+  }, [activeFilter, notificationsInfiniteQuery.data?.pages])
 
   const ackNotifications = useMutation(notificationsApi.ack)
+
+  const loading = notificationsInfiniteQuery.isLoading
+  const loadingMore = notificationsInfiniteQuery.isFetchingNextPage
+  const error = notificationsInfiniteQuery.isError
+    ? notificationsInfiniteQuery.error instanceof Error
+      ? notificationsInfiniteQuery.error.message
+      : 'Failed to load notifications'
+    : null
+  const nextCursor = notificationsInfiniteQuery.hasNextPage
 
   const updateNotificationStatus = useCallback(
     async (ids: string[], action: AckAction) => {
@@ -131,6 +124,7 @@ export default function NotificationsPage() {
       try {
         setAckInFlight(true)
         await ackNotifications({ workspaceId, ids, action })
+        await notificationsInfiniteQuery.refetch()
 
         toast({
           title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
@@ -143,31 +137,20 @@ export default function NotificationsPage() {
         setAckInFlight(false)
       }
     },
-    [ackNotifications, toast, workspaceId]
+    [ackNotifications, notificationsInfiniteQuery, toast, workspaceId]
   )
 
-  useEffect(() => {
-    if (!user?.id) {
-      return
-    }
-
-    setLoading(true)
-    void fetchNotifications()
-  }, [fetchNotifications, user?.id])
-
   const handleRefresh = useCallback(() => {
-    setCursor(null)
-    setLoading(true)
-  }, [])
+    void notificationsInfiniteQuery.refetch()
+  }, [notificationsInfiniteQuery])
 
   const handleLoadMore = useCallback(() => {
-    if (!nextCursor || loadingMore) {
+    if (!notificationsInfiniteQuery.hasNextPage || notificationsInfiniteQuery.isFetchingNextPage) {
       return
     }
 
-    setLoadingMore(true)
-    fetchNotifications({ cursor: nextCursor }).finally(() => setLoadingMore(false))
-  }, [fetchNotifications, loadingMore, nextCursor])
+    void notificationsInfiniteQuery.fetchNextPage()
+  }, [notificationsInfiniteQuery])
 
   const handleDismiss = useCallback(
     (id: string) => {

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { LoaderCircle, Plus, Trash, CheckCircle2, XCircle, Send, DollarSign, Settings, RefreshCw } from 'lucide-react'
 import { useMutation } from 'convex/react'
+import type { ColumnDef } from '@tanstack/react-table'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,9 +23,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CurrencySelect } from '@/components/ui/currency-select'
+import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
 import type { CurrencyCode } from '@/constants/currencies'
 
 import { useExpensesData } from '../hooks/use-expenses-data'
@@ -32,6 +33,37 @@ import { useAuth } from '@/contexts/auth-context'
 import { uploadExpenseReceipt } from '@/services/expense-attachments'
 import { formatCurrency } from '../utils'
 import { filesApi } from '@/lib/convex-api'
+
+// Type for expenses from the hook
+type Expense = {
+  id: string
+  description: string
+  amount: number
+  currency?: string
+  status: string
+  costType: string
+  employeeId?: string | null
+  categoryId?: string | null
+  categoryName?: string | null
+  vendorId?: string | null
+  vendorName?: string | null
+  attachments?: Array<{ url: string; name: string }>
+}
+
+type Category = {
+  id: string
+  name: string
+  code?: string | null
+  isActive: boolean
+  isSystem?: boolean
+}
+
+type Vendor = {
+  id: string
+  name: string
+  email?: string | null
+  isActive: boolean
+}
 
 function StatusBadge({ status }: { status: string }) {
   const variant = status === 'approved' ? 'default' : status === 'rejected' ? 'destructive' : 'secondary'
@@ -98,6 +130,260 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
   )
 
   const canApprove = isAdmin
+
+  // Expense columns
+  const expenseColumns: ColumnDef<Expense>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'description',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Description" />
+        ),
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">{row.getValue('description')}</div>
+            <div className="text-xs text-muted-foreground">
+              {row.original.categoryName || (row.original.categoryId ? 'Category set' : 'Uncategorized')}
+              {row.original.vendorName ? ` · ${row.original.vendorName}` : ''}
+              {row.original.attachments?.length ? ` · ${row.original.attachments.length} attachment(s)` : ''}
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => <StatusBadge status={row.getValue('status')} />,
+      },
+      {
+        accessorKey: 'costType',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Type" />
+        ),
+        cell: ({ row }) => (
+          <span className="capitalize">{String(row.getValue('costType')).replace(/_/g, ' ')}</span>
+        ),
+      },
+      {
+        accessorKey: 'amount',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Amount" />
+        ),
+        cell: ({ row }) => (
+          formatCurrency(Math.round(row.getValue('amount')), (row.original.currency ?? resolvedCurrency).toUpperCase())
+        ),
+      },
+      {
+        accessorKey: 'employeeId',
+        header: 'Employee',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.getValue('employeeId') ?? '—'}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => {
+          const e = row.original
+          return (
+            <div className="flex flex-wrap gap-2">
+              {e.status === 'draft' ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={actingExpenseId === e.id}
+                  onClick={() => void handleTransition(e.id, 'submit')}
+                >
+                  {actingExpenseId === e.id ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Submit
+                </Button>
+              ) : null}
+
+              {e.status === 'submitted' && canApprove ? (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-2"
+                    disabled={actingExpenseId === e.id}
+                    onClick={() => void handleTransition(e.id, 'approve')}
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Approve
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="gap-2"
+                    disabled={actingExpenseId === e.id}
+                    onClick={() => {
+                      const note = window.prompt('Rejection note (optional):') || undefined
+                      void handleTransition(e.id, 'reject', note)
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" /> Reject
+                  </Button>
+                </>
+              ) : null}
+
+              {e.status === 'approved' && canApprove ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={actingExpenseId === e.id}
+                  onClick={() => void handleTransition(e.id, 'mark_paid')}
+                >
+                  Mark paid
+                </Button>
+              ) : null}
+
+              {e.status === 'draft' ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={actingExpenseId === e.id}
+                    >
+                      <Trash className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the expense &quot;{e.description}&quot;. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => void handleDeleteExpense(e.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
+            </div>
+          )
+        },
+      },
+    ],
+    [actingExpenseId, canApprove, handleDeleteExpense, handleTransition, resolvedCurrency]
+  )
+
+  // Category columns for admin dialog
+  const categoryColumns: ColumnDef<Category>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+      },
+      {
+        accessorKey: 'code',
+        header: 'Code',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.getValue('code') ?? '—'}</span>
+        ),
+      },
+      {
+        accessorKey: 'isActive',
+        header: 'Active',
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getValue('isActive')}
+            disabled={row.original.isSystem}
+            onChange={() => void adminCategoryActions.update(row.original.id, { isActive: !row.original.isActive })}
+          />
+        ),
+      },
+      {
+        id: 'isSystem',
+        header: 'System',
+        cell: ({ row }) => (
+          <span className="text-xs">{row.original.isSystem ? 'Yes' : 'No'}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            disabled={row.original.isSystem}
+            onClick={() => void adminCategoryActions.remove(row.original.id)}
+          >
+            Delete
+          </Button>
+        ),
+      },
+    ],
+    [adminCategoryActions]
+  )
+
+  // Vendor columns for admin dialog
+  const vendorColumns: ColumnDef<Vendor>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }) => <span className="font-medium">{row.getValue('name')}</span>,
+      },
+      {
+        accessorKey: 'email',
+        header: 'Email',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.getValue('email') ?? '—'}</span>
+        ),
+      },
+      {
+        accessorKey: 'isActive',
+        header: 'Active',
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getValue('isActive')}
+            onChange={() => void adminVendorActions.update(row.original.id, { isActive: !row.original.isActive })}
+          />
+        ),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            onClick={() => void adminVendorActions.remove(row.original.id)}
+          >
+            Delete
+          </Button>
+        ),
+      },
+    ],
+    [adminVendorActions]
+  )
 
   const Wrapper = embedded ? 'div' : Card
   const HeaderWrapper = embedded ? 'div' : CardHeader
@@ -272,7 +558,7 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
               >
                 {submitting ? (
                   <>
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Saving…
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Saving...
                   </>
                 ) : (
                   <>
@@ -300,50 +586,6 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
                 <span className="font-medium">{newExpense.attachments.length} file(s) attached</span>
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-[1fr,1fr,1fr]">
-          <div className="space-y-1.5">
-            <Label>Vendor</Label>
-            <Select
-              value={newExpense.vendorId || 'none'}
-              onValueChange={(value) => setNewExpense((p) => ({ ...p, vendorId: value === 'none' ? '' : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {vendors
-                  .filter((v) => v.isActive)
-                  .map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="expense-date">Incurred date</Label>
-            <Input
-              id="expense-date"
-              type="date"
-              value={newExpense.incurredDate}
-              onChange={(e) => setNewExpense((p) => ({ ...p, incurredDate: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="expense-receipt">Receipt (optional)</Label>
-            <Input
-              id="expense-receipt"
-              type="file"
-              accept="image/*,application/pdf"
-              onChange={(e) => void handleAddReceipt(e.target.files?.[0] ?? null)}
-            />
           </div>
         </div>
 
@@ -418,145 +660,14 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
           </div>
         </div>
 
-        <div className="rounded-lg border border-muted/40 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expenses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-sm text-muted-foreground">
-                    No expenses yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                expenses.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell>
-                      <div className="font-medium">{e.description}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {e.categoryName || (e.categoryId ? 'Category set' : 'Uncategorized')}
-                        {e.vendorName ? ` · ${e.vendorName}` : ''}
-                        {e.attachments?.length ? ` · ${e.attachments.length} attachment(s)` : ''}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={e.status} />
-                    </TableCell>
-                    <TableCell className="capitalize">{String(e.costType).replace(/_/g, ' ')}</TableCell>
-                    <TableCell>
-                      {formatCurrency(Math.round(e.amount), (e.currency ?? resolvedCurrency).toUpperCase())}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{e.employeeId ?? '—'}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        {e.status === 'draft' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            disabled={actingExpenseId === e.id}
-                            onClick={() => void handleTransition(e.id, 'submit')}
-                          >
-                            {actingExpenseId === e.id ? (
-                              <LoaderCircle className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Send className="h-4 w-4" />
-                            )}
-                            Submit
-                          </Button>
-                        ) : null}
-
-                        {e.status === 'submitted' && canApprove ? (
-                          <>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="gap-2"
-                              disabled={actingExpenseId === e.id}
-                              onClick={() => void handleTransition(e.id, 'approve')}
-                            >
-                              <CheckCircle2 className="h-4 w-4" /> Approve
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              className="gap-2"
-                              disabled={actingExpenseId === e.id}
-                              onClick={() => {
-                                const note = window.prompt('Rejection note (optional):') || undefined
-                                void handleTransition(e.id, 'reject', note)
-                              }}
-                            >
-                              <XCircle className="h-4 w-4" /> Reject
-                            </Button>
-                          </>
-                        ) : null}
-
-                        {e.status === 'approved' && canApprove ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            disabled={actingExpenseId === e.id}
-                            onClick={() => void handleTransition(e.id, 'mark_paid')}
-                          >
-                            Mark paid
-                          </Button>
-                        ) : null}
-
-                        {e.status === 'draft' ? (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                disabled={actingExpenseId === e.id}
-                              >
-                                <Trash className="h-4 w-4" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete expense?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete the expense &quot;{e.description}&quot;. This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => void handleDeleteExpense(e.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          columns={expenseColumns}
+          data={expenses as Expense[]}
+          showPagination={expenses.length > 10}
+          pageSize={10}
+          emptyState={<span className="text-sm text-muted-foreground">No expenses yet.</span>}
+          getRowId={(row) => row.id}
+        />
 
         {/* Categories dialog */}
         <Dialog open={managingCategories} onOpenChange={setManagingCategories}>
@@ -590,47 +701,12 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
               </div>
             </div>
 
-            <div className="rounded-lg border border-muted/40 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Active</TableHead>
-                    <TableHead>System</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{c.code ?? '—'}</TableCell>
-                      <TableCell>
-                        <Checkbox
-                          checked={c.isActive}
-                          disabled={c.isSystem}
-                          onChange={() => void adminCategoryActions.update(c.id, { isActive: !c.isActive })}
-                        />
-                      </TableCell>
-                      <TableCell className="text-xs">{c.isSystem ? 'Yes' : 'No'}</TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          disabled={c.isSystem}
-                          onClick={() => void adminCategoryActions.remove(c.id)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={categoryColumns}
+              data={categories as Category[]}
+              showPagination={false}
+              getRowId={(row) => row.id}
+            />
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setManagingCategories(false)}>
@@ -672,40 +748,12 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
               </div>
             </div>
 
-            <div className="rounded-lg border border-muted/40 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Active</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendors.map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell className="font-medium">{v.name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{v.email ?? '—'}</TableCell>
-                      <TableCell>
-                        <Checkbox checked={v.isActive} onChange={() => void adminVendorActions.update(v.id, { isActive: !v.isActive })} />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => void adminVendorActions.remove(v.id)}
-                        >
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={vendorColumns}
+              data={vendors as Vendor[]}
+              showPagination={false}
+              getRowId={(row) => row.id}
+            />
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setManagingVendors(false)}>

@@ -4,18 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAction } from 'convex/react'
 import { Pause, Play, Trash2, DollarSign, RefreshCw, TrendingUp } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
@@ -35,10 +28,10 @@ import {
 } from '@/components/ui/tooltip'
 import {
   Tabs,
-  TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs'
+import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
@@ -144,6 +137,24 @@ function formatCampaignDateRange(startTime?: string, stopTime?: string): string 
   return `${startStr} - ${endStr}`
 }
 
+function getStatusBadge(status: string) {
+  const statusLower = status.toLowerCase()
+  if (statusLower === 'enabled' || statusLower === 'enable' || statusLower === 'active') {
+    return <Badge variant="default" className="bg-green-500">Active</Badge>
+  }
+  if (statusLower === 'paused' || statusLower === 'disable') {
+    return <Badge variant="secondary">Paused</Badge>
+  }
+  if (statusLower === 'removed' || statusLower === 'archived' || statusLower === 'delete') {
+    return <Badge variant="destructive">Removed</Badge>
+  }
+  return <Badge variant="outline">{status}</Badge>
+}
+
+function isActive(status: string) {
+  const s = (status || '').toLowerCase()
+  return s === 'enabled' || s === 'enable' || s === 'active'
+}
 
 // =============================================================================
 // COMPONENT
@@ -380,7 +391,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId])
+  }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId, updateCampaign, updateCampaignGroup])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
@@ -419,26 +430,269 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } finally {
       setActionLoading(null)
     }
-  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId])
+  }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId, updateCampaign])
 
-  const getStatusBadge = (status: string) => {
-    const statusLower = status.toLowerCase()
-    if (statusLower === 'enabled' || statusLower === 'enable' || statusLower === 'active') {
-      return <Badge variant="default" className="bg-green-500">Active</Badge>
-    }
-    if (statusLower === 'paused' || statusLower === 'disable') {
-      return <Badge variant="secondary">Paused</Badge>
-    }
-    if (statusLower === 'removed' || statusLower === 'archived' || statusLower === 'delete') {
-      return <Badge variant="destructive">Removed</Badge>
-    }
-    return <Badge variant="outline">{status}</Badge>
-  }
+  // Campaign columns
+  const campaignColumns: ColumnDef<Campaign>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Name" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium hover:underline">{row.getValue('name')}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => getStatusBadge(row.getValue('status')),
+      },
+      {
+        id: 'runs',
+        header: 'Runs',
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatCampaignDateRange(row.original.startTime, row.original.stopTime)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'budget',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Budget" />
+        ),
+        cell: ({ row }) => {
+          const budget = row.getValue('budget') as number | undefined
+          if (budget === undefined) {
+            return <span className="text-muted-foreground">-</span>
+          }
+          return (
+            <span>
+              {formatMoney(budget, row.original.currency)}
+              /{row.original.budgetType || 'day'}
+            </span>
+          )
+        },
+      },
+      {
+        accessorKey: 'objective',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Objective" />
+        ),
+        cell: ({ row }) => {
+          const objective = row.getValue('objective') as string | undefined
+          return (
+            <span className="capitalize text-sm text-muted-foreground">
+              {objective?.toLowerCase().replace(/_/g, ' ') || '-'}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const campaign = row.original
+          return (
+            <TooltipProvider>
+              <div className="flex items-center justify-end gap-1">
+                {isActive(campaign.status) ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void handleAction(campaign.id, 'pause')
+                        }}
+                        disabled={actionLoading === campaign.id}
+                      >
+                        <Pause className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Pause campaign</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void handleAction(campaign.id, 'enable')
+                        }}
+                        disabled={actionLoading === campaign.id}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enable campaign</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedCampaign(campaign)
+                        setNewBudget(campaign.budget?.toString() || '')
+                        setBudgetDialogOpen(true)
+                      }}
+                      disabled={actionLoading === campaign.id}
+                    >
+                      <DollarSign className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Update budget</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedCampaign(campaign)
+                        setNewBidding({
+                          type: campaign.biddingStrategy?.type || '',
+                          value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
+                        })
+                        setBiddingDialogOpen(true)
+                      }}
+                      disabled={actionLoading === campaign.id}
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Bidding strategy</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void handleAction(campaign.id, 'remove')
+                      }}
+                      disabled={actionLoading === campaign.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Remove campaign</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          )
+        },
+      },
+    ],
+    [actionLoading, handleAction]
+  )
 
-  const isActive = (status: string) => {
-    const s = (status || '').toLowerCase()
-    return s === 'enabled' || s === 'enable' || s === 'active'
-  }
+  // Group columns
+  const groupColumns: ColumnDef<CampaignGroup>[] = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Name" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium hover:underline">{row.getValue('name')}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => getStatusBadge(row.getValue('status')),
+      },
+      {
+        accessorKey: 'totalBudget',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Budget" />
+        ),
+        cell: ({ row }) => {
+          const budget = row.getValue('totalBudget') as number | undefined
+          if (budget === undefined) {
+            return <span className="text-muted-foreground">-</span>
+          }
+          return <span>{formatMoney(budget, row.original.currency)} total</span>
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const group = row.original
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {isActive(group.status) ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void handleGroupAction(group.id, 'pause')
+                  }}
+                  disabled={actionLoading === group.id}
+                >
+                  <Pause className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void handleGroupAction(group.id, 'enable')
+                  }}
+                  disabled={actionLoading === group.id}
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedGroup(group)
+                  setNewBudget(group.totalBudget?.toString() || '')
+                  setBudgetDialogOpen(true)
+                }}
+                disabled={actionLoading === group.id}
+              >
+                <DollarSign className="h-4 w-4" />
+              </Button>
+            </div>
+          )
+        },
+      },
+    ],
+    [actionLoading, handleGroupAction]
+  )
 
   if (!isConnected) {
     return (
@@ -482,230 +736,25 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
               No {view === 'groups' ? 'groups' : 'campaigns'} found for this provider.
             </p>
           ) : view === 'groups' ? (
-            <div className="max-h-[420px] overflow-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Budget</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groups.map((group) => (
-                    <TableRow
-                      key={group.id}
-                      className="cursor-pointer"
-                      onClick={() => openInsightsPage(group.id, group.name)}
-                    >
-                      <TableCell className="font-medium hover:underline">{group.name}</TableCell>
-                      <TableCell>{getStatusBadge(group.status)}</TableCell>
-                      <TableCell>
-                        {group.totalBudget !== undefined ? (
-                          <span>{formatMoney(group.totalBudget, group.currency)} total</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {isActive(group.status) ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                void handleGroupAction(group.id, 'pause')
-                              }}
-                              disabled={actionLoading === group.id}
-                            >
-                              <Pause className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                void handleGroupAction(group.id, 'enable')
-                              }}
-                              disabled={actionLoading === group.id}
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedGroup(group)
-                              setNewBudget(group.totalBudget?.toString() || '')
-                              setBudgetDialogOpen(true)
-                            }}
-                            disabled={actionLoading === group.id}
-                          >
-                            <DollarSign className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={groupColumns}
+              data={groups}
+              showPagination={false}
+              maxHeight={420}
+              onRowClick={(row) => openInsightsPage(row.id, row.name)}
+              rowClassName="cursor-pointer"
+              getRowId={(row) => row.id}
+            />
           ) : (
-            <div className="max-h-[420px] overflow-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Runs</TableHead>
-                    <TableHead>Budget</TableHead>
-                    <TableHead>Objective</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {campaigns.map((campaign) => (
-                    <TableRow
-                      key={campaign.id}
-                      className="cursor-pointer"
-                      onClick={() => openInsightsPage(campaign.id, campaign.name)}
-                    >
-                      <TableCell className="font-medium hover:underline">{campaign.name}</TableCell>
-                      <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatCampaignDateRange(campaign.startTime, campaign.stopTime)}
-                      </TableCell>
-                      <TableCell>
-                        {campaign.budget !== undefined ? (
-                          <span>
-                            {formatMoney(campaign.budget, campaign.currency)}
-                            /{campaign.budgetType || 'day'}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="capitalize text-sm text-muted-foreground">
-                          {campaign.objective?.toLowerCase().replace(/_/g, ' ') || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <TooltipProvider>
-                          <div className="flex items-center justify-end gap-1">
-                            {isActive(campaign.status) ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      void handleAction(campaign.id, 'pause')
-                                    }}
-                                    disabled={actionLoading === campaign.id}
-                                  >
-                                    <Pause className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Pause campaign</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      void handleAction(campaign.id, 'enable')
-                                    }}
-                                    disabled={actionLoading === campaign.id}
-                                  >
-                                    <Play className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Enable campaign</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedCampaign(campaign)
-                                    setNewBudget(campaign.budget?.toString() || '')
-                                    setBudgetDialogOpen(true)
-                                  }}
-                                  disabled={actionLoading === campaign.id}
-                                >
-                                  <DollarSign className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Update budget</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedCampaign(campaign)
-                                    setNewBidding({
-                                      type: campaign.biddingStrategy?.type || '',
-                                      value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
-                                    })
-                                    setBiddingDialogOpen(true)
-                                  }}
-                                  disabled={actionLoading === campaign.id}
-                                >
-                                  <TrendingUp className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Bidding strategy</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    void handleAction(campaign.id, 'remove')
-                                  }}
-                                  disabled={actionLoading === campaign.id}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Remove campaign</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={campaignColumns}
+              data={campaigns}
+              showPagination={false}
+              maxHeight={420}
+              onRowClick={(row) => openInsightsPage(row.id, row.name)}
+              rowClassName="cursor-pointer"
+              getRowId={(row) => row.id}
+            />
           )}
         </CardContent>
       </Card>

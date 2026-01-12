@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { MapPin, X, Search, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { useGeocodeSearch, type GeocodeSearchResult } from '@/hooks/use-geocode'
 
 export type LocationMarker = {
   id: string
@@ -26,19 +27,6 @@ type LocationMapProps = {
   className?: string
   showSearch?: boolean
   showSelectedList?: boolean
-}
-
-type SearchResult = {
-  place_id: number
-  display_name: string
-  lat: string
-  lon: string
-  type: string
-  address?: {
-    city?: string
-    country?: string
-    state?: string
-  }
 }
 
 const LeafletMap = dynamic(
@@ -68,46 +56,17 @@ export function LocationMap({
   showSelectedList = false,
 }: LocationMapProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Use TanStack Query for geocoding search with built-in debouncing
+  const { data: searchResults = [], isFetching: searching } = useGeocodeSearch(searchQuery, {
+    enabled: showSearch,
+  })
 
   const allLocations = useMemo(() => {
     return [...locations, ...selectedLocations]
   }, [locations, selectedLocations])
 
-  const searchLocations = useCallback(async (query: string) => {
-    if (!query || query.length < 2) {
-      setSearchResults([])
-      return
-    }
-
-    setSearching(true)
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
-      )
-      const data = await response.json() as SearchResult[]
-      setSearchResults(data)
-    } catch (error) {
-      console.error('Search error:', error)
-      setSearchResults([])
-    } finally {
-      setSearching(false)
-    }
-  }, [])
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-    searchTimeoutRef.current = setTimeout(() => {
-      void searchLocations(value)
-    }, 300)
-  }
-
-  const handleResultSelect = (result: SearchResult) => {
+  const handleResultSelect = (result: GeocodeSearchResult) => {
     const location: LocationMarker = {
       id: `loc-${result.place_id}`,
       name: result.display_name.split(',')[0] || result.display_name,
@@ -117,7 +76,6 @@ export function LocationMap({
     }
     
     setSearchQuery('')
-    setSearchResults([])
     
     if (onLocationSelect) {
       onLocationSelect(location)
@@ -133,7 +91,7 @@ export function LocationMap({
             <Input
               placeholder="Search for a city, country, or region..."
               value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-9"
             />
             {searching && (

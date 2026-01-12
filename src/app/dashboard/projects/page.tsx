@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { useMutation as useTanstackMutation } from '@tanstack/react-query'
 import {
   TriangleAlert,
   ArrowDown,
@@ -407,33 +408,10 @@ export default function ProjectsPage() {
     }
   }, [projectToDelete, isPreviewMode, user?.id, workspaceId, softDeleteProject, toast])
 
-  const handleUpdateStatus = useCallback(async (project: ProjectRecord, newStatus: ProjectStatus) => {
-    // In preview mode, just update local state (won't persist)
-    if (isPreviewMode) {
-      setProjects((prev) => prev.map((p) =>
-        p.id === project.id ? { ...p, status: newStatus } : p
-      ))
-      toast({
-        title: 'Preview mode',
-        description: `Status changed to ${formatStatusLabel(newStatus)} (not saved).`,
-      })
-      return
-    }
-
-    if (!user?.id) return
-
-    // Prevent duplicate updates
-    if (pendingStatusUpdates.has(project.id)) return
-
-    // Optimistic update
-    const previousStatus = project.status
-    setProjects((prev) => prev.map((p) =>
-      p.id === project.id ? { ...p, status: newStatus } : p
-    ))
-    setPendingStatusUpdates((prev) => new Set(prev).add(project.id))
-
-    try {
+  const updateStatusMutation = useTanstackMutation({
+    mutationFn: async ({ project, newStatus }: { project: ProjectRecord; newStatus: ProjectStatus }) => {
       if (!workspaceId) throw new Error('Missing workspace')
+
       await updateProject({
         workspaceId,
         legacyId: project.id,
@@ -441,26 +419,63 @@ export default function ProjectsPage() {
         updatedAtMs: Date.now(),
       })
 
-      emitDashboardRefresh({ reason: 'project-mutated', clientId: project.clientId ?? null })
-      toast({
-        title: 'Status updated',
-        description: `"${project.name}" is now ${formatStatusLabel(newStatus)}.`,
-      })
-    } catch (error) {
-      // Rollback optimistic update
-      setProjects((prev) => prev.map((p) =>
-        p.id === project.id ? { ...p, status: previousStatus } : p
-      ))
-      const message = error instanceof Error ? error.message : 'Failed to update project'
-      toast({ title: 'Status update failed', description: message, variant: 'destructive' })
-    } finally {
+      return { project, newStatus }
+    },
+    onMutate: async ({ project, newStatus }: { project: ProjectRecord; newStatus: ProjectStatus }) => {
       setPendingStatusUpdates((prev) => {
         const next = new Set(prev)
-        next.delete(project.id)
+        next.add(project.id)
         return next
       })
-    }
-  }, [isPreviewMode, user?.id, workspaceId, updateProject, toast, pendingStatusUpdates])
+
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, status: newStatus } : p)))
+
+      return { projectId: project.id, previousStatus: project.status, clientId: project.clientId ?? null, projectName: project.name }
+    },
+    onError: (error, variables, context) => {
+      if (!context) return
+
+      setProjects((prev) => prev.map((p) => (p.id === context.projectId ? { ...p, status: context.previousStatus } : p)))
+
+      const message = error instanceof Error ? error.message : 'Failed to update project'
+      toast({ title: 'Status update failed', description: message, variant: 'destructive' })
+    },
+    onSuccess: (_data, variables, _context) => {
+      emitDashboardRefresh({ reason: 'project-mutated', clientId: variables.project.clientId ?? null })
+      toast({
+        title: 'Status updated',
+        description: `"${variables.project.name}" is now ${formatStatusLabel(variables.newStatus)}.`,
+      })
+    },
+    onSettled: (_data, _error, variables) => {
+      setPendingStatusUpdates((prev) => {
+        const next = new Set(prev)
+        next.delete(variables.project.id)
+        return next
+      })
+    },
+  })
+
+  const handleUpdateStatus = useCallback(
+    async (project: ProjectRecord, newStatus: ProjectStatus) => {
+      // In preview mode, just update local state (won't persist)
+      if (isPreviewMode) {
+        setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, status: newStatus } : p)))
+        toast({
+          title: 'Preview mode',
+          description: `Status changed to ${formatStatusLabel(newStatus)} (not saved).`,
+        })
+        return
+      }
+
+      if (!user?.id) return
+
+      if (pendingStatusUpdates.has(project.id) || updateStatusMutation.isPending) return
+
+      await updateStatusMutation.mutateAsync({ project, newStatus })
+    },
+    [isPreviewMode, pendingStatusUpdates, toast, updateStatusMutation, user?.id]
+  )
 
   const openDeleteDialog = useCallback((project: ProjectRecord) => {
     setProjectToDelete(project)

@@ -21,12 +21,25 @@ export function getBetterAuthOrNull() {
     process.env.NEXT_PUBLIC_APP_URL ||
     'http://localhost:3000'
 
+  // Build social providers config dynamically based on available env vars
+  const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {}
+
+  const googleClientId = process.env.GOOGLE_CLIENT_ID
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+  if (googleClientId && googleClientSecret) {
+    socialProviders.google = {
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+    }
+  }
+
   cachedAuth = betterAuth({
     secret,
     baseURL,
     emailAndPassword: {
       enabled: true,
     },
+    socialProviders,
     // Stateless mode is enabled automatically when no database is configured.
     session: {
       cookieCache: {

@@ -18,6 +18,7 @@ import { adsIntegrationsApi } from '@/lib/convex-api'
 // Extracted hooks and types
 import {
   useAnalyticsData,
+  useGoogleAnalyticsSync,
   PROVIDER_LABELS,
   PERIOD_OPTIONS,
   PLATFORM_OPTIONS,
@@ -64,7 +65,9 @@ export default function AnalyticsPage() {
   const [gaConnected, setGaConnected] = useState(false)
   const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(null)
   const [gaLoading, setGaLoading] = useState(false)
-  const [gaSyncing, setGaSyncing] = useState(false)
+
+  // TanStack Query mutation for Google Analytics sync
+  const googleAnalyticsSyncMutation = useGoogleAnalyticsSync()
 
 
 
@@ -167,29 +170,17 @@ export default function AnalyticsPage() {
       return
     }
 
-
-    setGaSyncing(true)
     try {
-      const params = new URLSearchParams({ days: String(periodDays) })
-      if (selectedClientId) params.set('clientId', selectedClientId)
-      const url = `/api/analytics/google-analytics/sync?${params.toString()}`
-
-      const response = await fetch(url, {
-        method: 'POST',
-        credentials: 'same-origin',
+      const result = await googleAnalyticsSyncMutation.mutateAsync({
+        periodDays,
+        clientId: selectedClientId,
       })
-
-      const payload = (await response.json().catch(() => ({}))) as any
-      if (!response.ok) {
-        const message = typeof payload?.error === 'string' ? payload.error : 'Failed to sync Google Analytics'
-        throw new Error(message)
-      }
 
       toast({
         title: 'Google Analytics synced',
-        description: payload?.propertyName
-          ? `Imported ${payload?.written ?? 0} day(s) from ${payload.propertyName}.`
-          : `Imported ${payload?.written ?? 0} day(s).`,
+        description: result?.propertyName
+          ? `Imported ${result?.written ?? 0} day(s) from ${result.propertyName}.`
+          : `Imported ${result?.written ?? 0} day(s).`,
       })
 
       await refreshGoogleAnalyticsStatus()
@@ -197,10 +188,8 @@ export default function AnalyticsPage() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unable to sync Google Analytics'
       toast({ title: 'Sync failed', description: message, variant: 'destructive' })
-    } finally {
-      setGaSyncing(false)
     }
-  }, [isPreviewMode, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])
+  }, [isPreviewMode, googleAnalyticsSyncMutation, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])
 
   const initialMetricsLoading = metricsLoading && metrics.length === 0
   const initialInsightsLoading = insightsLoading && insights.length === 0
@@ -407,10 +396,10 @@ export default function AnalyticsPage() {
                   type="button"
                   size="sm"
                   onClick={() => void handleSyncGoogleAnalytics()}
-                  disabled={gaSyncing || gaLoading}
+                  disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
                   className="h-9 rounded-xl bg-primary text-[10px] font-bold uppercase tracking-widest shadow-md transition-all hover:bg-primary/90 active:scale-[0.98]"
                 >
-                  {gaSyncing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-white" /> : <RotateCw className="h-3.5 w-3.5 text-white" />}
+                  {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-white" /> : <RotateCw className="h-3.5 w-3.5 text-white" />}
                   Sync now
                 </Button>
               </div>

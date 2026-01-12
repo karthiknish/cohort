@@ -57,12 +57,12 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
                 key={item.id}
                 className={cn(
                   "group flex items-start gap-3 rounded-xl border border-muted/30 p-3 transition-all",
-                  item.done ? "bg-emerald-500/[0.03] border-emerald-500/20" : "bg-muted/5"
+                  item.done ? "bg-primary/[0.03] border-primary/20" : "bg-muted/5"
                 )}
               >
                 <div className={cn(
                   "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
-                  item.done ? "bg-emerald-500/10 text-emerald-600" : "bg-muted/20 text-muted-foreground/30"
+                  item.done ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground/30"
                 )}>
                   <Icon
                     className={cn(
@@ -74,7 +74,7 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
                 <div className="min-w-0 flex-1">
                   <p className={cn(
                     "text-xs font-bold tracking-tight transition-colors",
-                    item.done ? "text-emerald-700/80" : "text-foreground/80"
+                    item.done ? "text-primary" : "text-foreground/80"
                   )}>{item.label}</p>
                   {item.helper ? (
                     <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground/50">

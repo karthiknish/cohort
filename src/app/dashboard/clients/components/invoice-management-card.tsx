@@ -139,8 +139,8 @@ export function InvoiceStatusBadge({ status, isOutstanding }: { status: string; 
       variant={isOutstanding ? 'destructive' : 'secondary'}
       className={cn(
         'h-5 px-2 text-[9px] font-black uppercase tracking-[0.15em] rounded-full border-none shadow-sm',
-        isPaid ? 'bg-emerald-500/10 text-emerald-600' :
-          isOutstanding ? 'bg-red-500/10 text-red-600 animate-pulse' :
+        isPaid ? 'bg-primary/10 text-primary' :
+          isOutstanding ? 'bg-destructive/10 text-destructive animate-pulse' :
             'bg-muted/30 text-muted-foreground/60'
       )}
     >
@@ -151,26 +151,26 @@ export function InvoiceStatusBadge({ status, isOutstanding }: { status: string; 
 
 // Invoice Status Icon Component
 export function InvoiceStatusIcon({ status }: { status: string }) {
-  const iconClasses = 'h-9 w-9 rounded-xl flex items-center justify-center shadow-sm border border-black/5'
+  const iconClasses = 'h-9 w-9 rounded-xl flex items-center justify-center shadow-sm border border-muted/20'
 
   switch (status) {
     case 'paid':
       return (
-        <div className={cn(iconClasses, 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20')}>
+        <div className={cn(iconClasses, 'bg-primary/10 text-primary border-primary/20')}>
           <Check className="h-5 w-5" strokeWidth={3} />
         </div>
       )
     case 'open':
     case 'sent':
       return (
-        <div className={cn(iconClasses, 'bg-blue-500/10 text-blue-600 border-blue-500/20')}>
+        <div className={cn(iconClasses, 'bg-primary/10 text-primary border-primary/20')}>
           <Send className="h-4 w-4" strokeWidth={2.5} />
         </div>
       )
     case 'overdue':
     case 'uncollectible':
       return (
-        <div className={cn(iconClasses, 'bg-red-500/10 text-red-600 border-red-500/20')}>
+        <div className={cn(iconClasses, 'bg-destructive/10 text-destructive border-destructive/20')}>
           <TriangleAlert className="h-5 w-5" strokeWidth={2.5} />
         </div>
       )
@@ -196,7 +196,7 @@ export function InvoiceHistoryItem({
   const isOutstanding = invoice.status === 'open' || invoice.status === 'overdue' || invoice.status === 'uncollectible'
 
   return (
-    <div className="group rounded-xl border border-muted/20 bg-muted/2 p-4 transition-all hover:bg-muted/5 hover:border-muted/40 hover:shadow-sm">
+    <div className="group rounded-xl border border-muted/20 bg-muted/5 p-4 transition-all hover:bg-muted/10 hover:border-muted/40 hover:shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
@@ -563,12 +563,12 @@ export function InvoiceManagementCard({
                   <Calendar className="h-3 w-3" />
                   Issued: <span className="text-foreground/60">{formatDate(invoiceSummary.issuedAt)}</span>
                 </div>
-                {invoiceSummary.paidAt && (
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500">
-                    <Check className="h-3 w-3" />
-                    Settled
-                  </div>
-                )}
+                 {invoiceSummary.paidAt && (
+                   <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                     <Check className="h-3 w-3" />
+                     Settled
+                   </div>
+                 )}
               </div>
             </div>
 
@@ -584,7 +584,7 @@ export function InvoiceManagementCard({
               {invoiceSummary.isOutstanding && invoiceSummary.identifier && (
                 <Button
                   variant="outline"
-                  className="h-10 rounded-xl border-orange-500/20 bg-orange-500/[0.03] text-orange-600 text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-orange-500/10"
+                  className="h-10 rounded-xl border-primary/20 bg-primary/[0.03] text-primary text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-primary/10"
                   onClick={() => onSendReminder()}
                   disabled={sendingReminder}
                 >
@@ -595,7 +595,7 @@ export function InvoiceManagementCard({
               {invoiceSummary.isPaid && invoiceSummary.identifier && (
                 <Button
                   variant="outline"
-                  className="h-10 rounded-xl border-red-500/20 bg-red-500/[0.03] text-red-600 text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-red-500/10"
+                  className="h-10 rounded-xl border-destructive/20 bg-destructive/[0.03] text-destructive text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-destructive/10"
                   onClick={() => onRefundDialogOpenChange(true)}
                 >
                   <RotateCcw className="mr-2 h-3.5 w-3.5" />
@@ -650,11 +650,11 @@ export function InvoiceManagementCard({
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6">
             <AlertDialogCancel disabled={refundLoading} className="rounded-xl border-muted/30 text-[10px] font-bold uppercase tracking-widest">Abort Transaction</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onIssueRefund}
-              disabled={refundLoading}
-              className="rounded-xl bg-red-600 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-600/20 hover:bg-red-700 active:scale-[0.98]"
-            >
+              <AlertDialogAction
+                onClick={onIssueRefund}
+                disabled={refundLoading}
+                className="rounded-xl bg-destructive text-[10px] font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:bg-destructive/90 active:scale-[0.98]"
+              >
               {refundLoading ? <LoaderCircle className="h-4 w-4 animate-spin text-white" /> : 'Confirm Reversal'}
             </AlertDialogAction>
           </AlertDialogFooter>

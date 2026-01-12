@@ -50,10 +50,10 @@ export function ClientDetailsCard({
           </div>
         </div>
 
-        <div className="group flex items-center gap-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/5 text-violet-500 shadow-sm border border-violet-500/10 transition-colors group-hover:bg-violet-500/10">
-            <Calendar className="h-4 w-4" />
-          </div>
+         <div className="group flex items-center gap-4">
+           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm border border-primary/10 transition-colors group-hover:bg-primary/10">
+             <Calendar className="h-4 w-4" />
+           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Workspace Index</p>
             <p className="mt-0.5 text-xs font-black text-foreground">
@@ -62,11 +62,11 @@ export function ClientDetailsCard({
           </div>
         </div>
 
-        {createdAt && (
-          <div className="group flex items-center gap-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/5 text-emerald-500 shadow-sm border border-emerald-500/10 transition-colors group-hover:bg-emerald-500/10">
-              <Calendar className="h-4 w-4" />
-            </div>
+         {createdAt && (
+           <div className="group flex items-center gap-4">
+             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm border border-primary/10 transition-colors group-hover:bg-primary/10">
+               <Calendar className="h-4 w-4" />
+             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Registration</p>
               <p className="mt-0.5 text-xs font-black text-foreground">{formatDate(createdAt)}</p>
