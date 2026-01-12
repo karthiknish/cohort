@@ -141,22 +141,11 @@ export async function POST(req: NextRequest) {
     const storedRole = existing ? normalizeRole(existing.role) : null
     const storedStatus = existing ? normalizeStatus(existing.status, 'active') : null
 
-    // 7. Determine final role/status
-    const admins = (process.env.ADMIN_EMAILS ?? '')
-      .split(',')
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean)
+    // 7. Determine final role/status - use stored values from Convex, default to client/pending for new users
+    const finalRole = storedRole ?? 'client'
+    const finalStatus = storedStatus ?? 'pending'
 
-    const isAdminEmail = admins.includes(normalizedEmail)
-
-    const finalRole = (isAdminEmail ? 'admin' : null) ?? storedRole ?? 'client'
-    let finalStatus = storedStatus ?? (finalRole === 'admin' ? 'active' : 'pending')
-
-    if (finalRole === 'admin' && finalStatus !== 'active') {
-      finalStatus = 'active'
-    }
-
-    debug.roleResolution = { isAdminEmail, storedRole, storedStatus, finalRole, finalStatus }
+    debug.roleResolution = { storedRole, storedStatus, finalRole, finalStatus }
 
     // 8. Use JWT subject as the legacyId (this is the Better Auth user ID)
     const legacyId = jwtSubject

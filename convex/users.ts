@@ -1,4 +1,4 @@
-import { mutation, query } from './_generated/server'
+import { mutation, query, internalQuery, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 
 function requireIdentity(identity: unknown): asserts identity {
@@ -17,6 +17,48 @@ function normalizeEmail(value: string | null | undefined) {
   if (!trimmed) return { email: null, emailLower: null }
   return { email: trimmed, emailLower: trimmed.toLowerCase() }
 }
+
+// Internal query - no auth required, for CLI/internal use only
+export const _getByEmailInternal = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const normalized = normalizeEmail(args.email)
+    if (!normalized.emailLower) return null
+
+    return await ctx.db
+      .query('users')
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+      .unique()
+  },
+})
+
+// Internal mutation - no auth required, for CLI/internal use only
+export const _updateUserRoleStatus = internalMutation({
+  args: {
+    email: v.string(),
+    role: v.string(),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalized = normalizeEmail(args.email)
+    if (!normalized.emailLower) return { ok: false, error: 'Invalid email' }
+
+    const existing = await ctx.db
+      .query('users')
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+      .unique()
+
+    if (!existing) return { ok: false, error: 'User not found' }
+
+    await ctx.db.patch(existing._id, {
+      role: args.role,
+      status: args.status,
+      updatedAtMs: nowMs(),
+    })
+
+    return { ok: true, legacyId: existing.legacyId }
+  },
+})
 
 export const getByLegacyId = query({
   args: { legacyId: v.string() },
