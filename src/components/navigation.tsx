@@ -346,7 +346,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-[2000] border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-[1000] border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <div className="lg:hidden">

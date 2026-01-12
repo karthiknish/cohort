@@ -221,3 +221,15 @@ export function isValidRedirectUrl(url: string | null | undefined): boolean {
     return false
   }
 }
+
+/**
+ * Gets the workspace ID from user data.
+ * Uses agencyId if available and non-empty, otherwise falls back to user.id.
+ * Returns null if neither is available.
+ */
+export function getWorkspaceId(user: { agencyId?: string; id?: string } | null | undefined): string | null {
+  if (!user) return null
+  if (user.agencyId && user.agencyId.length > 0) return user.agencyId
+  if (user.id && user.id.length > 0) return user.id
+  return null
+}

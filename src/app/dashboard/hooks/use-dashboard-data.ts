@@ -13,6 +13,7 @@ import type { ProposalDraft } from '@/types/proposals'
 import { useQuery } from 'convex/react'
 import { adsMetricsApi, financeSummaryApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
+import { getWorkspaceId } from '@/lib/utils'
 
 export interface UseDashboardDataOptions {
     selectedClientId: string | null
@@ -51,11 +52,11 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const { selectedClientId } = options
     const { user, getIdToken } = useAuth()
     const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
-    const workspaceId = user?.agencyId ?? null
+    const workspaceId = getWorkspaceId(user)
     const { isPreviewMode } = usePreview()
     
     // Don't run Convex queries until Convex auth is ready
-    const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id
+    const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id && !!workspaceId
 
     const [financeSummary, setFinanceSummary] = useState<FinanceSummaryResponse | null>(null)
     const [financeLoading, setFinanceLoading] = useState(true)

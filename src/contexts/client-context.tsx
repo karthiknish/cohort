@@ -9,6 +9,7 @@ import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { apiFetch } from '@/lib/api-client'
 import { clientsApi } from '@/lib/convex-api'
 import { getPreviewClients, isPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data'
+import { getWorkspaceId } from '@/lib/utils'
 
 type ClientContextValue = {
   workspaceId: string | null
@@ -43,7 +44,7 @@ function parseError(error: unknown, fallback: string): string {
 }
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, isSyncing } = useAuth()
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -53,11 +54,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
   const selectionBeforePreviewRef = useRef<string | null>(null)
 
-  const workspaceId = user?.agencyId ?? null
+  // Use utility to get workspaceId - handles empty string and fallback to user.id
+  const workspaceId = getWorkspaceId(user)
+
+  // Don't query until auth is fully loaded and synced
+  const canQuery = !authLoading && !isSyncing && !!workspaceId
 
   const convexClients = useQuery(
     clientsApi.list,
-    previewEnabled || !workspaceId
+    previewEnabled || !canQuery
       ? 'skip'
       : {
           workspaceId,
@@ -193,7 +198,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    if (authLoading) {
+    if (authLoading || isSyncing) {
       return
     }
 
@@ -211,7 +216,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(false)
     setError(null)
-  }, [authLoading, previewEnabled, workspaceId, convexClients])
+  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients])
 
   useEffect(() => {
     if (previewEnabled) {
@@ -225,10 +230,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       setSelectedClientId(previousSelection)
     }
 
-    if (!authLoading && user?.id) {
+    if (!authLoading && !isSyncing && user?.id) {
       void fetchClients()
     }
-  }, [previewEnabled, authLoading, user?.id, fetchClients])
+  }, [previewEnabled, authLoading, isSyncing, user?.id, fetchClients])
 
   const resolvedClients = useMemo<ClientRecord[]>(() => {
     if (previewEnabled) {

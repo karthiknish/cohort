@@ -160,21 +160,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Update user with data from Convex (role, status, agencyId)
         if (bootstrapResult) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[AuthContext] Applying bootstrap result:', bootstrapResult)
+          }
           setUser((prev) => {
             if (!prev) return prev
+            // Always use user.id as fallback for agencyId if bootstrap doesn't provide one
+            const resolvedAgencyId = bootstrapResult.agencyId || prev.agencyId || prev.id
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[AuthContext] Setting agencyId:', resolvedAgencyId)
+            }
             return {
               ...prev,
               role: (bootstrapResult.role as AuthUser['role']) || prev.role,
               status: (bootstrapResult.status as AuthUser['status']) || prev.status,
-              agencyId: bootstrapResult.agencyId || prev.agencyId || prev.id,
+              agencyId: resolvedAgencyId,
             }
           })
         } else {
           // Fallback: ensure agencyId is set to user id if not available
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[AuthContext] Bootstrap failed, using fallback agencyId')
+          }
           setUser((prev) => {
             if (!prev) return prev
-            if (prev.agencyId && prev.agencyId.length > 0) return prev
-            return { ...prev, agencyId: prev.id }
+            // Always ensure agencyId is set - use user.id as fallback
+            const resolvedAgencyId = prev.agencyId && prev.agencyId.length > 0 ? prev.agencyId : prev.id
+            return { ...prev, agencyId: resolvedAgencyId }
           })
         }
       }
