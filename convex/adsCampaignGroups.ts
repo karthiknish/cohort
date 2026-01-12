@@ -1,9 +1,10 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors, asErrorMessage } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 }
 
@@ -17,12 +18,6 @@ function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
   const fiveMinutes = 5 * 60 * 1000
   return expiresAtMs - Date.now() <= fiveMinutes
-}
-
-function asErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  return 'Unknown error'
 }
 
 export type CampaignGroup = {

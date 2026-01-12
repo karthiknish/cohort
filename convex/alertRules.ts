@@ -1,9 +1,10 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 }
 
@@ -166,7 +167,7 @@ export const create = mutation({
       .unique()
 
     if (existing) {
-      throw new Error('Alert rule already exists')
+      throw Errors.alreadyExists('Alert rule')
     }
 
     const id = await ctx.db.insert('alertRules', {
@@ -224,7 +225,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Alert rule not found')
+      throw Errors.notFound('Alert rule')
     }
 
     const updates: Record<string, unknown> = {
@@ -267,7 +268,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Alert rule not found')
+      throw Errors.notFound('Alert rule')
     }
 
     await ctx.db.delete(existing._id)

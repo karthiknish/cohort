@@ -5,7 +5,11 @@ import {
   workspaceMutation,
   workspaceQuery,
   workspaceQueryActive,
+  zWorkspacePaginatedQueryActive,
+  applyManualPagination,
+  getPaginatedResponse,
 } from './functions'
+import { z } from 'zod/v4'
 
 function slugify(value: string): string {
   const base = value
@@ -80,7 +84,7 @@ export const updateInvoiceFieldsServer = mutation({
     // No auth required - called from server-side code
     const client = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     const timestamp = Date.now()
@@ -136,53 +140,40 @@ export const updateInvoiceFieldsServer = mutation({
   },
 })
 
-export const list = workspaceQueryActive({
-  args: {
-    workspaceId: v.string(),
-    limit: v.number(),
-    // Cursor for pagination, based on (nameLower, legacyId)
-    afterNameLower: v.optional(v.string()),
-    afterLegacyId: v.optional(v.string()),
-  },
+export const list = zWorkspacePaginatedQueryActive({
+  args: {},
   handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('clients')
       .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
       .order('asc')
-    
-    // deletedAtMs filter is handled by workspaceQueryActive
 
-    const afterNameLower = args.afterNameLower
-    const afterLegacyId = args.afterLegacyId
+    q = applyManualPagination(q, args.cursor, 'nameLower', 'asc')
 
-    if (typeof afterNameLower === 'string' && typeof afterLegacyId === 'string') {
-      q = q.filter((row: any) =>
-        row.or(
-          row.gt(row.field('nameLower'), afterNameLower),
-          row.and(row.eq(row.field('nameLower'), afterNameLower), row.gt(row.field('legacyId'), afterLegacyId))
-        )
-      )
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'nameLower')
+
+    return {
+      items: result.items.map((row: any) => ({
+        legacyId: row.legacyId,
+        name: row.name,
+        accountManager: row.accountManager,
+        teamMembers: row.teamMembers,
+        billingEmail: row.billingEmail,
+        stripeCustomerId: row.stripeCustomerId,
+        lastInvoiceStatus: row.lastInvoiceStatus,
+        lastInvoiceAmount: row.lastInvoiceAmount,
+        lastInvoiceCurrency: row.lastInvoiceCurrency,
+        lastInvoiceIssuedAtMs: row.lastInvoiceIssuedAtMs,
+        lastInvoiceNumber: row.lastInvoiceNumber,
+        lastInvoiceUrl: row.lastInvoiceUrl,
+        lastInvoicePaidAtMs: row.lastInvoicePaidAtMs,
+        createdAtMs: row.createdAtMs,
+        updatedAtMs: row.updatedAtMs,
+        deletedAtMs: row.deletedAtMs,
+      })),
+      nextCursor: result.nextCursor,
     }
-
-    const rows = await q.take(args.limit)
-    return rows.map((row: any) => ({
-      legacyId: row.legacyId,
-      name: row.name,
-      accountManager: row.accountManager,
-      teamMembers: row.teamMembers,
-      billingEmail: row.billingEmail,
-      stripeCustomerId: row.stripeCustomerId,
-      lastInvoiceStatus: row.lastInvoiceStatus,
-      lastInvoiceAmount: row.lastInvoiceAmount,
-      lastInvoiceCurrency: row.lastInvoiceCurrency,
-      lastInvoiceIssuedAtMs: row.lastInvoiceIssuedAtMs,
-      lastInvoiceNumber: row.lastInvoiceNumber,
-      lastInvoiceUrl: row.lastInvoiceUrl,
-      lastInvoicePaidAtMs: row.lastInvoicePaidAtMs,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
-      deletedAtMs: row.deletedAtMs,
-    }))
   },
 })
 
@@ -203,7 +194,7 @@ export const getByLegacyId = workspaceQuery({
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -305,7 +296,7 @@ export const addTeamMember = workspaceMutation({
   handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!client || client.deletedAtMs !== null) {
@@ -338,7 +329,7 @@ export const softDelete = workspaceMutation({
   handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!client) {
@@ -373,7 +364,7 @@ export const updateInvoiceFields = workspaceMutation({
   handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!client) {
@@ -426,7 +417,7 @@ export const upsert = workspaceMutation({
   handler: async (ctx: any, args: any) => {
     const existing = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     const payload = {

@@ -5,6 +5,7 @@ import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
+import { Errors, asErrorMessage } from './errors'
 
 function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
@@ -16,12 +17,6 @@ function normalizeClientId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
-}
-
-function asErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  return 'Unknown error'
 }
 
 export const processClaimedJob = action({
@@ -37,11 +32,11 @@ export const processClaimedJob = action({
   handler: async (ctx, args) => {
     const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
     if (!cronSecret) {
-      throw new Error('INTEGRATIONS_CRON_SECRET is not configured')
+      throw Errors.internal('INTEGRATIONS_CRON_SECRET is not configured')
     }
 
     if (args.cronKey !== cronSecret) {
-      throw new Error('Unauthorized')
+      throw Errors.unauthorized()
     }
 
     const clientId = normalizeClientId(args.clientId)
@@ -53,7 +48,7 @@ export const processClaimedJob = action({
     })
 
     if (!integration || !integration.accessToken) {
-      throw new Error('Integration or access token not found')
+      throw Errors.integrationNotFound(args.providerId)
     }
 
     let metrics: any[] = []
@@ -63,12 +58,12 @@ export const processClaimedJob = action({
         case 'google': {
           const accountId = integration.accountId
           if (typeof accountId !== 'string' || accountId.trim().length === 0) {
-            throw new Error('Google Ads account not configured')
+            throw Errors.integrationNotConfigured('Google', 'Account not configured')
           }
 
           // Token refreshing in Convex is not migrated yet; for now, fail if expired.
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw new Error('Google Ads token expired; reconnect integration')
+            throw Errors.integrationExpired('Google')
           }
 
           metrics = await fetchGoogleAdsMetrics({
@@ -84,11 +79,11 @@ export const processClaimedJob = action({
         case 'facebook': {
           const accountId = integration.accountId
           if (typeof accountId !== 'string' || accountId.trim().length === 0) {
-            throw new Error('Meta Ads account not configured')
+            throw Errors.integrationNotConfigured('Meta', 'Account not configured')
           }
 
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw new Error('Meta token expired; reconnect integration')
+            throw Errors.integrationExpired('Meta')
           }
 
           metrics = await fetchMetaAdsMetrics({
@@ -101,11 +96,11 @@ export const processClaimedJob = action({
         case 'linkedin': {
           const accountId = integration.accountId
           if (typeof accountId !== 'string' || accountId.trim().length === 0) {
-            throw new Error('LinkedIn Ads account not configured')
+            throw Errors.integrationNotConfigured('LinkedIn', 'Account not configured')
           }
 
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw new Error('LinkedIn token expired; reconnect integration')
+            throw Errors.integrationExpired('LinkedIn')
           }
 
           metrics = await fetchLinkedInAdsMetrics({
@@ -118,11 +113,11 @@ export const processClaimedJob = action({
         case 'tiktok': {
           const advertiserId = integration.accountId
           if (typeof advertiserId !== 'string' || advertiserId.trim().length === 0) {
-            throw new Error('TikTok Ads account not configured')
+            throw Errors.integrationNotConfigured('TikTok', 'Account not configured')
           }
 
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw new Error('TikTok token expired; reconnect integration')
+            throw Errors.integrationExpired('TikTok')
           }
 
           metrics = await fetchTikTokAdsMetrics({
@@ -133,10 +128,10 @@ export const processClaimedJob = action({
           break
         }
         default:
-          throw new Error(`Unsupported provider: ${args.providerId}`)
+          throw Errors.invalidInput(`Unsupported provider: ${args.providerId}`)
       }
     } catch (err) {
-      throw new Error(asErrorMessage(err))
+      throw Errors.internal(asErrorMessage(err))
     }
 
     const insertResult = await ctx.runMutation('adsIntegrations:writeMetricsBatch' as any, {

@@ -10,6 +10,10 @@ import {
   zWorkspaceQuery,
   zWorkspaceQueryActive,
   zWorkspaceMutation,
+  zWorkspacePaginatedQuery,
+  zWorkspacePaginatedQueryActive,
+  applyManualPagination,
+  getPaginatedResponse,
   type AuthenticatedQueryCtx,
   type AuthenticatedMutationCtx,
 } from './functions'
@@ -18,52 +22,39 @@ import { z } from 'zod/v4'
 
 
 
-export const list = zWorkspaceQueryActive({
-  args: {
-    limit: z.number().min(1).max(200),
-    // Cursor for pagination, based on (createdAtMs, legacyId)
-    afterCreatedAtMs: z.number().optional(),
-    afterLegacyId: z.string().optional(),
-  },
+export const list = zWorkspacePaginatedQueryActive({
+  args: {},
   handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('tasks')
       .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
       .order('desc')
 
-    const afterCreatedAtMs = args.afterCreatedAtMs
-    const afterLegacyId = args.afterLegacyId
+    q = applyManualPagination(q, args.cursor)
 
-    if (typeof afterCreatedAtMs === 'number' && typeof afterLegacyId === 'string') {
-      q = q.filter((row: any) =>
-        row.or(
-          row.lt(row.field('createdAtMs'), afterCreatedAtMs),
-          row.and(
-            row.eq(row.field('createdAtMs'), afterCreatedAtMs),
-            row.lt(row.field('legacyId'), afterLegacyId),
-          ),
-        ),
-      )
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+
+    return {
+      items: result.items.map((row: any) => ({
+        legacyId: row.legacyId,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        priority: row.priority,
+        assignedTo: row.assignedTo,
+        client: row.client,
+        clientId: row.clientId,
+        projectId: row.projectId,
+        projectName: row.projectName,
+        dueDateMs: row.dueDateMs,
+        tags: row.tags,
+        createdAtMs: row.createdAtMs,
+        updatedAtMs: row.updatedAtMs,
+        deletedAtMs: row.deletedAtMs,
+      })),
+      nextCursor: result.nextCursor,
     }
-
-    const rows = await q.take(args.limit)
-    return rows.map((row: any) => ({
-      legacyId: row.legacyId,
-      title: row.title,
-      description: row.description,
-      status: row.status,
-      priority: row.priority,
-      assignedTo: row.assignedTo,
-      client: row.client,
-      clientId: row.clientId,
-      projectId: row.projectId,
-      projectName: row.projectName,
-      dueDateMs: row.dueDateMs,
-      tags: row.tags,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
-      deletedAtMs: row.deletedAtMs,
-    }))
   },
 })
 
@@ -96,59 +87,25 @@ export const getByLegacyId = zWorkspaceQuery({
   },
 })
 
-export const listForProject = zWorkspaceQueryActive({
+export const listForProject = zWorkspacePaginatedQueryActive({
   args: {
     projectId: z.string(),
-    limit: z.number().min(1).max(200),
   },
   handler: async (ctx: any, args: any) => {
-    const rows = await ctx.db
+    let q = ctx.db
       .query('tasks')
       .withIndex('by_workspace_projectId_deletedAtMs', (q: any) =>
         q.eq('workspaceId', args.workspaceId).eq('projectId', args.projectId),
       )
       .order('desc')
-      .filter((row: any) => row.eq(row.field('deletedAtMs'), null))
-      .take(args.limit)
 
-    return rows.map((row: any) => ({
-      legacyId: row.legacyId,
-      title: row.title,
-      description: row.description,
-      status: row.status,
-      priority: row.priority,
-      assignedTo: row.assignedTo,
-      client: row.client,
-      clientId: row.clientId,
-      projectId: row.projectId,
-      projectName: row.projectName,
-      dueDateMs: row.dueDateMs,
-      tags: row.tags,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
-      deletedAtMs: row.deletedAtMs,
-    }))
-  },
-})
+    q = applyManualPagination(q, args.cursor)
 
-export const listByClient = zWorkspaceQueryActive({
-  args: {
-    clientId: z.string(),
-    limit: z.number().min(1).max(200),
-  },
-  handler: async (ctx: any, args: any) => {
-    const base = ctx.db
-      .query('tasks')
-      .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q: any) =>
-        q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId),
-      )
-      .order('desc')
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
 
-    const rows = await base.take(500)
-
-    return rows
-      .filter((row: any) => row.deletedAtMs === null)
-      .map((row: any) => ({
+    return {
+      items: result.items.map((row: any) => ({
         legacyId: row.legacyId,
         title: row.title,
         description: row.description,
@@ -164,7 +121,49 @@ export const listByClient = zWorkspaceQueryActive({
         createdAtMs: row.createdAtMs,
         updatedAtMs: row.updatedAtMs,
         deletedAtMs: row.deletedAtMs,
-      }))
+      })),
+      nextCursor: result.nextCursor,
+    }
+  },
+})
+
+export const listByClient = zWorkspacePaginatedQueryActive({
+  args: {
+    clientId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    let q = ctx.db
+      .query('tasks')
+      .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q: any) =>
+        q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId),
+      )
+      .order('desc')
+
+    q = applyManualPagination(q, args.cursor)
+
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+
+    return {
+      items: result.items.map((row: any) => ({
+        legacyId: row.legacyId,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        priority: row.priority,
+        assignedTo: row.assignedTo,
+        client: row.client,
+        clientId: row.clientId,
+        projectId: row.projectId,
+        projectName: row.projectName,
+        dueDateMs: row.dueDateMs,
+        tags: row.tags,
+        createdAtMs: row.createdAtMs,
+        updatedAtMs: row.updatedAtMs,
+        deletedAtMs: row.deletedAtMs,
+      })),
+      nextCursor: result.nextCursor,
+    }
   },
 })
 

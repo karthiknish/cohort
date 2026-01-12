@@ -40,11 +40,11 @@ export const exportUserData = action({
     const workspaceId = user?.agencyId ?? null
 
     if (workspaceId) {
-      const clients = await ctx.runQuery(api.clients.list, {
+      const clientsResult = await ctx.runQuery(api.clients.list, {
         workspaceId,
         limit: 500,
       })
-      exportData.clients = (clients ?? []).map((client: any) => ({
+      exportData.clients = (clientsResult?.items ?? []).map((client: any) => ({
         id: client.legacyId,
         name: client.name,
         accountManager: client.accountManager,
@@ -54,11 +54,11 @@ export const exportUserData = action({
         updatedAt: client.updatedAtMs ? new Date(client.updatedAtMs).toISOString() : null,
       }))
 
-      const projects = await ctx.runQuery(api.projects.list, {
+      const projectsResult = await ctx.runQuery(api.projects.list, {
         workspaceId,
         limit: 500,
       })
-      exportData.projects = (projects ?? []).map((project: any) => ({
+      exportData.projects = (projectsResult?.items ?? []).map((project: any) => ({
         id: project.legacyId,
         name: project.name,
         description: project.description,

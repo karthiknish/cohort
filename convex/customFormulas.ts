@@ -39,7 +39,7 @@ export const listActiveForAlerts = query({
     // No auth required - called from server-side alert processor
     const rows = await ctx.db
       .query('customFormulas')
-      .withIndex('by_workspaceId_isActive', (q) =>
+      .withIndex('by_workspaceId_isActive', (q: any) =>
         q.eq('workspaceId', args.workspaceId).eq('isActive', true)
       )
       .collect()
@@ -66,12 +66,12 @@ export const listByWorkspace = authenticatedQuery({
 
     const baseQuery = ctx.db
       .query('customFormulas')
-      .withIndex('by_workspaceId', (q) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspaceId', (q: any) => q.eq('workspaceId', args.workspaceId))
 
     const rows = activeOnly
       ? await ctx.db
           .query('customFormulas')
-          .withIndex('by_workspaceId_isActive', (q) => q.eq('workspaceId', args.workspaceId).eq('isActive', true))
+          .withIndex('by_workspaceId_isActive', (q: any) => q.eq('workspaceId', args.workspaceId).eq('isActive', true))
           .collect()
       : await baseQuery.collect()
 
@@ -98,7 +98,7 @@ export const getByLegacyId = authenticatedQuery({
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('customFormulas')
-      .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -135,7 +135,7 @@ export const create = authenticatedMutation({
 
     const existing = await ctx.db
       .query('customFormulas')
-      .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (existing) {
@@ -176,7 +176,7 @@ export const update = authenticatedMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('customFormulas')
-      .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!existing) {
@@ -207,7 +207,7 @@ export const remove = authenticatedMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('customFormulas')
-      .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!existing) {

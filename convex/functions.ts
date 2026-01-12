@@ -20,6 +20,7 @@ import {
 import { Doc } from './_generated/dataModel'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 /**
  * Tables that support soft deletion via a `deletedAtMs` field.
@@ -100,7 +101,7 @@ export type AuthenticatedActionCtx = ActionCtx & {
 async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 
   const user = await ctx.db
@@ -109,11 +110,11 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
     .unique()
 
   if (!user) {
-    throw new Error('User not found')
+    throw Errors.userNotFound()
   }
 
   if (user.status === 'disabled' || user.status === 'suspended') {
-    throw new Error('User is not active')
+    throw Errors.userDisabled()
   }
 
   return {
@@ -171,12 +172,85 @@ async function checkIdempotency(
 }
 
 /**
+ * Standard pagination arguments using Convex validators.
+ * Uses a generic 'cursor' object to allow for different sort fields.
+ */
+export const PaginationValidators = {
+  limit: v.number(),
+  cursor: v.optional(
+    v.union(
+      v.null(),
+      v.object({
+        fieldValue: v.union(v.number(), v.string()),
+        legacyId: v.string(),
+      }),
+    ),
+  ),
+}
+
+/**
+ * Helper to apply standardized manual pagination to a Convex query.
+ * Support both descending (default) and ascending orders, and custom field names.
+ */
+export function applyManualPagination(
+  q: any,
+  cursor: { fieldValue: number | string; legacyId: string } | null | undefined,
+  fieldName: string = 'createdAtMs',
+  order: 'asc' | 'desc' = 'desc',
+) {
+  if (!cursor) return q
+
+  if (order === 'desc') {
+    return q.filter((row: any) =>
+      row.or(
+        row.lt(row.field(fieldName), cursor.fieldValue),
+        row.and(
+          row.eq(row.field(fieldName), cursor.fieldValue),
+          row.lt(row.field('legacyId'), cursor.legacyId),
+        ),
+      ),
+    )
+  } else {
+    return q.filter((row: any) =>
+      row.or(
+        row.gt(row.field(fieldName), cursor.fieldValue),
+        row.and(
+          row.eq(row.field(fieldName), cursor.fieldValue),
+          row.gt(row.field('legacyId'), cursor.legacyId),
+        ),
+      ),
+    )
+  }
+}
+
+/**
+ * Helper to wrap a result set in a standardized paginated response.
+ */
+export function getPaginatedResponse<T extends Record<string, any>>(
+  items: T[],
+  limit: number,
+  fieldName: string = 'createdAtMs',
+) {
+  const hasMore = items.length > limit
+  const results = hasMore ? items.slice(0, limit) : items
+  const lastItem = results[results.length - 1]
+
+  return {
+    items: results,
+    nextCursor:
+      hasMore && lastItem
+        ? { fieldValue: lastItem[fieldName], legacyId: lastItem.legacyId }
+        : null,
+  }
+}
+
+/**
  * Shared helper to get validated authentication context for actions.
  */
 async function getAuthenticatedActionContext(ctx: ActionCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 
   const user = (await ctx.runQuery(api.users.getByLegacyId, {
@@ -184,11 +258,11 @@ async function getAuthenticatedActionContext(ctx: ActionCtx) {
   })) as Doc<'users'> | null
 
   if (!user) {
-    throw new Error('User not found')
+    throw Errors.userNotFound()
   }
 
   if (user.status === 'disabled' || user.status === 'suspended') {
-    throw new Error('User is not active')
+    throw Errors.userDisabled()
   }
 
   return {
@@ -217,7 +291,7 @@ export const workspaceQuery = customQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth }, args }
   },
@@ -244,7 +318,7 @@ export const workspaceQueryActive = customQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
   },
@@ -269,7 +343,7 @@ export const adminQuery = customQuery(query, {
   input: async (ctx) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
-      throw new Error('Admin access required')
+      throw Errors.adminRequired()
     }
     return { ctx: { ...ctx, ...auth }, args: {} }
   },
@@ -280,7 +354,7 @@ export const adminMutation = customMutation(mutation, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
-      throw new Error('Admin access required')
+      throw Errors.adminRequired()
     }
     const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
     return {
@@ -299,7 +373,7 @@ export const adminAction = customAction(action, {
   input: async (ctx) => {
     const auth = await getAuthenticatedActionContext(ctx)
     if (auth.user.role !== 'admin') {
-      throw new Error('Admin access required')
+      throw Errors.adminRequired()
     }
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
@@ -316,7 +390,7 @@ export const workspaceMutation = customMutation(mutation, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
     return {
@@ -346,7 +420,7 @@ export const zWorkspaceQuery = zCustomQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth }, args }
   },
@@ -357,7 +431,7 @@ export const zWorkspaceQueryActive = zCustomQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
   },
@@ -384,7 +458,7 @@ export const zWorkspaceMutation = zCustomMutation(mutation, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
     return {
@@ -403,7 +477,7 @@ export const zWorkspaceAction = zCustomAction(action, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedActionContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw new Error('Unauthorized: Workspace access denied')
+      throw Errors.workspaceAccessDenied()
     }
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
@@ -412,5 +486,27 @@ export const zWorkspaceAction = zCustomAction(action, {
         return { ok: true, data: result }
       },
     }
+  },
+})
+
+export const zWorkspacePaginatedQuery = zCustomQuery(query, {
+  args: { workspaceId: v.string(), ...PaginationValidators },
+  input: async (ctx, args) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
+      throw Errors.workspaceAccessDenied()
+    }
+    return { ctx: { ...ctx, ...auth }, args }
+  },
+})
+
+export const zWorkspacePaginatedQueryActive = zCustomQuery(query, {
+  args: { workspaceId: v.string(), ...PaginationValidators },
+  input: async (ctx, args) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
+      throw Errors.workspaceAccessDenied()
+    }
+    return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
   },
 })

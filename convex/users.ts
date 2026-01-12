@@ -23,7 +23,7 @@ export const _getByEmailInternal = internalQuery({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) return null
@@ -54,7 +54,7 @@ export const _updateUserRoleStatus = internalMutation({
 
     const matches = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (matches.length === 0) return { ok: false, error: 'User not found' }
@@ -83,7 +83,7 @@ export const getByLegacyId = authenticatedQuery({
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -114,7 +114,7 @@ export const getByEmail = authenticatedQuery({
     // Historical data may contain duplicates; prefer the most recently updated record.
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) return null
@@ -152,7 +152,7 @@ export const listWorkspaceMembers = authenticatedQuery({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_agencyId', (q) => q.eq('agencyId', args.workspaceId))
+      .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
       .take(limit)
 
     return rows
@@ -178,7 +178,7 @@ export const getWorkspaceIdForUser = query({
     // The userId comes from authenticated server context
     const row = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.userId))
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.userId))
       .unique()
 
     // If user doesn't exist or has no agencyId, fall back to userId
@@ -202,7 +202,7 @@ export const getNotificationPreferencesByEmail = query({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) return null
@@ -242,7 +242,7 @@ export const getWhatsAppRecipientsForWorkspace = query({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_agencyId', (q) => q.eq('agencyId', args.workspaceId))
+      .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
       .take(limit)
 
     const phoneNumbers: string[] = []
@@ -317,7 +317,7 @@ export const bulkUpsert = authenticatedMutation({
     for (const user of args.users) {
       const existing = await ctx.db
         .query('users')
-        .withIndex('by_legacyId', (q) => q.eq('legacyId', user.legacyId))
+        .withIndex('by_legacyId', (q: any) => q.eq('legacyId', user.legacyId))
         .unique()
 
       const normalized = normalizeEmail((user.email ?? null) as string | null)
@@ -378,7 +378,7 @@ export const getStripeCustomerId = query({
     // No auth required - called from server-side billing code
     const row = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
       .unique()
 
     return {
@@ -403,7 +403,7 @@ export const setStripeCustomerId = mutation({
     // No auth required - called from server-side billing code
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
       .unique()
 
     const timestamp = nowMs()

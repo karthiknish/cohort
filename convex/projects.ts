@@ -4,16 +4,16 @@ import {
   workspaceMutation,
   workspaceQuery,
   workspaceQueryActive,
+  zWorkspacePaginatedQueryActive,
+  applyManualPagination,
+  getPaginatedResponse,
 } from './functions'
+import { z } from 'zod/v4'
 
-export const list = workspaceQueryActive({
+export const list = zWorkspacePaginatedQueryActive({
   args: {
-    workspaceId: v.string(),
-    limit: v.number(),
-    status: v.optional(v.string()),
-    clientId: v.optional(v.string()),
-    afterUpdatedAtMs: v.optional(v.number()),
-    afterLegacyId: v.optional(v.string()),
+    status: z.string().optional(),
+    clientId: z.string().optional(),
   },
   handler: async (ctx, args) => {
     const hasStatus = typeof args.status === 'string'
@@ -37,36 +37,30 @@ export const list = workspaceQueryActive({
       q = q.withIndex('by_workspace_updatedAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
     }
 
-    // deletedAtMs filter is handled by workspaceQueryActive
+    q = q.order('desc')
+    q = applyManualPagination(q, args.cursor, 'updatedAtMs', 'desc')
 
-    const afterUpdatedAtMs = args.afterUpdatedAtMs
-    const afterLegacyId = args.afterLegacyId
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'updatedAtMs')
 
-    if (typeof afterUpdatedAtMs === 'number' && typeof afterLegacyId === 'string') {
-      q = q.filter((row: any) =>
-        row.or(
-          row.lt(row.field('updatedAtMs'), afterUpdatedAtMs),
-          row.and(row.eq(row.field('updatedAtMs'), afterUpdatedAtMs), row.lt(row.field('legacyId'), afterLegacyId))
-        )
-      )
+    return {
+      items: result.items.map((row: any) => ({
+        legacyId: row.legacyId,
+        name: row.name,
+        description: row.description,
+        status: row.status,
+        clientId: row.clientId,
+        clientName: row.clientName,
+        startDateMs: row.startDateMs,
+        endDateMs: row.endDateMs,
+        tags: row.tags,
+        ownerId: row.ownerId,
+        createdAtMs: row.createdAtMs,
+        updatedAtMs: row.updatedAtMs,
+        deletedAtMs: row.deletedAtMs,
+      })),
+      nextCursor: result.nextCursor,
     }
-
-    const rows = await q.take(args.limit)
-    return rows.map((row: any) => ({
-      legacyId: row.legacyId,
-      name: row.name,
-      description: row.description,
-      status: row.status,
-      clientId: row.clientId,
-      clientName: row.clientName,
-      startDateMs: row.startDateMs,
-      endDateMs: row.endDateMs,
-      tags: row.tags,
-      ownerId: row.ownerId,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
-      deletedAtMs: row.deletedAtMs,
-    }))
   },
 })
 
@@ -75,7 +69,7 @@ export const getByLegacyId = workspaceQuery({
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('projects')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -155,7 +149,7 @@ export const update = workspaceMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db
       .query('projects')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!project || project.deletedAtMs !== null) {
@@ -190,7 +184,7 @@ export const softDelete = workspaceMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db
       .query('projects')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!project) {

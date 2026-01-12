@@ -1,9 +1,15 @@
 import { v } from 'convex/values'
+import { z } from 'zod/v4'
 import type { Id } from './_generated/dataModel'
+import { Errors } from './errors'
 import {
   workspaceMutation,
   workspaceQuery,
   workspaceQueryActive,
+  zWorkspacePaginatedQuery,
+  zWorkspacePaginatedQueryActive,
+  applyManualPagination,
+  getPaginatedResponse,
 } from './functions'
 
 async function hydrateAttachments(
@@ -143,24 +149,7 @@ function buildListChannelQuery(ctx: any, args: any) {
       )
   }
 
-  q = q.order('desc')
-
-  const afterCreatedAtMs = args.afterCreatedAtMs
-  const afterLegacyId = args.afterLegacyId
-
-  if (typeof afterCreatedAtMs === 'number' && typeof afterLegacyId === 'string') {
-    q = q.filter((row: any) =>
-      row.or(
-        row.lt(row.field('createdAtMs'), afterCreatedAtMs),
-        row.and(
-          row.eq(row.field('createdAtMs'), afterCreatedAtMs),
-          row.lt(row.field('legacyId'), afterLegacyId),
-        ),
-      ),
-    )
-  }
-
-  return q
+  return q.order('desc')
 }
 
 async function fetchChannelRows(ctx: any, args: any) {
@@ -169,28 +158,28 @@ async function fetchChannelRows(ctx: any, args: any) {
   return await Promise.all(rows.map((row: any) => hydrateMessageRow(ctx, row)))
 }
 
-export const listChannel = workspaceQueryActive({
+export const listChannel = zWorkspacePaginatedQueryActive({
   args: {
-    workspaceId: v.string(),
-    channelType: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    projectId: v.optional(v.union(v.string(), v.null())),
-    limit: v.number(),
-    afterCreatedAtMs: v.optional(v.number()),
-    afterLegacyId: v.optional(v.string()),
+    channelType: z.string(),
+    clientId: z.string().optional().nullable(),
+    projectId: z.string().optional().nullable(),
   },
   handler: async (ctx: any, args: any) => {
-    return await fetchChannelRows(ctx, args)
+    let q = buildListChannelQuery(ctx, args)
+    q = applyManualPagination(q, args.cursor)
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+    const items = await Promise.all(result.items.map((row: any) => hydrateMessageRow(ctx, row)))
+    return {
+      items,
+      nextCursor: result.nextCursor,
+    }
   },
 })
 
-export const listThreadReplies = workspaceQuery({
+export const listThreadReplies = zWorkspacePaginatedQuery({
   args: {
-    workspaceId: v.string(),
-    threadRootId: v.string(),
-    limit: v.number(),
-    afterCreatedAtMs: v.optional(v.number()),
-    afterLegacyId: v.optional(v.string()),
+    threadRootId: z.string(),
   },
   handler: async (ctx: any, args: any) => {
     let q: any = ctx.db
@@ -200,23 +189,16 @@ export const listThreadReplies = workspaceQuery({
       )
       .order('asc')
 
-    const afterCreatedAtMs = args.afterCreatedAtMs
-    const afterLegacyId = args.afterLegacyId
+    q = applyManualPagination(q, args.cursor, 'asc')
 
-    if (typeof afterCreatedAtMs === 'number' && typeof afterLegacyId === 'string') {
-      q = q.filter((row: any) =>
-        row.or(
-          row.gt(row.field('createdAtMs'), afterCreatedAtMs),
-          row.and(
-            row.eq(row.field('createdAtMs'), afterCreatedAtMs),
-            row.gt(row.field('legacyId'), afterLegacyId),
-          ),
-        ),
-      )
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+    const items = await Promise.all(result.items.map((row: any) => hydrateMessageRow(ctx, row)))
+
+    return {
+      items,
+      nextCursor: result.nextCursor,
     }
-
-    const rows = await q.take(args.limit)
-    return await Promise.all(rows.map((row: any) => hydrateMessageRow(ctx, row)))
   },
 })
 
@@ -431,7 +413,7 @@ export const updateMessage = workspaceMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw new Error('not_found')
+    if (!row) throw Errors.notFound('Message')
 
     await ctx.db.patch(row._id, {
       content: args.content,
@@ -452,7 +434,7 @@ export const softDelete = workspaceMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw new Error('not_found')
+    if (!row) throw Errors.notFound('Message')
 
     await ctx.db.patch(row._id, {
       deleted: true,
@@ -473,7 +455,7 @@ export const toggleReaction = workspaceMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw new Error('not_found')
+    if (!row) throw Errors.notFound('Message')
 
     const reactions = Array.isArray(row.reactions) ? row.reactions.slice() : []
 

@@ -4,10 +4,11 @@ import { v } from 'convex/values'
 import { appendMetaAuthParams, calculateMetaAdsInsights, coerceNumber, META_API_BASE } from '@/services/integrations/meta-ads'
 import type { MetaInsightsResponse, MetaInsightsRow } from '@/services/integrations/meta-ads'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
+import { Errors, asErrorMessage } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 }
 
@@ -58,11 +59,11 @@ export const getCampaignInsights = action({
     const endDate = args.endDate ?? todayIsoDate()
 
     if (startDate > endDate) {
-      throw new Error('startDate must be <= endDate')
+      throw Errors.validation('startDate must be <= endDate')
     }
 
     if (args.providerId !== 'facebook') {
-      throw new Error('Campaign insights are currently only supported for Meta (facebook).')
+      throw Errors.notImplemented('Campaign insights for non-Meta providers')
     }
 
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -74,16 +75,16 @@ export const getCampaignInsights = action({
     })
 
     if (!integration) {
-      throw new Error(`${args.providerId} integration not found`)
+      throw Errors.integrationNotFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw new Error('Integration access token missing')
+      throw Errors.integrationMissingToken(args.providerId)
     }
 
     const adAccountId = integration.accountId
     if (!adAccountId) {
-      throw new Error('Meta ad account ID not configured. Finish setup to select an ad account.')
+      throw Errors.integrationNotConfigured('Meta', 'Ad account ID not configured')
     }
 
     const params = new URLSearchParams({
@@ -130,7 +131,10 @@ export const getCampaignInsights = action({
           operation: 'fetchAdAccountCurrency',
           maxRetries: 2,
         })
-        .catch(() => ({ payload: { currency: integration.currency || 'USD' } })),
+        .catch((err) => {
+          console.error('[fetchAdAccountCurrency]', asErrorMessage(err))
+          return { payload: { currency: integration.currency || 'USD' } }
+        }),
     ])
 
     const rows: MetaInsightsRow[] = Array.isArray(insightsRes.payload?.data) ? insightsRes.payload.data : []

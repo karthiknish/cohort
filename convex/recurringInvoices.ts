@@ -2,10 +2,11 @@ import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 
 import { api } from './_generated/api'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 }
 
@@ -314,7 +315,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Schedule not found')
+      throw Errors.notFound('Schedule')
     }
 
     const timestamp = now()
@@ -376,7 +377,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Schedule not found')
+      throw Errors.notFound('Schedule')
     }
 
     await ctx.db.delete(existing._id)
@@ -402,18 +403,18 @@ export const trigger = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Schedule not found')
+      throw Errors.notFound('Schedule')
     }
 
     if (!existing.isActive) {
-      throw new Error('Schedule is not active')
+      throw Errors.invalidState('Schedule is not active')
     }
 
     // Check if end date has passed
     if (existing.endDate) {
       const endDate = new Date(existing.endDate)
       if (endDate < new Date()) {
-        throw new Error('Schedule has ended')
+        throw Errors.invalidState('Schedule has ended')
       }
     }
 

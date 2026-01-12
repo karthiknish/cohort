@@ -5,11 +5,12 @@ import { action, query } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
 import { authenticatedAction } from './functions'
+import { Errors, asErrorMessage, logAndThrow } from './errors'
 
 function getStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY
   if (!secretKey) {
-    throw new Error('Stripe secret key not configured')
+    throw Errors.internal('Stripe secret key not configured')
   }
   return new Stripe(secretKey)
 }
@@ -70,7 +71,7 @@ async function loadPlanSummaries(stripe: Stripe): Promise<PlanSummary[]> {
         productName: product && 'name' in product ? ((product as { name?: string }).name ?? null) : null,
       })
     } catch (error) {
-      console.error(`[billing] Failed to fetch Stripe price ${plan.priceId}`, error)
+      console.error(`[billing] Failed to fetch Stripe price ${plan.priceId}:`, asErrorMessage(error))
     }
   }
 
@@ -204,20 +205,30 @@ export const getStatus = authenticatedAction({
     const planSummaries = await loadPlanSummaries(stripe)
     const priceIds = new Set(planSummaries.map((plan) => plan.priceId))
 
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'all',
-      limit: 1,
-      expand: ['data.items.data.price.product', 'data.latest_invoice'],
-    })
+    let subscriptions: Stripe.ApiList<Stripe.Subscription>
+    try {
+      subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all',
+        limit: 1,
+        expand: ['data.items.data.price.product', 'data.latest_invoice'],
+      })
+    } catch (error) {
+      logAndThrow(error, 'billing.getStatus: Failed to list subscriptions')
+    }
 
     const activeSubscription = subscriptions.data[0] ?? null
 
-    const invoices = await stripe.invoices.list({
-      customer: customerId,
-      limit: 6,
-      expand: ['data.charge'],
-    })
+    let invoices: Stripe.ApiList<Stripe.Invoice>
+    try {
+      invoices = await stripe.invoices.list({
+        customer: customerId,
+        limit: 6,
+        expand: ['data.charge'],
+      })
+    } catch (error) {
+      logAndThrow(error, 'billing.getStatus: Failed to list invoices')
+    }
 
     const invoiceSummaries = invoices.data.map((invoice) => ({
       id: invoice.id,
@@ -260,7 +271,7 @@ export const createCheckoutSession = authenticatedAction({
 
     const plan = getBillingPlanById(args.planId)
     if (!plan) {
-      throw new Error('Plan is not available')
+      throw Errors.planNotAvailable()
     }
 
     const customerId = await ensureStripeCustomer(ctx, stripe, uid, email)
@@ -271,29 +282,34 @@ export const createCheckoutSession = authenticatedAction({
 
     const idempotencyKey = `checkout_${uid}_${plan.id}_${Date.now().toString(36)}`
 
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode: 'subscription',
-        customer: customerId,
-        billing_address_collection: 'auto',
-        allow_promotion_codes: true,
-        line_items: [
-          {
-            price: plan.priceId,
-            quantity: 1,
+    let session: Stripe.Checkout.Session
+    try {
+      session = await stripe.checkout.sessions.create(
+        {
+          mode: 'subscription',
+          customer: customerId,
+          billing_address_collection: 'auto',
+          allow_promotion_codes: true,
+          line_items: [
+            {
+              price: plan.priceId,
+              quantity: 1,
+            },
+          ],
+          subscription_data: {
+            metadata: {
+              planId: plan.id,
+              userId: uid,
+            },
           },
-        ],
-        subscription_data: {
-          metadata: {
-            planId: plan.id,
-            userId: uid,
-          },
+          success_url: successUrl,
+          cancel_url: cancelUrl,
         },
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      },
-      { idempotencyKey }
-    )
+        { idempotencyKey }
+      )
+    } catch (error) {
+      logAndThrow(error, 'billing.createCheckoutSession: Failed to create checkout session')
+    }
 
     return { url: session.url, sessionId: session.id }
   },
@@ -325,28 +341,38 @@ export const createPortalSession = authenticatedAction({
       })
 
       if (!client) {
-        throw new Error('Client not found')
+        throw Errors.notFound('Client')
       }
 
       const stripeCustomerId = client.stripeCustomerId
       if (!stripeCustomerId) {
-        throw new Error('This client does not have a Stripe customer profile yet')
+        throw Errors.invalidState('Client does not have a Stripe customer profile')
       }
 
-      const portalSession = await stripe.billingPortal.sessions.create({
-        customer: stripeCustomerId,
-        return_url: buildReturnUrl(origin, returnPath),
-      })
+      let portalSession: Stripe.BillingPortal.Session
+      try {
+        portalSession = await stripe.billingPortal.sessions.create({
+          customer: stripeCustomerId,
+          return_url: buildReturnUrl(origin, returnPath),
+        })
+      } catch (error) {
+        logAndThrow(error, 'billing.createPortalSession: Failed to create portal session for client')
+      }
 
       return { url: portalSession.url, sessionId: portalSession.id }
     }
 
     const customerId = await ensureStripeCustomer(ctx, stripe, uid, email)
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: buildReturnUrl(origin, returnPath),
-    })
+    let portalSession: Stripe.BillingPortal.Session
+    try {
+      portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: buildReturnUrl(origin, returnPath),
+      })
+    } catch (error) {
+      logAndThrow(error, 'billing.createPortalSession: Failed to create portal session')
+    }
 
     return { url: portalSession.url, sessionId: portalSession.id }
   },

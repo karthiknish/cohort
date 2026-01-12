@@ -1,8 +1,9 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
+  if (!identity) throw Errors.unauthorized()
 }
 
 function nowMs(): number {
@@ -146,7 +147,7 @@ export const update = mutation({
       .unique()
 
     if (!milestone) {
-      throw new Error('Milestone not found')
+      throw Errors.notFound('Milestone')
     }
 
     const patch: Record<string, unknown> = {
@@ -185,7 +186,7 @@ export const remove = mutation({
       .unique()
 
     if (!milestone) {
-      throw new Error('Milestone not found')
+      throw Errors.notFound('Milestone')
     }
 
     await ctx.db.delete(milestone._id)

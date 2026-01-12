@@ -1,9 +1,10 @@
 import { query, mutation } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.unauthorized()
   }
 }
 
@@ -77,7 +78,7 @@ export const upsert = mutation({
       // Preserve system category immutability rules.
       if (existing.isSystem && !args.isSystem) {
         // allow keeping it system; disallow clearing it
-        throw new Error('System categories cannot be modified')
+        throw Errors.forbidden('System categories cannot be modified')
       }
 
       await ctx.db.patch(existing._id, {
@@ -196,7 +197,7 @@ export const remove = mutation({
     }
 
     if (existing.isSystem) {
-      throw new Error('System categories cannot be deleted')
+      throw Errors.forbidden('System categories cannot be deleted')
     }
 
     await ctx.db.delete(existing._id)
