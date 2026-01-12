@@ -459,9 +459,15 @@ export default function HomePage() {
 
   const handleGoogleSignIn = async () => {
     try {
+      setIsSubmitting(true)
       await authClient.signIn.social({
         provider: "google",
       })
+
+      // Social sign-in may redirect; in case it returns without redirect,
+      // ensure bootstrap+session cookies are ready.
+      await bootstrapAndSyncSession()
+      setSessionSynced(true)
     } catch (error) {
       const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
@@ -469,6 +475,8 @@ export default function HomePage() {
         description: errorMessage,
         variant: "destructive",
       })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 

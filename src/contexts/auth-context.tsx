@@ -61,11 +61,18 @@ async function syncSessionCookies(retries = 2): Promise<{ success: boolean; erro
         return { success: true }
       }
 
+      const body = await response.json().catch(() => null)
+
       // Handle specific error codes
       if (response.status === 401 || response.status === 403) {
         return {
           success: false,
-          error: createAuthError('UNAUTHORIZED', 'Session expired or invalid', { status: response.status }, true),
+          error: createAuthError(
+            'UNAUTHORIZED',
+            body?.message ?? body?.error ?? 'Session expired or invalid',
+            { status: response.status, code: body?.code },
+            true
+          ),
         }
       }
 
@@ -78,7 +85,12 @@ async function syncSessionCookies(retries = 2): Promise<{ success: boolean; erro
         }
         return {
           success: false,
-          error: createAuthError('RATE_LIMITED', 'Too many requests', { retryAfter }, true),
+          error: createAuthError(
+            'RATE_LIMITED',
+            body?.message ?? body?.error ?? 'Too many requests',
+            { retryAfter, code: body?.code },
+            true
+          ),
         }
       }
 
@@ -89,13 +101,23 @@ async function syncSessionCookies(retries = 2): Promise<{ success: boolean; erro
         }
         return {
           success: false,
-          error: createAuthError('SERVER_ERROR', 'Server error during session sync', { status: response.status }, true),
+          error: createAuthError(
+            'SERVER_ERROR',
+            body?.message ?? body?.error ?? 'Server error during session sync',
+            { status: response.status, code: body?.code },
+            true
+          ),
         }
       }
 
       return {
         success: false,
-        error: createAuthError('SESSION_SYNC_FAILED', `Session sync failed with status ${response.status}`, { status: response.status }),
+        error: createAuthError(
+          'SESSION_SYNC_FAILED',
+          body?.message ?? body?.error ?? `Session sync failed with status ${response.status}`,
+          { status: response.status, code: body?.code },
+          false
+        ),
       }
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {
@@ -202,6 +224,8 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
         }
       }
 
+      const body = await response.json().catch(() => null)
+
       // If we get a 401/403, the session might not be ready yet - wait and retry
       if (response.status === 401 || response.status === 403) {
         if (attempt < retries - 1) {
@@ -210,7 +234,12 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
         }
         return {
           success: false,
-          error: createAuthError('UNAUTHORIZED', 'Not authorized to bootstrap', { status: response.status }, true),
+          error: createAuthError(
+            'UNAUTHORIZED',
+            body?.data?.error ?? body?.error ?? body?.message ?? 'Not authorized to bootstrap',
+            { status: response.status, code: body?.code, requestId: body?.requestId },
+            true
+          ),
         }
       }
 
@@ -223,7 +252,12 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
         }
         return {
           success: false,
-          error: createAuthError('RATE_LIMITED', 'Too many bootstrap requests', { retryAfter }, true),
+          error: createAuthError(
+            'RATE_LIMITED',
+            body?.data?.error ?? body?.error ?? body?.message ?? 'Too many bootstrap requests',
+            { retryAfter, code: body?.code, requestId: body?.requestId },
+            true
+          ),
         }
       }
 
@@ -234,7 +268,12 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
         }
         return {
           success: false,
-          error: createAuthError('SERVER_ERROR', 'Server error during bootstrap', { status: response.status }, true),
+          error: createAuthError(
+            'SERVER_ERROR',
+            body?.data?.error ?? body?.error ?? body?.message ?? 'Server error during bootstrap',
+            { status: response.status, code: body?.code, requestId: body?.requestId },
+            true
+          ),
         }
       }
 
@@ -244,7 +283,12 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
 
       return {
         success: false,
-        error: createAuthError('BOOTSTRAP_FAILED', `Bootstrap failed with status ${response.status}`, { status: response.status }),
+        error: createAuthError(
+          'BOOTSTRAP_FAILED',
+          body?.data?.error ?? body?.error ?? body?.message ?? `Bootstrap failed with status ${response.status}`,
+          { status: response.status, code: body?.code, requestId: body?.requestId },
+          false
+        ),
       }
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {

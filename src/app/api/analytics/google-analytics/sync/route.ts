@@ -35,10 +35,10 @@ function getConvexClient(): ConvexHttpClient | null {
   }
 
   const client = new ConvexHttpClient(url)
-  ;(client as any).setAdminAuth(deployKey, {
-    issuer: 'system',
-    subject: 'ga-sync',
-  })
+    ; (client as any).setAdminAuth(deployKey, {
+      issuer: 'system',
+      subject: 'ga-sync',
+    })
 
   return client
 }
@@ -62,7 +62,7 @@ async function ensureGoogleAnalyticsAccessToken(options: {
 }
 
 async function fetchAccountSummaries(accessToken: string): Promise<
-  Array<{ property: string; displayName: string }> 
+  Array<{ property: string; displayName: string }>
 > {
   const url = new URL('https://analyticsadmin.googleapis.com/v1beta/accountSummaries')
   url.searchParams.set('pageSize', '200')
@@ -88,7 +88,7 @@ async function fetchAccountSummaries(accessToken: string): Promise<
   const properties: Array<{ property: string; displayName: string }> = []
 
   summaries.forEach((account) => {
-    ;(account.propertySummaries ?? []).forEach((p) => {
+    ; (account.propertySummaries ?? []).forEach((p) => {
       if (typeof p.property === 'string' && p.property.length > 0) {
         properties.push({
           property: p.property,
@@ -245,11 +245,21 @@ export const POST = createApiHandler(
 
     for (let i = 0; i < metrics.length; i += chunkSize) {
       const chunk = metrics.slice(i, i + chunkSize)
-      await convex.mutation('adsIntegrations:writeMetricsBatch' as any, {
-        workspaceId: workspace.workspaceId,
-        metrics: chunk,
-      })
-      written += chunk.length
+      try {
+        await convex.mutation('adsIntegrations:writeMetricsBatch' as any, {
+          workspaceId: workspace.workspaceId,
+          metrics: chunk,
+        })
+        written += chunk.length
+      } catch (error) {
+        logger.error('[Google Analytics Sync] Chunk Write Failed', error, {
+          requestId: req.headers.get('x-request-id'),
+          workspaceId: workspace.workspaceId,
+          chunkIndex: i,
+          chunkSize: chunk.length,
+        })
+        throw error
+      }
     }
 
     logger.info('[Google Analytics Sync] Completed', {

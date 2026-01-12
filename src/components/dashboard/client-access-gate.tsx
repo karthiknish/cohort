@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ClientWorkspaceSelector } from '@/components/client-workspace-selector'
 
 export function ClientAccessGate({ children }: PropsWithChildren) {
-  const { loading, error, clients, selectedClientId, refreshClients } = useClientContext()
+  const { loading, error, clients, selectedClientId, refreshClients, retryClients } = useClientContext()
   const { isPreviewMode } = usePreview()
   const [refreshing, setRefreshing] = useState(false)
 
@@ -34,6 +34,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
       if (refreshing) return
       setRefreshing(true)
       try {
+        retryClients()
         await refreshClients()
       } finally {
         setRefreshing(false)

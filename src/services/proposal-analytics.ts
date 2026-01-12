@@ -1,4 +1,5 @@
 import { ConvexHttpClient } from 'convex/browser'
+import { logger } from '@/lib/logger'
 
 import type {
   ProposalAnalyticsEvent,
@@ -33,14 +34,33 @@ function getConvexHttpClient(): ConvexHttpClient {
 async function queryConvex(functionName: string, args: any) {
   const client = getConvexHttpClient()
 
-  // NOTE: ConvexHttpClient uses fetch under the hood.
-  // This relies on cookie-based auth (Convex auth integration).
-  return client.query(functionName as any, args)
+  try {
+    return await client.query(functionName as any, args)
+  } catch (error) {
+    logger.error(`Convex Query Error: ${functionName}`, error, {
+      type: 'convex_error',
+      method: 'query',
+      name: functionName,
+      workspaceId: args.workspaceId,
+    })
+    throw error
+  }
 }
 
 async function mutateConvex(functionName: string, args: any) {
   const client = getConvexHttpClient()
-  return client.mutation(functionName as any, args)
+
+  try {
+    return await client.mutation(functionName as any, args)
+  } catch (error) {
+    logger.error(`Convex Mutation Error: ${functionName}`, error, {
+      type: 'convex_error',
+      method: 'mutation',
+      name: functionName,
+      workspaceId: args.workspaceId,
+    })
+    throw error
+  }
 }
 
 function parseDateOnlyToMs(dateOnly: string | undefined, endOfDay = false): number | undefined {

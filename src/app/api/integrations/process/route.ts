@@ -25,6 +25,7 @@ import {
 } from '@/lib/integration-token-refresh'
 import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 import { processWorkspaceAlerts } from '@/lib/alerts'
+import { logger } from '@/lib/logger'
 
 // Convex client for user lookup
 let _convexClient: ConvexHttpClient | null = null
@@ -256,10 +257,17 @@ export const POST = createApiHandler(
         try {
           const convex = getConvexClient()
           let recipientEmail: string | null = null
-          
+
           if (convex) {
-            const userResult = await convex.query(api.users.getByLegacyId, { legacyId: targetUserId })
-            recipientEmail = userResult?.email ?? null
+            try {
+              const userResult = await convex.query(api.users.getByLegacyId, { legacyId: targetUserId })
+              recipientEmail = userResult?.email ?? null
+            } catch (queryError) {
+              logger.error('[integrations/process] failed to fetch recipient email', queryError, {
+                userId: targetUserId,
+                requestId: req.headers.get('x-request-id'),
+              })
+            }
           }
 
           if (recipientEmail) {
@@ -270,13 +278,20 @@ export const POST = createApiHandler(
             })
           }
         } catch (alertError) {
-          console.error('[integrations/process] alert evaluation background failed', alertError)
+          logger.error('[integrations/process] alert evaluation background failed', alertError, {
+            userId: targetUserId,
+            requestId: req.headers.get('x-request-id'),
+          })
         }
       }
 
       return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
     } catch (error: unknown) {
-      console.error('[integrations/process] error', error)
+      logger.error('[integrations/process] error', error, {
+        requestId: req.headers.get('x-request-id'),
+        userId: resolvedUserId,
+        jobId: activeJob?.id,
+      })
 
       if (error instanceof IntegrationTokenError) {
         const { userId, providerId, message } = error

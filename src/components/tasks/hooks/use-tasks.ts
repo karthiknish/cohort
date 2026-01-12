@@ -257,23 +257,24 @@ export function useTasks({
         throw new Error('Workspace not available.')
       }
 
-      const result = await createTask({
-        workspaceId,
-        title: payload.title,
-        description: payload.description ?? null,
-        status: payload.status,
-        priority: payload.priority,
-        assignedTo: payload.assignedTo,
-        clientId: payload.clientId,
-        client: payload.client ?? null,
-        dueDateMs: msFromIsoDateString(payload.dueDate),
-        tags: payload.tags,
-      })
+      try {
+        const result = await createTask({
+          workspaceId,
+          title: payload.title,
+          description: payload.description ?? null,
+          status: payload.status,
+          priority: payload.priority,
+          assignedTo: payload.assignedTo,
+          clientId: payload.clientId,
+          client: payload.client ?? null,
+          dueDateMs: msFromIsoDateString(payload.dueDate),
+          tags: payload.tags,
+        })
 
-      toast({ title: 'Task created', description: `"${payload.title}" added.` })
+        toast({ title: 'Task created', description: `"${payload.title}" added.` })
 
-      return result?.legacyId
-        ? {
+        return result?.legacyId
+          ? {
             id: result.legacyId,
             title: payload.title,
             description: payload.description ?? null,
@@ -290,7 +291,15 @@ export function useTasks({
             updatedAt: new Date().toISOString(),
             deletedAt: null,
           }
-        : null
+          : null
+      } catch (err) {
+        toast({
+          title: 'Creation failed',
+          description: err instanceof Error ? err.message : 'Unable to create task. Please try again.',
+          variant: 'destructive',
+        })
+        return null
+      }
     },
     [createTask, isPreviewMode, toast, workspaceId]
   )
@@ -302,16 +311,16 @@ export function useTasks({
           prev.map((t) =>
             t.id === taskId
               ? {
-                  ...t,
-                  title: payload.title ?? t.title,
-                  description: payload.description ?? t.description,
-                  status: payload.status ?? t.status,
-                  priority: (payload.priority as TaskRecord['priority']) ?? t.priority,
-                  assignedTo: payload.assignedTo ?? t.assignedTo,
-                  dueDate: payload.dueDate ?? t.dueDate,
-                  tags: payload.tags ?? t.tags,
-                  updatedAt: new Date().toISOString(),
-                }
+                ...t,
+                title: payload.title ?? t.title,
+                description: payload.description ?? t.description,
+                status: payload.status ?? t.status,
+                priority: (payload.priority as TaskRecord['priority']) ?? t.priority,
+                assignedTo: payload.assignedTo ?? t.assignedTo,
+                dueDate: payload.dueDate ?? t.dueDate,
+                tags: payload.tags ?? t.tags,
+                updatedAt: new Date().toISOString(),
+              }
               : t
           )
         )
@@ -321,21 +330,29 @@ export function useTasks({
 
       if (!workspaceId) return null
 
-      await patchTask({
-        workspaceId,
-        legacyId: taskId,
-        update: {
-          title: payload.title,
-          description: payload.description ?? null,
-          status: payload.status,
-          priority: payload.priority,
-          assignedTo: payload.assignedTo,
-          dueDateMs: msFromIsoDateString(payload.dueDate),
-          tags: payload.tags,
-        },
-      })
+      try {
+        await patchTask({
+          workspaceId,
+          legacyId: taskId,
+          update: {
+            title: payload.title,
+            description: payload.description ?? null,
+            status: payload.status,
+            priority: payload.priority,
+            assignedTo: payload.assignedTo,
+            dueDateMs: msFromIsoDateString(payload.dueDate),
+            tags: payload.tags,
+          },
+        })
 
-      toast({ title: 'Task updated', description: 'Changes saved.' })
+        toast({ title: 'Task updated', description: 'Changes saved.' })
+      } catch (err) {
+        toast({
+          title: 'Update failed',
+          description: err instanceof Error ? err.message : 'Unable to update task. Please try again.',
+          variant: 'destructive',
+        })
+      }
       return null
     },
     [isPreviewMode, patchTask, toast, workspaceId]

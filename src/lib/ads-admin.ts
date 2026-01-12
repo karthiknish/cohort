@@ -3,6 +3,7 @@ import type { ConvexHttpClient } from 'convex/browser'
 import { createConvexAdminClient, isConvexAdsEnabled } from '@/lib/convex-admin'
 import type { AuthResult } from '@/lib/server-auth'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
+import { logger } from '@/lib/logger'
 
 import type { AdIntegration, NormalizedMetric, SyncJob } from '@/types/integrations'
 
@@ -65,6 +66,40 @@ function shouldUseConvexAds(): boolean {
     return Boolean(process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL)
 }
 
+/**
+ * Executes a Convex mutation with error handling and logging.
+ */
+async function executeMutation(convex: ConvexHttpClient, name: string, args: any, context: any = {}): Promise<any> {
+    try {
+        return await convex.mutation(name as any, args)
+    } catch (error) {
+        logger.error(`Convex Mutation Error: ${name}`, error, {
+            type: 'convex_error',
+            method: 'mutation',
+            name,
+            ...context
+        })
+        throw error
+    }
+}
+
+/**
+ * Executes a Convex query with error handling and logging.
+ */
+async function executeQuery(convex: ConvexHttpClient, name: string, args: any, context: any = {}): Promise<any> {
+    try {
+        return await convex.query(name as any, args)
+    } catch (error) {
+        logger.error(`Convex Query Error: ${name}`, error, {
+            type: 'convex_error',
+            method: 'query',
+            name,
+            ...context
+        })
+        throw error
+    }
+}
+
 export async function persistIntegrationTokens(options: {
     userId: string
     providerId: string
@@ -92,7 +127,7 @@ export async function persistIntegrationTokens(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:persistIntegrationTokens' as any, {
+    await executeMutation(convex, 'adsIntegrations:persistIntegrationTokens', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
@@ -110,7 +145,7 @@ export async function persistIntegrationTokens(options: {
         managerCustomerId: options.managerCustomerId,
         accountId: options.accountId,
         accountName: options.accountName,
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 
@@ -139,7 +174,7 @@ export async function updateIntegrationCredentials(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:updateIntegrationCredentials' as any, {
+    await executeMutation(convex, 'adsIntegrations:updateIntegrationCredentials', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
@@ -155,7 +190,7 @@ export async function updateIntegrationCredentials(options: {
         managerCustomerId: options.managerCustomerId,
         accountId: options.accountId,
         accountName: options.accountName,
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 export async function enqueueSyncJob(options: {
@@ -175,14 +210,14 @@ export async function enqueueSyncJob(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:enqueueSyncJob' as any, {
+    await executeMutation(convex, 'adsIntegrations:enqueueSyncJob', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
         jobType: options.jobType ?? 'initial-backfill',
         timeframeDays: options.timeframeDays ?? 90,
         cronKey: process.env.INTEGRATIONS_CRON_SECRET,
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 export async function getAdIntegration(options: {
@@ -200,35 +235,35 @@ export async function getAdIntegration(options: {
         return null
     }
 
-    const row = (await convex.query('adsIntegrations:getAdIntegration' as any, {
+    const row = (await executeQuery(convex, 'adsIntegrations:getAdIntegration', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
-    })) as
+    }, { userId: options.userId, providerId: options.providerId })) as
         | {
-                providerId: string
-                clientId: string | null
-                accessToken: string | null
-                idToken: string | null
-                refreshToken: string | null
-                scopes: string[]
-                accountId: string | null
-                accountName: string | null
-                currency: string | null
-                developerToken: string | null
-                loginCustomerId: string | null
-                managerCustomerId: string | null
-                accessTokenExpiresAtMs: number | null
-                refreshTokenExpiresAtMs: number | null
-                lastSyncStatus: 'never' | 'pending' | 'success' | 'error'
-                lastSyncMessage: string | null
-                lastSyncedAtMs: number | null
-                lastSyncRequestedAtMs: number | null
-                linkedAtMs: number | null
-                autoSyncEnabled: boolean | null
-                syncFrequencyMinutes: number | null
-                scheduledTimeframeDays: number | null
-            }
+            providerId: string
+            clientId: string | null
+            accessToken: string | null
+            idToken: string | null
+            refreshToken: string | null
+            scopes: string[]
+            accountId: string | null
+            accountName: string | null
+            currency: string | null
+            developerToken: string | null
+            loginCustomerId: string | null
+            managerCustomerId: string | null
+            accessTokenExpiresAtMs: number | null
+            refreshTokenExpiresAtMs: number | null
+            lastSyncStatus: 'never' | 'pending' | 'success' | 'error'
+            lastSyncMessage: string | null
+            lastSyncedAtMs: number | null
+            lastSyncRequestedAtMs: number | null
+            linkedAtMs: number | null
+            autoSyncEnabled: boolean | null
+            syncFrequencyMinutes: number | null
+            scheduledTimeframeDays: number | null
+        }
         | null
 
     if (!row) {
@@ -272,21 +307,21 @@ export async function claimNextSyncJob(options: { userId: string }): Promise<Syn
         return null
     }
 
-    const job = (await convex.mutation('adsIntegrations:claimNextSyncJob' as any, {
+    const job = (await executeMutation(convex, 'adsIntegrations:claimNextSyncJob', {
         workspaceId,
-    })) as
+    }, { userId: options.userId })) as
         | {
-                id: string
-                providerId: string
-                clientId: string | null
-                jobType: SyncJob['jobType']
-                timeframeDays: number
-                status: 'running'
-                createdAtMs: number
-                startedAtMs: number | null
-                processedAtMs: number | null
-                errorMessage: string | null
-            }
+            id: string
+            providerId: string
+            clientId: string | null
+            jobType: SyncJob['jobType']
+            timeframeDays: number
+            status: 'running'
+            createdAtMs: number
+            startedAtMs: number | null
+            processedAtMs: number | null
+            errorMessage: string | null
+        }
         | null
 
     if (!job) {
@@ -317,9 +352,9 @@ export async function completeSyncJob(options: { userId: string; jobId: string }
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:completeSyncJob' as any, {
+    await executeMutation(convex, 'adsIntegrations:completeSyncJob', {
         jobId: options.jobId as any,
-    })
+    }, { userId: options.userId, jobId: options.jobId })
 }
 
 export async function failSyncJob(options: { userId: string; jobId: string; message: string }): Promise<void> {
@@ -332,10 +367,10 @@ export async function failSyncJob(options: { userId: string; jobId: string; mess
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:failSyncJob' as any, {
+    await executeMutation(convex, 'adsIntegrations:failSyncJob', {
         jobId: options.jobId as any,
         message: options.message,
-    })
+    }, { userId: options.userId, jobId: options.jobId })
 }
 
 export async function updateIntegrationStatus(options: {
@@ -355,13 +390,13 @@ export async function updateIntegrationStatus(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:updateIntegrationStatus' as any, {
+    await executeMutation(convex, 'adsIntegrations:updateIntegrationStatus', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
         status: options.status,
         message: options.message ?? null,
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 export async function writeMetricsBatch(options: {
@@ -386,7 +421,7 @@ export async function writeMetricsBatch(options: {
     const chunkSize = 100
     for (let i = 0; i < metrics.length; i += chunkSize) {
         const chunk = metrics.slice(i, i + chunkSize)
-        await convex.mutation('adsIntegrations:writeMetricsBatch' as any, {
+        await executeMutation(convex, 'adsIntegrations:writeMetricsBatch', {
             workspaceId,
             metrics: chunk.map((metric) => ({
                 providerId: metric.providerId,
@@ -403,7 +438,7 @@ export async function writeMetricsBatch(options: {
                 creatives: metric.creatives,
                 rawPayload: metric.rawPayload,
             })),
-        })
+        }, { userId: options.userId, metricsCount: chunk.length })
     }
 }
 
@@ -422,11 +457,11 @@ export async function hasPendingSyncJob(options: {
         return false
     }
 
-    const result = (await convex.query('adsIntegrations:hasPendingSyncJob' as any, {
+    const result = (await executeQuery(convex, 'adsIntegrations:hasPendingSyncJob', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
-    })) as boolean
+    }, { userId: options.userId, providerId: options.providerId })) as boolean
 
     return result
 }
@@ -449,12 +484,12 @@ export async function markIntegrationSyncRequested(
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:markIntegrationSyncRequested' as any, {
+    await executeMutation(convex, 'adsIntegrations:markIntegrationSyncRequested', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
         status: options.status ?? 'pending',
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 export async function updateIntegrationPreferences(options: {
@@ -475,14 +510,14 @@ export async function updateIntegrationPreferences(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:updateIntegrationPreferences' as any, {
+    await executeMutation(convex, 'adsIntegrations:updateIntegrationPreferences', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
         autoSyncEnabled: options.autoSyncEnabled ?? null,
         syncFrequencyMinutes: options.syncFrequencyMinutes ?? null,
         scheduledTimeframeDays: options.scheduledTimeframeDays ?? null,
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 export async function deleteAdIntegration(options: {
@@ -500,11 +535,11 @@ export async function deleteAdIntegration(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:deleteAdIntegration' as any, {
+    await executeMutation(convex, 'adsIntegrations:deleteAdIntegration', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }
 
 export async function deleteSyncJobs(options: {
@@ -522,9 +557,9 @@ export async function deleteSyncJobs(options: {
         throw new Error('Convex admin client is not configured')
     }
 
-    await convex.mutation('adsIntegrations:deleteSyncJobs' as any, {
+    await executeMutation(convex, 'adsIntegrations:deleteSyncJobs', {
         workspaceId,
         providerId: options.providerId,
         clientId: normalizeClientId(options.clientId),
-    })
+    }, { userId: options.userId, providerId: options.providerId })
 }

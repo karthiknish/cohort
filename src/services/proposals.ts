@@ -3,6 +3,7 @@ import { mergeProposalForm } from '@/lib/proposals'
 import { resolveProposalDeck } from '@/types/proposals'
 import { ConvexReactClient } from 'convex/react'
 import { api as convexApi } from '@/lib/convex-api'
+import { logger } from '@/lib/logger'
 
 type ConvexAuthArgs = {
   workspaceId: string
@@ -47,6 +48,40 @@ function createAuthedConvexClient(token: string): ConvexReactClient {
   return convex
 }
 
+/**
+ * Executes a Convex mutation with error handling and logging.
+ */
+async function executeMutation(convex: ConvexReactClient, name: string, args: any, context: any = {}): Promise<any> {
+  try {
+    return await convex.mutation(name as any, args)
+  } catch (error) {
+    logger.error(`Convex Mutation Error: ${name}`, error, {
+      type: 'convex_error',
+      method: 'mutation',
+      name,
+      ...context
+    })
+    throw error
+  }
+}
+
+/**
+ * Executes a Convex query with error handling and logging.
+ */
+async function executeQuery(convex: ConvexReactClient, name: string, args: any, context: any = {}): Promise<any> {
+  try {
+    return await convex.query(name as any, args)
+  } catch (error) {
+    logger.error(`Convex Query Error: ${name}`, error, {
+      type: 'convex_error',
+      method: 'query',
+      name,
+      ...context
+    })
+    throw error
+  }
+}
+
 function mapConvexProposalToDraft(row: ConvexProposalRow): ProposalDraft {
   const baseDraft: ProposalDraft = {
     id: String(row.legacyId),
@@ -64,17 +99,17 @@ function mapConvexProposalToDraft(row: ConvexProposalRow): ProposalDraft {
     clientName: row.clientName ?? null,
     presentationDeck: row.presentationDeck
       ? ({
-          generationId: null,
-          status: 'unknown',
-          instructions: null,
-          webUrl: null,
-          shareUrl: null,
-          pptxUrl: null,
-          pdfUrl: null,
-          generatedFiles: [],
-          storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
-          ...row.presentationDeck,
-        } as ProposalDraft['presentationDeck'])
+        generationId: null,
+        status: 'unknown',
+        instructions: null,
+        webUrl: null,
+        shareUrl: null,
+        pptxUrl: null,
+        pdfUrl: null,
+        generatedFiles: [],
+        storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
+        ...row.presentationDeck,
+      } as ProposalDraft['presentationDeck'])
       : null,
   }
   return resolveProposalDeck(baseDraft)
@@ -85,12 +120,12 @@ export async function listProposals(
 ) {
   const convex = createAuthedConvexClient(params.convexToken)
 
-  const rows = (await convex.query(convexApi.proposals.list, {
+  const rows = (await executeQuery(convex, 'proposals:list', {
     workspaceId: params.workspaceId,
     limit: typeof params.pageSize === 'number' && Number.isFinite(params.pageSize) ? params.pageSize : 100,
     status: params.status,
     clientId: params.clientId,
-  })) as ConvexProposalRow[]
+  }, { workspaceId: params.workspaceId })) as ConvexProposalRow[]
 
   return rows.map(mapConvexProposalToDraft)
 }
@@ -98,10 +133,10 @@ export async function listProposals(
 export async function getProposalById(id: string, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
-  const row = (await convex.query(convexApi.proposals.getByLegacyId, {
+  const row = (await executeQuery(convex, 'proposals:getByLegacyId', {
     workspaceId: auth.workspaceId,
     legacyId: id,
-  })) as ConvexProposalRow | null
+  }, { workspaceId: auth.workspaceId, legacyId: id })) as ConvexProposalRow | null
 
   if (!row) {
     throw new Error('Proposal not found')
@@ -113,7 +148,7 @@ export async function getProposalById(id: string, auth: ConvexAuthArgs) {
 export async function createProposalDraft(body: Partial<ProposalDraft> & { ownerId?: string | null } = {}, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
-  const res = (await convex.mutation(convexApi.proposals.create, {
+  const res = (await executeMutation(convex, 'proposals:create', {
     workspaceId: auth.workspaceId,
     ownerId: body.ownerId ?? null,
     status: (body.status ?? 'draft') as string,
@@ -121,7 +156,7 @@ export async function createProposalDraft(body: Partial<ProposalDraft> & { owner
     formData: body.formData ?? mergeProposalForm(null),
     clientId: body.clientId ?? null,
     clientName: body.clientName ?? null,
-  })) as ConvexCreateResponse
+  }, { workspaceId: auth.workspaceId })) as ConvexCreateResponse
 
   return String(res.legacyId)
 }
@@ -130,7 +165,7 @@ export async function updateProposalDraft(id: string, body: Partial<ProposalDraf
   const convex = createAuthedConvexClient(auth.convexToken)
   const timestamp = Date.now()
 
-  await convex.mutation(convexApi.proposals.update, {
+  await executeMutation(convex, 'proposals:update', {
     workspaceId: auth.workspaceId,
     legacyId: id,
     status: body.status,
@@ -140,7 +175,7 @@ export async function updateProposalDraft(id: string, body: Partial<ProposalDraf
     clientName: body.clientName,
     updatedAtMs: timestamp,
     lastAutosaveAtMs: timestamp,
-  })
+  }, { workspaceId: auth.workspaceId, legacyId: id })
 
   return true
 }
@@ -148,10 +183,10 @@ export async function updateProposalDraft(id: string, body: Partial<ProposalDraf
 export async function deleteProposalDraft(id: string, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
-  await convex.mutation(convexApi.proposals.remove, {
+  await executeMutation(convex, 'proposals:remove', {
     workspaceId: auth.workspaceId,
     legacyId: id,
-  })
+  }, { workspaceId: auth.workspaceId, legacyId: id })
 
   return true
 }
