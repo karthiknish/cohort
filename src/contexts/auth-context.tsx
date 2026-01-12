@@ -3,64 +3,203 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { AuthUser, SignUpData, authService } from '@/services/auth'
 
+// Error types for better error handling
+export type AuthErrorCode = 
+  | 'BOOTSTRAP_FAILED'
+  | 'SESSION_SYNC_FAILED'
+  | 'NETWORK_ERROR'
+  | 'UNAUTHORIZED'
+  | 'RATE_LIMITED'
+  | 'SERVER_ERROR'
+  | 'UNKNOWN'
+
+export interface AuthError {
+  code: AuthErrorCode
+  message: string
+  details?: Record<string, unknown>
+  retryable: boolean
+}
+
+function createAuthError(
+  code: AuthErrorCode,
+  message: string,
+  details?: Record<string, unknown>,
+  retryable = false
+): AuthError {
+  return { code, message, details, retryable }
+}
+
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof TypeError && error.message.includes('fetch')) return true
+  if (error instanceof Error && error.name === 'AbortError') return true
+  if (error instanceof Error && error.message.toLowerCase().includes('network')) return true
+  return false
+}
+
 // Helper to sync session cookies (sets cohorts_role, cohorts_status, etc.)
 // This must be called after authentication to populate middleware-visible cookies.
-async function syncSessionCookies(): Promise<boolean> {
-  try {
-    const response = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    })
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[AuthContext] Session sync response:', response.status)
+async function syncSessionCookies(retries = 2): Promise<{ success: boolean; error?: AuthError }> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[AuthContext] Session sync response:', response.status)
+      }
+
+      if (response.ok) {
+        return { success: true }
+      }
+
+      // Handle specific error codes
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          error: createAuthError('UNAUTHORIZED', 'Session expired or invalid', { status: response.status }, true),
+        }
+      }
+
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After')
+        if (attempt < retries) {
+          const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : 1000 * (attempt + 1)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
+        }
+        return {
+          success: false,
+          error: createAuthError('RATE_LIMITED', 'Too many requests', { retryAfter }, true),
+        }
+      }
+
+      if (response.status >= 500) {
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+          continue
+        }
+        return {
+          success: false,
+          error: createAuthError('SERVER_ERROR', 'Server error during session sync', { status: response.status }, true),
+        }
+      }
+
+      return {
+        success: false,
+        error: createAuthError('SESSION_SYNC_FAILED', `Session sync failed with status ${response.status}`, { status: response.status }),
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[AuthContext] Session sync error:', error)
+      }
+
+      if (isNetworkError(error)) {
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+          continue
+        }
+        return {
+          success: false,
+          error: createAuthError('NETWORK_ERROR', 'Network error during session sync', undefined, true),
+        }
+      }
+
+      return {
+        success: false,
+        error: createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Unknown error during session sync'),
+      }
     }
-    return response.ok
-  } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[AuthContext] Session sync error:', error)
-    }
-    return false
+  }
+
+  return {
+    success: false,
+    error: createAuthError('SESSION_SYNC_FAILED', 'Session sync failed after retries', undefined, true),
   }
 }
 
 // Helper to call bootstrap API (ensures user exists in Convex users table)
 // Returns the user data from bootstrap if successful
-async function callBootstrap(retries = 3): Promise<{ role?: string; status?: string; agencyId?: string } | null> {
+interface BootstrapResult {
+  success: boolean
+  data?: { role?: string; status?: string; agencyId?: string }
+  error?: AuthError
+}
+
+async function callBootstrap(retries = 3): Promise<BootstrapResult> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+
       const response = await fetch('/api/auth/bootstrap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
         credentials: 'include',
+        signal: controller.signal,
       })
 
+      clearTimeout(timeoutId)
+
       if (response.ok) {
-        const json = await response.json()
+        let json: unknown
+        try {
+          json = await response.json()
+        } catch (parseError) {
+          console.error('[AuthContext] Failed to parse bootstrap response:', parseError)
+          return {
+            success: false,
+            error: createAuthError('BOOTSTRAP_FAILED', 'Invalid response from bootstrap'),
+          }
+        }
+
         if (process.env.NODE_ENV !== 'production') {
           console.log('[AuthContext] Bootstrap response', json)
         }
-        
+
         // Handle both old format (data.role) and new format (data.data.role)
-        const data = json.data?.data ?? json.data ?? json
-        
+        const data = (json as any)?.data?.data ?? (json as any)?.data ?? json
+
         if (data?.ok === true) {
           // After bootstrap succeeds, sync session cookies so middleware can read role
-          await syncSessionCookies()
-          
+          const sessionResult = await syncSessionCookies()
+          if (!sessionResult.success && process.env.NODE_ENV !== 'production') {
+            console.warn('[AuthContext] Session sync failed after bootstrap:', sessionResult.error)
+          }
+
           return {
-            role: data.role,
-            status: data.status,
-            agencyId: data.agencyId,
+            success: true,
+            data: {
+              role: data.role,
+              status: data.status,
+              agencyId: data.agencyId,
+            },
           }
         }
-        
+
         // Bootstrap returned ok: false - log the error
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[AuthContext] Bootstrap returned ok: false', data?.error, data?.debug)
         }
-        return null
+
+        return {
+          success: false,
+          error: createAuthError(
+            'BOOTSTRAP_FAILED',
+            data?.error || 'Bootstrap returned failure',
+            { debug: data?.debug },
+            true
+          ),
+        }
       }
 
       // If we get a 401/403, the session might not be ready yet - wait and retry
@@ -69,28 +208,85 @@ async function callBootstrap(retries = 3): Promise<{ role?: string; status?: str
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
           continue
         }
+        return {
+          success: false,
+          error: createAuthError('UNAUTHORIZED', 'Not authorized to bootstrap', { status: response.status }, true),
+        }
+      }
+
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After')
+        if (attempt < retries - 1) {
+          const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : 1000 * (attempt + 1)
+          await new Promise(resolve => setTimeout(resolve, delay))
+          continue
+        }
+        return {
+          success: false,
+          error: createAuthError('RATE_LIMITED', 'Too many bootstrap requests', { retryAfter }, true),
+        }
+      }
+
+      if (response.status >= 500) {
+        if (attempt < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+          continue
+        }
+        return {
+          success: false,
+          error: createAuthError('SERVER_ERROR', 'Server error during bootstrap', { status: response.status }, true),
+        }
       }
 
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[AuthContext] Bootstrap call failed:', response.status)
       }
-      return null
+
+      return {
+        success: false,
+        error: createAuthError('BOOTSTRAP_FAILED', `Bootstrap failed with status ${response.status}`, { status: response.status }),
+      }
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[AuthContext] Bootstrap call error:', error)
       }
+
+      if (isNetworkError(error)) {
+        if (attempt < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+          continue
+        }
+        return {
+          success: false,
+          error: createAuthError('NETWORK_ERROR', 'Network error during bootstrap', undefined, true),
+        }
+      }
+
       if (attempt < retries - 1) {
         await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
+        continue
+      }
+
+      return {
+        success: false,
+        error: createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Unknown bootstrap error'),
       }
     }
   }
-  return null
+
+  return {
+    success: false,
+    error: createAuthError('BOOTSTRAP_FAILED', 'Bootstrap failed after all retries', undefined, true),
+  }
 }
 
 interface AuthContextType {
   user: AuthUser | null
   loading: boolean
   isSyncing: boolean
+  authError: AuthError | null
+  clearAuthError: () => void
+  retrySync: () => Promise<void>
   signIn: (email: string, password: string) => Promise<AuthUser>
   signInWithGoogle: () => Promise<AuthUser>
   connectGoogleAdsAccount: () => Promise<void>
@@ -129,8 +325,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [authError, setAuthError] = useState<AuthError | null>(null)
 
   const lastAppliedUserKeyRef = useRef<string | null>(null)
+  const currentUserRef = useRef<AuthUser | null>(null)
+
+  const clearAuthError = useCallback(() => {
+    setAuthError(null)
+  }, [])
 
   const applyUser = useCallback(async (authUser: AuthUser | null, isIntentionalSignOut = false) => {
     const userKey = authUser
@@ -143,8 +345,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return
     }
     lastAppliedUserKeyRef.current = userKey
+    currentUserRef.current = authUser
 
     setUser(authUser)
+    setAuthError(null) // Clear any previous errors on new auth state
 
     // Skip sync for passive null states (handled internally by SessionSyncManager)
     if (!authUser && !isIntentionalSignOut) {
@@ -159,26 +363,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const bootstrapResult = await callBootstrap()
 
         // Update user with data from Convex (role, status, agencyId)
-        if (bootstrapResult) {
+        if (bootstrapResult.success && bootstrapResult.data) {
           if (process.env.NODE_ENV !== 'production') {
-            console.log('[AuthContext] Applying bootstrap result:', bootstrapResult)
+            console.log('[AuthContext] Applying bootstrap result:', bootstrapResult.data)
           }
           setUser((prev) => {
             if (!prev) return prev
             // Always use user.id as fallback for agencyId if bootstrap doesn't provide one
-            const resolvedAgencyId = bootstrapResult.agencyId || prev.agencyId || prev.id
+            const resolvedAgencyId = bootstrapResult.data!.agencyId || prev.agencyId || prev.id
             if (process.env.NODE_ENV !== 'production') {
               console.log('[AuthContext] Setting agencyId:', resolvedAgencyId)
             }
-            return {
+            const updated = {
               ...prev,
-              role: (bootstrapResult.role as AuthUser['role']) || prev.role,
-              status: (bootstrapResult.status as AuthUser['status']) || prev.status,
+              role: (bootstrapResult.data!.role as AuthUser['role']) || prev.role,
+              status: (bootstrapResult.data!.status as AuthUser['status']) || prev.status,
               agencyId: resolvedAgencyId,
             }
+            currentUserRef.current = updated
+            return updated
           })
         } else {
-          // Fallback: ensure agencyId is set to user id if not available
+          // Bootstrap failed - set error but still ensure agencyId fallback
+          if (bootstrapResult.error) {
+            console.error('[AuthContext] Bootstrap failed:', bootstrapResult.error)
+            setAuthError(bootstrapResult.error)
+          }
+
           if (process.env.NODE_ENV !== 'production') {
             console.log('[AuthContext] Bootstrap failed, using fallback agencyId')
           }
@@ -186,22 +397,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
             if (!prev) return prev
             // Always ensure agencyId is set - use user.id as fallback
             const resolvedAgencyId = prev.agencyId && prev.agencyId.length > 0 ? prev.agencyId : prev.id
-            return { ...prev, agencyId: resolvedAgencyId }
+            const updated = { ...prev, agencyId: resolvedAgencyId }
+            currentUserRef.current = updated
+            return updated
           })
         }
       }
-
-      // SessionSyncManager is no longer needed as we've unified the auth flow
-      // await sessionSyncManager.sync(authUser, isIntentionalSignOut)
+    } catch (error) {
+      console.error('[AuthContext] Unexpected error in applyUser:', error)
+      setAuthError(createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Unexpected error'))
     } finally {
       setIsSyncing(false)
     }
   }, [])
 
+  // Retry sync manually (for error recovery UI)
+  const retrySync = useCallback(async () => {
+    const currentUser = currentUserRef.current
+    if (!currentUser) return
+
+    setAuthError(null)
+    lastAppliedUserKeyRef.current = null // Force re-sync
+    await applyUser(currentUser)
+  }, [applyUser])
+
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged(async (authUser) => {
-      await applyUser(authUser)
-      setLoading(false)
+      try {
+        await applyUser(authUser)
+      } catch (error) {
+        console.error('[AuthContext] Error in onAuthStateChanged:', error)
+        setAuthError(createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Auth state change failed'))
+      } finally {
+        setLoading(false)
+      }
     })
 
     return unsubscribe
@@ -209,10 +438,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signIn = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true)
+    setAuthError(null)
     try {
       const authUser = await authService.signIn(email, password)
       await applyUser(authUser)
       return authUser
+    } catch (error) {
+      console.error('[AuthContext] Sign in error:', error)
+      throw error // Let the caller handle auth-specific errors
     } finally {
       setLoading(false)
     }
@@ -220,10 +453,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = useCallback(async (data: SignUpData): Promise<AuthUser> => {
     setLoading(true)
+    setAuthError(null)
     try {
       const authUser = await authService.signUp(data)
       await applyUser(authUser)
       return authUser
+    } catch (error) {
+      console.error('[AuthContext] Sign up error:', error)
+      throw error
     } finally {
       setLoading(false)
     }
@@ -231,10 +468,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signInWithGoogle = useCallback(async (): Promise<AuthUser> => {
     setLoading(true)
+    setAuthError(null)
     try {
       const authUser = await authService.signInWithGoogle()
       await applyUser(authUser)
       return authUser
+    } catch (error) {
+      console.error('[AuthContext] Google sign in error:', error)
+      throw error
     } finally {
       setLoading(false)
     }
@@ -242,9 +483,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = useCallback(async (): Promise<void> => {
     setLoading(true)
+    setAuthError(null)
     try {
       await authService.signOut()
       await applyUser(null, true)
+    } catch (error) {
+      console.error('[AuthContext] Sign out error:', error)
+      // Still clear local state even if server sign out fails
+      setUser(null)
+      currentUserRef.current = null
+      lastAppliedUserKeyRef.current = null
     } finally {
       setLoading(false)
     }
@@ -267,9 +515,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const updateProfile = useCallback(async (data: Partial<AuthUser>): Promise<AuthUser> => {
-    const authUser = await authService.updateProfile(data)
-    await applyUser(authUser)
-    return authUser
+    try {
+      const authUser = await authService.updateProfile(data)
+      await applyUser(authUser)
+      return authUser
+    } catch (error) {
+      console.error('[AuthContext] Update profile error:', error)
+      throw error
+    }
   }, [applyUser])
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<void> => {
@@ -280,9 +533,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const deleteAccount = useCallback(async (): Promise<void> => {
     setLoading(true)
+    setAuthError(null)
     try {
       await authService.deleteAccount()
       await applyUser(null, true)
+    } catch (error) {
+      console.error('[AuthContext] Delete account error:', error)
+      throw error
     } finally {
       setLoading(false)
     }
@@ -327,6 +584,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       loading,
       isSyncing,
+      authError,
+      clearAuthError,
+      retrySync,
       signIn,
       signInWithGoogle,
       connectGoogleAdsAccount,
@@ -350,6 +610,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       loading,
       isSyncing,
+      authError,
+      clearAuthError,
+      retrySync,
       signIn,
       signInWithGoogle,
       connectGoogleAdsAccount,

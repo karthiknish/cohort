@@ -29,6 +29,7 @@ export class ApiClientError extends UnifiedError {
 function isNetworkError(error: unknown): boolean {
   if (error instanceof ApiClientError && error.code === 'NETWORK_ERROR') return true
   if (error instanceof TypeError && /fetch|network/i.test(error.message)) return true
+  if (error instanceof Error && /offline|connection|network/i.test(error.message)) return true
   return false
 }
 
@@ -46,6 +47,24 @@ function isValidationError(status?: number, code?: string, details?: Record<stri
 
 function isRateLimit(status?: number, code?: string): boolean {
   return status === 429 || code === 'RATE_LIMIT_EXCEEDED'
+}
+
+function isTimeoutError(status?: number, code?: string, error?: unknown): boolean {
+  if (status === 408 || status === 504) return true
+  if (code === 'TIMEOUT' || code === 'REQUEST_TIMEOUT' || code === 'GATEWAY_TIMEOUT') return true
+  if (error instanceof Error && /timeout|timed out/i.test(error.message)) return true
+  return false
+}
+
+function isFileSizeError(status?: number, code?: string, error?: unknown): boolean {
+  if (status === 413) return true
+  if (code === 'PAYLOAD_TOO_LARGE' || code === 'FILE_TOO_LARGE') return true
+  if (error instanceof Error && /too large|size limit|file size/i.test(error.message)) return true
+  return false
+}
+
+function isConflictError(status?: number, code?: string): boolean {
+  return status === 409 || code === 'CONFLICT'
 }
 
 export function buildUserFacingError(error: unknown, fallback: string): UserFacingError {

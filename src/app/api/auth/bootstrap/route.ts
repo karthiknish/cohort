@@ -25,6 +25,23 @@ export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || uuidv4()
   const debug: Record<string, unknown> = {}
 
+  const reply = (
+    status: number,
+    data: { ok: boolean; error?: string; [key: string]: unknown }
+  ) => {
+    return NextResponse.json(
+      {
+        success: status >= 200 && status < 300,
+        requestId,
+        data,
+      },
+      {
+        status,
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
+      }
+    )
+  }
+
   try {
     // 1. Parse optional body
     let body: z.infer<typeof payloadSchema> = undefined
@@ -50,19 +67,11 @@ export async function POST(req: NextRequest) {
       debug.hasToken = false
       debug.tokenError = tokenError instanceof Error ? tokenError.message : String(tokenError)
       // Token fetch failed - user likely not authenticated
-      return NextResponse.json({
-        success: true,
-        data: { ok: false, error: 'Failed to get auth token', debug },
-        requestId,
-      })
+       return reply(401, { ok: false, error: 'Failed to get auth token', debug })
     }
 
     if (!convexToken) {
-      return NextResponse.json({
-        success: true,
-        data: { ok: false, error: 'No Better Auth session', debug },
-        requestId,
-      })
+      return reply(401, { ok: false, error: 'No Better Auth session', debug })
     }
 
     // 3. Decode the JWT to get the subject (Better Auth user ID)
@@ -77,21 +86,13 @@ export async function POST(req: NextRequest) {
 
     const jwtSubject = jwtPayload?.sub
     if (!jwtSubject) {
-      return NextResponse.json({
-        success: true,
-        data: { ok: false, error: 'JWT missing subject claim', debug },
-        requestId,
-      })
+      return reply(401, { ok: false, error: 'JWT missing subject claim', debug })
     }
 
     // 4. Get Convex URL and create client
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
     if (!convexUrl) {
-      return NextResponse.json({
-        success: true,
-        data: { ok: false, error: 'Convex not configured', debug },
-        requestId,
-      })
+      return reply(500, { ok: false, error: 'Convex not configured', debug })
     }
 
     const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
@@ -105,22 +106,14 @@ export async function POST(req: NextRequest) {
       debug.currentUser = currentUser ? { email: currentUser.email, name: currentUser.name } : null
     } catch (queryError) {
       debug.getCurrentUserError = queryError instanceof Error ? queryError.message : String(queryError)
-      return NextResponse.json({
-        success: true,
-        data: { ok: false, error: 'Failed to get current user from Convex', debug },
-        requestId,
-      })
+      return reply(502, { ok: false, error: 'Failed to get current user from Convex', debug })
     }
 
     const email = currentUser?.email ? String(currentUser.email) : null
     const name = providedName ?? (currentUser?.name ? String(currentUser.name) : null) ?? email ?? 'Pending user'
 
     if (!email) {
-      return NextResponse.json({
-        success: true,
-        data: { ok: false, error: 'Missing email from session', debug },
-        requestId,
-      })
+      return reply(400, { ok: false, error: 'Missing email from session', debug })
     }
 
     const normalizedEmail = email.toLowerCase()
@@ -181,27 +174,19 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ok: true,
-        role: finalRole,
-        status: finalStatus,
-        claimsUpdated: claimsNeedUpdate,
-        agencyId: existing?.agencyId || String(legacyId),
-        debug,
-      },
-      requestId,
+    return reply(200, {
+      ok: true,
+      role: finalRole,
+      status: finalStatus,
+      claimsUpdated: claimsNeedUpdate,
+      agencyId: existing?.agencyId || String(legacyId),
+      debug,
     })
   } catch (error) {
     console.error('[Bootstrap] Error:', error)
     debug.error = error instanceof Error ? error.message : String(error)
 
-    return NextResponse.json({
-      success: true,
-      data: { ok: false, error: 'Bootstrap failed', debug },
-      requestId,
-    }, { status: 200 }) // Return 200 so client sees the debug info
+    return reply(500, { ok: false, error: 'Bootstrap failed', debug })
   }
 }
 

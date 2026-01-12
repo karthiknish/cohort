@@ -15,7 +15,10 @@ export const API_STATUS_MESSAGES: Record<number, string> = {
     401: 'Authentication required',
     403: 'Permission denied',
     404: 'Resource not found',
+    408: 'Request timeout',
     409: 'Conflict occurred',
+    413: 'File too large',
+    415: 'Unsupported file type',
     422: 'Validation failed',
     429: 'Too many requests',
     500: 'Internal server error',
@@ -26,19 +29,23 @@ export const API_STATUS_MESSAGES: Record<number, string> = {
 
 /**
  * User-friendly messages (for client-side toast/UI)
+ * These are written in a friendly, helpful tone without technical jargon
  */
 export const USER_FRIENDLY_MESSAGES: Record<number, string> = {
-    400: 'Something was wrong with your request. Please check and try again.',
-    401: 'Please sign in to continue.',
-    403: "You don't have permission to do that.",
-    404: 'We could not find what you were looking for.',
-    409: 'This action conflicts with another operation. Please refresh and try again.',
-    422: 'Some fields need attention. Please correct the highlighted fields.',
-    429: 'Too many requests. Please wait a moment and try again.',
-    500: 'Something went wrong on our side. Please try again.',
-    502: 'We are having trouble connecting. Please try again shortly.',
-    503: 'The service is temporarily unavailable. Please try again shortly.',
-    504: 'The request took too long. Please try again.',
+    400: "We couldn't process that request. Please double-check your information and try again.",
+    401: 'Your session has ended. Please sign in again to continue.',
+    403: "You don't have access to this feature. Contact your administrator if you need permission.",
+    404: "We couldn't find what you're looking for. It may have been moved or deleted.",
+    408: 'This is taking longer than expected. Please check your connection and try again.',
+    409: 'Someone else may have made changes. Please refresh the page to see the latest version.',
+    413: 'This file is too large to upload. Please try a smaller file (under 10MB).',
+    415: "This file type isn't supported. Please use a different format.",
+    422: 'Please review the highlighted fields and make the necessary corrections.',
+    429: "You're doing that too quickly. Please wait a few seconds and try again.",
+    500: "Something unexpected happened. We're looking into it — please try again in a moment.",
+    502: "We're having trouble connecting to our servers. Please try again in a few moments.",
+    503: "We're temporarily down for maintenance. Please check back shortly.",
+    504: 'The server took too long to respond. Please try again.',
 }
 
 /**
@@ -50,24 +57,37 @@ export const ERROR_CODES: Record<string, number> = {
     UNAUTHORIZED: 401,
     FORBIDDEN: 403,
     NOT_FOUND: 404,
+    REQUEST_TIMEOUT: 408,
     CONFLICT: 409,
+    PAYLOAD_TOO_LARGE: 413,
+    UNSUPPORTED_MEDIA_TYPE: 415,
     RATE_LIMIT_EXCEEDED: 429,
     INTERNAL_ERROR: 500,
+    BAD_GATEWAY: 502,
     SERVICE_UNAVAILABLE: 503,
+    GATEWAY_TIMEOUT: 504,
     NETWORK_ERROR: 0,
 }
 
 /**
  * Suggested actions by status code
+ * These provide clear, actionable next steps for users
  */
 export const SUGGESTED_ACTIONS: Record<number, string[]> = {
-    400: ['Review your input', 'Try again'],
-    401: ['Sign in', 'Contact support'],
-    403: ['Contact your admin', 'Request access'],
-    404: ['Go back', 'Contact support'],
-    429: ['Wait a moment', 'Try again'],
-    500: ['Try again', 'Report bug'],
-    503: ['Wait a moment', 'Try again'],
+    400: ['Check your input', 'Try again'],
+    401: ['Sign in again', 'Reset password'],
+    403: ['Contact admin', 'Request access'],
+    404: ['Go back', 'Search for it'],
+    408: ['Check connection', 'Try again'],
+    409: ['Refresh page', 'Try again'],
+    413: ['Use smaller file', 'Compress file'],
+    415: ['Use different format', 'Check requirements'],
+    422: ['Fix highlighted fields', 'Try again'],
+    429: ['Wait 30 seconds', 'Try again'],
+    500: ['Refresh page', 'Try again later'],
+    502: ['Wait a moment', 'Try again'],
+    503: ['Check back soon', 'Contact support'],
+    504: ['Check connection', 'Try again'],
 }
 
 // =============================================================================
@@ -85,7 +105,7 @@ export function getStatusMessage(status: number): string {
  * Get user-friendly message for display
  */
 export function getUserFriendlyMessage(status: number): string {
-    return USER_FRIENDLY_MESSAGES[status] ?? 'Something went wrong. Please try again.'
+    return USER_FRIENDLY_MESSAGES[status] ?? "Something didn't work as expected. Please try again, or contact support if the problem continues."
 }
 
 /**

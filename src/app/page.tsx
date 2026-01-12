@@ -18,29 +18,29 @@ import { cn } from "@/lib/utils"
 
 // Helper to bootstrap user in Convex and sync session cookies
 async function bootstrapAndSyncSession(): Promise<void> {
-  try {
-    // 1. Bootstrap: ensure user exists in Convex users table with role/status
-    const bootstrapRes = await fetch('/api/auth/bootstrap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-      credentials: 'include',
-    })
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[HomePage] Bootstrap response:', bootstrapRes.status)
-    }
+  // 1. Bootstrap: ensure user exists in Convex users table with role/status
+  const bootstrapRes = await fetch('/api/auth/bootstrap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+    credentials: 'include',
+  })
 
-    // 2. Sync session cookies so middleware can read role
-    const sessionRes = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    })
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[HomePage] Session sync response:', sessionRes.status)
-    }
-  } catch (err) {
-    console.error('[HomePage] bootstrapAndSyncSession error:', err)
+  if (!bootstrapRes.ok) {
+    const payload = await bootstrapRes.json().catch(() => null)
+    throw new Error(payload?.data?.error ?? 'Failed to bootstrap user')
+  }
+
+  // 2. Sync session cookies so middleware can read role
+  const sessionRes = await fetch('/api/auth/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  })
+
+  if (!sessionRes.ok) {
+    const payload = await sessionRes.json().catch(() => null)
+    throw new Error(payload?.error ?? payload?.message ?? 'Failed to sync session')
   }
 }
 
@@ -399,6 +399,7 @@ export default function HomePage() {
         
         // Bootstrap user in Convex and sync session cookies before redirect
         await bootstrapAndSyncSession()
+        setSessionSynced(true)
         
         toast({
           title: "Welcome to Cohorts!",
@@ -426,6 +427,7 @@ export default function HomePage() {
 
         // Bootstrap user in Convex and sync session cookies before redirect
         await bootstrapAndSyncSession()
+        setSessionSynced(true)
 
         toast({
           title: "Welcome back!",

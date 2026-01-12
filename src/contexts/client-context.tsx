@@ -6,7 +6,6 @@ import { useQuery, useMutation } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
-import { apiFetch } from '@/lib/api-client'
 import { clientsApi } from '@/lib/convex-api'
 import { getPreviewClients, isPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data'
 import { getWorkspaceId } from '@/lib/utils'
@@ -19,6 +18,7 @@ type ClientContextValue = {
   loading: boolean
   error: string | null
   refreshClients: () => Promise<ClientRecord[]>
+  retryClients: () => void
   selectClient: (clientId: string | null) => void
   createClient: (input: { name: string; accountManager: string; teamMembers: ClientTeamMember[] }) => Promise<ClientRecord>
   removeClient: (clientId: string) => Promise<void>
@@ -28,27 +28,13 @@ const STORAGE_KEY_SELECTED = 'cohorts.dashboard.selectedClient'
 
 const ClientContext = createContext<ClientContextValue | undefined>(undefined)
 
-function parseError(error: unknown, fallback: string): string {
-  if (typeof error === 'string') {
-    return error
-  }
-
-  if (error && typeof error === 'object' && 'message' in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === 'string' && message.trim().length > 0) {
-      return message
-    }
-  }
-
-  return fallback
-}
-
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, isSyncing } = useAuth()
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryKey, setRetryKey] = useState(0)
 
   const mountedRef = useRef(false)
   const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
@@ -167,6 +153,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return []
     }
 
+    if (convexClients === undefined) {
+      return []
+    }
+
     const rows = convexClients ?? []
     const list: ClientRecord[] = rows.map((row: any) => ({
       id: row.legacyId,
@@ -215,8 +205,14 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
 
     setLoading(false)
+
+    if (Array.isArray(convexClients) && convexClients.length === 0) {
+      setError('No clients found for this workspace')
+      return
+    }
+
     setError(null)
-  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients])
+  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey])
 
   useEffect(() => {
     if (previewEnabled) {
@@ -240,7 +236,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return getPreviewClients()
     }
 
-    if (!workspaceId) {
+    if (!workspaceId || convexClients === undefined) {
       return []
     }
 
@@ -293,6 +289,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const refreshClients = useCallback(async () => {
     return await fetchClients()
   }, [fetchClients])
+
+  const retryClients = useCallback(() => {
+    setError(null)
+    setRetryKey((current) => current + 1)
+  }, [])
 
   const selectClient = useCallback((clientId: string | null) => {
     if (!clientId) {
@@ -387,10 +388,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     loading,
     error,
     refreshClients,
+    retryClients,
     selectClient,
     createClient,
     removeClient,
-  }), [workspaceId, resolvedClients, selectedClientId, selectedClient, loading, error, refreshClients, selectClient, createClient, removeClient])
+  }), [workspaceId, resolvedClients, selectedClientId, selectedClient, loading, error, refreshClients, retryClients, selectClient, createClient, removeClient])
 
   return <ClientContext.Provider value={value}>{children}</ClientContext.Provider>
 }

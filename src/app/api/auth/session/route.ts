@@ -1,7 +1,6 @@
-import { cookies, headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
-import { betterFetch } from '@better-fetch/fetch'
 
 // CSRF token header must match a cookie value (double-submit pattern)
 const CSRF_COOKIE = 'cohorts_csrf'
@@ -85,6 +84,30 @@ import { isAuthenticated, getToken } from '@/lib/auth-server'
 import { api } from '../../../../../convex/_generated/api'
 
 
+type SessionErrorCode =
+  | 'CSRF_VALIDATION_FAILED'
+  | 'UNAUTHENTICATED'
+  | 'TOKEN_MISSING'
+  | 'CONVEX_URL_MISSING'
+  | 'EMAIL_MISSING'
+  | 'USER_LOOKUP_FAILED'
+  | 'UNKNOWN'
+
+function sessionError(status: number, code: SessionErrorCode, message: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+      code,
+      message,
+    },
+    {
+      status,
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    }
+  )
+}
+
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
 
@@ -95,15 +118,7 @@ export async function POST(request: NextRequest) {
   // Validate CSRF token (double-submit cookie pattern)
   if (!validateCsrfToken(request, cookieStore, true)) {
     console.warn('[SessionRoute] CSRF validation failed')
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Invalid CSRF token',
-        code: 'CSRF_VALIDATION_FAILED',
-        message: 'Security validation failed. Please refresh and try again.'
-      },
-      { status: 403 }
-    )
+    return sessionError(403, 'CSRF_VALIDATION_FAILED', 'Security validation failed. Please refresh and try again.')
   }
 
   const response = NextResponse.json(
@@ -127,34 +142,35 @@ export async function POST(request: NextRequest) {
     // 1. Check authentication using official helper
     const isAuth = await isAuthenticated()
     if (!isAuth) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[SessionRoute][POST] Not authenticated, clearing session cookies')
-      }
       response.cookies.delete('cohorts_role')
       response.cookies.delete('cohorts_status')
       response.cookies.delete('cohorts_agency_id')
       response.cookies.delete('cohorts_session_expires')
       response.cookies.delete(CSRF_COOKIE)
-      return response
+      return sessionError(401, 'UNAUTHENTICATED', 'No active session')
     }
 
     // 2. Get Convex token
     const convexToken = await getToken()
     if (!convexToken) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[SessionRoute][POST] No Convex token, clearing session cookies')
-      }
       response.cookies.delete('cohorts_role')
       response.cookies.delete('cohorts_status')
       response.cookies.delete('cohorts_agency_id')
       response.cookies.delete('cohorts_session_expires')
       response.cookies.delete(CSRF_COOKIE)
-      return response
+      return sessionError(401, 'TOKEN_MISSING', 'Authentication token unavailable')
     }
 
     // 3. Query Convex for user info
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-    if (!convexUrl) throw new Error('Missing CONVEX_URL')
+    if (!convexUrl) {
+      response.cookies.delete('cohorts_role')
+      response.cookies.delete('cohorts_status')
+      response.cookies.delete('cohorts_agency_id')
+      response.cookies.delete('cohorts_session_expires')
+      response.cookies.delete(CSRF_COOKIE)
+      return sessionError(500, 'CONVEX_URL_MISSING', 'Server configuration error')
+    }
 
     const convex = new ConvexHttpClient(convexUrl)
     convex.setAuth(convexToken)
@@ -168,7 +184,7 @@ export async function POST(request: NextRequest) {
       response.cookies.delete('cohorts_agency_id')
       response.cookies.delete('cohorts_session_expires')
       response.cookies.delete(CSRF_COOKIE)
-      return response
+      return sessionError(401, 'EMAIL_MISSING', 'Session missing email')
     }
 
     const normalizedEmail = email.toLowerCase()
@@ -250,15 +266,7 @@ export async function DELETE(request: NextRequest) {
   // Validate CSRF token for logout (not creating session, so stricter validation)
   if (!validateCsrfToken(request, cookieStore, false)) {
     console.warn('[SessionRoute] CSRF validation failed on DELETE')
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Invalid CSRF token',
-        code: 'CSRF_VALIDATION_FAILED',
-        message: 'Security validation failed. Please refresh and try again.'
-      },
-      { status: 403 }
-    )
+    return sessionError(403, 'CSRF_VALIDATION_FAILED', 'Security validation failed. Please refresh and try again.')
   }
 
   const response = NextResponse.json(
