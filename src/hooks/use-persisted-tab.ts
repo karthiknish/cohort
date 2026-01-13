@@ -49,11 +49,19 @@ export function usePersistedTab<TValue extends string>(
     return `${base}${pathname}:${param}`
   }, [pathname, param, storageNamespace])
 
+  // Start with defaultValue to avoid hydration mismatch
   const [value, setValueState] = useState<TValue>(defaultValue)
+  const [hasMounted, setHasMounted] = useState(false)
 
   const didInitRef = useRef(false)
 
+  // Only run initialization after mount to avoid hydration mismatch
   useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hasMounted) return
     if (didInitRef.current) return
     didInitRef.current = true
 
@@ -71,13 +79,14 @@ export function usePersistedTab<TValue extends string>(
     } catch {
       // ignore storage errors
     }
-  }, [allowedValues, param, searchParams, storageKey])
+  }, [hasMounted, allowedValues, param, searchParams, storageKey])
 
   // If allowed values change (role-based tabs, feature flags), force a valid selection.
   useEffect(() => {
+    if (!hasMounted) return
     if (isAllowed(allowedValues, value)) return
     setValueState(defaultValue)
-  }, [allowedValues, defaultValue, value])
+  }, [hasMounted, allowedValues, defaultValue, value])
 
   const setValue = useCallback(
     (next: TValue) => {

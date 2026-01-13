@@ -30,10 +30,10 @@ export const statusColors: Record<TaskStatus, string> = {
 }
 
 export const statusLaneColors: Record<TaskStatus, string> = {
-  todo: '#64748b', // slate-500
-  'in-progress': '#3b82f6', // blue-500
-  review: '#f59e0b', // amber-500
-  completed: '#10b981', // emerald-500
+  todo: 'bg-slate-500 dark:bg-slate-400',
+  'in-progress': 'bg-blue-500 dark:bg-blue-400',
+  review: 'bg-amber-500 dark:bg-amber-400',
+  completed: 'bg-emerald-500 dark:bg-emerald-400',
 }
 
 export const priorityColors: Record<TaskPriority, string> = {
