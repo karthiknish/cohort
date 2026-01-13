@@ -71,22 +71,24 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
 
   return (
     <>
+      {/* Mobile: compact icon button */}
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center rounded-md border border-input bg-background p-2 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground sm:hidden"
+        className="inline-flex sm:hidden items-center justify-center rounded-md border border-input bg-background p-2 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
         aria-label="Open quick navigation"
         type="button"
       >
         <Search className="h-4 w-4" />
       </button>
 
+      {/* Desktop: full button with text */}
       <button
         id="tour-command-menu"
         onClick={() => setOpen(true)}
-        className="hidden sm:inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+        className="hidden sm:inline-flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
-        <Search className="h-4 w-4" />
-        <span>Quick navigation...</span>
+        <Search className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left truncate">Quick navigation...</span>
         <KeyboardShortcutBadge combo="mod+k" />
       </button>
 

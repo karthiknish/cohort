@@ -352,12 +352,12 @@ export function Header() {
           </div>
 
           {/* Workspace selector */}
-          <div className="min-w-0 sm:max-w-[260px]">
+          <div className="min-w-0 flex-1 sm:flex-none sm:max-w-[260px]">
             <ClientWorkspaceSelector className="w-full" />
           </div>
 
-          {/* Search / Command menu (takes remaining space) */}
-          <div className="hidden sm:block flex-1 sm:max-w-md">
+          {/* Search / Command menu (takes remaining space on desktop) */}
+          <div className="hidden sm:flex flex-1 sm:max-w-md">
             <CommandMenu onOpenHelp={() => {
               setShowWelcome(false)
               void onHelpOpenChange(true)
@@ -365,7 +365,14 @@ export function Header() {
           </div>
 
           {/* Right side actions (pinned to the right) */}
-          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            {/* Mobile search button - only visible on small screens */}
+            <div className="sm:hidden">
+              <CommandMenu onOpenHelp={() => {
+                setShowWelcome(false)
+                void onHelpOpenChange(true)
+              }} />
+            </div>
 
             <TooltipProvider>
               <Tooltip>

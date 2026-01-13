@@ -1,17 +1,6 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { adminQuery, adminMutation } from './functions'
 import { Errors } from './errors'
-
-function requireAdmin(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-
-  const role = (identity as any).role
-  if (role !== 'admin') {
-    throw Errors.auth.adminRequired()
-  }
-}
 
 function nowMs() {
   return Date.now()
@@ -22,12 +11,9 @@ const referenceValidator = v.object({
   label: v.string(),
 })
 
-export const listFeatures = query({
+export const listFeatures = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const rows = await ctx.db.query('platformFeatures').order('desc').collect()
 
     return {
@@ -46,7 +32,7 @@ export const listFeatures = query({
   },
 })
 
-export const createFeature = mutation({
+export const createFeature = adminMutation({
   args: {
     title: v.string(),
     description: v.string(),
@@ -61,9 +47,6 @@ export const createFeature = mutation({
     references: v.array(referenceValidator),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const timestamp = nowMs()
 
     const id = await ctx.db.insert('platformFeatures', {
@@ -82,7 +65,7 @@ export const createFeature = mutation({
   },
 })
 
-export const bulkUpsertFeatures = mutation({
+export const bulkUpsertFeatures = adminMutation({
   args: {
     features: v.array(
       v.object({
@@ -104,9 +87,6 @@ export const bulkUpsertFeatures = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     for (const feature of args.features) {
       const existing = await ctx.db
         .query('platformFeatures')
@@ -136,12 +116,9 @@ export const bulkUpsertFeatures = mutation({
   },
 })
 
-export const getFeature = query({
+export const getFeature = adminQuery({
   args: { id: v.id('platformFeatures') },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const row = await ctx.db.get(args.id)
     if (!row) return null
 
@@ -159,7 +136,7 @@ export const getFeature = query({
   },
 })
 
-export const updateFeature = mutation({
+export const updateFeature = adminMutation({
   args: {
     id: v.id('platformFeatures'),
     title: v.optional(v.string()),
@@ -177,9 +154,6 @@ export const updateFeature = mutation({
     references: v.optional(v.array(referenceValidator)),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw Errors.resource.notFound('Feature')
@@ -202,12 +176,9 @@ export const updateFeature = mutation({
   },
 })
 
-export const deleteFeature = mutation({
+export const deleteFeature = adminMutation({
   args: { id: v.id('platformFeatures') },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw Errors.resource.notFound('Feature')

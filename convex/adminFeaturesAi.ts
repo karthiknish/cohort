@@ -1,17 +1,6 @@
-import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { adminAction } from './functions'
 import { Errors, withErrorHandling } from './errors'
-
-function requireAdmin(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-
-  const role = (identity as any).role
-  if (role !== 'admin') {
-    throw Errors.auth.adminRequired()
-  }
-}
 
 function buildPrompt(args: {
   field: 'title' | 'description'
@@ -115,7 +104,7 @@ function cleanupOutput(raw: string) {
   return result
 }
 
-export const generate = action({
+export const generate = adminAction({
   args: {
     field: v.union(v.literal('title'), v.literal('description')),
     context: v.optional(
@@ -129,9 +118,6 @@ export const generate = action({
   },
   handler: async (ctx, args) =>
     withErrorHandling(async () => {
-      const identity = await ctx.auth.getUserIdentity()
-      requireAdmin(identity)
-
       const prompt = buildPrompt({ field: args.field, context: args.context })
       const raw = await generateWithGemini(prompt)
       const cleaned = cleanupOutput(raw)

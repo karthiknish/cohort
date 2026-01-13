@@ -119,6 +119,12 @@ export function useAdminClients(): UseAdminClientsReturn {
             return page
         },
         getNextPageParam: (lastPage) => {
+            // Handle paginated response format { items, nextCursor }
+            if (lastPage && typeof lastPage === 'object' && 'nextCursor' in lastPage) {
+                return lastPage.nextCursor ?? null
+            }
+            
+            // Legacy array format fallback
             if (!Array.isArray(lastPage) || lastPage.length === 0) {
                 return null
             }
@@ -172,7 +178,12 @@ export function useAdminClients(): UseAdminClientsReturn {
 
     // Transform Convex data to ClientRecord format
     const clients = useMemo<ClientRecord[]>(() => {
-        const rows = clientsInfiniteQuery.data?.pages.flatMap((page) => (Array.isArray(page) ? page : [])) ?? []
+        const rows = clientsInfiniteQuery.data?.pages.flatMap((page) => {
+            // Handle both array format and paginated { items, nextCursor } format
+            if (Array.isArray(page)) return page
+            if (page && Array.isArray(page.items)) return page.items
+            return []
+        }) ?? []
 
         const list: ClientRecord[] = rows.map((row: any) => ({
             id: row.legacyId,
