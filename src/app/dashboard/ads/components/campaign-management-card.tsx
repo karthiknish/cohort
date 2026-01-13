@@ -36,7 +36,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
 import type { DateRange } from './date-range-picker'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api'
 
 // =============================================================================
@@ -220,6 +220,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
       setCampaigns(Array.isArray(result) ? (result as Campaign[]) : [])
     } catch (error) {
+      logError(error, 'CampaignManagementCard:fetchCampaigns')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -246,6 +247,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
       setGroups(Array.isArray(result) ? (result as CampaignGroup[]) : [])
     } catch (error) {
+      logError(error, 'CampaignManagementCard:fetchGroups')
       console.error('Fetch groups error:', error)
     } finally {
       setGroupsLoading(false)
@@ -294,6 +296,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       fetchCampaigns()
       onRefresh?.()
     } catch (error) {
+      logError(error, 'CampaignManagementCard:handleAction')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -327,6 +330,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       fetchGroups()
       onRefresh?.()
     } catch (error) {
+      logError(error, 'CampaignManagementCard:handleGroupAction')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -384,6 +388,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       else fetchCampaigns()
       onRefresh?.()
     } catch (error) {
+      logError(error, 'CampaignManagementCard:handleBudgetUpdate')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -423,6 +428,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       fetchCampaigns()
       onRefresh?.()
     } catch (error) {
+      logError(error, 'CampaignManagementCard:handleBiddingUpdate')
       toast({
         title: 'Error',
         description: asErrorMessage(error),

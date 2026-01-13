@@ -5,7 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useConvex, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { clientsApi } from '@/lib/convex-api'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
@@ -264,6 +264,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setClientPendingDelete(null)
             setIsDeleteDialogOpen(false)
         } catch (err: unknown) {
+            logError(err, 'useAdminClients:handleDeleteClient')
             const message = asErrorMessage(err)
             toast({ title: 'Client delete failed', description: message, variant: 'destructive' })
         } finally {
@@ -315,6 +316,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setIsTeamDialogOpen(false)
             setClientPendingMembers(null)
         } catch (err: unknown) {
+            logError(err, 'useAdminClients:handleAddTeamMember')
             const message = asErrorMessage(err)
             toast({ title: 'Add teammate failed', description: message, variant: 'destructive' })
         } finally {
@@ -422,6 +424,7 @@ export function useAdminClients(): UseAdminClientsReturn {
 
             handleInvoiceDialogChange(false)
         } catch (err: unknown) {
+            logError(err, 'useAdminClients:handleCreateInvoice')
             const message = asErrorMessage(err)
             setInvoiceError(message)
             toast({ title: 'Invoice error', description: message, variant: 'destructive' })
@@ -488,6 +491,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             toast({ title: 'Client created', description: `${name} is ready to use.` })
             resetClientForm()
         } catch (err: unknown) {
+            logError(err, 'useAdminClients:handleCreateClient')
             const message = asErrorMessage(err)
             toast({ title: 'Client create failed', description: message, variant: 'destructive' })
         } finally {

@@ -5,7 +5,7 @@ import { refreshProposalDraft } from '@/services/proposals'
 import { useQuery } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import {
     trackDeckGenerationStarted,
     trackDeckGenerationCompleted,
@@ -201,6 +201,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
             }
             pendingDeckWindowRef.current = null
         } catch (error: unknown) {
+            logError(error, 'useDeckPreparation:handleDownloadDeck')
             setDeckProgressStage('error')
             console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
             const message = asErrorMessage(error)

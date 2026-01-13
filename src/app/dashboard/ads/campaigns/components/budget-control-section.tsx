@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { adsCampaignsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { formatMoney, normalizeCurrencyCode } from '@/constants/currencies'
 
@@ -157,6 +157,7 @@ export function BudgetControlSection({
 
       await onReloadCampaign?.()
     } catch (error) {
+      logError(error, 'BudgetControlSection:handleSave')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -170,8 +171,8 @@ export function BudgetControlSection({
   const handleRefresh = useCallback(async () => {
     try {
       await onReloadCampaign?.()
-    } catch {
-      // ignore
+    } catch (error) {
+      logError(error, 'BudgetControlSection:handleRefresh')
     }
   }, [onReloadCampaign])
 

@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { CollaborationMessage, CollaborationReaction } from '@/types/collaboration'
 import { COLLABORATION_REACTION_SET } from '@/constants/collaboration-reactions'
 import type { Channel } from '../types'
@@ -89,6 +89,7 @@ export function useMessageActions({
           return next
         })
       } catch (error) {
+        logError(error, 'useMessageActions:handleToggleReaction')
         toast({ title: 'Reaction failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setReactionUpdatingByMessage((prev) => {
@@ -187,6 +188,7 @@ export function useMessageActions({
 
         toast({ title: 'Message updated', description: 'Your edit is live for the team.' })
       } catch (error) {
+        logError(error, 'useMessageActions:handleEditMessage')
         toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setMessageUpdatingId((current) => (current === messageId ? null : current))
@@ -259,6 +261,7 @@ export function useMessageActions({
 
         toast({ title: 'Message removed', description: 'The message is no longer visible to teammates.' })
       } catch (error) {
+        logError(error, 'useMessageActions:handleDeleteMessage')
         toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setMessageDeletingId((current) => (current === messageId ? null : current))

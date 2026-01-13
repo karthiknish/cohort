@@ -8,7 +8,7 @@ import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
 import { formatCurrency } from '@/lib/utils'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 export async function resolveJson(response: Response, fallbackMessage: string): Promise<unknown> {
   if (response.ok) {
@@ -21,7 +21,8 @@ export async function resolveJson(response: Response, fallbackMessage: string): 
     if (typeof payload?.error === 'string' && payload.error.trim().length > 0) {
       message = payload.error
     }
-  } catch {
+  } catch (e) {
+    logError(e, 'resolveJson')
     // swallow JSON parse failures, fall back to default message
   }
   throw new Error(message)

@@ -38,7 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { notificationsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { parsePageSize } from '@/lib/pagination'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
@@ -127,14 +127,15 @@ export default function NotificationsPage() {
         await ackNotifications({ workspaceId, ids, action })
         await notificationsInfiniteQuery.refetch()
 
-        toast({
-          title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
-          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
-        })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Notification update failed'
-        toast({ title: 'Notification error', description: message, variant: 'destructive' })
-      } finally {
+          toast({
+            title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
+            description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
+          })
+        } catch (error) {
+          logError(error, 'Notifications:updateStatus')
+          const message = asErrorMessage(error)
+          toast({ title: 'Notification error', description: message, variant: 'destructive' })
+        } finally {
         setAckInFlight(false)
       }
     },

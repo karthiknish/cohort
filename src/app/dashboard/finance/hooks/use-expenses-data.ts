@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { Expense, ExpenseCategory, Vendor, ExpenseAttachment } from '@/types/expenses'
@@ -236,6 +236,7 @@ export function useExpensesData() {
       setNewExpense(INITIAL_FORM)
       toast({ title: 'Expense created', description: 'Saved as draft.' })
     } catch (error) {
+      logError(error, 'useExpensesData:handleCreateExpense')
       toast({ title: 'Create failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setSubmitting(false)
@@ -257,6 +258,7 @@ export function useExpensesData() {
         setExpenses((prev) => prev.filter((e) => e.id !== expenseId))
         toast({ title: 'Expense deleted' })
       } catch (error) {
+        logError(error, 'useExpensesData:handleDeleteExpense')
         toast({ title: 'Delete failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingExpenseId(null)
@@ -314,6 +316,7 @@ export function useExpensesData() {
         })
         toast({ title: 'Updated', description: 'Expense status updated.' })
       } catch (error) {
+        logError(error, 'useExpensesData:handleTransition')
         toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingExpenseId(null)
@@ -345,6 +348,7 @@ export function useExpensesData() {
           })
           toast({ title: 'Category created', description: `"${input.name}" added successfully.` })
         } catch (error) {
+          logError(error, 'useExpensesData:adminCategoryActions:create')
           toast({
             title: 'Failed to create category',
             description: asErrorMessage(error),
@@ -373,6 +377,7 @@ export function useExpensesData() {
           })
           toast({ title: 'Category updated' })
         } catch (error) {
+          logError(error, 'useExpensesData:adminCategoryActions:update')
           toast({
             title: 'Update failed',
             description: asErrorMessage(error),
@@ -390,6 +395,7 @@ export function useExpensesData() {
           await convexRemoveCategory({ workspaceId, legacyId: id })
           toast({ title: 'Category removed' })
         } catch (error) {
+          logError(error, 'useExpensesData:adminCategoryActions:remove')
           toast({
             title: 'Delete failed',
             description: asErrorMessage(error),
@@ -418,6 +424,7 @@ export function useExpensesData() {
           })
           toast({ title: 'Vendor created', description: `"${input.name}" added successfully.` })
         } catch (error) {
+          logError(error, 'useExpensesData:adminVendorActions:create')
           toast({
             title: 'Failed to create vendor',
             description: asErrorMessage(error),
@@ -445,6 +452,7 @@ export function useExpensesData() {
           })
           toast({ title: 'Vendor updated' })
         } catch (error) {
+          logError(error, 'useExpensesData:adminVendorActions:update')
           toast({
             title: 'Update failed',
             description: asErrorMessage(error),
@@ -459,6 +467,7 @@ export function useExpensesData() {
           await convexRemoveVendor({ workspaceId, legacyId: id })
           toast({ title: 'Vendor removed' })
         } catch (error) {
+          logError(error, 'useExpensesData:adminVendorActions:remove')
           toast({
             title: 'Delete failed',
             description: asErrorMessage(error),

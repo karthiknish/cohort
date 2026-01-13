@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
@@ -102,6 +102,7 @@ export default function AdminFeaturesPage() {
         description: 'The feature has been removed from the board.',
       })
     } catch (error) {
+      logError(error, 'AdminFeaturesPage:confirmDelete')
       console.error('Failed to delete feature:', error)
       toast({
         title: 'Delete failed',
@@ -128,6 +129,7 @@ export default function AdminFeaturesPage() {
           description: `Feature moved to ${newStatus.replace('_', ' ')}.`,
         })
       } catch (error) {
+        logError(error, 'AdminFeaturesPage:handleMoveFeature')
         console.error('Failed to move feature:', error)
         // Convex is source of truth; UI will settle automatically.
         toast({
@@ -183,6 +185,7 @@ export default function AdminFeaturesPage() {
           })
         }
       } catch (error) {
+        logError(error, 'AdminFeaturesPage:handleSubmitFeature')
         console.error('Failed to save feature:', error)
         toast({
           title: 'Save failed',

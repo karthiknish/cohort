@@ -22,7 +22,7 @@ import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { recurringInvoicesApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
 
 import { Button } from '@/components/ui/button'
@@ -178,6 +178,7 @@ export function RecurringInvoicesCard() {
         description: `Recurring invoice schedule for ${selectedClient?.name} has been created.`,
       })
     } catch (error) {
+      logError(error, 'RecurringInvoicesCard:handleCreate')
       console.error('Failed to create schedule:', error)
       toast({
         title: 'Failed to create schedule',
@@ -204,6 +205,7 @@ export function RecurringInvoicesCard() {
         description: `Recurring invoice for ${schedule.clientName} has been ${schedule.isActive ? 'paused' : 'activated'}.`,
       })
     } catch (error) {
+      logError(error, 'RecurringInvoicesCard:handleToggleActive')
       console.error('Failed to update schedule:', error)
       toast({
         title: 'Failed to update schedule',
@@ -230,6 +232,7 @@ export function RecurringInvoicesCard() {
         description: `Recurring invoice for ${scheduleToDelete.clientName} has been deleted.`,
       })
     } catch (error) {
+      logError(error, 'RecurringInvoicesCard:handleDelete')
       console.error('Failed to delete schedule:', error)
       toast({
         title: 'Failed to delete schedule',
@@ -254,6 +257,7 @@ export function RecurringInvoicesCard() {
         description: `A new invoice has been created for ${schedule.clientName}.`,
       })
     } catch (error) {
+      logError(error, 'RecurringInvoicesCard:handleGenerateNow')
       console.error('Failed to generate invoice:', error)
       toast({
         title: 'Failed to generate invoice',

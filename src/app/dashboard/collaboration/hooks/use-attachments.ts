@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { CollaborationAttachment } from '@/types/collaboration'
 import type { PendingAttachment } from './types'
 import { MAX_ATTACHMENTS } from './constants'
@@ -89,6 +89,7 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
 
       return results
     } catch (error) {
+      logError(error, 'useAttachments:uploadAttachments')
       console.warn('[collaboration] failed to upload attachments', error)
       toast({
         title: 'Upload failed',

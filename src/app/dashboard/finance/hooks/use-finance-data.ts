@@ -8,7 +8,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useAction, useMutation, useQuery } from 'convex/react'
 
 import { api } from '../../../../../convex/_generated/api'
@@ -486,6 +486,7 @@ export function useFinanceData(): FinanceHookReturn {
         setNewCost(INITIAL_COST_FORM)
         toast({ title: 'Cost added', description: `"${result.legacyId}" has been recorded.` })
       } catch (error: unknown) {
+        logError(error, 'useFinanceData:handleAddCost')
         toast({
           title: 'Failed to add cost',
           description: asErrorMessage(error),
@@ -510,6 +511,7 @@ export function useFinanceData(): FinanceHookReturn {
 
         toast({ title: 'Cost removed', description: 'The cost entry has been deleted.' })
       } catch (error: unknown) {
+        logError(error, 'useFinanceData:handleRemoveCost')
         toast({
           title: 'Failed to delete cost',
           description: asErrorMessage(error),
@@ -534,11 +536,12 @@ export function useFinanceData(): FinanceHookReturn {
       }
 
       await remindInvoiceAction({ workspaceId: resolvedWorkspaceId, invoiceId })
-      toast({
+        toast({
         title: 'Reminder sent!',
         description: 'Payment reminder email will be sent to the client shortly.',
       })
     } catch (error: unknown) {
+      logError(error, 'useFinanceData:handleSendInvoiceReminder')
       toast({
         title: 'Reminder failed',
         description: asErrorMessage(error),
@@ -561,11 +564,12 @@ export function useFinanceData(): FinanceHookReturn {
       }
 
       const result = await refundInvoiceAction({ workspaceId: resolvedWorkspaceId, invoiceId })
-      toast({
+        toast({
         title: 'Refund initiated',
         description: `${formatCurrency(result.refund.amount, primaryCurrencyTotals.currency)} refund is being processed.`,
       })
     } catch (error: unknown) {
+      logError(error, 'useFinanceData:handleIssueInvoiceRefund')
       toast({
         title: 'Refund failed',
         description: asErrorMessage(error),

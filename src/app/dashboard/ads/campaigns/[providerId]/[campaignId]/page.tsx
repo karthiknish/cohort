@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { getPreviewCampaigns, getPreviewCampaignInsights } from '@/lib/preview-data'
 import { adsCampaignInsightsApi, adsCampaignsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 // Modular Components
 import { CampaignHeader } from '../../components/campaign-header'
@@ -255,6 +255,7 @@ export default function CampaignInsightsPage() {
 
       setCampaign(match)
     } catch (err) {
+      logError(err, 'CampaignInsights:loadCampaign')
       setCampaignError(asErrorMessage(err))
     } finally {
       setCampaignLoading(false)
@@ -305,6 +306,7 @@ export default function CampaignInsightsPage() {
         setCampaign((prev) => (prev ? { ...prev, currency: data.currency } : null))
       }
     } catch (err) {
+      logError(err, 'CampaignInsights:loadInsights')
       setInsightsError(asErrorMessage(err))
       setInsights(null)
     } finally {

@@ -11,7 +11,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { useAction } from 'convex/react'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi, creativesCopyApi } from '@/lib/convex-api'
 
 import { CreativeHeader } from './components/creative-header'
@@ -90,6 +90,7 @@ export default function CreativeDetailPage() {
 
       setCreative(match)
     } catch (error) {
+      logError(error, 'CreativeDetailPage:fetchCreative')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -128,6 +129,7 @@ export default function CreativeDetailPage() {
       const filtered = allMetrics.filter((m) => m.adId === params.creativeId)
       setCreativeMetrics(filtered)
     } catch (error) {
+      logError(error, 'CreativeDetailPage:fetchMetrics')
       setCreativeMetrics(null)
       setMetricsError(asErrorMessage(error))
     } finally {
@@ -267,6 +269,7 @@ export default function CreativeDetailPage() {
         toast({ title: 'Generated captions', description: `Added ${captions.length} new variant(s).` })
       }
     } catch (error) {
+      logError(error, 'CreativeDetailPage:generateCopy')
       toast({
         title: 'AI generation error',
         description: asErrorMessage(error),
@@ -299,6 +302,7 @@ export default function CreativeDetailPage() {
       })
       setIsEditing(false)
     } catch (error) {
+      logError(error, 'CreativeDetailPage:handleSave')
       toast({
         title: 'Error',
         description: 'Failed to save changes. Please try again.',

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/contexts/auth-context'
 import { adsIntegrationsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 // Extracted hooks and types
 import {
@@ -138,6 +138,7 @@ export default function AnalyticsPage() {
     try {
       await loadMoreMetrics()
     } catch (error) {
+      logError(error, 'AnalyticsPage:handleLoadMoreMetrics')
       toast({ title: 'Metrics pagination error', description: asErrorMessage(error), variant: 'destructive' })
     }
   }, [loadMoreMetrics, metricsNextCursor, toast])
@@ -157,6 +158,7 @@ export default function AnalyticsPage() {
       })
       await refreshGoogleAnalyticsStatus()
     } catch (error: unknown) {
+      logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
       toast({ title: 'Connection failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setGaLoading(false)
@@ -185,6 +187,7 @@ export default function AnalyticsPage() {
       await refreshGoogleAnalyticsStatus()
       await mutateMetrics()
     } catch (error: unknown) {
+      logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
       toast({ title: 'Sync failed', description: asErrorMessage(error), variant: 'destructive' })
     }
   }, [isPreviewMode, googleAnalyticsSyncMutation, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])

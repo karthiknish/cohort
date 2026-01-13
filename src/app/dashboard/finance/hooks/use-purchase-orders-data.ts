@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 
@@ -191,6 +191,7 @@ export function usePurchaseOrdersData() {
       setNewPO(INITIAL_FORM)
       toast({ title: 'Purchase order created', description: 'Saved as draft.' })
     } catch (error) {
+      logError(error, 'usePurchaseOrdersData:create')
       toast({ title: 'Create failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setSubmitting(false)
@@ -256,6 +257,7 @@ export function usePurchaseOrdersData() {
           )
         )
       } catch (error) {
+        logError(error, 'usePurchaseOrdersData:updateDraft')
         toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingId(null)
@@ -279,6 +281,7 @@ export function usePurchaseOrdersData() {
         setPurchaseOrders((prev) => prev.filter((po) => po.id !== id))
         toast({ title: 'Purchase order deleted' })
       } catch (error) {
+        logError(error, 'usePurchaseOrdersData:remove')
         toast({ title: 'Delete failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingId(null)
@@ -344,6 +347,7 @@ export function usePurchaseOrdersData() {
         })
         toast({ title: 'Updated', description: 'Purchase order status updated.' })
       } catch (error) {
+        logError(error, 'usePurchaseOrdersData:transition')
         toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingId(null)

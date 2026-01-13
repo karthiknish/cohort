@@ -10,7 +10,7 @@ import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 import { adsIntegrationsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
@@ -268,6 +268,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       triggerRefresh()
 
     } catch (error: unknown) {
+      logError(error, 'useAdsConnections:initializeMetaIntegration')
       const message = asErrorMessage(error)
       setMetaSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
@@ -300,6 +301,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       triggerRefresh()
 
     } catch (error: unknown) {
+      logError(error, 'useAdsConnections:initializeTikTokIntegration')
       const message = asErrorMessage(error)
       setTiktokSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.TIKTOK_SETUP_FAILED, description: message })
@@ -367,6 +369,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
         }).catch(err => {
+          logError(err, 'useAdsConnections:oauthSuccess:google')
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: asErrorMessage(err) })
         })
        } else if (providerId === PROVIDER_IDS.LINKEDIN) {
@@ -374,6 +377,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
         }).catch(err => {
+          logError(err, 'useAdsConnections:oauthSuccess:linkedin')
           toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: asErrorMessage(err) })
         })
       } else {
@@ -410,6 +414,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       triggerRefresh()
     } catch (error: unknown) {
+      logError(error, 'useAdsConnections:handleConnect')
       const message = asErrorMessage(error)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
@@ -458,6 +463,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       }
       throw new Error('This provider does not support OAuth yet.')
     } catch (error: unknown) {
+      logError(error, 'useAdsConnections:handleOauthRedirect')
       const rawMessage = error instanceof Error ? error.message : ''
 
       const isMetaConfigError =
@@ -507,6 +513,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       toast({ title: TOAST_TITLES.DISCONNECTED, description: SUCCESS_MESSAGES.DISCONNECTED(providerName) })
       triggerRefresh()
     } catch (error: unknown) {
+      logError(error, 'useAdsConnections:handleDisconnect')
       const message = asErrorMessage(error)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       toast({ variant: 'destructive', title: TOAST_TITLES.DISCONNECT_FAILED, description: message })

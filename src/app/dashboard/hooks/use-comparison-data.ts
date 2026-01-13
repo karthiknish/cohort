@@ -11,7 +11,7 @@ import {
     formatRoas,
     formatCpa,
 } from '@/lib/dashboard-utils'
-import { asErrorMessage, extractErrorCode } from '@/lib/convex-errors'
+import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 import { formatCurrency } from '@/lib/utils'
 import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ClientRecord } from '@/types/clients'
@@ -112,15 +112,16 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
 
                 if (!isCancelled) {
                     setComparisonSummaries(summaries)
-                    setComparisonLoading(false)
-                }
-            } catch (error) {
-                if (!isCancelled) {
-                    setComparisonSummaries([])
-                    setComparisonError(asErrorMessage(error))
-                    setComparisonLoading(false)
-                }
-            }
+                     setComparisonLoading(false)
+                 }
+             } catch (error) {
+                 if (!isCancelled) {
+                     logError(error, 'useComparisonData:loadPreview')
+                     setComparisonSummaries([])
+                     setComparisonError(asErrorMessage(error))
+                     setComparisonLoading(false)
+                 }
+             }
 
             return () => {
                 isCancelled = true
@@ -190,12 +191,13 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                         }
                         return b.totalRevenue - a.totalRevenue
                     })
-                    setComparisonSummaries(ordered)
-                }
-             } catch (error) {
-                 if (!isCancelled) {
-                     setComparisonSummaries([])
-                     const message = isAuthError(error)
+                     setComparisonSummaries(ordered)
+                 }
+              } catch (error) {
+                  if (!isCancelled) {
+                      logError(error, 'useComparisonData:loadComparison')
+                      setComparisonSummaries([])
+                      const message = isAuthError(error)
                          ? 'Your session is not ready yet. Please refresh, or sign in again.'
                          : asErrorMessage(error)
                      setComparisonError(message)

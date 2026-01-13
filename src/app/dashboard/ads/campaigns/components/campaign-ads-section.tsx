@@ -44,7 +44,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
 
 export type CampaignAd = {
@@ -155,6 +155,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       setSummary(null)
       setHasLoaded(true)
     } catch (error) {
+      logError(error, 'CampaignAdsSection:fetchAds')
       toast({
         title: 'Error',
         description: asErrorMessage(error),
@@ -198,6 +199,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       })
       setAdMetrics(aggregated)
     } catch (error) {
+      logError(error, 'CampaignAdsSection:fetchMetrics')
       console.error('[CampaignAdsSection] metrics error:', error)
     } finally {
       setMetricsLoading(false)
@@ -266,6 +268,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     } catch (error) {
       // Revert on error
       setAds(previousAds)
+      logError(error, 'CampaignAdsSection:toggleAdStatus')
       toast({
         title: 'Error',
         description: asErrorMessage(error),

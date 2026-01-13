@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { api, filesApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { isConvexRealtimeEnabled } from '@/lib/convex-realtime'
 
 
@@ -231,6 +231,7 @@ export function TaskCommentsPanel(props: {
       setReplyTo(null)
       setPendingAttachments([])
     } catch (error) {
+      logError(error, 'TaskCommentsPanel:handleSend')
       toast({
         title: 'Failed to post comment',
         description: asErrorMessage(error),

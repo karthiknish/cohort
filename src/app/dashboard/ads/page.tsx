@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
-import { asErrorMessage, extractErrorCode } from '@/lib/convex-errors'
+import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -134,6 +134,7 @@ export default function AdsPage() {
 
     errors.forEach((error) => {
       if (shownErrorsRef.current.has(error)) return
+      logError(error, 'AdsPage:Effect')
       toast({
         variant: 'destructive',
         title: 'Ads error',

@@ -10,7 +10,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { projectsApi } from '@/lib/convex-api'
 import { collaborationApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { CollaborationMessageFormat } from '@/types/collaboration'
@@ -300,6 +300,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         setSearchError(null)
       })
       .catch((error: any) => {
+        logError(error, 'useCollaborationData:searchChannel')
         setSearchError(asErrorMessage(error))
         setSearchResults([])
       })
@@ -613,6 +614,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
       } catch (error) {
+        logError(error, 'useCollaborationData:handleSendMessage')
         toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setSending(false)
@@ -716,6 +718,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
         setNextCursorByChannel((prev) => ({ ...prev, [channelId]: newCursor }))
       } catch (error) {
+        logError(error, 'useCollaborationData:handleLoadMore')
         toast({ title: 'Load error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setLoadingMoreChannelId(null)

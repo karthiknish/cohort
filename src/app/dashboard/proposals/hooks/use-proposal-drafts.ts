@@ -6,7 +6,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { trackDraftCreated } from '@/services/proposal-analytics'
 
 import { createInitialProposalFormState } from '../utils/form-steps'
@@ -188,6 +188,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setAutosaveStatus('saved')
             return newDraftId
         } catch (error: unknown) {
+            logError(error, 'useProposalDrafts:ensureDraftId')
             setAutosaveStatus('error')
             toast({
                 title: 'Unable to create draft',
@@ -259,6 +260,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     : 'You can begin filling out the proposal steps.',
             })
         } catch (error: unknown) {
+            logError(error, 'useProposalDrafts:handleCreateNewProposal')
             setAutosaveStatus('error')
             toast({
                 title: 'Unable to create draft',
@@ -321,6 +323,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
             toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
         } catch (err: unknown) {
+            logError(err, 'useProposalDrafts:handleDeleteProposal')
             const message = asErrorMessage(err)
             toast({ title: 'Unable to delete proposal', description: message, variant: 'destructive' })
         } finally {
@@ -389,6 +392,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 if (cancelled) {
                     return
                 }
+                logError(err, 'useProposalDrafts:bootstrapDraft')
                 console.error('[ProposalWizard] bootstrap failed', err)
                 toast({ title: 'Unable to start proposal wizard', description: asErrorMessage(err), variant: 'destructive' })
             } finally {

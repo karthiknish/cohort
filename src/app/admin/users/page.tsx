@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useMutation, usePaginatedQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import {
   Card,
   CardContent,
@@ -175,6 +175,7 @@ export default function AdminUsersPage() {
       toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
       setRevokeOpen(false)
     } catch (err: unknown) {
+      logError(err, 'AdminUsers:handleApprovalToggle')
       const message = asErrorMessage(err)
       toast({ title: 'Admin error', description: message, variant: 'destructive' })
     } finally {
@@ -206,6 +207,7 @@ export default function AdminUsersPage() {
       setInviteEmail('')
       setInviteRole('team')
     } catch (err: unknown) {
+      logError(err, 'AdminUsers:handleInviteUser')
       const message = asErrorMessage(err)
       toast({ title: 'Invitation error', description: message, variant: 'destructive' })
     } finally {
@@ -496,11 +498,13 @@ export default function AdminUsersPage() {
                    onClick={async () => {
                      if (loadingMore) return
                      setLoadingMore(true)
-                     try {
-                       await loadMore(50)
-                     } finally {
-                       setLoadingMore(false)
-                     }
+                      try {
+                        await loadMore(50)
+                      } catch (err) {
+                        logError(err, 'AdminUsers:loadMore')
+                      } finally {
+                        setLoadingMore(false)
+                      }
                    }}
 
                   disabled={loadingMore}

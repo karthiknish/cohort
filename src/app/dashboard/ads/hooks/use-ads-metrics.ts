@@ -10,7 +10,7 @@ import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
 import { adsMetricsApi } from '@/lib/convex-api'
-import { asErrorMessage, extractErrorCode } from '@/lib/convex-errors'
+import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -259,6 +259,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       setVisibleCount(nextCount)
       setMetrics(metricsSource.slice(0, nextCount))
     } catch (error: unknown) {
+      logError(error, 'useAdsMetrics:handleLoadMore')
       const message = isAuthError(error)
         ? ERROR_MESSAGES.SIGN_IN_REQUIRED
         : asErrorMessage(error)

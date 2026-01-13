@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
@@ -184,6 +184,7 @@ export function useTasks({
           description: `Task moved to "${formatStatusLabel(newStatus)}".`,
         })
       } catch (err) {
+        logError(err, 'useTasks:handleQuickStatusChange')
         setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)))
         toast({
           title: 'Status update failed',
@@ -218,6 +219,7 @@ export function useTasks({
         toast({ title: 'Task deleted', description: `"${task.title}" has been removed.` })
         return true
       } catch (err) {
+        logError(err, 'useTasks:handleDeleteTask')
         toast({
           title: 'Deletion failed',
           description: asErrorMessage(err),
@@ -294,6 +296,7 @@ export function useTasks({
           }
           : null
       } catch (err) {
+        logError(err, 'useTasks:handleCreateTask')
         toast({
           title: 'Creation failed',
           description: asErrorMessage(err),
@@ -345,9 +348,10 @@ export function useTasks({
             tags: payload.tags,
           },
         })
-
+  
         toast({ title: 'Task updated', description: 'Changes saved.' })
       } catch (err) {
+        logError(err, 'useTasks:handleUpdateTask')
         toast({
           title: 'Update failed',
           description: asErrorMessage(err),
@@ -398,6 +402,7 @@ export function useTasks({
         toast({ title: 'Bulk update complete' })
         return true
       } catch (err) {
+        logError(err, 'useTasks:handleBulkUpdate')
         toast({
           title: 'Bulk update failed',
           description: asErrorMessage(err),
@@ -426,6 +431,7 @@ export function useTasks({
         toast({ title: 'Bulk deletion complete' })
         return true
       } catch (err) {
+        logError(err, 'useTasks:handleBulkDelete')
         toast({
           title: 'Bulk deletion failed',
           description: asErrorMessage(err),

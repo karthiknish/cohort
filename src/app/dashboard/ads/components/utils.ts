@@ -3,7 +3,7 @@ import { Facebook, Linkedin, Music, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import type { MetricRecord } from './types'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
 
 // Re-export from retry-fetch for convenience
@@ -84,7 +84,10 @@ export function normalizeTimeframe(value?: number | null): number {
   return DEFAULT_TIMEFRAME_DAYS
 }
 
-export function getErrorMessage(error: unknown, fallback: string): string {
+export function getErrorMessage(error: unknown, fallback: string, context?: string): string {
+  if (context) {
+    logError(error, context)
+  }
   const message = asErrorMessage(error)
   if (message && message !== 'An unexpected error occurred' && message !== 'An error occurred') {
     return message

@@ -14,7 +14,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useQuery } from 'convex/react'
 import { useClientContext } from '@/contexts/client-context'
 import { financeExpensesApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { ExpenseReportResponse, ExpenseStatus } from '@/types/expenses'
 import { formatCurrency } from '../utils'
 
@@ -72,6 +72,7 @@ export function FinanceExpenseReportCard({ currency, embedded = false }: { curre
       setQueryFrom(from)
       setQueryTo(to)
     } catch (e) {
+      logError(e, 'FinanceExpenseReport:refresh')
       setError(asErrorMessage(e))
     } finally {
       setLoading(false)
@@ -141,6 +142,7 @@ export function FinanceExpenseReportCard({ currency, embedded = false }: { curre
 
       toast({ title: 'Export complete', description: `Downloaded ${rows.length} row${rows.length === 1 ? '' : 's'}.` })
     } catch (e) {
+      logError(e, 'FinanceExpenseReport:exportCsv')
       toast({ title: 'Export failed', description: asErrorMessage(e), variant: 'destructive' })
     }
   }, [report?.rows, resolvedCurrency, toast])

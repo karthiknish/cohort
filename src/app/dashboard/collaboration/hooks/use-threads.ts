@@ -6,7 +6,7 @@ import { useConvex } from 'convex/react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { collaborationApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
 import { THREAD_PAGE_SIZE } from './constants'
 import type {
@@ -198,6 +198,7 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
         setThreadMessagesByRootId((prev) => ({ ...prev, [trimmedId]: firstPage.replies }))
         setThreadNextCursorByRootId((prev) => ({ ...prev, [trimmedId]: firstPage.nextCursor }))
       } catch (error) {
+        logError(error, 'useThreads:loadThreadReplies')
         const message = asErrorMessage(error)
         setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: message }))
         toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })
@@ -229,6 +230,7 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
         })
         setThreadNextCursorByRootId((prev) => ({ ...prev, [trimmedId]: page.nextCursor }))
       } catch (error) {
+        logError(error, 'useThreads:loadMoreThreadReplies')
         const message = asErrorMessage(error)
         setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: message }))
         toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })

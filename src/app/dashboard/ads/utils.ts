@@ -1,9 +1,18 @@
 import { formatDistanceToNow } from 'date-fns'
 
 import { DISPLAY_DATE_FORMATTER, FREQUENCY_OPTIONS, TIMEFRAME_OPTIONS } from './constants'
-import { asErrorMessage as getErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
-export { getErrorMessage }
+export function getErrorMessage(error: unknown, fallback: string, context?: string): string {
+  if (context) {
+    logError(error, context)
+  }
+  const message = asErrorMessage(error)
+  if (message && message !== 'An unexpected error occurred' && message !== 'An error occurred') {
+    return message
+  }
+  return fallback
+}
 
 export function formatRelativeTimestamp(iso?: string | null): string {
     if (!iso) {

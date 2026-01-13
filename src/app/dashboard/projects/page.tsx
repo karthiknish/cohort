@@ -71,7 +71,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import type { MilestoneRecord } from '@/types/milestones'
@@ -249,7 +249,7 @@ export default function ProjectsPage() {
         return
       }
 
-      console.error('Failed to fetch projects', fetchError)
+      logError(fetchError, 'ProjectsPage:loadProjects')
       const message = asErrorMessage(fetchError)
 
       // Retry on network errors
@@ -323,6 +323,7 @@ export default function ProjectsPage() {
 
       setMilestonesByProject(mapped)
     } catch (err) {
+      logError(err, 'ProjectsPage:milestonesEffect')
       setMilestonesError(asErrorMessage(err))
       setMilestonesByProject({})
     } finally {
@@ -398,6 +399,7 @@ export default function ProjectsPage() {
         description: `"${projectToDelete.name}" has been permanently removed.`,
       })
     } catch (error) {
+      logError(error, 'ProjectsPage:handleDeleteProject')
       toast({ title: 'Deletion failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setDeleting(false)
@@ -433,6 +435,7 @@ export default function ProjectsPage() {
     onError: (error, variables, context) => {
       if (!context) return
 
+      logError(error, 'ProjectsPage:updateStatusMutation')
       setProjects((prev) => prev.map((p) => (p.id === context.projectId ? { ...p, status: context.previousStatus } : p)))
 
       toast({ title: 'Status update failed', description: asErrorMessage(error), variant: 'destructive' })

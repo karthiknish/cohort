@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCreativesApi } from '@/lib/convex-api'
 
 // =============================================================================
@@ -101,6 +101,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
       setCreatives(Array.isArray(creativesList) ? (creativesList as Creative[]) : [])
       setSummary(null)
     } catch (error) {
+      logError(error, 'CreativesCard:fetchCreatives')
       toast({
         title: 'Error',
         description: asErrorMessage(error),

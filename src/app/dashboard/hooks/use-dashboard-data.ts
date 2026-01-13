@@ -14,7 +14,7 @@ import { useQuery } from 'convex/react'
 import { adsMetricsApi, financeSummaryApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
 import { getWorkspaceId } from '@/lib/utils'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 export interface UseDashboardDataOptions {
     selectedClientId: string | null
@@ -241,6 +241,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
                 }
             } catch (error) {
                 if (!isCancelled) {
+                    logError(error, 'useDashboardData:loadFinance')
                     setFinanceSummary(null)
                     setFinanceError(asErrorMessage(error))
                 }
