@@ -45,8 +45,8 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
-  // Disable automatic instrumentation for global-error to fix build issues with Next.js 16
-  autoInstrumentAppDirectory: false,
+  // Enable automatic instrumentation for global-error
+  autoInstrumentAppDirectory: true,
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
