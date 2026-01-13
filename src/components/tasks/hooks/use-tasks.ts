@@ -108,7 +108,7 @@ export function useTasks({
   const convexTasksQuery = useQuery(
     tasksApi.listByClient,
     !isPreviewMode && !authLoading && workspaceId && clientId !== undefined
-      ? { workspaceId, clientId: clientId ?? null }
+      ? { workspaceId, clientId: clientId ?? null, limit: 200 }
       : 'skip'
   ) as Array<any> | undefined
 

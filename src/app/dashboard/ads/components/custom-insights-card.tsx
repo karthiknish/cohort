@@ -163,7 +163,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }
     const computedBenchmarks = useMemo(() => {
         if (!derivedMetrics) return null
 
-        const normalized = (processedMetrics ?? []).map((m) => ({
+        const normalized = Array.isArray(processedMetrics) ? processedMetrics.map((m) => ({
             providerId: m.providerId,
             adId: m.id,
             campaignId: 'unknown',
@@ -173,7 +173,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }
             spend: m.spend,
             conversions: m.conversions,
             revenue: m.revenue ?? 0,
-        }))
+        })) : []
 
         return calculateBenchmarks(normalized)
     }, [derivedMetrics, processedMetrics])

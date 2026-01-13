@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
   const users: AdminUserRecord[] = useMemo(() => {
     if (usersOverride) return usersOverride
 
-    return (usersPage ?? []).map((row: any) => ({
+    return (Array.isArray(usersPage) ? usersPage : []).map((row: any) => ({
       id: row.legacyId,
       email: row.email ?? '',
       name: row.name ?? '',

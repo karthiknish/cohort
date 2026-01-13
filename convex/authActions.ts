@@ -46,7 +46,8 @@ export const exportUserData = action({
           workspaceId,
           limit: 500,
         })
-        exportData.clients = (clientsResult?.items ?? []).map((client: any) => ({
+        const clients = clientsResult?.items
+        exportData.clients = (Array.isArray(clients) ? clients : []).map((client: any) => ({
           id: client.legacyId,
           name: client.name,
           accountManager: client.accountManager,
@@ -60,7 +61,8 @@ export const exportUserData = action({
           workspaceId,
           limit: 500,
         })
-        exportData.projects = (projectsResult?.items ?? []).map((project: any) => ({
+        const projects = projectsResult?.items
+        exportData.projects = (Array.isArray(projects) ? projects : []).map((project: any) => ({
           id: project.legacyId,
           name: project.name,
           description: project.description,
@@ -74,7 +76,7 @@ export const exportUserData = action({
           workspaceId,
           limit: 500,
         })
-        exportData.proposals = (proposals ?? []).map((proposal: any) => ({
+        exportData.proposals = (Array.isArray(proposals) ? proposals : []).map((proposal: any) => ({
           id: proposal.legacyId,
           title: proposal.title,
           status: proposal.status,
@@ -88,7 +90,8 @@ export const exportUserData = action({
           workspaceId,
           limit: 500,
         })
-        exportData.invoices = (invoices?.invoices ?? []).map((invoice: any) => ({
+        const invoicesList = invoices?.invoices
+        exportData.invoices = (Array.isArray(invoicesList) ? invoicesList : []).map((invoice: any) => ({
           id: invoice.legacyId ?? invoice.id,
           number: invoice.number,
           status: invoice.status,
@@ -103,7 +106,8 @@ export const exportUserData = action({
           workspaceId,
           pageSize: 500,
         })
-        exportData.notifications = (notificationsResult?.notifications ?? []).map((notification: any) => ({
+        const notifications = notificationsResult?.notifications
+        exportData.notifications = (Array.isArray(notifications) ? notifications : []).map((notification: any) => ({
           id: notification._id,
           type: notification.type,
           title: notification.title,

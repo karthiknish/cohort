@@ -45,7 +45,7 @@ function resolveThreshold(input: SchedulerEventInput): number {
 }
 
 function determineSeverity(input: SchedulerEventInput): SchedulerEventSeverity {
-  const providerThresholds = (input.providerFailureThresholds ?? []).map((entry) => ({
+  const providerThresholds = (Array.isArray(input.providerFailureThresholds) ? input.providerFailureThresholds : []).map((entry) => ({
     providerId: entry.providerId,
     failedJobs: entry.failedJobs,
     threshold:

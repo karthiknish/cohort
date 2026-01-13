@@ -89,7 +89,7 @@ export default function AdminTeamPage() {
     if (usersOverride) return usersOverride
 
     // Convex returns a simplified record; adapt to existing AdminUserRecord expectations.
-    return (usersPage ?? []).map((row: any) => ({
+    return (Array.isArray(usersPage) ? usersPage : []).map((row: any) => ({
       id: row.legacyId,
       email: row.email ?? '',
       name: row.name ?? '',

@@ -46,6 +46,9 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   // Don't query until auth is fully loaded and synced
   const canQuery = !authLoading && !isSyncing && !!workspaceId
 
+  // Admin users can see all clients across workspaces
+  const isAdmin = user?.role === 'admin'
+
   const convexClients = useQuery(
     clientsApi.list,
     previewEnabled || !canQuery
@@ -53,6 +56,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       : {
         workspaceId,
         limit: 100,
+        includeAllWorkspaces: isAdmin,
       }
   )
 
@@ -67,7 +71,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
         workspaceId,
         canQuery,
         hasConvexResult: convexClients !== undefined,
-        convexResultLength: Array.isArray(convexClients) ? convexClients.length : 'N/A'
+        convexResultLength: Array.isArray(convexClients) ? convexClients.length : (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)) ? (convexClients as any).items.length : 'N/A',
+        rawConvexResult: convexClients
       })
     }
   }, [authLoading, isSyncing, workspaceId, canQuery, convexClients])
@@ -170,7 +175,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return []
     }
 
-    const rows = convexClients ?? []
+    const rows = Array.isArray(convexClients) ? convexClients : (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)) ? (convexClients as any).items : []
     const list: ClientRecord[] = rows.map((row: any) => ({
       id: row.legacyId,
       name: row.name,
@@ -224,6 +229,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    if (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items) && (convexClients as any).items.length === 0) {
+      setError('No clients found for this workspace')
+      return
+    }
+
     setError(null)
   }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey])
 
@@ -253,7 +263,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return []
     }
 
-    const rows = convexClients ?? []
+    const rows = Array.isArray(convexClients) ? convexClients : (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)) ? (convexClients as any).items : []
     const list: ClientRecord[] = rows.map((row: any) => ({
       id: row.legacyId,
       name: row.name,

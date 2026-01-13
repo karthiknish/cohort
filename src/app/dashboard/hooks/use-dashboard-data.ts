@@ -95,6 +95,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             : {
                 workspaceId,
                 clientId: selectedClientId ?? null,
+                limit: 200,
             }
     ) as Array<any> | undefined
 
@@ -155,7 +156,13 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         let isCancelled = false
 
         if (!isPreviewMode && workspaceId && user?.id && convexTasks !== undefined) {
-            const mapped = convexTasks.map((row: any) => ({
+            const taskRows = Array.isArray(convexTasks)
+                ? convexTasks
+                : (convexTasks && typeof convexTasks === 'object' && 'items' in convexTasks && Array.isArray((convexTasks as any).items))
+                    ? (convexTasks as any).items
+                    : []
+
+            const mapped = taskRows.map((row: any) => ({
                 id: String(row.legacyId),
                 title: String(row.title ?? ''),
                 description: typeof row.description === 'string' ? row.description : null,

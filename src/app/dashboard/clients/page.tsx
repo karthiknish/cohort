@@ -101,7 +101,9 @@ function ClientsDashboardContent() {
 
   const tasksRealtime = useQuery(
     tasksApi.listByClient,
-    !isPreviewMode && workspaceId && selectedClient ? { workspaceId, clientId: selectedClient.id } : 'skip'
+    !isPreviewMode && workspaceId && selectedClient
+      ? { workspaceId, clientId: selectedClient.id, limit: 200 }
+      : 'skip'
   ) as Array<any> | undefined
 
   const projectsRealtime = useQuery(

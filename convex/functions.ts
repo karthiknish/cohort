@@ -29,6 +29,7 @@ const SOFT_DELETE_TABLES = ['tasks', 'taskComments', 'collaborationMessages', 'c
 
 /**
  * Helper to automatically append a deletedAtMs filter to queries.
+ * Treats both `null` and `undefined` (missing field) as "active" (not deleted).
  */
 function wrapDatabaseActive(db: QueryCtx['db']): QueryCtx['db'] {
   const proxyQuery = (q: any): any => {
@@ -36,7 +37,13 @@ function wrapDatabaseActive(db: QueryCtx['db']): QueryCtx['db'] {
       get(target, prop, receiver) {
         if (['collect', 'first', 'unique', 'paginate', 'take'].includes(prop as string)) {
           return (...args: any[]) => {
-            return target.filter((q: any) => q.eq(q.field('deletedAtMs'), null))[prop](...args)
+            // Filter: deletedAtMs is null OR deletedAtMs is undefined (missing)
+            return target.filter((q: any) =>
+              q.or(
+                q.eq(q.field('deletedAtMs'), null),
+                q.eq(q.field('deletedAtMs'), undefined)
+              )
+            )[prop](...args)
           }
         }
         const value = Reflect.get(target, prop, receiver)

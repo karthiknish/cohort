@@ -1,4 +1,5 @@
-import { authenticatedQuery, adminQuery } from './functions'
+import { authenticatedQuery, adminMutation, adminQuery } from './functions'
+import { query } from './_generated/server'
 import { v } from 'convex/values'
 
 function summarizeIdentity(identity: any) {
@@ -65,6 +66,76 @@ export const countClientsByWorkspace = adminQuery({
       workspaces: Array.from(counts.entries())
         .map(([workspaceId, stats]) => ({ workspaceId, ...stats }))
         .sort((a, b) => b.total - a.total),
+    }
+  },
+})
+
+export const backfillDeletedAtMs = adminMutation({
+  args: {
+    tables: v.optional(v.array(v.string())),
+    limitPerTable: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const defaultTables = ['tasks', 'taskComments', 'collaborationMessages', 'clients', 'projects']
+    const tables = (args.tables ?? defaultTables).filter((t) => defaultTables.includes(t))
+    const limitPerTable = Math.min(Math.max(args.limitPerTable ?? 500, 1), 5000)
+
+    const summary: Record<string, { scanned: number; patched: number; skipped: number; errors: number }> = {}
+
+    for (const table of tables) {
+      summary[table] = { scanned: 0, patched: 0, skipped: 0, errors: 0 }
+
+      const rows = await ctx.db.query(table as any).take(limitPerTable)
+      summary[table].scanned = rows.length
+
+      for (const row of rows as any[]) {
+        try {
+          if (row.deletedAtMs !== undefined) {
+            summary[table].skipped += 1
+            continue
+          }
+          await ctx.db.patch(row._id, { deletedAtMs: null })
+          summary[table].patched += 1
+        } catch {
+          summary[table].errors += 1
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      tables,
+      limitPerTable,
+      summary,
+    }
+  },
+})
+
+/**
+ * Unauthenticated debug query to inspect raw client data.
+ * WARNING: Only use in development! Remove or protect in production.
+ */
+export const inspectClients = query({
+  args: { workspaceId: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 10, 1), 50)
+
+    const rows = await ctx.db
+      .query('clients')
+      .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
+      .take(limit)
+
+    return {
+      count: rows.length,
+      rows: rows.map((row) => ({
+        _id: row._id,
+        workspaceId: row.workspaceId,
+        legacyId: row.legacyId,
+        name: row.name,
+        deletedAtMs: row.deletedAtMs,
+        deletedAtMsType: typeof row.deletedAtMs,
+        hasDeletedAtMs: 'deletedAtMs' in row,
+      })),
     }
   },
 })

@@ -214,13 +214,13 @@ export function AlgorithmicInsightsCard({
   onViewAll,
 }: AlgorithmicInsightsCardProps) {
   const displayedInsights = useMemo(() => {
-    return insights.slice(0, maxInsights)
+    return (Array.isArray(insights) ? insights : []).slice(0, maxInsights)
   }, [insights, maxInsights])
 
-  const hasMoreInsights = insights.length > maxInsights
+  const hasMoreInsights = (Array.isArray(insights) ? insights : []).length > maxInsights
 
-  const criticalCount = insights.filter((i) => i.level === 'critical').length
-  const warningCount = insights.filter((i) => i.level === 'warning').length
+  const criticalCount = (Array.isArray(insights) ? insights : []).filter((i) => i.level === 'critical').length
+  const warningCount = (Array.isArray(insights) ? insights : []).filter((i) => i.level === 'warning').length
 
   if (loading) {
     return (

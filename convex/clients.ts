@@ -142,12 +142,27 @@ export const updateInvoiceFieldsServer = mutation({
 })
 
 export const list = zWorkspacePaginatedQueryActive({
-  args: {},
+  args: {
+    includeAllWorkspaces: z.boolean().optional(),
+  },
   handler: async (ctx: any, args: any) => {
-    let q = ctx.db
-      .query('clients')
-      .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
-      .order('asc')
+    const isAdmin = ctx.user?.role === 'admin'
+    const fetchAll = isAdmin && args.includeAllWorkspaces === true
+
+    let q: any
+
+    if (fetchAll) {
+      // Admin fetching all clients across workspaces
+      q = ctx.db
+        .query('clients')
+        .order('asc')
+    } else {
+      // Standard workspace-scoped query
+      q = ctx.db
+        .query('clients')
+        .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
+        .order('asc')
+    }
 
     q = applyManualPagination(q, args.cursor, 'nameLower', 'asc')
 
@@ -172,6 +187,7 @@ export const list = zWorkspacePaginatedQueryActive({
         createdAtMs: row.createdAtMs,
         updatedAtMs: row.updatedAtMs,
         deletedAtMs: row.deletedAtMs,
+        workspaceId: row.workspaceId,
       })),
       nextCursor: result.nextCursor,
     }
