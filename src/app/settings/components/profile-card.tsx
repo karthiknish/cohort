@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery, useConvex } from 'convex/react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/components/ui/use-toast'
-import { settingsApi } from '@/lib/convex-api'
+import { settingsApi, filesApi } from '@/lib/convex-api'
 import { getAvatarInitials } from './utils'
 import { validateFile } from '@/lib/utils'
 
@@ -31,8 +31,10 @@ export function ProfileCard({
   saveNotificationPreferences,
 }: ProfileCardProps) {
   const { toast } = useToast()
+  const convex = useConvex()
   const profile = useQuery(settingsApi.getMyProfile)
   const updateMyProfile = useMutation(settingsApi.updateMyProfile)
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
 
   const user = profile
 
@@ -43,7 +45,7 @@ export function ProfileCard({
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoUrl ?? null)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
-  
+
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const tempAvatarUrlRef = useRef<string | null>(null)
 
@@ -134,6 +136,35 @@ export function ProfileCard({
     avatarInputRef.current?.click()
   }, [])
 
+  const uploadAvatarImage = useCallback(async (file: File): Promise<string> => {
+    const { url: uploadUrl } = await generateUploadUrl()
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'image/jpeg',
+      },
+      body: file,
+    })
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Failed to upload file (${uploadResponse.status})`)
+    }
+
+    const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+    if (!json?.storageId) {
+      throw new Error('Upload did not return storageId')
+    }
+
+    const publicUrl = await convex.query((filesApi as any).getPublicUrl, { storageId: json.storageId })
+
+    if (!publicUrl?.url) {
+      throw new Error('Unable to resolve uploaded file URL')
+    }
+
+    return publicUrl.url
+  }, [generateUploadUrl, convex])
+
   const handleAvatarFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0]
@@ -169,10 +200,12 @@ export function ProfileCard({
       tempAvatarUrlRef.current = objectUrl
       setAvatarPreview(objectUrl)
 
-       try {
-         setAvatarError('Avatar uploads are temporarily disabled during migration.')
-         setAvatarPreview(previousUrl ?? null)
-       } catch (uploadError) {
+      try {
+        const photoUrl = await uploadAvatarImage(file)
+        await updateMyProfile({ photoUrl })
+        setAvatarPreview(photoUrl)
+        toast({ title: 'Photo uploaded', description: 'Your profile photo has been updated.' })
+      } catch (uploadError) {
         console.error('[settings/profile] avatar upload failed', uploadError)
         setAvatarError('Failed to upload image. Try again.')
         setAvatarPreview(previousUrl ?? null)
@@ -186,7 +219,7 @@ export function ProfileCard({
         event.target.value = ''
       }
     },
-    [avatarPreview, toast, updateMyProfile, user],
+    [avatarPreview, toast, updateMyProfile, user, uploadAvatarImage],
   )
 
   const handleAvatarRemove = useCallback(async () => {

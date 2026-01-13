@@ -109,7 +109,7 @@ function MetricCard({
 }
 
 export function MetricCardsSection({ metrics, loading, currency, efficiencyScore }: MetricCardsSectionProps) {
-  const displayCurrency = currency || 'USD'
+  const displayCurrency = currency?.toUpperCase() || 'USD'
   const displayEfficiencyScore =
     typeof efficiencyScore === 'number' && Number.isFinite(efficiencyScore)
       ? Math.max(0, Math.min(100, Math.round(efficiencyScore)))

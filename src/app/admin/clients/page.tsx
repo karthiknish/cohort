@@ -144,11 +144,10 @@ export default function AdminClientsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-muted/60 bg-background">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active clients</CardTitle>
+         <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active clients</CardTitle>
               <UsersIcon className={`h-4 w-4 text-muted-foreground ${clientsLoading ? 'animate-spin' : ''}`} />
             </CardHeader>
             <CardContent>
@@ -157,20 +156,20 @@ export default function AdminClientsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-muted/60 bg-background">
+          <Card>
             <CardHeader className="space-y-1 pb-2">
-              <CardTitle className="text-sm font-medium">Workspace coverage</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Workspace coverage</CardTitle>
               <CardDescription>Team members attached</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{existingTeamMembers}</div>
+              <div className="text-2xl font-bold">{existingTeamMembers}</div>
               <p className="text-xs text-muted-foreground">Across all clients</p>
             </CardContent>
           </Card>
 
-          <Card className="border-muted/60 bg-background">
+          <Card>
             <CardHeader className="space-y-1 pb-2">
-              <CardTitle className="text-sm font-medium">Quick start</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Quick start</CardTitle>
               <CardDescription>Need a workspace fast?</CardDescription>
             </CardHeader>
             <CardContent>
@@ -182,12 +181,11 @@ export default function AdminClientsPage() {
           </Card>
         </div>
 
-        {/* Invoice Card */}
-        <Card className="border-muted/60 bg-background">
-          <CardHeader>
-            <CardTitle className="text-lg">Raise invoice</CardTitle>
-            <CardDescription>Send a Stripe invoice to any client workspace.</CardDescription>
-          </CardHeader>
+         <Card>
+           <CardHeader>
+             <CardTitle className="text-lg">Raise invoice</CardTitle>
+             <CardDescription>Send a Stripe invoice to any client workspace.</CardDescription>
+           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="admin-invoice-client">Client workspace</Label>
@@ -247,10 +245,9 @@ export default function AdminClientsPage() {
           </CardContent>
         </Card>
 
-        {/* New Client Form */}
-        <Card className="border-muted/60 bg-background">
-          <CardHeader>
-            <CardTitle className="text-lg">New client</CardTitle>
+         <Card>
+           <CardHeader>
+             <CardTitle className="text-lg">New client</CardTitle>
             <CardDescription>Kick off a workspace with the key account team.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -297,7 +294,7 @@ export default function AdminClientsPage() {
                   {teamMemberFields.map((member, index) => (
                     <div
                       key={member.key}
-                      className="flex flex-col gap-2 rounded-md border border-muted/60 bg-muted/10 p-3 sm:flex-row sm:items-center"
+                      className="flex flex-col gap-2 rounded-md border p-4 sm:flex-row sm:items-center"
                     >
                       <div className="flex-1 space-y-2">
                         <Label htmlFor={`team-member-name-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -368,10 +365,10 @@ export default function AdminClientsPage() {
               ) : (
                 <div className="space-y-3">
                   {clients.map((client) => (
-                    <div key={client.id} className="rounded-md border border-muted/60 bg-muted/10 p-4">
+                    <div key={client.id} className="rounded-md border p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-foreground">{client.name}</p>
+                          <p className="text-sm font-bold text-foreground">{client.name}</p>
                           <p className="text-xs text-muted-foreground">Managed by {client.accountManager}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -415,7 +412,7 @@ export default function AdminClientsPage() {
                           {client.teamMembers.map((member) => (
                             <span
                               key={`${client.id}-${member.name}-${member.role}`}
-                              className="rounded-full border border-muted/60 bg-background px-3 py-1 text-xs text-muted-foreground"
+                              className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
                             >
                               <span className="font-medium text-foreground">{member.name}</span>
                               {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
@@ -424,9 +421,9 @@ export default function AdminClientsPage() {
                         </div>
                       )}
                       {(client.lastInvoiceStatus || typeof client.lastInvoiceAmount === 'number' || client.lastInvoiceIssuedAt || client.lastInvoiceNumber) && (
-                        <div className="mt-4 rounded-md border border-muted/50 bg-background/80 p-3 text-xs text-muted-foreground">
+                        <div className="mt-4 rounded-md border bg-muted p-3 text-xs text-muted-foreground">
                           <div className="flex flex-wrap items-center gap-2 text-foreground">
-                            <span className="font-semibold">Latest invoice</span>
+                            <span className="font-bold">Latest invoice</span>
                             {client.lastInvoiceStatus ? (
                               <Badge variant="outline" className="capitalize">
                                 {client.lastInvoiceStatus.replace(/_/g, ' ')}
@@ -639,10 +636,10 @@ export default function AdminClientsPage() {
                 />
               </div>
             </div>
-            {(clientPendingInvoice?.lastInvoiceStatus || typeof clientPendingInvoice?.lastInvoiceAmount === 'number' || clientPendingInvoice?.lastInvoiceNumber) && (
-              <div className="rounded-md border border-muted/50 bg-muted/10 p-3 text-xs text-muted-foreground">
-                <div className="flex flex-wrap items-center gap-2 text-foreground">
-                  <span className="font-medium">Latest invoice</span>
+             {(clientPendingInvoice?.lastInvoiceStatus || typeof clientPendingInvoice?.lastInvoiceAmount === 'number' || clientPendingInvoice?.lastInvoiceNumber) && (
+               <div className="rounded-md border bg-muted p-3 text-xs text-muted-foreground">
+                 <div className="flex flex-wrap items-center gap-2 text-foreground">
+                   <span className="font-medium">Latest invoice</span>
                   {clientPendingInvoice?.lastInvoiceStatus ? (
                     <Badge variant="outline" className="capitalize">
                       {clientPendingInvoice.lastInvoiceStatus.replace(/_/g, ' ')}

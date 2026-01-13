@@ -295,11 +295,19 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         if (firstId) setSelectedTargetingId(firstId)
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load audience targeting',
-        variant: 'destructive',
-      })
+      const message = error instanceof Error ? error.message : 'Failed to load audience targeting'
+
+      // Suppress toasts for non-actionable errors
+      if (message.includes('Unknown Meta API error') || message.includes('INTERNAL_ERROR')) {
+        // Silent failure - don't show toast for unknown errors
+        console.warn('Meta API error (suppressed):', message)
+      } else {
+        toast({
+          title: 'Error',
+          description: message,
+          variant: 'destructive',
+        })
+      }
     } finally {
       setLoading(false)
     }

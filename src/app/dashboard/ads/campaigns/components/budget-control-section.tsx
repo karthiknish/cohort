@@ -237,7 +237,7 @@ export function BudgetControlSection({
           )}
 
           <div className={cn('space-y-2', modeOptions.length > 0 ? 'sm:col-span-2' : 'sm:col-span-3')}>
-            <Label>Budget amount ({currencyCode})</Label>
+            <Label>Budget amount ({currencyCode.toUpperCase()})</Label>
             <Input
               inputMode="decimal"
               placeholder="e.g. 50"

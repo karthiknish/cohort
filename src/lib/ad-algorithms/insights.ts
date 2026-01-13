@@ -68,7 +68,7 @@ export function generateEfficiencyInsights(summary: AdMetricsSummary): Algorithm
       level: 'critical',
       category: 'Efficiency Alert',
       title: 'Below Break-Even Performance',
-      message: `${providerName} ROAS is ${averageRoaS.toFixed(2)}x - you're losing ${formatCurrency(totalSpend - totalRevenue)} on this platform.`,
+      message: `${providerName} ROAS is ${averageRoaS.toFixed(2)}x - you're losing ${formatCurrency(totalSpend - totalRevenue, 'INR')} on this platform.`,
       suggestion: 'Immediately audit campaign targeting and pause lowest-performing ad sets. Consider restructuring your funnel.',
       score: 25,
       impact: 'high',
