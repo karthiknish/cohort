@@ -82,42 +82,69 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
     }
   }, [interactive])
 
-  useEffect(() => {
-    const map = mapInstanceRef.current
-    if (!map || !mapReady) return
+   useEffect(() => {
+     const map = mapInstanceRef.current
+     if (!map || !mapReady) return
 
-    markersRef.current.forEach((marker) => marker.remove())
-    markersRef.current = []
+     markersRef.current.forEach((marker) => marker.remove())
+     markersRef.current = []
 
-    if (locations.length === 0) {
-      map.setView([20, 0], 2)
-      return
-    }
+     const validLocations = locations.filter(
+       (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0)
+     )
 
-    locations.forEach((loc) => {
-      const marker = L.marker([loc.lat, loc.lng])
-        .addTo(map)
-        .bindPopup(`<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`)
+     if (validLocations.length === 0) {
+       map.setView([20, 0], 2)
+       return
+     }
 
-      if (onMarkerClick) {
-        marker.on('click', () => onMarkerClick(loc))
-      }
+     validLocations.forEach((loc) => {
+       const marker = L.marker([loc.lat, loc.lng])
+         .addTo(map)
+         .bindPopup(
+           `<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`
+         )
 
-      markersRef.current.push(marker)
-    })
+       marker.on('add', () => {
+         // no-op; ensures marker is attached before bounds fit
+       })
 
-    // Ensure the map has a real size before fitting/centering.
-    requestAnimationFrame(() => {
-      map.invalidateSize()
-      if (locations.length === 1) {
-        const zoomLevel = getZoomForLocation(locations[0])
-        map.setView([locations[0].lat, locations[0].lng], zoomLevel, { animate: false })
-      } else {
-        const bounds = L.latLngBounds(locations.map((loc) => [loc.lat, loc.lng] as L.LatLngTuple))
-        map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 })
-      }
-    })
-  }, [locations, onMarkerClick, mapReady])
+       if (onMarkerClick) {
+         marker.on('click', () => onMarkerClick(loc))
+       }
+
+       markersRef.current.push(marker)
+     })
+
+     // Ensure the map has a real size before fitting/centering.
+     requestAnimationFrame(() => {
+       map.invalidateSize()
+
+       if (validLocations.length === 1) {
+         const zoomLevel = getZoomForLocation(validLocations[0])
+         map.setView([validLocations[0].lat, validLocations[0].lng], zoomLevel, { animate: false })
+         return
+       }
+
+       const bounds = L.latLngBounds(validLocations.map((loc) => [loc.lat, loc.lng] as L.LatLngTuple))
+
+       // If all coordinates are nearly identical, fitBounds can look like it "didn't zoom".
+       // Expand the bounds slightly to force a sensible zoom.
+       if (bounds.isValid()) {
+         const northEast = bounds.getNorthEast()
+         const southWest = bounds.getSouthWest()
+         const latSpan = Math.abs(northEast.lat - southWest.lat)
+         const lngSpan = Math.abs(northEast.lng - southWest.lng)
+
+         if (latSpan < 0.01 && lngSpan < 0.01) {
+           bounds.extend([northEast.lat + 0.05, northEast.lng + 0.05])
+           bounds.extend([southWest.lat - 0.05, southWest.lng - 0.05])
+         }
+       }
+
+       map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 })
+     })
+   }, [locations, onMarkerClick, mapReady])
 
   return <div ref={mapRef} className="h-full w-full" />
 }

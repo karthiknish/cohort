@@ -203,8 +203,8 @@ export function useFinanceData(): FinanceHookReturn {
   const loadMoreCosts = useCallback(async () => {}, [])
 
   const invoices: FinanceInvoice[] = useMemo(() => {
-    if (!invoicePage) return []
-    return invoicePage.invoices.map((row) => ({
+    if (!Array.isArray((invoicePage as any)?.invoices)) return []
+    return (invoicePage as any).invoices.map((row: any) => ({
       id: row.legacyId,
       clientId: row.clientId,
       clientName: row.clientName,
@@ -236,8 +236,8 @@ export function useFinanceData(): FinanceHookReturn {
   }, [invoices, invoiceStatusFilter])
 
   const companyCosts: FinanceCostEntry[] = useMemo(() => {
-    if (!costPage) return []
-    return costPage.costs.map((row) => ({
+    if (!Array.isArray((costPage as any)?.costs)) return []
+    return (costPage as any).costs.map((row: any) => ({
       id: row.legacyId,
       clientId: row.clientId,
       category: row.category,
@@ -250,8 +250,8 @@ export function useFinanceData(): FinanceHookReturn {
   }, [costPage])
 
   const revenueRecords: FinanceRevenueRecord[] = useMemo(() => {
-    if (!revenue) return []
-    return revenue.revenue.map((row) => ({
+    if (!Array.isArray((revenue as any)?.revenue)) return []
+    return (revenue as any).revenue.map((row: any) => ({
       id: row.legacyId,
       clientId: row.clientId,
       period: row.period,

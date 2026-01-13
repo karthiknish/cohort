@@ -110,7 +110,7 @@ export function useTasks({
     !isPreviewMode && !authLoading && workspaceId && clientId !== undefined
       ? { workspaceId, clientId: clientId ?? null, limit: 200 }
       : 'skip'
-  ) as Array<any> | undefined
+  )
 
   const createTask = useMutation(tasksApi.createTask)
   const patchTask = useMutation(tasksApi.patchTask)
@@ -138,11 +138,17 @@ export function useTasks({
       return
     }
 
-    if (!convexTasksQuery) {
-      return
+    const rows = Array.isArray(convexTasksQuery)
+      ? convexTasksQuery
+      : Array.isArray((convexTasksQuery as any)?.items)
+        ? ((convexTasksQuery as any).items as any[])
+        : []
+
+    if (rows.length === 0 && convexTasksQuery) {
+      logError(convexTasksQuery, 'useTasks:unexpectedQueryShape')
     }
 
-    setTasks(convexTasksQuery.map(mapConvexTaskToTaskRecord))
+    setTasks(rows.map(mapConvexTaskToTaskRecord))
     setError(null)
   }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
 

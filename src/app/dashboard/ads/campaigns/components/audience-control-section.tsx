@@ -50,6 +50,13 @@ import { toast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { AudienceBuilderDialog } from '@/app/dashboard/ads/components/audience-builder-dialog'
 import { LocationMap, type LocationMarker } from '@/components/ui/location-map'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useGeocodeResolveBatch } from '@/hooks/use-geocode'
 
 type TargetingData = {
@@ -225,6 +232,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const [editingSection, setEditingSection] = useState<string | null>(null)
   const [newInterest, setNewInterest] = useState('')
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null)
+  const [selectedTargetingId, setSelectedTargetingId] = useState<string>('all')
 
   const canLoad = !isPreviewMode
 
@@ -274,9 +282,18 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         campaignId,
       })
 
-      setTargeting(Array.isArray((data as any)?.targeting) ? (data as any).targeting : [])
+       const nextTargetingRaw = (data as any)?.targeting
+       const nextTargeting = Array.isArray(nextTargetingRaw) ? nextTargetingRaw : []
+       setTargeting(nextTargeting)
       setInsights(((data as any)?.insights ?? null) as Insights | null)
       setHasLoaded(true)
+
+      if (nextTargeting.length <= 1) {
+        setSelectedTargetingId('all')
+      } else if (selectedTargetingId === 'all') {
+        const firstId = typeof nextTargeting[0]?.entityId === 'string' ? nextTargeting[0].entityId : null
+        if (firstId) setSelectedTargetingId(firstId)
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -286,7 +303,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     } finally {
       setLoading(false)
     }
-  }, [campaignId, canLoad, clientId, getTargeting, providerId, user?.agencyId])
+  }, [campaignId, canLoad, clientId, getTargeting, providerId, selectedTargetingId, user?.agencyId])
 
   useEffect(() => {
     void fetchTargeting()
@@ -302,30 +319,36 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     setExpandedSections(next)
   }
 
-  const locationMarkers: LocationMarker[] = useMemo(() => {
-    const markers: LocationMarker[] = []
-    targeting.forEach((t) => {
-      t.locations.included.forEach((loc) => {
-        const nameKey = loc.name.toLowerCase().trim()
-        const coords = loc.lat && loc.lng
-          ? { lat: loc.lat, lng: loc.lng }
-          : LOCATION_COORDINATES[nameKey] || resolvedCoordinates[nameKey] || findLocationCoordinates(loc.name)
+   const visibleTargeting = useMemo(() => {
+     if (targeting.length <= 1) return targeting
+     if (selectedTargetingId === 'all') return targeting
+     return targeting.filter((t) => t.entityId === selectedTargetingId)
+   }, [selectedTargetingId, targeting])
 
-        if (coords) {
-          markers.push({
-            id: loc.id,
-            name: loc.name,
-            lat: coords.lat,
-            lng: coords.lng,
-            type: loc.type,
-          })
-        }
-      })
-    })
-    return markers
-  }, [targeting])
+   const locationMarkers: LocationMarker[] = useMemo(() => {
+     const markers: LocationMarker[] = []
+     visibleTargeting.forEach((t) => {
+       t.locations.included.forEach((loc) => {
+         const nameKey = loc.name.toLowerCase().trim()
+         const coords = loc.lat && loc.lng
+           ? { lat: loc.lat, lng: loc.lng }
+           : LOCATION_COORDINATES[nameKey] || resolvedCoordinates[nameKey] || findLocationCoordinates(loc.name)
 
-  const aggregatedData = useMemo(() => {
+         if (coords) {
+           markers.push({
+             id: loc.id,
+             name: loc.name,
+             lat: coords.lat,
+             lng: coords.lng,
+             type: loc.type,
+           })
+         }
+       })
+     })
+     return markers
+   }, [resolvedCoordinates, visibleTargeting])
+ 
+   const aggregatedData = useMemo(() => {
     const demographics = { ageRanges: new Set<string>(), genders: new Set<string>(), languages: new Set<string>() }
     const audiences = { included: new Map<string, { id: string; name: string; type: string }>(), excluded: new Map<string, { id: string; name: string }>() }
     const locations = { included: new Map<string, { id: string; name: string; type: string }>(), excluded: new Map<string, { id: string; name: string }>() }
@@ -341,7 +364,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
     const professional = { industries: new Map<string, { id: string; name: string }>(), jobTitles: new Map<string, { id: string; name: string }>() }
 
-    targeting.forEach((t) => {
+    visibleTargeting.forEach((t) => {
       t.demographics.ageRanges.forEach((a) => demographics.ageRanges.add(a))
       t.demographics.genders.forEach((g) => demographics.genders.add(g))
       t.demographics.languages.forEach((l) => demographics.languages.add(l))
@@ -394,7 +417,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         jobTitles: Array.from(professional.jobTitles.values()),
       },
     }
-  }, [targeting])
+  }, [visibleTargeting])
 
   if (loading && !hasLoaded) {
     return (
@@ -499,6 +522,23 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Target Locations</span>
+              {targeting.length > 1 && (
+                <Select value={selectedTargetingId} onValueChange={setSelectedTargetingId}>
+                  <SelectTrigger className="h-8 w-[220px]">
+                    <SelectValue placeholder="Select ad set" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All ad sets</SelectItem>
+                    {Array.isArray(targeting)
+                      ? targeting.map((t) => (
+                          <SelectItem key={t.entityId} value={t.entityId}>
+                            {t.entityName ?? t.entityId}
+                          </SelectItem>
+                        ))
+                      : null}
+                  </SelectContent>
+                </Select>
+              )}
               {aggregatedData.locations.included.length > 0 && (
                 <Badge variant="secondary" className="ml-auto">
                   {aggregatedData.locations.included.length}
