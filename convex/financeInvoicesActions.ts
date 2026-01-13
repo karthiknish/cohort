@@ -129,8 +129,8 @@ export const refund = action({
     invoiceId: v.string(),
     amount: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    return withErrorHandling(async () => {
+  handler: async (ctx, args) =>
+    withErrorHandling(async () => {
       const identity = await ctx.auth.getUserIdentity()
       requireIdentity(identity)
 
@@ -270,8 +270,8 @@ export const remind = action({
     workspaceId: v.string(),
     invoiceId: v.string(),
   },
-  handler: async (ctx, args) => {
-    return withErrorHandling(async () => {
+  handler: async (ctx, args) =>
+    withErrorHandling(async () => {
       const identity = await ctx.auth.getUserIdentity()
       requireIdentity(identity)
 
@@ -293,8 +293,7 @@ export const remind = action({
       const result = await stripe.invoices.sendInvoice(trimmedInvoiceId)
 
       return { ok: true, status: result.status ?? 'sent' }
-    }, 'financeInvoicesActions:remind')
-  },
+    }, 'financeInvoicesActions:remind'),
 })
 
 function isStripeResourceMissing(error: unknown): boolean {

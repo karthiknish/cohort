@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 
 import { useAuth } from '@/contexts/auth-context'
 import { projectMilestonesApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import {
@@ -133,8 +134,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
       toast({ title: 'Milestone created', description: `“${milestone.title}” added to the timeline.` })
       setOpen(false)
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create milestone'
-      toast({ title: 'Could not create', description: message, variant: 'destructive' })
+      toast({ title: 'Could not create', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setLoading(false)
     }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 
@@ -191,7 +191,7 @@ export function usePurchaseOrdersData() {
       setNewPO(INITIAL_FORM)
       toast({ title: 'Purchase order created', description: 'Saved as draft.' })
     } catch (error) {
-      toast({ title: 'Create failed', description: toErrorMessage(error), variant: 'destructive' })
+      toast({ title: 'Create failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
@@ -256,7 +256,7 @@ export function usePurchaseOrdersData() {
           )
         )
       } catch (error) {
-        toast({ title: 'Update failed', description: toErrorMessage(error), variant: 'destructive' })
+        toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingId(null)
       }
@@ -279,7 +279,7 @@ export function usePurchaseOrdersData() {
         setPurchaseOrders((prev) => prev.filter((po) => po.id !== id))
         toast({ title: 'Purchase order deleted' })
       } catch (error) {
-        toast({ title: 'Delete failed', description: toErrorMessage(error), variant: 'destructive' })
+        toast({ title: 'Delete failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingId(null)
       }
@@ -344,7 +344,7 @@ export function usePurchaseOrdersData() {
         })
         toast({ title: 'Updated', description: 'Purchase order status updated.' })
       } catch (error) {
-        toast({ title: 'Update failed', description: toErrorMessage(error), variant: 'destructive' })
+        toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingId(null)
       }

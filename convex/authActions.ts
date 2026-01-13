@@ -11,8 +11,8 @@ function requireIdentity(identity: unknown): asserts identity {
 
 export const exportUserData = action({
   args: {},
-  handler: async (ctx) => {
-    return withErrorHandling(async () => {
+  handler: async (ctx) =>
+    withErrorHandling(async () => {
       const identity = await ctx.auth.getUserIdentity()
       requireIdentity(identity)
 

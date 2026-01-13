@@ -10,11 +10,12 @@ import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 import { adsIntegrationsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
 
-import { getErrorMessage, formatProviderName } from '../components/utils'
+import { formatProviderName } from '../components/utils'
   import {
     ERROR_MESSAGES,
     SUCCESS_MESSAGES,
@@ -224,15 +225,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
     }
 
-    try {
-      return await initializeAdAccount({
-        workspaceId,
-        providerId: 'google',
-        clientId: selectedClientId ?? null,
-      })
-    } catch (error: unknown) {
-      throw new Error(getErrorMessage(error, ERROR_MESSAGES.GOOGLE_INIT_FAILED))
-    }
+    return await initializeAdAccount({
+      workspaceId,
+      providerId: 'google',
+      clientId: selectedClientId ?? null,
+    })
   }, [initializeAdAccount, selectedClientId, workspaceId])
 
   const initializeLinkedInIntegration = useCallback(async () => {
@@ -240,15 +237,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
     }
 
-    try {
-      return await initializeAdAccount({
-        workspaceId,
-        providerId: 'linkedin',
-        clientId: selectedClientId ?? null,
-      })
-    } catch (error: unknown) {
-      throw new Error(getErrorMessage(error, ERROR_MESSAGES.LINKEDIN_INIT_FAILED))
-    }
+    return await initializeAdAccount({
+      workspaceId,
+      providerId: 'linkedin',
+      clientId: selectedClientId ?? null,
+    })
   }, [initializeAdAccount, selectedClientId, workspaceId])
 
   const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null) => {
@@ -275,7 +268,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       triggerRefresh()
 
     } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to complete Meta setup')
+      const message = asErrorMessage(error)
       setMetaSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
     } finally {
@@ -307,7 +300,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       triggerRefresh()
 
     } catch (error: unknown) {
-      const message = getErrorMessage(error, 'Unable to complete TikTok setup')
+      const message = asErrorMessage(error)
       setTiktokSetupMessage(message)
       toast({ variant: 'destructive', title: TOAST_TITLES.TIKTOK_SETUP_FAILED, description: message })
     } finally {
@@ -374,14 +367,14 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
         }).catch(err => {
-          toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize Google Ads') })
+          toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: asErrorMessage(err) })
         })
        } else if (providerId === PROVIDER_IDS.LINKEDIN) {
         void initializeLinkedInIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
           triggerRefresh()
         }).catch(err => {
-          toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: getErrorMessage(err, 'Failed to initialize LinkedIn Ads') })
+          toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: asErrorMessage(err) })
         })
       } else {
         toast({
@@ -417,7 +410,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       triggerRefresh()
     } catch (error: unknown) {
-      const message = getErrorMessage(error, ERROR_MESSAGES.CONNECTION_FAILED)
+      const message = asErrorMessage(error)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
       toast({
@@ -477,14 +470,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       // replaced by a generic 5xx-friendly message.
       const message = (isMetaConfigError || isTikTokConfigError)
         ? rawMessage
-        : getErrorMessage(
-            error,
-            providerId === PROVIDER_IDS.FACEBOOK
-              ? 'Unable to start Meta OAuth. Please try again.'
-              : providerId === PROVIDER_IDS.TIKTOK
-                ? 'Unable to start TikTok OAuth. Please try again.'
-                : 'Unable to start OAuth. Please try again.'
-          )
+        : asErrorMessage(error)
 
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       if (providerId === PROVIDER_IDS.FACEBOOK && (isMetaConfigError || message.toLowerCase().includes('meta business login is not configured'))) {
@@ -521,7 +507,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       toast({ title: TOAST_TITLES.DISCONNECTED, description: SUCCESS_MESSAGES.DISCONNECTED(providerName) })
       triggerRefresh()
     } catch (error: unknown) {
-      const message = getErrorMessage(error, ERROR_MESSAGES.DISCONNECT_FAILED)
+      const message = asErrorMessage(error)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       toast({ variant: 'destructive', title: TOAST_TITLES.DISCONNECT_FAILED, description: message })
     } finally {

@@ -6,6 +6,7 @@ import { useQuery, useAction, useConvexAuth } from 'convex/react'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
 import { onDashboardRefresh } from '@/lib/refresh-bus'
 import { adsMetricsApi, analyticsInsightsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import type { MetricRecord, ProviderInsight, AlgorithmicInsight } from './types'
 
 export interface UseAnalyticsDataReturn {
@@ -92,7 +93,7 @@ export function useAnalyticsData(
       setAlgorithmic(result.algorithmic as AlgorithmicInsight[])
     } catch (error) {
       console.error('[useAnalyticsData] Failed to generate insights:', error)
-      setInsightsError(error instanceof Error ? error : new Error('Failed to generate insights'))
+      setInsightsError(error instanceof Error ? error : new Error(asErrorMessage(error)))
     } finally {
       setInsightsLoading(false)
       setInsightsRefreshing(false)

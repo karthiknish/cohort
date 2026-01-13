@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { notificationsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { parsePageSize } from '@/lib/pagination'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
 

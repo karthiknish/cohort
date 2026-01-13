@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
@@ -186,7 +186,7 @@ export default function AdminFeaturesPage() {
         console.error('Failed to save feature:', error)
         toast({
           title: 'Save failed',
-          description: toErrorMessage(error, 'Unable to save the feature. Please try again.'),
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       }

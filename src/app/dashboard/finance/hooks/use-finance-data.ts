@@ -8,7 +8,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useAction, useMutation, useQuery } from 'convex/react'
 
 import { api } from '../../../../../convex/_generated/api'
@@ -488,14 +488,14 @@ export function useFinanceData(): FinanceHookReturn {
       } catch (error: unknown) {
         toast({
           title: 'Failed to add cost',
-          description: toErrorMessage(error, 'Unable to add cost entry'),
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       } finally {
         setIsSubmittingCost(false)
       }
     },
-    [newCost, selectedClientId, toast]
+    [newCost, resolvedWorkspaceId, selectedClientId, toast]
   )
 
   const handleRemoveCost = useCallback(
@@ -512,14 +512,14 @@ export function useFinanceData(): FinanceHookReturn {
       } catch (error: unknown) {
         toast({
           title: 'Failed to delete cost',
-          description: toErrorMessage(error, 'Unable to delete cost entry'),
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       } finally {
         setRemovingCostId(null)
       }
     },
-    [toast]
+    [deleteCostMutation, resolvedWorkspaceId, toast]
   )
 
   const handleSendInvoiceReminder = useCallback(async (invoiceId: string) => {
@@ -541,13 +541,13 @@ export function useFinanceData(): FinanceHookReturn {
     } catch (error: unknown) {
       toast({
         title: 'Reminder failed',
-        description: toErrorMessage(error, 'Unable to send invoice reminder'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
       setSendingInvoiceId(null)
     }
-  }, [remindInvoiceAction, toast])
+  }, [remindInvoiceAction, resolvedWorkspaceId, toast])
 
   const handleIssueInvoiceRefund = useCallback(async (invoiceId: string) => {
     if (!invoiceId) {
@@ -568,13 +568,13 @@ export function useFinanceData(): FinanceHookReturn {
     } catch (error: unknown) {
       toast({
         title: 'Refund failed',
-        description: toErrorMessage(error, 'Unable to issue refund'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
       setRefundingInvoiceId(null)
     }
-  }, [refundInvoiceAction, toast, primaryCurrencyTotals.currency])
+  }, [refundInvoiceAction, resolvedWorkspaceId, toast, primaryCurrencyTotals.currency])
 
   const costsWithMonthly = useMemo(
     () =>

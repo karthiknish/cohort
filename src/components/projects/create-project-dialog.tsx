@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 
 import { projectsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -191,8 +192,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
       setOpen(false)
       resetForm()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create project'
-      toast({ title: 'Creation failed', description: message, variant: 'destructive' })
+      toast({ title: 'Creation failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setLoading(false)
     }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
@@ -186,7 +187,7 @@ export function useTasks({
         setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)))
         toast({
           title: 'Status update failed',
-          description: err instanceof Error ? err.message : 'Unable to update status. Please try again.',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
       } finally {
@@ -219,7 +220,7 @@ export function useTasks({
       } catch (err) {
         toast({
           title: 'Deletion failed',
-          description: err instanceof Error ? err.message : 'Unable to delete task. Please try again.',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
         return false
@@ -295,7 +296,7 @@ export function useTasks({
       } catch (err) {
         toast({
           title: 'Creation failed',
-          description: err instanceof Error ? err.message : 'Unable to create task. Please try again.',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
         return null
@@ -349,7 +350,7 @@ export function useTasks({
       } catch (err) {
         toast({
           title: 'Update failed',
-          description: err instanceof Error ? err.message : 'Unable to update task. Please try again.',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
       }
@@ -399,7 +400,7 @@ export function useTasks({
       } catch (err) {
         toast({
           title: 'Bulk update failed',
-          description: err instanceof Error ? err.message : 'Unable to update tasks in bulk',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
         return false
@@ -427,7 +428,7 @@ export function useTasks({
       } catch (err) {
         toast({
           title: 'Bulk deletion failed',
-          description: err instanceof Error ? err.message : 'Unable to delete tasks in bulk',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
         return false

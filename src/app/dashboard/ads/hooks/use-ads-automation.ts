@@ -14,9 +14,9 @@ import {
   DEFAULT_TIMEFRAME_DAYS,
   normalizeFrequency,
   normalizeTimeframe,
-  getErrorMessage,
   formatProviderName,
 } from '../components/utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
@@ -167,7 +167,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         })
         onRefresh?.()
       } catch (error: unknown) {
-        const message = getErrorMessage(error, ERROR_MESSAGES.SAVE_SETTINGS_FAILED)
+        const message = asErrorMessage(error)
         setSettingsErrors((prev) => ({ ...prev, [providerId]: message }))
         toast({ variant: 'destructive', title: TOAST_TITLES.SAVE_FAILED, description: message })
       } finally {
@@ -208,7 +208,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         toast({ title: TOAST_TITLES.SYNC_COMPLETE, description: successMessage })
         onRefresh?.()
       } catch (error: unknown) {
-        const message = getErrorMessage(error, ERROR_MESSAGES.PROCESS_SYNC_FAILED)
+        const message = asErrorMessage(error)
 
         toast({
           variant: 'destructive',

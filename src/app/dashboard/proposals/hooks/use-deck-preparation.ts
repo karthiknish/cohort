@@ -5,17 +5,13 @@ import { refreshProposalDraft } from '@/services/proposals'
 import { useQuery } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { asErrorMessage } from '@/lib/convex-errors'
 import {
     trackDeckGenerationStarted,
     trackDeckGenerationCompleted,
     trackDeckGenerationFailed,
 } from '@/services/proposal-analytics'
 import type { DeckProgressStage } from '../components/deck-progress-overlays'
-
-function getErrorMessage(error: unknown, fallback: string): string {
-    return formatUserFacingErrorMessage(error, fallback)
-}
 
 export interface UseDeckPreparationOptions {
     draftId: string | null
@@ -207,7 +203,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         } catch (error: unknown) {
             setDeckProgressStage('error')
             console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
-            const message = getErrorMessage(error, 'Failed to prepare the presentation deck')
+            const message = asErrorMessage(error)
 
             // Track deck generation failure
             if (workspaceId) {

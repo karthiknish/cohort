@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/contexts/auth-context'
 import { adsIntegrationsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 // Extracted hooks and types
 import {
@@ -137,8 +138,7 @@ export default function AnalyticsPage() {
     try {
       await loadMoreMetrics()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to load additional metrics'
-      toast({ title: 'Metrics pagination error', description: message, variant: 'destructive' })
+      toast({ title: 'Metrics pagination error', description: asErrorMessage(error), variant: 'destructive' })
     }
   }, [loadMoreMetrics, metricsNextCursor, toast])
 
@@ -157,12 +157,11 @@ export default function AnalyticsPage() {
       })
       await refreshGoogleAnalyticsStatus()
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unable to connect Google Analytics'
-      toast({ title: 'Connection failed', description: message, variant: 'destructive' })
+      toast({ title: 'Connection failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setGaLoading(false)
     }
-  }, [isPreviewMode, refreshGoogleAnalyticsStatus, selectedClientId, toast])
+  }, [isPreviewMode, refreshGoogleAnalyticsStatus, toast])
 
   const handleSyncGoogleAnalytics = useCallback(async () => {
     if (isPreviewMode) {
@@ -186,8 +185,7 @@ export default function AnalyticsPage() {
       await refreshGoogleAnalyticsStatus()
       await mutateMetrics()
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unable to sync Google Analytics'
-      toast({ title: 'Sync failed', description: message, variant: 'destructive' })
+      toast({ title: 'Sync failed', description: asErrorMessage(error), variant: 'destructive' })
     }
   }, [isPreviewMode, googleAnalyticsSyncMutation, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])
 
@@ -419,7 +417,7 @@ export default function AnalyticsPage() {
         {metricsError && (
           <Alert variant="destructive">
             <AlertTitle>Unable to load analytics</AlertTitle>
-            <AlertDescription>{metricsError.message}</AlertDescription>
+            <AlertDescription>{asErrorMessage(metricsError)}</AlertDescription>
           </Alert>
         )}
 

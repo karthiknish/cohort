@@ -2,7 +2,12 @@
 
 import { useEffect, useRef } from 'react'
 
-import { isAuthError } from '@/lib/error-utils'
+import { asErrorMessage, extractErrorCode } from '@/lib/convex-errors'
+
+function isAuthError(error: unknown): boolean {
+  const code = extractErrorCode(error)
+  return code === 'UNAUTHORIZED' || code === 'FORBIDDEN'
+}
 
 import { FadeIn } from '@/components/ui/animate-in'
 import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'

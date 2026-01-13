@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useMutation, usePaginatedQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import {
   Card,
   CardContent,
@@ -147,7 +147,7 @@ export default function AdminTeamPage() {
       })
       toast({ title: 'Role updated', description: `Member is now a ${role}.` })
     } catch (err: unknown) {
-      const message = toErrorMessage(err, 'Unable to update role')
+      const message = asErrorMessage(err)
       setError(message)
       toast({ title: 'Role update failed', description: message, variant: 'destructive' })
     } finally {
@@ -186,7 +186,7 @@ export default function AdminTeamPage() {
         description: `Member is now ${nextStatus.replace('_', ' ')}.`,
       })
     } catch (err: unknown) {
-      const message = toErrorMessage(err, 'Unable to update status')
+      const message = asErrorMessage(err)
       setError(message)
       toast({ title: 'Status update failed', description: message, variant: 'destructive' })
     } finally {
@@ -218,7 +218,7 @@ export default function AdminTeamPage() {
       setInviteEmail('')
       setInviteRole('team')
     } catch (err: unknown) {
-      const message = toErrorMessage(err, 'Unable to send invitation')
+      const message = asErrorMessage(err)
       toast({ title: 'Invitation failed', description: message, variant: 'destructive' })
     } finally {
       setInviteSending(false)

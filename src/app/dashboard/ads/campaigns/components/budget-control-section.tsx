@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { adsCampaignsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { formatMoney, normalizeCurrencyCode } from '@/constants/currencies'
 
@@ -135,7 +136,8 @@ export function BudgetControlSection({
       const apiMode = toApiBudgetMode(providerId, mode)
 
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        setSaving(false)
+        return
       }
 
       await updateCampaign({
@@ -157,7 +159,7 @@ export function BudgetControlSection({
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update budget',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

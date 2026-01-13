@@ -6,7 +6,7 @@ import { getPreviewFinanceSummary, getPreviewMetrics, getPreviewTasks } from '@/
 import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
-import { getErrorMessage, mapTasksForDashboard } from '@/lib/dashboard-utils'
+import { mapTasksForDashboard } from '@/lib/dashboard-utils'
 import { summarizeTasks, DEFAULT_TASK_SUMMARY, type TaskSummary } from '../components'
 import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
@@ -14,6 +14,7 @@ import { useQuery } from 'convex/react'
 import { adsMetricsApi, financeSummaryApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
 import { getWorkspaceId } from '@/lib/utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 export interface UseDashboardDataOptions {
     selectedClientId: string | null
@@ -241,7 +242,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             } catch (error) {
                 if (!isCancelled) {
                     setFinanceSummary(null)
-                    setFinanceError(getErrorMessage(error, 'Unable to load finance data'))
+                    setFinanceError(asErrorMessage(error))
                 }
             } finally {
                 if (!isCancelled) {

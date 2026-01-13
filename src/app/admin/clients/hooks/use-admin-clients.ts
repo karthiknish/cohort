@@ -5,7 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useConvex, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { clientsApi } from '@/lib/convex-api'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
@@ -264,7 +264,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setClientPendingDelete(null)
             setIsDeleteDialogOpen(false)
         } catch (err: unknown) {
-            const message = toErrorMessage(err, 'Unable to delete client')
+            const message = asErrorMessage(err)
             toast({ title: 'Client delete failed', description: message, variant: 'destructive' })
         } finally {
             setDeletingClientId(null)
@@ -315,7 +315,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             setIsTeamDialogOpen(false)
             setClientPendingMembers(null)
         } catch (err: unknown) {
-            const message = toErrorMessage(err, 'Unable to add teammate')
+            const message = asErrorMessage(err)
             toast({ title: 'Add teammate failed', description: message, variant: 'destructive' })
         } finally {
             setAddingMember(false)
@@ -422,7 +422,7 @@ export function useAdminClients(): UseAdminClientsReturn {
 
             handleInvoiceDialogChange(false)
         } catch (err: unknown) {
-            const message = toErrorMessage(err, 'Unable to send invoice')
+            const message = asErrorMessage(err)
             setInvoiceError(message)
             toast({ title: 'Invoice error', description: message, variant: 'destructive' })
         } finally {
@@ -488,7 +488,7 @@ export function useAdminClients(): UseAdminClientsReturn {
             toast({ title: 'Client created', description: `${name} is ready to use.` })
             resetClientForm()
         } catch (err: unknown) {
-            const message = toErrorMessage(err, 'Unable to create client')
+            const message = asErrorMessage(err)
             toast({ title: 'Client create failed', description: message, variant: 'destructive' })
         } finally {
             setClientSaving(false)

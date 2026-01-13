@@ -11,6 +11,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { useAction } from 'convex/react'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi, creativesCopyApi } from '@/lib/convex-api'
 
 import { CreativeHeader } from './components/creative-header'
@@ -70,7 +71,7 @@ export default function CreativeDetailPage() {
     setLoading(true)
     try {
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        return
       }
 
       const creatives = await listCreatives({
@@ -91,7 +92,7 @@ export default function CreativeDetailPage() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load creative',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -128,7 +129,7 @@ export default function CreativeDetailPage() {
       setCreativeMetrics(filtered)
     } catch (error) {
       setCreativeMetrics(null)
-      setMetricsError(error instanceof Error ? error.message : 'Failed to load performance metrics')
+      setMetricsError(asErrorMessage(error))
     } finally {
       setMetricsLoading(false)
     }
@@ -268,7 +269,7 @@ export default function CreativeDetailPage() {
     } catch (error) {
       toast({
         title: 'AI generation error',
-        description: error instanceof Error ? error.message : 'AI generation failed',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

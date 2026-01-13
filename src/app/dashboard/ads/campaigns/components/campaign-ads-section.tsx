@@ -44,6 +44,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
 
 export type CampaignAd = {
@@ -139,7 +140,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     setLoading(true)
     try {
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        setLoading(false)
+        return
       }
 
       const creatives = (await listCreatives({
@@ -155,7 +157,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load ads',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -169,7 +171,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     setMetricsLoading(true)
     try {
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        setMetricsLoading(false)
+        return
       }
 
       const data = await listAdMetrics({
@@ -265,7 +268,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       setAds(previousAds)
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update ad status',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     }

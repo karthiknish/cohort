@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { Expense, ExpenseCategory, Vendor, ExpenseAttachment } from '@/types/expenses'
@@ -236,7 +236,7 @@ export function useExpensesData() {
       setNewExpense(INITIAL_FORM)
       toast({ title: 'Expense created', description: 'Saved as draft.' })
     } catch (error) {
-      toast({ title: 'Create failed', description: toErrorMessage(error), variant: 'destructive' })
+      toast({ title: 'Create failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setSubmitting(false)
     }
@@ -257,7 +257,7 @@ export function useExpensesData() {
         setExpenses((prev) => prev.filter((e) => e.id !== expenseId))
         toast({ title: 'Expense deleted' })
       } catch (error) {
-        toast({ title: 'Delete failed', description: toErrorMessage(error), variant: 'destructive' })
+        toast({ title: 'Delete failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingExpenseId(null)
       }
@@ -314,7 +314,7 @@ export function useExpensesData() {
         })
         toast({ title: 'Updated', description: 'Expense status updated.' })
       } catch (error) {
-        toast({ title: 'Update failed', description: toErrorMessage(error), variant: 'destructive' })
+        toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setActingExpenseId(null)
       }
@@ -347,7 +347,7 @@ export function useExpensesData() {
         } catch (error) {
           toast({
             title: 'Failed to create category',
-            description: toErrorMessage(error),
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         }
@@ -375,7 +375,7 @@ export function useExpensesData() {
         } catch (error) {
           toast({
             title: 'Update failed',
-            description: toErrorMessage(error),
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         }
@@ -392,7 +392,7 @@ export function useExpensesData() {
         } catch (error) {
           toast({
             title: 'Delete failed',
-            description: toErrorMessage(error),
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         }
@@ -420,7 +420,7 @@ export function useExpensesData() {
         } catch (error) {
           toast({
             title: 'Failed to create vendor',
-            description: toErrorMessage(error),
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         }
@@ -447,7 +447,7 @@ export function useExpensesData() {
         } catch (error) {
           toast({
             title: 'Update failed',
-            description: toErrorMessage(error),
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         }
@@ -461,7 +461,7 @@ export function useExpensesData() {
         } catch (error) {
           toast({
             title: 'Delete failed',
-            description: toErrorMessage(error),
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         }

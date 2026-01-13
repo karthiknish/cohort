@@ -19,10 +19,10 @@ import { format } from 'date-fns'
 import { useQuery, useMutation } from 'convex/react'
 
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
-import { toErrorMessage } from '@/lib/error-utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { recurringInvoicesApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import type { RecurringInvoiceSchedule, RecurringFrequency } from '@/types/recurring-invoices'
 
 import { Button } from '@/components/ui/button'
@@ -181,7 +181,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to create schedule:', error)
       toast({
         title: 'Failed to create schedule',
-        description: toErrorMessage(error, 'An error occurred'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -207,7 +207,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to update schedule:', error)
       toast({
         title: 'Failed to update schedule',
-        description: toErrorMessage(error, 'An error occurred'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -233,7 +233,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to delete schedule:', error)
       toast({
         title: 'Failed to delete schedule',
-        description: toErrorMessage(error, 'An error occurred'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     }
@@ -257,7 +257,7 @@ export function RecurringInvoicesCard() {
       console.error('Failed to generate invoice:', error)
       toast({
         title: 'Failed to generate invoice',
-        description: toErrorMessage(error, 'An error occurred'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

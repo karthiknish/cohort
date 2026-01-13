@@ -1,4 +1,6 @@
-'use client'
+import { ConvexError } from 'convex/values'
+
+import { AppErrorData } from './convex-errors'
 
 /**
  * Agent-specific error classes for better error handling and categorization.
@@ -122,6 +124,29 @@ export class AgentValidationError extends AgentError {
  * Parse API response to determine error type
  */
 export function parseAgentError(error: unknown, response?: Response | null): AgentError {
+  // Structured Convex errors
+  if (error instanceof ConvexError) {
+    const data = error.data as AppErrorData
+    const code = data?.code || ''
+    const message = data?.message || 'An error occurred'
+
+    if (code.includes('auth')) {
+      return new AgentAuthError(message, error)
+    }
+    if (code.includes('rate_limit') || code.includes('too_many_requests')) {
+      return new AgentRateLimitError(60, error)
+    }
+    if (code.includes('validation')) {
+      return new AgentValidationError(message, error)
+    }
+    return new AgentError({
+      type: 'unknown',
+      message,
+      retryable: true,
+      originalError: error,
+    })
+  }
+
   // Network/fetch errors
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return new AgentNetworkError('Unable to connect. Check your internet connection.', error)

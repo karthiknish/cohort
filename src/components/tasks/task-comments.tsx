@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { api, filesApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { isConvexRealtimeEnabled } from '@/lib/convex-realtime'
 
 
@@ -172,8 +173,7 @@ export function TaskCommentsPanel(props: {
   const handleSend = useCallback(async () => {
     const content = composerValue.trim()
     if (!content) return
-    if (!userId) {
-      toast({ title: 'Sign in required', description: 'You must be signed in to comment.', variant: 'destructive' })
+    if (!userId || !workspaceId) {
       return
     }
 
@@ -226,10 +226,6 @@ export function TaskCommentsPanel(props: {
         threadRootId: replyTo?.threadRootId ?? replyTo?.id ?? undefined,
       })
 
-      if (!res?.ok) {
-        throw new Error('Failed to post comment')
-      }
-
       // Convex query will update `comments` automatically.
       setComposerValue('')
       setReplyTo(null)
@@ -237,7 +233,7 @@ export function TaskCommentsPanel(props: {
     } catch (error) {
       toast({
         title: 'Failed to post comment',
-        description: error instanceof Error ? error.message : 'Unexpected error',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

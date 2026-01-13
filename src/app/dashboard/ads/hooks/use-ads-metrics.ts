@@ -10,14 +10,18 @@ import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
 import { adsMetricsApi } from '@/lib/convex-api'
-import { isAuthError } from '@/lib/error-utils'
+import { asErrorMessage, extractErrorCode } from '@/lib/convex-errors'
+
+function isAuthError(error: unknown): boolean {
+  const code = extractErrorCode(error)
+  return code === 'UNAUTHORIZED' || code === 'FORBIDDEN'
+}
 
 import type { MetricRecord, ProviderSummary } from '../components/types'
 import type { MetricsSummary } from '../components/types'
 import type { DateRange } from '../components/date-range-picker'
 import {
   METRICS_PAGE_SIZE,
-  getErrorMessage,
   exportMetricsToCsv,
 } from '../components/utils'
 import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
@@ -257,7 +261,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     } catch (error: unknown) {
       const message = isAuthError(error)
         ? ERROR_MESSAGES.SIGN_IN_REQUIRED
-        : getErrorMessage(error, ERROR_MESSAGES.LOAD_MORE_FAILED)
+        : asErrorMessage(error)
       setLoadMoreError(message)
     } finally {
       setLoadingMore(false)

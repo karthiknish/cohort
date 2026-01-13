@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { getPreviewCampaigns, getPreviewCampaignInsights } from '@/lib/preview-data'
 import { adsCampaignInsightsApi, adsCampaignsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 // Modular Components
 import { CampaignHeader } from '../../components/campaign-header'
@@ -236,7 +237,8 @@ export default function CampaignInsightsPage() {
       }
 
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        setCampaignLoading(false)
+        return
       }
 
       const campaigns = await listCampaigns({
@@ -253,7 +255,7 @@ export default function CampaignInsightsPage() {
 
       setCampaign(match)
     } catch (err) {
-      setCampaignError(err instanceof Error ? err.message : 'Failed to load campaign')
+      setCampaignError(asErrorMessage(err))
     } finally {
       setCampaignLoading(false)
     }
@@ -283,7 +285,8 @@ export default function CampaignInsightsPage() {
       }
 
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        setInsightsLoading(false)
+        return
       }
 
       const data = (await getCampaignInsights({
@@ -302,7 +305,7 @@ export default function CampaignInsightsPage() {
         setCampaign((prev) => (prev ? { ...prev, currency: data.currency } : null))
       }
     } catch (err) {
-      setInsightsError(err instanceof Error ? err.message : 'Failed to load insights')
+      setInsightsError(asErrorMessage(err))
       setInsights(null)
     } finally {
       setInsightsLoading(false)

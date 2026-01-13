@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import type {
   CollaborationMessage,
   CollaborationAttachment,
@@ -155,8 +156,7 @@ export function useSendMessage({
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to send message'
-        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+        toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setSendingMessage(false)
         sendingMessageRef.current = false
@@ -280,8 +280,7 @@ export function useFetchMessages({
         setChannelCursors((prev) => ({ ...prev, [channelId]: nextCursor }))
         setHasMoreByChannel((prev) => ({ ...prev, [channelId]: !!nextCursor }))
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to fetch messages'
-        toast({ title: 'Fetch error', description: message, variant: 'destructive' })
+        toast({ title: 'Fetch error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setFetchingMessages(false)
       }

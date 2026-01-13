@@ -71,6 +71,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import type { MilestoneRecord } from '@/types/milestones'
@@ -94,7 +95,6 @@ import {
   isNetworkError,
   formatStatusLabel,
   useDebouncedValue,
-  getErrorMessage,
 } from './components'
 
 type ProjectResponse = {
@@ -250,7 +250,7 @@ export default function ProjectsPage() {
       }
 
       console.error('Failed to fetch projects', fetchError)
-      const message = getErrorMessage(fetchError, 'Unable to load projects')
+      const message = asErrorMessage(fetchError)
 
       // Retry on network errors
       if (retryAttempt < RETRY_CONFIG.maxRetries && isNetworkError(fetchError)) {
@@ -323,8 +323,7 @@ export default function ProjectsPage() {
 
       setMilestonesByProject(mapped)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to load milestones'
-      setMilestonesError(message)
+      setMilestonesError(asErrorMessage(err))
       setMilestonesByProject({})
     } finally {
       setMilestonesLoading(false)
@@ -399,8 +398,7 @@ export default function ProjectsPage() {
         description: `"${projectToDelete.name}" has been permanently removed.`,
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete project'
-      toast({ title: 'Deletion failed', description: message, variant: 'destructive' })
+      toast({ title: 'Deletion failed', description: asErrorMessage(error), variant: 'destructive' })
     } finally {
       setDeleting(false)
       setDeleteDialogOpen(false)
@@ -437,8 +435,7 @@ export default function ProjectsPage() {
 
       setProjects((prev) => prev.map((p) => (p.id === context.projectId ? { ...p, status: context.previousStatus } : p)))
 
-      const message = error instanceof Error ? error.message : 'Failed to update project'
-      toast({ title: 'Status update failed', description: message, variant: 'destructive' })
+      toast({ title: 'Status update failed', description: asErrorMessage(error), variant: 'destructive' })
     },
     onSuccess: (_data, variables, _context) => {
       emitDashboardRefresh({ reason: 'project-mutated', clientId: variables.project.clientId ?? null })

@@ -6,14 +6,10 @@ import { useQuery, useMutation } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { trackDraftCreated } from '@/services/proposal-analytics'
 
 import { createInitialProposalFormState } from '../utils/form-steps'
-
-function getErrorMessage(error: unknown, fallback: string): string {
-    return formatUserFacingErrorMessage(error, fallback)
-}
 
 export interface UseProposalDraftsOptions {
     formState: ProposalFormData
@@ -195,7 +191,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setAutosaveStatus('error')
             toast({
                 title: 'Unable to create draft',
-                description: getErrorMessage(error, 'Failed to create proposal draft'),
+                description: asErrorMessage(error),
                 variant: 'destructive',
             })
             return null
@@ -266,7 +262,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setAutosaveStatus('error')
             toast({
                 title: 'Unable to create draft',
-                description: getErrorMessage(error, 'Failed to create proposal draft'),
+                description: asErrorMessage(error),
                 variant: 'destructive',
             })
         } finally {
@@ -325,7 +321,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
             toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
         } catch (err: unknown) {
-            const message = getErrorMessage(err, 'Failed to delete proposal')
+            const message = asErrorMessage(err)
             toast({ title: 'Unable to delete proposal', description: message, variant: 'destructive' })
         } finally {
             setDeletingProposalId(null)
@@ -394,7 +390,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     return
                 }
                 console.error('[ProposalWizard] bootstrap failed', err)
-                toast({ title: 'Unable to start proposal wizard', description: getErrorMessage(err, 'Unable to start proposal wizard'), variant: 'destructive' })
+                toast({ title: 'Unable to start proposal wizard', description: asErrorMessage(err), variant: 'destructive' })
             } finally {
                 if (!cancelled) {
                     hydrationRef.current = true

@@ -7,7 +7,7 @@ import { proposalsApi } from '@/lib/convex-api'
 import { refreshProposalDraft } from '@/services/proposals'
 import type { ProposalPresentationDeck } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
-import { formatUserFacingErrorMessage } from '@/lib/user-friendly-error'
+import { asErrorMessage } from '@/lib/convex-errors'
 import {
     trackProposalSubmitted,
     trackAiGenerationStarted,
@@ -19,10 +19,6 @@ import {
 } from '@/services/proposal-analytics'
 import { createInitialProposalFormState, stepErrorPaths } from '../utils/form-steps'
 import type { SubmissionSnapshot } from './use-proposal-drafts'
-
-function getErrorMessage(error: unknown, fallback: string): string {
-    return formatUserFacingErrorMessage(error, fallback)
-}
 
 export interface UseProposalSubmissionOptions {
     draftId: string | null
@@ -150,7 +146,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setAutosaveStatus('error')
                 toast({
                     title: 'Unable to save proposal',
-                    description: getErrorMessage(updateError, 'Failed to sync latest changes before generation'),
+                    description: asErrorMessage(updateError),
                     variant: 'destructive',
                 })
                 setIsSubmitting(false)
@@ -287,7 +283,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             await refreshProposals()
         } catch (err: unknown) {
             console.error('[ProposalWizard] submit failed', err)
-            const message = getErrorMessage(err, 'Failed to submit proposal')
+            const message = asErrorMessage(err)
 
             // Track AI generation failure
             if (draftId) {
@@ -351,7 +347,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             toast({ title: 'Editing restored', description: 'Your previous responses have been reloaded.' })
         } catch (error: unknown) {
             console.error('[ProposalWizard] resume snapshot failed', error)
-            const message = getErrorMessage(error, 'Failed to reopen proposal for editing')
+            const message = asErrorMessage(error)
             toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
         }
     }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast, setFormState, setCurrentStep, setDraftId, setAutosaveStatus, workspaceId, convexUpdateProposal])
@@ -419,7 +415,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             }
         } catch (error: unknown) {
             console.error('[ProposalWizard] recheck deck failed', error)
-            const message = getErrorMessage(error, 'Failed to check presentation status')
+            const message = asErrorMessage(error)
             toast({ title: 'Unable to check status', description: message, variant: 'destructive' })
         } finally {
             setIsRecheckingDeck(false)

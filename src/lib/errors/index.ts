@@ -41,4 +41,4 @@ export {
     parseResponseError,
 } from './integration-parser'
 
-export { IntegrationApiErrorBase } from '@/lib/error-utils'
+export { IntegrationApiErrorBase } from '@/services/integrations/shared/api-error-base'

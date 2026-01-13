@@ -8,7 +8,7 @@ import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
 import { formatCurrency } from '@/lib/utils'
-import { getErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 export async function resolveJson(response: Response, fallbackMessage: string): Promise<unknown> {
   if (response.ok) {
@@ -237,4 +237,4 @@ function normalizeTaskPriority(value: unknown): DashboardTaskItem['priority'] {
   return 'medium'
 }
 
-export { getErrorMessage }
+export { asErrorMessage }

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { adsCreativesApi } from '@/lib/convex-api'
 
 // =============================================================================
@@ -88,7 +89,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
     setLoading(true)
     try {
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        return
       }
 
       const creativesList = await listCreatives({
@@ -102,7 +103,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load creatives',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

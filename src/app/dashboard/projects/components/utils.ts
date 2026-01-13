@@ -4,7 +4,7 @@ import type { ProjectRecord } from '@/types/projects'
 import { FolderKanban, CircleCheck, TriangleAlert } from 'lucide-react'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib } from '@/lib/retry-utils'
-import { getErrorMessage as getErrorMessageLib } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 export type StatusFilter = 'all' | ProjectStatus
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount'
@@ -113,7 +113,7 @@ export function formatDateRange(start: string | null, end: string | null): strin
 }
 
 export function getErrorMessage(error: unknown, fallback: string): string {
-  return getErrorMessageLib(error, fallback)
+  return asErrorMessage(error)
 }
 
 export function parseDate(value: string | null | undefined): Date | null {

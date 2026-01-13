@@ -36,6 +36,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
 import type { DateRange } from './date-range-picker'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api'
 
 // =============================================================================
@@ -208,7 +209,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     setLoading(true)
     try {
       if (!workspaceId) {
-        throw new Error('Sign in required')
+        return
       }
 
       const result = await listCampaigns({
@@ -221,7 +222,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load campaigns',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -295,7 +296,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : `Failed to ${action} campaign`,
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -328,7 +329,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : `Failed to ${action} group`,
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -385,7 +386,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update budget',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {
@@ -424,7 +425,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update bidding',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

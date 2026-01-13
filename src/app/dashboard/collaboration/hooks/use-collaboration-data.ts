@@ -10,6 +10,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { projectsApi } from '@/lib/convex-api'
 import { collaborationApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { CollaborationMessageFormat } from '@/types/collaboration'
@@ -299,8 +300,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         setSearchError(null)
       })
       .catch((error: any) => {
-        const message = error instanceof Error ? error.message : 'Unable to search messages'
-        setSearchError(message)
+        setSearchError(asErrorMessage(error))
         setSearchResults([])
       })
       .finally(() => {
@@ -526,7 +526,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
         })
 
         if (!workspaceId || !currentUserId) {
-          throw new Error('You must be signed in to send messages')
+          return // Silent early return for guard failures in auto-running logic
         }
 
         const messageId = uuidv4()
@@ -613,8 +613,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to send message'
-        toast({ title: 'Collaboration error', description: message, variant: 'destructive' })
+        toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setSending(false)
       }
@@ -717,8 +716,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
         setNextCursorByChannel((prev) => ({ ...prev, [channelId]: newCursor }))
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to load older messages'
-        toast({ title: 'Load error', description: message, variant: 'destructive' })
+        toast({ title: 'Load error', description: asErrorMessage(error), variant: 'destructive' })
       } finally {
         setLoadingMoreChannelId(null)
       }

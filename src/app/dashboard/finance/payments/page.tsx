@@ -6,7 +6,7 @@ import { useAction } from 'convex/react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { toErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage } from '@/lib/convex-errors'
 import {
   Card,
   CardContent,
@@ -61,7 +61,7 @@ export default function FinancePaymentsPage() {
     } catch (error: unknown) {
       toast({
         title: 'Portal unavailable',
-        description: toErrorMessage(error, 'Unable to open the Stripe billing portal'),
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
     } finally {

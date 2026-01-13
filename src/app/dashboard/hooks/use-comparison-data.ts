@@ -10,13 +10,17 @@ import {
     groupMetricsByClient,
     formatRoas,
     formatCpa,
-    getErrorMessage,
 } from '@/lib/dashboard-utils'
-import { isAuthError } from '@/lib/error-utils'
+import { asErrorMessage, extractErrorCode } from '@/lib/convex-errors'
 import { formatCurrency } from '@/lib/utils'
 import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ClientRecord } from '@/types/clients'
 import { adsMetricsApi, financeSummaryApi } from '@/lib/convex-api'
+
+function isAuthError(error: unknown): boolean {
+    const code = extractErrorCode(error)
+    return code === 'UNAUTHORIZED' || code === 'FORBIDDEN'
+}
 
 export interface UseComparisonDataOptions {
     clients: ClientRecord[]
@@ -113,7 +117,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
             } catch (error) {
                 if (!isCancelled) {
                     setComparisonSummaries([])
-                    setComparisonError(getErrorMessage(error, 'Unable to load comparison'))
+                    setComparisonError(asErrorMessage(error))
                     setComparisonLoading(false)
                 }
             }
@@ -193,7 +197,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                      setComparisonSummaries([])
                      const message = isAuthError(error)
                          ? 'Your session is not ready yet. Please refresh, or sign in again.'
-                         : getErrorMessage(error, 'Unable to build comparison view')
+                         : asErrorMessage(error)
                      setComparisonError(message)
                  }
              } finally {

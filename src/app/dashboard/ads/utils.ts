@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 
 import { DISPLAY_DATE_FORMATTER, FREQUENCY_OPTIONS, TIMEFRAME_OPTIONS } from './constants'
-import { getErrorMessage } from '@/lib/error-utils'
+import { asErrorMessage as getErrorMessage } from '@/lib/convex-errors'
 
 export { getErrorMessage }
 
