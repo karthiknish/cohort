@@ -96,7 +96,7 @@ export const getByLegacyId = query({
       )
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Purchase Order', args.legacyId)
 
     return {
       legacyId: row.legacyId,
@@ -261,9 +261,11 @@ export const remove = mutation({
       )
       .unique()
 
-    if (existing) {
-      await ctx.db.delete(existing._id)
+    if (!existing) {
+      throw Errors.resource.notFound('Purchase Order', args.legacyId)
     }
+
+    await ctx.db.delete(existing._id)
 
     return { ok: true }
   },

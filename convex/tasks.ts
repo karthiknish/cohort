@@ -22,6 +22,8 @@ import { z } from 'zod/v4'
 
 
 
+import { Errors } from './errors'
+
 export const list = zWorkspacePaginatedQueryActive({
   args: {},
   handler: async (ctx: any, args: any) => {
@@ -66,7 +68,7 @@ export const getByLegacyId = zWorkspaceQuery({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Task', args.legacyId)
     return {
       legacyId: row.legacyId,
       title: row.title,
@@ -227,9 +229,7 @@ export const patchTask = authenticatedMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) {
-      return { ok: false, error: 'not_found' as const }
-    }
+    if (!row) throw Errors.resource.notFound('Task', args.legacyId)
 
     const patch: Record<string, unknown> = {
       updatedAtMs: ctx.now,
@@ -294,9 +294,7 @@ export const softDeleteTask = authenticatedMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) {
-      return { ok: false, error: 'not_found' as const }
-    }
+    if (!row) throw Errors.resource.notFound('Task', args.legacyId)
 
     await ctx.db.patch(row._id, { deletedAtMs: ctx.now, updatedAtMs: ctx.now })
     return { ok: true }
@@ -558,7 +556,7 @@ export const softDelete = authenticatedMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) throw Errors.resource.notFound('Task', args.legacyId)
 
     await ctx.db.patch(row._id, {
       deletedAtMs: args.deletedAtMs ?? ctx.now,
@@ -577,7 +575,7 @@ export const hardDelete = adminMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) throw Errors.resource.notFound('Task', args.legacyId)
 
     await ctx.db.delete(row._id)
     return { ok: true }

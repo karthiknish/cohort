@@ -73,7 +73,7 @@ export const getByLegacyId = workspaceQuery({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Project', args.legacyId)
 
     return {
       legacyId: row.legacyId,

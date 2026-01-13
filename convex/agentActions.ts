@@ -361,7 +361,7 @@ export const getConversation = action({
     })
 
     if (!conv.conversation) {
-      throw Errors.resource.notFound('Conversation')
+      throw Errors.resource.notFound('Conversation', args.conversationId)
     }
 
     if (conv.conversation.userId !== identity.subject) {

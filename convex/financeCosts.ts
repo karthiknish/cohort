@@ -198,10 +198,10 @@ export const remove = mutation({
       )
       .unique()
 
-    if (existing) {
-      await ctx.db.delete(existing._id)
+    if (!existing) {
+      throw Errors.resource.notFound('Cost', args.legacyId)
     }
 
-    return { ok: true }
+    await ctx.db.delete(existing._id)
   },
 })

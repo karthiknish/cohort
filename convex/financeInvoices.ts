@@ -33,7 +33,7 @@ export const getByLegacyIdServer = query({
       )
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Invoice', args.legacyId)
 
     return {
       legacyId: row.legacyId,
@@ -170,30 +170,30 @@ export const getByLegacyId = query({
       )
       .unique()
 
-    return row
-      ? {
-          legacyId: row.legacyId,
-          clientId: row.clientId,
-          clientName: row.clientName,
-          amount: row.amount,
-          status: row.status,
-          stripeStatus: row.stripeStatus,
-          issuedDate: row.issuedDate,
-          dueDate: row.dueDate,
-          paidDate: row.paidDate,
-          amountPaid: row.amountPaid,
-          amountRemaining: row.amountRemaining,
-          amountRefunded: row.amountRefunded,
-          currency: row.currency,
-          description: row.description,
-          hostedInvoiceUrl: row.hostedInvoiceUrl,
-          number: row.number,
-          paymentIntentId: row.paymentIntentId,
-          collectionMethod: row.collectionMethod,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-        }
-      : null
+    if (!row) throw Errors.resource.notFound('Invoice', trimmedLegacyId)
+
+    return {
+      legacyId: row.legacyId,
+      clientId: row.clientId,
+      clientName: row.clientName,
+      amount: row.amount,
+      status: row.status,
+      stripeStatus: row.stripeStatus,
+      issuedDate: row.issuedDate,
+      dueDate: row.dueDate,
+      paidDate: row.paidDate,
+      amountPaid: row.amountPaid,
+      amountRemaining: row.amountRemaining,
+      amountRefunded: row.amountRefunded,
+      currency: row.currency,
+      description: row.description,
+      hostedInvoiceUrl: row.hostedInvoiceUrl,
+      number: row.number,
+      paymentIntentId: row.paymentIntentId,
+      collectionMethod: row.collectionMethod,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }
   },
 })
 
@@ -405,10 +405,10 @@ export const remove = mutation({
       )
       .unique()
 
-    if (existing) {
-      await ctx.db.delete(existing._id)
+    if (!existing) {
+      throw Errors.resource.notFound('Invoice', args.legacyId)
     }
 
-    return { ok: true }
+    await ctx.db.delete(existing._id)
   },
 })

@@ -193,7 +193,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      return { ok: true }
+      throw Errors.resource.notFound('Expense Category', args.legacyId)
     }
 
     if (existing.isSystem) {

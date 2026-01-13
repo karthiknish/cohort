@@ -147,9 +147,11 @@ export const remove = mutation({
       )
       .unique()
 
-    if (existing) {
-      await ctx.db.delete(existing._id)
+    if (!existing) {
+      throw Errors.resource.notFound('Vendor', args.legacyId)
     }
+
+    await ctx.db.delete(existing._id)
 
     return { ok: true }
   },

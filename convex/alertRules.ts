@@ -111,7 +111,7 @@ export const getByLegacyId = query({
       )
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Alert rule', args.legacyId)
 
     return {
       id: row.legacyId,
@@ -225,7 +225,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Alert rule')
+      throw Errors.resource.notFound('Alert rule', args.legacyId)
     }
 
     const updates: Record<string, unknown> = {
@@ -268,7 +268,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Alert rule')
+      throw Errors.resource.notFound('Alert rule', args.legacyId)
     }
 
     await ctx.db.delete(existing._id)

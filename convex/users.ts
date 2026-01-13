@@ -1,6 +1,7 @@
 import { mutation, query, internalQuery, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import { authenticatedMutation, authenticatedQuery } from './functions'
+import { Errors } from './errors'
 
 
 function nowMs() {
@@ -50,14 +51,14 @@ export const _updateUserRoleStatus = internalMutation({
   },
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) return { ok: false, error: 'Invalid email' }
+    if (!normalized.emailLower) throw Errors.validation.invalidInput('Invalid email')
 
     const matches = await ctx.db
       .query('users')
       .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (matches.length === 0) return { ok: false, error: 'User not found' }
+    if (matches.length === 0) throw Errors.resource.notFound('User', args.email)
 
     let best = matches[0]
     for (const row of matches) {
@@ -86,7 +87,7 @@ export const getByLegacyId = authenticatedQuery({
       .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('User', args.legacyId)
 
     return {
       legacyId: row.legacyId,
@@ -109,7 +110,7 @@ export const getByEmail = authenticatedQuery({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) return null
+    if (!normalized.emailLower) throw Errors.validation.invalidInput('Invalid email')
 
     // Historical data may contain duplicates; prefer the most recently updated record.
     const rows = await ctx.db
@@ -117,7 +118,7 @@ export const getByEmail = authenticatedQuery({
       .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (rows.length === 0) return null
+    if (rows.length === 0) throw Errors.resource.notFound('User', args.email)
 
     let best = rows[0]
     for (const row of rows) {

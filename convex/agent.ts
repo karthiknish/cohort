@@ -24,7 +24,7 @@ export const updateConversationTitle = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Conversation')
+      throw Errors.resource.notFound('Conversation', args.conversationId)
     }
 
     if (existing.userId !== identity.subject) {
@@ -57,7 +57,7 @@ export const deleteConversation = mutation({
       .unique()
 
     if (!existing) {
-      return { ok: true }
+      throw Errors.resource.notFound('Conversation', args.conversationId)
     }
 
     if (existing.userId !== identity.subject) {

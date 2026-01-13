@@ -40,7 +40,7 @@ export const getByLegacyIdServer = query({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Client', args.legacyId)
 
     return {
       legacyId: row.legacyId,
@@ -114,12 +114,12 @@ export const updateInvoiceFieldsServer = mutation({
           updatedAtMs: timestamp,
           deletedAtMs: null,
         })
-        return { ok: true, created: true }
-      }
-      return { ok: false, error: 'Client not found' }
+      return { ok: true, created: true }
     }
+    throw Errors.resource.notFound('Client', args.legacyId)
+  }
 
-    const updates: Record<string, unknown> = {
+  const updates: Record<string, unknown> = {
       lastInvoiceStatus: args.lastInvoiceStatus,
       lastInvoiceAmount: args.lastInvoiceAmount,
       lastInvoiceCurrency: args.lastInvoiceCurrency,
@@ -198,7 +198,7 @@ export const getByLegacyId = workspaceQuery({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Client', args.legacyId)
 
     return {
       legacyId: row.legacyId,

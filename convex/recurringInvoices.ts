@@ -187,7 +187,7 @@ export const getById = query({
       .unique()
 
     if (!row) {
-      return null
+      throw Errors.resource.notFound('Schedule', args.scheduleId)
     }
 
     return {
@@ -315,7 +315,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Schedule')
+      throw Errors.resource.notFound('Schedule', args.scheduleId)
     }
 
     const timestamp = now()
@@ -377,7 +377,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Schedule')
+      throw Errors.resource.notFound('Schedule', args.scheduleId)
     }
 
     await ctx.db.delete(existing._id)
@@ -403,7 +403,7 @@ export const trigger = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Schedule')
+      throw Errors.resource.notFound('Schedule', args.scheduleId)
     }
 
     if (!existing.isActive) {

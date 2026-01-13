@@ -102,7 +102,7 @@ export const getByLegacyId = authenticatedQuery({
       .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Formula', args.legacyId)
 
     return {
       workspaceId: row.workspaceId,
@@ -181,7 +181,7 @@ export const update = authenticatedMutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Formula')
+      throw Errors.resource.notFound('Formula', args.legacyId)
     }
 
     const updates: Record<string, unknown> = {
@@ -212,7 +212,7 @@ export const remove = authenticatedMutation({
       .unique()
 
     if (!existing) {
-      throw Errors.resource.notFound('Formula')
+      throw Errors.resource.notFound('Formula', args.legacyId)
     }
 
     await ctx.db.delete(existing._id)

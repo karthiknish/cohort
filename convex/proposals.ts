@@ -26,7 +26,7 @@ export const getByLegacyId = query({
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) return null
+    if (!row) throw Errors.resource.notFound('Proposal', args.legacyId)
       return {
         legacyId: row.legacyId,
         ownerId: row.ownerId,
@@ -245,7 +245,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      return { ok: true }
+      throw Errors.resource.notFound('Proposal', args.legacyId)
     }
 
     await ctx.db.delete(existing._id)

@@ -127,7 +127,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      return { ok: true, deletedConversation: false }
+      throw Errors.resource.notFound('Conversation', args.legacyId)
     }
 
     // Delete messages first.
