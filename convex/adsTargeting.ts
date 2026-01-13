@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -206,7 +206,7 @@ export const getTargeting = action({
     campaignId: v.optional(v.string()),
     adGroupId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -217,10 +217,6 @@ export const getTargeting = action({
       providerId: args.providerId,
       clientId,
     })
-
-    if (!integration) {
-      throw Errors.integration.notFound(args.providerId)
-    }
 
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
@@ -323,5 +319,5 @@ export const getTargeting = action({
     }
 
     return { targeting, insights }
-  },
+  }, 'adsTargeting:getTargeting'),
 })

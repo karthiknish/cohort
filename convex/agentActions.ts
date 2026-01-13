@@ -3,7 +3,7 @@
 import { action } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 import { buildRoutesForPrompt } from '../src/lib/navigation-intents'
 import { geminiAI } from '../src/services/gemini'
@@ -169,129 +169,132 @@ export const sendMessage = action({
     conversationId: v.optional(v.union(v.string(), v.null())),
     context: v.optional(agentRequestContext),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+  handler: async (ctx, args) =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
 
-    const now = Date.now()
-    const userId = identity.subject
+      const now = Date.now()
+      const userId = identity.subject
 
-    const conversationId = args.conversationId ?? null
-    const isNewConversation = !conversationId
+      const conversationId = args.conversationId ?? null
+      const isNewConversation = !conversationId
 
-    const convId = conversationId ?? crypto.randomUUID()
+      const convId = conversationId ?? crypto.randomUUID()
 
-    // Upsert conversation (similar to legacy dual-write mechanics)
-    if (isNewConversation) {
-      let title = fallbackTitleFromMessage(args.message)
-      try {
-        title = await generateConversationTitle(args.message)
-      } catch {
-        // ignore
+      // Upsert conversation (similar to legacy dual-write mechanics)
+      if (isNewConversation) {
+        let title = fallbackTitleFromMessage(args.message)
+        try {
+          title = await generateConversationTitle(args.message)
+        } catch {
+          // ignore
+        }
+
+        await ctx.runMutation(api.agentConversations.upsert, {
+          workspaceId: args.workspaceId,
+          legacyId: convId,
+          userId,
+          title,
+          startedAt: now,
+          lastMessageAt: now,
+          messageCount: 1,
+        })
+      } else {
+        await ctx.runMutation(api.agentConversations.upsert, {
+          workspaceId: args.workspaceId,
+          legacyId: convId,
+          userId,
+          lastMessageAt: now,
+        })
       }
 
-      await ctx.runMutation(api.agentConversations.upsert, {
+      // Save user message
+      const userMessageLegacyId = crypto.randomUUID()
+      await ctx.runMutation(api.agentMessages.upsert, {
         workspaceId: args.workspaceId,
-        legacyId: convId,
+        conversationLegacyId: convId,
+        legacyId: userMessageLegacyId,
+        type: 'user',
+        content: args.message,
+        createdAt: now,
         userId,
-        title,
-        startedAt: now,
-        lastMessageAt: now,
-        messageCount: 1,
+        action: null,
+        route: null,
+        operation: null,
+        params: null,
+        executeResult: null,
       })
-    } else {
-      await ctx.runMutation(api.agentConversations.upsert, {
+
+      // Build prompt and call Gemini
+      const prompt = `${SYSTEM_PROMPT}${formatConversationHistory(args.context)}\nUser: ${
+        args.message
+      }\n\nRespond with JSON only:`
+
+      let agentAction = 'chat'
+      let agentRoute: string | null = null
+      let agentMessage = "I didn't quite understand that."
+      let agentOperation: string | null = null
+      let agentParams: Record<string, unknown> | null = null
+      let executeResult: { success: boolean; data?: Record<string, unknown> } | null = null
+
+      const raw = await geminiAI.generateContent(prompt)
+      const parsed = parseGeminiResponse(raw)
+
+      agentAction = parsed.action || 'chat'
+      agentRoute = parsed.route || null
+      agentOperation = parsed.operation || null
+      agentParams = parsed.params || null
+
+      if (agentAction === 'execute' && agentOperation && agentParams) {
+        const result = await safeExecuteOperation(ctx, {
+          workspaceId: args.workspaceId,
+          operation: agentOperation,
+          params: agentParams,
+        })
+
+        executeResult = { success: result.success, data: result.data }
+        agentMessage = typeof parsed.message === 'string' ? parsed.message : 'Action completed.'
+
+        if (!executeResult.success) {
+          agentAction = 'chat'
+        }
+      } else {
+        agentMessage = typeof parsed.message === 'string' ? parsed.message : agentMessage
+      }
+
+      const agentMessageLegacyId = crypto.randomUUID()
+      await ctx.runMutation(api.agentMessages.upsert, {
         workspaceId: args.workspaceId,
-        legacyId: convId,
-        userId,
-        lastMessageAt: now,
-      })
-    }
-
-    // Save user message
-    const userMessageLegacyId = crypto.randomUUID()
-    await ctx.runMutation(api.agentMessages.upsert, {
-      workspaceId: args.workspaceId,
-      conversationLegacyId: convId,
-      legacyId: userMessageLegacyId,
-      type: 'user',
-      content: args.message,
-      createdAt: now,
-      userId,
-      action: null,
-      route: null,
-      operation: null,
-      params: null,
-      executeResult: null,
-    })
-
-    // Build prompt and call Gemini
-    const prompt = `${SYSTEM_PROMPT}${formatConversationHistory(args.context)}\nUser: ${args.message}\n\nRespond with JSON only:`
-
-    let agentAction = 'chat'
-    let agentRoute: string | null = null
-    let agentMessage = 'I didn\'t quite understand that.'
-    let agentOperation: string | null = null
-    let agentParams: Record<string, unknown> | null = null
-    let executeResult: { success: boolean; data?: Record<string, unknown> } | null = null
-
-    const raw = await geminiAI.generateContent(prompt)
-    const parsed = parseGeminiResponse(raw)
-
-    agentAction = parsed.action || 'chat'
-    agentRoute = parsed.route || null
-    agentOperation = parsed.operation || null
-    agentParams = parsed.params || null
-
-    if (agentAction === 'execute' && agentOperation && agentParams) {
-      const result = await safeExecuteOperation(ctx, {
-        workspaceId: args.workspaceId,
+        conversationLegacyId: convId,
+        legacyId: agentMessageLegacyId,
+        type: 'agent',
+        content: agentMessage,
+        createdAt: Date.now(),
+        userId: null,
+        action: agentAction,
+        route: agentRoute,
         operation: agentOperation,
         params: agentParams,
+        executeResult,
       })
 
-      executeResult = { success: result.success, data: result.data }
-      agentMessage = typeof parsed.message === 'string' ? parsed.message : 'Action completed.'
+      await ctx.runMutation(api.agentConversations.upsert, {
+        workspaceId: args.workspaceId,
+        legacyId: convId,
+        userId,
+        lastMessageAt: Date.now(),
+      })
 
-      if (!executeResult.success) {
-        agentAction = 'chat'
+      return {
+        conversationId: convId,
+        action: agentAction,
+        route: agentRoute,
+        message: agentMessage,
+        operation: agentOperation,
+        executeResult,
       }
-    } else {
-      agentMessage = typeof parsed.message === 'string' ? parsed.message : agentMessage
-    }
-
-    const agentMessageLegacyId = crypto.randomUUID()
-    await ctx.runMutation(api.agentMessages.upsert, {
-      workspaceId: args.workspaceId,
-      conversationLegacyId: convId,
-      legacyId: agentMessageLegacyId,
-      type: 'agent',
-      content: agentMessage,
-      createdAt: Date.now(),
-      userId: null,
-      action: agentAction,
-      route: agentRoute,
-      operation: agentOperation,
-      params: agentParams,
-      executeResult,
-    })
-
-    await ctx.runMutation(api.agentConversations.upsert, {
-      workspaceId: args.workspaceId,
-      legacyId: convId,
-      userId,
-      lastMessageAt: Date.now(),
-    })
-
-    return {
-      conversationId: convId,
-      action: agentAction,
-      route: agentRoute,
-      message: agentMessage,
-      operation: agentOperation,
-      executeResult,
-    }
-  },
+    }, 'agentActions:sendMessage'),
 })
 
 export const listConversations = action({
@@ -307,28 +310,30 @@ export const listConversations = action({
       lastMessageAt: string | null
       messageCount: number
     }>
-  }> => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+  }> =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
 
-    const limit = Math.min(Math.max(args.limit ?? 20, 1), 50)
+      const limit = Math.min(Math.max(args.limit ?? 20, 1), 50)
 
-    const result: any = await ctx.runQuery(api.agentConversations.list, {
-      workspaceId: args.workspaceId,
-      userId: identity.subject,
-      limit,
-    })
+      const result: any = await ctx.runQuery(api.agentConversations.list, {
+        workspaceId: args.workspaceId,
+        userId: identity.subject,
+        limit,
+      })
 
-    return {
-      conversations: result.conversations.map((row: any) => ({
-        id: row.legacyId,
-        title: row.title,
-        startedAt: typeof row.startedAt === 'number' ? new Date(row.startedAt).toISOString() : null,
-        lastMessageAt: typeof row.lastMessageAt === 'number' ? new Date(row.lastMessageAt).toISOString() : null,
-        messageCount: row.messageCount,
-      })),
-    }
-  },
+      return {
+        conversations: result.conversations.map((row: any) => ({
+          id: row.legacyId,
+          title: row.title,
+          startedAt: typeof row.startedAt === 'number' ? new Date(row.startedAt).toISOString() : null,
+          lastMessageAt:
+            typeof row.lastMessageAt === 'number' ? new Date(row.lastMessageAt).toISOString() : null,
+          messageCount: row.messageCount,
+        })),
+      }
+    }, 'agentActions:listConversations'),
 })
 
 export const getConversation = action({
@@ -351,46 +356,52 @@ export const getConversation = action({
       timestamp: string
       route: string | null
     }>
-  }> => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+  }> =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
 
-    const conv: any = await ctx.runQuery(api.agentConversations.get, {
-      workspaceId: args.workspaceId,
-      legacyId: args.conversationId,
-    })
+      const conv: any = await ctx.runQuery(api.agentConversations.get, {
+        workspaceId: args.workspaceId,
+        legacyId: args.conversationId,
+      })
 
-    if (!conv.conversation) {
-      throw Errors.resource.notFound('Conversation', args.conversationId)
-    }
+      if (!conv.conversation) {
+        throw Errors.resource.notFound('Conversation', args.conversationId)
+      }
 
-    if (conv.conversation.userId !== identity.subject) {
-      throw Errors.auth.forbidden()
-    }
+      if (conv.conversation.userId !== identity.subject) {
+        throw Errors.auth.forbidden()
+      }
 
-    const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
+      const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
 
-    const msgs: any = await ctx.runQuery(api.agentMessages.listByConversation, {
-      workspaceId: args.workspaceId,
-      conversationLegacyId: args.conversationId,
-      limit,
-    })
+      const msgs: any = await ctx.runQuery(api.agentMessages.listByConversation, {
+        workspaceId: args.workspaceId,
+        conversationLegacyId: args.conversationId,
+        limit,
+      })
 
-    return {
-      conversation: {
-        id: args.conversationId,
-        startedAt: typeof conv.conversation.startedAt === 'number' ? new Date(conv.conversation.startedAt).toISOString() : null,
-        lastMessageAt:
-          typeof conv.conversation.lastMessageAt === 'number' ? new Date(conv.conversation.lastMessageAt).toISOString() : null,
-        messageCount: conv.conversation.messageCount,
-      },
-      messages: msgs.messages.map((msg: any) => ({
-        id: msg.legacyId,
-        type: msg.type,
-        content: msg.content,
-        timestamp: new Date(msg.createdAt).toISOString(),
-        route: msg.route,
-      })),
-    }
-  },
+      return {
+        conversation: {
+          id: args.conversationId,
+          startedAt:
+            typeof conv.conversation.startedAt === 'number'
+              ? new Date(conv.conversation.startedAt).toISOString()
+              : null,
+          lastMessageAt:
+            typeof conv.conversation.lastMessageAt === 'number'
+              ? new Date(conv.conversation.lastMessageAt).toISOString()
+              : null,
+          messageCount: conv.conversation.messageCount,
+        },
+        messages: msgs.messages.map((msg: any) => ({
+          id: msg.legacyId,
+          type: msg.type,
+          content: msg.content,
+          timestamp: new Date(msg.createdAt).toISOString(),
+          route: msg.route,
+        })),
+      }
+    }, 'agentActions:getConversation'),
 })

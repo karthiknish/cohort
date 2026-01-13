@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors, asErrorMessage } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -34,7 +34,7 @@ export const listCampaignGroups = action({
     providerId: v.literal('linkedin'),
     clientId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -46,10 +46,6 @@ export const listCampaignGroups = action({
       clientId,
     })
 
-    if (!integration) {
-      throw Errors.integration.notFound('LinkedIn')
-    }
-
     if (!integration.accessToken || !integration.accountId) {
       throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
     }
@@ -58,27 +54,23 @@ export const listCampaignGroups = action({
       throw Errors.integration.expired('LinkedIn')
     }
 
-    try {
-      const { listLinkedInCampaignGroups } = await import('@/services/integrations/linkedin-ads')
+    const { listLinkedInCampaignGroups } = await import('@/services/integrations/linkedin-ads')
 
-      const groups = await listLinkedInCampaignGroups({
-        accessToken: integration.accessToken,
-        accountId: integration.accountId,
+    const groups = await listLinkedInCampaignGroups({
+      accessToken: integration.accessToken,
+      accountId: integration.accountId,
+    })
+
+    return groups.map(
+      (group: any): CampaignGroup => ({
+        id: group.id,
+        name: group.name,
+        status: group.status,
+        totalBudget: group.totalBudget,
+        currency: group.currency,
       })
-
-      return groups.map(
-        (group: any): CampaignGroup => ({
-          id: group.id,
-          name: group.name,
-          status: group.status,
-          totalBudget: group.totalBudget,
-          currency: group.currency,
-        })
-      )
-    } catch (err) {
-      throw Errors.base.internal(asErrorMessage(err))
-    }
-  },
+    )
+  }, 'adsCampaignGroups:listCampaignGroups'),
 })
 
 export const updateCampaignGroup = action({
@@ -90,7 +82,7 @@ export const updateCampaignGroup = action({
     action: v.union(v.literal('enable'), v.literal('pause'), v.literal('updateBudget')),
     budget: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -102,10 +94,6 @@ export const updateCampaignGroup = action({
       clientId,
     })
 
-    if (!integration) {
-      throw Errors.integration.notFound('LinkedIn')
-    }
-
     if (!integration.accessToken) {
       throw Errors.integration.missingToken('LinkedIn')
     }
@@ -114,28 +102,24 @@ export const updateCampaignGroup = action({
       throw Errors.integration.expired('LinkedIn')
     }
 
-    try {
-      const { updateLinkedInCampaignGroupBudget, updateLinkedInCampaignGroupStatus } = await import(
-        '@/services/integrations/linkedin-ads'
-      )
+    const { updateLinkedInCampaignGroupBudget, updateLinkedInCampaignGroupStatus } = await import(
+      '@/services/integrations/linkedin-ads'
+    )
 
-      if (args.action === 'enable' || args.action === 'pause') {
-        await updateLinkedInCampaignGroupStatus({
-          accessToken: integration.accessToken,
-          campaignGroupId: args.campaignGroupId,
-          status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
-        })
-      } else if (args.action === 'updateBudget' && args.budget !== undefined) {
-        await updateLinkedInCampaignGroupBudget({
-          accessToken: integration.accessToken,
-          campaignGroupId: args.campaignGroupId,
-          totalBudget: args.budget,
-        })
-      }
-
-      return { success: true }
-    } catch (err) {
-      throw Errors.base.internal(asErrorMessage(err))
+    if (args.action === 'enable' || args.action === 'pause') {
+      await updateLinkedInCampaignGroupStatus({
+        accessToken: integration.accessToken,
+        campaignGroupId: args.campaignGroupId,
+        status: args.action === 'enable' ? 'ACTIVE' : 'PAUSED',
+      })
+    } else if (args.action === 'updateBudget' && args.budget !== undefined) {
+      await updateLinkedInCampaignGroupBudget({
+        accessToken: integration.accessToken,
+        campaignGroupId: args.campaignGroupId,
+        totalBudget: args.budget,
+      })
     }
-  },
+
+    return { success: true }
+  }, 'adsCampaignGroups:updateCampaignGroup'),
 })

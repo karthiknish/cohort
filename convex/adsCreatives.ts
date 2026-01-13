@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -145,7 +145,7 @@ export const listCreatives = action({
     status: v.optional(v.string()),
     includeMedia: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -157,10 +157,6 @@ export const listCreatives = action({
       clientId,
     })
 
-    if (!integration) {
-      throw Errors.integration.notFound(args.providerId)
-    }
-
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
     }
@@ -169,96 +165,92 @@ export const listCreatives = action({
       throw Errors.integration.expired(args.providerId)
     }
 
-    try {
-      if (args.providerId === 'google') {
-        const { fetchGoogleCreatives } = await import('@/services/integrations/google-ads')
+    if (args.providerId === 'google') {
+      const { fetchGoogleCreatives } = await import('@/services/integrations/google-ads')
 
-        const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
-        const customerId = integration.accountId ?? ''
-        const loginCustomerId = integration.loginCustomerId
+      const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
+      const customerId = integration.accountId ?? ''
+      const loginCustomerId = integration.loginCustomerId
 
-        if (!customerId) {
-          throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
-        }
-
-        const googleCreatives = await fetchGoogleCreatives({
-          accessToken: integration.accessToken,
-          developerToken,
-          customerId,
-          campaignId: args.campaignId,
-          adGroupId: args.adGroupId,
-          loginCustomerId,
-        })
-
-        return normalizeGoogleCreatives(googleCreatives)
+      if (!customerId) {
+        throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
       }
 
-      if (args.providerId === 'tiktok') {
-        const { fetchTikTokCreatives } = await import('@/services/integrations/tiktok-ads')
+      const googleCreatives = await fetchGoogleCreatives({
+        accessToken: integration.accessToken,
+        developerToken,
+        customerId,
+        campaignId: args.campaignId,
+        adGroupId: args.adGroupId,
+        loginCustomerId,
+      })
 
-        const advertiserId = integration.accountId
-        if (!advertiserId) {
-          throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
-        }
+      return normalizeGoogleCreatives(googleCreatives)
+    }
 
-        const tiktokCreatives = await fetchTikTokCreatives({
-          accessToken: integration.accessToken,
-          advertiserId,
-          campaignId: args.campaignId,
-          adGroupId: args.adGroupId,
-        })
+    if (args.providerId === 'tiktok') {
+      const { fetchTikTokCreatives } = await import('@/services/integrations/tiktok-ads')
 
-        return normalizeTikTokCreatives(tiktokCreatives)
+      const advertiserId = integration.accountId
+      if (!advertiserId) {
+        throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
       }
 
-      if (args.providerId === 'linkedin') {
-        const { fetchLinkedInAds, fetchLinkedInCreatives } = await import('@/services/integrations/linkedin-ads')
+      const tiktokCreatives = await fetchTikTokCreatives({
+        accessToken: integration.accessToken,
+        advertiserId,
+        campaignId: args.campaignId,
+        adGroupId: args.adGroupId,
+      })
 
-        const accountId = integration.accountId
-        if (!accountId) {
-          throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
-        }
+      return normalizeTikTokCreatives(tiktokCreatives)
+    }
 
-        // Legacy route used ads when campaignId is specified; keep same semantics.
-        if (args.campaignId) {
-          const ads = await fetchLinkedInAds({
-            accessToken: integration.accessToken,
-            accountId,
-            campaignId: args.campaignId,
-          })
-          return normalizeLinkedInAds(ads)
-        }
+    if (args.providerId === 'linkedin') {
+      const { fetchLinkedInAds, fetchLinkedInCreatives } = await import('@/services/integrations/linkedin-ads')
 
-        const creatives = await fetchLinkedInCreatives({
+      const accountId = integration.accountId
+      if (!accountId) {
+        throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
+      }
+
+      // Legacy route used ads when campaignId is specified; keep same semantics.
+      if (args.campaignId) {
+        const ads = await fetchLinkedInAds({
           accessToken: integration.accessToken,
           accountId,
           campaignId: args.campaignId,
         })
-
-        return normalizeLinkedInCreatives(creatives)
+        return normalizeLinkedInAds(ads)
       }
 
-      // facebook
-      const { fetchMetaCreatives } = await import('@/services/integrations/meta-ads')
-
-      const adAccountId = integration.accountId
-      if (!adAccountId) {
-        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured. Finish setup to select an ad account.')
-      }
-
-      const metaCreatives = await fetchMetaCreatives({
+      const creatives = await fetchLinkedInCreatives({
         accessToken: integration.accessToken,
-        adAccountId,
+        accountId,
         campaignId: args.campaignId,
-        adSetId: args.adGroupId,
-        includeVideoMedia: args.includeMedia ?? false,
       })
 
-      return normalizeMetaCreatives(metaCreatives)
-    } catch (err) {
-      throw Errors.base.internal(asErrorMessage(err))
+      return normalizeLinkedInCreatives(creatives)
     }
-  },
+
+    // facebook
+    const { fetchMetaCreatives } = await import('@/services/integrations/meta-ads')
+
+    const adAccountId = integration.accountId
+    if (!adAccountId) {
+      throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured. Finish setup to select an ad account.')
+    }
+
+    const metaCreatives = await fetchMetaCreatives({
+      accessToken: integration.accessToken,
+      adAccountId,
+      campaignId: args.campaignId,
+      adSetId: args.adGroupId,
+      includeVideoMedia: args.includeMedia ?? false,
+    })
+
+    return normalizeMetaCreatives(metaCreatives)
+  }, 'adsCreatives:listCreatives'),
 })
 
 export const updateCreativeStatus = action({
@@ -277,7 +269,7 @@ export const updateCreativeStatus = action({
       v.literal('DISABLE')
     ),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -289,10 +281,6 @@ export const updateCreativeStatus = action({
       clientId,
     })
 
-    if (!integration) {
-      throw Errors.integration.notFound(args.providerId)
-    }
-
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
     }
@@ -303,89 +291,85 @@ export const updateCreativeStatus = action({
 
     const status = args.status
 
-    try {
-      if (args.providerId === 'google') {
-        if (!args.adGroupId) {
-          throw Errors.validation.invalidInput('adGroupId is required for Google Ads')
-        }
-        const { updateGoogleAdStatus } = await import('@/services/integrations/google-ads')
+    if (args.providerId === 'google') {
+      if (!args.adGroupId) {
+        throw Errors.validation.invalidInput('adGroupId is required for Google Ads')
+      }
+      const { updateGoogleAdStatus } = await import('@/services/integrations/google-ads')
 
-        const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
-        const customerId = integration.accountId ?? ''
-        const loginCustomerId = integration.loginCustomerId
+      const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
+      const customerId = integration.accountId ?? ''
+      const loginCustomerId = integration.loginCustomerId
 
-        if (!customerId) {
-          throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
-        }
-
-        const googleStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ENABLED' : 'PAUSED'
-
-        await updateGoogleAdStatus({
-          accessToken: integration.accessToken,
-          developerToken,
-          customerId,
-          adId: args.creativeId,
-          adGroupId: args.adGroupId,
-          status: googleStatus as 'ENABLED' | 'PAUSED',
-          loginCustomerId,
-        })
-
-        return { success: true, creativeId: args.creativeId, status: googleStatus }
+      if (!customerId) {
+        throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
       }
 
-      if (args.providerId === 'tiktok') {
-        const { updateTikTokAdStatus } = await import('@/services/integrations/tiktok-ads')
+      const googleStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ENABLED' : 'PAUSED'
 
-        const advertiserId = integration.accountId
-        if (!advertiserId) {
-          throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
-        }
-
-        const tiktokStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ENABLE' : 'DISABLE'
-
-        await updateTikTokAdStatus({
-          accessToken: integration.accessToken,
-          advertiserId,
-          adId: args.creativeId,
-          status: tiktokStatus as 'ENABLE' | 'DISABLE',
-        })
-
-        return { success: true, creativeId: args.creativeId, status: tiktokStatus }
-      }
-
-      if (args.providerId === 'linkedin') {
-        const { updateLinkedInAdStatus } = await import('@/services/integrations/linkedin-ads')
-
-        const accountId = integration.accountId
-        if (!accountId) {
-          throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
-        }
-
-        const linkedinStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ACTIVE' : 'PAUSED'
-
-        await updateLinkedInAdStatus({
-          accessToken: integration.accessToken,
-          creativeId: args.creativeId,
-          status: linkedinStatus as 'ACTIVE' | 'PAUSED',
-        })
-
-        return { success: true, creativeId: args.creativeId, status: linkedinStatus }
-      }
-
-      // facebook
-      const { updateMetaAdStatus } = await import('@/services/integrations/meta-ads')
-
-      const metaStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ACTIVE' : 'PAUSED'
-
-      await updateMetaAdStatus({
+      await updateGoogleAdStatus({
         accessToken: integration.accessToken,
+        developerToken,
+        customerId,
         adId: args.creativeId,
-        status: metaStatus as 'ACTIVE' | 'PAUSED',
+        adGroupId: args.adGroupId,
+        status: googleStatus as 'ENABLED' | 'PAUSED',
+        loginCustomerId,
       })
 
-      return { success: true, creativeId: args.creativeId, status: metaStatus }
-    } catch (err) {
-      throw Errors.base.internal(asErrorMessage(err))
+      return { success: true, creativeId: args.creativeId, status: googleStatus }
     }
-  },
+
+    if (args.providerId === 'tiktok') {
+      const { updateTikTokAdStatus } = await import('@/services/integrations/tiktok-ads')
+
+      const advertiserId = integration.accountId
+      if (!advertiserId) {
+        throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
+      }
+
+      const tiktokStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ENABLE' : 'DISABLE'
+
+      await updateTikTokAdStatus({
+        accessToken: integration.accessToken,
+        advertiserId,
+        adId: args.creativeId,
+        status: tiktokStatus as 'ENABLE' | 'DISABLE',
+      })
+
+      return { success: true, creativeId: args.creativeId, status: tiktokStatus }
+    }
+
+    if (args.providerId === 'linkedin') {
+      const { updateLinkedInAdStatus } = await import('@/services/integrations/linkedin-ads')
+
+      const accountId = integration.accountId
+      if (!accountId) {
+        throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
+      }
+
+      const linkedinStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ACTIVE' : 'PAUSED'
+
+      await updateLinkedInAdStatus({
+        accessToken: integration.accessToken,
+        creativeId: args.creativeId,
+        status: linkedinStatus as 'ACTIVE' | 'PAUSED',
+      })
+
+      return { success: true, creativeId: args.creativeId, status: linkedinStatus }
+    }
+
+    // facebook
+    const { updateMetaAdStatus } = await import('@/services/integrations/meta-ads')
+
+    const metaStatus = status === 'ACTIVE' || status === 'ENABLE' || status === 'ENABLED' ? 'ACTIVE' : 'PAUSED'
+
+    await updateMetaAdStatus({
+      accessToken: integration.accessToken,
+      adId: args.creativeId,
+      status: metaStatus as 'ACTIVE' | 'PAUSED',
+    })
+
+    return { success: true, creativeId: args.creativeId, status: metaStatus }
+  }, 'adsCreatives:updateCreativeStatus'),
 })

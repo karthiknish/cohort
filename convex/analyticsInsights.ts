@@ -6,6 +6,7 @@ import { api } from './_generated/api'
 
 import { geminiAI } from '../src/services/gemini'
 import { formatCurrency } from '../src/lib/utils'
+import { withErrorHandling } from './errors'
 import {
   calculateAlgorithmicInsights,
   getGlobalBudgetSuggestions,
@@ -259,42 +260,43 @@ export const generateInsights = action({
       suggestions: v.array(algorithmicInsightSchema),
     })),
   }),
-  handler: async (ctx, args) => {
-    const periodDays = args.periodDays ?? 30
-    const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
+  handler: async (ctx, args) =>
+    withErrorHandling(async () => {
+      const periodDays = args.periodDays ?? 30
+      const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
 
-    // Fetch metrics from Convex
-    const metrics = await ctx.runQuery(api.adsMetrics.listMetrics, {
-      workspaceId: args.workspaceId,
-      clientId: args.clientId ?? null,
-      limit: 150,
-    })
-
-    const records: MetricRecord[] = (metrics as any[])
-      .map((row) => ({
-        providerId: typeof row.providerId === 'string' ? row.providerId : 'unknown',
-        date: typeof row.date === 'string' ? row.date : 'unknown',
-        spend: Number(row.spend ?? 0),
-        impressions: Number(row.impressions ?? 0),
-        clicks: Number(row.clicks ?? 0),
-        conversions: Number(row.conversions ?? 0),
-        revenue: row.revenue !== undefined && row.revenue !== null ? Number(row.revenue) : null,
-        createdAt: toISO(row.createdAtMs ?? null),
-        clientId: typeof row.clientId === 'string' ? row.clientId : null,
-      }))
-      .filter((metric) => {
-        if (!metric.date) return false
-        const metricDate = new Date(metric.date).getTime()
-        return Number.isFinite(metricDate) ? metricDate >= cutoff : true
+      // Fetch metrics from Convex
+      const metrics = await ctx.runQuery(api.adsMetrics.listMetrics, {
+        workspaceId: args.workspaceId,
+        clientId: args.clientId ?? null,
+        limit: 150,
       })
 
-    if (records.length === 0) {
-      return { insights: [], algorithmic: [] }
-    }
+      const records: MetricRecord[] = (metrics as any[])
+        .map((row) => ({
+          providerId: typeof row.providerId === 'string' ? row.providerId : 'unknown',
+          date: typeof row.date === 'string' ? row.date : 'unknown',
+          spend: Number(row.spend ?? 0),
+          impressions: Number(row.impressions ?? 0),
+          clicks: Number(row.clicks ?? 0),
+          conversions: Number(row.conversions ?? 0),
+          revenue: row.revenue !== undefined && row.revenue !== null ? Number(row.revenue) : null,
+          createdAt: toISO(row.createdAtMs ?? null),
+          clientId: typeof row.clientId === 'string' ? row.clientId : null,
+        }))
+        .filter((metric) => {
+          if (!metric.date) return false
+          const metricDate = new Date(metric.date).getTime()
+          return Number.isFinite(metricDate) ? metricDate >= cutoff : true
+        })
 
-    const summaries = summarizeByProvider(records, periodDays)
-    const { insights, algorithmic } = await generateAllInsights(summaries)
+      if (records.length === 0) {
+        return { insights: [], algorithmic: [] }
+      }
 
-    return { insights, algorithmic }
-  },
+      const summaries = summarizeByProvider(records, periodDays)
+      const { insights, algorithmic } = await generateAllInsights(summaries)
+
+      return { insights, algorithmic }
+    }, 'analyticsInsights:generateInsights'),
 })

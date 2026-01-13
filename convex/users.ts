@@ -199,14 +199,14 @@ export const getNotificationPreferencesByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) return null
+    if (!normalized.emailLower) throw Errors.validation.invalidInput('Invalid email')
 
     const rows = await ctx.db
       .query('users')
       .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (rows.length === 0) return null
+    if (rows.length === 0) throw Errors.auth.userNotFound()
 
     let best = rows[0]
     for (const row of rows) {

@@ -2,7 +2,7 @@ import { action } from './_generated/server'
 import { v } from 'convex/values'
 
 import { runDerivedMetricsPipeline } from '@/lib/metrics'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -157,7 +157,7 @@ export const listAdMetrics = action({
     level: v.optional(v.union(v.literal('ad'), v.literal('adGroup'), v.literal('creative'))),
     days: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -170,10 +170,6 @@ export const listAdMetrics = action({
       clientId,
     })
 
-    if (!integration) {
-      throw Errors.integration.notFound(args.providerId)
-    }
-
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
     }
@@ -182,105 +178,101 @@ export const listAdMetrics = action({
       throw Errors.integration.expired(args.providerId)
     }
 
-    try {
-      let metrics: NormalizedAdMetric[] = []
+    let metrics: NormalizedAdMetric[] = []
 
-      if (args.providerId === 'google') {
-        const { fetchGoogleAdGroupMetrics, fetchGoogleAdMetrics } = await import('@/services/integrations/google-ads')
+    if (args.providerId === 'google') {
+      const { fetchGoogleAdGroupMetrics, fetchGoogleAdMetrics } = await import('@/services/integrations/google-ads')
 
-        const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
-        const customerId = integration.accountId ?? ''
-        const loginCustomerId = integration.loginCustomerId
+      const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
+      const customerId = integration.accountId ?? ''
+      const loginCustomerId = integration.loginCustomerId
 
-        if (!customerId) {
-          throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
-        }
+      if (!customerId) {
+        throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
+      }
 
-        if (args.level === 'adGroup') {
-          const googleMetrics = await fetchGoogleAdGroupMetrics({
-            accessToken: integration.accessToken,
-            developerToken,
-            customerId,
-            campaignId: args.campaignId,
-            loginCustomerId,
-            timeframeDays,
-          })
-          metrics = normalizeGoogleMetrics(googleMetrics)
-        } else {
-          const googleMetrics = await fetchGoogleAdMetrics({
-            accessToken: integration.accessToken,
-            developerToken,
-            customerId,
-            campaignId: args.campaignId,
-            adGroupId: args.adGroupId,
-            loginCustomerId,
-            timeframeDays,
-          })
-          metrics = normalizeGoogleMetrics(googleMetrics)
-        }
-      } else if (args.providerId === 'tiktok') {
-        const { fetchTikTokAdMetrics } = await import('@/services/integrations/tiktok-ads')
-
-        const advertiserId = integration.accountId
-        if (!advertiserId) {
-          throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
-        }
-
-        const tiktokMetrics = await fetchTikTokAdMetrics({
+      if (args.level === 'adGroup') {
+        const googleMetrics = await fetchGoogleAdGroupMetrics({
           accessToken: integration.accessToken,
-          advertiserId,
+          developerToken,
+          customerId,
           campaignId: args.campaignId,
+          loginCustomerId,
           timeframeDays,
         })
-
-        metrics = normalizeTikTokMetrics(tiktokMetrics)
-      } else if (args.providerId === 'linkedin') {
-        const { fetchLinkedInCreativeMetrics } = await import('@/services/integrations/linkedin-ads')
-
-        const accountId = integration.accountId
-        if (!accountId) {
-          throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
-        }
-
-        const linkedInMetrics = await fetchLinkedInCreativeMetrics({
-          accessToken: integration.accessToken,
-          accountId,
-          campaignId: args.campaignId,
-          timeframeDays,
-        })
-
-        metrics = normalizeLinkedInMetrics(linkedInMetrics)
+        metrics = normalizeGoogleMetrics(googleMetrics)
       } else {
-        const { fetchMetaAdMetrics } = await import('@/services/integrations/meta-ads')
-
-        const adAccountId = integration.accountId
-        if (!adAccountId) {
-          throw Errors.integration.notConfigured('Meta', 'Meta credentials not configured')
-        }
-
-        const metaMetrics = await fetchMetaAdMetrics({
+        const googleMetrics = await fetchGoogleAdMetrics({
           accessToken: integration.accessToken,
-          adAccountId,
+          developerToken,
+          customerId,
           campaignId: args.campaignId,
+          adGroupId: args.adGroupId,
+          loginCustomerId,
           timeframeDays,
         })
+        metrics = normalizeGoogleMetrics(googleMetrics)
+      }
+    } else if (args.providerId === 'tiktok') {
+      const { fetchTikTokAdMetrics } = await import('@/services/integrations/tiktok-ads')
 
-        metrics = normalizeMetaMetrics(metaMetrics)
+      const advertiserId = integration.accountId
+      if (!advertiserId) {
+        throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
       }
 
-      return {
-        metrics,
-        summary: {
-          totalImpressions: metrics.reduce((sum, m) => sum + m.impressions, 0),
-          totalClicks: metrics.reduce((sum, m) => sum + m.clicks, 0),
-          totalSpend: metrics.reduce((sum, m) => sum + m.spend, 0),
-          totalConversions: metrics.reduce((sum, m) => sum + m.conversions, 0),
-          totalRevenue: metrics.reduce((sum, m) => sum + m.revenue, 0),
-        },
-        derivedMetrics: runDerivedMetricsPipeline(metrics),
+      const tiktokMetrics = await fetchTikTokAdMetrics({
+        accessToken: integration.accessToken,
+        advertiserId,
+        campaignId: args.campaignId,
+        timeframeDays,
+      })
+
+      metrics = normalizeTikTokMetrics(tiktokMetrics)
+    } else if (args.providerId === 'linkedin') {
+      const { fetchLinkedInCreativeMetrics } = await import('@/services/integrations/linkedin-ads')
+
+      const accountId = integration.accountId
+      if (!accountId) {
+        throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
       }
-    } catch (err) {
-      throw Errors.base.internal(asErrorMessage(err))
+
+      const linkedInMetrics = await fetchLinkedInCreativeMetrics({
+        accessToken: integration.accessToken,
+        accountId,
+        campaignId: args.campaignId,
+        timeframeDays,
+      })
+
+      metrics = normalizeLinkedInMetrics(linkedInMetrics)
+    } else {
+      const { fetchMetaAdMetrics } = await import('@/services/integrations/meta-ads')
+
+      const adAccountId = integration.accountId
+      if (!adAccountId) {
+        throw Errors.integration.notConfigured('Meta', 'Meta credentials not configured')
+      }
+
+      const metaMetrics = await fetchMetaAdMetrics({
+        accessToken: integration.accessToken,
+        adAccountId,
+        campaignId: args.campaignId,
+        timeframeDays,
+      })
+
+      metrics = normalizeMetaMetrics(metaMetrics)
     }
-  },
+
+    return {
+      metrics,
+      summary: {
+        totalImpressions: metrics.reduce((sum, m) => sum + m.impressions, 0),
+        totalClicks: metrics.reduce((sum, m) => sum + m.clicks, 0),
+        totalSpend: metrics.reduce((sum, m) => sum + m.spend, 0),
+        totalConversions: metrics.reduce((sum, m) => sum + m.conversions, 0),
+        totalRevenue: metrics.reduce((sum, m) => sum + m.revenue, 0),
+      },
+      derivedMetrics: runDerivedMetricsPipeline(metrics),
+    }
+  }, 'adsAdMetrics:listAdMetrics'),
 })

@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireAdmin(identity: unknown): asserts identity {
   if (!identity) {
@@ -127,14 +127,15 @@ export const generate = action({
       })
     ),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
+  handler: async (ctx, args) =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireAdmin(identity)
 
-    const prompt = buildPrompt({ field: args.field, context: args.context })
-    const raw = await generateWithGemini(prompt)
-    const cleaned = cleanupOutput(raw)
+      const prompt = buildPrompt({ field: args.field, context: args.context })
+      const raw = await generateWithGemini(prompt)
+      const cleaned = cleanupOutput(raw)
 
-    return args.field === 'title' ? { title: cleaned } : { description: cleaned }
-  },
+      return args.field === 'title' ? { title: cleaned } : { description: cleaned }
+    }, 'adminFeaturesAi:generate'),
 })

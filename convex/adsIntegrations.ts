@@ -1,11 +1,16 @@
 import { action, internalMutation, mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
+import { authenticatedMutation, workspaceMutation } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
+function nowMs() {
+  return Date.now()
+}
+
+function normalizeClientId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 function assertCronKey(ctx: { auth: { getUserIdentity: () => Promise<unknown> } }, args: { cronKey?: string | null }) {
@@ -21,16 +26,6 @@ function assertCronKey(ctx: { auth: { getUserIdentity: () => Promise<unknown> } 
   }
 }
 
-function nowMs() {
-  return Date.now()
-}
-
-function normalizeClientId(value: string | null | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
 function hasOwn(obj: object, key: string) {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
@@ -43,7 +38,9 @@ export const getAdIntegration = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -54,7 +51,9 @@ export const getAdIntegration = query({
       )
       .unique()
 
-    if (!row) return null
+    if (!row) {
+      throw Errors.resource.notFound('Integration', args.providerId)
+    }
 
     return {
       providerId: row.providerId,
@@ -92,7 +91,9 @@ export const listStatuses = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const clientId = normalizeClientId(args.clientId)
 
@@ -146,7 +147,9 @@ export const persistIntegrationTokens = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -195,10 +198,10 @@ export const persistIntegrationTokens = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload)
-      return { ok: true }
+    } else {
+      await ctx.db.insert('adIntegrations', payload)
     }
 
-    await ctx.db.insert('adIntegrations', payload)
     return { ok: true }
   },
 })
@@ -215,7 +218,9 @@ export const updateAutomationSettings = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -256,7 +261,9 @@ export const requestManualSync = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -302,9 +309,11 @@ export const initializeAdAccount = action({
     providerId: v.union(v.literal('google'), v.literal('linkedin'), v.literal('facebook'), v.literal('tiktok')),
     clientId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -313,10 +322,6 @@ export const initializeAdAccount = action({
       providerId: args.providerId,
       clientId,
     })
-
-    if (!integration) {
-      throw Errors.resource.notFound('Integration')
-    }
 
     // Make sure linkedAt is set so the UI considers it connected.
     const linkedAtMs = typeof integration.linkedAtMs === 'number' ? integration.linkedAtMs : nowMs()
@@ -482,7 +487,7 @@ export const initializeAdAccount = action({
       accountName: preferredAccount.name,
       accounts,
     }
-  },
+  }, 'adsIntegrations:initializeAdAccount'),
 })
 
 export const updateIntegrationCredentials = mutation({
@@ -508,7 +513,9 @@ export const updateIntegrationCredentials = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -622,7 +629,9 @@ export const markIntegrationSyncRequested = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -687,7 +696,9 @@ export const updateIntegrationPreferences = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -901,7 +912,9 @@ export const hasPendingSyncJob = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -1007,7 +1020,9 @@ export const deleteAdIntegration = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -1033,7 +1048,9 @@ export const deleteSyncJobs = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
 
     const clientId = normalizeClientId(args.clientId ?? null)
 

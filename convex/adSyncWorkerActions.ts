@@ -5,7 +5,7 @@ import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
-import { Errors, asErrorMessage } from './errors'
+import { Errors, asErrorMessage, withErrorHandling } from './errors'
 
 function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
@@ -29,31 +29,31 @@ export const processClaimedJob = action({
     timeframeDays: v.number(),
     cronKey: v.string(),
   },
-  handler: async (ctx, args) => {
-    const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
-    if (!cronSecret) {
-      throw Errors.base.internal('INTEGRATIONS_CRON_SECRET is not configured')
-    }
+  handler: async (ctx, args) =>
+    withErrorHandling(async () => {
+      const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
+      if (!cronSecret) {
+        throw Errors.base.internal('INTEGRATIONS_CRON_SECRET is not configured')
+      }
 
-    if (args.cronKey !== cronSecret) {
-      throw Errors.auth.unauthorized()
-    }
+      if (args.cronKey !== cronSecret) {
+        throw Errors.auth.unauthorized()
+      }
 
-    const clientId = normalizeClientId(args.clientId)
+      const clientId = normalizeClientId(args.clientId)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
-      workspaceId: args.workspaceId,
-      providerId: args.providerId,
-      clientId,
-    })
+      const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+        workspaceId: args.workspaceId,
+        providerId: args.providerId,
+        clientId,
+      })
 
-    if (!integration || !integration.accessToken) {
-      throw Errors.integration.notFound(args.providerId)
-    }
+      if (!integration || !integration.accessToken) {
+        throw Errors.integration.notFound(args.providerId)
+      }
 
-    let metrics: any[] = []
+      let metrics: any[] = []
 
-    try {
       switch (args.providerId) {
         case 'google': {
           const accountId = integration.accountId
@@ -130,30 +130,27 @@ export const processClaimedJob = action({
         default:
           throw Errors.validation.invalidInput(`Unsupported provider: ${args.providerId}`)
       }
-    } catch (err) {
-      throw Errors.base.internal(asErrorMessage(err))
-    }
 
-    const insertResult = await ctx.runMutation('adsIntegrations:writeMetricsBatch' as any, {
-      workspaceId: args.workspaceId,
-      cronKey: args.cronKey,
-      metrics: metrics.map((metric: any) => ({
-        providerId: metric.providerId,
-        clientId,
-        accountId: metric.accountId ?? null,
-        date: metric.date,
-        spend: metric.spend,
-        impressions: metric.impressions,
-        clicks: metric.clicks,
-        conversions: metric.conversions,
-        revenue: metric.revenue ?? null,
-        campaignId: metric.campaignId,
-        campaignName: metric.campaignName,
-        creatives: metric.creatives,
-        rawPayload: metric.rawPayload,
-      })),
-    })
+      const insertResult = await ctx.runMutation('adsIntegrations:writeMetricsBatch' as any, {
+        workspaceId: args.workspaceId,
+        cronKey: args.cronKey,
+        metrics: metrics.map((metric: any) => ({
+          providerId: metric.providerId,
+          clientId,
+          accountId: metric.accountId ?? null,
+          date: metric.date,
+          spend: metric.spend,
+          impressions: metric.impressions,
+          clicks: metric.clicks,
+          conversions: metric.conversions,
+          revenue: metric.revenue ?? null,
+          campaignId: metric.campaignId,
+          campaignName: metric.campaignName,
+          creatives: metric.creatives,
+          rawPayload: metric.rawPayload,
+        })),
+      })
 
-    return { metricsInserted: insertResult?.inserted ?? 0 }
-  },
+      return { metricsInserted: insertResult?.inserted ?? 0 }
+    }, 'adSyncWorkerActions:processClaimedJob'),
 })

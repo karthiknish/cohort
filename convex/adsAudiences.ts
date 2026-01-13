@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -49,7 +49,7 @@ export const createAudience = action({
       })
     ),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -60,10 +60,6 @@ export const createAudience = action({
       providerId: args.providerId,
       clientId,
     })
-
-    if (!integration) {
-      throw Errors.integration.notFound(args.providerId)
-    }
 
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
@@ -148,5 +144,5 @@ export const createAudience = action({
       message: `Audience "${args.name}" created on ${args.providerId}`,
       id: result.id || result.resourceName,
     }
-  },
+  }, 'adsAudiences:createAudience'),
 })

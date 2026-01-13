@@ -4,6 +4,7 @@ import { action } from './_generated/server'
 import { v } from 'convex/values'
 
 import { geminiAI } from '../src/services/gemini'
+import { withErrorHandling } from './errors'
 
 const providerIdValidator = v.union(
   v.literal('google'),
@@ -150,77 +151,82 @@ export const generateCopy = action({
     captions: v.array(v.string()),
     generatedAt: v.string(),
   }),
-  handler: async (_, args) => {
-    const input: GenerateCopyInput = {
-      providerId: args.providerId,
-      clientId: args.clientId,
-      campaignId: args.campaignId,
-      creativeId: args.creativeId,
-      campaignName: args.campaignName,
-      creativeName: args.creativeName,
-      landingPageUrl: args.landingPageUrl,
-      callToAction: args.callToAction,
-      creativeType: args.creativeType,
-      pageName: args.pageName,
-      existingHeadlines: args.existingHeadlines,
-      existingCaptions: args.existingCaptions,
-      count: args.count,
-      kind: args.kind,
-    }
+  handler: async (_, args) =>
+    withErrorHandling(async () => {
+      const input: GenerateCopyInput = {
+        providerId: args.providerId,
+        clientId: args.clientId,
+        campaignId: args.campaignId,
+        creativeId: args.creativeId,
+        campaignName: args.campaignName,
+        creativeName: args.creativeName,
+        landingPageUrl: args.landingPageUrl,
+        callToAction: args.callToAction,
+        creativeType: args.creativeType,
+        pageName: args.pageName,
+        existingHeadlines: args.existingHeadlines,
+        existingCaptions: args.existingCaptions,
+        count: args.count,
+        kind: args.kind,
+      }
 
-    const prompt = buildPrompt(input)
-    const raw = await geminiAI.generateContent(prompt)
+      const prompt = buildPrompt(input)
+      const raw = await geminiAI.generateContent(prompt)
 
-    const jsonCandidate = extractJsonObject(raw)
-    const parsed = jsonCandidate ? JSON.parse(jsonCandidate) : JSON.parse(raw)
+      const jsonCandidate = extractJsonObject(raw)
+      const parsed = jsonCandidate ? JSON.parse(jsonCandidate) : JSON.parse(raw)
 
-    // Validate response has the expected shape
-    const validated = {
-      headlines: Array.isArray(parsed.headlines) ? parsed.headlines : [],
-      captions: Array.isArray(parsed.captions) ? parsed.captions : [],
-    }
+      // Validate response has the expected shape
+      const validated = {
+        headlines: Array.isArray(parsed.headlines) ? parsed.headlines : [],
+        captions: Array.isArray(parsed.captions) ? parsed.captions : [],
+      }
 
-    const kind = args.kind ?? 'both'
-    const count = args.count ?? 5
+      const kind = args.kind ?? 'both'
+      const count = args.count ?? 5
 
-    const requestedHeadlines = kind === 'headlines' || kind === 'both'
-    const requestedCaptions = kind === 'captions' || kind === 'both'
+      const requestedHeadlines = kind === 'headlines' || kind === 'both'
+      const requestedCaptions = kind === 'captions' || kind === 'both'
 
-    const existingHeadlines = Array.isArray(args.existingHeadlines)
-      ? args.existingHeadlines.map(cleanSuggestion).filter(Boolean)
-      : []
-    const existingCaptions = Array.isArray(args.existingCaptions)
-      ? args.existingCaptions.map(cleanSuggestion).filter(Boolean)
-      : []
+      const existingHeadlines = Array.isArray(args.existingHeadlines)
+        ? args.existingHeadlines.map(cleanSuggestion).filter(Boolean)
+        : []
+      const existingCaptions = Array.isArray(args.existingCaptions)
+        ? args.existingCaptions.map(cleanSuggestion).filter(Boolean)
+        : []
 
-    const headlines = requestedHeadlines
-      ? uniqStrings(
-          clampLength(
-            validated.headlines
-              .map(cleanSuggestion)
-              .filter(Boolean)
-              .filter((s: string) => !existingHeadlines.some((e) => e.toLowerCase() === s.toLowerCase())),
-            40
-          )
-        ).slice(0, count)
-      : []
+      const headlines = requestedHeadlines
+        ? uniqStrings(
+            clampLength(
+              validated.headlines
+                .map(cleanSuggestion)
+                .filter(Boolean)
+                .filter(
+                  (s: string) => !existingHeadlines.some((e) => e.toLowerCase() === s.toLowerCase())
+                ),
+              40
+            )
+          ).slice(0, count)
+        : []
 
-    const captions = requestedCaptions
-      ? uniqStrings(
-          clampLength(
-            validated.captions
-              .map(cleanSuggestion)
-              .filter(Boolean)
-              .filter((s: string) => !existingCaptions.some((e) => e.toLowerCase() === s.toLowerCase())),
-            180
-          )
-        ).slice(0, count)
-      : []
+      const captions = requestedCaptions
+        ? uniqStrings(
+            clampLength(
+              validated.captions
+                .map(cleanSuggestion)
+                .filter(Boolean)
+                .filter(
+                  (s: string) => !existingCaptions.some((e) => e.toLowerCase() === s.toLowerCase())
+                ),
+              180
+            )
+          ).slice(0, count)
+        : []
 
-    return {
-      headlines,
-      captions,
-      generatedAt: new Date().toISOString(),
-    }
-  },
+      return {
+        headlines,
+        captions,
+        generatedAt: new Date().toISOString(),
+      }
+    }, 'creativesCopy:generateCopy'),
 })

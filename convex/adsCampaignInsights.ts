@@ -4,7 +4,7 @@ import { v } from 'convex/values'
 import { appendMetaAuthParams, calculateMetaAdsInsights, coerceNumber, META_API_BASE } from '@/services/integrations/meta-ads'
 import type { MetaInsightsResponse, MetaInsightsRow } from '@/services/integrations/meta-ads'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { Errors, asErrorMessage } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -51,7 +51,7 @@ export const getCampaignInsights = action({
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -73,10 +73,6 @@ export const getCampaignInsights = action({
       providerId: args.providerId,
       clientId,
     })
-
-    if (!integration) {
-      throw Errors.integration.notFound(args.providerId)
-    }
 
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
@@ -132,7 +128,7 @@ export const getCampaignInsights = action({
           maxRetries: 2,
         })
         .catch((err) => {
-          console.error('[fetchAdAccountCurrency]', asErrorMessage(err))
+          console.error('[fetchAdAccountCurrency]', err)
           return { payload: { currency: integration.currency || 'USD' } }
         }),
     ])
@@ -226,5 +222,5 @@ export const getCampaignInsights = action({
       insights,
       currency: accountCurrency,
     }
-  },
+  }, 'adsCampaignInsights:getCampaignInsights'),
 })

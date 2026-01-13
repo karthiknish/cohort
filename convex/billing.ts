@@ -5,7 +5,7 @@ import { action, query } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
 import { authenticatedAction } from './functions'
-import { Errors, asErrorMessage, logAndThrow } from './errors'
+import { Errors, asErrorMessage, logAndThrow, withErrorHandling } from './errors'
 
 function getStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY
@@ -195,7 +195,7 @@ async function ensureStripeCustomer(
 
 export const getStatus = authenticatedAction({
   args: {},
-  handler: async (ctx: any) => {
+  handler: async (ctx: any) => withErrorHandling(async () => {
     const uid = ctx.legacyId
     const email = ctx.user.email ?? null
 
@@ -214,7 +214,7 @@ export const getStatus = authenticatedAction({
         expand: ['data.items.data.price.product', 'data.latest_invoice'],
       })
     } catch (error) {
-      logAndThrow(error, 'billing.getStatus: Failed to list subscriptions')
+      throw Errors.billing.stripe(asErrorMessage(error))
     }
 
     const activeSubscription = subscriptions.data[0] ?? null
@@ -227,7 +227,7 @@ export const getStatus = authenticatedAction({
         expand: ['data.charge'],
       })
     } catch (error) {
-      logAndThrow(error, 'billing.getStatus: Failed to list invoices')
+      throw Errors.billing.stripe(asErrorMessage(error))
     }
 
     const invoiceSummaries = invoices.data.map((invoice) => ({
@@ -254,7 +254,7 @@ export const getStatus = authenticatedAction({
       invoices: invoiceSummaries,
       upcomingInvoice: null,
     }
-  },
+  }, 'billing:getStatus'),
 })
 
 export const createCheckoutSession = authenticatedAction({
@@ -263,7 +263,7 @@ export const createCheckoutSession = authenticatedAction({
     successPath: v.optional(v.string()),
     cancelPath: v.optional(v.string()),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx: any, args: any) => withErrorHandling(async () => {
     const uid = ctx.legacyId
     const email = ctx.user.email ?? null
 
@@ -308,11 +308,11 @@ export const createCheckoutSession = authenticatedAction({
         { idempotencyKey }
       )
     } catch (error) {
-      logAndThrow(error, 'billing.createCheckoutSession: Failed to create checkout session')
+      throw Errors.billing.stripe(asErrorMessage(error))
     }
 
     return { url: session.url, sessionId: session.id }
-  },
+  }, 'billing:createCheckoutSession'),
 })
 
 export const createPortalSession = authenticatedAction({
@@ -320,7 +320,7 @@ export const createPortalSession = authenticatedAction({
     clientId: v.optional(v.string()),
     returnUrl: v.optional(v.string()),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx: any, args: any) => withErrorHandling(async () => {
     const uid = ctx.legacyId
     const email = ctx.user.email ?? null
 
@@ -356,7 +356,7 @@ export const createPortalSession = authenticatedAction({
           return_url: buildReturnUrl(origin, returnPath),
         })
       } catch (error) {
-        logAndThrow(error, 'billing.createPortalSession: Failed to create portal session for client')
+        throw Errors.billing.stripe(asErrorMessage(error))
       }
 
       return { url: portalSession.url, sessionId: portalSession.id }
@@ -371,11 +371,11 @@ export const createPortalSession = authenticatedAction({
         return_url: buildReturnUrl(origin, returnPath),
       })
     } catch (error) {
-      logAndThrow(error, 'billing.createPortalSession: Failed to create portal session')
+      throw Errors.billing.stripe(asErrorMessage(error))
     }
 
     return { url: portalSession.url, sessionId: portalSession.id }
-  },
+  }, 'billing:createPortalSession'),
 })
 
 function buildReturnUrl(origin: string, path: string): string {
