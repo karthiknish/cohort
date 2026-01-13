@@ -1,9 +1,10 @@
 import { mutation } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -23,11 +24,11 @@ export const updateConversationTitle = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Conversation not found')
+      throw Errors.resource.notFound('Conversation')
     }
 
     if (existing.userId !== identity.subject) {
-      throw new Error('Forbidden')
+      throw Errors.auth.forbidden()
     }
 
     const now = Date.now()
@@ -60,7 +61,7 @@ export const deleteConversation = mutation({
     }
 
     if (existing.userId !== identity.subject) {
-      throw new Error('Forbidden')
+      throw Errors.auth.forbidden()
     }
 
     // Delete messages first.

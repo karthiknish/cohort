@@ -1,14 +1,15 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireAdmin(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 
   const role = (identity as any).role
   if (role !== 'admin') {
-    throw new Error('Admin access required')
+    throw Errors.auth.adminRequired()
   }
 }
 
@@ -53,7 +54,7 @@ Return ONLY the description, nothing else. No quotes, no preamble.`
 async function generateWithGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured')
+    throw Errors.integration.notConfigured('Gemini', 'GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured')
   }
 
   const model = (process.env.GEMINI_MODEL?.trim() || 'gemini-3-flash-preview').trim()
@@ -80,7 +81,7 @@ async function generateWithGemini(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const details = await response.text()
-    throw new Error(`Gemini API error ${response.status}: ${details}`)
+    throw Errors.base.internal(`Gemini API error ${response.status}: ${details}`)
   }
 
   const payload = (await response.json()) as any
@@ -100,7 +101,7 @@ async function generateWithGemini(prompt: string): Promise<string> {
     : ''
 
   if (!text) {
-    throw new Error('Gemini API returned an empty response')
+    throw Errors.base.internal('Gemini API returned an empty response')
   }
 
   return text

@@ -413,7 +413,7 @@ export const updateMessage = workspaceMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw Errors.notFound('Message')
+    if (!row) throw Errors.resource.notFound('Message')
 
     await ctx.db.patch(row._id, {
       content: args.content,
@@ -434,7 +434,7 @@ export const softDelete = workspaceMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw Errors.notFound('Message')
+    if (!row) throw Errors.resource.notFound('Message')
 
     await ctx.db.patch(row._id, {
       deleted: true,
@@ -455,7 +455,7 @@ export const toggleReaction = workspaceMutation({
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
-    if (!row) throw Errors.notFound('Message')
+    if (!row) throw Errors.resource.notFound('Message')
 
     const reactions = Array.isArray(row.reactions) ? row.reactions.slice() : []
 

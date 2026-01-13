@@ -1,11 +1,12 @@
 import { query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 import { api } from './_generated/api'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -30,7 +31,7 @@ export const get: any = query({
   },
   handler: async (ctx, args): Promise<any> => {
     const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+    if (!identity) throw Errors.auth.unauthorized()
 
     const invoiceLimit = Math.min(Math.max(args.invoiceLimit ?? 200, 1), 200)
     const costLimit = Math.min(Math.max(args.costLimit ?? 200, 1), 200)

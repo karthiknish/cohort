@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 /**
  * Get a single scheduler alert preference by provider ID.
@@ -52,7 +53,7 @@ export const upsert = mutation({
     // Validate threshold
     if (args.failureThreshold !== null) {
       if (!Number.isFinite(args.failureThreshold) || args.failureThreshold < 0) {
-        throw new Error('failureThreshold must be a non-negative number or null')
+        throw Errors.validation.invalidInput('failureThreshold must be a non-negative number or null')
       }
     }
 

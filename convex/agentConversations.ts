@@ -1,9 +1,10 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 

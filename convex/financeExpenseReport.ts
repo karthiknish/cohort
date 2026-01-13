@@ -1,9 +1,11 @@
 import { query } from './_generated/server'
+import { api } from './_generated/api'
+import { Errors } from './errors'
 import { v } from 'convex/values'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 

@@ -1,9 +1,10 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -18,7 +19,7 @@ export const getByUserId = query({
     requireIdentity(identity)
 
     if (identity.subject !== args.userId) {
-      throw new Error('Unauthorized')
+      throw Errors.auth.unauthorized()
     }
 
     const row = await ctx.db
@@ -53,7 +54,7 @@ export const upsert = mutation({
     requireIdentity(identity)
 
     if (identity.subject !== args.userId) {
-      throw new Error('Unauthorized')
+      throw Errors.auth.unauthorized()
     }
 
     const existing = await ctx.db

@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 import { query, mutation } from './_generated/server'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole, WorkspaceNotificationResource } from '../src/types/notifications'
@@ -71,7 +72,7 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    if (!identity) throw Errors.auth.unauthorized()
 
     const userId = identity.subject
     const pageSize = Math.min(Math.max(args.pageSize ?? 25, 1), 100)
@@ -136,7 +137,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    if (!identity) throw Errors.auth.unauthorized()
 
     const existing = await ctx.db
       .query('notifications')
@@ -182,7 +183,7 @@ export const getUnreadCount = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    if (!identity) throw Errors.auth.unauthorized()
 
     const userId = identity.subject
 
@@ -213,7 +214,7 @@ export const ack = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    if (!identity) throw Errors.auth.unauthorized()
 
     const userId = identity.subject
 

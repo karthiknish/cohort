@@ -3,7 +3,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 

@@ -1,8 +1,9 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
+  if (!identity) throw Errors.auth.unauthorized()
 }
 
 function nowMs() {
@@ -205,7 +206,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Proposal not found')
+      throw Errors.resource.notFound('Proposal')
     }
 
     const patch: Record<string, unknown> = {

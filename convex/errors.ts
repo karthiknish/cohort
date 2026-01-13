@@ -1,67 +1,69 @@
 import { ConvexError, type Value } from 'convex/values'
 
 /**
- * Standardized error codes for the application.
- * These codes help clients identify and handle specific error types.
+ * Standardized error codes for the application, organized by category.
  */
 export const ErrorCode = {
-  // Authentication & Authorization
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  FORBIDDEN: 'FORBIDDEN',
-  USER_NOT_FOUND: 'USER_NOT_FOUND',
-  USER_DISABLED: 'USER_DISABLED',
-  ADMIN_REQUIRED: 'ADMIN_REQUIRED',
-  WORKSPACE_ACCESS_DENIED: 'WORKSPACE_ACCESS_DENIED',
-
-  // Resource errors
-  NOT_FOUND: 'NOT_FOUND',
-  ALREADY_EXISTS: 'ALREADY_EXISTS',
-  CONFLICT: 'CONFLICT',
-
-  // Validation errors
-  INVALID_INPUT: 'INVALID_INPUT',
-  INVALID_STATE: 'INVALID_STATE',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-
-  // External service errors
-  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
-  INTEGRATION_ERROR: 'INTEGRATION_ERROR',
-  INTEGRATION_NOT_FOUND: 'INTEGRATION_NOT_FOUND',
-  INTEGRATION_EXPIRED: 'INTEGRATION_EXPIRED',
-  INTEGRATION_NOT_CONFIGURED: 'INTEGRATION_NOT_CONFIGURED',
-
-  // Payment/Billing errors
-  PAYMENT_ERROR: 'PAYMENT_ERROR',
-  STRIPE_ERROR: 'STRIPE_ERROR',
-  PLAN_NOT_AVAILABLE: 'PLAN_NOT_AVAILABLE',
-
-  // Rate limiting
-  RATE_LIMITED: 'RATE_LIMITED',
-
-  // Generic
-  INTERNAL_ERROR: 'INTERNAL_ERROR',
-  NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
+  BASE: {
+    BAD_REQUEST: 'BAD_REQUEST',
+    INTERNAL_ERROR: 'INTERNAL_ERROR',
+    NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
+    CONFLICT: 'CONFLICT',
+  },
+  AUTH: {
+    UNAUTHORIZED: 'UNAUTHORIZED',
+    FORBIDDEN: 'FORBIDDEN',
+    USER_NOT_FOUND: 'USER_NOT_FOUND',
+    USER_DISABLED: 'USER_DISABLED',
+    ADMIN_REQUIRED: 'ADMIN_REQUIRED',
+    WORKSPACE_ACCESS_DENIED: 'WORKSPACE_ACCESS_DENIED',
+    INVALID_TOKEN: 'INVALID_TOKEN',
+  },
+  RESOURCE: {
+    NOT_FOUND: 'NOT_FOUND',
+    ALREADY_EXISTS: 'ALREADY_EXISTS',
+  },
+  VALIDATION: {
+    INVALID_INPUT: 'INVALID_INPUT',
+    INVALID_STATE: 'INVALID_STATE',
+    VALIDATION_ERROR: 'VALIDATION_ERROR',
+  },
+  INTEGRATION: {
+    ERROR: 'INTEGRATION_ERROR',
+    NOT_FOUND: 'INTEGRATION_NOT_FOUND',
+    EXPIRED: 'INTEGRATION_EXPIRED',
+    NOT_CONFIGURED: 'INTEGRATION_NOT_CONFIGURED',
+    MISSING_TOKEN: 'MISSING_TOKEN',
+  },
+  BILLING: {
+    PAYMENT_ERROR: 'PAYMENT_ERROR',
+    STRIPE_ERROR: 'STRIPE_ERROR',
+    PLAN_NOT_AVAILABLE: 'PLAN_NOT_AVAILABLE',
+  },
+  RATE_LIMIT: {
+    TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
+  },
 } as const
 
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode]
+// Extract flat error codes for type safety
+type DeepValue<T> = T extends object ? T[keyof T] extends object ? DeepValue<T[keyof T]> : T[keyof T] : never
+export type ErrorCodeValue = DeepValue<typeof ErrorCode>
 
 /**
  * Structured error data passed to ConvexError.
- * Uses index signature to satisfy Convex Value type constraint.
  */
 export type AppErrorData = {
   [key: string]: Value | undefined
-  code: ErrorCode
+  code: string
   message: string
   details?: Record<string, Value>
 }
 
 /**
  * Create a standardized ConvexError with structured data.
- * This allows clients to programmatically handle errors.
  */
 export function appError(
-  code: ErrorCode,
+  code: string,
   message: string,
   details?: Record<string, Value>
 ): ConvexError<AppErrorData> {
@@ -69,82 +71,87 @@ export function appError(
 }
 
 /**
- * Convenience error creators for common cases
+ * Hierarchical error creators for a more organized API.
  */
 export const Errors = {
-  unauthorized: (message = 'Authentication required') =>
-    appError(ErrorCode.UNAUTHORIZED, message),
+  base: {
+    badRequest: (message = 'Bad request', details?: Record<string, Value>) =>
+      appError(ErrorCode.BASE.BAD_REQUEST, message, details),
+    internal: (message = 'An internal error occurred', details?: Record<string, Value>) =>
+      appError(ErrorCode.BASE.INTERNAL_ERROR, message, details),
+    notImplemented: (feature: string) =>
+      appError(ErrorCode.BASE.NOT_IMPLEMENTED, `${feature} is not implemented`),
+    conflict: (message: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.BASE.CONFLICT, message, details),
+  },
 
-  forbidden: (message = 'Access denied') =>
-    appError(ErrorCode.FORBIDDEN, message),
+  auth: {
+    unauthorized: (message = 'Authentication required') =>
+      appError(ErrorCode.AUTH.UNAUTHORIZED, message),
+    forbidden: (message = 'Access denied') =>
+      appError(ErrorCode.AUTH.FORBIDDEN, message),
+    userNotFound: (message = 'User not found') =>
+      appError(ErrorCode.AUTH.USER_NOT_FOUND, message),
+    userDisabled: (message = 'User account is disabled or suspended') =>
+      appError(ErrorCode.AUTH.USER_DISABLED, message),
+    adminRequired: (message = 'Admin access required') =>
+      appError(ErrorCode.AUTH.ADMIN_REQUIRED, message),
+    workspaceAccessDenied: (message = 'Workspace access denied') =>
+      appError(ErrorCode.AUTH.WORKSPACE_ACCESS_DENIED, message),
+    invalidToken: (message = 'Invalid token') =>
+      appError(ErrorCode.AUTH.INVALID_TOKEN, message),
+  },
 
-  userNotFound: (message = 'User not found') =>
-    appError(ErrorCode.USER_NOT_FOUND, message),
+  resource: {
+    notFound: (resource: string, id?: string) =>
+      appError(
+        ErrorCode.RESOURCE.NOT_FOUND,
+        id ? `${resource} not found: ${id}` : `${resource} not found`,
+        id ? { resource, id } : { resource }
+      ),
+    alreadyExists: (resource: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.RESOURCE.ALREADY_EXISTS, `${resource} already exists`, { resource, ...details }),
+  },
 
-  userDisabled: (message = 'User account is disabled or suspended') =>
-    appError(ErrorCode.USER_DISABLED, message),
+  validation: {
+    invalidInput: (message: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.VALIDATION.INVALID_INPUT, message, details),
+    invalidState: (message: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.VALIDATION.INVALID_STATE, message, details),
+    error: (message: string, field?: string) =>
+      appError(ErrorCode.VALIDATION.VALIDATION_ERROR, message, field ? { field } : undefined),
+  },
 
-  adminRequired: (message = 'Admin access required') =>
-    appError(ErrorCode.ADMIN_REQUIRED, message),
+  integration: {
+    error: (provider: string, message: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.INTEGRATION.ERROR, `${provider}: ${message}`, { provider, ...details }),
+    notFound: (provider: string) =>
+      appError(ErrorCode.INTEGRATION.NOT_FOUND, `${provider} integration not found`, { provider }),
+    expired: (provider: string) =>
+      appError(ErrorCode.INTEGRATION.EXPIRED, `${provider} token expired; reconnect integration`, { provider }),
+    notConfigured: (provider: string, detail?: string) =>
+      appError(
+        ErrorCode.INTEGRATION.NOT_CONFIGURED,
+        detail || `${provider} integration not configured`,
+        { provider }
+      ),
+    missingToken: (provider: string) =>
+      appError(ErrorCode.INTEGRATION.MISSING_TOKEN, `${provider} integration is missing access token`, { provider }),
+  },
 
-  workspaceAccessDenied: (message = 'Workspace access denied') =>
-    appError(ErrorCode.WORKSPACE_ACCESS_DENIED, message),
+  billing: {
+    paymentError: (message: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.BILLING.PAYMENT_ERROR, message, details),
+    stripe: (message: string, details?: Record<string, Value>) =>
+      appError(ErrorCode.BILLING.STRIPE_ERROR, message, details),
+    planNotAvailable: (message = 'Plan is not available') =>
+      appError(ErrorCode.BILLING.PLAN_NOT_AVAILABLE, message),
+  },
 
-  notFound: (resource: string, id?: string) =>
-    appError(
-      ErrorCode.NOT_FOUND,
-      id ? `${resource} not found: ${id}` : `${resource} not found`,
-      id ? { resource, id } : { resource }
-    ),
-
-  alreadyExists: (resource: string, details?: Record<string, Value>) =>
-    appError(ErrorCode.ALREADY_EXISTS, `${resource} already exists`, { resource, ...details }),
-
-  conflict: (message: string, details?: Record<string, Value>) =>
-    appError(ErrorCode.CONFLICT, message, details),
-
-  invalidInput: (message: string, details?: Record<string, Value>) =>
-    appError(ErrorCode.INVALID_INPUT, message, details),
-
-  invalidState: (message: string, details?: Record<string, Value>) =>
-    appError(ErrorCode.INVALID_STATE, message, details),
-
-  validation: (message: string, field?: string) =>
-    appError(ErrorCode.VALIDATION_ERROR, message, field ? { field } : undefined),
-
-  integrationNotFound: (provider: string) =>
-    appError(ErrorCode.INTEGRATION_NOT_FOUND, `${provider} integration not found`, { provider }),
-
-  integrationExpired: (provider: string) =>
-    appError(ErrorCode.INTEGRATION_EXPIRED, `${provider} token expired; reconnect integration`, { provider }),
-
-  integrationNotConfigured: (provider: string, detail?: string) =>
-    appError(
-      ErrorCode.INTEGRATION_NOT_CONFIGURED,
-      detail || `${provider} integration not configured`,
-      { provider }
-    ),
-
-  integrationMissingToken: (provider: string) =>
-    appError(ErrorCode.INTEGRATION_ERROR, `${provider} integration is missing access token`, { provider }),
-
-  externalService: (service: string, message: string, details?: Record<string, Value>) =>
-    appError(ErrorCode.EXTERNAL_SERVICE_ERROR, `${service}: ${message}`, { service, ...details }),
-
-  stripe: (message: string, details?: Record<string, Value>) =>
-    appError(ErrorCode.STRIPE_ERROR, message, details),
-
-  planNotAvailable: (message = 'Plan is not available') =>
-    appError(ErrorCode.PLAN_NOT_AVAILABLE, message),
-
-  rateLimited: (message = 'Rate limit exceeded') =>
-    appError(ErrorCode.RATE_LIMITED, message),
-
-  internal: (message = 'An internal error occurred') =>
-    appError(ErrorCode.INTERNAL_ERROR, message),
-
-  notImplemented: (feature: string) =>
-    appError(ErrorCode.NOT_IMPLEMENTED, `${feature} is not implemented`),
+  rateLimit: {
+    tooManyRequests: (message = 'Rate limit exceeded') =>
+      appError(ErrorCode.RATE_LIMIT.TOO_MANY_REQUESTS, message),
+  },
 }
 
 /**
@@ -165,9 +172,9 @@ export function asErrorMessage(error: unknown): string {
 }
 
 /**
- * Check if an error is a specific app error code
+ * Check if an error is a specific app error code.
  */
-export function isAppError(error: unknown, code?: ErrorCode): error is ConvexError<AppErrorData> {
+export function isAppError(error: unknown, code?: string): error is ConvexError<AppErrorData> {
   if (!(error instanceof ConvexError)) return false
   if (!code) return true
   const data = error.data as AppErrorData
@@ -176,7 +183,6 @@ export function isAppError(error: unknown, code?: ErrorCode): error is ConvexErr
 
 /**
  * Wrap an async function with standardized error handling.
- * Converts unknown errors to ConvexError with INTERNAL_ERROR code.
  */
 export async function withErrorHandling<T>(
   fn: () => Promise<T>,
@@ -189,18 +195,17 @@ export async function withErrorHandling<T>(
       throw error
     }
     console.error(`[${context ?? 'error'}]`, error)
-    throw Errors.internal(asErrorMessage(error))
+    throw Errors.base.internal(asErrorMessage(error))
   }
 }
 
 /**
  * Log and rethrow an error with additional context.
- * Useful for adding context to errors in catch blocks.
  */
 export function logAndThrow(error: unknown, context: string): never {
   console.error(`[${context}]`, error)
   if (error instanceof ConvexError) {
     throw error
   }
-  throw Errors.internal(asErrorMessage(error))
+  throw Errors.base.internal(asErrorMessage(error))
 }

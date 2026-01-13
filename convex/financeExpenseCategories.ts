@@ -4,7 +4,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -78,7 +78,7 @@ export const upsert = mutation({
       // Preserve system category immutability rules.
       if (existing.isSystem && !args.isSystem) {
         // allow keeping it system; disallow clearing it
-        throw Errors.forbidden('System categories cannot be modified')
+        throw Errors.auth.forbidden('System categories cannot be modified')
       }
 
       await ctx.db.patch(existing._id, {
@@ -197,7 +197,7 @@ export const remove = mutation({
     }
 
     if (existing.isSystem) {
-      throw Errors.forbidden('System categories cannot be deleted')
+      throw Errors.auth.forbidden('System categories cannot be deleted')
     }
 
     await ctx.db.delete(existing._id)

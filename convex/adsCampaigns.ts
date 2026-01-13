@@ -1,9 +1,10 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -69,15 +70,15 @@ export const listCampaigns = action({
     })
 
     if (!integration) {
-      throw new Error(`${args.providerId} integration not found`)
+      throw Errors.integration.notFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw new Error('Integration access token missing')
+      throw Errors.integration.missingToken(args.providerId)
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw new Error('Integration token expired; reconnect integration')
+      throw Errors.integration.expired(args.providerId)
     }
 
     try {
@@ -85,7 +86,7 @@ export const listCampaigns = action({
         const { listGoogleCampaigns } = await import('@/services/integrations/google-ads')
 
         const customerId = integration.accountId
-        if (!customerId) throw new Error('Google Ads customer ID not configured')
+        if (!customerId) throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
 
         const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
 
@@ -126,7 +127,7 @@ export const listCampaigns = action({
         const { listTikTokCampaigns } = await import('@/services/integrations/tiktok-ads')
 
         const advertiserId = integration.accountId
-        if (!advertiserId) throw new Error('TikTok advertiser ID not configured')
+        if (!advertiserId) throw Errors.integration.notConfigured('TikTok', 'TikTok advertiser ID not configured')
 
         const tiktokCampaigns = await listTikTokCampaigns({
           accessToken: integration.accessToken,
@@ -153,7 +154,7 @@ export const listCampaigns = action({
         const { listLinkedInCampaigns } = await import('@/services/integrations/linkedin-ads')
 
         const accountId = integration.accountId
-        if (!accountId) throw new Error('LinkedIn account ID not configured')
+        if (!accountId) throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn account ID not configured')
 
         const linkedInCampaigns = await listLinkedInCampaigns({
           accessToken: integration.accessToken,
@@ -181,7 +182,7 @@ export const listCampaigns = action({
 
       const adAccountId = integration.accountId
       if (!adAccountId) {
-        throw new Error('Meta ad account ID not configured. Finish setup to select an ad account.')
+        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured. Finish setup to select an ad account.')
       }
 
       const [metaCampaigns, accountMeta] = await Promise.all([
@@ -231,7 +232,7 @@ export const listCampaigns = action({
         })
       )
     } catch (err) {
-      throw new Error(asErrorMessage(err))
+      throw Errors.base.internal(asErrorMessage(err))
     }
   },
 })
@@ -267,15 +268,15 @@ export const updateCampaign = action({
     })
 
     if (!integration) {
-      throw new Error(`${args.providerId} integration not found`)
+      throw Errors.integration.notFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw new Error('Integration access token missing')
+      throw Errors.integration.missingToken(args.providerId)
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw new Error('Integration token expired; reconnect integration')
+      throw Errors.integration.expired(args.providerId)
     }
 
     const normalizedBudgetMode = typeof args.budgetMode === 'string' ? args.budgetMode.trim().toLowerCase() : undefined
@@ -290,7 +291,7 @@ export const updateCampaign = action({
         } = await import('@/services/integrations/google-ads')
 
         const customerId = integration.accountId
-        if (!customerId) throw new Error('Google Ads customer ID not configured')
+        if (!customerId) throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
 
         const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
 
@@ -344,7 +345,7 @@ export const updateCampaign = action({
         } = await import('@/services/integrations/tiktok-ads')
 
         const advertiserId = integration.accountId
-        if (!advertiserId) throw new Error('TikTok advertiser ID not configured')
+        if (!advertiserId) throw Errors.integration.notConfigured('TikTok', 'TikTok advertiser ID not configured')
 
         if (args.action === 'enable' || args.action === 'pause') {
           await updateTikTokCampaignStatus({
@@ -459,7 +460,7 @@ export const updateCampaign = action({
 
       return { success: true, campaignId: args.campaignId, action: args.action }
     } catch (err) {
-      throw new Error(asErrorMessage(err))
+      throw Errors.base.internal(asErrorMessage(err))
     }
   },
 })

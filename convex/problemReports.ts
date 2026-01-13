@@ -4,7 +4,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -125,7 +125,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Problem report')
+      throw Errors.resource.notFound('Problem report')
     }
 
     const updates: Record<string, unknown> = {

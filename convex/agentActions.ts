@@ -3,6 +3,7 @@
 import { action } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 import { buildRoutesForPrompt } from '../src/lib/navigation-intents'
 import { geminiAI } from '../src/services/gemini'
@@ -28,7 +29,7 @@ When the user wants to CREATE or UPDATE data, use:
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -360,11 +361,11 @@ export const getConversation = action({
     })
 
     if (!conv.conversation) {
-      throw new Error('Conversation not found')
+      throw Errors.resource.notFound('Conversation')
     }
 
     if (conv.conversation.userId !== identity.subject) {
-      throw new Error('Forbidden')
+      throw Errors.auth.forbidden()
     }
 
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)

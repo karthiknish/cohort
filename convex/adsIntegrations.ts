@@ -4,7 +4,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -13,11 +13,11 @@ function assertCronKey(ctx: { auth: { getUserIdentity: () => Promise<unknown> } 
   // without requiring a user identity, guarded by a shared secret.
   const secret = process.env.INTEGRATIONS_CRON_SECRET
   if (!secret) {
-    throw Errors.internal('INTEGRATIONS_CRON_SECRET is not configured')
+    throw Errors.base.internal('INTEGRATIONS_CRON_SECRET is not configured')
   }
 
   if (args.cronKey !== secret) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -228,7 +228,7 @@ export const updateAutomationSettings = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Integration')
+      throw Errors.resource.notFound('Integration')
     }
 
     const patch: Record<string, unknown> = {
@@ -315,7 +315,7 @@ export const initializeAdAccount = action({
     })
 
     if (!integration) {
-      throw Errors.notFound('Integration')
+      throw Errors.resource.notFound('Integration')
     }
 
     // Make sure linkedAt is set so the UI considers it connected.
@@ -323,7 +323,7 @@ export const initializeAdAccount = action({
 
     if (args.providerId === 'google') {
       if (!integration.accessToken || !integration.developerToken) {
-        throw Errors.integrationMissingToken('Google')
+        throw Errors.integration.missingToken('Google')
       }
 
       const { fetchGoogleAdAccounts } = await import('@/services/integrations/google-ads')
@@ -334,7 +334,7 @@ export const initializeAdAccount = action({
       })
 
       if (!accounts.length) {
-        throw Errors.integrationNotConfigured('Google', 'No ad accounts available')
+        throw Errors.integration.notConfigured('Google', 'No ad accounts available')
       }
 
       const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]
@@ -372,14 +372,14 @@ export const initializeAdAccount = action({
 
     if (args.providerId === 'linkedin') {
       if (!integration.accessToken) {
-        throw Errors.integrationMissingToken('LinkedIn')
+        throw Errors.integration.missingToken('LinkedIn')
       }
 
       const { fetchLinkedInAdAccounts } = await import('@/services/integrations/linkedin-ads')
 
       const accounts = await fetchLinkedInAdAccounts({ accessToken: integration.accessToken })
       if (!accounts.length) {
-        throw Errors.integrationNotConfigured('LinkedIn', 'No ad accounts available')
+        throw Errors.integration.notConfigured('LinkedIn', 'No ad accounts available')
       }
 
       const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0]
@@ -410,14 +410,14 @@ export const initializeAdAccount = action({
 
     if (args.providerId === 'facebook') {
       if (!integration.accessToken) {
-        throw Errors.integrationMissingToken('Meta')
+        throw Errors.integration.missingToken('Meta')
       }
 
       const { fetchMetaAdAccounts } = await import('@/services/integrations/meta-ads')
 
       const accounts = await fetchMetaAdAccounts({ accessToken: integration.accessToken })
       if (!accounts.length) {
-        throw Errors.integrationNotConfigured('Meta', 'No ad accounts available')
+        throw Errors.integration.notConfigured('Meta', 'No ad accounts available')
       }
 
       const preferredAccount = accounts.find((account) => account.account_status === 1) ?? accounts[0]
@@ -448,14 +448,14 @@ export const initializeAdAccount = action({
 
     // tiktok
     if (!integration.accessToken) {
-      throw Errors.integrationMissingToken('TikTok')
+      throw Errors.integration.missingToken('TikTok')
     }
 
     const { fetchTikTokAdAccounts } = await import('@/services/integrations/tiktok-ads')
 
     const accounts = await fetchTikTokAdAccounts({ accessToken: integration.accessToken })
     if (!accounts.length) {
-      throw Errors.integrationNotConfigured('TikTok', 'No ad accounts available')
+      throw Errors.integration.notConfigured('TikTok', 'No ad accounts available')
     }
 
     const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? accounts[0]

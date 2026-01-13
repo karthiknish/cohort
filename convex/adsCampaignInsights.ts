@@ -8,7 +8,7 @@ import { Errors, asErrorMessage } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -59,11 +59,11 @@ export const getCampaignInsights = action({
     const endDate = args.endDate ?? todayIsoDate()
 
     if (startDate > endDate) {
-      throw Errors.validation('startDate must be <= endDate')
+      throw Errors.validation.error('startDate must be <= endDate')
     }
 
     if (args.providerId !== 'facebook') {
-      throw Errors.notImplemented('Campaign insights for non-Meta providers')
+      throw Errors.base.notImplemented('Campaign insights for non-Meta providers')
     }
 
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -75,16 +75,16 @@ export const getCampaignInsights = action({
     })
 
     if (!integration) {
-      throw Errors.integrationNotFound(args.providerId)
+      throw Errors.integration.notFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw Errors.integrationMissingToken(args.providerId)
+      throw Errors.integration.missingToken(args.providerId)
     }
 
     const adAccountId = integration.accountId
     if (!adAccountId) {
-      throw Errors.integrationNotConfigured('Meta', 'Ad account ID not configured')
+      throw Errors.integration.notConfigured('Meta', 'Ad account ID not configured')
     }
 
     const params = new URLSearchParams({

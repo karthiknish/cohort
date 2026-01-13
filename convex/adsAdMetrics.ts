@@ -2,10 +2,11 @@ import { action } from './_generated/server'
 import { v } from 'convex/values'
 
 import { runDerivedMetricsPipeline } from '@/lib/metrics'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -170,15 +171,15 @@ export const listAdMetrics = action({
     })
 
     if (!integration) {
-      throw new Error(`${args.providerId} integration not found`)
+      throw Errors.integration.notFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw new Error('Integration access token missing')
+      throw Errors.integration.missingToken(args.providerId)
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw new Error('Integration token expired; reconnect integration')
+      throw Errors.integration.expired(args.providerId)
     }
 
     try {
@@ -192,7 +193,7 @@ export const listAdMetrics = action({
         const loginCustomerId = integration.loginCustomerId
 
         if (!customerId) {
-          throw new Error('Google Ads customer ID not configured')
+          throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
         }
 
         if (args.level === 'adGroup') {
@@ -222,7 +223,7 @@ export const listAdMetrics = action({
 
         const advertiserId = integration.accountId
         if (!advertiserId) {
-          throw new Error('TikTok credentials not configured')
+          throw Errors.integration.notConfigured('TikTok', 'TikTok credentials not configured')
         }
 
         const tiktokMetrics = await fetchTikTokAdMetrics({
@@ -238,7 +239,7 @@ export const listAdMetrics = action({
 
         const accountId = integration.accountId
         if (!accountId) {
-          throw new Error('LinkedIn credentials not configured')
+          throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
         }
 
         const linkedInMetrics = await fetchLinkedInCreativeMetrics({
@@ -254,7 +255,7 @@ export const listAdMetrics = action({
 
         const adAccountId = integration.accountId
         if (!adAccountId) {
-          throw new Error('Meta credentials not configured')
+          throw Errors.integration.notConfigured('Meta', 'Meta credentials not configured')
         }
 
         const metaMetrics = await fetchMetaAdMetrics({
@@ -279,7 +280,7 @@ export const listAdMetrics = action({
         derivedMetrics: runDerivedMetricsPipeline(metrics),
       }
     } catch (err) {
-      throw new Error(asErrorMessage(err))
+      throw Errors.base.internal(asErrorMessage(err))
     }
   },
 })

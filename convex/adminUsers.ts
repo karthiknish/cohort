@@ -1,5 +1,6 @@
 import { adminMutation, adminQuery } from './functions'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 export const listUsers = adminQuery({
   args: { paginationOpts: v.any() },
@@ -44,7 +45,7 @@ export const updateUserRoleStatus = adminMutation({
       .unique()
 
     if (!existing) {
-      throw new Error('User not found')
+      throw Errors.auth.userNotFound()
     }
 
     const patch: Record<string, unknown> = {

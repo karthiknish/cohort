@@ -10,6 +10,7 @@ import {
   getPaginatedResponse,
 } from './functions'
 import { z } from 'zod/v4'
+import { Errors } from './errors'
 
 function slugify(value: string): string {
   const base = value
@@ -300,7 +301,7 @@ export const addTeamMember = workspaceMutation({
       .unique()
 
     if (!client || client.deletedAtMs !== null) {
-      throw new Error('Client not found')
+      throw Errors.resource.notFound('Client')
     }
 
     const normalizedName = args.name.trim()
@@ -308,7 +309,7 @@ export const addTeamMember = workspaceMutation({
 
     const exists = client.teamMembers.some((member: any) => member.name.toLowerCase() === normalizedName.toLowerCase())
     if (exists) {
-      throw new Error('Team member already exists')
+      throw Errors.resource.alreadyExists('Team member')
     }
 
     await ctx.db.patch(client._id, {
@@ -333,7 +334,7 @@ export const softDelete = workspaceMutation({
       .unique()
 
     if (!client) {
-      throw new Error('Client not found')
+      throw Errors.resource.notFound('Client')
     }
 
     const timestamp = args.deletedAtMs ?? ctx.now
@@ -368,7 +369,7 @@ export const updateInvoiceFields = workspaceMutation({
       .unique()
 
     if (!client) {
-      throw new Error('Client not found')
+      throw Errors.resource.notFound('Client')
     }
 
     await ctx.db.patch(client._id, {

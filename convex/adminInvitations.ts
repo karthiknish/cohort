@@ -1,14 +1,15 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireAdmin(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 
   const role = (identity as any).role
   if (role !== 'admin') {
-    throw new Error('Admin access required')
+    throw Errors.auth.adminRequired()
   }
 }
 
@@ -95,7 +96,7 @@ export const createInvitation = mutation({
       .unique()
 
     if (existingUser) {
-      throw new Error('A user with this email already exists')
+      throw Errors.resource.alreadyExists('User with this email')
     }
 
     const existingInvite = await ctx.db
@@ -106,7 +107,7 @@ export const createInvitation = mutation({
       .unique()
 
     if (existingInvite) {
-      throw new Error('A pending invitation already exists for this email')
+      throw Errors.resource.alreadyExists('Pending invitation for this email')
     }
 
     const token = generateToken()
@@ -217,7 +218,7 @@ export const deleteInvitation = mutation({
 
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error('Invitation not found')
+      throw Errors.resource.notFound('Invitation')
     }
 
     await ctx.db.delete(args.id)

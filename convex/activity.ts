@@ -1,8 +1,9 @@
-import { query } from './_generated/server'
+import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
+  if (!identity) throw Errors.auth.unauthorized()
 }
 
 type ActivityType = 'task_completed' | 'message_posted'

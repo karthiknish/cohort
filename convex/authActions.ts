@@ -1,10 +1,11 @@
 import { action, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 import { api, internal } from './_generated/api'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -141,7 +142,7 @@ export const softDeleteUser = internalMutation({
     requireIdentity(identity)
 
     if (identity.subject !== args.legacyId) {
-      throw new Error('Unauthorized: can only delete own account')
+      throw Errors.auth.forbidden('can only delete own account')
     }
 
     const user = await ctx.db

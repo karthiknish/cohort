@@ -1,6 +1,7 @@
 "use node"
 
 import { action } from './_generated/server'
+import { Errors } from './errors'
 import { v } from 'convex/values'
 
 import { 
@@ -99,7 +100,7 @@ export const listFolders = action({
     const gammaService = new GammaService()
     
     if (!gammaService.isConfigured()) {
-      throw new Error('Gamma API not configured')
+      throw Errors.integration.notConfigured('Gamma', 'Gamma API not configured')
     }
 
     const result = await gammaService.listFolders({
@@ -136,7 +137,7 @@ export const listThemes = action({
     const gammaService = new GammaService()
     
     if (!gammaService.isConfigured()) {
-      throw new Error('Gamma API not configured')
+      throw Errors.integration.notConfigured('Gamma', 'Gamma API not configured')
     }
 
     const result = await gammaService.listThemes({

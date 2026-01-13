@@ -1,14 +1,15 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireAdmin(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 
   const role = (identity as any).role
   if (role !== 'admin') {
-    throw new Error('Admin access required')
+    throw Errors.auth.adminRequired()
   }
 }
 
@@ -181,7 +182,7 @@ export const updateFeature = mutation({
 
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error('Feature not found')
+      throw Errors.resource.notFound('Feature')
     }
 
     const patch: Record<string, unknown> = {
@@ -209,7 +210,7 @@ export const deleteFeature = mutation({
 
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error('Feature not found')
+      throw Errors.resource.notFound('Feature')
     }
 
     await ctx.db.delete(args.id)

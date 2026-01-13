@@ -10,7 +10,7 @@ import { Errors, asErrorMessage, logAndThrow } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -135,7 +135,7 @@ export const refund = action({
 
     const trimmedInvoiceId = args.invoiceId.trim()
     if (!trimmedInvoiceId) {
-      throw Errors.invalidInput('Invoice id is required')
+      throw Errors.validation.invalidInput('Invoice id is required')
     }
 
     const invoiceRow = (await ctx.runQuery(api.financeInvoices.getByLegacyId, {
@@ -144,14 +144,14 @@ export const refund = action({
     })) as any
 
     if (!invoiceRow) {
-      throw Errors.notFound('Invoice')
+      throw Errors.resource.notFound('Invoice')
     }
 
     const amountPaid = typeof invoiceRow.amountPaid === 'number' ? invoiceRow.amountPaid : invoiceRow.amount
     const amountAlreadyRefunded = typeof invoiceRow.amountRefunded === 'number' ? invoiceRow.amountRefunded : 0
 
     if (amountPaid <= 0) {
-      throw Errors.invalidState('Invoice has no recorded payments to refund')
+      throw Errors.validation.invalidState('Invoice has no recorded payments to refund')
     }
 
     const requestedAmount = args.amount
@@ -159,7 +159,7 @@ export const refund = action({
       const normalizedRequested = Math.round(requestedAmount * 100) / 100
       const maxRefundable = Math.max(amountPaid - amountAlreadyRefunded, 0)
       if (normalizedRequested <= 0 || normalizedRequested - maxRefundable > 0.0001) {
-        throw Errors.invalidInput('Refund amount exceeds paid balance')
+        throw Errors.validation.invalidInput('Refund amount exceeds paid balance')
       }
     }
 
@@ -179,7 +179,7 @@ export const refund = action({
         : invoiceWithIntent.payment_intent?.id ?? null
 
     if (!paymentIntentId) {
-      throw Errors.notFound('Payment intent')
+      throw Errors.resource.notFound('Payment intent')
     }
 
     const refundAmountCents =
@@ -275,7 +275,7 @@ export const remind = action({
 
     const trimmedInvoiceId = args.invoiceId.trim()
     if (!trimmedInvoiceId) {
-      throw Errors.invalidInput('Invoice id is required')
+      throw Errors.validation.invalidInput('Invoice id is required')
     }
 
     const invoiceRow = (await ctx.runQuery(api.financeInvoices.getByLegacyId, {
@@ -284,7 +284,7 @@ export const remind = action({
     })) as any
 
     if (!invoiceRow) {
-      throw Errors.notFound('Invoice')
+      throw Errors.resource.notFound('Invoice')
     }
 
     const stripe = getStripeClient()
@@ -311,7 +311,7 @@ function isStripeResourceMissing(error: unknown): boolean {
 function normaliseAmountCents(amountDollars: number): number {
   const converted = Math.round(amountDollars * 100)
   if (!Number.isFinite(converted) || converted <= 0) {
-    throw Errors.validation('Invoice amount is invalid after conversion')
+    throw Errors.validation.error('Invoice amount is invalid after conversion')
   }
   return converted
 }
@@ -374,13 +374,13 @@ export const createAndSend = action({
     if (args.dueDate) {
       const parsedDueDate = new Date(args.dueDate)
       if (Number.isNaN(parsedDueDate.getTime())) {
-        throw Errors.validation('Provide a valid due date')
+        throw Errors.validation.error('Provide a valid due date')
       }
       dueDateIso = parsedDueDate.toISOString()
       const seconds = Math.floor(parsedDueDate.getTime() / 1000)
       dueDateUnix = seconds > 0 ? seconds : undefined
       if (dueDateUnix && dueDateUnix <= Math.floor(Date.now() / 1000)) {
-        throw Errors.validation('Due date must be in the future')
+        throw Errors.validation.error('Due date must be in the future')
       }
     }
 

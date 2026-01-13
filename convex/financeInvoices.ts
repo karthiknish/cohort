@@ -1,9 +1,10 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -159,7 +160,7 @@ export const getByLegacyId = query({
 
     const trimmedLegacyId = args.legacyId.trim()
     if (!trimmedLegacyId) {
-      throw new Error('Invoice id is required')
+      throw Errors.validation.invalidInput('Invoice id is required')
     }
 
     const row = await ctx.db

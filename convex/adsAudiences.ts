@@ -1,9 +1,10 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw new Error('Unauthorized')
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -61,15 +62,15 @@ export const createAudience = action({
     })
 
     if (!integration) {
-      throw new Error(`${args.providerId} integration not found`)
+      throw Errors.integration.notFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw new Error('Integration access token missing')
+      throw Errors.integration.missingToken(args.providerId)
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw new Error('Integration token expired; reconnect integration')
+      throw Errors.integration.expired(args.providerId)
     }
 
     let result: { success: boolean; id?: string; resourceName?: string }
@@ -79,7 +80,7 @@ export const createAudience = action({
 
       const customerId = integration.accountId ?? ''
       if (!customerId) {
-        throw new Error('Google Ads customer ID not configured')
+        throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
       }
 
       const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
@@ -98,7 +99,7 @@ export const createAudience = action({
 
       const advertiserId = integration.accountId ?? ''
       if (!advertiserId) {
-        throw new Error('TikTok advertiser id not configured')
+        throw Errors.integration.notConfigured('TikTok', 'TikTok advertiser id not configured')
       }
 
       result = await createTikTokAudience({
@@ -113,7 +114,7 @@ export const createAudience = action({
 
       const accountId = integration.accountId ?? ''
       if (!accountId) {
-        throw new Error('LinkedIn account id not configured')
+        throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn account id not configured')
       }
 
       result = await createLinkedInAudience({
@@ -128,7 +129,7 @@ export const createAudience = action({
 
       const adAccountId = integration.accountId ?? ''
       if (!adAccountId) {
-        throw new Error('Meta ad account ID not configured. Finish setup to select an ad account.')
+        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured. Finish setup to select an ad account.')
       }
 
       result = await createMetaAudience({
@@ -139,7 +140,7 @@ export const createAudience = action({
         segments: args.segments,
       })
     } else {
-      throw new Error('Unsupported provider')
+      throw Errors.base.badRequest('Unsupported provider')
     }
 
     return {

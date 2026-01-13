@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 import { authenticatedMutation, authenticatedQuery } from './functions'
 
 function nowMs() {
@@ -139,7 +140,7 @@ export const create = authenticatedMutation({
       .unique()
 
     if (existing) {
-      throw new Error('Formula already exists')
+      throw Errors.resource.alreadyExists('Formula')
     }
 
     const payload = {
@@ -180,7 +181,7 @@ export const update = authenticatedMutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Formula not found')
+      throw Errors.resource.notFound('Formula')
     }
 
     const updates: Record<string, unknown> = {
@@ -211,7 +212,7 @@ export const remove = authenticatedMutation({
       .unique()
 
     if (!existing) {
-      throw new Error('Formula not found')
+      throw Errors.resource.notFound('Formula')
     }
 
     await ctx.db.delete(existing._id)

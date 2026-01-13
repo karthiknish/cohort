@@ -6,7 +6,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -315,7 +315,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Schedule')
+      throw Errors.resource.notFound('Schedule')
     }
 
     const timestamp = now()
@@ -377,7 +377,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Schedule')
+      throw Errors.resource.notFound('Schedule')
     }
 
     await ctx.db.delete(existing._id)
@@ -403,18 +403,18 @@ export const trigger = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Schedule')
+      throw Errors.resource.notFound('Schedule')
     }
 
     if (!existing.isActive) {
-      throw Errors.invalidState('Schedule is not active')
+      throw Errors.validation.invalidState('Schedule is not active')
     }
 
     // Check if end date has passed
     if (existing.endDate) {
       const endDate = new Date(existing.endDate)
       if (endDate < new Date()) {
-        throw Errors.invalidState('Schedule has ended')
+        throw Errors.validation.invalidState('Schedule has ended')
       }
     }
 

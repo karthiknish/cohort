@@ -4,7 +4,7 @@ import { Errors, asErrorMessage } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -47,15 +47,15 @@ export const listCampaignGroups = action({
     })
 
     if (!integration) {
-      throw new Error('linkedin integration not found')
+      throw Errors.integration.notFound('LinkedIn')
     }
 
     if (!integration.accessToken || !integration.accountId) {
-      throw new Error('LinkedIn credentials not configured')
+      throw Errors.integration.notConfigured('LinkedIn', 'LinkedIn credentials not configured')
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw new Error('LinkedIn token expired; reconnect integration')
+      throw Errors.integration.expired('LinkedIn')
     }
 
     try {
@@ -76,7 +76,7 @@ export const listCampaignGroups = action({
         })
       )
     } catch (err) {
-      throw new Error(asErrorMessage(err))
+      throw Errors.base.internal(asErrorMessage(err))
     }
   },
 })
@@ -103,15 +103,15 @@ export const updateCampaignGroup = action({
     })
 
     if (!integration) {
-      throw new Error('linkedin integration not found')
+      throw Errors.integration.notFound('LinkedIn')
     }
 
     if (!integration.accessToken) {
-      throw new Error('LinkedIn access token missing')
+      throw Errors.integration.missingToken('LinkedIn')
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw new Error('LinkedIn token expired; reconnect integration')
+      throw Errors.integration.expired('LinkedIn')
     }
 
     try {
@@ -135,7 +135,7 @@ export const updateCampaignGroup = action({
 
       return { success: true }
     } catch (err) {
-      throw new Error(asErrorMessage(err))
+      throw Errors.base.internal(asErrorMessage(err))
     }
   },
 })

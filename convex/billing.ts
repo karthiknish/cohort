@@ -10,7 +10,7 @@ import { Errors, asErrorMessage, logAndThrow } from './errors'
 function getStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY
   if (!secretKey) {
-    throw Errors.internal('Stripe secret key not configured')
+    throw Errors.base.internal('Stripe secret key not configured')
   }
   return new Stripe(secretKey)
 }
@@ -271,7 +271,7 @@ export const createCheckoutSession = authenticatedAction({
 
     const plan = getBillingPlanById(args.planId)
     if (!plan) {
-      throw Errors.planNotAvailable()
+      throw Errors.billing.planNotAvailable()
     }
 
     const customerId = await ensureStripeCustomer(ctx, stripe, uid, email)
@@ -341,12 +341,12 @@ export const createPortalSession = authenticatedAction({
       })
 
       if (!client) {
-        throw Errors.notFound('Client')
+        throw Errors.resource.notFound('Client')
       }
 
       const stripeCustomerId = client.stripeCustomerId
       if (!stripeCustomerId) {
-        throw Errors.invalidState('Client does not have a Stripe customer profile')
+        throw Errors.validation.invalidState('Client does not have a Stripe customer profile')
       }
 
       let portalSession: Stripe.BillingPortal.Session

@@ -4,7 +4,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -219,15 +219,15 @@ export const getTargeting = action({
     })
 
     if (!integration) {
-      throw Errors.integrationNotFound(args.providerId)
+      throw Errors.integration.notFound(args.providerId)
     }
 
     if (!integration.accessToken) {
-      throw Errors.integrationMissingToken(args.providerId)
+      throw Errors.integration.missingToken(args.providerId)
     }
 
     if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-      throw Errors.integrationExpired(args.providerId)
+      throw Errors.integration.expired(args.providerId)
     }
 
     let targeting: NormalizedTargeting[] = []
@@ -237,7 +237,7 @@ export const getTargeting = action({
 
       const customerId = integration.accountId ?? ''
       if (!customerId) {
-        throw Errors.integrationNotConfigured('Google', 'Customer ID not configured')
+        throw Errors.integration.notConfigured('Google', 'Customer ID not configured')
       }
 
       const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
@@ -259,7 +259,7 @@ export const getTargeting = action({
       const advertiserId = integration.accountId
 
       if (!accessToken || !advertiserId) {
-        throw Errors.integrationNotConfigured('TikTok', 'Credentials not configured')
+        throw Errors.integration.notConfigured('TikTok', 'Credentials not configured')
       }
 
       const tiktokTargeting = await fetchTikTokAudienceTargeting({
@@ -277,7 +277,7 @@ export const getTargeting = action({
       const accountId = integration.accountId
 
       if (!accessToken || !accountId) {
-        throw Errors.integrationNotConfigured('LinkedIn', 'Credentials not configured')
+        throw Errors.integration.notConfigured('LinkedIn', 'Credentials not configured')
       }
 
       const linkedInTargeting = await fetchLinkedInAudienceTargeting({
@@ -292,7 +292,7 @@ export const getTargeting = action({
 
       const adAccountId = integration.accountId
       if (!adAccountId) {
-        throw Errors.integrationNotConfigured('Meta', 'Ad account ID not configured')
+        throw Errors.integration.notConfigured('Meta', 'Ad account ID not configured')
       }
 
       const metaTargeting = await fetchMetaAudienceTargeting({

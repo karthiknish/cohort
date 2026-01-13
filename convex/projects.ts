@@ -9,6 +9,7 @@ import {
   getPaginatedResponse,
 } from './functions'
 import { z } from 'zod/v4'
+import { Errors } from './errors'
 
 export const list = zWorkspacePaginatedQueryActive({
   args: {
@@ -153,7 +154,7 @@ export const update = workspaceMutation({
       .unique()
 
     if (!project || project.deletedAtMs !== null) {
-      throw new Error('Project not found')
+      throw Errors.resource.notFound('Project')
     }
 
     const patch: Record<string, unknown> = {
@@ -188,7 +189,7 @@ export const softDelete = workspaceMutation({
       .unique()
 
     if (!project) {
-      throw new Error('Project not found')
+      throw Errors.resource.notFound('Project')
     }
 
     const timestamp = args.deletedAtMs ?? ctx.now

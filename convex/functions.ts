@@ -101,7 +101,7 @@ export type AuthenticatedActionCtx = ActionCtx & {
 async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 
   const user = await ctx.db
@@ -110,11 +110,11 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
     .unique()
 
   if (!user) {
-    throw Errors.userNotFound()
+    throw Errors.auth.userNotFound()
   }
 
   if (user.status === 'disabled' || user.status === 'suspended') {
-    throw Errors.userDisabled()
+    throw Errors.auth.userDisabled()
   }
 
   return {
@@ -250,7 +250,7 @@ export function getPaginatedResponse<T extends Record<string, any>>(
 async function getAuthenticatedActionContext(ctx: ActionCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 
   const user = (await ctx.runQuery(api.users.getByLegacyId, {
@@ -258,11 +258,11 @@ async function getAuthenticatedActionContext(ctx: ActionCtx) {
   })) as Doc<'users'> | null
 
   if (!user) {
-    throw Errors.userNotFound()
+    throw Errors.auth.userNotFound()
   }
 
   if (user.status === 'disabled' || user.status === 'suspended') {
-    throw Errors.userDisabled()
+    throw Errors.auth.userDisabled()
   }
 
   return {
@@ -291,7 +291,7 @@ export const workspaceQuery = customQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth }, args }
   },
@@ -318,7 +318,7 @@ export const workspaceQueryActive = customQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
   },
@@ -343,7 +343,7 @@ export const adminQuery = customQuery(query, {
   input: async (ctx) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
-      throw Errors.adminRequired()
+      throw Errors.auth.adminRequired()
     }
     return { ctx: { ...ctx, ...auth }, args: {} }
   },
@@ -354,7 +354,7 @@ export const adminMutation = customMutation(mutation, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
-      throw Errors.adminRequired()
+      throw Errors.auth.adminRequired()
     }
     const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
     return {
@@ -373,7 +373,7 @@ export const adminAction = customAction(action, {
   input: async (ctx) => {
     const auth = await getAuthenticatedActionContext(ctx)
     if (auth.user.role !== 'admin') {
-      throw Errors.adminRequired()
+      throw Errors.auth.adminRequired()
     }
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
@@ -390,7 +390,7 @@ export const workspaceMutation = customMutation(mutation, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
     return {
@@ -420,7 +420,7 @@ export const zWorkspaceQuery = zCustomQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth }, args }
   },
@@ -431,7 +431,7 @@ export const zWorkspaceQueryActive = zCustomQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
   },
@@ -458,7 +458,7 @@ export const zWorkspaceMutation = zCustomMutation(mutation, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
     return {
@@ -477,7 +477,7 @@ export const zWorkspaceAction = zCustomAction(action, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedActionContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
@@ -494,7 +494,7 @@ export const zWorkspacePaginatedQuery = zCustomQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth }, args }
   },
@@ -505,7 +505,7 @@ export const zWorkspacePaginatedQueryActive = zCustomQuery(query, {
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
-      throw Errors.workspaceAccessDenied()
+      throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
   },

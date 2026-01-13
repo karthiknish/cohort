@@ -4,7 +4,7 @@ import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
-    throw Errors.unauthorized()
+    throw Errors.auth.unauthorized()
   }
 }
 
@@ -167,7 +167,7 @@ export const create = mutation({
       .unique()
 
     if (existing) {
-      throw Errors.alreadyExists('Alert rule')
+      throw Errors.resource.alreadyExists('Alert rule')
     }
 
     const id = await ctx.db.insert('alertRules', {
@@ -225,7 +225,7 @@ export const update = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Alert rule')
+      throw Errors.resource.notFound('Alert rule')
     }
 
     const updates: Record<string, unknown> = {
@@ -268,7 +268,7 @@ export const remove = mutation({
       .unique()
 
     if (!existing) {
-      throw Errors.notFound('Alert rule')
+      throw Errors.resource.notFound('Alert rule')
     }
 
     await ctx.db.delete(existing._id)

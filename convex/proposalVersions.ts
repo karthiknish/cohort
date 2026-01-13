@@ -1,8 +1,9 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw new Error('Unauthorized')
+  if (!identity) throw Errors.auth.unauthorized()
 }
 
 function nowMs() {
@@ -117,7 +118,7 @@ export const createSnapshot = mutation({
       .unique()
 
     if (!proposal) {
-      throw new Error('Proposal not found')
+      throw Errors.resource.notFound('Proposal')
     }
 
     const latest = await ctx.db
@@ -183,7 +184,7 @@ export const restoreToVersion = mutation({
       .unique()
 
     if (!proposal) {
-      throw new Error('Proposal not found')
+      throw Errors.resource.notFound('Proposal')
     }
 
     const target = await ctx.db
@@ -194,7 +195,7 @@ export const restoreToVersion = mutation({
       .unique()
 
     if (!target) {
-      throw new Error('Version not found')
+      throw Errors.resource.notFound('Version')
     }
 
     const latest = await ctx.db
