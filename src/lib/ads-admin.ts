@@ -1,6 +1,6 @@
 import type { ConvexHttpClient } from 'convex/browser'
 
-import { createConvexAdminClient, isConvexAdsEnabled } from '@/lib/convex-admin'
+import { createConvexAdminClient } from '@/lib/convex-admin'
 import type { AuthResult } from '@/lib/server-auth'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 import { logger } from '@/lib/logger'
@@ -117,10 +117,6 @@ export async function persistIntegrationTokens(options: {
     accountId?: string | null
     accountName?: string | null
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -164,10 +160,6 @@ export async function updateIntegrationCredentials(options: {
     accountId?: string | null
     accountName?: string | null
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -200,10 +192,6 @@ export async function enqueueSyncJob(options: {
     jobType?: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
     timeframeDays?: number
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -225,10 +213,6 @@ export async function getAdIntegration(options: {
     providerId: string
     clientId?: string | null
 }): Promise<AdIntegration | null> {
-    if (!shouldUseConvexAds()) {
-        return null
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -297,10 +281,6 @@ export async function getAdIntegration(options: {
 }
 
 export async function claimNextSyncJob(options: { userId: string }): Promise<SyncJob | null> {
-    if (!shouldUseConvexAds()) {
-        return null
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -343,10 +323,6 @@ export async function claimNextSyncJob(options: { userId: string }): Promise<Syn
 }
 
 export async function completeSyncJob(options: { userId: string; jobId: string }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
         throw new Error('Convex admin client is not configured')
@@ -358,10 +334,6 @@ export async function completeSyncJob(options: { userId: string; jobId: string }
 }
 
 export async function failSyncJob(options: { userId: string; jobId: string; message: string }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
         throw new Error('Convex admin client is not configured')
@@ -380,10 +352,6 @@ export async function updateIntegrationStatus(options: {
     status: 'pending' | 'success' | 'error'
     message?: string | null
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -447,10 +415,6 @@ export async function hasPendingSyncJob(options: {
     providerId: string
     clientId?: string | null
 }): Promise<boolean> {
-    if (!shouldUseConvexAds()) {
-        return false
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -474,10 +438,6 @@ export async function markIntegrationSyncRequested(
         status?: 'pending' | 'never' | 'error' | 'success'
     }
 ): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -500,10 +460,6 @@ export async function updateIntegrationPreferences(options: {
     syncFrequencyMinutes?: number | null
     scheduledTimeframeDays?: number | null
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -525,10 +481,6 @@ export async function deleteAdIntegration(options: {
     providerId: string
     clientId?: string | null
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {
@@ -547,10 +499,6 @@ export async function deleteSyncJobs(options: {
     providerId: string
     clientId?: string | null
 }): Promise<void> {
-    if (!shouldUseConvexAds()) {
-        throw new Error('Convex ads are not enabled')
-    }
-
     const workspaceId = await resolveWorkspaceIdForUser(options.userId)
     const convex = getConvexClientForUser(options.userId)
     if (!convex) {

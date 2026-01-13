@@ -96,7 +96,7 @@ export const GET = createApiHandler(
       const messageLower = rawMessage.toLowerCase()
 
       const userFacingMessage = (() => {
-        if (messageLower.includes('convex ads are not enabled') || messageLower.includes('convex admin client is not configured')) {
+        if (messageLower.includes('convex admin client is not configured')) {
           return 'Ads integration is not configured on this environment.'
         }
 

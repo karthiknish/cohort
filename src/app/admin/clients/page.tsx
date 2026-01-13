@@ -642,7 +642,7 @@ export default function AdminClientsPage() {
             {(clientPendingInvoice?.lastInvoiceStatus || typeof clientPendingInvoice?.lastInvoiceAmount === 'number' || clientPendingInvoice?.lastInvoiceNumber) && (
               <div className="rounded-md border border-muted/50 bg-muted/10 p-3 text-xs text-muted-foreground">
                 <div className="flex flex-wrap items-center gap-2 text-foreground">
-                  <p className="font-medium">Latest invoice</p>
+                  <span className="font-medium">Latest invoice</span>
                   {clientPendingInvoice?.lastInvoiceStatus ? (
                     <Badge variant="outline" className="capitalize">
                       {clientPendingInvoice.lastInvoiceStatus.replace(/_/g, ' ')}

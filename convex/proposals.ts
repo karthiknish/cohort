@@ -1,10 +1,7 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
+import { workspaceQuery, workspaceMutation, authenticatedMutation, adminMutation } from './functions'
 
 function nowMs() {
   return Date.now()
@@ -15,41 +12,39 @@ function generateId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${rand}`
 }
 
-export const getByLegacyId = query({
+export const getByLegacyId = workspaceQuery({
   args: { workspaceId: v.string(), legacyId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Proposal', args.legacyId)
-      return {
-        legacyId: row.legacyId,
-        ownerId: row.ownerId,
-        status: row.status,
-        stepProgress: row.stepProgress,
-        formData: row.formData,
-        aiInsights: row.aiInsights,
-        aiSuggestions: row.aiSuggestions,
-        pdfUrl: row.pdfUrl,
-        pptUrl: row.pptUrl,
-        pdfStorageId: row.pdfStorageId,
-        pptStorageId: row.pptStorageId,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        presentationDeck: row.presentationDeck,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-        lastAutosaveAtMs: row.lastAutosaveAtMs,
-      }
+
+    return {
+      legacyId: row.legacyId,
+      ownerId: row.ownerId,
+      status: row.status,
+      stepProgress: row.stepProgress,
+      formData: row.formData,
+      aiInsights: row.aiInsights,
+      aiSuggestions: row.aiSuggestions,
+      pdfUrl: row.pdfUrl,
+      pptUrl: row.pptUrl,
+      pdfStorageId: row.pdfStorageId,
+      pptStorageId: row.pptStorageId,
+      clientId: row.clientId,
+      clientName: row.clientName,
+      presentationDeck: row.presentationDeck,
+      createdAtMs: row.createdAtMs,
+      updatedAtMs: row.updatedAtMs,
+      lastAutosaveAtMs: row.lastAutosaveAtMs,
+    }
   },
 })
 
-export const list = query({
+export const list = workspaceQuery({
   args: {
     workspaceId: v.string(),
     limit: v.number(),
@@ -59,9 +54,6 @@ export const list = query({
     afterLegacyId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     let q = ctx.db
       .query('proposals')
       .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
@@ -112,12 +104,9 @@ export const list = query({
   },
 })
 
-export const count = query({
+export const count = workspaceQuery({
   args: { workspaceId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const rows = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
@@ -127,7 +116,7 @@ export const count = query({
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
     workspaceId: v.string(),
     ownerId: v.union(v.string(), v.null()),
@@ -138,9 +127,6 @@ export const create = mutation({
     clientName: v.union(v.string(), v.null()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const timestamp = nowMs()
     let legacyId = generateId('proposal')
     let attempt = 0
@@ -177,7 +163,7 @@ export const create = mutation({
   },
 })
 
-export const update = mutation({
+export const update = workspaceMutation({
   args: {
     workspaceId: v.string(),
     legacyId: v.string(),
@@ -197,9 +183,6 @@ export const update = mutation({
     lastAutosaveAtMs: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -227,18 +210,14 @@ export const update = mutation({
     if (args.pptStorageId !== undefined) patch.pptStorageId = args.pptStorageId
     if (args.presentationDeck !== undefined) patch.presentationDeck = args.presentationDeck
 
-
     await ctx.db.patch(existing._id, patch)
     return { ok: true }
   },
 })
 
-export const remove = mutation({
+export const remove = workspaceMutation({
   args: { workspaceId: v.string(), legacyId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -253,7 +232,7 @@ export const remove = mutation({
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = adminMutation({
   args: {
     proposals: v.array(
       v.object({
@@ -279,9 +258,6 @@ export const bulkUpsert = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     let upserted = 0
 
     for (const proposal of args.proposals) {
