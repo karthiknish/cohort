@@ -1,5 +1,23 @@
 import { authService } from '@/services/auth'
-import { ApiClientError } from './user-friendly-error'
+export class ApiClientError extends Error {
+  readonly status?: number
+  readonly code?: string
+  readonly details?: unknown
+
+  constructor(
+    message: string,
+    options: { status?: number; code?: string; details?: unknown; cause?: unknown } = {}
+  ) {
+    super(message)
+    this.name = 'ApiClientError'
+    this.status = options.status
+    this.code = options.code
+    this.details = options.details
+    if (options.cause) {
+      this.cause = options.cause
+    }
+  }
+}
 import { CacheManager } from '@/lib/cache/cache-manager'
 import { MemoryCacheBackend } from '@/lib/cache/memory-backend'
 import {
