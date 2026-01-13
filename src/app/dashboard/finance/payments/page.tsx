@@ -6,7 +6,7 @@ import { useAction } from 'convex/react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import {
   Card,
   CardContent,
@@ -59,6 +59,7 @@ export default function FinancePaymentsPage() {
       const { url } = await createPortalSession({ clientId: selectedClientId })
       window.location.href = url
     } catch (error: unknown) {
+      logError(error, 'FinancePaymentsPage:handleOpenPortal')
       toast({
         title: 'Portal unavailable',
         description: asErrorMessage(error),
