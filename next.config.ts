@@ -29,14 +29,16 @@ export default withSentryConfig(nextConfig, {
   project: "cohorts",
   silent: !process.env.CI,
 
-  // Disable all automatic instrumentation to fix Next.js 16 compatibility
-  disableAutoInstrumentation: true,
-
-  // Disable source maps upload to avoid global-error.rsc issues
+  // Disable source maps to avoid global-error.rsc build issues
   sourcemaps: {
     disable: true,
   },
 
-  // Disable Vercel Cron monitoring
-  automaticVercelMonitors: false,
+  // Disable all webpack instrumentation
+  webpack: {
+    autoInstrumentAppDirectory: false,
+    autoInstrumentServerFunctions: false,
+    autoInstrumentMiddleware: false,
+    disableSentryConfig: true,
+  },
 });
