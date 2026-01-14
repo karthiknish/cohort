@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   experimental: {
     staticGenerationRetryCount: 0,
   },
+  // Clean output directory before builds to prevent stale file issues
+  cleanDistDir: true,
   async rewrites() {
     return [
       {
