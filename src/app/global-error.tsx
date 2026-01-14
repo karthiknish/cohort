@@ -1,30 +1,22 @@
-'use client'
-
-import { useEffect } from 'react'
+"use client";
 
 export default function GlobalError({
-  error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
-  useEffect(() => {
-    // Log the error to an error reporting service
-    console.error(error)
-  }, [error])
-
   return (
     <html>
-      <body className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-        <h2 className="mb-4 text-2xl font-bold">Something went wrong!</h2>
+      <body style={{ display: "flex", minHeight: "100vh", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", textAlign: "center" }}>
+        <h2 style={{ marginBottom: "16px", fontSize: "24px", fontWeight: "bold" }}>Something went wrong!</h2>
         <button
           onClick={() => reset()}
-          className="rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90"
+          style={{ padding: "8px 16px", borderRadius: "6px", backgroundColor: "#3b82f6", color: "white", border: "none", cursor: "pointer" }}
         >
           Try again
         </button>
       </body>
     </html>
-  )
+  );
 }

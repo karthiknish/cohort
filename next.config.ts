@@ -47,8 +47,15 @@ export default withSentryConfig(nextConfig, {
   // side errors will fail.
   tunnelRoute: "/monitoring",
 
-  // Disable automatic instrumentation for global-error to avoid build issues
+  // Disable automatic instrumentation to avoid global-error build issues
   autoInstrumentAppDirectory: false,
+  autoInstrumentServerFunctions: false,
+  autoInstrumentMiddleware: false,
+
+  // Exclude global-error from source map upload
+  sourcemaps: {
+    ignore: ["**/global-error*"],
+  },
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
