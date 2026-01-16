@@ -98,18 +98,40 @@ export async function POST(req: NextRequest) {
     const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
 
     // 5. Get current user info from Better Auth (for email/name)
-    let currentUser: { email?: string | null; name?: string | null } | null = null
-    try {
-      currentUser = (await convex.query(api.auth.getCurrentUser, {})) as
-        | { email?: string | null; name?: string | null }
-        | null
-      debug.currentUser = currentUser ? { email: currentUser.email, name: currentUser.name } : null
-    } catch (queryError) {
-      debug.getCurrentUserError = queryError instanceof Error ? queryError.message : String(queryError)
+    type ExistingUser = { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
+    const currentUserPromise = convex.query(api.auth.getCurrentUser, {})
+    const tokenEmail = typeof (jwtPayload as { email?: unknown })?.email === 'string'
+      ? String((jwtPayload as { email?: string }).email)
+      : null
+    const existingByTokenPromise = tokenEmail
+      ? convex.query(api.users.getByEmail, { email: tokenEmail.toLowerCase() })
+      : null
+
+    const [currentUserResult, existingByTokenResult] = await Promise.allSettled([
+      currentUserPromise,
+      existingByTokenPromise ?? Promise.resolve(null),
+    ])
+
+    if (currentUserResult.status === 'rejected') {
+      debug.getCurrentUserError = currentUserResult.reason instanceof Error
+        ? currentUserResult.reason.message
+        : String(currentUserResult.reason)
       return reply(502, { ok: false, error: 'Failed to get current user from Convex', debug })
     }
 
-    const email = currentUser?.email ? String(currentUser.email) : null
+    const currentUser = currentUserResult.value as { email?: string | null; name?: string | null } | null
+    debug.currentUser = currentUser ? { email: currentUser.email, name: currentUser.name } : null
+
+    let existingByToken: ExistingUser | null = null
+    if (existingByTokenResult.status === 'fulfilled') {
+      existingByToken = existingByTokenResult.value as ExistingUser | null
+    } else if (existingByTokenResult.status === 'rejected') {
+      debug.getByEmailError = existingByTokenResult.reason instanceof Error
+        ? existingByTokenResult.reason.message
+        : String(existingByTokenResult.reason)
+    }
+
+    const email = currentUser?.email ? String(currentUser.email) : tokenEmail
     const name = providedName ?? (currentUser?.name ? String(currentUser.name) : null) ?? email ?? 'Pending user'
 
     if (!email) {
@@ -119,17 +141,21 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = email.toLowerCase()
 
     // 6. Check if user already exists in our users table
-    type ExistingUser = { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
     let existing: ExistingUser | null = null
-    try {
-      existing = (await convex.query(api.users.getByEmail, {
-        email: normalizedEmail,
-      })) as ExistingUser | null
-      debug.existingUser = existing ? { legacyId: existing.legacyId, role: existing.role, status: existing.status } : null
-    } catch (queryError) {
-      debug.getByEmailError = queryError instanceof Error ? queryError.message : String(queryError)
-      // Non-fatal - user might not exist yet, continue with null
+    if (existingByToken && tokenEmail && normalizedEmail === tokenEmail.toLowerCase()) {
+      existing = existingByToken
+    } else {
+      try {
+        existing = (await convex.query(api.users.getByEmail, {
+          email: normalizedEmail,
+        })) as ExistingUser | null
+      } catch (queryError) {
+        debug.getByEmailError = queryError instanceof Error ? queryError.message : String(queryError)
+        // Non-fatal - user might not exist yet, continue with null
+      }
     }
+
+    debug.existingUser = existing ? { legacyId: existing.legacyId, role: existing.role, status: existing.status } : null
 
     const storedRole = existing ? normalizeRole(existing.role) : null
     const storedStatus = existing ? normalizeStatus(existing.status, 'active') : null

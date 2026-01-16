@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { cache } from 'react'
 
 export interface AuthResult {
   uid: string | null
@@ -19,6 +20,17 @@ class AuthenticationError extends ApiError {
   }
 }
 
+const fetchCurrentUser = cache(async (convex: ConvexHttpClient) => {
+  return (await convex.query(api.auth.getCurrentUser, {})) as
+    | { id?: string; email?: string | null; name?: string | null }
+    | null
+})
+
+const fetchUserByEmail = cache(async (convex: ConvexHttpClient, email: string) => {
+  return (await convex.query(api.users.getByEmail, { email })) as
+    | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
+    | null
+})
 
 async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthResult | null> {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
@@ -37,9 +49,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
     const convex = new ConvexHttpClient(convexUrl, { auth: token })
 
     // 3. Get user info from Convex
-    const user = (await convex.query(api.auth.getCurrentUser, {})) as
-      | { id?: string; email?: string | null; name?: string | null }
-      | null
+    const user = await fetchCurrentUser(convex)
 
     if (!user) return null
 
@@ -74,11 +84,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
     }
 
     try {
-      const convexUser = (await convex.query(api.users.getByEmail, {
-        email: normalizedEmail,
-      })) as
-        | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
-        | null
+      const convexUser = await fetchUserByEmail(convex, normalizedEmail)
 
       if (convexUser?.legacyId) {
         resolvedUid = String(convexUser.legacyId)
@@ -104,11 +110,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
           ],
         })
 
-        const convexUser = (await convex.query(api.users.getByEmail, {
-          email: normalizedEmail,
-        })) as
-          | { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
-          | null
+        const convexUser = await fetchUserByEmail(convex, normalizedEmail)
 
         if (convexUser?.legacyId) {
           resolvedUid = String(convexUser.legacyId)

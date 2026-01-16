@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import type { ProposalFormData } from '@/lib/proposals'
 import {
@@ -127,6 +127,15 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
             },
         }))
     }, [])
+
+    useEffect(() => {
+        const stepErrors = collectStepValidationErrors(step.id, formState)
+        if (Object.keys(stepErrors).length === 0) {
+            clearErrors(stepErrorPaths[step.id])
+        } else {
+            setValidationErrors((prev) => ({ ...prev, ...stepErrors }))
+        }
+    }, [formState, step.id, clearErrors, setValidationErrors])
 
     const handleNext = useCallback(() => {
         if (!validateProposalStep(step.id, formState)) {

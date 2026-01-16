@@ -145,13 +145,13 @@ export default function HomePage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
-  const [signInData, setSignInData] = useState({ email: "", password: "" })
-  const [signUpData, setSignUpData] = useState({
+  const [signInData, setSignInData] = useState(() => ({ email: "", password: "" }))
+  const [signUpData, setSignUpData] = useState(() => ({
     email: "",
     password: "",
     confirmPassword: "",
     displayName: "",
-  })
+  }))
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const user = session?.user ?? null
   const loading = sessionPending
@@ -396,7 +396,8 @@ export default function HomePage() {
           password: signUpData.password,
           name: signUpData.displayName.trim() || signUpData.email,
         })
-        
+        await authClient.getSession().catch(() => null)
+
         // Bootstrap user in Convex and sync session cookies before redirect
         await bootstrapAndSyncSession()
         setSessionSynced(true)
@@ -417,6 +418,7 @@ export default function HomePage() {
           email: signInData.email,
           password: signInData.password,
         })
+        await authClient.getSession().catch(() => null)
 
         // Handle remember me
         if (rememberMe && typeof window !== "undefined") {
@@ -463,6 +465,7 @@ export default function HomePage() {
       await authClient.signIn.social({
         provider: "google",
       })
+      await authClient.getSession().catch(() => null)
 
       // Social sign-in may redirect; in case it returns without redirect,
       // ensure bootstrap+session cookies are ready.

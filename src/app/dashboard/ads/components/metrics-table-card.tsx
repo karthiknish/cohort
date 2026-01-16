@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Info, RefreshCw, Search, Filter, X } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
@@ -69,7 +69,7 @@ function HeaderWithTooltip({ title, tooltip }: { title: string; tooltip: string 
   )
 }
 
-export function MetricsTableCard({
+function MetricsTableCardComponent({
   processedMetrics,
   hasMetrics,
   initialMetricsLoading,
@@ -335,3 +335,5 @@ export function MetricsTableCard({
     </Card>
   )
 }
+
+export const MetricsTableCard = memo(MetricsTableCardComponent)

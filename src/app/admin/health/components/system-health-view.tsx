@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
     Activity,
     CheckCircle2,
@@ -41,55 +42,33 @@ interface HealthData {
     version: string
 }
 
+async function fetchHealthData(): Promise<HealthData> {
+    const response = await fetch('/api/health', {
+        cache: 'no-store',
+        headers: {
+            'Cache-Control': 'no-cache',
+        },
+    })
+
+    const json = await response.json()
+
+    if (json.data) {
+        return json.data
+    } else if (json.status) {
+        return json
+    }
+    throw new Error('Invalid health response format')
+}
+
 export function SystemHealthView() {
-    const [data, setData] = useState<HealthData | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [refreshing, setRefreshing] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
 
-    const fetchHealth = useCallback(async (isRefresh = false) => {
-        if (isRefresh) {
-            setRefreshing(true)
-        } else {
-            setLoading(true)
-        }
-        setError(null)
-
-        try {
-            const response = await fetch('/api/health', {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                },
-            })
-
-            const json = await response.json()
-
-            if (json.data) {
-                setData(json.data)
-            } else if (json.status) {
-                setData(json)
-            } else {
-                throw new Error('Invalid health response format')
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to fetch health status')
-        } finally {
-            setLoading(false)
-            setRefreshing(false)
-        }
-    }, [])
-
-    useEffect(() => {
-        void fetchHealth()
-
-        const interval = setInterval(() => {
-            void fetchHealth(true)
-        }, 30000)
-
-        return () => clearInterval(interval)
-    }, [fetchHealth])
+    const { data, isLoading: loading, error, isFetching: refreshing, refetch } = useQuery({
+        queryKey: ['system-health'],
+        queryFn: fetchHealthData,
+        refetchInterval: 30000,
+        staleTime: 10000,
+    })
 
     const toggleExpand = (service: string) => {
         setExpandedServices(prev => {
@@ -210,8 +189,8 @@ export function SystemHealthView() {
                 <CardContent className="flex flex-col items-center justify-center py-10 text-center">
                     <AlertCircle className="mb-4 h-10 w-10 text-destructive" />
                     <h3 className="text-lg font-semibold text-destructive">Monitoring Offline</h3>
-                    <p className="max-w-xs text-sm text-muted-foreground">{error}</p>
-                    <Button variant="outline" className="mt-4" onClick={() => void fetchHealth()}>
+                    <p className="max-w-xs text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Failed to fetch health status'}</p>
+                    <Button variant="outline" className="mt-4" onClick={() => void refetch()}>
                         Try Again
                     </Button>
                 </CardContent>
@@ -251,7 +230,7 @@ export function SystemHealthView() {
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => void fetchHealth(true)}
+                    onClick={() => void refetch()}
                     disabled={refreshing}
                 >
                     <RefreshCw className={cn("mr-2 h-4 w-4", refreshing && "animate-spin")} />
@@ -380,7 +359,7 @@ export function SystemHealthView() {
                     <CardContent className="flex items-center gap-3 py-3">
                         <AlertCircle className="h-5 w-5 text-amber-600" />
                         <p className="text-sm text-amber-800 dark:text-amber-200">
-                            Last refresh failed: {error}. Showing cached data.
+                            Last refresh failed: {error instanceof Error ? error.message : 'Unknown error'}. Showing cached data.
                         </p>
                     </CardContent>
                 </Card>
