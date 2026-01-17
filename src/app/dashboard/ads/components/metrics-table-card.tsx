@@ -311,6 +311,8 @@ function MetricsTableCardComponent({
             showPagination={false}
             maxHeight={288}
             stickyHeader
+            enableVirtualization={filteredMetrics.length > 50}
+            rowHeight={44}
             getRowId={(row) => row.id}
           />
         )}

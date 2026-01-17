@@ -151,14 +151,13 @@ export default function ProjectsPage() {
     if (isPreviewMode) {
       let previewProjects = getPreviewProjects(selectedClientId)
 
-      // Apply status filter
       if (statusFilter !== 'all') {
         previewProjects = previewProjects.filter((p) => p.status === statusFilter)
       }
 
-      // Apply search filter
-      if (debouncedQuery.trim().length > 0) {
-        const query = debouncedQuery.trim().toLowerCase()
+      const trimmedQuery = debouncedQuery.trim()
+      if (trimmedQuery) {
+        const query = trimmedQuery.toLowerCase()
         previewProjects = previewProjects.filter((p) =>
           p.name.toLowerCase().includes(query) ||
           p.description?.toLowerCase().includes(query) ||
@@ -195,16 +194,7 @@ export default function ProjectsPage() {
         return
       }
 
-      let rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
-
-      if (debouncedQuery.trim().length > 0) {
-        const query = debouncedQuery.trim().toLowerCase()
-        rows = rows.filter((p: any) =>
-          String(p.name ?? '').toLowerCase().includes(query) ||
-          String(p.description ?? '').toLowerCase().includes(query) ||
-          (Array.isArray(p.tags) ? p.tags : []).some((tag: any) => String(tag ?? '').toLowerCase().includes(query))
-        )
-      }
+      const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
 
       const mapped: ProjectRecord[] = rows.map((row: any) => ({
         id: String(row.legacyId),
@@ -468,8 +458,24 @@ export default function ProjectsPage() {
   }, [])
 
   // Sort projects
+  const searchedProjects = useMemo(() => {
+    if (!projects.length) return []
+
+    const trimmedQuery = debouncedQuery.trim()
+    if (!trimmedQuery) {
+      return projects
+    }
+
+    const query = trimmedQuery.toLowerCase()
+    return projects.filter((project) =>
+      project.name.toLowerCase().includes(query) ||
+      project.description?.toLowerCase().includes(query) ||
+      project.tags.some((tag) => tag.toLowerCase().includes(query))
+    )
+  }, [debouncedQuery, projects])
+
   const sortedProjects = useMemo(() => {
-    const sorted = [...projects]
+    const sorted = [...searchedProjects]
     sorted.sort((a, b) => {
       let comparison = 0
 
@@ -496,7 +502,7 @@ export default function ProjectsPage() {
     })
 
     return sorted
-  }, [projects, sortField, sortDirection])
+  }, [searchedProjects, sortDirection, sortField])
 
   const statusCounts = useMemo(() => {
     return projects.reduce<Record<ProjectStatus, number>>((acc, project) => {

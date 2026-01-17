@@ -73,6 +73,11 @@ export function useMessagesData({
   const channelMessages = selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []
   const normalizedMessageSearch = messageSearchQuery.trim()
 
+  const participantNameMap = useMemo(
+    () => new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant])),
+    [channelParticipants]
+  )
+
   const visibleMessages = useMemo(() => {
     if (normalizedMessageSearch) {
       if (searchResults.length > 0) return searchResults
@@ -235,9 +240,9 @@ export function useMessagesData({
 
   const resolveSenderDetails = useCallback(() => {
     const resolvedName = senderSelection.trim() || fallbackDisplayName
-    const participant = channelParticipants.find((member) => member.name === resolvedName)
+    const participant = participantNameMap.get(resolvedName.toLowerCase())
     return { senderName: resolvedName, senderRole: participant?.role ?? null }
-  }, [channelParticipants, fallbackDisplayName, senderSelection])
+  }, [fallbackDisplayName, participantNameMap, senderSelection])
 
   const {
     stopTyping,
@@ -356,9 +361,7 @@ export function useMessagesData({
 
         const mentionMatches = extractMentionsFromContent(trimmedContent)
         const mentionMetadata = mentionMatches.map((mention: any) => {
-          const participant = channelParticipants.find(
-            (member) => member.name.toLowerCase() === mention.name.toLowerCase()
-          )
+          const participant = participantNameMap.get(mention.name.toLowerCase())
           return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
         })
 

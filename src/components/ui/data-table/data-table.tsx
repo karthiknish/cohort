@@ -15,6 +15,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 import {
   Table,
@@ -56,6 +57,9 @@ interface DataTableProps<TData, TValue> {
   maxHeight?: string | number
   className?: string
   getRowId?: (row: TData) => string
+  enableVirtualization?: boolean
+  rowHeight?: number
+  overscan?: number
 }
 
 export function DataTable<TData, TValue>({
@@ -86,6 +90,9 @@ export function DataTable<TData, TValue>({
   maxHeight,
   className,
   getRowId,
+  enableVirtualization = false,
+  rowHeight = 48,
+  overscan = 6,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(initialColumnFilters)
@@ -167,16 +174,36 @@ export function DataTable<TData, TValue>({
 
   const rows = table.getRowModel().rows
 
+  const shouldVirtualize = enableVirtualization && !manualPagination
+  const virtualParentRef = React.useRef<HTMLDivElement | null>(null)
+  const virtualizer = useVirtualizer({
+    count: shouldVirtualize ? rows.length : 0,
+    getScrollElement: () => virtualParentRef.current,
+    estimateSize: () => rowHeight,
+    overscan,
+  })
+  const virtualItems = shouldVirtualize ? virtualizer.getVirtualItems() : []
+  const paddingTop = shouldVirtualize && virtualItems.length > 0 ? virtualItems[0].start : 0
+  const paddingBottom = shouldVirtualize && virtualItems.length > 0
+    ? virtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+    : 0
+
+  React.useEffect(() => {
+    if (!shouldVirtualize) return
+    virtualizer.measure()
+  }, [rows.length, shouldVirtualize, virtualizer])
+
   return (
     <div className={cn('space-y-4', className)}>
       <div
+        ref={shouldVirtualize ? virtualParentRef : undefined}
         className={cn(
           'rounded-md border',
-          maxHeight && 'overflow-auto'
+          (maxHeight || shouldVirtualize) && 'overflow-auto'
         )}
-        style={maxHeight ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight } : undefined}
+        style={maxHeight ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight } : shouldVirtualize ? { maxHeight: '520px' } : undefined}
       >
-        <Table>
+        <Table wrapperClassName={shouldVirtualize ? 'overflow-visible' : undefined}>
           <TableHeader className={stickyHeader ? 'sticky top-0 bg-background z-10' : undefined}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -206,25 +233,63 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : rows.length ? (
-              rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                  className={cn(
-                    onRowClick && 'cursor-pointer',
-                    typeof rowClassName === 'function'
-                      ? rowClassName(row.original)
-                      : rowClassName
+              shouldVirtualize ? (
+                <>
+                  {paddingTop > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} style={{ height: `${paddingTop}px` }} />
+                    </TableRow>
                   )}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+                  {virtualItems.map((virtualRow) => {
+                    const row = rows[virtualRow.index]
+                    return (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && 'selected'}
+                        onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                        className={cn(
+                          onRowClick && 'cursor-pointer',
+                          typeof rowClassName === 'function'
+                            ? rowClassName(row.original)
+                            : rowClassName
+                        )}
+                        style={{ height: `${virtualRow.size}px` }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    )
+                  })}
+                  {paddingBottom > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} style={{ height: `${paddingBottom}px` }} />
+                    </TableRow>
+                  )}
+                </>
+              ) : (
+                rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                    className={cn(
+                      onRowClick && 'cursor-pointer',
+                      typeof rowClassName === 'function'
+                        ? rowClassName(row.original)
+                        : rowClassName
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )
             ) : (
               <TableRow>
                 <TableCell
