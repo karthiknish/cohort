@@ -37,14 +37,14 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
   if (!convexUrl) return null
 
   try {
-    // 1. Check if authenticated using official helper
-    if (!(await isAuthenticated())) {
+    const [authenticated, token] = await Promise.all([
+      isAuthenticated(),
+      getToken(),
+    ])
+
+    if (!authenticated || !token) {
       return null
     }
-
-    // 2. Get Convex token
-    const token = await getToken()
-    if (!token) return null
 
     const convex = new ConvexHttpClient(convexUrl, { auth: token })
 

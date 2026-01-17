@@ -44,30 +44,45 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1. Parse optional body
-    let body: z.infer<typeof payloadSchema> = undefined
-    try {
-      const json = await req.json()
-      const result = payloadSchema.safeParse(json)
-      if (result.success) {
-        body = result.data
-      }
-    } catch {
-      // No body or invalid JSON - that's fine
-    }
+    type Payload = { name?: string } | undefined
+    let body: Payload = undefined
+    let providedName: string | undefined = undefined
+    let tokenResult: { token: string | null; error?: unknown } = { token: null }
 
-    const providedName = body?.name
+    const bodyPromise = (async () => {
+      try {
+        const json = await req.json()
+        const result = payloadSchema.safeParse(json)
+        if (result.success) {
+          body = result.data
+          providedName = result.data?.name
+        }
+      } catch {
+        // No body or invalid JSON - that's fine
+      }
+    })()
+
+    const tokenPromise = (async () => {
+      try {
+        const token = await getToken()
+        tokenResult = { token: token ?? null }
+      } catch (tokenError) {
+        tokenResult = { token: null, error: tokenError }
+      }
+    })()
+
+    await Promise.all([bodyPromise, tokenPromise])
+
 
     // 2. Get Convex token using official helper
-    let convexToken: string | null = null
-    try {
-      const token = await getToken()
-      convexToken = token ?? null
-      debug.hasToken = Boolean(convexToken)
-    } catch (tokenError) {
-      debug.hasToken = false
-      debug.tokenError = tokenError instanceof Error ? tokenError.message : String(tokenError)
+    const convexToken = tokenResult.token
+    debug.hasToken = Boolean(convexToken)
+    if (tokenResult.error) {
+      debug.tokenError = tokenResult.error instanceof Error
+        ? tokenResult.error.message
+        : String(tokenResult.error)
       // Token fetch failed - user likely not authenticated
-       return reply(401, { ok: false, error: 'Failed to get auth token', debug })
+      return reply(401, { ok: false, error: 'Failed to get auth token', debug })
     }
 
     if (!convexToken) {

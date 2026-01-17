@@ -176,14 +176,11 @@ export function useExpensesData() {
         throw new Error('Missing workspace')
       }
 
-      const category = newExpense.categoryId ? categories.find((c) => c.id === newExpense.categoryId) : null
-      const vendor = newExpense.vendorId ? vendors.find((v) => v.id === newExpense.vendorId) : null
+      const categoryName = newExpense.categoryId ? categoryLookup.get(newExpense.categoryId) ?? null : null
+      const vendorName = newExpense.vendorId ? vendorLookup.get(newExpense.vendorId) ?? null : null
 
       const legacyId = crypto.randomUUID()
       const timestampMs = Date.now()
-
-      const categoryName = category?.name ?? null
-      const vendorName = vendor?.name ?? null
 
       const expense: Expense = {
         id: legacyId,
@@ -241,7 +238,7 @@ export function useExpensesData() {
     } finally {
       setSubmitting(false)
     }
-  }, [categories, convexUpsertExpense, newExpense, toast, user?.id, vendors, workspaceId])
+  }, [categoryLookup, convexUpsertExpense, newExpense, toast, user?.id, vendorLookup, workspaceId])
 
   const handleDeleteExpense = useCallback(
     async (expenseId: string) => {

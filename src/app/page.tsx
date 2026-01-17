@@ -274,12 +274,13 @@ export default function HomePage() {
           password: signUpData.password,
           name: signUpData.displayName.trim() || signUpData.email,
         })
-        await authClient.getSession().catch(() => null)
 
-        // Bootstrap user in Convex and sync session cookies before redirect
-        await bootstrapAndSyncSession()
+        await Promise.all([
+          authClient.getSession().catch(() => null),
+          bootstrapAndSyncSession(),
+        ])
         setSessionSynced(true)
-        
+
         toast({
           title: "Welcome to Cohorts!",
           description: "Your account has been created. Taking you to your dashboard...",
@@ -296,7 +297,12 @@ export default function HomePage() {
           email: signInData.email,
           password: signInData.password,
         })
-        await authClient.getSession().catch(() => null)
+
+        await Promise.all([
+          authClient.getSession().catch(() => null),
+          bootstrapAndSyncSession(),
+        ])
+        setSessionSynced(true)
 
         // Handle remember me
         if (rememberMe && typeof window !== "undefined") {
@@ -304,10 +310,6 @@ export default function HomePage() {
         } else if (typeof window !== "undefined") {
           window.localStorage.removeItem(REMEMBER_ME_KEY)
         }
-
-        // Bootstrap user in Convex and sync session cookies before redirect
-        await bootstrapAndSyncSession()
-        setSessionSynced(true)
 
         toast({
           title: "Welcome back!",
@@ -343,11 +345,13 @@ export default function HomePage() {
       await authClient.signIn.social({
         provider: "google",
       })
-      await authClient.getSession().catch(() => null)
 
       // Social sign-in may redirect; in case it returns without redirect,
       // ensure bootstrap+session cookies are ready.
-      await bootstrapAndSyncSession()
+      await Promise.all([
+        authClient.getSession().catch(() => null),
+        bootstrapAndSyncSession(),
+      ])
       setSessionSynced(true)
     } catch (error) {
       const errorMessage = getFriendlyAuthErrorMessage(error)

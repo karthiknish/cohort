@@ -1,7 +1,7 @@
-
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin'
 import { logger } from '@/lib/logger'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
+import { cache } from 'react'
 
 interface RefreshParams {
   userId: string
@@ -498,7 +498,7 @@ export async function refreshTikTokAccessToken({ userId, clientId }: RefreshPara
   throw lastError ?? new IntegrationTokenError('TikTok token refresh failed after all retries', 'tiktok', userId)
 }
 
-export async function ensureGoogleAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
+async function ensureGoogleAccessTokenInternal({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
   cleanupStalePromises()
   const promiseKey = `google:${userId}:${clientId ?? 'workspace'}`
   const existingPromise = refreshPromises.get(promiseKey)
@@ -531,6 +531,8 @@ export async function ensureGoogleAccessToken({ userId, clientId, forceRefresh }
   refreshPromiseTimestamps.set(promiseKey, Date.now())
   return refreshPromise
 }
+
+export const ensureGoogleAccessToken = cache(ensureGoogleAccessTokenInternal)
 
 export async function ensureMetaAccessToken({ userId, clientId, forceRefresh }: RefreshParams): Promise<string> {
   cleanupStalePromises()

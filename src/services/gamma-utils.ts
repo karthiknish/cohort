@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer'
+import { cache } from 'react'
 
 import type { ProposalFormData } from '@/lib/proposals'
 import { geminiAI } from '@/services/gemini'
@@ -109,7 +110,7 @@ export type NormalizedGammaFile = {
   fileUrl: string
 }
 
-export async function findGammaFile(args: {
+async function findGammaFileInternal(args: {
   generationId: string
   fileType: 'pptx' | 'pdf'
 }): Promise<NormalizedGammaFile | null> {
@@ -132,6 +133,8 @@ export async function findGammaFile(args: {
 
   return null
 }
+
+export const findGammaFile = cache(findGammaFileInternal)
 
 export async function downloadGammaPresentation(url: string, retries = 3, backoffMs = 2000): Promise<Buffer> {
   const apiKey = process.env.GAMMA_API_KEY
