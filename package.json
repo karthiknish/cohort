@@ -12,6 +12,7 @@
     "convex:codegen": "convex codegen",
     "convex:typecheck": "npm run convex:codegen && tsc -p convex/tsconfig.json --noEmit",
     "build": "next build",
+    "postbuild": "node -e \"const fs=require('fs');const path=require('path');const targets=['_global-error.rsc'];targets.forEach((file)=>{const target=path.join('.next','server','app',file);fs.mkdirSync(path.dirname(target),{recursive:true});if(!fs.existsSync(target)){fs.writeFileSync(target,'');}});\"",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc -p tsconfig.json --noEmit",
