@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     staticGenerationRetryCount: 0,
+    // Explicitly disable Partial Prerendering (PPR).
+    // This avoids Vercel builds expecting `_global-error.rsc`.
+    ppr: false,
   },
   cleanDistDir: true,
   async rewrites() {

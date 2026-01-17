@@ -12,7 +12,6 @@
     "convex:codegen": "convex codegen",
     "convex:typecheck": "npm run convex:codegen && tsc -p convex/tsconfig.json --noEmit",
     "build": "next build",
-    "postbuild": "node -e \"const fs=require('fs');const path=require('path');const manifestPath=path.join('.next','server','app-paths-manifest.json');const targets=new Set();if(fs.existsSync(manifestPath)){const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));Object.keys(manifest).forEach((route)=>{const trimmed=route.replace(/\\/(page|route)$/, '');const relative=trimmed === '' ? 'page' : trimmed.slice(1);targets.add(relative + '.rsc');});}targets.add('index.rsc');targets.forEach((file)=>{const target=path.join('.next','server','app',file);fs.mkdirSync(path.dirname(target),{recursive:true});if(!fs.existsSync(target)){fs.writeFileSync(target,'');}});\"",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc -p tsconfig.json --noEmit",
