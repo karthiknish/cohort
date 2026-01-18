@@ -894,11 +894,11 @@ export const completeSyncJob = mutation({
   },
 })
 
-export const cleanupOldJobs = internalMutation({
+export const cleanupOldJobsInternal = internalMutation({
   args: {
     cutoffMs: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ deleted: number }> => {
     const jobs = await ctx.db
       .query('adSyncJobs')
       .withIndex('by_status_processedAt', (q) => q.eq('status', 'success'))
@@ -924,11 +924,24 @@ export const cleanupOldJobs = internalMutation({
   },
 })
 
-export const resetStaleJobs = internalMutation({
+export const cleanupOldJobsServer = mutation({
+  args: {
+    cutoffMs: v.number(),
+    cronKey: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ deleted: number }> => {
+    assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    return await ctx.runMutation(internal.adsIntegrations.cleanupOldJobsInternal, {
+      cutoffMs: args.cutoffMs,
+    })
+  },
+})
+
+export const resetStaleJobsInternal = internalMutation({
   args: {
     startedBeforeMs: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ reset: number }> => {
     const running = await ctx.db
       .query('adSyncJobs')
       .withIndex('by_status_startedAt', (q) => q.eq('status', 'running'))
@@ -948,6 +961,19 @@ export const resetStaleJobs = internalMutation({
     }
 
     return { reset }
+  },
+})
+
+export const resetStaleJobsServer = mutation({
+  args: {
+    startedBeforeMs: v.number(),
+    cronKey: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ reset: number }> => {
+    assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    return await ctx.runMutation(internal.adsIntegrations.resetStaleJobsInternal, {
+      startedBeforeMs: args.startedBeforeMs,
+    })
   },
 })
 
