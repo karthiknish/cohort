@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   experimental: {
     staticGenerationRetryCount: 0,
   },
+  cleanDistDir: true,
   async rewrites() {
     return [
       {
