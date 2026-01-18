@@ -400,9 +400,25 @@ export function useHelpModal() {
       const now = new Date()
       const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
 
-      if (!cancelled && !hasSeenWelcomeRemote && !hasSeenWelcomeLocal && isNewUser) {
+      const shouldShowWelcome = !hasSeenWelcomeRemote && !hasSeenWelcomeLocal && isNewUser
+
+      if (!cancelled && shouldShowWelcome) {
         setShowWelcome(true)
         setOpen(true)
+      }
+
+      if (!cancelled && !shouldShowWelcome && hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
+        try {
+          await upsertOnboarding({
+            userId: uid,
+            onboardingTourCompleted: Boolean((onboardingState as any)?.onboardingTourCompleted),
+            onboardingTourCompletedAtMs: (onboardingState as any)?.onboardingTourCompletedAtMs ?? null,
+            welcomeSeen: true,
+            welcomeSeenAtMs: Date.now(),
+          })
+        } catch (error) {
+          console.warn('Failed to persist onboarding state', error)
+        }
       }
     }
 

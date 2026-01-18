@@ -13,6 +13,10 @@ export type { SummaryCardProps } from './summary-card'
 export { GanttView } from './gantt-view'
 export type { GanttViewProps } from './gantt-view'
 
+export { ProjectFilters } from './project-filters'
+export { ProjectSearch } from './project-search'
+export { ViewModeSelector } from './view-mode-selector'
+
 export * from './utils'
 
 // Back-compat re-exports for ProjectsPage

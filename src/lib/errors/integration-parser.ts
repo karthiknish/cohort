@@ -38,18 +38,37 @@ interface ParsedPayload {
 }
 
 function extractMetaPayload(payload: unknown): ParsedPayload {
-    const error = (payload as { error?: Record<string, unknown> })?.error
-    if (!error) {
-        return { message: 'Unknown Meta API error' }
+    const data = payload as any
+    
+    // Check for standard Meta error format
+    if (data.error) {
+        const error = data.error
+        return {
+            message: String(error.message || error.error_user_msg || 'Meta API error'),
+            code: error.code as number | undefined,
+            subcode: error.error_subcode as number | undefined,
+            type: error.type as string | undefined,
+            traceId: error.fbtrace_id as string | undefined,
+        }
     }
-
-    return {
-        message: String(error.message ?? 'Meta API error'),
-        code: error.code as number | undefined,
-        subcode: error.error_subcode as number | undefined,
-        type: error.type as string | undefined,
-        traceId: error.fbtrace_id as string | undefined,
+    
+    // Check for alternate error format (data.error_code, data.error_msg)
+    if (data.error_code) {
+        return {
+            message: String(data.error_msg || data.error_message || 'Meta API error'),
+            code: data.error_code as number | undefined,
+        }
     }
+    
+    // Check for response-level errors
+    if (data.code && data.code !== 200) {
+        return {
+            message: String(data.message || data.error_description || 'Meta API request failed'),
+            code: data.code,
+        }
+    }
+    
+    return { message: 'Failed to load audience targeting. Please try again.' }
 }
 
 function extractGooglePayload(payload: unknown): ParsedPayload {

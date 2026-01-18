@@ -15,7 +15,6 @@ const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_
 const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
 const ADMIN_ONLY_ROUTE_PREFIX = '/admin'
 const AUTH_ROUTE_PREFIX = '/auth'
-const ROLE_COOKIE = 'cohorts_role'
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_MATCHER.some((route) => pathname === route || pathname.startsWith(`${route}/`))
@@ -63,9 +62,8 @@ export async function middleware(request: NextRequest) {
   }
 
   const hasSession = await hasValidSession(request)
-  const role = request.cookies.get(ROLE_COOKIE)?.value
 
-  console.log(`[Middleware] Path: ${pathname} | Has valid session: ${hasSession} | Role: ${role}`)
+  console.log(`[Middleware] Path: ${pathname} | Has valid session: ${hasSession}`)
 
   // Public auth pages should always be reachable without redirection.
   if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
@@ -97,15 +95,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (pathname.startsWith(ADMIN_ONLY_ROUTE_PREFIX)) {
-    const role = request.cookies.get(ROLE_COOKIE)?.value
-    if (role !== 'admin') {
-      const target = request.nextUrl.clone()
-      target.pathname = '/dashboard'
-      target.search = ''
-      return NextResponse.redirect(target)
-    }
-  }
+  // Admin route protection is now enforced server-side in API routes and page loaders,
+  // not via a forgeable cookie. Middleware only checks authentication.
 
   return NextResponse.next()
 }

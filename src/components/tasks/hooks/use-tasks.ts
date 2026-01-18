@@ -138,13 +138,17 @@ export function useTasks({
       return
     }
 
-    const rows = Array.isArray(convexTasksQuery)
+    const isArray = Array.isArray(convexTasksQuery)
+    const hasPaginatedItems = Array.isArray((convexTasksQuery as any)?.items)
+    
+    const rows = isArray
       ? convexTasksQuery
-      : Array.isArray((convexTasksQuery as any)?.items)
+      : hasPaginatedItems
         ? ((convexTasksQuery as any).items as any[])
         : []
 
-    if (rows.length === 0 && convexTasksQuery) {
+    // Only log error if we have a response that's neither an array nor a paginated shape
+    if (convexTasksQuery && !isArray && !hasPaginatedItems) {
       logError(convexTasksQuery, 'useTasks:unexpectedQueryShape')
     }
 

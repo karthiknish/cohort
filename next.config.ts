@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // Skip static generation entirely - use SSR for all pages
+  // This fixes build errors with React 19 + Next.js 16 + Sentry
+  experimental: {
+    staticGenerationRetryCount: 0,
+  },
   async rewrites() {
     return [
       {
@@ -39,6 +44,9 @@ export default withSentryConfig(nextConfig, {
   // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
   // side errors will fail.
   tunnelRoute: "/monitoring",
+
+  // Disable automatic instrumentation for global-error to fix build issues with Next.js 16
+  autoInstrumentAppDirectory: false,
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)

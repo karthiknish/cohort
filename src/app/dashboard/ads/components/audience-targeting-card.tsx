@@ -106,18 +106,34 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
     try {
       const data = await getTargeting({
         workspaceId,
-        providerId: providerId as any,
+        providerId,
         clientId: selectedClientId ?? null,
       })
 
-      setTargeting((data as any)?.targeting || [])
-      setInsights((data as any)?.insights || null)
+      setTargeting((data as any)?.targeting ?? [])
+      setInsights((data as any)?.insights ?? null)
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load audience targeting data',
-        variant: 'destructive',
-      })
+      const message = error instanceof Error ? error.message : 'Failed to load audience targeting data'
+      
+      if (message.includes('not configured') || message.includes('missing token') || message.includes('expired')) {
+        toast({
+          title: 'Integration Issue',
+          description: 'Please connect or refresh your Meta ad account.',
+          variant: 'destructive',
+        })
+      } else if (message.includes('Meta API') || message.includes('Facebook')) {
+        toast({
+          title: 'Meta API Error',
+          description: 'Could not fetch targeting data. Please check your connection and try again.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Error',
+          description: message,
+          variant: 'destructive',
+        })
+      }
     } finally {
       setLoading(false)
     }

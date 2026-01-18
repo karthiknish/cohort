@@ -125,8 +125,7 @@ export function TaskKanban({
               <div className="flex items-center justify-between gap-2 px-4 py-4.5 border-b border-muted/20">
                 <div className="flex items-center gap-3">
                   <div
-                    className="h-2.5 w-2.5 rounded-full shadow-sm"
-                    style={{ backgroundColor: statusLaneColors[column.status] }}
+                    className={`h-2.5 w-2.5 rounded-full shadow-sm ${statusLaneColors[column.status]}`}
                   />
                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
                     {column.label}

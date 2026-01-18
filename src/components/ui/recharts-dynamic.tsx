@@ -1,7 +1,20 @@
 'use client'
 
 import * as React from 'react'
-import * as Recharts from 'recharts'
+import {
+  Area as RechartsArea,
+  AreaChart as RechartsAreaChart,
+  Bar as RechartsBar,
+  BarChart as RechartsBarChart,
+  CartesianGrid as RechartsCartesianGrid,
+  Cell as RechartsCell,
+  Line as RechartsLine,
+  LineChart as RechartsLineChart,
+  Pie as RechartsPie,
+  PieChart as RechartsPieChart,
+  XAxis as RechartsXAxis,
+  YAxis as RechartsYAxis,
+} from 'recharts'
 import type {
   AreaProps,
   BarProps,
@@ -15,44 +28,44 @@ import type {
 
 type WithoutRef<T> = Omit<T, 'ref'>
 
-export const AreaChart: React.FC<React.ComponentPropsWithoutRef<typeof Recharts.AreaChart>> = (props) => (
-  <Recharts.AreaChart {...props} />
+export const AreaChart: React.FC<React.ComponentPropsWithoutRef<typeof RechartsAreaChart>> = (props) => (
+  <RechartsAreaChart {...props} />
 )
 
-export const BarChart: React.FC<React.ComponentPropsWithoutRef<typeof Recharts.BarChart>> = (props) => (
-  <Recharts.BarChart {...props} />
+export const BarChart: React.FC<React.ComponentPropsWithoutRef<typeof RechartsBarChart>> = (props) => (
+  <RechartsBarChart {...props} />
 )
 
-export const LineChart: React.FC<React.ComponentPropsWithoutRef<typeof Recharts.LineChart>> = (props) => (
-  <Recharts.LineChart {...props} />
+export const LineChart: React.FC<React.ComponentPropsWithoutRef<typeof RechartsLineChart>> = (props) => (
+  <RechartsLineChart {...props} />
 )
 
-export const PieChart: React.FC<React.ComponentPropsWithoutRef<typeof Recharts.PieChart>> = (props) => (
-  <Recharts.PieChart {...props} />
+export const PieChart: React.FC<React.ComponentPropsWithoutRef<typeof RechartsPieChart>> = (props) => (
+  <RechartsPieChart {...props} />
 )
 
 export const CartesianGrid: React.FC<CartesianGridProps> = (props) => (
-  <Recharts.CartesianGrid {...props} />
+  <RechartsCartesianGrid {...props} />
 )
 
 export const XAxis: React.FC<XAxisProps> = (props) => (
-  <Recharts.XAxis {...props} />
+  <RechartsXAxis {...props} />
 )
 
 export const YAxis: React.FC<YAxisProps> = (props) => (
-  <Recharts.YAxis {...props} />
+  <RechartsYAxis {...props} />
 )
 
 export const Line: React.FC<WithoutRef<LineProps>> = (props) => (
-  <Recharts.Line {...props} />
+  <RechartsLine {...props} />
 )
 
-export const Bar: React.FC<WithoutRef<BarProps>> = (props) => <Recharts.Bar {...props} />
+export const Bar: React.FC<WithoutRef<BarProps>> = (props) => <RechartsBar {...props} />
 
 export const Area: React.FC<WithoutRef<AreaProps>> = (props) => (
-  <Recharts.Area {...props} />
+  <RechartsArea {...props} />
 )
 
-export const Pie: React.FC<WithoutRef<PieProps>> = (props) => <Recharts.Pie {...props} />
+export const Pie: React.FC<WithoutRef<PieProps>> = (props) => <RechartsPie {...props} />
 
-export const Cell: React.FC<CellProps> = (props) => <Recharts.Cell {...props} />
+export const Cell: React.FC<CellProps> = (props) => <RechartsCell {...props} />

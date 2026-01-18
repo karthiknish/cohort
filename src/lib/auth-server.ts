@@ -10,17 +10,15 @@ const convexUrl = requireEnv(
   process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL
 )
 
-// Convex Better Auth utilities need the *.convex.site URL.
+// Convex Better Auth utilities need to *.convex.site URL.
 // Many projects store this as NEXT_PUBLIC_CONVEX_HTTP_URL, so accept either.
-// Fallback to NEXT_PUBLIC_APP_URL/NEXT_PUBLIC_SITE_URL only for local dev,
-// so we can emit a clearer error instead of a generic 500.
 export const convexSiteUrl = requireEnv(
   'NEXT_PUBLIC_CONVEX_SITE_URL (or NEXT_PUBLIC_CONVEX_HTTP_URL)',
   process.env.NEXT_PUBLIC_CONVEX_SITE_URL ??
-  process.env.NEXT_PUBLIC_CONVEX_HTTP_URL ??
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  process.env.NEXT_PUBLIC_APP_URL
+  process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
 )
+
+export const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
 export const {
   handler,

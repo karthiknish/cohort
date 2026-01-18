@@ -665,6 +665,8 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
           data={expenses as Expense[]}
           showPagination={expenses.length > 10}
           pageSize={10}
+          enableVirtualization={expenses.length > 50}
+          rowHeight={48}
           emptyState={<span className="text-sm text-muted-foreground">No expenses yet.</span>}
           getRowId={(row) => row.id}
         />

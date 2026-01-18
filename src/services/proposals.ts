@@ -4,6 +4,7 @@ import { resolveProposalDeck } from '@/types/proposals'
 import { ConvexReactClient } from 'convex/react'
 import { api as convexApi } from '@/lib/convex-api'
 import { logger } from '@/lib/logger'
+import { cache } from 'react'
 
 type ConvexAuthArgs = {
   workspaceId: string
@@ -115,7 +116,7 @@ function mapConvexProposalToDraft(row: ConvexProposalRow): ProposalDraft {
   return resolveProposalDeck(baseDraft)
 }
 
-export async function listProposals(
+async function listProposalsInternal(
   params: { status?: ProposalStatus; clientId?: string; pageSize?: number } & ConvexAuthArgs
 ) {
   const convex = createAuthedConvexClient(params.convexToken)
@@ -130,7 +131,9 @@ export async function listProposals(
   return rows.map(mapConvexProposalToDraft)
 }
 
-export async function getProposalById(id: string, auth: ConvexAuthArgs) {
+export const listProposals = cache(listProposalsInternal)
+
+async function getProposalByIdInternal(id: string, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
   const row = (await executeQuery(convex, 'proposals:getByLegacyId', {
@@ -144,6 +147,8 @@ export async function getProposalById(id: string, auth: ConvexAuthArgs) {
 
   return mapConvexProposalToDraft(row)
 }
+
+export const getProposalById = cache(getProposalByIdInternal)
 
 export async function createProposalDraft(body: Partial<ProposalDraft> & { ownerId?: string | null } = {}, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)

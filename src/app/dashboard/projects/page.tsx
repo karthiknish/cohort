@@ -6,23 +6,15 @@ import { useMutation, useQuery } from 'convex/react'
 import { useMutation as useTanstackMutation } from '@tanstack/react-query'
 import {
   TriangleAlert,
-  ArrowDown,
-  ArrowUp,
   Briefcase,
-
   FolderKanban,
-  LayoutGrid,
-  List,
   ListChecks,
   LoaderCircle,
   MoreHorizontal,
   Plus,
   RefreshCw,
-  Search,
   Users,
   CircleX,
-  ChartGantt,
-  Columns3,
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -42,14 +34,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,14 +71,15 @@ import {
   SortField,
   SortDirection,
   ViewMode,
-  STATUS_FILTERS,
-  SORT_OPTIONS,
   RETRY_CONFIG,
   sleep,
   calculateBackoffDelay,
   isNetworkError,
   formatStatusLabel,
   useDebouncedValue,
+  ProjectFilters,
+  ProjectSearch,
+  ViewModeSelector,
 } from './components'
 
 type ProjectResponse = {
@@ -166,14 +151,13 @@ export default function ProjectsPage() {
     if (isPreviewMode) {
       let previewProjects = getPreviewProjects(selectedClientId)
 
-      // Apply status filter
       if (statusFilter !== 'all') {
         previewProjects = previewProjects.filter((p) => p.status === statusFilter)
       }
 
-      // Apply search filter
-      if (debouncedQuery.trim().length > 0) {
-        const query = debouncedQuery.trim().toLowerCase()
+      const trimmedQuery = debouncedQuery.trim()
+      if (trimmedQuery) {
+        const query = trimmedQuery.toLowerCase()
         previewProjects = previewProjects.filter((p) =>
           p.name.toLowerCase().includes(query) ||
           p.description?.toLowerCase().includes(query) ||
@@ -210,16 +194,7 @@ export default function ProjectsPage() {
         return
       }
 
-      let rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
-
-      if (debouncedQuery.trim().length > 0) {
-        const query = debouncedQuery.trim().toLowerCase()
-        rows = rows.filter((p: any) =>
-          String(p.name ?? '').toLowerCase().includes(query) ||
-          String(p.description ?? '').toLowerCase().includes(query) ||
-          (Array.isArray(p.tags) ? p.tags : []).some((tag: any) => String(tag ?? '').toLowerCase().includes(query))
-        )
-      }
+      const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
 
       const mapped: ProjectRecord[] = rows.map((row: any) => ({
         id: String(row.legacyId),
@@ -483,8 +458,24 @@ export default function ProjectsPage() {
   }, [])
 
   // Sort projects
+  const searchedProjects = useMemo(() => {
+    if (!projects.length) return []
+
+    const trimmedQuery = debouncedQuery.trim()
+    if (!trimmedQuery) {
+      return projects
+    }
+
+    const query = trimmedQuery.toLowerCase()
+    return projects.filter((project) =>
+      project.name.toLowerCase().includes(query) ||
+      project.description?.toLowerCase().includes(query) ||
+      project.tags.some((tag) => tag.toLowerCase().includes(query))
+    )
+  }, [debouncedQuery, projects])
+
   const sortedProjects = useMemo(() => {
-    const sorted = [...projects]
+    const sorted = [...searchedProjects]
     sorted.sort((a, b) => {
       let comparison = 0
 
@@ -511,7 +502,7 @@ export default function ProjectsPage() {
     })
 
     return sorted
-  }, [projects, sortField, sortDirection])
+  }, [searchedProjects, sortDirection, sortField])
 
   const statusCounts = useMemo(() => {
     return projects.reduce<Record<ProjectStatus, number>>((acc, project) => {
@@ -557,64 +548,7 @@ export default function ProjectsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center rounded-md border bg-background p-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setViewMode('list')}
-                    aria-label="List view"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>List view</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setViewMode('grid')}
-                    aria-label="Grid view"
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Grid view</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={viewMode === 'board' ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setViewMode('board')}
-                    aria-label="Kanban view"
-                  >
-                    <Columns3 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Kanban view</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={viewMode === 'gantt' ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setViewMode('gantt')}
-                    aria-label="Gantt view"
-                  >
-                    <ChartGantt className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Gantt view</TooltipContent>
-              </Tooltip>
-            </div>
+            <ViewModeSelector viewMode={viewMode} onChange={setViewMode} />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -730,63 +664,15 @@ export default function ProjectsPage() {
                 </CardDescription>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="relative w-full sm:w-72">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="project-search"
-                    placeholder="Search projects..."
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
-                    className="pl-9"
-                    aria-label="Search projects"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={(value: StatusFilter) => setStatusFilter(value)}>
-                  <SelectTrigger className="sm:w-40" aria-label="Filter by status">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_FILTERS.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {value === 'all' ? 'All statuses' : formatStatusLabel(value)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center gap-1">
-                  <Select value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
-                    <SelectTrigger className="sm:w-36" aria-label="Sort by">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORT_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={toggleSortDirection}
-                        className="h-10 w-10"
-                        aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
-                      >
-                        {sortDirection === 'asc' ? (
-                          <ArrowUp className="h-4 w-4" />
-                        ) : (
-                          <ArrowDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {sortDirection === 'asc' ? 'Sort descending' : 'Sort ascending'}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <ProjectSearch value={searchInput} onChange={setSearchInput} />
+                <ProjectFilters
+                  statusFilter={statusFilter}
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onStatusChange={setStatusFilter}
+                  onSortFieldChange={setSortField}
+                  onToggleSortDirection={toggleSortDirection}
+                />
               </div>
             </div>
             <Separator />

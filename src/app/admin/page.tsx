@@ -24,7 +24,7 @@ import {
   Bot,
 } from 'lucide-react'
 
-import { useQuery } from 'convex/react'
+import { useQuery, usePaginatedQuery } from 'convex/react'
 
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '@/contexts/auth-context'
@@ -93,13 +93,16 @@ type AdminSection = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const usersRealtime = useQuery((api as any).adminUsers.listUsers, {
-    paginationOpts: { numItems: 1, cursor: null },
-  }) as any
+  const { results: usersPage } = usePaginatedQuery(
+    (api as any).adminUsers.listUsers,
+    {},
+    { initialNumItems: 50 }
+  )
 
   const clientsRealtime = useQuery((api as any).clients.list, {
     workspaceId: user?.agencyId || user?.id || '',
     limit: 100,
+    includeAllWorkspaces: true,
   }) as any
 
   const schedulerEventsRealtime = useQuery((api as any).schedulerEvents.list, {
@@ -113,7 +116,7 @@ export default function AdminPage() {
   const usageStatsRealtime = useQuery((api as any).adminUsage.getStats, {}) as any
 
   const statsLoading =
-    usersRealtime === undefined ||
+    usersPage === undefined ||
     clientsRealtime === undefined ||
     schedulerEventsRealtime === undefined ||
     adminNotificationsRealtime === undefined
@@ -121,34 +124,24 @@ export default function AdminPage() {
   const usageLoading = usageStatsRealtime === undefined
 
   const derived = useCallback(() => {
-    const usersPayload = usersRealtime
-    const usersData = usersPayload && typeof usersPayload === 'object' && 'data' in usersPayload ? usersPayload.data : usersPayload
-
+    const usersPayload = usersPage
     const clientsPayload = clientsRealtime
-    const clientsData = clientsPayload && typeof clientsPayload === 'object' && 'data' in clientsPayload ? clientsPayload.data : clientsPayload
-
     const schedulerPayload = schedulerEventsRealtime
-    const schedulerData = schedulerPayload && typeof schedulerPayload === 'object' && 'data' in schedulerPayload ? schedulerPayload.data : schedulerPayload
-
     const notificationsPayload = adminNotificationsRealtime
-    const notificationsData = notificationsPayload && typeof notificationsPayload === 'object' && 'data' in notificationsPayload ? notificationsPayload.data : notificationsPayload
 
     let totalUsers = 0
     let activeUsers = 0
-    if (usersData) {
-      totalUsers = typeof usersData.total === 'number' ? usersData.total : Array.isArray(usersData.users) ? usersData.users.length : 0
-      activeUsers =
-        typeof usersData.activeTotal === 'number'
-          ? usersData.activeTotal
-          : Array.isArray(usersData.users)
-            ? usersData.users.filter((u: { status: string }) => u.status === 'active').length
-            : 0
+    if (usersPayload) {
+      const usersArray = Array.isArray(usersPayload) ? usersPayload : []
+      totalUsers = usersArray.length
+      activeUsers = usersArray.filter((u: any) => u.status === 'active').length
     }
 
     let totalClients = 0
     let activeClients = 0
-    if (clientsData) {
-      totalClients = typeof clientsData.total === 'number' ? clientsData.total : Array.isArray(clientsData.clients) ? clientsData.clients.length : 0
+    if (clientsPayload && typeof clientsPayload === 'object') {
+      const clientsArray = Array.isArray(clientsPayload.items) ? clientsPayload.items : []
+      totalClients = clientsArray.length
       activeClients = totalClients
     }
 
@@ -158,7 +151,7 @@ export default function AdminPage() {
     let lastSyncTime: string | null = null
     let recentErrors = 0
     {
-      const events = Array.isArray(schedulerData?.events) ? schedulerData.events : Array.isArray(schedulerPayload?.events) ? schedulerPayload.events : []
+      const events = Array.isArray(schedulerPayload?.events) ? schedulerPayload.events : Array.isArray(schedulerPayload) && Array.isArray(schedulerPayload[0]?.events) ? schedulerPayload[0].events : []
       recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
       if (recentErrors > 5) schedulerHealth = 'error'
       else if (recentErrors > 0) schedulerHealth = 'warning'
@@ -170,10 +163,10 @@ export default function AdminPage() {
     }
 
     {
-      const notifications = Array.isArray(notificationsData?.notifications)
-        ? notificationsData.notifications
-        : Array.isArray(notificationsPayload?.notifications)
-          ? notificationsPayload.notifications
+      const notifications = Array.isArray(notificationsPayload?.notifications)
+        ? notificationsPayload.notifications
+        : Array.isArray(notificationsPayload)
+          ? notificationsPayload
           : []
       notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
         if (n.type === 'new_user_signup') {
@@ -202,7 +195,7 @@ export default function AdminPage() {
       } satisfies DashboardStats,
       activities: recentActivities.slice(0, 5),
     }
-  }, [usersRealtime, clientsRealtime, schedulerEventsRealtime, adminNotificationsRealtime])
+  }, [usersPage, clientsRealtime, schedulerEventsRealtime, adminNotificationsRealtime])
 
   const derivedResult = derived()
   const stats = derivedResult.stats

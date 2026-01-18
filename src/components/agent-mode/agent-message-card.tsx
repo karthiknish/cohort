@@ -65,7 +65,7 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex justify-end"
             >
-                <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-white">
                     {content}
                 </div>
             </motion.div>
@@ -90,16 +90,16 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
                 <div
                     className={cn(
                         'max-w-[90%] overflow-hidden rounded-xl border shadow-sm',
-                        isSuccess && 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/30',
-                        isError && 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30'
+                        isSuccess && 'border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950',
+                        isError && 'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-950'
                     )}
                 >
                     {/* Header */}
                     <div
                         className={cn(
                             'flex items-center gap-2 border-b px-4 py-2.5',
-                            isSuccess && 'border-emerald-200 bg-emerald-100/50 dark:border-emerald-800 dark:bg-emerald-900/30',
-                            isError && 'border-red-200 bg-red-100/50 dark:border-red-800 dark:bg-red-900/30'
+                            isSuccess && 'border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900',
+                            isError && 'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-900'
                         )}
                     >
                         {isSuccess ? (
@@ -109,7 +109,7 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
                         )}
                         <span
                             className={cn(
-                                'text-sm font-medium',
+                                'text-sm font-medium text-white',
                                 isSuccess && 'text-emerald-700 dark:text-emerald-300',
                                 isError && 'text-red-700 dark:text-red-300'
                             )}
@@ -120,8 +120,8 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
                             variant="secondary"
                             className={cn(
                                 'ml-auto text-xs',
-                                isSuccess && 'bg-emerald-200/50 text-emerald-700 dark:bg-emerald-800/50 dark:text-emerald-300',
-                                isError && 'bg-red-200/50 text-red-700 dark:bg-red-800/50 dark:text-red-300'
+                                isSuccess && 'bg-emerald-200 text-emerald-700 dark:bg-emerald-800 dark:text-emerald-300',
+                                isError && 'bg-red-200 text-red-700 dark:bg-red-800 dark:text-red-300'
                             )}
                         >
                             {getActionIcon(action)}
@@ -131,7 +131,7 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
 
                     {/* Content */}
                     <div className="px-4 py-3">
-                        <p className="text-sm leading-relaxed">{content}</p>
+                        <p className="text-sm leading-relaxed text-white">{content}</p>
 
                         {/* Route link for navigation actions */}
                         {route && isSuccess && (
@@ -164,7 +164,7 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-start"
         >
-            <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-2.5 text-sm">
+            <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-2.5 text-sm text-white">
                 {content}
             </div>
         </motion.div>

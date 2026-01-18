@@ -46,3 +46,15 @@ AUDIT_AND_IMPROVEMENT_PLAN.md
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# AI tool directories
+.agent/
+.cursor/
+.opencode/
+.claude/
+.codex/
+
+# Scripts
+/scripts/
+
+.github/skills/better-auth-best-practices/SKILL.md

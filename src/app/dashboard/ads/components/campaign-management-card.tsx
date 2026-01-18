@@ -748,6 +748,8 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
               data={groups}
               showPagination={false}
               maxHeight={420}
+              enableVirtualization={groups.length > 50}
+              rowHeight={48}
               onRowClick={(row) => openInsightsPage(row.id, row.name)}
               rowClassName="cursor-pointer"
               getRowId={(row) => row.id}
@@ -758,6 +760,8 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
               data={campaigns}
               showPagination={false}
               maxHeight={420}
+              enableVirtualization={campaigns.length > 50}
+              rowHeight={48}
               onRowClick={(row) => openInsightsPage(row.id, row.name)}
               rowClassName="cursor-pointer"
               getRowId={(row) => row.id}

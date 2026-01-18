@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -160,6 +161,33 @@ export function CollaborationMessagePane({
     if (isSearchActive) return []
     return groupMessages(visibleMessages.filter((m) => !m.parentMessageId))
   }, [visibleMessages, isSearchActive])
+
+  const flattenedMessages = useMemo(() => {
+    if (isSearchActive) return []
+    return messageGroups.flatMap((group) => {
+      const headerItem = group.dateSeparator
+        ? [{ id: `separator-${group.id}`, type: 'separator' as const, label: group.dateSeparator }]
+        : []
+
+      const messageItems = group.messages.map((message, index) => ({
+        id: message.id,
+        type: 'message' as const,
+        message,
+        isFirstInGroup: index === 0,
+      }))
+
+      return [...headerItem, ...messageItems]
+    })
+  }, [isSearchActive, messageGroups])
+
+  const messageListRef = useRef<HTMLDivElement | null>(null)
+  const virtualizer = useVirtualizer({
+    count: isSearchActive ? 0 : flattenedMessages.length,
+    getScrollElement: () => messageListRef.current,
+    estimateSize: (index) => (flattenedMessages[index]?.type === 'separator' ? 44 : 140),
+    overscan: 6,
+  })
+  const virtualItems = virtualizer.getVirtualItems()
 
   const typingIndicator = useMemo(() => {
     if (!typingParticipants || typingParticipants.length === 0) return ''
@@ -570,7 +598,7 @@ export function CollaborationMessagePane({
         isActive={isSearchActive}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" ref={messageListRef}>
         <div className="space-y-4 p-4">
           {isLoading && (
             <div className="flex justify-center py-6 text-muted-foreground">
@@ -604,7 +632,42 @@ export function CollaborationMessagePane({
             </div>
           )}
 
-          {messageGroups.map((group) => (
+          {!isSearchActive && (
+            <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+              {virtualItems.map((virtualItem) => {
+                const item = flattenedMessages[virtualItem.index]
+                if (!item) return null
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    {item.type === 'separator' ? (
+                      <DateSeparator label={item.label} />
+                    ) : (
+                      <div>
+                        {renderMessage(item.message, {
+                          isReply: false,
+                          isSearchResult: false,
+                          showAvatar: item.isFirstInGroup,
+                          showHeader: item.isFirstInGroup,
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {isSearchActive && messageGroups.map((group) => (
             <div key={group.id} className="group-block mb-4">
               {group.dateSeparator && <DateSeparator label={group.dateSeparator} />}
               {group.messages.map((message, messageIndex) => {
@@ -626,6 +689,7 @@ export function CollaborationMessagePane({
           <div ref={messagesEndRef} />
         </div>
       </div>
+
 
       <MessageComposer
         channel={channel}

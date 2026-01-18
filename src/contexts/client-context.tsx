@@ -224,18 +224,26 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(false)
 
-    if (Array.isArray(convexClients) && convexClients.length === 0) {
+    const rows = Array.isArray(convexClients)
+      ? convexClients
+      : convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)
+        ? (convexClients as any).items
+        : []
+
+    if (rows.length === 0) {
       setError('No clients found for this workspace')
       return
     }
 
-    if (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items) && (convexClients as any).items.length === 0) {
-      setError('No clients found for this workspace')
-      return
+    const storedSelection = selectedClientId
+
+    if (!storedSelection || !rows.some((client: any) => client.legacyId === storedSelection)) {
+      const firstClientId = rows[0]?.legacyId ?? null
+      setSelectedClientId(firstClientId)
     }
 
     setError(null)
-  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey])
+  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey, selectedClientId])
 
   useEffect(() => {
     if (previewEnabled) {

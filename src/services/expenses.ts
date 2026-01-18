@@ -1,4 +1,5 @@
 import type { Expense, ExpenseAttachment, ExpenseCategory, ExpenseReportResponse, Vendor } from '@/types/expenses'
+import { cache } from 'react'
 
 export type CreateExpenseInput = {
   description: string
@@ -60,9 +61,11 @@ function requireProvider(): ExpenseServices {
   return provider
 }
 
-export async function listExpenseCategories(options?: { includeInactive?: boolean }) {
+async function listExpenseCategoriesInternal(options?: { includeInactive?: boolean }) {
   return requireProvider().listExpenseCategories(options)
 }
+
+export const listExpenseCategories = cache(listExpenseCategoriesInternal)
 
 export async function createExpenseCategory(input: {
   name: string
@@ -82,9 +85,11 @@ export async function deleteExpenseCategory(id: string) {
   return requireProvider().deleteExpenseCategory(id)
 }
 
-export async function listVendors(options?: { includeInactive?: boolean; q?: string }) {
+async function listVendorsInternal(options?: { includeInactive?: boolean; q?: string }) {
   return requireProvider().listVendors(options)
 }
+
+export const listVendors = cache(listVendorsInternal)
 
 export async function createVendor(input: {
   name: string
@@ -105,9 +110,11 @@ export async function deleteVendor(id: string) {
   return requireProvider().deleteVendor(id)
 }
 
-export async function listExpenses(options?: { employeeId?: string; status?: string; limit?: number }) {
+async function listExpensesInternal(options?: { employeeId?: string; status?: string; limit?: number }) {
   return requireProvider().listExpenses(options)
 }
+
+export const listExpenses = cache(listExpensesInternal)
 
 export async function createExpense(input: CreateExpenseInput) {
   return requireProvider().createExpense(input)

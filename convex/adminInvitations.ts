@@ -1,17 +1,6 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
+import { adminQuery, adminMutation } from './functions'
 import { Errors } from './errors'
-
-function requireAdmin(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-
-  const role = (identity as any).role
-  if (role !== 'admin') {
-    throw Errors.auth.adminRequired()
-  }
-}
 
 function nowMs() {
   return Date.now()
@@ -34,7 +23,7 @@ function generateToken(): string {
   return token
 }
 
-export const listInvitations = query({
+export const listInvitations = adminQuery({
   args: {
     status: v.optional(
       v.union(v.literal('pending'), v.literal('accepted'), v.literal('expired'), v.literal('revoked'))
@@ -42,9 +31,6 @@ export const listInvitations = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 100)
 
     const base = args.status
@@ -75,7 +61,7 @@ export const listInvitations = query({
   },
 })
 
-export const createInvitation = mutation({
+export const createInvitation = adminMutation({
   args: {
     email: v.string(),
     role: v.union(v.literal('admin'), v.literal('team'), v.literal('client')),
@@ -85,9 +71,6 @@ export const createInvitation = mutation({
     invitedByName: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const normalized = normalizeEmail(args.email)
 
     const existingUser = await ctx.db
@@ -147,7 +130,7 @@ export const createInvitation = mutation({
   },
 })
 
-export const bulkUpsertInvitations = mutation({
+export const bulkUpsertInvitations = adminMutation({
   args: {
     invitations: v.array(
       v.object({
@@ -172,9 +155,6 @@ export const bulkUpsertInvitations = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     for (const invitation of args.invitations) {
       const normalized = normalizeEmail(invitation.email)
 
@@ -210,12 +190,9 @@ export const bulkUpsertInvitations = mutation({
   },
 })
 
-export const deleteInvitation = mutation({
+export const deleteInvitation = adminMutation({
   args: { id: v.id('invitations') },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireAdmin(identity)
-
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw Errors.resource.notFound('Invitation')

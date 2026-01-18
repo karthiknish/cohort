@@ -389,6 +389,46 @@ export const getStripeCustomerId = query({
   },
 })
 
+// Public query - no auth required for test user management
+export const getUserByEmailPublic = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const normalized = normalizeEmail(args.email)
+    if (!normalized.emailLower) return { found: false, user: null }
+
+    const rows = await ctx.db
+      .query('users')
+      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .collect()
+
+    if (rows.length === 0) return { found: false, user: null }
+
+    let best = rows[0]
+    for (const row of rows) {
+      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+      if (rowUpdated > bestUpdated) {
+        best = row
+      }
+    }
+
+    return { 
+      found: true, 
+      user: {
+        _id: best._id,
+        legacyId: best.legacyId,
+        email: best.email,
+        name: best.name,
+        role: best.role,
+        status: best.status,
+        agencyId: best.agencyId,
+        createdAtMs: best.createdAtMs,
+        updatedAtMs: best.updatedAtMs,
+      }
+    }
+  },
+})
+
 /**
  * Set Stripe customer ID for a user.
  * Creates user record if it doesn't exist.
@@ -435,5 +475,42 @@ export const setStripeCustomerId = mutation({
     })
 
     return { ok: true, created: true }
+  },
+})
+
+// Public mutation - no auth required for test user management
+export const updateUserRoleStatusPublic = mutation({
+  args: {
+    email: v.string(),
+    role: v.string(),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalized = normalizeEmail(args.email)
+    if (!normalized.emailLower) throw new Error('Invalid email')
+
+    const matches = await ctx.db
+      .query('users')
+      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .collect()
+
+    if (matches.length === 0) throw new Error('User not found')
+
+    let best = matches[0]
+    for (const row of matches) {
+      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+      if (rowUpdated > bestUpdated) {
+        best = row
+      }
+    }
+
+    await ctx.db.patch(best._id, {
+      role: args.role,
+      status: args.status,
+      updatedAtMs: nowMs(),
+    })
+
+    return { ok: true, legacyId: best.legacyId, updatedUserId: best._id, duplicateCount: matches.length }
   },
 })

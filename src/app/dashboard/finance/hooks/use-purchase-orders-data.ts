@@ -144,7 +144,7 @@ export function usePurchaseOrdersData() {
         throw new Error('Missing workspace')
       }
 
-      const vendor = newPO.vendorId ? vendors.find((v) => v.id === newPO.vendorId) : null
+      const vendorName = newPO.vendorId ? vendorLookup.get(newPO.vendorId) ?? null : null
 
       const legacyId = crypto.randomUUID()
       const timestampMs = Date.now()
@@ -154,7 +154,7 @@ export function usePurchaseOrdersData() {
         number: newPO.number.trim() ? newPO.number.trim() : null,
         status: 'draft',
         vendorId: newPO.vendorId.trim() ? newPO.vendorId.trim() : null,
-        vendorName: vendor?.name ?? null,
+        vendorName,
         currency: newPO.currency,
         items,
         totalAmount: items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
@@ -196,7 +196,7 @@ export function usePurchaseOrdersData() {
     } finally {
       setSubmitting(false)
     }
-  }, [convexUpsertPurchaseOrder, newPO.currency, newPO.items, newPO.notes, newPO.number, newPO.vendorId, toast, user?.id, vendors, workspaceId])
+  }, [convexUpsertPurchaseOrder, newPO.currency, newPO.items, newPO.notes, newPO.number, newPO.vendorId, toast, user?.id, vendorLookup, workspaceId])
 
   const updateDraft = useCallback(
     async (id: string, patch: Partial<Omit<PurchaseOrder, 'id'>>) => {

@@ -2,6 +2,7 @@
 // META ADS METRICS - Account discovery, metrics fetching, health checks
 // =============================================================================
 
+import { cache } from 'react'
 import { formatDate } from '@/lib/dates'
 
 import {
@@ -119,7 +120,7 @@ export async function fetchMetaAdAccounts(options: {
 // FETCH META ADS METRICS
 // =============================================================================
 
-export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<NormalizedMetric[]> {
+async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<NormalizedMetric[]> {
   const { 
     accessToken, 
     adAccountId, 
@@ -235,6 +236,8 @@ export async function fetchMetaAdsMetrics(options: MetaAdsOptions): Promise<Norm
 
   return metrics
 }
+
+export const fetchMetaAdsMetrics = cache(fetchMetaAdsMetricsInternal)
 
 // =============================================================================
 // HEALTH CHECK FOR META INTEGRATION

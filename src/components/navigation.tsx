@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import {
@@ -79,10 +79,13 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const prefetchedRef = useRef<Set<string>>(new Set())
+
   const prefetchRoute = useCallback((href: string) => {
     if (!href) return
     const target = href.split('?')[0]
-    if (target && target !== pathname) {
+    if (target && target !== pathname && !prefetchedRef.current.has(target)) {
+      prefetchedRef.current.add(target)
       try {
         router.prefetch(href)
       } catch {
@@ -108,7 +111,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
   }, [user?.role])
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delayDuration={300} skipDelayDuration={100}>
       <nav className="flex flex-1 flex-col space-y-4">
         <ScrollArea className="flex-1">
           <div className="space-y-1 px-1">
@@ -118,37 +121,32 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
-              const navButton = (
-                <Button
+              const linkClasses = cn(
+                'flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                collapsed ? 'justify-center px-0' : 'justify-start',
+                isActive
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
+              )
+
+              const navLink = (
+                <Link
                   key={item.name}
-                  asChild
-                  variant={isActive ? 'default' : 'ghost'}
-                  className={cn(
-                    'w-full gap-2 text-sm font-medium transition-all duration-200',
-                    collapsed ? 'justify-center px-0' : 'justify-start',
-                    isActive
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
-                  )}
+                  href={item.href}
+                  onClick={onNavigate}
+                  onMouseEnter={() => prefetchRoute(item.href)}
+                  className={linkClasses}
                 >
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    onMouseEnter={() => prefetchRoute(item.href)}
-                    onFocus={() => prefetchRoute(item.href)}
-                    className="flex w-full items-center gap-2"
-                  >
-                    <item.icon className={cn('h-4 w-4 shrink-0 transition-transform duration-200', !isActive && 'group-hover:scale-110')} />
-                    <span className={cn(collapsed && 'hidden', 'truncate')}>{item.name}</span>
-                  </Link>
-                </Button>
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span className="truncate">{item.name}</span>}
+                </Link>
               )
 
               if (collapsed) {
                 return (
                   <Tooltip key={item.name}>
                     <TooltipTrigger asChild>
-                      {navButton}
+                      {navLink}
                     </TooltipTrigger>
                     <TooltipContent side="right" className="flex flex-col gap-0.5">
                       <span className="font-medium">{item.name}</span>
@@ -158,7 +156,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                 )
               }
 
-              return navButton
+              return navLink
             })}
           </div>
         </ScrollArea>
@@ -169,84 +167,58 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
             collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
+                  <Link
+                    href="/admin"
+                    onClick={onNavigate}
+                    onMouseEnter={() => prefetchRoute('/admin')}
+                    className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
                   >
-                    <Link
-                      href="/admin"
-                      onClick={onNavigate}
-                      onMouseEnter={() => prefetchRoute('/admin')}
-                      onFocus={() => prefetchRoute('/admin')}
-                    >
-                      <Shield className="h-4 w-4" />
-                      <span className={cn(collapsed && 'hidden')}>Admin</span>
-                    </Link>
-                  </Button>
+                    <Shield className="h-4 w-4" />
+                  </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">
                   <span className="font-medium">Admin Panel</span>
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <Button
-                asChild
-                variant="ghost"
-                className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
+              <Link
+                href="/admin"
+                onClick={onNavigate}
+                onMouseEnter={() => prefetchRoute('/admin')}
+                className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
               >
-                <Link
-                  href="/admin"
-                  onClick={onNavigate}
-                  onMouseEnter={() => prefetchRoute('/admin')}
-                  onFocus={() => prefetchRoute('/admin')}
-                >
-                  <Shield className="mr-2 h-4 w-4" />
-                  <span className={cn(collapsed && 'hidden')}>Admin Panel</span>
-                </Link>
-              </Button>
+                <Shield className="h-4 w-4" />
+                <span>Admin Panel</span>
+              </Link>
             )
           )}
 
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
+                <Link
+                  href="/settings"
+                  onClick={onNavigate}
+                  onMouseEnter={() => prefetchRoute('/settings')}
+                  className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
                 >
-                  <Link
-                    href="/settings"
-                    onClick={onNavigate}
-                    onMouseEnter={() => prefetchRoute('/settings')}
-                    onFocus={() => prefetchRoute('/settings')}
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span className={cn(collapsed && 'hidden')}>Settings</span>
-                  </Link>
-                </Button>
+                  <Settings className="h-4 w-4" />
+                </Link>
               </TooltipTrigger>
               <TooltipContent side="right">
                 <span className="font-medium">Settings</span>
               </TooltipContent>
             </Tooltip>
           ) : (
-            <Button
-              asChild
-              variant="ghost"
-              className={cn('w-full gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200', collapsed ? 'justify-center px-0' : 'justify-start')}
+            <Link
+              href="/settings"
+              onClick={onNavigate}
+              onMouseEnter={() => prefetchRoute('/settings')}
+              className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
             >
-              <Link
-                href="/settings"
-                onClick={onNavigate}
-                onMouseEnter={() => prefetchRoute('/settings')}
-                onFocus={() => prefetchRoute('/settings')}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <span className={cn(collapsed && 'hidden')}>Settings</span>
-              </Link>
-            </Button>
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </Link>
           )}
         </div>
       </nav>
@@ -379,21 +351,28 @@ export function Header() {
             </Sheet>
           </div>
 
-          {/* Workspace selector - grows to fill space */}
-          <div className="min-w-0 flex-1 sm:max-w-[260px]">
+          {/* Workspace selector */}
+          <div className="min-w-0 flex-1 sm:flex-none sm:max-w-[260px]">
             <ClientWorkspaceSelector className="w-full" />
           </div>
 
-          {/* Search / Command menu - desktop only */}
-          <div className="hidden sm:block sm:flex-1 sm:max-w-md">
+          {/* Search / Command menu (takes remaining space on desktop) */}
+          <div className="hidden sm:flex flex-1 sm:max-w-md">
             <CommandMenu onOpenHelp={() => {
               setShowWelcome(false)
               void onHelpOpenChange(true)
             }} />
           </div>
 
-          {/* Right side actions */}
+          {/* Right side actions (pinned to the right) */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            {/* Mobile search button - only visible on small screens */}
+            <div className="sm:hidden">
+              <CommandMenu onOpenHelp={() => {
+                setShowWelcome(false)
+                void onHelpOpenChange(true)
+              }} />
+            </div>
 
             <TooltipProvider>
               <Tooltip>

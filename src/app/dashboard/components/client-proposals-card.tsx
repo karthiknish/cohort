@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { memo } from 'react'
 import Link from 'next/link'
 import { FileText, ArrowRight, Clock, CheckCircle2, FileEdit } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,7 +15,7 @@ interface ClientProposalsCardProps {
     loading: boolean
 }
 
-export function ClientProposalsCard({ proposals, loading }: ClientProposalsCardProps) {
+function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCardProps) {
     const stats = React.useMemo(() => {
         const total = proposals.length
         const ready = proposals.filter((p) => p.status === 'ready' || p.status === 'sent').length
@@ -115,3 +115,5 @@ export function ClientProposalsCard({ proposals, loading }: ClientProposalsCardP
         </Card>
     )
 }
+
+export const ClientProposalsCard = memo(ClientProposalsCardComponent)

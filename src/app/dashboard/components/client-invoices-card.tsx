@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { memo } from 'react'
 import Link from 'next/link'
 import { CreditCard, ArrowRight, Clock, AlertTriangle } from 'lucide-react'
 
@@ -37,7 +37,7 @@ function getInvoiceStatusVariant(status: FinanceInvoice['status']): 'default' | 
   return 'outline'
 }
 
-export function ClientInvoicesCard({ financeSummary, loading, error }: Props) {
+function ClientInvoicesCardComponent({ financeSummary, loading, error }: Props) {
   if (loading) {
     return <Skeleton className="h-[300px] w-full rounded-xl" />
   }
@@ -188,3 +188,5 @@ export function ClientInvoicesCard({ financeSummary, loading, error }: Props) {
     </Card>
   )
 }
+
+export const ClientInvoicesCard = memo(ClientInvoicesCardComponent)

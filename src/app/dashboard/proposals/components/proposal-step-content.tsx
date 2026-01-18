@@ -70,6 +70,7 @@ function ProposalStepContentComponent({
               </div>
               <Input
                 id="companyName"
+                name="companyName"
                 placeholder="Acme Corporation"
                 value={formState.company.name}
                 onChange={(event) => onUpdateField(['company', 'name'], event.target.value)}
@@ -92,6 +93,7 @@ function ProposalStepContentComponent({
               </div>
               <Input
                 id="website"
+                name="website"
                 type="url"
                 placeholder="https://acme.com"
                 value={formState.company.website}
@@ -109,6 +111,7 @@ function ProposalStepContentComponent({
               </div>
               <Input
                 id="industry"
+                name="industry"
                 placeholder="e.g. SaaS, Retail, Healthcare"
                 value={formState.company.industry}
                 onChange={(event) => onUpdateField(['company', 'industry'], event.target.value)}
@@ -131,6 +134,7 @@ function ProposalStepContentComponent({
               </div>
               <Input
                 id="companySize"
+                name="companySize"
                 placeholder="e.g. 25 employees"
                 value={formState.company.size}
                 onChange={(event) => onUpdateField(['company', 'size'], event.target.value)}
@@ -146,6 +150,7 @@ function ProposalStepContentComponent({
             </div>
             <Textarea
               id="locations"
+              name="locations"
               placeholder="List primary offices or regions served"
               value={formState.company.locations}
               onChange={(event) => onUpdateField(['company', 'locations'], event.target.value)}
@@ -163,6 +168,7 @@ function ProposalStepContentComponent({
               <Label htmlFor="budget">Monthly marketing budget</Label>
               <Input
                 id="budget"
+                name="budget"
                 placeholder="e.g. £7,500"
                 value={formState.marketing.budget}
                 onChange={(event) => onUpdateField(['marketing', 'budget'], event.target.value)}
@@ -237,6 +243,7 @@ function ProposalStepContentComponent({
                       <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{handle}</Label>
                     </div>
                     <Input
+                      name={`social-${handle}`}
                       placeholder={`@company`}
                       value={formState.marketing.socialHandles[handle] ?? ''}
                       onChange={(event) => onChangeSocialHandle(handle, event.target.value)}
@@ -294,6 +301,7 @@ function ProposalStepContentComponent({
             <p className="text-xs text-muted-foreground mb-2">Describe your ideal customer persona.</p>
             <Textarea
               id="audience"
+              name="audience"
               placeholder="e.g. Marketing Managers at B2B SaaS companies with 50-200 employees"
               value={formState.goals.audience}
               onChange={(event) => onUpdateField(['goals', 'audience'], event.target.value)}
@@ -328,6 +336,7 @@ function ProposalStepContentComponent({
             </div>
             <div className="pt-2">
               <Input
+                name="customChallenge"
                 placeholder="Other specific challenge..."
                 value={formState.goals.customChallenge}
                 onChange={(event) => onUpdateField(['goals', 'customChallenge'], event.target.value)}
@@ -384,6 +393,7 @@ function ProposalStepContentComponent({
             <p className="text-xs text-muted-foreground mb-2">Any other service or specific deliverable you need?</p>
             <Textarea
               id="otherService"
+              name="otherService"
               placeholder="e.g. CRO Audit, Landing Page Design, etc."
               value={formState.scope.otherService}
               onChange={(event) => onUpdateField(['scope', 'otherService'], event.target.value)}
@@ -426,6 +436,7 @@ function ProposalStepContentComponent({
             <p className="text-xs text-muted-foreground mb-2">Share launches or milestones we should plan for.</p>
             <Textarea
               id="upcomingEvents"
+              name="upcomingEvents"
               placeholder="e.g. Q1 Product Launch, Black Friday Sales, etc."
               value={formState.timelines.upcomingEvents}
               onChange={(event) => onUpdateField(['timelines', 'upcomingEvents'], event.target.value)}

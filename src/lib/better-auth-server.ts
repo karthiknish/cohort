@@ -1,70 +1,27 @@
-import { betterAuth } from 'better-auth'
-
-let cachedAuth: ReturnType<typeof betterAuth> | null = null
-
-function hasValidSecret(secret: string | undefined): secret is string {
-  return typeof secret === 'string' && secret.trim().length >= 32
-}
+/**
+ * @deprecated This file is deprecated. Use the consolidated auth configuration in convex/auth.ts instead.
+ * 
+ * The canonical Better Auth configuration now lives in convex/auth.ts which:
+ * - Uses Convex as the database backend
+ * - Properly configures BETTER_AUTH_SECRET and BETTER_AUTH_URL
+ * - Has secure cookie settings, rate limiting, and account linking
+ * 
+ * For server-side auth operations, use the helpers from @/lib/auth-server instead:
+ * - isAuthenticated()
+ * - getToken()
+ * - fetchAuthQuery(), fetchAuthMutation(), fetchAuthAction()
+ */
 
 export function getBetterAuthOrNull() {
-  const secret = process.env.BETTER_AUTH_SECRET
-  if (!hasValidSecret(secret)) {
-    return null
-  }
-
-  if (cachedAuth) {
-    return cachedAuth
-  }
-
-  const baseURL =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    'http://localhost:3000'
-
-  // Build social providers config dynamically based on available env vars
-  const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {}
-
-  const googleClientId = process.env.GOOGLE_CLIENT_ID
-  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
-  if (googleClientId && googleClientSecret) {
-    socialProviders.google = {
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-    }
-  }
-
-  cachedAuth = betterAuth({
-    secret,
-    baseURL,
-    emailAndPassword: {
-      enabled: true,
-    },
-    socialProviders,
-    // Stateless mode is enabled automatically when no database is configured.
-    session: {
-      cookieCache: {
-        enabled: true,
-        // 7 days cache duration (seconds)
-        maxAge: 7 * 24 * 60 * 60,
-        strategy: 'compact',
-        refreshCache: true,
-      },
-    },
-    account: {
-      storeStateStrategy: 'cookie',
-      storeAccountCookie: true,
-    },
-  })
-
-  return cachedAuth
+  console.warn(
+    '[DEPRECATED] getBetterAuthOrNull() is deprecated. Use auth helpers from @/lib/auth-server instead.'
+  )
+  return null
 }
 
 export function getBetterAuth() {
-  const auth = getBetterAuthOrNull()
-  if (!auth) {
-    throw new Error(
-      'Better Auth is not configured. Set BETTER_AUTH_SECRET (>= 32 chars) and NEXT_PUBLIC_SITE_URL.'
-    )
-  }
-  return auth
+  throw new Error(
+    '[DEPRECATED] getBetterAuth() is deprecated. Use auth helpers from @/lib/auth-server instead. ' +
+    'The canonical auth config is in convex/auth.ts.'
+  )
 }

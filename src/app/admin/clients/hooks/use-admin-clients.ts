@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { useConvex, useMutation } from 'convex/react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { useConvex } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api-client'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -96,47 +96,44 @@ export interface UseAdminClientsReturn {
 export function useAdminClients(): UseAdminClientsReturn {
     const { user } = useAuth()
     const { toast } = useToast()
-
-    const workspaceId = user?.agencyId ?? null
     const convex = useConvex()
 
-    const clientsInfiniteQuery = useInfiniteQuery({
-        queryKey: ['adminClients', workspaceId],
-        enabled: Boolean(workspaceId),
-        initialPageParam: null as { nameLower: string; legacyId: string } | null,
-        queryFn: async ({ pageParam }) => {
-            if (!workspaceId) {
-                return [] as Array<any>
-            }
+    const workspaceId = user?.agencyId ?? null
 
-            const page = await convex.query(clientsApi.list, {
+    const clientsQuery = useQuery({
+        queryKey: ['adminClients', workspaceId],
+        queryFn: async () => {
+            if (!workspaceId) return { items: [], nextCursor: null }
+            return await convex.query((clientsApi as any).list, {
                 workspaceId,
                 limit: 100,
-                afterNameLower: pageParam?.nameLower,
-                afterLegacyId: pageParam?.legacyId,
+                cursor: null,
+                includeAllWorkspaces: true,
             })
-
-            return page
         },
-        getNextPageParam: (lastPage) => {
-            if (!Array.isArray(lastPage) || lastPage.length === 0) {
-                return null
-            }
+        enabled: Boolean(workspaceId),
+    })
 
-            const last = lastPage[lastPage.length - 1]
-            const name = typeof last?.name === 'string' ? last.name : ''
-            const legacyId = typeof last?.legacyId === 'string' ? last.legacyId : ''
-            if (!legacyId) {
-                return null
-            }
-
-            return { nameLower: name.toLowerCase(), legacyId }
+    const createClientMutation = useMutation({
+        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).create, args),
+        onSuccess: () => {
+            clientsQuery.refetch()
         },
     })
 
-    const convexCreateClient = useMutation(clientsApi.create)
-    const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
-    const convexAddTeamMember = useMutation(clientsApi.addTeamMember)
+    const softDeleteClientMutation = useMutation({
+        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).softDelete, args),
+        onSuccess: () => {
+            clientsQuery.refetch()
+        },
+    })
+
+    const addTeamMemberMutation = useMutation({
+        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).addTeamMember, args),
+        onSuccess: () => {
+            clientsQuery.refetch()
+        },
+    })
 
     // Client list state (derived from Convex query)
     const [clientsError, setClientsError] = useState<string | null>(null)
@@ -172,7 +169,10 @@ export function useAdminClients(): UseAdminClientsReturn {
 
     // Transform Convex data to ClientRecord format
     const clients = useMemo<ClientRecord[]>(() => {
-        const rows = clientsInfiniteQuery.data?.pages.flatMap((page) => (Array.isArray(page) ? page : [])) ?? []
+        const data = clientsQuery.data
+        if (!data || typeof data !== 'object') return []
+
+        const rows = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : []
 
         const list: ClientRecord[] = rows.map((row: any) => ({
             id: row.legacyId,
@@ -194,16 +194,16 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         list.sort((a, b) => a.name.localeCompare(b.name))
         return list
-    }, [clientsInfiniteQuery.data?.pages])
+    }, [clientsQuery.data])
 
-    // Dummy setClients for backward compatibility (Convex handles state)
+    // Dummy setClients for backward compatibility (TanStack handles state)
     const setClients = useCallback((_updater: React.SetStateAction<ClientRecord[]>) => {
-        // No-op: Convex query automatically updates
+        // No-op: TanStack Query automatically updates
     }, [])
 
-    const clientsLoading = clientsInfiniteQuery.isLoading
-    const loadingMore = clientsInfiniteQuery.isFetchingNextPage
-    const nextCursor = clientsInfiniteQuery.hasNextPage ? 'more' : null
+    const clientsLoading = clientsQuery.isLoading
+    const loadingMore = false
+    const nextCursor = null
 
     const existingTeamMembers = useMemo(
         () => clients.reduce((total, client) => total + client.teamMembers.length, 0),
@@ -211,16 +211,13 @@ export function useAdminClients(): UseAdminClientsReturn {
     )
 
     const loadClients = useCallback(async () => {
-        await clientsInfiniteQuery.refetch()
-    }, [clientsInfiniteQuery])
+        await clientsQuery.refetch()
+    }, [clientsQuery])
 
     const handleLoadMore = useCallback(async () => {
-        if (!clientsInfiniteQuery.hasNextPage || clientsInfiniteQuery.isFetchingNextPage) {
-            return
-        }
-
-        await clientsInfiniteQuery.fetchNextPage()
-    }, [clientsInfiniteQuery])
+        // No infinite scroll with single query
+        await clientsQuery.refetch()
+    }, [clientsQuery])
 
     // Sync invoice client selection
     useEffect(() => {
@@ -254,7 +251,7 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         try {
             setDeletingClientId(clientPendingDelete.id)
-            await convexSoftDeleteClient({
+            await softDeleteClientMutation.mutateAsync({
                 workspaceId,
                 legacyId: clientPendingDelete.id,
                 deletedAtMs: Date.now(),
@@ -270,7 +267,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setDeletingClientId(null)
         }
-    }, [clientPendingDelete, workspaceId, convexSoftDeleteClient, toast])
+    }, [clientPendingDelete, workspaceId, softDeleteClientMutation, toast])
 
     // Team member dialog handlers
     const handleTeamDialogChange = useCallback((open: boolean) => {
@@ -303,7 +300,7 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         try {
             setAddingMember(true)
-            await convexAddTeamMember({
+            await addTeamMemberMutation.mutateAsync({
                 workspaceId,
                 legacyId: clientPendingMembers.id,
                 name,
@@ -322,7 +319,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setAddingMember(false)
         }
-    }, [clientPendingMembers, workspaceId, memberName, memberRole, convexAddTeamMember, toast])
+    }, [clientPendingMembers, workspaceId, memberName, memberRole, addTeamMemberMutation, toast])
 
     // Invoice dialog handlers
     const handleInvoiceDialogChange = useCallback(
@@ -479,7 +476,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         setClientSaving(true)
 
         try {
-            const result = await convexCreateClient({
+            const result = await createClientMutation.mutateAsync({
                 workspaceId,
                 name,
                 accountManager,
@@ -497,7 +494,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setClientSaving(false)
         }
-    }, [workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, convexCreateClient, user?.id, toast])
+    }, [workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, createClientMutation, user?.id, toast])
 
     return {
         // Client list
