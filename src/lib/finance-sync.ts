@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type Stripe from 'stripe'
 import { ConvexHttpClient } from 'convex/browser'
 
@@ -33,6 +34,14 @@ function getConvexClient(): ConvexHttpClient | null {
   _convexClient = new ConvexHttpClient(url)
   return _convexClient
 }
+
+const getRevenueByLegacyId = cache(async (convex: ConvexHttpClient, workspaceId: string, legacyId: string) => {
+  return await convex.query(api.financeRevenue.getByLegacyId, { workspaceId, legacyId })
+})
+
+const getClientByLegacyId = cache(async (convex: ConvexHttpClient, workspaceId: string, legacyId: string) => {
+  return await convex.query(api.clients.getByLegacyIdServer, { workspaceId, legacyId })
+})
 
 export function parseTimestampMillis(value: Date | string | number | null | undefined): number | null {
   if (!value) {
@@ -177,10 +186,7 @@ export async function recordInvoiceRevenue(params: {
 
   try {
     // Get existing revenue record to calculate new total
-    const existing = await convex.query(api.financeRevenue.getByLegacyId, {
-      workspaceId,
-      legacyId: docId,
-    })
+    const existing = await getRevenueByLegacyId(convex, workspaceId, docId)
 
     const existingRevenue = existing?.revenue ?? 0
     const existingOperatingExpenses = existing?.operatingExpenses ?? 0
@@ -313,10 +319,7 @@ export async function syncInvoiceRecords(
     deltaRefunded = incomingRefundTotal > previousRefunded ? incomingRefundTotal - previousRefunded : 0
 
     // 2. Update client record with latest invoice info
-    const existingClient = await convex.query(api.clients.getByLegacyIdServer, {
-      workspaceId,
-      legacyId: clientId,
-    })
+    const existingClient = await getClientByLegacyId(convex, workspaceId, clientId)
 
     const existingIssuedAtMillis = existingClient?.lastInvoiceIssuedAtMs ?? null
 

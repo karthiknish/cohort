@@ -5,6 +5,7 @@ import { betterAuth } from "better-auth/minimal";
 import { components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
+import { v } from "convex/values";
 
 import authConfig from "./auth.config";
 
@@ -107,7 +108,16 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
 // Example function for getting the current user
 export const getCurrentUser = query({
   args: {},
+  // Returns null if not authenticated, or the authenticated user object
+  returns: v.union(v.null(), v.any()),
   handler: async (ctx) => {
     return authComponent.getAuthUser(ctx);
   },
 });
+
+// Type exports for better TypeScript integration
+// Use: import type { Session, User } from '@/convex/auth'
+export type Auth = ReturnType<typeof createAuth>;
+export type Session = Auth["$Infer"]["Session"];
+export type User = Session["user"];
+

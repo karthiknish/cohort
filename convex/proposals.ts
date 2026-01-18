@@ -1,7 +1,16 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-import { workspaceQuery, workspaceMutation, authenticatedMutation, adminMutation } from './functions'
+import {
+  workspaceQuery,
+  workspaceMutation,
+  authenticatedMutation,
+  adminMutation,
+  zWorkspaceQuery,
+  zWorkspaceMutation,
+  zAdminMutation,
+} from './functions'
+import { z } from 'zod/v4'
 
 function nowMs() {
   return Date.now()
@@ -9,11 +18,32 @@ function nowMs() {
 
 function generateId(prefix: string) {
   const rand = Math.random().toString(36).slice(2, 10)
-  return `${prefix}-${Date.now().toString(36)}-${rand}`
+  return `${prefix}-${Date.now().toString(36)}-${rand}` 
 }
+ 
+const proposalZ = z.object({
+  legacyId: z.string(),
+  ownerId: z.string().nullable(),
+  status: z.string(),
+  stepProgress: z.number(),
+  formData: z.any(),
+  aiInsights: z.any().nullable(),
+  aiSuggestions: z.string().nullable(),
+  pdfUrl: z.string().nullable(),
+  pptUrl: z.string().nullable(),
+  pdfStorageId: z.string().nullable().optional(),
+  pptStorageId: z.string().nullable().optional(),
+  clientId: z.string().nullable(),
+  clientName: z.string().nullable(),
+  presentationDeck: z.any().nullable(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+  lastAutosaveAtMs: z.number().nullable(),
+})
 
-export const getByLegacyId = workspaceQuery({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = zWorkspaceQuery({
+  args: { workspaceId: z.string(), legacyId: z.string() },
+  returns: proposalZ,
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('proposals')
@@ -44,15 +74,16 @@ export const getByLegacyId = workspaceQuery({
   },
 })
 
-export const list = workspaceQuery({
+export const list = zWorkspaceQuery({
   args: {
-    workspaceId: v.string(),
-    limit: v.number(),
-    status: v.optional(v.string()),
-    clientId: v.optional(v.string()),
-    afterUpdatedAtMs: v.optional(v.number()),
-    afterLegacyId: v.optional(v.string()),
+    workspaceId: z.string(),
+    limit: z.number(),
+    status: z.string().optional(),
+    clientId: z.string().optional(),
+    afterUpdatedAtMs: z.number().optional(),
+    afterLegacyId: z.string().optional(),
   },
+  returns: z.array(proposalZ),
   handler: async (ctx, args) => {
     let q = ctx.db
       .query('proposals')
@@ -104,8 +135,9 @@ export const list = workspaceQuery({
   },
 })
 
-export const count = workspaceQuery({
-  args: { workspaceId: v.string() },
+export const count = zWorkspaceQuery({
+  args: { workspaceId: z.string() },
+  returns: z.object({ count: z.number() }),
   handler: async (ctx, args) => {
     const rows = await ctx.db
       .query('proposals')
@@ -116,16 +148,17 @@ export const count = workspaceQuery({
   },
 })
 
-export const create = workspaceMutation({
+export const create = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    ownerId: v.union(v.string(), v.null()),
-    status: v.string(),
-    stepProgress: v.number(),
-    formData: v.any(),
-    clientId: v.union(v.string(), v.null()),
-    clientName: v.union(v.string(), v.null()),
+    workspaceId: z.string(),
+    ownerId: z.string().nullable(),
+    status: z.string(),
+    stepProgress: z.number(),
+    formData: z.any(),
+    clientId: z.string().nullable(),
+    clientName: z.string().nullable(),
   },
+  returns: z.object({ legacyId: z.string() }),
   handler: async (ctx, args) => {
     const timestamp = nowMs()
     let legacyId = generateId('proposal')
@@ -163,25 +196,26 @@ export const create = workspaceMutation({
   },
 })
 
-export const update = workspaceMutation({
+export const update = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    status: v.optional(v.string()),
-    stepProgress: v.optional(v.number()),
-    formData: v.optional(v.any()),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    clientName: v.optional(v.union(v.string(), v.null())),
-    aiInsights: v.optional(v.union(v.any(), v.null())),
-    aiSuggestions: v.optional(v.union(v.string(), v.null())),
-    pdfUrl: v.optional(v.union(v.string(), v.null())),
-    pptUrl: v.optional(v.union(v.string(), v.null())),
-    pdfStorageId: v.optional(v.union(v.string(), v.null())),
-    pptStorageId: v.optional(v.union(v.string(), v.null())),
-    presentationDeck: v.optional(v.union(v.any(), v.null())),
-    updatedAtMs: v.number(),
-    lastAutosaveAtMs: v.number(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    status: z.string().optional(),
+    stepProgress: z.number().optional(),
+    formData: z.any().optional(),
+    clientId: z.string().nullable().optional(),
+    clientName: z.string().nullable().optional(),
+    aiInsights: z.any().nullable().optional(),
+    aiSuggestions: z.string().nullable().optional(),
+    pdfUrl: z.string().nullable().optional(),
+    pptUrl: z.string().nullable().optional(),
+    pdfStorageId: z.string().nullable().optional(),
+    pptStorageId: z.string().nullable().optional(),
+    presentationDeck: z.any().nullable().optional(),
+    updatedAtMs: z.number(),
+    lastAutosaveAtMs: z.number(),
   },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('proposals')
@@ -215,8 +249,9 @@ export const update = workspaceMutation({
   },
 })
 
-export const remove = workspaceMutation({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const remove = zWorkspaceMutation({
+  args: { workspaceId: z.string(), legacyId: z.string() },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('proposals')
@@ -232,31 +267,32 @@ export const remove = workspaceMutation({
   },
 })
 
-export const bulkUpsert = adminMutation({
+export const bulkUpsert = zAdminMutation({
   args: {
-    proposals: v.array(
-      v.object({
-        workspaceId: v.string(),
-        legacyId: v.string(),
-        ownerId: v.union(v.string(), v.null()),
-        status: v.string(),
-        stepProgress: v.number(),
-        formData: v.any(),
-        aiInsights: v.union(v.any(), v.null()),
-        aiSuggestions: v.union(v.string(), v.null()),
-        pdfUrl: v.union(v.string(), v.null()),
-        pptUrl: v.union(v.string(), v.null()),
-        pdfStorageId: v.optional(v.union(v.string(), v.null())),
-        pptStorageId: v.optional(v.union(v.string(), v.null())),
-        clientId: v.union(v.string(), v.null()),
-        clientName: v.union(v.string(), v.null()),
-        presentationDeck: v.union(v.any(), v.null()),
-        createdAtMs: v.number(),
-        updatedAtMs: v.number(),
-        lastAutosaveAtMs: v.number(),
-      }),
+    proposals: z.array(
+      z.object({
+        workspaceId: z.string(),
+        legacyId: z.string(),
+        ownerId: z.string().nullable(),
+        status: z.string(),
+        stepProgress: z.number(),
+        formData: z.any(),
+        aiInsights: z.any().nullable(),
+        aiSuggestions: z.string().nullable(),
+        pdfUrl: z.string().nullable(),
+        pptUrl: z.string().nullable(),
+        pdfStorageId: z.string().nullable().optional(),
+        pptStorageId: z.string().nullable().optional(),
+        clientId: z.string().nullable(),
+        clientName: z.string().nullable(),
+        presentationDeck: z.any().nullable(),
+        createdAtMs: z.number(),
+        updatedAtMs: z.number(),
+        lastAutosaveAtMs: z.number(),
+      })
     ),
   },
+  returns: z.object({ upserted: z.number() }),
   handler: async (ctx, args) => {
     let upserted = 0
 

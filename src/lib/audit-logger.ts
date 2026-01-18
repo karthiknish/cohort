@@ -42,39 +42,44 @@ function getConvexClient(): ConvexHttpClient | null {
   return _convexClient
 }
 
+import { after } from 'next/server'
+
 /**
  * Logs a sensitive action to the audit_logs collection in Convex
  */
 export async function logAuditAction(entry: Omit<AuditLogEntry, 'timestamp'>) {
-  try {
-    const logEntry: AuditLogEntry = {
-      ...entry,
-      timestamp: new Date(),
-    }
+  after(async () => {
+    try {
+      const logEntry: AuditLogEntry = {
+        ...entry,
+        timestamp: new Date(),
+      }
 
-    // 1. Log to Convex for permanent record
-    const convex = getConvexClient()
-    if (convex) {
-      await convex.mutation(api.auditLogs.log, {
-        action: entry.action,
-        actorId: entry.actorId,
-        actorEmail: entry.actorEmail ?? null,
-        targetId: entry.targetId ?? null,
-        workspaceId: entry.workspaceId ?? null,
-        metadata: entry.metadata,
-        ip: entry.ip ?? null,
-        userAgent: entry.userAgent ?? null,
-        requestId: entry.requestId ?? null,
+      // 1. Log to Convex for permanent record
+      const convex = getConvexClient()
+      if (convex) {
+        await convex.mutation(api.auditLogs.log, {
+          serverKey: process.env.INTEGRATIONS_CRON_SECRET || '',
+          action: entry.action,
+          actorId: entry.actorId,
+          actorEmail: entry.actorEmail ?? null,
+          targetId: entry.targetId ?? null,
+          workspaceId: entry.workspaceId ?? null,
+          metadata: entry.metadata,
+          ip: entry.ip ?? null,
+          userAgent: entry.userAgent ?? null,
+          requestId: entry.requestId ?? null,
+        })
+      }
+
+      // 2. Also log to structured logger for real-time monitoring
+      logger.info(`Audit Log: ${entry.action}`, {
+        type: 'audit',
+        ...entry
       })
+    } catch (error) {
+      // Don't let audit logging failure crash the main operation, but log it
+      logger.error('Failed to write audit log', error, { action: entry.action })
     }
-
-    // 2. Also log to structured logger for real-time monitoring
-    logger.info(`Audit Log: ${entry.action}`, {
-      type: 'audit',
-      ...entry
-    })
-  } catch (error) {
-    // Don't let audit logging failure crash the main operation, but log it
-    logger.error('Failed to write audit log', error, { action: entry.action })
-  }
+  })
 }

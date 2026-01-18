@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
 
 import { ValidationError } from './api-errors'
@@ -31,7 +32,7 @@ function getConvexClient(): ConvexHttpClient | null {
  * Resolve workspace ID for a given user ID.
  * Uses Convex to look up the user's agencyId, falling back to userId if not found.
  */
-export async function resolveWorkspaceIdForUser(userId: string): Promise<string> {
+export const resolveWorkspaceIdForUser = cache(async (userId: string): Promise<string> => {
   if (!userId) {
     throw new ValidationError('User id is required to resolve workspace id')
   }
@@ -54,7 +55,7 @@ export async function resolveWorkspaceIdForUser(userId: string): Promise<string>
     // Fallback to userId on error
     return userId
   }
-}
+})
 
 /**
  * Simplified workspace context - just the workspaceId.

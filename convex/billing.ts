@@ -4,8 +4,52 @@ import Stripe from 'stripe'
 import { action, query } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
-import { authenticatedAction } from './functions'
+import { authenticatedAction, zAuthenticatedAction } from './functions'
+import { z } from 'zod/v4'
 import { Errors, asErrorMessage, logAndThrow, withErrorHandling } from './errors'
+ 
+const planSummaryZ = z.object({
+  id: z.string(),
+  name: z.string(),
+  priceId: z.string(),
+  features: z.array(z.string()).optional(),
+  unitAmount: z.number().nullable(),
+  currency: z.string().nullable(),
+  interval: z.string().nullable(),
+  productName: z.string().nullable(),
+})
+ 
+const subscriptionSummaryZ = z.object({
+  id: z.string(),
+  status: z.string(),
+  cancelAtPeriodEnd: z.boolean(),
+  currentPeriodEnd: z.string().nullable(),
+  currentPeriodStart: z.string().nullable(),
+  price: z.object({
+    id: z.string(),
+    currency: z.string().nullable(),
+    unitAmount: z.number().nullable(),
+    interval: z.string().nullable(),
+    nickname: z.string().nullable(),
+  }).nullable(),
+  plan: z.object({
+    id: z.string(),
+    name: z.string(),
+  }).nullable(),
+  isManagedByApp: z.boolean(),
+})
+ 
+const invoiceSummaryZ = z.object({
+  id: z.string(),
+  number: z.string().nullable(),
+  status: z.string().nullable(),
+  amountPaid: z.number(),
+  total: z.number(),
+  currency: z.string().nullable(),
+  hostedInvoiceUrl: z.string().nullable(),
+  invoicePdf: z.string().nullable(),
+  createdAt: z.string().nullable(),
+})
 
 function getStripeClient(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY
@@ -193,8 +237,14 @@ async function ensureStripeCustomer(
   return customer.id
 }
 
-export const getStatus = authenticatedAction({
+export const getStatus = zAuthenticatedAction({
   args: {},
+  returns: z.object({
+    plans: z.array(planSummaryZ),
+    subscription: subscriptionSummaryZ.nullable(),
+    invoices: z.array(invoiceSummaryZ),
+    upcomingInvoice: z.any().nullable(),
+  }),
   handler: async (ctx: any) => withErrorHandling(async () => {
     const uid = ctx.legacyId
     const email = ctx.user.email ?? null
@@ -257,12 +307,13 @@ export const getStatus = authenticatedAction({
   }, 'billing:getStatus'),
 })
 
-export const createCheckoutSession = authenticatedAction({
+export const createCheckoutSession = zAuthenticatedAction({
   args: {
-    planId: v.string(),
-    successPath: v.optional(v.string()),
-    cancelPath: v.optional(v.string()),
+    planId: z.string(),
+    successPath: z.string().optional(),
+    cancelPath: z.string().optional(),
   },
+  returns: z.object({ url: z.string().nullable(), sessionId: z.string() }),
   handler: async (ctx: any, args: any) => withErrorHandling(async () => {
     const uid = ctx.legacyId
     const email = ctx.user.email ?? null
@@ -315,11 +366,12 @@ export const createCheckoutSession = authenticatedAction({
   }, 'billing:createCheckoutSession'),
 })
 
-export const createPortalSession = authenticatedAction({
+export const createPortalSession = zAuthenticatedAction({
   args: {
-    clientId: v.optional(v.string()),
-    returnUrl: v.optional(v.string()),
+    clientId: z.string().optional(),
+    returnUrl: z.string().optional(),
   },
+  returns: z.object({ url: z.string(), sessionId: z.string() }),
   handler: async (ctx: any, args: any) => withErrorHandling(async () => {
     const uid = ctx.legacyId
     const email = ctx.user.email ?? null

@@ -6,6 +6,9 @@ import {
   workspaceMutation,
   workspaceQuery,
   workspaceQueryActive,
+  zWorkspaceMutation,
+  zWorkspaceQuery,
+  zWorkspaceQueryActive,
   zWorkspacePaginatedQuery,
   zWorkspacePaginatedQueryActive,
   applyManualPagination,
@@ -106,18 +109,18 @@ function fuzzyScore(text: string, term: string): number {
   return 0
 }
 
-const attachment = v.object({
-  name: v.string(),
-  url: v.string(),
-  storageId: v.optional(v.union(v.string(), v.null())),
-  type: v.optional(v.union(v.string(), v.null())),
-  size: v.optional(v.union(v.string(), v.null())),
+const attachmentZ = z.object({
+  name: z.string(),
+  url: z.string(),
+  storageId: z.string().nullable().optional(),
+  type: z.string().nullable().optional(),
+  size: z.string().nullable().optional(),
 })
 
-const mention = v.object({
-  slug: v.string(),
-  name: v.string(),
-  role: v.union(v.string(), v.null()),
+const mentionZ = z.object({
+  slug: z.string(),
+  name: z.string(),
+  role: z.string().nullable(),
 })
 
 function buildListChannelQuery(ctx: any, args: any) {
@@ -202,8 +205,8 @@ export const listThreadReplies = zWorkspacePaginatedQuery({
   },
 })
 
-export const getByLegacyId = workspaceQuery({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = zWorkspaceQuery({
+  args: { legacyId: z.string() },
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
@@ -214,19 +217,18 @@ export const getByLegacyId = workspaceQuery({
   },
 })
 
-export const searchChannel = workspaceQueryActive({
+export const searchChannel = zWorkspaceQueryActive({
   args: {
-    workspaceId: v.string(),
-    channelType: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    projectId: v.optional(v.union(v.string(), v.null())),
-    q: v.optional(v.union(v.string(), v.null())),
-    sender: v.optional(v.union(v.string(), v.null())),
-    attachment: v.optional(v.union(v.string(), v.null())),
-    mention: v.optional(v.union(v.string(), v.null())),
-    startMs: v.optional(v.union(v.number(), v.null())),
-    endMs: v.optional(v.union(v.number(), v.null())),
-    limit: v.number(),
+    channelType: z.string(),
+    clientId: z.string().nullable().optional(),
+    projectId: z.string().nullable().optional(),
+    q: z.string().nullable().optional(),
+    sender: z.string().nullable().optional(),
+    attachment: z.string().nullable().optional(),
+    mention: z.string().nullable().optional(),
+    startMs: z.number().nullable().optional(),
+    endMs: z.number().nullable().optional(),
+    limit: z.number(),
   },
   handler: async (ctx: any, args: any) => {
     const limit = clampLimit(args.limit, 20, 400)
@@ -332,23 +334,22 @@ export const searchChannel = workspaceQueryActive({
   },
 })
 
-export const create = workspaceMutation({
+export const create = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    channelType: v.string(),
-    clientId: v.union(v.string(), v.null()),
-    projectId: v.union(v.string(), v.null()),
-    senderId: v.union(v.string(), v.null()),
-    senderName: v.string(),
-    senderRole: v.union(v.string(), v.null()),
-    content: v.string(),
-    attachments: v.optional(v.array(attachment)),
-    format: v.optional(v.union(v.literal('markdown'), v.literal('plaintext'))),
-    mentions: v.optional(v.array(mention)),
-    parentMessageId: v.optional(v.union(v.string(), v.null())),
-    threadRootId: v.optional(v.union(v.string(), v.null())),
-    isThreadRoot: v.optional(v.boolean()),
+    legacyId: z.string(),
+    channelType: z.string(),
+    clientId: z.string().nullable(),
+    projectId: z.string().nullable(),
+    senderId: z.string().nullable(),
+    senderName: z.string(),
+    senderRole: z.string().nullable(),
+    content: z.string(),
+    attachments: z.array(attachmentZ).optional(),
+    format: z.union([z.literal('markdown'), z.literal('plaintext')]).optional(),
+    mentions: z.array(mentionZ).optional(),
+    parentMessageId: z.string().nullable().optional(),
+    threadRootId: z.string().nullable().optional(),
+    isThreadRoot: z.boolean().optional(),
   },
   handler: async (ctx: any, args: any) => {
     const hydratedAttachments = await hydrateAttachments(ctx, (args.attachments ?? null) as any)
@@ -399,13 +400,12 @@ export const create = workspaceMutation({
   },
 })
 
-export const updateMessage = workspaceMutation({
+export const updateMessage = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    content: v.string(),
-    format: v.optional(v.union(v.literal('markdown'), v.literal('plaintext'))),
-    mentions: v.optional(v.array(mention)),
+    legacyId: z.string(),
+    content: z.string(),
+    format: z.union([z.literal('markdown'), z.literal('plaintext')]).optional(),
+    mentions: z.array(mentionZ).optional(),
   },
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
@@ -426,8 +426,8 @@ export const updateMessage = workspaceMutation({
   },
 })
 
-export const softDelete = workspaceMutation({
-  args: { workspaceId: v.string(), legacyId: v.string(), deletedBy: v.string() },
+export const softDelete = zWorkspaceMutation({
+  args: { legacyId: z.string(), deletedBy: z.string() },
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
@@ -447,8 +447,8 @@ export const softDelete = workspaceMutation({
   },
 })
 
-export const toggleReaction = workspaceMutation({
-  args: { workspaceId: v.string(), legacyId: v.string(), emoji: v.string(), userId: v.string() },
+export const toggleReaction = zWorkspaceMutation({
+  args: { legacyId: z.string(), emoji: z.string(), userId: z.string() },
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('collaborationMessages')
@@ -501,42 +501,38 @@ export const toggleReaction = workspaceMutation({
   },
 })
 
-export const bulkUpsert = workspaceMutation({
+export const bulkUpsert = zWorkspaceMutation({
   args: {
-    messages: v.array(
-      v.object({
-        workspaceId: v.string(),
-        legacyId: v.string(),
-        channelType: v.string(),
-        clientId: v.union(v.string(), v.null()),
-        projectId: v.union(v.string(), v.null()),
-        senderId: v.union(v.string(), v.null()),
-        senderName: v.string(),
-        senderRole: v.union(v.string(), v.null()),
-        content: v.string(),
-        createdAtMs: v.number(),
-        updatedAtMs: v.union(v.number(), v.null()),
-        deleted: v.boolean(),
-        deletedAtMs: v.union(v.number(), v.null()),
-        deletedBy: v.union(v.string(), v.null()),
-        attachments: v.union(v.array(attachment), v.null()),
-        format: v.union(v.literal('markdown'), v.literal('plaintext')),
-        mentions: v.union(v.array(mention), v.null()),
-        reactions: v.union(
-          v.array(
-            v.object({
-              emoji: v.string(),
-              count: v.number(),
-              userIds: v.array(v.string()),
-            })
-          ),
-          v.null()
-        ),
-        parentMessageId: v.union(v.string(), v.null()),
-        threadRootId: v.union(v.string(), v.null()),
-        isThreadRoot: v.boolean(),
-        threadReplyCount: v.union(v.number(), v.null()),
-        threadLastReplyAtMs: v.union(v.number(), v.null()),
+    messages: z.array(
+      z.object({
+        legacyId: z.string(),
+        channelType: z.string(),
+        clientId: z.string().nullable(),
+        projectId: z.string().nullable(),
+        senderId: z.string().nullable(),
+        senderName: z.string(),
+        senderRole: z.string().nullable(),
+        content: z.string(),
+        createdAtMs: z.number(),
+        updatedAtMs: z.number().nullable(),
+        deleted: z.boolean(),
+        deletedAtMs: z.number().nullable(),
+        deletedBy: z.string().nullable(),
+        attachments: z.array(attachmentZ).nullable(),
+        format: z.union([z.literal('markdown'), z.literal('plaintext')]),
+        mentions: z.array(mentionZ).nullable(),
+        reactions: z.array(
+          z.object({
+            emoji: z.string(),
+            count: z.number(),
+            userIds: z.array(z.string()),
+          })
+        ).nullable(),
+        parentMessageId: z.string().nullable(),
+        threadRootId: z.string().nullable(),
+        isThreadRoot: z.boolean(),
+        threadReplyCount: z.number().nullable(),
+        threadLastReplyAtMs: z.number().nullable(),
       })
     ),
   },

@@ -2,6 +2,7 @@
 // ALERT PROCESSOR - Orchestration for workspace-level alerts
 // =============================================================================
 
+import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../../convex/_generated/api'
 import { evaluateAlerts, formatAlertsForEmail } from './evaluator'
@@ -24,6 +25,26 @@ function getConvexClient(): ConvexHttpClient | null {
     return _convexClient
 }
 
+const fetchAlertRules = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
+    return await convex.query(api.alertRules.listEnabled, { workspaceId }) as AlertRule[]
+})
+
+const fetchCustomFormulas = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
+    return await convex.query(api.customFormulas.listActiveForAlerts, { workspaceId })
+})
+
+const fetchRecentMetrics = cache(async (convex: ConvexHttpClient, workspaceId: string, limit: number) => {
+    return await convex.query(api.adsMetrics.listRecentForAlerts, {
+        workspaceId,
+        clientId: workspaceId,
+        limit,
+    }) as DailyMetricData[]
+})
+
+const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, email: string) => {
+    return await convex.query(api.users.getNotificationPreferencesByEmail, { email })
+})
+
 /**
  * Process all alert rules for a specific workspace/client and send notifications
  */
@@ -42,7 +63,7 @@ export async function processWorkspaceAlerts(options: {
 
     try {
         // 1. Fetch Alert Rules for this workspace from Convex
-        const rules = await convex.query(api.alertRules.listEnabled, { workspaceId }) as AlertRule[]
+        const rules = await fetchAlertRules(convex, workspaceId)
 
         if (rules.length === 0) {
             return { evaluated: 0, triggered: 0, results: [] }
@@ -53,7 +74,7 @@ export async function processWorkspaceAlerts(options: {
         let formulas: Record<string, { formula: string; inputs: string[] }> = {}
 
         if (formulaRules.length > 0) {
-            formulas = await convex.query(api.customFormulas.listActiveForAlerts, { workspaceId })
+            formulas = await fetchCustomFormulas(convex, workspaceId)
         }
 
         // 3. Fetch Recent Metrics for evaluation
@@ -65,11 +86,7 @@ export async function processWorkspaceAlerts(options: {
         }), 7)
 
         // Use workspaceId as clientId for metrics lookup (legacy pattern)
-        const metricsData: DailyMetricData[] = await convex.query(api.adsMetrics.listRecentForAlerts, {
-            workspaceId,
-            clientId: workspaceId,
-            limit: maxBaseline + 1,
-        })
+        const metricsData = await fetchRecentMetrics(convex, workspaceId, maxBaseline + 1)
 
         if (metricsData.length === 0) {
             return { evaluated: rules.length, triggered: 0, results: [] }
@@ -91,9 +108,7 @@ export async function processWorkspaceAlerts(options: {
         // 5. Send Notification if triggers exist
         if (triggeredAlerts.length > 0 && recipientEmail) {
             // Check preference from Convex
-            const prefResult = await convex.query(api.users.getNotificationPreferencesByEmail, {
-                email: recipientEmail
-            })
+            const prefResult = await fetchNotificationPreferences(convex, recipientEmail)
 
             const prefs = prefResult?.notificationPreferences
             const emailPref = prefs?.emailAdAlerts !== false

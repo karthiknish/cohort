@@ -19,6 +19,10 @@
 
 # convex
 .convex/
+convex/.agents/
+convex/.github/
+convex/.gemini/
+convex/.windsurf/
 
 # production
 /build
@@ -57,4 +61,6 @@ AUDIT_AND_IMPROVEMENT_PLAN.md
 # Scripts
 /scripts/
 
-.github/skills/better-auth-best-practices/SKILL.md
+
+.gitignore
+convex/CLAUDE.md

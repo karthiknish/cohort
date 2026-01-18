@@ -1,6 +1,13 @@
 import { v } from 'convex/values'
-import { adminQuery, adminMutation } from './functions'
+import {
+  adminQuery,
+  adminMutation,
+  zAdminQuery,
+  zAdminMutation,
+} from './functions'
 import { Errors } from './errors'
+import { z } from 'zod/v4'
+import type { Id, TableNames } from './_generated/dataModel'
 
 function nowMs() {
   return Date.now()
@@ -23,12 +30,15 @@ function generateToken(): string {
   return token
 }
 
-export const listInvitations = adminQuery({
+export const listInvitations = zAdminQuery({
   args: {
-    status: v.optional(
-      v.union(v.literal('pending'), v.literal('accepted'), v.literal('expired'), v.literal('revoked'))
-    ),
-    limit: v.optional(v.number()),
+    status: z.union([
+      z.literal('pending'),
+      z.literal('accepted'),
+      z.literal('expired'),
+      z.literal('revoked'),
+    ]).optional(),
+    limit: z.number().optional(),
   },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 100)
@@ -61,14 +71,14 @@ export const listInvitations = adminQuery({
   },
 })
 
-export const createInvitation = adminMutation({
+export const createInvitation = zAdminMutation({
   args: {
-    email: v.string(),
-    role: v.union(v.literal('admin'), v.literal('team'), v.literal('client')),
-    name: v.optional(v.union(v.string(), v.null())),
-    message: v.optional(v.union(v.string(), v.null())),
-    invitedBy: v.string(),
-    invitedByName: v.optional(v.union(v.string(), v.null())),
+    email: z.string(),
+    role: z.union([z.literal('admin'), z.literal('team'), z.literal('client')]),
+    name: z.string().nullable().optional(),
+    message: z.string().nullable().optional(),
+    invitedBy: z.string(),
+    invitedByName: z.string().nullable().optional(),
   },
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
@@ -130,27 +140,27 @@ export const createInvitation = adminMutation({
   },
 })
 
-export const bulkUpsertInvitations = adminMutation({
+export const bulkUpsertInvitations = zAdminMutation({
   args: {
-    invitations: v.array(
-      v.object({
-        legacyId: v.string(),
-        email: v.string(),
-        role: v.union(v.literal('admin'), v.literal('team'), v.literal('client')),
-        name: v.union(v.string(), v.null()),
-        message: v.union(v.string(), v.null()),
-        status: v.union(
-          v.literal('pending'),
-          v.literal('accepted'),
-          v.literal('expired'),
-          v.literal('revoked')
-        ),
-        invitedBy: v.string(),
-        invitedByName: v.union(v.string(), v.null()),
-        token: v.string(),
-        expiresAtMs: v.number(),
-        createdAtMs: v.number(),
-        acceptedAtMs: v.union(v.number(), v.null()),
+    invitations: z.array(
+      z.object({
+        legacyId: z.string(),
+        email: z.string(),
+        role: z.union([z.literal('admin'), z.literal('team'), z.literal('client')]),
+        name: z.string().nullable(),
+        message: z.string().nullable(),
+        status: z.union([
+          z.literal('pending'),
+          z.literal('accepted'),
+          z.literal('expired'),
+          z.literal('revoked'),
+        ]),
+        invitedBy: z.string(),
+        invitedByName: z.string().nullable(),
+        token: z.string(),
+        expiresAtMs: z.number(),
+        createdAtMs: z.number(),
+        acceptedAtMs: z.number().nullable(),
       })
     ),
   },
@@ -190,15 +200,15 @@ export const bulkUpsertInvitations = adminMutation({
   },
 })
 
-export const deleteInvitation = adminMutation({
-  args: { id: v.id('invitations') },
+export const deleteInvitation = zAdminMutation({
+  args: { id: z.string() }, // v.id('invitations') -> z.string() or similar
   handler: async (ctx, args) => {
-    const existing = await ctx.db.get(args.id)
+    const existing = await ctx.db.get(args.id as Id<'invitations'>)
     if (!existing) {
       throw Errors.resource.notFound('Invitation')
     }
 
-    await ctx.db.delete(args.id)
+    await ctx.db.delete(args.id as Id<'invitations'>)
     return { ok: true }
   },
 })

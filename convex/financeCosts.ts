@@ -1,6 +1,12 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import {
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
+import type { Id } from './_generated/dataModel'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -12,13 +18,13 @@ function now() {
   return Date.now()
 }
 
-export const list = query({
+export const list = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    limit: v.optional(v.number()),
-    cursorCreatedAt: v.optional(v.number()),
-    cursorLegacyId: v.optional(v.string()),
+    workspaceId: z.string(),
+    clientId: z.string().nullable().optional(),
+    limit: z.number().optional(),
+    cursorCreatedAt: z.number().optional(),
+    cursorLegacyId: z.string().optional(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -75,14 +81,14 @@ export const list = query({
   },
 })
 
-export const create = mutation({
+export const create = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    clientId: v.union(v.string(), v.null()),
-    category: v.string(),
-    amount: v.number(),
-    cadence: v.string(),
-    currency: v.string(),
+    workspaceId: z.string(),
+    clientId: z.string().nullable(),
+    category: z.string(),
+    amount: z.number(),
+    cadence: z.string(),
+    currency: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -108,18 +114,18 @@ export const create = mutation({
   },
 })
 
-export const upsert = mutation({
+export const upsert = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.optional(v.string()),
-
-    clientId: v.union(v.string(), v.null()),
-    category: v.string(),
-    amount: v.number(),
-    cadence: v.string(),
-    currency: v.string(),
-
-    createdBy: v.union(v.string(), v.null()),
+    workspaceId: z.string(),
+    legacyId: z.string().optional(),
+ 
+    clientId: z.string().nullable(),
+    category: z.string(),
+    amount: z.number(),
+    cadence: z.string(),
+    currency: z.string(),
+ 
+    createdBy: z.string().nullable(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -182,10 +188,10 @@ export const upsert = mutation({
   },
 })
 
-export const remove = mutation({
+export const remove = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()

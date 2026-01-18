@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { after } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../../../../convex/_generated/api'
 
@@ -155,6 +156,7 @@ export const POST = createApiHandler(
       throw new ValidationError(`Unknown operation: ${operation}`)
   }
 
+  const durationMs = Date.now() - startedAt
   const result = {
     operation,
     processedCount,
@@ -165,19 +167,22 @@ export const POST = createApiHandler(
 
   console.log('[integrations/cron] Completed operation:', result)
 
-  await recordSchedulerEvent({
-    source: 'cron',
-    operation,
-    processedJobs: processedCount,
-    successfulJobs: enqueuedJobs,
-    failedJobs: errors.length,
-    durationMs: Date.now() - startedAt,
-    errors,
-    failureThresholdOverride: errors.length,
-    notes:
-      operation === 'schedule_all_users' && processedCount === 0
-        ? 'No users processed during schedule run'
-        : undefined,
+  // Use after() for non-blocking monitoring - response is sent immediately
+  after(async () => {
+    await recordSchedulerEvent({
+      source: 'cron',
+      operation,
+      processedJobs: processedCount,
+      successfulJobs: enqueuedJobs,
+      failedJobs: errors.length,
+      durationMs,
+      errors,
+      failureThresholdOverride: errors.length,
+      notes:
+        operation === 'schedule_all_users' && processedCount === 0
+          ? 'No users processed during schedule run'
+          : undefined,
+    })
   })
 
   return result

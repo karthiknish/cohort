@@ -1,6 +1,38 @@
-import { mutation, query } from './_generated/server'
-import { v } from 'convex/values'
-import { authenticatedMutation, authenticatedQuery } from './functions'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
+ 
+const notificationPreferencesZ = z.object({
+  whatsappTasks: z.boolean(),
+  whatsappCollaboration: z.boolean(),
+  emailAdAlerts: z.boolean(),
+  emailPerformanceDigest: z.boolean(),
+  emailTaskActivity: z.boolean(),
+})
+ 
+const regionalPreferencesZ = z.object({
+  currency: z.string().nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  locale: z.string().nullable().optional(),
+}).nullable()
+ 
+const profileZ = z.object({
+  legacyId: z.string(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+  role: z.string().nullable(),
+  status: z.string().nullable(),
+  agencyId: z.string().nullable(),
+  phoneNumber: z.string().nullable().optional(),
+  photoUrl: z.string().nullable().optional(),
+  notificationPreferences: notificationPreferencesZ,
+  regionalPreferences: regionalPreferencesZ,
+  updatedAtMs: z.number().nullable(),
+})
 
 
 function nowMs() {
@@ -15,8 +47,9 @@ const defaultNotificationPreferences = {
   emailTaskActivity: true,
 }
 
-export const getMyProfile = authenticatedQuery({
+export const getMyProfile = zAuthenticatedQuery({
   args: {},
+  returns: profileZ,
   handler: async (ctx) => {
     const row = ctx.user
 
@@ -36,12 +69,13 @@ export const getMyProfile = authenticatedQuery({
   },
 })
 
-export const updateMyProfile = authenticatedMutation({
+export const updateMyProfile = zAuthenticatedMutation({
   args: {
-    name: v.optional(v.union(v.string(), v.null())),
-    phoneNumber: v.optional(v.union(v.string(), v.null())),
-    photoUrl: v.optional(v.union(v.string(), v.null())),
+    name: z.string().nullable().optional(),
+    phoneNumber: z.string().nullable().optional(),
+    photoUrl: z.string().nullable().optional(),
   },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx, args) => {
     const row = ctx.user
 
@@ -56,8 +90,9 @@ export const updateMyProfile = authenticatedMutation({
   },
 })
 
-export const getMyNotificationPreferences = authenticatedQuery({
+export const getMyNotificationPreferences = zAuthenticatedQuery({
   args: {},
+  returns: notificationPreferencesZ.extend({ phoneNumber: z.string().nullable() }),
   handler: async (ctx) => {
     const row = ctx.user
 
@@ -70,15 +105,16 @@ export const getMyNotificationPreferences = authenticatedQuery({
   },
 })
 
-export const updateMyNotificationPreferences = authenticatedMutation({
+export const updateMyNotificationPreferences = zAuthenticatedMutation({
   args: {
-    whatsappTasks: v.boolean(),
-    whatsappCollaboration: v.boolean(),
-    emailAdAlerts: v.optional(v.boolean()),
-    emailPerformanceDigest: v.optional(v.boolean()),
-    emailTaskActivity: v.optional(v.boolean()),
-    phoneNumber: v.optional(v.union(v.string(), v.null())),
+    whatsappTasks: z.boolean(),
+    whatsappCollaboration: z.boolean(),
+    emailAdAlerts: z.boolean().optional(),
+    emailPerformanceDigest: z.boolean().optional(),
+    emailTaskActivity: z.boolean().optional(),
+    phoneNumber: z.string().nullable().optional(),
   },
+  returns: notificationPreferencesZ.extend({ phoneNumber: z.string().nullable() }),
   handler: async (ctx, args) => {
     const row = ctx.user
 
@@ -103,19 +139,21 @@ export const updateMyNotificationPreferences = authenticatedMutation({
   },
 })
 
-export const getMyRegionalPreferences = authenticatedQuery({
+export const getMyRegionalPreferences = zAuthenticatedQuery({
   args: {},
+  returns: regionalPreferencesZ,
   handler: async (ctx) => {
     return ctx.user.regionalPreferences ?? null
   },
 })
 
-export const updateMyRegionalPreferences = authenticatedMutation({
+export const updateMyRegionalPreferences = zAuthenticatedMutation({
   args: {
-    currency: v.optional(v.union(v.string(), v.null())),
-    timezone: v.optional(v.union(v.string(), v.null())),
-    locale: v.optional(v.union(v.string(), v.null())),
+    currency: z.string().nullable().optional(),
+    timezone: z.string().nullable().optional(),
+    locale: z.string().nullable().optional(),
   },
+  returns: regionalPreferencesZ,
   handler: async (ctx, args) => {
     const row = ctx.user
 

@@ -5,12 +5,41 @@ import {
   workspaceMutation,
   workspaceQuery,
   workspaceQueryActive,
+  zAuthenticatedMutation,
+  zWorkspaceMutation,
+  zWorkspaceQuery,
+  zWorkspaceQueryActive,
   zWorkspacePaginatedQueryActive,
   applyManualPagination,
   getPaginatedResponse,
 } from './functions'
 import { z } from 'zod/v4'
 import { Errors } from './errors'
+ 
+const clientZ = z.object({
+  legacyId: z.string(),
+  name: z.string(),
+  accountManager: z.string(),
+  teamMembers: z.array(
+    z.object({
+      name: z.string(),
+      role: z.string(),
+    })
+  ),
+  billingEmail: z.string().nullable(),
+  stripeCustomerId: z.string().nullable(),
+  lastInvoiceStatus: z.string().nullable(),
+  lastInvoiceAmount: z.number().nullable(),
+  lastInvoiceCurrency: z.string().nullable(),
+  lastInvoiceIssuedAtMs: z.number().nullable(),
+  lastInvoiceNumber: z.string().nullable(),
+  lastInvoiceUrl: z.string().nullable(),
+  lastInvoicePaidAtMs: z.number().nullable(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+  deletedAtMs: z.number().nullable(),
+})
+ 
 
 function slugify(value: string): string {
   const base = value
@@ -145,6 +174,13 @@ export const list = zWorkspacePaginatedQueryActive({
   args: {
     includeAllWorkspaces: z.boolean().optional(),
   },
+  returns: z.object({
+    items: z.array(clientZ.extend({ workspaceId: z.string() })),
+    nextCursor: z.object({
+      fieldValue: z.string(),
+      legacyId: z.string(),
+    }).nullable(),
+  }),
   handler: async (ctx: any, args: any) => {
     const isAdmin = ctx.user?.role === 'admin'
     const fetchAll = isAdmin && args.includeAllWorkspaces === true
@@ -194,8 +230,9 @@ export const list = zWorkspacePaginatedQueryActive({
   },
 })
 
-export const countActive = workspaceQueryActive({
-  args: { workspaceId: v.string() },
+export const countActive = zWorkspaceQueryActive({
+  args: { workspaceId: z.string() },
+  returns: z.number(),
   handler: async (ctx: any, args: any) => {
     const rows = await ctx.db
       .query('clients')
@@ -206,8 +243,9 @@ export const countActive = workspaceQueryActive({
   },
 })
 
-export const getByLegacyId = workspaceQuery({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = zWorkspaceQuery({
+  args: { workspaceId: z.string(), legacyId: z.string() },
+  returns: clientZ,
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('clients')
@@ -237,20 +275,21 @@ export const getByLegacyId = workspaceQuery({
   },
 })
 
-export const create = workspaceMutation({
+export const create = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    name: v.string(),
-    accountManager: v.string(),
-    teamMembers: v.array(
-      v.object({
-        name: v.string(),
-        role: v.string(),
+    workspaceId: z.string(),
+    name: z.string(),
+    accountManager: z.string(),
+    teamMembers: z.array(
+      z.object({
+        name: z.string(),
+        role: z.string(),
       })
     ),
-    billingEmail: v.union(v.string(), v.null()),
-    createdBy: v.union(v.string(), v.null()),
+    billingEmail: z.string().nullable(),
+    createdBy: z.string().nullable(),
   },
+  returns: z.object({ legacyId: z.string() }),
   handler: async (ctx: any, args: any) => {
     const baseId = slugify(args.name)
     let candidateId = baseId
@@ -303,13 +342,14 @@ export const create = workspaceMutation({
   },
 })
 
-export const addTeamMember = workspaceMutation({
+export const addTeamMember = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    role: v.optional(v.string()),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string(),
+    role: z.string().optional(),
   },
+  returns: z.string(),
   handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
@@ -337,12 +377,13 @@ export const addTeamMember = workspaceMutation({
   },
 })
 
-export const softDelete = workspaceMutation({
+export const softDelete = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    deletedAtMs: v.optional(v.number()),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    deletedAtMs: z.number().optional(),
   },
+  returns: z.string(),
   handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
@@ -364,20 +405,21 @@ export const softDelete = workspaceMutation({
   },
 })
 
-export const updateInvoiceFields = workspaceMutation({
+export const updateInvoiceFields = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    billingEmail: v.union(v.string(), v.null()),
-    stripeCustomerId: v.union(v.string(), v.null()),
-    lastInvoiceStatus: v.union(v.string(), v.null()),
-    lastInvoiceAmount: v.union(v.number(), v.null()),
-    lastInvoiceCurrency: v.union(v.string(), v.null()),
-    lastInvoiceIssuedAtMs: v.union(v.number(), v.null()),
-    lastInvoiceNumber: v.union(v.string(), v.null()),
-    lastInvoiceUrl: v.union(v.string(), v.null()),
-    lastInvoicePaidAtMs: v.optional(v.union(v.number(), v.null())),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    billingEmail: z.string().nullable(),
+    stripeCustomerId: z.string().nullable(),
+    lastInvoiceStatus: z.string().nullable(),
+    lastInvoiceAmount: z.number().nullable(),
+    lastInvoiceCurrency: z.string().nullable(),
+    lastInvoiceIssuedAtMs: z.number().nullable(),
+    lastInvoiceNumber: z.string().nullable(),
+    lastInvoiceUrl: z.string().nullable(),
+    lastInvoicePaidAtMs: z.number().nullable().optional(),
   },
+  returns: z.string(),
   handler: async (ctx: any, args: any) => {
     const client = await ctx.db
       .query('clients')
@@ -405,32 +447,33 @@ export const updateInvoiceFields = workspaceMutation({
   },
 })
 
-export const upsert = workspaceMutation({
+export const upsert = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    accountManager: v.string(),
-    teamMembers: v.array(
-      v.object({
-        name: v.string(),
-        role: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string(),
+    accountManager: z.string(),
+    teamMembers: z.array(
+      z.object({
+        name: z.string(),
+        role: z.string(),
       })
     ),
-    billingEmail: v.union(v.string(), v.null()),
-    stripeCustomerId: v.union(v.string(), v.null()),
-    lastInvoiceStatus: v.union(v.string(), v.null()),
-    lastInvoiceAmount: v.union(v.number(), v.null()),
-    lastInvoiceCurrency: v.union(v.string(), v.null()),
-    lastInvoiceIssuedAtMs: v.union(v.number(), v.null()),
-    lastInvoiceNumber: v.union(v.string(), v.null()),
-    lastInvoiceUrl: v.union(v.string(), v.null()),
-    lastInvoicePaidAtMs: v.union(v.number(), v.null()),
-    createdBy: v.union(v.string(), v.null()),
-    createdAtMs: v.number(),
-    updatedAtMs: v.number(),
-    deletedAtMs: v.union(v.number(), v.null()),
+    billingEmail: z.string().nullable(),
+    stripeCustomerId: z.string().nullable(),
+    lastInvoiceStatus: z.string().nullable(),
+    lastInvoiceAmount: z.number().nullable(),
+    lastInvoiceCurrency: z.string().nullable(),
+    lastInvoiceIssuedAtMs: z.number().nullable(),
+    lastInvoiceNumber: z.string().nullable(),
+    lastInvoiceUrl: z.string().nullable(),
+    lastInvoicePaidAtMs: z.number().nullable(),
+    createdBy: z.string().nullable(),
+    createdAtMs: z.number(),
+    updatedAtMs: z.number(),
+    deletedAtMs: z.number().nullable(),
   },
+  returns: z.string(),
   handler: async (ctx: any, args: any) => {
     const existing = await ctx.db
       .query('clients')
@@ -469,36 +512,37 @@ export const upsert = workspaceMutation({
   },
 })
 
-export const bulkUpsert = authenticatedMutation({
+export const bulkUpsert = zAuthenticatedMutation({
   args: {
-    clients: v.array(
-      v.object({
-        workspaceId: v.string(),
-        legacyId: v.string(),
-        name: v.string(),
-        accountManager: v.string(),
-        teamMembers: v.array(
-          v.object({
-            name: v.string(),
-            role: v.string(),
+    clients: z.array(
+      z.object({
+        workspaceId: z.string(),
+        legacyId: z.string(),
+        name: z.string(),
+        accountManager: z.string(),
+        teamMembers: z.array(
+          z.object({
+            name: z.string(),
+            role: z.string(),
           })
         ),
-        billingEmail: v.union(v.string(), v.null()),
-        stripeCustomerId: v.union(v.string(), v.null()),
-        lastInvoiceStatus: v.union(v.string(), v.null()),
-        lastInvoiceAmount: v.union(v.number(), v.null()),
-        lastInvoiceCurrency: v.union(v.string(), v.null()),
-        lastInvoiceIssuedAtMs: v.union(v.number(), v.null()),
-        lastInvoiceNumber: v.union(v.string(), v.null()),
-        lastInvoiceUrl: v.union(v.string(), v.null()),
-        lastInvoicePaidAtMs: v.union(v.number(), v.null()),
-        createdBy: v.union(v.string(), v.null()),
-        createdAtMs: v.number(),
-        updatedAtMs: v.number(),
-        deletedAtMs: v.union(v.number(), v.null()),
+        billingEmail: z.string().nullable(),
+        stripeCustomerId: z.string().nullable(),
+        lastInvoiceStatus: z.string().nullable(),
+        lastInvoiceAmount: z.number().nullable(),
+        lastInvoiceCurrency: z.string().nullable(),
+        lastInvoiceIssuedAtMs: z.number().nullable(),
+        lastInvoiceNumber: z.string().nullable(),
+        lastInvoiceUrl: z.string().nullable(),
+        lastInvoicePaidAtMs: z.number().nullable(),
+        createdBy: z.string().nullable(),
+        createdAtMs: z.number(),
+        updatedAtMs: z.number(),
+        deletedAtMs: z.number().nullable(),
       })
     ),
   },
+  returns: z.object({ upserted: z.number() }),
   handler: async (ctx: any, args: any) => {
     let upserted = 0
 

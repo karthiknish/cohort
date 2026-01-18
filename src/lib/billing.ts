@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
 
 import { getStripeClient } from '@/lib/stripe'
@@ -58,6 +59,12 @@ const planInputs: PlanConfigInput[] = [
 
 let cachedPlans: BillingPlanDefinition[] | null = null
 
+const getStripeCustomerIdFromConvex = cache(
+  async (convex: ConvexHttpClient, legacyId: string) => {
+    return await convex.query(api.users.getStripeCustomerId, { legacyId })
+  }
+)
+
 function loadConfiguredPlans(): BillingPlanDefinition[] {
   if (cachedPlans) {
     return cachedPlans
@@ -110,7 +117,7 @@ export async function ensureStripeCustomer(options: {
   // Get existing Stripe customer ID from Convex
   let customerId: string | undefined
   if (convex) {
-    const result = await convex.query(api.users.getStripeCustomerId, { legacyId: uid })
+    const result = await getStripeCustomerIdFromConvex(convex, uid)
     customerId = result.stripeCustomerId ?? undefined
   }
 

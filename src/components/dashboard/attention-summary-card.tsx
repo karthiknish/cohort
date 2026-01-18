@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import React, { useMemo } from 'react'
 import { AlertTriangle, ArrowRight, CheckCircle2, FileText, PlugZap, TriangleAlert } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -105,9 +106,11 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
           </div>
           <div className="mt-2 space-y-1">
             <p className="text-xl font-semibold tabular-nums">
-              {loading?.finance ? '—' : overdueInvoices}
+              {loading?.finance ? <Skeleton className="h-7 w-8" /> : overdueInvoices}
             </p>
-            <p className="text-xs text-muted-foreground">{openInvoices} open · {overdueInvoices} overdue</p>
+            <p className="text-xs text-muted-foreground">
+              {loading?.finance ? <Skeleton className="h-3 w-24" /> : `${openInvoices} open · ${overdueInvoices} overdue`}
+            </p>
           </div>
           <div className="mt-3">
             <Link href="/dashboard/finance/payments">
@@ -125,9 +128,11 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
             <FileText className={cn('h-4 w-4', proposalCounts.total > 0 ? 'text-primary' : 'text-muted-foreground')} />
           </div>
           <div className="mt-2 space-y-1">
-            <p className="text-xl font-semibold tabular-nums">{loading?.proposals ? '—' : proposalCounts.total}</p>
+            <p className="text-xl font-semibold tabular-nums">
+              {loading?.proposals ? <Skeleton className="h-7 w-8" /> : proposalCounts.total}
+            </p>
             <p className="text-xs text-muted-foreground">
-              {proposalCounts.inProgress} in progress · {proposalCounts.ready} ready · {proposalCounts.sent} sent
+              {loading?.proposals ? <Skeleton className="h-3 w-32" /> : `${proposalCounts.inProgress} in progress · ${proposalCounts.ready} ready · ${proposalCounts.sent} sent`}
             </p>
           </div>
           <div className="mt-3">
@@ -147,10 +152,16 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
           </div>
           <div className="mt-2 space-y-1">
             <p className="text-xl font-semibold tabular-nums">
-              {loading?.integrations ? '—' : (integrationSummary?.failedCount ?? 0)}
+              {loading?.integrations ? <Skeleton className="h-7 w-8" /> : (integrationSummary?.failedCount ?? 0)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {integrationSummary ? `${integrationSummary.pendingCount} pending · ${integrationSummary.neverCount} never` : 'Select workspaces to view'}
+              {loading?.integrations ? (
+                 <Skeleton className="h-3 w-36" />
+              ) : integrationSummary ? (
+                `${integrationSummary.pendingCount} pending · ${integrationSummary.neverCount} never`
+              ) : (
+                'Select workspaces to view'
+              )}
             </p>
           </div>
           <div className="mt-3">

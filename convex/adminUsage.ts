@@ -38,23 +38,32 @@ export const getStats = query({
     const newUsersToday = users.filter((u) => (u.createdAtMs ?? 0) >= todayMs).length
     const newUsersWeek = users.filter((u) => (u.createdAtMs ?? 0) >= weekAgoMs).length
 
-    // Note: we only count collections that exist in Convex at the moment.
-    const totalProjects = (await ctx.db.query('projects').collect()).length
-    const projectsThisWeek = (await ctx.db.query('projects').collect()).filter((p: any) => (p.createdAtMs ?? 0) >= weekAgoMs).length
+    // Fetch each collection once and reuse for filtering
+    const [projects, tasks, invoices, expenses, clients, conversations] = await Promise.all([
+      ctx.db.query('projects').collect(),
+      ctx.db.query('tasks').collect(),
+      ctx.db.query('financeInvoices').collect(),
+      ctx.db.query('financeExpenses').collect(),
+      ctx.db.query('clients').collect(),
+      ctx.db.query('agentConversations').collect(),
+    ])
 
-    const totalTasks = (await ctx.db.query('tasks').collect()).length
-    const tasksCompletedThisWeek = (await ctx.db.query('tasks').collect()).filter((t: any) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs).length
+    const totalProjects = projects.length
+    const projectsThisWeek = projects.filter((p: any) => (p.createdAtMs ?? 0) >= weekAgoMs).length
 
-    const totalInvoices = (await ctx.db.query('financeInvoices').collect()).length
-    const invoicesThisWeek = (await ctx.db.query('financeInvoices').collect()).filter((i: any) => (i.createdAtMs ?? 0) >= weekAgoMs).length
+    const totalTasks = tasks.length
+    const tasksCompletedThisWeek = tasks.filter((t: any) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs).length
 
-    const totalExpenses = (await ctx.db.query('financeExpenses').collect()).length
-    const expensesThisWeek = (await ctx.db.query('financeExpenses').collect()).filter((e: any) => (e.createdAtMs ?? 0) >= weekAgoMs).length
+    const totalInvoices = invoices.length
+    const invoicesThisWeek = invoices.filter((i: any) => (i.createdAtMs ?? 0) >= weekAgoMs).length
 
-    const totalClients = (await ctx.db.query('clients').collect()).length
+    const totalExpenses = expenses.length
+    const expensesThisWeek = expenses.filter((e: any) => (e.createdAtMs ?? 0) >= weekAgoMs).length
 
-    const agentConversations = (await ctx.db.query('agentConversations').collect()).length
-    const agentActionsThisWeek = (await ctx.db.query('agentConversations').collect()).filter((c: any) => (c.createdAtMs ?? 0) >= weekAgoMs).length
+    const totalClients = clients.length
+
+    const agentConversations = conversations.length
+    const agentActionsThisWeek = conversations.filter((c: any) => (c.createdAtMs ?? 0) >= weekAgoMs).length
 
     const dailyActiveUsers: Array<{ date: string; count: number }> = []
     for (let i = 6; i >= 0; i--) {

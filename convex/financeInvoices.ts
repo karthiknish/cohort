@@ -1,6 +1,13 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -149,10 +156,10 @@ export const upsertServer = mutation({
   },
 })
 
-export const getByLegacyId = query({
+export const getByLegacyId = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -197,13 +204,13 @@ export const getByLegacyId = query({
   },
 })
 
-export const list = query({
+export const list = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    limit: v.optional(v.number()),
-    cursorCreatedAt: v.optional(v.number()),
-    cursorLegacyId: v.optional(v.string()),
+    workspaceId: z.string(),
+    clientId: z.string().nullable().optional(),
+    limit: z.number().optional(),
+    cursorCreatedAt: z.number().optional(),
+    cursorLegacyId: z.string().optional(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -271,28 +278,28 @@ export const list = query({
   },
 })
 
-export const upsert = mutation({
+export const upsert = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.optional(v.string()),
-
-    clientId: v.union(v.string(), v.null()),
-    clientName: v.string(),
-    amount: v.number(),
-    status: v.string(),
-    stripeStatus: v.union(v.string(), v.null()),
-    issuedDate: v.union(v.string(), v.null()),
-    dueDate: v.union(v.string(), v.null()),
-    paidDate: v.union(v.string(), v.null()),
-    amountPaid: v.union(v.number(), v.null()),
-    amountRemaining: v.union(v.number(), v.null()),
-    amountRefunded: v.union(v.number(), v.null()),
-    currency: v.union(v.string(), v.null()),
-    description: v.union(v.string(), v.null()),
-    hostedInvoiceUrl: v.union(v.string(), v.null()),
-    number: v.union(v.string(), v.null()),
-    paymentIntentId: v.union(v.string(), v.null()),
-    collectionMethod: v.union(v.string(), v.null()),
+    workspaceId: z.string(),
+    legacyId: z.string().optional(),
+ 
+    clientId: z.string().nullable(),
+    clientName: z.string(),
+    amount: z.number(),
+    status: z.string(),
+    stripeStatus: z.string().nullable(),
+    issuedDate: z.string().nullable(),
+    dueDate: z.string().nullable(),
+    paidDate: z.string().nullable(),
+    amountPaid: z.number().nullable(),
+    amountRemaining: z.number().nullable(),
+    amountRefunded: z.number().nullable(),
+    currency: z.string().nullable(),
+    description: z.string().nullable(),
+    hostedInvoiceUrl: z.string().nullable(),
+    number: z.string().nullable(),
+    paymentIntentId: z.string().nullable(),
+    collectionMethod: z.string().nullable(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -389,10 +396,10 @@ export const upsert = mutation({
   },
 })
 
-export const remove = mutation({
+export const remove = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()

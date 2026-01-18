@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import {  useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,7 +29,7 @@ const ACTIVITY_ICONS = {
 
 const ACTIVITY_COLORS = {
   project_updated: 'text-blue-600',
-  task_completed: 'text-green-600', 
+  task_completed: 'text-green-600',
   message_posted: 'text-purple-600',
 }
 
@@ -44,7 +45,7 @@ function formatRelativeTime(timestamp: string): string {
   if (diffMinutes < 60) return `${diffMinutes}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   if (diffDays < 7) return `${diffDays}d ago`
-  
+
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
@@ -74,7 +75,7 @@ function ActivityItem({ activity }: ActivityItemProps) {
           {activity.navigationUrl && (
             <>
               <span className="text-xs text-muted-foreground">•</span>
-              <Link 
+              <Link
                 href={activity.navigationUrl}
                 className="text-xs text-primary hover:underline"
               >
@@ -112,7 +113,7 @@ export function ActivityWidget() {
     // Filter by date range
     const now = new Date()
     const cutoffDate = new Date()
-    
+
     switch (dateRange) {
       case '1d':
         cutoffDate.setDate(now.getDate() - 1)
@@ -130,7 +131,7 @@ export function ActivityWidget() {
         cutoffDate.setDate(now.getDate() - 7)
     }
 
-    filtered = filtered.filter(activity => 
+    filtered = filtered.filter(activity =>
       new Date(activity.timestamp) >= cutoffDate
     )
 
@@ -140,13 +141,13 @@ export function ActivityWidget() {
   // Update URL params when filters change
   const updateFilters = useCallback((newActivityType: string, newDateRange: string) => {
     const newParams = new URLSearchParams(searchParams.toString())
-    
+
     if (newActivityType === 'all') {
       newParams.delete('activityType')
     } else {
       newParams.set('activityType', newActivityType)
     }
-    
+
     if (newDateRange === '7d') {
       newParams.delete('dateRange')
     } else {
@@ -226,7 +227,19 @@ export function ActivityWidget() {
         </div>
       </CardHeader>
       <CardContent className="flex-1">
-        {error ? (
+        {loading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-3 p-2">
+                <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
           <div className="flex h-full flex-col items-center justify-center py-8 text-center">
             <p className="text-sm text-destructive mb-2">{error}</p>
             <Button variant="outline" size="sm" onClick={handleRefresh}>

@@ -1,7 +1,9 @@
-import { action, internalMutation, mutation, query } from './_generated/server'
+import { action, internalMutation, mutation, query, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
+import { z } from 'zod/v4'
+import { internal } from './_generated/api'
 import { Errors, withErrorHandling } from './errors'
-import { authenticatedMutation, workspaceMutation } from './functions'
+import { authenticatedMutation, authenticatedQuery, workspaceMutation, zWorkspaceQuery, zWorkspaceMutation, zWorkspaceQueryActive } from './functions'
 
 function nowMs() {
   return Date.now()
@@ -30,18 +32,43 @@ function hasOwn(obj: object, key: string) {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
-export const getAdIntegration = query({
+const adIntegrationZ = z.object({
+  providerId: z.string(),
+  clientId: z.string().nullable(),
+  accessToken: z.string().nullable(),
+  idToken: z.string().nullable(),
+  refreshToken: z.string().nullable(),
+  scopes: z.array(z.string()),
+  accountId: z.string().nullable(),
+  accountName: z.string().nullable(),
+  currency: z.string().nullable(),
+  developerToken: z.string().nullable(),
+  loginCustomerId: z.string().nullable(),
+  managerCustomerId: z.string().nullable(),
+  accessTokenExpiresAtMs: z.number().nullable(),
+  refreshTokenExpiresAtMs: z.number().nullable(),
+  lastSyncStatus: z.union([
+    z.literal('never'),
+    z.literal('pending'),
+    z.literal('success'),
+    z.literal('error'),
+  ]),
+  lastSyncMessage: z.string().nullable(),
+  lastSyncedAtMs: z.number().nullable(),
+  lastSyncRequestedAtMs: z.number().nullable(),
+  linkedAtMs: z.number().nullable(),
+  autoSyncEnabled: z.boolean().nullable(),
+  syncFrequencyMinutes: z.number().nullable(),
+  scheduledTimeframeDays: z.number().nullable(),
+})
+
+export const getAdIntegrationInternal = internalQuery({
   args: {
     workspaceId: v.string(),
     providerId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
-
+  handler: async (ctx, args): Promise<z.infer<typeof adIntegrationZ>> => {
     const clientId = normalizeClientId(args.clientId ?? null)
 
     const row = await ctx.db
@@ -78,23 +105,35 @@ export const getAdIntegration = query({
       autoSyncEnabled: row.autoSyncEnabled,
       syncFrequencyMinutes: row.syncFrequencyMinutes,
       scheduledTimeframeDays: row.scheduledTimeframeDays,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
     }
   },
 })
 
-export const listStatuses = query({
+export const getAdIntegration = zWorkspaceQuery({
   args: {
-    workspaceId: v.string(),
-    clientId: v.union(v.string(), v.null()),
+    providerId: z.string(),
+    clientId: z.string().nullable().optional(),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
+  returns: adIntegrationZ,
+  handler: async (ctx, args): Promise<z.infer<typeof adIntegrationZ>> => {
+    return await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, args)
+  },
+})
 
+export const listStatuses = zWorkspaceMutation({
+  args: {
+    clientId: z.string().nullable(),
+  },
+  returns: z.array(z.object({
+    providerId: z.string(),
+    clientId: z.string().nullable(),
+    lastSyncStatus: z.string(),
+    lastSyncMessage: z.string().nullable(),
+    lastSyncedAtMs: z.number().nullable(),
+    accountId: z.string().nullable(),
+    accountName: z.string().nullable(),
+  })),
+  handler: async (ctx, args) => {
     const clientId = normalizeClientId(args.clientId)
 
     // We scan by workspace and then filter clientId. This is fine because
@@ -398,7 +437,7 @@ export const initializeAdAccount = action({
         linkedAtMs,
       })
 
-      await ctx.runMutation('adsIntegrations:enqueueSyncJob' as any, {
+      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
         workspaceId: args.workspaceId,
         providerId: 'linkedin',
         clientId,
@@ -436,7 +475,7 @@ export const initializeAdAccount = action({
         linkedAtMs,
       })
 
-      await ctx.runMutation('adsIntegrations:enqueueSyncJob' as any, {
+      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
         workspaceId: args.workspaceId,
         providerId: 'facebook',
         clientId,
@@ -474,13 +513,13 @@ export const initializeAdAccount = action({
       linkedAtMs,
     })
 
-    await ctx.runMutation('adsIntegrations:enqueueSyncJob' as any, {
-      workspaceId: args.workspaceId,
-      providerId: 'tiktok',
-      clientId,
-      jobType: 'initial-backfill',
-      timeframeDays: 90,
-    })
+      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+        workspaceId: args.workspaceId,
+        providerId: 'tiktok',
+        clientId,
+        jobType: 'initial-backfill',
+        timeframeDays: 90,
+      })
 
     return {
       accountId: preferredAccount.id,
@@ -582,21 +621,15 @@ export const updateIntegrationCredentials = mutation({
   },
 })
 
-export const updateIntegrationStatus = mutation({
+export const updateIntegrationStatusInternal = internalMutation({
   args: {
     workspaceId: v.string(),
     providerId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
     status: v.union(v.literal('pending'), v.literal('success'), v.literal('error')),
     message: v.optional(v.union(v.string(), v.null())),
-    cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
-
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -617,6 +650,30 @@ export const updateIntegrationStatus = mutation({
     })
 
     return { ok: true }
+  },
+})
+
+export const updateIntegrationStatus = mutation({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.string(),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    status: v.union(v.literal('pending'), v.literal('success'), v.literal('error')),
+    message: v.optional(v.union(v.string(), v.null())),
+    cronKey: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    }
+    return await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId: args.clientId,
+      status: args.status,
+      message: args.message,
+    })
   },
 })
 
@@ -723,21 +780,15 @@ export const updateIntegrationPreferences = mutation({
   },
 })
 
-export const enqueueSyncJob = mutation({
+export const enqueueSyncJob = internalMutation({
   args: {
     workspaceId: v.string(),
     providerId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
     jobType: v.optional(v.union(v.literal('initial-backfill'), v.literal('scheduled-sync'), v.literal('manual-sync'))),
     timeframeDays: v.optional(v.number()),
-    cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
-
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -758,17 +809,11 @@ export const enqueueSyncJob = mutation({
   },
 })
 
-export const claimNextSyncJob = mutation({
+export const claimNextSyncJobInternal = internalMutation({
   args: {
     workspaceId: v.string(),
-    cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
-
+  handler: async (ctx, args): Promise<any> => {
     const timestamp = nowMs()
 
     const next = await ctx.db
@@ -802,25 +847,50 @@ export const claimNextSyncJob = mutation({
   },
 })
 
-export const completeSyncJob = mutation({
+export const claimNextSyncJob = mutation({
   args: {
-    jobId: v.id('adSyncJobs'),
+    workspaceId: v.string(),
     cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
       assertCronKey(ctx, { cronKey: args.cronKey ?? null })
     }
+    return await ctx.runMutation(internal.adsIntegrations.claimNextSyncJobInternal, {
+      workspaceId: args.workspaceId,
+    })
+  },
+})
 
+export const completeSyncJobInternal = internalMutation({
+  args: {
+    jobId: v.id('adSyncJobs'),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const timestamp = nowMs()
     await ctx.db.patch(args.jobId, {
       status: 'success',
       processedAtMs: timestamp,
       errorMessage: null,
     })
-
     return { ok: true }
+  },
+})
+
+export const completeSyncJob = mutation({
+  args: {
+    jobId: v.id('adSyncJobs'),
+    cronKey: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    }
+    return await ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
+      jobId: args.jobId,
+    })
   },
 })
 
@@ -881,41 +951,47 @@ export const resetStaleJobs = internalMutation({
   },
 })
 
-export const failSyncJob = mutation({
+export const failSyncJobInternal = internalMutation({
   args: {
     jobId: v.id('adSyncJobs'),
     message: v.string(),
-    cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
-
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const timestamp = nowMs()
     await ctx.db.patch(args.jobId, {
       status: 'error',
       processedAtMs: timestamp,
       errorMessage: args.message,
     })
-
     return { ok: true }
   },
 })
 
-export const hasPendingSyncJob = query({
+export const failSyncJob = mutation({
   args: {
-    workspaceId: v.string(),
-    providerId: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
+    jobId: v.id('adSyncJobs'),
+    message: v.string(),
+    cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
-      throw Errors.auth.unauthorized()
+      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
     }
+    return await ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
+      jobId: args.jobId,
+      message: args.message,
+    })
+  },
+})
 
+export const hasPendingSyncJob = zWorkspaceQuery({
+  args: {
+    providerId: z.string(),
+    clientId: z.string().nullable().optional(),
+  },
+  returns: z.boolean(),
+  handler: async (ctx, args) => {
     const clientId = normalizeClientId(args.clientId ?? null)
 
     const queued = await ctx.db
@@ -944,10 +1020,9 @@ export const hasPendingSyncJob = query({
   },
 })
 
-export const writeMetricsBatch = mutation({
+export const writeMetricsBatchInternal = internalMutation({
   args: {
     workspaceId: v.string(),
-    cronKey: v.optional(v.union(v.string(), v.null())),
     metrics: v.array(
       v.object({
         providerId: v.string(),
@@ -980,14 +1055,8 @@ export const writeMetricsBatch = mutation({
       })
     ),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
-
+  handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
     const timestamp = nowMs()
-
     for (const metric of args.metrics) {
       await ctx.db.insert('adMetrics', {
         workspaceId: args.workspaceId,
@@ -1009,6 +1078,24 @@ export const writeMetricsBatch = mutation({
     }
 
     return { ok: true, inserted: args.metrics.length }
+  },
+})
+
+export const writeMetricsBatch = mutation({
+  args: {
+    workspaceId: v.string(),
+    cronKey: v.optional(v.union(v.string(), v.null())),
+    metrics: v.array(v.any()), // Raw payload passed through to internal
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    }
+    return await ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
+      workspaceId: args.workspaceId,
+      metrics: args.metrics,
+    })
   },
 })
 
@@ -1178,75 +1265,4 @@ export const countQueuedJobsForWorkspace = query({
  * HTTP-callable mutation to clean up old completed/failed jobs.
  * Called from cron route with cronKey authentication.
  */
-export const cleanupOldJobsServer = mutation({
-  args: {
-    cutoffMs: v.number(),
-    cronKey: v.optional(v.union(v.string(), v.null())),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
 
-    const jobs = await ctx.db
-      .query('adSyncJobs')
-      .withIndex('by_status_processedAt', (q) => q.eq('status', 'success'))
-      .collect()
-
-    const completed = jobs.concat(
-      await ctx.db
-        .query('adSyncJobs')
-        .withIndex('by_status_processedAt', (q) => q.eq('status', 'error'))
-        .collect()
-    )
-
-    let deleted = 0
-    for (const job of completed) {
-      const processedAt = job.processedAtMs
-      if (typeof processedAt === 'number' && processedAt < args.cutoffMs) {
-        await ctx.db.delete(job._id)
-        deleted++
-      }
-    }
-
-    return { deleted }
-  },
-})
-
-/**
- * HTTP-callable mutation to reset stale running jobs back to queued.
- * Called from cron route with cronKey authentication.
- */
-export const resetStaleJobsServer = mutation({
-  args: {
-    startedBeforeMs: v.number(),
-    cronKey: v.optional(v.union(v.string(), v.null())),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
-    }
-
-    const running = await ctx.db
-      .query('adSyncJobs')
-      .withIndex('by_status_startedAt', (q) => q.eq('status', 'running'))
-      .collect()
-
-    let reset = 0
-    for (const job of running) {
-      const startedAt = job.startedAtMs
-      if (typeof startedAt === 'number' && startedAt < args.startedBeforeMs) {
-        await ctx.db.patch(job._id, {
-          status: 'queued',
-          startedAtMs: null,
-          errorMessage: 'Reset due to stale execution',
-        })
-        reset++
-      }
-    }
-
-    return { reset }
-  },
-})

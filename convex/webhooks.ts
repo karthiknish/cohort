@@ -193,10 +193,13 @@ export const handleStripeChargeRefunded = internalMutation({
       return { ok: true, skipped: true, reason: 'No invoice associated with charge' }
     }
 
+    const invoiceId = args.invoiceId
+
+    // Use the by_legacyId index for efficient lookup
     const invoiceRow = await ctx.db
       .query('financeInvoices')
-      .filter((q) => q.eq(q.field('legacyId'), args.invoiceId))
-      .first()
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', invoiceId))
+      .unique()
 
     if (!invoiceRow) {
       return { ok: true, skipped: true, reason: 'Invoice not found' }

@@ -1,6 +1,12 @@
 import { mutation, query, internalQuery, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
-import { authenticatedMutation, authenticatedQuery } from './functions'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
 import { Errors } from './errors'
 
 
@@ -14,6 +20,35 @@ function normalizeEmail(value: string | null | undefined) {
   if (!trimmed) return { email: null, emailLower: null }
   return { email: trimmed, emailLower: trimmed.toLowerCase() }
 }
+ 
+const userZ = z.object({
+  legacyId: z.string(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+  role: z.string().nullable(),
+  status: z.string().nullable(),
+  agencyId: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
+  photoUrl: z.string().nullable(),
+  notificationPreferences: z
+    .object({
+      whatsappTasks: z.boolean(),
+      whatsappCollaboration: z.boolean(),
+      emailAdAlerts: z.boolean(),
+      emailPerformanceDigest: z.boolean(),
+      emailTaskActivity: z.boolean(),
+    })
+    .nullable(),
+  regionalPreferences: z
+    .object({
+      currency: z.string().nullable().optional(),
+      timezone: z.string().nullable().optional(),
+      locale: z.string().nullable().optional(),
+    })
+    .nullable(),
+  createdAtMs: z.number().nullable(),
+  updatedAtMs: z.number().nullable(),
+})
 
 // Internal query - no auth required, for CLI/internal use only
 export const _getByEmailInternal = internalQuery({
@@ -79,8 +114,9 @@ export const _updateUserRoleStatus = internalMutation({
   },
 })
 
-export const getByLegacyId = authenticatedQuery({
-  args: { legacyId: v.string() },
+export const getByLegacyId = zAuthenticatedQuery({
+  args: { legacyId: z.string() },
+  returns: userZ,
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('users')
@@ -106,8 +142,9 @@ export const getByLegacyId = authenticatedQuery({
   },
 })
 
-export const getByEmail = authenticatedQuery({
-  args: { email: v.string() },
+export const getByEmail = zAuthenticatedQuery({
+  args: { email: z.string() },
+  returns: userZ,
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) throw Errors.validation.invalidInput('Invalid email')
@@ -146,8 +183,16 @@ export const getByEmail = authenticatedQuery({
   },
 })
 
-export const listWorkspaceMembers = authenticatedQuery({
-  args: { workspaceId: v.string(), limit: v.optional(v.number()) },
+export const listWorkspaceMembers = zAuthenticatedQuery({
+  args: { workspaceId: z.string(), limit: z.number().optional() },
+  returns: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().optional(),
+      role: z.string().optional(),
+    })
+  ),
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
 
@@ -278,40 +323,44 @@ export const getWhatsAppRecipientsForWorkspace = query({
   },
 })
 
-export const bulkUpsert = authenticatedMutation({
+export const bulkUpsert = zAuthenticatedMutation({
   args: {
-    users: v.array(
-      v.object({
-        legacyId: v.string(),
-        email: v.optional(v.union(v.string(), v.null())),
-        name: v.optional(v.union(v.string(), v.null())),
-        role: v.optional(v.union(v.string(), v.null())),
-        status: v.optional(v.union(v.string(), v.null())),
-        agencyId: v.optional(v.union(v.string(), v.null())),
-        phoneNumber: v.optional(v.union(v.string(), v.null())),
-        photoUrl: v.optional(v.union(v.string(), v.null())),
-        stripeCustomerId: v.optional(v.union(v.string(), v.null())),
-        notificationPreferences: v.optional(
-          v.object({
-            whatsappTasks: v.boolean(),
-            whatsappCollaboration: v.boolean(),
-            emailAdAlerts: v.boolean(),
-            emailPerformanceDigest: v.boolean(),
-            emailTaskActivity: v.boolean(),
+    users: z.array(
+      z.object({
+        legacyId: z.string(),
+        email: z.string().nullable().optional(),
+        name: z.string().nullable().optional(),
+        role: z.string().nullable().optional(),
+        status: z.string().nullable().optional(),
+        agencyId: z.string().nullable().optional(),
+        phoneNumber: z.string().nullable().optional(),
+        photoUrl: z.string().nullable().optional(),
+        stripeCustomerId: z.string().nullable().optional(),
+        notificationPreferences: z
+          .object({
+            whatsappTasks: z.boolean(),
+            whatsappCollaboration: z.boolean(),
+            emailAdAlerts: z.boolean(),
+            emailPerformanceDigest: z.boolean(),
+            emailTaskActivity: z.boolean(),
           })
-        ),
-        regionalPreferences: v.optional(
-          v.object({
-            currency: v.optional(v.union(v.string(), v.null())),
-            timezone: v.optional(v.union(v.string(), v.null())),
-            locale: v.optional(v.union(v.string(), v.null())),
+          .optional(),
+        regionalPreferences: z
+          .object({
+            currency: z.string().nullable().optional(),
+            timezone: z.string().nullable().optional(),
+            locale: z.string().nullable().optional(),
           })
-        ),
-        createdAtMs: v.optional(v.union(v.number(), v.null())),
-        updatedAtMs: v.optional(v.union(v.number(), v.null())),
+          .optional(),
+        createdAtMs: z.number().nullable().optional(),
+        updatedAtMs: z.number().nullable().optional(),
       })
     ),
   },
+  returns: z.object({
+    ok: z.boolean(),
+    upserted: z.number(),
+  }),
   handler: async (ctx, args) => {
     const timestamp = nowMs()
 
@@ -479,38 +528,3 @@ export const setStripeCustomerId = mutation({
 })
 
 // Public mutation - no auth required for test user management
-export const updateUserRoleStatusPublic = mutation({
-  args: {
-    email: v.string(),
-    role: v.string(),
-    status: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) throw new Error('Invalid email')
-
-    const matches = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
-      .collect()
-
-    if (matches.length === 0) throw new Error('User not found')
-
-    let best = matches[0]
-    for (const row of matches) {
-      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
-      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
-      if (rowUpdated > bestUpdated) {
-        best = row
-      }
-    }
-
-    await ctx.db.patch(best._id, {
-      role: args.role,
-      status: args.status,
-      updatedAtMs: nowMs(),
-    })
-
-    return { ok: true, legacyId: best.legacyId, updatedUserId: best._id, duplicateCount: matches.length }
-  },
-})

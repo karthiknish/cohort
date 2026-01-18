@@ -1,5 +1,3 @@
-import { mutation, query } from './_generated/server'
-import { v } from 'convex/values'
 import {
   authenticatedMutation,
   authenticatedQuery,
@@ -7,6 +5,8 @@ import {
   adminQuery,
   workspaceQuery,
   workspaceMutation,
+  zAuthenticatedMutation,
+  zAdminMutation,
   zWorkspaceQuery,
   zWorkspaceQueryActive,
   zWorkspaceMutation,
@@ -18,14 +18,40 @@ import {
   type AuthenticatedMutationCtx,
 } from './functions'
 import { z } from 'zod/v4'
+import { v } from 'convex/values'
 
 
 
 
 import { Errors } from './errors'
+ 
+const taskZ = z.object({
+  legacyId: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.string(),
+  priority: z.string(),
+  assignedTo: z.array(z.string()).nullable(),
+  client: z.string().nullable(),
+  clientId: z.string().nullable(),
+  projectId: z.string().nullable(),
+  projectName: z.string().nullable(),
+  dueDateMs: z.number().nullable(),
+  tags: z.array(z.string()),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+  deletedAtMs: z.number().nullable(),
+})
 
 export const list = zWorkspacePaginatedQueryActive({
   args: {},
+  returns: z.object({
+    items: z.array(taskZ),
+    nextCursor: z.object({
+      fieldValue: z.number(),
+      legacyId: z.string(),
+    }).nullable(),
+  }),
   handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('tasks')
@@ -62,6 +88,7 @@ export const list = zWorkspacePaginatedQueryActive({
 
 export const getByLegacyId = zWorkspaceQuery({
   args: { legacyId: z.string() },
+  returns: taskZ,
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
@@ -89,10 +116,64 @@ export const getByLegacyId = zWorkspaceQuery({
   },
 })
 
+export const listByStatus = zWorkspacePaginatedQueryActive({
+  args: {
+    status: z.string(),
+  },
+  returns: z.object({
+    items: z.array(taskZ),
+    nextCursor: z.object({
+      fieldValue: z.number(),
+      legacyId: z.string(),
+    }).nullable(),
+  }),
+  handler: async (ctx: any, args: any) => {
+    let q = ctx.db
+      .query('tasks')
+      .withIndex('by_workspace_status_createdAtMs', (q: any) => 
+        q.eq('workspaceId', args.workspaceId).eq('status', args.status)
+      )
+      .order('desc')
+
+    q = applyManualPagination(q, args.cursor)
+
+    const rows = await q.take(args.limit + 1)
+    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+
+    return {
+      items: result.items.map((row: any) => ({
+        legacyId: row.legacyId,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        priority: row.priority,
+        assignedTo: row.assignedTo,
+        client: row.client,
+        clientId: row.clientId,
+        projectId: row.projectId,
+        projectName: row.projectName,
+        dueDateMs: row.dueDateMs,
+        tags: row.tags,
+        createdAtMs: row.createdAtMs,
+        updatedAtMs: row.updatedAtMs,
+        deletedAtMs: row.deletedAtMs,
+      })),
+      nextCursor: result.nextCursor,
+    }
+  },
+})
+
 export const listForProject = zWorkspacePaginatedQueryActive({
   args: {
     projectId: z.string(),
   },
+  returns: z.object({
+    items: z.array(taskZ),
+    nextCursor: z.object({
+      fieldValue: z.number(),
+      legacyId: z.string(),
+    }).nullable(),
+  }),
   handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('tasks')
@@ -133,6 +214,13 @@ export const listByClient = zWorkspacePaginatedQueryActive({
   args: {
     clientId: z.string(),
   },
+  returns: z.object({
+    items: z.array(taskZ),
+    nextCursor: z.object({
+      fieldValue: z.number(),
+      legacyId: z.string(),
+    }).nullable(),
+  }),
   handler: async (ctx: any, args: any) => {
     let q = ctx.db
       .query('tasks')
@@ -169,19 +257,20 @@ export const listByClient = zWorkspacePaginatedQueryActive({
   },
 })
 
-export const createTask = authenticatedMutation({
+export const createTask = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    title: v.string(),
-    description: v.union(v.string(), v.null()),
-    status: v.string(),
-    priority: v.string(),
-    assignedTo: v.array(v.string()),
-    clientId: v.string(),
-    client: v.union(v.string(), v.null()),
-    dueDateMs: v.union(v.number(), v.null()),
-    tags: v.array(v.string()),
+    workspaceId: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    status: z.string(),
+    priority: z.string(),
+    assignedTo: z.array(z.string()),
+    clientId: z.string(),
+    client: z.string().nullable(),
+    dueDateMs: z.number().nullable(),
+    tags: z.array(z.string()),
   },
+  returns: z.string(),
   handler: async (ctx: any, args: any) => {
     const legacyId = `task_${ctx.now}_${Math.random().toString(16).slice(2)}`
 
@@ -209,20 +298,21 @@ export const createTask = authenticatedMutation({
   },
 })
 
-export const patchTask = authenticatedMutation({
+export const patchTask = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    update: v.object({
-      title: v.optional(v.string()),
-      description: v.optional(v.union(v.string(), v.null())),
-      status: v.optional(v.string()),
-      priority: v.optional(v.string()),
-      assignedTo: v.optional(v.array(v.string())),
-      dueDateMs: v.optional(v.union(v.number(), v.null())),
-      tags: v.optional(v.array(v.string())),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    update: z.object({
+      title: z.string().optional(),
+      description: z.string().nullable().optional(),
+      status: z.string().optional(),
+      priority: z.string().optional(),
+      assignedTo: z.array(z.string()).optional(),
+      dueDateMs: z.number().nullable().optional(),
+      tags: z.array(z.string()).optional(),
     }),
   },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
@@ -249,18 +339,19 @@ export const patchTask = authenticatedMutation({
   },
 })
 
-export const bulkPatchTasks = authenticatedMutation({
+export const bulkPatchTasks = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    ids: v.array(v.string()),
-    update: v.object({
-      status: v.optional(v.string()),
-      priority: v.optional(v.string()),
-      assignedTo: v.optional(v.array(v.string())),
-      dueDateMs: v.optional(v.union(v.number(), v.null())),
-      tags: v.optional(v.array(v.string())),
+    workspaceId: z.string(),
+    ids: z.array(z.string()),
+    update: z.object({
+      status: z.string().optional(),
+      priority: z.string().optional(),
+      assignedTo: z.array(z.string()).optional(),
+      dueDateMs: z.number().nullable().optional(),
+      tags: z.array(z.string()).optional(),
     }),
   },
+  returns: z.object({ ok: z.boolean(), updated: z.number() }),
   handler: async (ctx: any, args: any) => {
     const idSet = new Set(args.ids)
 
@@ -286,8 +377,9 @@ export const bulkPatchTasks = authenticatedMutation({
   },
 })
 
-export const softDeleteTask = authenticatedMutation({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const softDeleteTask = zAuthenticatedMutation({
+  args: { workspaceId: z.string(), legacyId: z.string() },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
@@ -301,8 +393,9 @@ export const softDeleteTask = authenticatedMutation({
   },
 })
 
-export const bulkSoftDeleteTasks = authenticatedMutation({
-  args: { workspaceId: v.string(), ids: v.array(v.string()) },
+export const bulkSoftDeleteTasks = zAuthenticatedMutation({
+  args: { workspaceId: z.string(), ids: z.array(z.string()) },
+  returns: z.object({ ok: z.boolean(), deleted: z.number() }),
   handler: async (ctx: any, args: any) => {
     const idSet = new Set(args.ids)
 
@@ -322,26 +415,27 @@ export const bulkSoftDeleteTasks = authenticatedMutation({
   },
 })
 
-export const upsert = authenticatedMutation({
+export const upsert = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    title: v.string(),
-    description: v.union(v.string(), v.null()),
-    status: v.string(),
-    priority: v.string(),
-    assignedTo: v.array(v.string()),
-    client: v.union(v.string(), v.null()),
-    clientId: v.union(v.string(), v.null()),
-    projectId: v.union(v.string(), v.null()),
-    projectName: v.union(v.string(), v.null()),
-    dueDateMs: v.union(v.number(), v.null()),
-    tags: v.array(v.string()),
-    createdBy: v.union(v.string(), v.null()),
-    createdAtMs: v.optional(v.number()),
-    updatedAtMs: v.optional(v.number()),
-    deletedAtMs: v.optional(v.union(v.number(), v.null())),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    status: z.string(),
+    priority: z.string(),
+    assignedTo: z.array(z.string()),
+    client: z.string().nullable(),
+    clientId: z.string().nullable(),
+    projectId: z.string().nullable(),
+    projectName: z.string().nullable(),
+    dueDateMs: z.number().nullable(),
+    tags: z.array(z.string()),
+    createdBy: z.string().nullable(),
+    createdAtMs: z.number().optional(),
+    updatedAtMs: z.number().optional(),
+    deletedAtMs: z.number().nullable().optional(),
   },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx: any, args: any) => {
     const existing = await ctx.db
       .query('tasks')
@@ -378,30 +472,31 @@ export const upsert = authenticatedMutation({
   },
 })
 
-export const bulkUpsert = authenticatedMutation({
+export const bulkUpsert = zAuthenticatedMutation({
   args: {
-    tasks: v.array(
-      v.object({
-        workspaceId: v.string(),
-        legacyId: v.string(),
-        title: v.string(),
-        description: v.union(v.string(), v.null()),
-        status: v.string(),
-        priority: v.string(),
-        assignedTo: v.array(v.string()),
-        client: v.union(v.string(), v.null()),
-        clientId: v.union(v.string(), v.null()),
-        projectId: v.union(v.string(), v.null()),
-        projectName: v.union(v.string(), v.null()),
-        dueDateMs: v.union(v.number(), v.null()),
-        tags: v.array(v.string()),
-        createdBy: v.union(v.string(), v.null()),
-        createdAtMs: v.number(),
-        updatedAtMs: v.number(),
-        deletedAtMs: v.union(v.number(), v.null()),
+    tasks: z.array(
+      z.object({
+        workspaceId: z.string(),
+        legacyId: z.string(),
+        title: z.string(),
+        description: z.string().nullable(),
+        status: z.string(),
+        priority: z.string(),
+        assignedTo: z.array(z.string()),
+        client: z.string().nullable(),
+        clientId: z.string().nullable(),
+        projectId: z.string().nullable(),
+        projectName: z.string().nullable(),
+        dueDateMs: z.number().nullable(),
+        tags: z.array(z.string()),
+        createdBy: z.string().nullable(),
+        createdAtMs: z.number(),
+        updatedAtMs: z.number(),
+        deletedAtMs: z.number().nullable(),
       })
     ),
   },
+  returns: z.object({ ok: z.boolean(), upserted: z.number() }),
   handler: async (ctx: any, args: any) => {
     let upserted = 0
     for (const task of args.tasks) {
@@ -445,17 +540,18 @@ export const bulkUpsert = authenticatedMutation({
   },
 })
 
-export const bulkUpdate = authenticatedMutation({
+export const bulkUpdate = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    ids: v.array(v.string()),
-    update: v.object({
-      status: v.optional(v.string()),
-      priority: v.optional(v.string()),
-      assignedTo: v.optional(v.array(v.string())),
-      tags: v.optional(v.array(v.string())),
+    workspaceId: z.string(),
+    ids: z.array(z.string()),
+    update: z.object({
+      status: z.string().optional(),
+      priority: z.string().optional(),
+      assignedTo: z.array(z.string()).optional(),
+      tags: z.array(z.string()).optional(),
     }),
   },
+  returns: z.object({ ok: z.boolean(), results: z.array(z.any()), tasks: z.array(taskZ) }),
   handler: async (ctx: any, args: any) => {
     const idSet = new Set(args.ids)
 
@@ -524,8 +620,9 @@ export const bulkUpdate = authenticatedMutation({
   },
 })
 
-export const bulkHardDelete = adminMutation({
-  args: { workspaceId: v.string(), ids: v.array(v.string()) },
+export const bulkHardDelete = zAdminMutation({
+  args: { workspaceId: z.string(), ids: z.array(z.string()) },
+  returns: z.object({ ok: z.boolean(), results: z.array(z.any()) }),
   handler: async (ctx: any, args: any) => {
     const results: Array<{ id: string; success: boolean; error?: string }> = []
 
@@ -548,8 +645,9 @@ export const bulkHardDelete = adminMutation({
   },
 })
 
-export const softDelete = authenticatedMutation({
-  args: { workspaceId: v.string(), legacyId: v.string(), deletedAtMs: v.optional(v.number()) },
+export const softDelete = zAuthenticatedMutation({
+  args: { workspaceId: z.string(), legacyId: z.string(), deletedAtMs: z.number().optional() },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')
@@ -567,8 +665,9 @@ export const softDelete = authenticatedMutation({
   },
 })
 
-export const hardDelete = adminMutation({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const hardDelete = zAdminMutation({
+  args: { workspaceId: z.string(), legacyId: z.string() },
+  returns: z.object({ ok: z.boolean() }),
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db
       .query('tasks')

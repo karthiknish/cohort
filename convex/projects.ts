@@ -1,21 +1,47 @@
-import { v } from 'convex/values'
 import {
   authenticatedMutation,
   workspaceMutation,
   workspaceQuery,
   workspaceQueryActive,
+  zAuthenticatedMutation,
+  zWorkspaceMutation,
+  zWorkspaceQuery,
   zWorkspacePaginatedQueryActive,
   applyManualPagination,
   getPaginatedResponse,
 } from './functions'
+import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { Errors } from './errors'
+ 
+const projectZ = z.object({
+  legacyId: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  status: z.string(),
+  clientId: z.string().nullable(),
+  clientName: z.string().nullable(),
+  startDateMs: z.number().nullable(),
+  endDateMs: z.number().nullable(),
+  tags: z.array(z.string()),
+  ownerId: z.string().nullable(),
+  createdAtMs: z.number(),
+  updatedAtMs: z.number(),
+  deletedAtMs: z.number().nullable(),
+})
 
 export const list = zWorkspacePaginatedQueryActive({
   args: {
     status: z.string().optional(),
     clientId: z.string().optional(),
   },
+  returns: z.object({
+    items: z.array(projectZ),
+    nextCursor: z.object({
+      fieldValue: z.number(),
+      legacyId: z.string(),
+    }).nullable(),
+  }),
   handler: async (ctx, args) => {
     const hasStatus = typeof args.status === 'string'
     const hasClientId = typeof args.clientId === 'string'
@@ -65,8 +91,9 @@ export const list = zWorkspacePaginatedQueryActive({
   },
 })
 
-export const getByLegacyId = workspaceQuery({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = zWorkspaceQuery({
+  args: { workspaceId: z.string(), legacyId: z.string() },
+  returns: projectZ,
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('projects')
@@ -93,22 +120,23 @@ export const getByLegacyId = workspaceQuery({
   },
 })
 
-export const create = workspaceMutation({
+export const create = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    description: v.union(v.string(), v.null()),
-    status: v.string(),
-    clientId: v.union(v.string(), v.null()),
-    clientName: v.union(v.string(), v.null()),
-    startDateMs: v.union(v.number(), v.null()),
-    endDateMs: v.union(v.number(), v.null()),
-    tags: v.array(v.string()),
-    ownerId: v.union(v.string(), v.null()),
-    createdAtMs: v.optional(v.number()),
-    updatedAtMs: v.optional(v.number()),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string(),
+    description: z.string().nullable(),
+    status: z.string(),
+    clientId: z.string().nullable(),
+    clientName: z.string().nullable(),
+    startDateMs: z.number().nullable(),
+    endDateMs: z.number().nullable(),
+    tags: z.array(z.string()),
+    ownerId: z.string().nullable(),
+    createdAtMs: z.number().optional(),
+    updatedAtMs: z.number().optional(),
   },
+  returns: z.string(),
   handler: async (ctx, args) => {
     await ctx.db.insert('projects', {
       workspaceId: args.workspaceId,
@@ -132,21 +160,22 @@ export const create = workspaceMutation({
   },
 })
 
-export const update = workspaceMutation({
+export const update = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.optional(v.string()),
-    description: v.optional(v.union(v.string(), v.null())),
-    status: v.optional(v.string()),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    clientName: v.optional(v.union(v.string(), v.null())),
-    startDateMs: v.optional(v.union(v.number(), v.null())),
-    endDateMs: v.optional(v.union(v.number(), v.null())),
-    tags: v.optional(v.array(v.string())),
-    ownerId: v.optional(v.union(v.string(), v.null())),
-    updatedAtMs: v.optional(v.number()),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string().optional(),
+    description: z.string().nullable().optional(),
+    status: z.string().optional(),
+    clientId: z.string().nullable().optional(),
+    clientName: z.string().nullable().optional(),
+    startDateMs: z.number().nullable().optional(),
+    endDateMs: z.number().nullable().optional(),
+    tags: z.array(z.string()).optional(),
+    ownerId: z.string().nullable().optional(),
+    updatedAtMs: z.number().optional(),
   },
+  returns: z.string(),
   handler: async (ctx, args) => {
     const project = await ctx.db
       .query('projects')
@@ -180,8 +209,9 @@ export const update = workspaceMutation({
   },
 })
 
-export const softDelete = workspaceMutation({
-  args: { workspaceId: v.string(), legacyId: v.string(), deletedAtMs: v.optional(v.number()) },
+export const softDelete = zWorkspaceMutation({
+  args: { workspaceId: z.string(), legacyId: z.string(), deletedAtMs: z.number().optional() },
+  returns: z.string(),
   handler: async (ctx, args) => {
     const project = await ctx.db
       .query('projects')
@@ -202,27 +232,28 @@ export const softDelete = workspaceMutation({
   },
 })
 
-export const bulkUpsert = authenticatedMutation({
+export const bulkUpsert = zAuthenticatedMutation({
   args: {
-    projects: v.array(
-      v.object({
-        workspaceId: v.string(),
-        legacyId: v.string(),
-        name: v.string(),
-        description: v.union(v.string(), v.null()),
-        status: v.string(),
-        clientId: v.union(v.string(), v.null()),
-        clientName: v.union(v.string(), v.null()),
-        startDateMs: v.union(v.number(), v.null()),
-        endDateMs: v.union(v.number(), v.null()),
-        tags: v.array(v.string()),
-        ownerId: v.union(v.string(), v.null()),
-        createdAtMs: v.number(),
-        updatedAtMs: v.number(),
-        deletedAtMs: v.union(v.number(), v.null()),
+    projects: z.array(
+      z.object({
+        workspaceId: z.string(),
+        legacyId: z.string(),
+        name: z.string(),
+        description: z.string().nullable(),
+        status: z.string(),
+        clientId: z.string().nullable(),
+        clientName: z.string().nullable(),
+        startDateMs: z.number().nullable(),
+        endDateMs: z.number().nullable(),
+        tags: z.array(z.string()),
+        ownerId: z.string().nullable(),
+        createdAtMs: z.number(),
+        updatedAtMs: z.number(),
+        deletedAtMs: z.number().nullable(),
       })
     ),
   },
+  returns: z.object({ upserted: z.number() }),
   handler: async (ctx, args) => {
     let upserted = 0
 

@@ -1,7 +1,13 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-import { authenticatedMutation, authenticatedQuery } from './functions'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
 
 function nowMs() {
   return Date.now()
@@ -57,10 +63,10 @@ export const listActiveForAlerts = query({
   },
 })
 
-export const listByWorkspace = authenticatedQuery({
+export const listByWorkspace = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    activeOnly: v.optional(v.boolean()),
+    workspaceId: z.string(),
+    activeOnly: z.boolean().optional(),
   },
   handler: async (ctx, args) => {
     const activeOnly = args.activeOnly === true
@@ -94,8 +100,8 @@ export const listByWorkspace = authenticatedQuery({
   },
 })
 
-export const getByLegacyId = authenticatedQuery({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = zAuthenticatedQuery({
+  args: { workspaceId: z.string(), legacyId: z.string() },
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('customFormulas')
@@ -120,16 +126,16 @@ export const getByLegacyId = authenticatedQuery({
   },
 })
 
-export const create = authenticatedMutation({
+export const create = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    description: v.optional(v.union(v.string(), v.null())),
-    formula: v.string(),
-    inputs: v.array(v.string()),
-    outputMetric: v.string(),
-    createdBy: v.optional(v.union(v.string(), v.null())),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string(),
+    description: z.string().nullable().optional(),
+    formula: z.string(),
+    inputs: z.array(z.string()),
+    outputMetric: z.string(),
+    createdBy: z.string().nullable().optional(),
   },
   handler: async (ctx, args) => {
     const timestamp = nowMs()
@@ -163,16 +169,16 @@ export const create = authenticatedMutation({
   },
 })
 
-export const update = authenticatedMutation({
+export const update = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.optional(v.string()),
-    description: v.optional(v.union(v.string(), v.null())),
-    formula: v.optional(v.string()),
-    inputs: v.optional(v.array(v.string())),
-    outputMetric: v.optional(v.string()),
-    isActive: v.optional(v.boolean()),
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string().optional(),
+    description: z.string().nullable().optional(),
+    formula: z.string().optional(),
+    inputs: z.array(z.string()).optional(),
+    outputMetric: z.string().optional(),
+    isActive: z.boolean().optional(),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -203,8 +209,8 @@ export const update = authenticatedMutation({
   },
 })
 
-export const remove = authenticatedMutation({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const remove = zAuthenticatedMutation({
+  args: { workspaceId: z.string(), legacyId: z.string() },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('customFormulas')

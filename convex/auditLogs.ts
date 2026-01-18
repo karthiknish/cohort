@@ -1,12 +1,15 @@
-import { mutation, query } from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
+import { internal } from './_generated/api'
 import { v } from 'convex/values'
+import { z } from 'zod/v4'
 import { Errors } from './errors'
+import { zAuthenticatedQuery } from './functions'
 
 /**
  * Log an audit action.
  * Called from server-side code without user auth context.
  */
-export const log = mutation({
+export const logInternal = internalMutation({
   args: {
     action: v.string(),
     actorId: v.string(),
@@ -19,9 +22,7 @@ export const log = mutation({
     requestId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    // No auth check - audit logs are written by server-side code
     const timestampMs = Date.now()
-
     await ctx.db.insert('auditLogs', {
       action: args.action,
       actorId: args.actorId,
@@ -34,27 +35,57 @@ export const log = mutation({
       requestId: args.requestId ?? null,
       timestampMs,
     })
-
     return { ok: true }
+  },
+})
+
+export const log = mutation({
+  args: {
+    serverKey: v.string(),
+    action: v.string(),
+    actorId: v.string(),
+    actorEmail: v.optional(v.union(v.string(), v.null())),
+    targetId: v.optional(v.union(v.string(), v.null())),
+    workspaceId: v.optional(v.union(v.string(), v.null())),
+    metadata: v.optional(v.any()),
+    ip: v.optional(v.union(v.string(), v.null())),
+    userAgent: v.optional(v.union(v.string(), v.null())),
+    requestId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
+    const secret = process.env.INTEGRATIONS_CRON_SECRET
+    if (!secret || args.serverKey !== secret) {
+      throw Errors.auth.unauthorized()
+    }
+    const { serverKey, ...logArgs } = args
+    return await ctx.runMutation(internal.auditLogs.logInternal, logArgs)
   },
 })
 
 /**
  * List recent audit logs.
  */
-export const listRecent = query({
+export const listRecent = zAuthenticatedQuery({
   args: {
-    limit: v.optional(v.number()),
-    actorId: v.optional(v.string()),
-    action: v.optional(v.string()),
-    workspaceId: v.optional(v.string()),
+    limit: z.number().optional(),
+    actorId: z.string().optional(),
+    action: z.string().optional(),
+    workspaceId: z.string().optional(),
   },
+  returns: z.array(z.object({
+    id: z.string(),
+    action: z.string(),
+    actorId: z.string(),
+    actorEmail: z.string().nullable(),
+    targetId: z.string().nullable(),
+    workspaceId: z.string().nullable(),
+    metadata: z.any().optional(),
+    ip: z.string().nullable(),
+    userAgent: z.string().nullable(),
+    requestId: z.string().nullable(),
+    timestamp: z.string(),
+  })),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
-
     const limit = Math.min(args.limit ?? 50, 200)
 
     let query

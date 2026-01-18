@@ -1,4 +1,5 @@
-import { action } from './_generated/server'
+import { action, internalAction, internalQuery } from './_generated/server'
+import { internal } from './_generated/api'
 import { v } from 'convex/values'
 
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
@@ -19,7 +20,7 @@ function normalizeClientId(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-export const processClaimedJob = action({
+export const processClaimedJob = internalAction({
   //
   args: {
     workspaceId: v.string(),
@@ -27,22 +28,13 @@ export const processClaimedJob = action({
     providerId: v.string(),
     clientId: v.union(v.string(), v.null()),
     timeframeDays: v.number(),
-    cronKey: v.string(),
   },
-  handler: async (ctx, args) =>
+  handler: async (ctx, args): Promise<{ metricsInserted: number }> =>
     withErrorHandling(async () => {
-      const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
-      if (!cronSecret) {
-        throw Errors.base.internal('INTEGRATIONS_CRON_SECRET is not configured')
-      }
-
-      if (args.cronKey !== cronSecret) {
-        throw Errors.auth.unauthorized()
-      }
 
       const clientId = normalizeClientId(args.clientId)
 
-      const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
         workspaceId: args.workspaceId,
         providerId: args.providerId,
         clientId,
@@ -131,9 +123,8 @@ export const processClaimedJob = action({
           throw Errors.validation.invalidInput(`Unsupported provider: ${args.providerId}`)
       }
 
-      const insertResult = await ctx.runMutation('adsIntegrations:writeMetricsBatch' as any, {
+      const insertResult = await ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
         workspaceId: args.workspaceId,
-        cronKey: args.cronKey,
         metrics: metrics.map((metric: any) => ({
           providerId: metric.providerId,
           clientId,

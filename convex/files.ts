@@ -1,19 +1,24 @@
-import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
 import type { Id } from './_generated/dataModel'
-import { authenticatedMutation, authenticatedQuery } from './functions'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
 
-export const generateUploadUrl = authenticatedMutation({
+export const generateUploadUrl = zAuthenticatedMutation({
   args: {},
+  returns: z.object({ url: z.string() }),
   handler: async (ctx) => {
     const url = await ctx.storage.generateUploadUrl()
     return { url }
   },
 })
 
-export const getDownloadUrl = authenticatedQuery({
+export const getDownloadUrl = zAuthenticatedQuery({
   args: {
-    storageId: v.string(),
+    storageId: z.string(),
   },
   handler: async (ctx, args) => {
     const url = await ctx.storage.getUrl(args.storageId as Id<'_storage'>)
@@ -21,9 +26,9 @@ export const getDownloadUrl = authenticatedQuery({
   },
 })
 
-export const getPublicUrl = authenticatedQuery({
+export const getPublicUrl = zAuthenticatedQuery({
   args: {
-    storageId: v.string(),
+    storageId: z.string(),
   },
   handler: async (ctx, args) => {
     const url = await ctx.storage.getUrl(args.storageId as Id<'_storage'>)
@@ -31,12 +36,16 @@ export const getPublicUrl = authenticatedQuery({
   },
 })
 
-export const getProposalFileDownloadUrl = authenticatedQuery({
+export const getProposalFileDownloadUrl = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    proposalId: v.string(),
-    fileType: v.union(v.literal('pptx'), v.literal('pdf')),
+    workspaceId: z.string(),
+    proposalId: z.string(),
+    fileType: z.union([z.literal('pptx'), z.literal('pdf')]),
   },
+  returns: z.union([
+    z.object({ ok: z.literal(true), url: z.string(), filename: z.string(), contentType: z.string() }),
+    z.object({ ok: z.literal(false), error: z.literal('not_found') }),
+  ]),
   handler: async (ctx, args) => {
     const proposal = await ctx.db
       .query('proposals')
@@ -68,12 +77,21 @@ export const getProposalFileDownloadUrl = authenticatedQuery({
   },
 })
 
-export const getCollaborationAttachmentDownloadUrl = authenticatedQuery({
+export const getCollaborationAttachmentDownloadUrl = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    messageId: v.string(),
-    attachmentIndex: v.number(),
+    workspaceId: z.string(),
+    messageId: z.string(),
+    attachmentIndex: z.number(),
   },
+  returns: z.union([
+    z.object({
+      ok: z.literal(true),
+      url: z.string(),
+      filename: z.string().nullable(),
+      contentType: z.string().nullable(),
+    }),
+    z.object({ ok: z.literal(false), error: z.literal('not_found') }),
+  ]),
   handler: async (ctx, args) => {
     const message = await ctx.db
       .query('collaborationMessages')

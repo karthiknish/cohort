@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
 import { logger } from '@/lib/logger'
 
@@ -31,7 +32,7 @@ function getConvexHttpClient(): ConvexHttpClient {
   return new ConvexHttpClient(url)
 }
 
-async function queryConvex(functionName: string, args: any) {
+const queryConvex = cache(async (functionName: string, args: any) => {
   const client = getConvexHttpClient()
 
   try {
@@ -45,7 +46,7 @@ async function queryConvex(functionName: string, args: any) {
     })
     throw error
   }
-}
+})
 
 async function mutateConvex(functionName: string, args: any) {
   const client = getConvexHttpClient()

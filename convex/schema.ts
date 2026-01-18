@@ -166,7 +166,8 @@ export default defineSchema({
   })
     .index('by_workspaceId', ['workspaceId'])
     .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_clientId_createdAt', ['workspaceId', 'clientId', 'createdAt']),
+    .index('by_workspaceId_clientId_createdAt', ['workspaceId', 'clientId', 'createdAt'])
+    .index('by_legacyId', ['legacyId']),
 
   // Recurring invoice schedules (migrated from Firestore `workspaces/{workspaceId}/recurringInvoices`).
   recurringInvoices: defineTable({
@@ -593,6 +594,7 @@ export default defineSchema({
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_createdAtMs_legacyId', ['workspaceId', 'createdAtMs', 'legacyId'])
+    .index('by_workspace_status_createdAtMs', ['workspaceId', 'status', 'createdAtMs'])
     .index('by_workspace_projectId_createdAtMs', ['workspaceId', 'projectId', 'createdAtMs'])
     .index('by_workspace_clientId_updatedAtMs_legacyId', ['workspaceId', 'clientId', 'updatedAtMs', 'legacyId']),
 

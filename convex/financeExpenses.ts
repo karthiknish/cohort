@@ -1,6 +1,12 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import {
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
+import type { Id } from './_generated/dataModel'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -12,19 +18,19 @@ function now() {
   return Date.now()
 }
 
-const attachmentValidator = v.object({
-  name: v.string(),
-  url: v.string(),
-  type: v.string(),
-  size: v.string(),
+const attachmentZ = z.object({
+  name: z.string(),
+  url: z.string(),
+  type: z.string(),
+  size: z.string(),
 })
 
-export const list = query({
+export const list = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    employeeId: v.optional(v.string()),
-    status: v.optional(v.string()),
-    limit: v.optional(v.number()),
+    workspaceId: z.string(),
+    employeeId: z.string().optional(),
+    status: z.string().optional(),
+    limit: z.number().optional(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -77,10 +83,10 @@ export const list = query({
   },
 })
 
-export const getByLegacyId = query({
+export const getByLegacyId = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -121,33 +127,33 @@ export const getByLegacyId = query({
   },
 })
 
-export const upsert = mutation({
+export const upsert = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.optional(v.string()),
-
-    description: v.string(),
-    amount: v.number(),
-    currency: v.string(),
-    costType: v.string(),
-    incurredAt: v.union(v.string(), v.null()),
-    categoryId: v.union(v.string(), v.null()),
-    categoryName: v.union(v.string(), v.null()),
-    vendorId: v.union(v.string(), v.null()),
-    vendorName: v.union(v.string(), v.null()),
-
-    status: v.string(),
-    employeeId: v.union(v.string(), v.null()),
-
-    submittedAt: v.union(v.number(), v.null()),
-    approvedAt: v.union(v.number(), v.null()),
-    rejectedAt: v.union(v.number(), v.null()),
-    decidedBy: v.union(v.string(), v.null()),
-    decisionNote: v.union(v.string(), v.null()),
-
-    attachments: v.array(attachmentValidator),
-
-    createdBy: v.union(v.string(), v.null()),
+    workspaceId: z.string(),
+    legacyId: z.string().optional(),
+ 
+    description: z.string(),
+    amount: z.number(),
+    currency: z.string(),
+    costType: z.string(),
+    incurredAt: z.string().nullable(),
+    categoryId: z.string().nullable(),
+    categoryName: z.string().nullable(),
+    vendorId: z.string().nullable(),
+    vendorName: z.string().nullable(),
+ 
+    status: z.string(),
+    employeeId: z.string().nullable(),
+ 
+    submittedAt: z.number().nullable(),
+    approvedAt: z.number().nullable(),
+    rejectedAt: z.number().nullable(),
+    decidedBy: z.string().nullable(),
+    decisionNote: z.string().nullable(),
+ 
+    attachments: z.array(attachmentZ),
+ 
+    createdBy: z.string().nullable(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -247,10 +253,10 @@ export const upsert = mutation({
   },
 })
 
-export const remove = mutation({
+export const remove = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()

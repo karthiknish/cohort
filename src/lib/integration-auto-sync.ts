@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { differenceInMinutes } from 'date-fns'
 import { ConvexHttpClient } from 'convex/browser'
 
@@ -22,6 +23,14 @@ function getConvexClient(): ConvexHttpClient | null {
   _convexClient = new ConvexHttpClient(url)
   return _convexClient
 }
+
+const listWorkspaceIntegrationIds = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
+  return await convex.query(api.adsIntegrations.listWorkspaceIntegrationIds, { workspaceId })
+})
+
+const listAllWorkspacesWithIntegrations = cache(async (convex: ConvexHttpClient, limit: number) => {
+  return await convex.query(api.adsIntegrations.listAllWorkspacesWithIntegrations, { limit })
+})
 
 function minutesSince(date: Date | null | undefined): number | null {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return null
@@ -174,9 +183,7 @@ async function getUserIntegrationIds(userId: string): Promise<string[]> {
   }
 
   const workspaceId = await resolveWorkspaceIdForUser(userId)
-  const providerIds = await convex.query(api.adsIntegrations.listWorkspaceIntegrationIds, {
-    workspaceId,
-  })
+  const providerIds = await listWorkspaceIntegrationIds(convex, workspaceId)
 
   return providerIds
 }
@@ -203,9 +210,7 @@ export async function scheduleSyncsForAllUsers(options: {
     ? Math.max(1, Math.floor(maxUsers))
     : 1000
 
-  const workspaceIds = await convex.query(api.adsIntegrations.listAllWorkspacesWithIntegrations, {
-    limit,
-  })
+  const workspaceIds = await listAllWorkspacesWithIntegrations(convex, limit)
 
   const scheduled: Array<{ userId: string; providerIds: string[] }> = []
   const skipped: Array<{ userId: string; providerIds: string[] }> = []

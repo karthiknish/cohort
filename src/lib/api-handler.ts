@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { z } from 'zod'
 import { v4 as uuidv4 } from 'uuid'
 import { createHash } from 'crypto'
@@ -339,32 +339,35 @@ export function createApiHandler<
         const status = payload.success ? 200 : 400
 
         const duration = Date.now() - startTime
-        logger.info(`API ${payload.success ? 'Success' : 'Handled Error'}: ${req.method} ${req.nextUrl.pathname}`, {
-          type: 'request_end',
-          requestId,
-          duration,
-          status,
-          userId: auth.uid,
-          workspaceId: workspace?.workspaceId,
+        
+        after(async () => {
+          logger.info(`API ${payload.success ? 'Success' : 'Handled Error'}: ${req.method} ${req.nextUrl.pathname}`, {
+            type: 'request_end',
+            requestId,
+            duration,
+            status,
+            userId: auth.uid,
+            workspaceId: workspace?.workspaceId,
+          })
+
+          if (!payload.success && idempotencyKey) {
+            const convex = getConvexIdempotencyClient()
+            if (convex) {
+              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+            }
+          }
+
+          if (payload.success && idempotencyKey) {
+            const convex = getConvexIdempotencyClient()
+            if (convex) {
+              await convex.mutation(api.apiIdempotency.complete, {
+                key: idempotencyKey,
+                response: payload,
+                httpStatus: status,
+              }).catch(() => {})
+            }
+          }
         })
-
-        if (!payload.success && idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
-          }
-        }
-
-        if (payload.success && idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.complete, {
-              key: idempotencyKey,
-              response: payload,
-              httpStatus: status,
-            }).catch(() => {})
-          }
-        }
 
         return NextResponse.json(payload, {
           status,
@@ -379,25 +382,28 @@ export function createApiHandler<
       }
       
       const duration = Date.now() - startTime
-      logger.info(`API Success: ${req.method} ${req.nextUrl.pathname}`, {
-        type: 'request_end',
-        requestId,
-        duration,
-        status: 200,
-        userId: auth.uid,
-        workspaceId: workspace?.workspaceId,
-      })
+      
+      after(async () => {
+        logger.info(`API Success: ${req.method} ${req.nextUrl.pathname}`, {
+          type: 'request_end',
+          requestId,
+          duration,
+          status: 200,
+          userId: auth.uid,
+          workspaceId: workspace?.workspaceId,
+        })
 
-      if (idempotencyKey) {
-        const convex = getConvexIdempotencyClient()
-        if (convex) {
-          await convex.mutation(api.apiIdempotency.complete, {
-            key: idempotencyKey,
-            response: successResponse,
-            httpStatus: 200,
-          }).catch(() => {})
+        if (idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.complete, {
+              key: idempotencyKey,
+              response: successResponse,
+              httpStatus: 200,
+            }).catch(() => {})
+          }
         }
-      }
+      })
 
       return NextResponse.json(successResponse, {
         headers: { 'X-Request-ID': requestId }
@@ -413,14 +419,16 @@ export function createApiHandler<
 
       // Handle known API errors
       if (error instanceof UnifiedError) {
-        logApiError(error, req, { ...logContext })
+        after(async () => {
+          logApiError(error, req, { ...logContext })
 
-        if (idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          if (idempotencyKey) {
+            const convex = getConvexIdempotencyClient()
+            if (convex) {
+              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+            }
           }
-        }
+        })
 
         const status = typeof error.status === 'number' ? error.status : 500
         const payload = {
@@ -436,14 +444,16 @@ export function createApiHandler<
       }
 
       if (error instanceof ApiError) {
-        logApiError(error, req, { ...logContext })
-        
-        if (idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+        after(async () => {
+          logApiError(error, req, { ...logContext })
+          
+          if (idempotencyKey) {
+            const convex = getConvexIdempotencyClient()
+            if (convex) {
+              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+            }
           }
-        }
+        })
 
         return NextResponse.json({ 
           success: false,
@@ -458,14 +468,16 @@ export function createApiHandler<
       }
 
       if (error instanceof z.ZodError) {
-        logApiError(error, req, { ...logContext })
+        after(async () => {
+          logApiError(error, req, { ...logContext })
 
-        if (idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          if (idempotencyKey) {
+            const convex = getConvexIdempotencyClient()
+            if (convex) {
+              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+            }
           }
-        }
+        })
 
         return NextResponse.json({ 
           success: false,
@@ -482,17 +494,19 @@ export function createApiHandler<
       // Log and handle unknown errors
       const isDev = process.env.NODE_ENV === 'development'
       
-      // CRITICAL: Ensure we see the error in the terminal
-      console.error(`[API Error] ${req.method} ${req.nextUrl.pathname}:`, error)
-      
-      logApiError(error, req, { ...logContext, includeStack: isDev })
+      after(async () => {
+        // CRITICAL: Ensure we see the error in the terminal
+        console.error(`[API Error] ${req.method} ${req.nextUrl.pathname}:`, error)
+        
+        logApiError(error, req, { ...logContext, includeStack: isDev })
 
-      if (idempotencyKey) {
-        const convex = getConvexIdempotencyClient()
-        if (convex) {
-          await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+        if (idempotencyKey) {
+          const convex = getConvexIdempotencyClient()
+          if (convex) {
+            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
+          }
         }
-      }
+      })
 
       return NextResponse.json({ 
         success: false,

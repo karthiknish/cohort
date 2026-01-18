@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { after } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../../../../convex/_generated/api'
 import {
@@ -84,17 +85,18 @@ export const POST = createApiHandler(
       const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId, clientId })
 
       if (!integration || !integration.accessToken) {
-        await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' })
-        // If the integration document was deleted (disconnect), avoid throwing from a status update.
-        if (integration) {
-          await updateIntegrationStatus({
+        // Parallelize independent status updates
+        await Promise.all([
+          failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' }),
+          // If the integration document was deleted (disconnect), avoid throwing from a status update.
+          integration ? updateIntegrationStatus({
             userId: targetUserId,
             providerId: job.providerId,
             clientId,
             status: 'error',
             message: 'Missing credentials',
-          })
-        }
+          }) : Promise.resolve(),
+        ])
         throw new ValidationError('Integration credentials missing')
       }
 
@@ -249,40 +251,45 @@ export const POST = createApiHandler(
       }
 
       await writeMetricsBatch({ userId: targetUserId, clientId, metrics })
-      await completeSyncJob({ userId: targetUserId, jobId: job.id })
-      await updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'success', message: null })
+      // Parallelize independent status updates
+      await Promise.all([
+        completeSyncJob({ userId: targetUserId, jobId: job.id }),
+        updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'success', message: null }),
+      ])
 
       // Trigger alert evaluation after successful sync if it's for a specific client/workspace
       if (clientId) {
-        try {
-          const convex = getConvexClient()
-          let recipientEmail: string | null = null
+        after(async () => {
+          try {
+            const convex = getConvexClient()
+            let recipientEmail: string | null = null
 
-          if (convex) {
-            try {
-              const userResult = await convex.query(api.users.getByLegacyId, { legacyId: targetUserId })
-              recipientEmail = userResult?.email ?? null
-            } catch (queryError) {
-              logger.error('[integrations/process] failed to fetch recipient email', queryError, {
+            if (convex) {
+              try {
+                const userResult = await convex.query(api.users.getByLegacyId, { legacyId: targetUserId })
+                recipientEmail = userResult?.email ?? null
+              } catch (queryError) {
+                logger.error('[integrations/process] failed to fetch recipient email', queryError, {
+                  userId: targetUserId,
+                  requestId: req.headers.get('x-request-id'),
+                })
+              }
+            }
+
+            if (recipientEmail) {
+              await processWorkspaceAlerts({
                 userId: targetUserId,
-                requestId: req.headers.get('x-request-id'),
+                workspaceId: clientId,
+                recipientEmail,
               })
             }
-          }
-
-          if (recipientEmail) {
-            await processWorkspaceAlerts({
+          } catch (alertError) {
+            logger.error('[integrations/process] alert evaluation background failed', alertError, {
               userId: targetUserId,
-              workspaceId: clientId,
-              recipientEmail,
+              requestId: req.headers.get('x-request-id'),
             })
           }
-        } catch (alertError) {
-          logger.error('[integrations/process] alert evaluation background failed', alertError, {
-            userId: targetUserId,
-            requestId: req.headers.get('x-request-id'),
-          })
-        }
+        })
       }
 
       return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
@@ -307,19 +314,27 @@ export const POST = createApiHandler(
 
       const { userId, jobId, providerId, message } = extractSyncErrorDetails(error)
 
-      if (userId && jobId) {
+      if (userId && jobId && userId && providerId) {
+        // Parallelize independent error status updates
+        await Promise.all([
+          failSyncJob({ userId, jobId, message: message ?? 'Unknown error' }),
+          updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' }),
+        ])
+        jobFailed = true
+      } else if (userId && jobId) {
         await failSyncJob({ userId, jobId, message: message ?? 'Unknown error' })
         jobFailed = true
-      }
-
-      if (userId && providerId) {
+      } else if (userId && providerId) {
         await updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' })
       }
 
       if (resolvedUserId && activeJob && !jobFailed) {
-        await failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' })
+        // Parallelize independent error status updates
+        await Promise.all([
+          failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' }),
+          updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, clientId: activeJob.clientId ?? null, status: 'error', message: message ?? 'Sync failed' }),
+        ])
         jobFailed = true
-        await updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, clientId: activeJob.clientId ?? null, status: 'error', message: message ?? 'Sync failed' })
       }
 
       throw new ApiError(message ?? 'Failed to process sync job', 500)

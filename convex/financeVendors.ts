@@ -1,6 +1,11 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import {
+  zAuthenticatedMutation,
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -12,11 +17,11 @@ function now() {
   return Date.now()
 }
 
-export const list = query({
+export const list = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    includeInactive: v.optional(v.boolean()),
-    q: v.optional(v.string()),
+    workspaceId: z.string(),
+    includeInactive: z.boolean().optional(),
+    q: z.string().optional(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -52,19 +57,19 @@ export const list = query({
   },
 })
 
-export const upsert = mutation({
+export const upsert = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.optional(v.string()),
-
-    name: v.string(),
-    email: v.union(v.string(), v.null()),
-    phone: v.union(v.string(), v.null()),
-    website: v.union(v.string(), v.null()),
-    notes: v.union(v.string(), v.null()),
-    isActive: v.boolean(),
-
-    createdBy: v.union(v.string(), v.null()),
+    workspaceId: z.string(),
+    legacyId: z.string().optional(),
+ 
+    name: z.string(),
+    email: z.string().nullable(),
+    phone: z.string().nullable(),
+    website: z.string().nullable(),
+    notes: z.string().nullable(),
+    isActive: z.boolean(),
+ 
+    createdBy: z.string().nullable(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -131,10 +136,10 @@ export const upsert = mutation({
   },
 })
 
-export const remove = mutation({
+export const remove = zAuthenticatedMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
+    workspaceId: z.string(),
+    legacyId: z.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()

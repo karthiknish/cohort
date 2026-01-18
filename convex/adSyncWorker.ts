@@ -1,7 +1,5 @@
 import { httpAction } from './_generated/server'
-import { api } from './_generated/api'
-
-const convexApi = api as any
+import { internal } from './_generated/api'
 
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -54,9 +52,8 @@ export const run = httpAction(async (ctx, request) => {
   const jobResults: Array<{ jobId: string; providerId: string; status: string; error?: string }> = []
 
   for (let i = 0; i < maxJobs; i++) {
-    const job = await ctx.runMutation(convexApi.adsIntegrations.claimNextSyncJob, {
+    const job = await ctx.runMutation(internal.adsIntegrations.claimNextSyncJobInternal, {
       workspaceId,
-      cronKey: cronSecret,
     })
 
     if (!job) {
@@ -66,49 +63,44 @@ export const run = httpAction(async (ctx, request) => {
     processedJobs++
 
     try {
-      await ctx.runAction(convexApi.adSyncWorkerActions.processClaimedJob, {
+      await ctx.runAction(internal.adSyncWorkerActions.processClaimedJob, {
         workspaceId,
         jobId: job.id,
         providerId: job.providerId,
         clientId: job.clientId,
         timeframeDays: job.timeframeDays,
-        cronKey: cronSecret,
       })
 
       successfulJobs++
       jobResults.push({ jobId: job.id, providerId: job.providerId, status: 'success' })
 
-      await ctx.runMutation(convexApi.adsIntegrations.completeSyncJob, {
+      await ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
         jobId: job.id,
-        cronKey: cronSecret,
       })
 
-      await ctx.runMutation(convexApi.adsIntegrations.updateIntegrationStatus, {
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
         workspaceId,
         providerId: job.providerId,
         clientId: job.clientId,
         status: 'success',
         message: null,
-        cronKey: cronSecret,
       })
     } catch (err: unknown) {
       failedJobs++
       const message = err instanceof Error ? err.message : 'Unknown error'
       jobResults.push({ jobId: job.id, providerId: job.providerId, status: 'error', error: message })
 
-      await ctx.runMutation(convexApi.adsIntegrations.failSyncJob, {
+      await ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
         jobId: job.id,
         message,
-        cronKey: cronSecret,
       })
 
-      await ctx.runMutation(convexApi.adsIntegrations.updateIntegrationStatus, {
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
         workspaceId,
         providerId: job.providerId,
         clientId: job.clientId,
         status: 'error',
         message,
-        cronKey: cronSecret,
       })
     }
   }

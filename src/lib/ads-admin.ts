@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { ConvexHttpClient } from 'convex/browser'
 
 import { createConvexAdminClient } from '@/lib/convex-admin'
@@ -86,7 +87,7 @@ async function executeMutation(convex: ConvexHttpClient, name: string, args: any
 /**
  * Executes a Convex query with error handling and logging.
  */
-async function executeQuery(convex: ConvexHttpClient, name: string, args: any, context: any = {}): Promise<any> {
+const executeQuery = cache(async (convex: ConvexHttpClient, name: string, args: any, context: any = {}): Promise<any> => {
     try {
         return await convex.query(name as any, args)
     } catch (error) {
@@ -98,7 +99,7 @@ async function executeQuery(convex: ConvexHttpClient, name: string, args: any, c
         })
         throw error
     }
-}
+})
 
 export async function persistIntegrationTokens(options: {
     userId: string

@@ -114,7 +114,7 @@ export const adSyncNotification = httpAction(async (ctx, request) => {
   // the source as trusted. If you want a true server-to-server webhook,
   // we should add a cron/service identity bypass in the mutation.
   try {
-    await ctx.runMutation(api.adsIntegrations.enqueueSyncJob, {
+    await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
       workspaceId,
       providerId,
       clientId,

@@ -1,7 +1,11 @@
+import { query, mutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-import { query, mutation } from './_generated/server'
+import {
+  zWorkspaceMutation,
+  zWorkspaceQuery,
+} from './functions'
+import { z } from 'zod/v4'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole, WorkspaceNotificationResource } from '../src/types/notifications'
 
 function toNotificationKind(input: string): WorkspaceNotificationKind {
@@ -60,15 +64,14 @@ function mapNotification(row: any, userId: string): WorkspaceNotification {
   }
 }
 
-export const list = query({
+export const list = zWorkspaceQuery({
   args: {
-    workspaceId: v.string(),
-    pageSize: v.optional(v.number()),
-    afterCreatedAtMs: v.optional(v.number()),
-    afterLegacyId: v.optional(v.string()),
-    role: v.optional(v.union(v.literal('admin'), v.literal('team'), v.literal('client'))),
-    clientId: v.optional(v.string()),
-    unread: v.optional(v.boolean()),
+    pageSize: z.number().optional(),
+    afterCreatedAtMs: z.number().optional(),
+    afterLegacyId: z.string().optional(),
+    role: z.union([z.literal('admin'), z.literal('team'), z.literal('client')]).optional(),
+    clientId: z.string().optional(),
+    unread: z.boolean().optional(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -116,24 +119,23 @@ export const list = query({
   },
 })
 
-export const create = mutation({
+export const create = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    kind: v.string(),
-    title: v.string(),
-    body: v.string(),
-    actorId: v.union(v.string(), v.null()),
-    actorName: v.union(v.string(), v.null()),
-    resourceType: v.string(),
-    resourceId: v.string(),
-    recipientRoles: v.array(v.string()),
-    recipientClientId: v.union(v.string(), v.null()),
-    recipientClientIds: v.optional(v.array(v.string())),
-    recipientUserIds: v.optional(v.array(v.string())),
-    metadata: v.optional(v.any()),
-    createdAtMs: v.number(),
-    updatedAtMs: v.number(),
+    legacyId: z.string(),
+    kind: z.string(),
+    title: z.string(),
+    body: z.string(),
+    actorId: z.string().nullable(),
+    actorName: z.string().nullable(),
+    resourceType: z.string(),
+    resourceId: z.string(),
+    recipientRoles: z.array(z.string()),
+    recipientClientId: z.string().nullable(),
+    recipientClientIds: z.array(z.string()).optional(),
+    recipientUserIds: z.array(z.string()).optional(),
+    metadata: z.any().optional(),
+    createdAtMs: z.number(),
+    updatedAtMs: z.number(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -175,11 +177,10 @@ export const create = mutation({
   },
 })
 
-export const getUnreadCount = query({
+export const getUnreadCount = zWorkspaceQuery({
   args: {
-    workspaceId: v.string(),
-    role: v.optional(v.union(v.literal('admin'), v.literal('team'), v.literal('client'))),
-    clientId: v.optional(v.string()),
+    role: z.union([z.literal('admin'), z.literal('team'), z.literal('client')]).optional(),
+    clientId: z.string().optional(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -206,11 +207,10 @@ export const getUnreadCount = query({
   },
 })
 
-export const ack = mutation({
+export const ack = zWorkspaceMutation({
   args: {
-    workspaceId: v.string(),
-    ids: v.array(v.string()),
-    action: v.union(v.literal('read'), v.literal('dismiss')),
+    ids: z.array(z.string()),
+    action: z.union([z.literal('read'), z.literal('dismiss')]),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()

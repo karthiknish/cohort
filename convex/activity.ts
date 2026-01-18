@@ -1,6 +1,10 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import {
+  zAuthenticatedQuery,
+} from './functions'
+import { z } from 'zod/v4'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) throw Errors.auth.unauthorized()
@@ -27,11 +31,11 @@ function readString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim().length > 0 ? value : fallback
 }
 
-export const listForClient = query({
+export const listForClient = zAuthenticatedQuery({
   args: {
-    workspaceId: v.string(),
-    clientId: v.string(),
-    limit: v.number(),
+    workspaceId: z.string(),
+    clientId: z.string(),
+    limit: z.number(),
   },
   handler: async (ctx, args): Promise<Activity[]> => {
     const identity = await ctx.auth.getUserIdentity()

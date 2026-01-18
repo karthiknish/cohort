@@ -21,6 +21,17 @@ import { Doc } from './_generated/dataModel'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+ 
+/**
+ * Helper to wrap a Zod schema in the standard { ok: true, data: T } response format
+ * used by our mutation and action wrappers.
+ */
+export function wrappedResponseZ<T extends z.ZodTypeAny>(schema: T) {
+  return z.object({
+    ok: z.literal(true),
+    data: schema,
+  })
+}
 
 /**
  * Tables that support soft deletion via a `deletedAtMs` field.
@@ -479,6 +490,20 @@ export const zWorkspaceMutation = zCustomMutation(mutation, {
   },
 })
 
+export const zAuthenticatedAction = zCustomAction(action, {
+  args: {},
+  input: async (ctx) => {
+    const auth = await getAuthenticatedActionContext(ctx)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now() },
+      args: {},
+      returnValue: async (result: any) => {
+        return { ok: true, data: result }
+      },
+    }
+  },
+})
+
 export const zWorkspaceAction = zCustomAction(action, {
   args: { workspaceId: v.string() },
   input: async (ctx, args) => {
@@ -515,5 +540,52 @@ export const zWorkspacePaginatedQueryActive = zCustomQuery(query, {
       throw Errors.auth.workspaceAccessDenied()
     }
     return { ctx: { ...ctx, ...auth, db: wrapDatabaseActive(ctx.db) }, args }
+  },
+})
+
+export const zAdminQuery = zCustomQuery(query, {
+  args: {},
+  input: async (ctx) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin') {
+      throw Errors.auth.adminRequired()
+    }
+    return { ctx: { ...ctx, ...auth }, args: {} }
+  },
+})
+
+export const zAdminMutation = zCustomMutation(mutation, {
+  args: { idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin') {
+      throw Errors.auth.adminRequired()
+    }
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
+      args,
+      returnValue: async (result: any) => {
+        if (commitIdempotency) await commitIdempotency(result)
+        return { ok: true, data: result }
+      },
+    }
+  },
+})
+
+export const zAdminAction = zCustomAction(action, {
+  args: {},
+  input: async (ctx) => {
+    const auth = await getAuthenticatedActionContext(ctx)
+    if (auth.user.role !== 'admin') {
+      throw Errors.auth.adminRequired()
+    }
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now() },
+      args: {},
+      returnValue: async (result: any) => {
+        return { ok: true, data: result }
+      },
+    }
   },
 })

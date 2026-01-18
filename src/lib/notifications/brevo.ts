@@ -4,6 +4,7 @@
  * Sends transactional emails for important platform activities.
  */
 
+import { cache } from 'react'
 import * as Brevo from '@getbrevo/brevo'
 import { ConvexHttpClient } from 'convex/browser'
 
@@ -76,6 +77,10 @@ function getBrevoClient(): Brevo.TransactionalEmailsApi | null {
   return apiInstance
 }
 
+const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, email: string) => {
+  return await convex.query(api.users.getNotificationPreferencesByEmail, { email })
+})
+
 /**
  * Check if a user has enabled a specific email notification type.
  * Returns true if enabled or if no preference is set (defaults to true).
@@ -85,7 +90,7 @@ async function isEmailNotificationEnabled(recipientEmail: string, prefKey: 'adAl
     const convex = getConvexClient()
     if (!convex) return true // Default to true if Convex unavailable
 
-    const result = await convex.query(api.users.getNotificationPreferencesByEmail, { email: recipientEmail })
+    const result = await fetchNotificationPreferences(convex, recipientEmail)
     
     if (!result || !result.notificationPreferences) return true
 
