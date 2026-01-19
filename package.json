@@ -11,7 +11,7 @@
     "convex:deploy:all": "npm run convex:deploy:dev && npm run convex:deploy:prod",
     "convex:codegen": "convex codegen",
     "convex:typecheck": "npm run convex:codegen && tsc -p convex/tsconfig.json --noEmit",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc -p tsconfig.json --noEmit",
