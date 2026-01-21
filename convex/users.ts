@@ -217,7 +217,7 @@ export const listWorkspaceMembers = zAuthenticatedQuery({
  * Returns agencyId if set, otherwise falls back to userId.
  * This is used by backend services to resolve workspace context.
  */
-export const getWorkspaceIdForUser = query({
+export const getWorkspaceIdForUser = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
     // This query is used by backend services, so we allow it without auth check
@@ -240,7 +240,7 @@ export const getWorkspaceIdForUser = query({
  * Used by email notification services to check preferences.
  * No auth required - called from server-side code.
  */
-export const getNotificationPreferencesByEmail = query({
+export const getNotificationPreferencesByEmail = internalQuery({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
@@ -273,7 +273,7 @@ export const getNotificationPreferencesByEmail = query({
  * Returns phone numbers for users with the specified notification type enabled.
  * No auth required - called from server-side notification code.
  */
-export const getWhatsAppRecipientsForWorkspace = query({
+export const getWhatsAppRecipientsForWorkspace = internalQuery({
   args: {
     workspaceId: v.string(),
     notificationType: v.union(
@@ -422,7 +422,7 @@ export const bulkUpsert = zAuthenticatedMutation({
  * Get Stripe customer ID for a user.
  * Used by billing to check if user already has a Stripe customer record.
  */
-export const getStripeCustomerId = query({
+export const getStripeCustomerId = internalQuery({
   args: { legacyId: v.string() },
   handler: async (ctx, args) => {
     // No auth required - called from server-side billing code
@@ -439,7 +439,7 @@ export const getStripeCustomerId = query({
 })
 
 // Public query - no auth required for test user management
-export const getUserByEmailPublic = query({
+export const getUserByEmailPublic = internalQuery({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
@@ -482,7 +482,7 @@ export const getUserByEmailPublic = query({
  * Set Stripe customer ID for a user.
  * Creates user record if it doesn't exist.
  */
-export const setStripeCustomerId = mutation({
+export const setStripeCustomerId = internalMutation({
   args: {
     legacyId: v.string(),
     stripeCustomerId: v.string(),

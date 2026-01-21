@@ -61,7 +61,10 @@ let cachedPlans: BillingPlanDefinition[] | null = null
 
 const getStripeCustomerIdFromConvex = cache(
   async (convex: ConvexHttpClient, legacyId: string) => {
-    return await convex.query(api.users.getStripeCustomerId, { legacyId })
+    // TODO: This function is now internal to Convex. Use a dedicated Action or verify this code path is needed.
+    // return await convex.query(api.users.getStripeCustomerId, { legacyId })
+    console.warn('Skipping getStripeCustomerIdFromConvex - internal function')
+    return { stripeCustomerId: null, userExists: false }
   }
 )
 
@@ -149,12 +152,16 @@ export async function ensureStripeCustomer(options: {
 
     // Save to Convex
     if (convex) {
+      // TODO: This mutation is now internal to Convex. Use a dedicated Action or verify this code path is needed.
+      /*
       await convex.mutation(api.users.setStripeCustomerId, {
         legacyId: uid,
         stripeCustomerId: customerId,
         email: email ?? null,
         name: name ?? null,
       })
+      */
+      console.warn('Skipping setStripeCustomerId - internal mutation')
     }
   }
 

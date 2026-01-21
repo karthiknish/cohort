@@ -2,7 +2,7 @@
 
 import Stripe from 'stripe'
 import { action, query } from './_generated/server'
-import { api } from './_generated/api'
+import { api, internal } from './_generated/api'
 import { v } from 'convex/values'
 import { authenticatedAction, zAuthenticatedAction } from './functions'
 import { z } from 'zod/v4'
@@ -229,9 +229,10 @@ async function ensureStripeCustomer(
   })
 
   // Update user with new customer ID
-  await ctx.runMutation(api.users.setStripeCustomerId, {
+  await ctx.runMutation(internal.users.setStripeCustomerId, {
     legacyId: uid,
     stripeCustomerId: customer.id,
+    email: email ?? null,
   })
 
   return customer.id
