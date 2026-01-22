@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import type { ProposalFormData } from '@/lib/proposals'
 import {
@@ -46,7 +46,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
 
     const [currentStep, setCurrentStep] = useState(0)
     const [formState, setFormState] = useState<ProposalFormData>(() => createInitialProposalFormState())
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+    const [manualErrors, setManualErrors] = useState<Record<string, string>>({})
 
     const steps = proposalSteps
     const step = steps[currentStep]
@@ -57,12 +57,16 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
 
     const clearErrors = useCallback((paths: string | string[]) => {
         const keys = Array.isArray(paths) ? paths : [paths]
-        setValidationErrors((prev) => {
+        setManualErrors((prev) => {
             const next = { ...prev }
+            let changed = false
             keys.forEach((key) => {
-                delete next[key]
+                if (key in next) {
+                    delete next[key]
+                    changed = true
+                }
             })
-            return next
+            return changed ? next : prev
         })
     }, [])
 
@@ -128,21 +132,31 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         }))
     }, [])
 
-    useEffect(() => {
-        const stepErrors = collectStepValidationErrors(step.id, formState)
-        if (Object.keys(stepErrors).length === 0) {
-            clearErrors(stepErrorPaths[step.id])
-        } else {
-            setValidationErrors((prev) => ({ ...prev, ...stepErrors }))
-        }
-    }, [formState, step.id, clearErrors, setValidationErrors])
+    const stepErrors = useMemo(
+        () => collectStepValidationErrors(step.id, formState),
+        [formState, step.id]
+    )
+
+    const validationErrors = useMemo(() => {
+        const next: Record<string, string> = { ...manualErrors }
+
+        stepErrorPaths[step.id].forEach((key) => {
+            if (stepErrors[key]) {
+                next[key] = stepErrors[key]
+            } else {
+                delete next[key]
+            }
+        })
+
+        return next
+    }, [manualErrors, step.id, stepErrors])
 
     const handleNext = useCallback(() => {
         if (!validateProposalStep(step.id, formState)) {
             const message = 'Please complete the required fields before continuing.'
             toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
             const stepErrors = collectStepValidationErrors(step.id, formState)
-            setValidationErrors((prev) => ({ ...prev, ...stepErrors }))
+            setManualErrors((prev) => ({ ...prev, ...stepErrors }))
             return
         }
         clearErrors(stepErrorPaths[step.id])
@@ -162,7 +176,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     const resetWizard = useCallback(() => {
         setFormState(createInitialProposalFormState())
         setCurrentStep(0)
-        setValidationErrors({})
+        setManualErrors({})
     }, [])
 
     return {
@@ -176,7 +190,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         hasPersistableData,
         setCurrentStep,
         setFormState,
-        setValidationErrors,
+        setValidationErrors: setManualErrors,
         updateField,
         toggleArrayValue,
         handleSocialHandleChange,

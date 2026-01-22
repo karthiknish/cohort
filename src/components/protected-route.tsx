@@ -92,12 +92,17 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const router = useRouter()
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
 
-  // Clear awaiting state once user is loaded or auth loading completes
-  const clearAwaitingState = useCallback(() => {
-    if (isAwaitingAuthRestore) {
+  // Clear awaiting state once auth loading completes or session cookie is gone.
+  useEffect(() => {
+    if (!isAwaitingAuthRestore) return
+    if (!loading && !isSyncing) {
+      setIsAwaitingAuthRestore(false)
+      return
+    }
+    if (!hasValidSessionCookie()) {
       setIsAwaitingAuthRestore(false)
     }
-  }, [isAwaitingAuthRestore])
+  }, [isAwaitingAuthRestore, loading, isSyncing])
 
   // Wait for auth to settle and handle pending status
   useEffect(() => {

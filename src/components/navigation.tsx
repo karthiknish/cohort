@@ -319,7 +319,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-[1000] border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <div className="lg:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
@@ -365,7 +365,7 @@ export function Header() {
           </div>
 
           {/* Right side actions (pinned to the right) */}
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Mobile search button - only visible on small screens */}
             <div className="sm:hidden">
               <CommandMenu onOpenHelp={() => {

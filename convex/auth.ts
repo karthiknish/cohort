@@ -1,6 +1,6 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { betterAuth } from "better-auth/minimal";
+import { betterAuth } from "better-auth";
 
 import { components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
@@ -9,12 +9,13 @@ import { v } from "convex/values";
 
 import authConfig from "./auth.config";
 
-const baseURL =
-  process.env.BETTER_AUTH_URL ||
-  process.env.SITE_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_APP_URL!;
+const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+const baseURL = process.env.BETTER_AUTH_URL || siteUrl;
 const secret = process.env.BETTER_AUTH_SECRET;
+
+if (!siteUrl) {
+  console.warn("[auth] SITE_URL is not set. Better Auth cookies may not be scoped correctly.");
+}
 
 if (!secret || secret.length < 32) {
   console.warn(
@@ -58,14 +59,16 @@ function buildTrustedOrigins(): string[] {
   return origins;
 }
 
+const isSecureBaseUrl = typeof baseURL === "string" && baseURL.startsWith("https://");
+
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     secret,
-    baseURL,
+    baseURL: baseURL || siteUrl,
     database: authComponent.adapter(ctx),
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: process.env.NODE_ENV === "production",
+      requireEmailVerification: false,
     },
     socialProviders: buildSocialProviders(),
     trustedOrigins: buildTrustedOrigins(),
@@ -96,7 +99,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
       },
     },
     advanced: {
-      useSecureCookies: process.env.NODE_ENV === "production",
+      useSecureCookies: isSecureBaseUrl,
     },
     plugins: [
       // The Convex plugin is required for Convex compatibility
@@ -120,4 +123,3 @@ export const getCurrentUser = query({
 export type Auth = ReturnType<typeof createAuth>;
 export type Session = Auth["$Infer"]["Session"];
 export type User = Session["user"];
-

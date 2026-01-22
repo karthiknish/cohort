@@ -120,18 +120,23 @@ export const getAdIntegration = zWorkspaceQuery({
   },
 })
 
-export const listStatuses = zWorkspaceMutation({
+export const listStatuses = zWorkspaceQuery({
   args: {
     clientId: z.string().nullable(),
   },
   returns: z.array(z.object({
     providerId: z.string(),
     clientId: z.string().nullable(),
+    accountId: z.string().nullable(),
+    accountName: z.string().nullable(),
     lastSyncStatus: z.string(),
     lastSyncMessage: z.string().nullable(),
     lastSyncedAtMs: z.number().nullable(),
-    accountId: z.string().nullable(),
-    accountName: z.string().nullable(),
+    lastSyncRequestedAtMs: z.number().nullable(),
+    linkedAtMs: z.number().nullable(),
+    autoSyncEnabled: z.boolean().nullable(),
+    syncFrequencyMinutes: z.number().nullable(),
+    scheduledTimeframeDays: z.number().nullable(),
   })),
   handler: async (ctx, args) => {
     const clientId = normalizeClientId(args.clientId)
@@ -1291,4 +1296,3 @@ export const countQueuedJobsForWorkspace = query({
  * HTTP-callable mutation to clean up old completed/failed jobs.
  * Called from cron route with cronKey authentication.
  */
-

@@ -133,10 +133,26 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const draftIdRef = useRef<string | null>(draftId)
     const submittedRef = useRef(false)
     const wizardRef = useRef<HTMLDivElement | null>(null)
+    const lastBootstrapKeyRef = useRef<string | null>(null)
+    const toastRef = useRef(toast)
+    const onFormStateChangeRef = useRef(onFormStateChange)
+    const onStepChangeRef = useRef(onStepChange)
+    const onSubmittedChangeRef = useRef(onSubmittedChange)
+    const onPresentationDeckChangeRef = useRef(onPresentationDeckChange)
+    const onAiSuggestionsChangeRef = useRef(onAiSuggestionsChange)
+    const onLastSubmissionSnapshotChangeRef = useRef(onLastSubmissionSnapshotChange)
 
     useEffect(() => {
         draftIdRef.current = draftId
     }, [draftId])
+
+    toastRef.current = toast
+    onFormStateChangeRef.current = onFormStateChange
+    onStepChangeRef.current = onStepChange
+    onSubmittedChangeRef.current = onSubmittedChange
+    onPresentationDeckChangeRef.current = onPresentationDeckChange
+    onAiSuggestionsChangeRef.current = onAiSuggestionsChange
+    onLastSubmissionSnapshotChangeRef.current = onLastSubmissionSnapshotChange
 
     const isLoadingProposals = Boolean(selectedClientId && workspaceId && convexProposals === undefined)
 
@@ -345,8 +361,22 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         }
     }, [])
 
+    const proposalsKey = useMemo(() => {
+        if (!proposals.length) {
+            return 'none'
+        }
+        return proposals
+            .map((proposal) => `${proposal.id}:${proposal.updatedAt ?? ''}:${proposal.status ?? ''}`)
+            .join('|')
+    }, [proposals])
+
     // Bootstrap effect
     useEffect(() => {
+        const bootstrapKey = `${selectedClientId ?? 'none'}:${proposalsKey}:${steps.length}`
+        if (bootstrapKey === lastBootstrapKeyRef.current) {
+            return
+        }
+        lastBootstrapKeyRef.current = bootstrapKey
         hydrationRef.current = false
         let cancelled = false
 
@@ -355,12 +385,12 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             try {
                 if (!selectedClientId) {
                     setDraftId(null)
-                    onFormStateChange(createInitialProposalFormState())
-                    onStepChange(0)
-                    onSubmittedChange(false)
-                    onPresentationDeckChange(null)
-                    onAiSuggestionsChange(null)
-                    onLastSubmissionSnapshotChange(null)
+                    onFormStateChangeRef.current(createInitialProposalFormState())
+                    onStepChangeRef.current(0)
+                    onSubmittedChangeRef.current(false)
+                    onPresentationDeckChangeRef.current(null)
+                    onAiSuggestionsChangeRef.current(null)
+                    onLastSubmissionSnapshotChangeRef.current(null)
                     return
                 }
 
@@ -373,20 +403,20 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
                 if (draft) {
                     setDraftId(draft.id)
-                    onFormStateChange(mergeProposalForm(draft.formData as Partial<ProposalFormData>))
-                    onStepChange(Math.min(draft.stepProgress ?? 0, steps.length - 1))
-                    onSubmittedChange(draft.status === 'ready')
-                    onPresentationDeckChange(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
-                    onAiSuggestionsChange(draft.aiSuggestions ?? null)
-                    onLastSubmissionSnapshotChange(null)
+                    onFormStateChangeRef.current(mergeProposalForm(draft.formData as Partial<ProposalFormData>))
+                    onStepChangeRef.current(Math.min(draft.stepProgress ?? 0, steps.length - 1))
+                    onSubmittedChangeRef.current(draft.status === 'ready')
+                    onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
+                    onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null)
+                    onLastSubmissionSnapshotChangeRef.current(null)
                 } else {
                     setDraftId(null)
-                    onFormStateChange(createInitialProposalFormState())
-                    onStepChange(0)
-                    onSubmittedChange(false)
-                    onPresentationDeckChange(null)
-                    onAiSuggestionsChange(null)
-                    onLastSubmissionSnapshotChange(null)
+                    onFormStateChangeRef.current(createInitialProposalFormState())
+                    onStepChangeRef.current(0)
+                    onSubmittedChangeRef.current(false)
+                    onPresentationDeckChangeRef.current(null)
+                    onAiSuggestionsChangeRef.current(null)
+                    onLastSubmissionSnapshotChangeRef.current(null)
                 }
             } catch (err: unknown) {
                 if (cancelled) {
@@ -394,7 +424,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 }
                 logError(err, 'useProposalDrafts:bootstrapDraft')
                 console.error('[ProposalWizard] bootstrap failed', err)
-                toast({ title: 'Unable to start proposal wizard', description: asErrorMessage(err), variant: 'destructive' })
+                toastRef.current({ title: 'Unable to start proposal wizard', description: asErrorMessage(err), variant: 'destructive' })
             } finally {
                 if (!cancelled) {
                     hydrationRef.current = true
@@ -408,7 +438,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         return () => {
             cancelled = true
         }
-    }, [proposals, selectedClientId, steps, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange])
+    }, [proposalsKey, selectedClientId, steps.length])
 
     return {
         draftId,

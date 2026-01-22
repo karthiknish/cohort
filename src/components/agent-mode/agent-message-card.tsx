@@ -164,7 +164,7 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
             animate={{ opacity: 1, y: 0 }}
             className="flex justify-start"
         >
-            <div className="max-w-[85%] rounded-2xl bg-muted px-4 py-2.5 text-sm text-white">
+            <div className="max-w-[85%] rounded-2xl bg-secondary px-4 py-2.5 text-sm text-white">
                 {content}
             </div>
         </motion.div>

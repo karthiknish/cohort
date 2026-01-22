@@ -12,6 +12,12 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface CalculatedMetrics {
   spend: number
@@ -66,6 +72,7 @@ function MetricCard({
   icon: Icon,
   trend,
   loading,
+  description,
 }: {
   label: string
   value: string
@@ -73,9 +80,10 @@ function MetricCard({
   icon: React.ComponentType<{ className?: string }>
   trend?: 'up' | 'down' | 'neutral'
   loading?: boolean
+  description?: string
 }) {
-  return (
-    <Card className="overflow-hidden border-muted/40 shadow-sm transition-all hover:shadow-md">
+  const content = (
+    <Card className="group overflow-hidden border-muted/40 shadow-sm transition-all hover:shadow-md">
       <CardContent className="p-4">
         {loading ? (
           <div className="space-y-2">
@@ -93,18 +101,39 @@ function MetricCard({
                 <p className="text-xs font-medium text-muted-foreground/60">{subValue}</p>
               )}
             </div>
-            <div className={cn(
-              "rounded-full p-2.5",
-              trend === 'up' ? "bg-emerald-500/10 text-emerald-600" :
-                trend === 'down' ? "bg-red-500/10 text-red-600" :
-                  "bg-muted/50 text-muted-foreground/70"
-            )}>
+            <div
+              className={cn(
+                "rounded-full p-2.5",
+                trend === 'up'
+                  ? "bg-emerald-500/10 text-emerald-600"
+                  : trend === 'down'
+                    ? "bg-red-500/10 text-red-600"
+                    : "bg-muted/50 text-muted-foreground/70"
+              )}
+            >
               <Icon className="h-5 w-5" />
             </div>
           </div>
         )}
       </CardContent>
     </Card>
+  )
+
+  if (!description) {
+    return content
+  }
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+          {description}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 
@@ -122,6 +151,7 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         value={metrics ? formatCurrency(metrics.spend, displayCurrency) : '—'}
         icon={CreditCard}
         loading={loading}
+        description="Total amount spent on advertising during the selected time period"
       />
       <MetricCard
         label="ROAS"
@@ -129,6 +159,7 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         trend={metrics && metrics.roas > 2 ? 'up' : 'neutral'}
         icon={TrendingUp}
         loading={loading}
+        description="Return on Ad Spend - revenue generated per dollar spent. Higher is better."
       />
       <MetricCard
         label="CTR"
@@ -136,6 +167,7 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         subValue={metrics ? `${formatNumber(metrics.clicks)} clicks` : undefined}
         icon={MousePointerClick}
         loading={loading}
+        description="Click-Through Rate - percentage of people who clicked after seeing your ad"
       />
       <MetricCard
         label="CPA"
@@ -143,12 +175,14 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         trend={metrics && metrics.cpa < 20 ? 'up' : 'down'}
         icon={Target}
         loading={loading}
+        description="Cost Per Acquisition - average cost to get one conversion. Lower is better."
       />
       <MetricCard
         label="Impressions"
         value={metrics ? formatNumber(metrics.impressions) : '—'}
         icon={Eye}
         loading={loading}
+        description="Number of times your ad was shown to potential customers"
       />
       <MetricCard
         label="Conv. Rate"
@@ -156,12 +190,14 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         subValue={metrics ? `${formatNumber(metrics.conversions)} conv.` : undefined}
         icon={TrendingUp}
         loading={loading}
+        description="Conversion Rate - percentage of clicks that resulted in a conversion"
       />
       <MetricCard
         label="Avg. CPC"
         value={metrics ? formatCurrency(metrics.cpc, displayCurrency) : '—'}
         icon={CreditCard}
         loading={loading}
+        description="Average Cost Per Click - average cost each time someone clicks your ad"
       />
       {metrics?.reach !== undefined && (
         <MetricCard
@@ -170,6 +206,7 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
           icon={Users}
           loading={loading}
           subValue={metrics ? `${((metrics.reach / metrics.impressions) * 100).toFixed(1)}% of impressions` : undefined}
+          description="Number of unique people who saw your ad at least once"
         />
       )}
       <MetricCard
@@ -177,6 +214,7 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         value={displayEfficiencyScore !== null ? `${displayEfficiencyScore}%` : '—'}
         icon={TrendingUp}
         loading={loading}
+        description="Overall performance health rating combining spend, revenue, conversions, and other metrics"
       />
     </div>
   )

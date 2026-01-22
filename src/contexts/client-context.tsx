@@ -36,9 +36,9 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
 
-  const mountedRef = useRef(false)
   const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
   const selectionBeforePreviewRef = useRef<string | null>(null)
+  const lastWorkspaceIdRef = useRef<string | null>(null)
 
   // Use utility to get workspaceId - handles empty string and fallback to user.id
   const workspaceId = getWorkspaceId(user)
@@ -77,25 +77,47 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, isSyncing, workspaceId, canQuery, convexClients])
 
+  const storageKey = useMemo(() => {
+    return workspaceId ? `${STORAGE_KEY_SELECTED}:${workspaceId}` : STORAGE_KEY_SELECTED
+  }, [workspaceId])
+
   useEffect(() => {
-    if (mountedRef.current) {
+    if (previewEnabled) {
       return
     }
-    mountedRef.current = true
+
+    if (!workspaceId) {
+      if (selectedClientId !== null) {
+        setSelectedClientId(null)
+      }
+      lastWorkspaceIdRef.current = null
+      return
+    }
+
+    if (lastWorkspaceIdRef.current && lastWorkspaceIdRef.current !== workspaceId) {
+      if (selectedClientId !== null) {
+        setSelectedClientId(null)
+      }
+    }
+    lastWorkspaceIdRef.current = workspaceId
 
     if (typeof window === 'undefined') {
       return
     }
 
+    if (selectedClientId) {
+      return
+    }
+
     try {
-      const storedSelected = window.localStorage.getItem(STORAGE_KEY_SELECTED)
-      if (storedSelected) {
+      const storedSelected = window.localStorage.getItem(storageKey)
+      if (storedSelected && storedSelected !== selectedClientId) {
         setSelectedClientId(storedSelected)
       }
     } catch (storageError) {
       console.warn('[ClientProvider] failed to hydrate stored client selection', storageError)
     }
-  }, [])
+  }, [previewEnabled, selectedClientId, storageKey, workspaceId])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -135,10 +157,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
 
     const previewClients = getPreviewClients()
-    setSelectedClientId(previewClients[0]?.id ?? null)
+    const previewSelection = previewClients[0]?.id ?? null
+    if (previewSelection !== selectedClientId) {
+      setSelectedClientId(previewSelection)
+    }
     setError(null)
     setLoading(false)
   }, [previewEnabled, selectedClientId])
+
+  const clientsResolved = previewEnabled || (canQuery && convexClients !== undefined)
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -150,17 +177,23 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    if (!workspaceId) {
+      return
+    }
+
     if (!selectedClientId) {
-      window.localStorage.removeItem(STORAGE_KEY_SELECTED)
+      if (clientsResolved) {
+        window.localStorage.removeItem(storageKey)
+      }
       return
     }
 
     try {
-      window.localStorage.setItem(STORAGE_KEY_SELECTED, selectedClientId)
+      window.localStorage.setItem(storageKey, selectedClientId)
     } catch (storageError) {
       console.warn('[ClientProvider] failed to persist client selection', storageError)
     }
-  }, [selectedClientId, previewEnabled])
+  }, [clientsResolved, previewEnabled, selectedClientId, storageKey, workspaceId])
 
   const fetchClients = useCallback(async (): Promise<ClientRecord[]> => {
     if (previewEnabled) {
@@ -235,15 +268,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const storedSelection = selectedClientId
-
-    if (!storedSelection || !rows.some((client: any) => client.legacyId === storedSelection)) {
-      const firstClientId = rows[0]?.legacyId ?? null
-      setSelectedClientId(firstClientId)
-    }
-
     setError(null)
-  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey, selectedClientId])
+  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey])
 
   useEffect(() => {
     if (previewEnabled) {
@@ -296,26 +322,25 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (resolvedClients.length === 0) {
-      if (selectedClientId !== null) {
+      if (clientsResolved && selectedClientId !== null) {
         setSelectedClientId(null)
       }
       return
     }
 
-    setSelectedClientId((current) => {
-      if (current && resolvedClients.some((client) => client.id === current)) {
-        return current
-      }
+    if (selectedClientId && resolvedClients.some((client) => client.id === selectedClientId)) {
+      return
+    }
 
-      const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY_SELECTED) : null
-      if (stored && resolvedClients.some((client) => client.id === stored)) {
-        if (stored === current) return current
-        return stored
-      }
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
+    const nextId = stored && resolvedClients.some((client) => client.id === stored)
+      ? stored
+      : resolvedClients[0]?.id ?? null
 
-      return resolvedClients[0]?.id ?? null
-    })
-  }, [resolvedClients, selectedClientId])
+    if (nextId !== selectedClientId) {
+      setSelectedClientId(nextId)
+    }
+  }, [clientsResolved, resolvedClients, selectedClientId, storageKey])
 
   const refreshClients = useCallback(async () => {
     return await fetchClients()

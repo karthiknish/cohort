@@ -29,19 +29,8 @@ function InsightBadge({ level }: { level: AlgorithmicInsight['level'] }) {
     error: 'bg-red-500/10 text-red-600 border-red-500/20', // Fallback for some API types
   }
 
-  const icons = {
-    success: CircleCheck,
-    info: Info,
-    warning: TriangleAlert,
-    critical: Zap,
-    error: TriangleAlert,
-  }
-
-  const Icon = icons[level] || Info
-
   return (
     <div className={cn("flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-tight", styles[level as keyof typeof styles])}>
-      <Icon className="h-3 w-3" />
       {level === 'critical' ? 'High Alert' : level === 'info' ? 'Suggestion' : level}
     </div>
   )
@@ -119,9 +108,6 @@ export function AlgorithmicInsightsSection({
           <div>
             <CardTitle className="text-lg">Algorithm Analysis</CardTitle>
             <CardDescription>AI-generated performance suggestions</CardDescription>
-          </div>
-          <div className="rounded-full bg-primary/10 p-2 text-primary">
-            <Lightbulb className="h-5 w-5" />
           </div>
         </CardHeader>
         <CardContent>

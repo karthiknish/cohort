@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors, withErrorHandling } from './errors'
+import { ErrorCode, Errors, isAppError, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -53,6 +53,26 @@ export type NormalizedTargeting = {
     instagram?: string[]
     audienceNetwork?: string[]
     messenger?: string[]
+  }
+}
+
+function buildInsights(targeting: NormalizedTargeting[]) {
+  return {
+    totalEntities: targeting.length,
+    demographicCoverage: {
+      hasAgeTargeting: targeting.some((t) => t.demographics.ageRanges.length > 0),
+      hasGenderTargeting: targeting.some((t) => t.demographics.genders.length > 0),
+      hasLocationTargeting: targeting.some((t) => t.locations.included.length > 0),
+    },
+    audienceStats: {
+      totalAudiences: targeting.reduce((sum, t) => sum + t.audiences.included.length, 0),
+      hasCustomAudiences: targeting.some((t) => t.audiences.included.some((a) => a.type === 'custom')),
+      hasRemarketingLists: targeting.some((t) => t.audiences.included.some((a) => a.type === 'remarketing')),
+    },
+    interestStats: {
+      totalInterests: targeting.reduce((sum, t) => sum + t.interests.length, 0),
+      totalKeywords: targeting.reduce((sum, t) => sum + t.keywords.length, 0),
+    },
   }
 }
 
@@ -212,11 +232,20 @@ export const getTargeting = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
-      workspaceId: args.workspaceId,
-      providerId: args.providerId,
-      clientId,
-    })
+    let integration: any
+    try {
+      integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+        workspaceId: args.workspaceId,
+        providerId: args.providerId,
+        clientId,
+      })
+    } catch (error) {
+      if (isAppError(error, ErrorCode.RESOURCE.NOT_FOUND)) {
+        const targeting: NormalizedTargeting[] = []
+        return { targeting, insights: buildInsights(targeting) }
+      }
+      throw error
+    }
 
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
@@ -300,24 +329,6 @@ export const getTargeting = action({
       targeting = normalizeMetaTargeting(metaTargeting)
     }
 
-    const insights = {
-      totalEntities: targeting.length,
-      demographicCoverage: {
-        hasAgeTargeting: targeting.some((t) => t.demographics.ageRanges.length > 0),
-        hasGenderTargeting: targeting.some((t) => t.demographics.genders.length > 0),
-        hasLocationTargeting: targeting.some((t) => t.locations.included.length > 0),
-      },
-      audienceStats: {
-        totalAudiences: targeting.reduce((sum, t) => sum + t.audiences.included.length, 0),
-        hasCustomAudiences: targeting.some((t) => t.audiences.included.some((a) => a.type === 'custom')),
-        hasRemarketingLists: targeting.some((t) => t.audiences.included.some((a) => a.type === 'remarketing')),
-      },
-      interestStats: {
-        totalInterests: targeting.reduce((sum, t) => sum + t.interests.length, 0),
-        totalKeywords: targeting.reduce((sum, t) => sum + t.keywords.length, 0),
-      },
-    }
-
-    return { targeting, insights }
+    return { targeting, insights: buildInsights(targeting) }
   }, 'adsTargeting:getTargeting'),
 })

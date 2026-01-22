@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo } from "react"
-import { FileText, CircleCheck, DollarSign, Send } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import type { ProposalDraft } from "@/types/proposals"
 
@@ -15,7 +14,6 @@ function getDefaultStats() {
     {
       label: "Total Proposals",
       value: "0",
-      icon: FileText,
       description: "Drafts and submitted",
       color: "text-blue-500",
       bg: "bg-blue-500/10",
@@ -23,7 +21,6 @@ function getDefaultStats() {
     {
       label: "Ready for Pitch",
       value: "0",
-      icon: CircleCheck,
       description: "Generated decks",
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
@@ -31,7 +28,6 @@ function getDefaultStats() {
     {
       label: "Sent to Clients",
       value: "0",
-      icon: Send,
       description: "Awaiting approval",
       color: "text-purple-500",
       bg: "bg-purple-500/10",
@@ -39,7 +35,6 @@ function getDefaultStats() {
     {
       label: "Pipeline Value",
       value: "$0",
-      icon: DollarSign,
       description: "Estimated total",
       color: "text-orange-500",
       bg: "bg-orange-500/10",
@@ -98,7 +93,6 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
         {
           label: "Total Proposals",
           value: total.toString(),
-          icon: FileText,
           description: "Drafts and submitted",
           color: "text-blue-500",
           bg: "bg-blue-500/10",
@@ -106,7 +100,6 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
         {
           label: "Ready for Pitch",
           value: ready.toString(),
-          icon: CircleCheck,
           description: "Generated decks",
           color: "text-emerald-500",
           bg: "bg-emerald-500/10",
@@ -114,7 +107,6 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
         {
           label: "Sent to Clients",
           value: sent.toString(),
-          icon: Send,
           description: "Awaiting approval",
           color: "text-purple-500",
           bg: "bg-purple-500/10",
@@ -122,7 +114,6 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
         {
           label: "Pipeline Value",
           value: formatValue(totalValue),
-          icon: DollarSign,
           description: "Estimated total",
           color: "text-orange-500",
           bg: "bg-orange-500/10",
@@ -143,7 +134,6 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
         {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="animate-pulse border-muted">
             <CardContent className="p-6">
-              <div className="h-12 w-12 rounded-lg bg-muted mb-4" />
               <div className="h-4 w-24 bg-muted rounded mb-2" />
               <div className="h-8 w-16 bg-muted rounded" />
             </CardContent>
@@ -158,11 +148,6 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
       {stats.map((stat) => (
         <Card key={stat.label} className="overflow-hidden border-muted/50 hover:border-primary/20 transition-colors duration-200">
           <CardContent className="p-6 relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-            </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
               <div className="flex items-baseline gap-2">
@@ -170,7 +155,7 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
               </div>
               <p className="text-xs text-muted-foreground/80">{stat.description}</p>
             </div>
-            
+
             {/* Subtle background glow */}
             <div className={`absolute -right-4 -bottom-4 h-24 w-24 rounded-full opacity-5 blur-2xl ${stat.bg}`} />
           </CardContent>

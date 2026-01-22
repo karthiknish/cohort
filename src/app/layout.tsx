@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 import { Suspense } from 'react'
 import './globals.css'
-
+import { Agentation } from "agentation";
 import { cn } from '@/lib/utils'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
@@ -50,6 +50,7 @@ export default function RootLayout({
           'min-h-screen bg-background font-sans antialiased text-foreground'
         )}
       >
+       
         <Suspense fallback={null}>
           <GoogleAnalyticsScript />
           <AppProviders>
@@ -63,6 +64,7 @@ export default function RootLayout({
         </Suspense>
         <Toaster />
         <SonnerToaster />
+        {process.env.NODE_ENV === "development" && <Agentation key="agentation-tool" />}
       </body>
     </html>
   )

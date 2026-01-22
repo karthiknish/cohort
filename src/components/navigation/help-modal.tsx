@@ -159,7 +159,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden p-0">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden p-0 z-[1100]">
         <DialogHeader className="px-6 pt-6">
           <DialogTitle className="flex items-center gap-2">
             <CircleHelp className="h-5 w-5 text-primary" />
