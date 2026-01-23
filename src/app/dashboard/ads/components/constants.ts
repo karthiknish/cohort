@@ -201,6 +201,12 @@ export const PROVIDER_INFO = {
     ],
     loginMethod: 'popup' as const,
     estimatedSetupTime: '30 seconds',
+    theme: {
+      color: 'text-[#4285F4]',
+      bg: 'bg-[#4285F4]/10',
+      border: 'border-[#4285F4]/20',
+      indicator: 'bg-[#4285F4]',
+    },
   },
   [PROVIDER_IDS.FACEBOOK]: {
     name: 'Meta Ads Manager',
@@ -217,6 +223,34 @@ export const PROVIDER_INFO = {
     ],
     loginMethod: 'redirect' as const,
     estimatedSetupTime: '1 minute',
+    theme: {
+      color: 'text-[#0668E1]',
+      bg: 'bg-[#0668E1]/10',
+      border: 'border-[#0668E1]/20',
+      indicator: 'bg-[#0668E1]',
+    },
+  },
+  [PROVIDER_IDS.META]: {
+    name: 'Meta Ads Manager',
+    shortName: 'Meta',
+    description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
+    benefits: [
+      'Facebook and Instagram ad performance',
+      'Creative-level reporting',
+      'Audience and placement insights',
+    ],
+    requirements: [
+      'Meta Business account',
+      'Admin access to at least one ad account',
+    ],
+    loginMethod: 'redirect' as const,
+    estimatedSetupTime: '1 minute',
+    theme: {
+      color: 'text-[#0668E1]',
+      bg: 'bg-[#0668E1]/10',
+      border: 'border-[#0668E1]/20',
+      indicator: 'bg-[#0668E1]',
+    },
   },
   [PROVIDER_IDS.LINKEDIN]: {
     name: 'LinkedIn Ads',
@@ -233,6 +267,12 @@ export const PROVIDER_INFO = {
     ],
     loginMethod: 'popup' as const,
     estimatedSetupTime: '30 seconds',
+    theme: {
+      color: 'text-[#0A66C2]',
+      bg: 'bg-[#0A66C2]/10',
+      border: 'border-[#0A66C2]/20',
+      indicator: 'bg-[#0A66C2]',
+    },
   },
   [PROVIDER_IDS.TIKTOK]: {
     name: 'TikTok Ads',
@@ -249,7 +289,14 @@ export const PROVIDER_INFO = {
     ],
     loginMethod: 'redirect' as const,
     estimatedSetupTime: '1 minute',
+    theme: {
+      color: 'text-[#FE2C55]',
+      bg: 'bg-[#FE2C55]/10',
+      border: 'border-[#FE2C55]/20',
+      indicator: 'bg-[#FE2C55]',
+    },
   },
 } as const
 
+export type ProviderInfo = typeof PROVIDER_INFO[keyof typeof PROVIDER_INFO]
 export type ProviderInfoKey = keyof typeof PROVIDER_INFO

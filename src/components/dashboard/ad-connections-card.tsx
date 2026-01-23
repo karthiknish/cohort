@@ -26,7 +26,7 @@ import {
   DisconnectDialog,
   type ConnectionStep
 } from '@/app/dashboard/ads/components/connection-dialog'
-import { PROVIDER_INFO } from '@/app/dashboard/ads/components/constants'
+import { PROVIDER_INFO, type ProviderInfo } from '@/app/dashboard/ads/components/constants'
 
 // =============================================================================
 // TYPES
@@ -36,7 +36,7 @@ interface ProviderConfig {
   id: string
   name: string
   description: string
-  icon: LucideIcon
+  icon: React.ComponentType<{ className?: string }>
   connect?: () => Promise<void>
   mode?: 'direct' | 'oauth'
 }
@@ -322,11 +322,14 @@ const ProviderCard = memo(function ProviderCard({
         ? statusInfo.accountId
         : null
 
+  const theme = (providerInfo as ProviderInfo | undefined)?.theme
+
   return (
     <Card className={cn(
       'relative overflow-hidden border-muted/70 bg-background shadow-sm transition-all',
-      isConnected && 'border-primary/20',
-      error && 'border-destructive/30'
+      isConnected && (theme?.border || 'border-primary/20'),
+      error && 'border-destructive/30',
+      !isConnected && 'hover:border-muted-foreground/30 opacity-90 hover:opacity-100'
     )}>
       {/* Status indicator bar */}
       {isConnected && (
@@ -334,17 +337,18 @@ const ProviderCard = memo(function ProviderCard({
           'absolute left-0 top-0 h-1 w-full',
           statusInfo?.status === 'error' && 'bg-destructive',
           statusInfo?.status === 'pending' && 'bg-amber-400',
-          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && 'bg-primary'
+          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && (theme?.indicator || 'bg-primary')
         )} />
       )}
 
       <CardHeader className="space-y-3 pb-3">
         <div className="flex items-start justify-between">
           <span className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-full',
-            isConnected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+            'flex h-12 w-12 items-center justify-center rounded-xl transition-all shadow-sm',
+            theme?.bg || (isConnected ? 'bg-primary/10' : 'bg-muted'),
+            theme?.color || (isConnected ? 'text-primary' : 'text-muted-foreground')
           )}>
-            <Icon className="h-5 w-5" />
+            <Icon className="h-6 w-6" />
           </span>
           {isConnecting && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

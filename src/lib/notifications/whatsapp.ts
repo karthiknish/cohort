@@ -2,7 +2,7 @@
 
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '../../../convex/_generated/api'
+import { internal } from '../../../convex/_generated/api'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
 
@@ -25,8 +25,13 @@ let _convexClient: ConvexHttpClient | null = null
 function getConvexClient(): ConvexHttpClient | null {
   if (_convexClient) return _convexClient
   const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!url) return null
+  const deployKey = process.env.CONVEX_DEPLOY_KEY ?? process.env.CONVEX_ADMIN_KEY ?? process.env.CONVEX_ADMIN_TOKEN
+  if (!url || !deployKey) return null
   _convexClient = new ConvexHttpClient(url)
+  ;(_convexClient as any).setAdminAuth(deployKey, {
+    issuer: 'system',
+    subject: 'notification-service',
+  })
   return _convexClient
 }
 
@@ -279,7 +284,7 @@ async function dispatchWorkspaceWhatsAppNotification(options: {
       return result
     }
 
-    const queryResult = await convex.query(api.users.getWhatsAppRecipientsForWorkspace, {
+    const queryResult = await convex.query(internal.users.getWhatsAppRecipientsForWorkspace as any, {
       workspaceId,
       notificationType,
     })

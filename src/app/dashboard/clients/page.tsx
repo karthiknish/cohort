@@ -7,14 +7,10 @@ import { useQuery, useAction } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { financeInvoicesApi, projectsApi, proposalsApi, tasksApi, api } from '@/lib/convex-api'
 import {
-  Briefcase,
-  CheckSquare,
   Download,
-  FileText,
   MoreHorizontal,
   RefreshCcw,
   Settings,
-  TrendingUp,
   Users as UsersIcon,
 } from 'lucide-react'
 
@@ -53,7 +49,6 @@ import {
   ClientsDashboardSkeleton,
   InvoiceManagementCard,
   TeamMembersCard,
-  QuickActionCard,
   ClientStatsGrid,
   ClientDetailsCard,
   ClientOnboardingChecklist,
@@ -668,35 +663,39 @@ function ClientsDashboardContent() {
         />
 
         {/* Quick Actions */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <QuickActionCard
-            href={`/dashboard/projects?clientId=${selectedClient.id}`}
-            icon={Briefcase}
-            title="Projects"
-            description="View and manage projects"
-            color="blue"
-          />
-          <QuickActionCard
-            href={`/dashboard/tasks?clientId=${selectedClient.id}`}
-            icon={CheckSquare}
-            title="Tasks"
-            description="Track deliverables"
-            color="emerald"
-          />
-          <QuickActionCard
-            href={`/dashboard/proposals?clientId=${selectedClient.id}`}
-            icon={FileText}
-            title="Proposals"
-            description="Create and send proposals"
-            color="amber"
-          />
-          <QuickActionCard
-            href={`/dashboard/finance?clientId=${selectedClient.id}`}
-            icon={TrendingUp}
-            title="Finance"
-            description="Revenue and invoicing"
-            color="violet"
-          />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+          >
+            <Link href={`/dashboard/projects?clientId=${selectedClient.id}`}>Projects</Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+          >
+            <Link href={`/dashboard/tasks?clientId=${selectedClient.id}`}>Tasks</Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+          >
+            <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`}>Proposals</Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+          >
+            <Link href={`/dashboard/finance?clientId=${selectedClient.id}`}>Finance</Link>
+          </Button>
         </div>
 
         <ClientPipelineBoard clients={clients} selectedClientId={selectedClient.id} />

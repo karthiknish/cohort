@@ -70,7 +70,7 @@ export interface AdPlatform {
   id: string
   name: string
   description: string
-  icon: LucideIcon
+  icon: React.ComponentType<{ className?: string }>
   connect?: () => Promise<void>
   mode?: 'oauth'
 }

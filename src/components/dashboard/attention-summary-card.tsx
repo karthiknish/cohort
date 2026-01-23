@@ -105,12 +105,12 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
             )}
           </div>
           <div className="mt-2 space-y-1">
-            <p className="text-xl font-semibold tabular-nums">
+            <div className="text-xl font-semibold tabular-nums">
               {loading?.finance ? <Skeleton className="h-7 w-8" /> : overdueInvoices}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            </div>
+            <div className="text-xs text-muted-foreground">
               {loading?.finance ? <Skeleton className="h-3 w-24" /> : `${openInvoices} open · ${overdueInvoices} overdue`}
-            </p>
+            </div>
           </div>
           <div className="mt-3">
             <Link href="/dashboard/finance/payments">
@@ -128,12 +128,12 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
             <FileText className={cn('h-4 w-4', proposalCounts.total > 0 ? 'text-primary' : 'text-muted-foreground')} />
           </div>
           <div className="mt-2 space-y-1">
-            <p className="text-xl font-semibold tabular-nums">
+            <div className="text-xl font-semibold tabular-nums">
               {loading?.proposals ? <Skeleton className="h-7 w-8" /> : proposalCounts.total}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            </div>
+            <div className="text-xs text-muted-foreground">
               {loading?.proposals ? <Skeleton className="h-3 w-32" /> : `${proposalCounts.inProgress} in progress · ${proposalCounts.ready} ready · ${proposalCounts.sent} sent`}
-            </p>
+            </div>
           </div>
           <div className="mt-3">
             <Link href="/dashboard/proposals">

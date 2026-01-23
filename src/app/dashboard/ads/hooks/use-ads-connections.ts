@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
-import { Facebook, Linkedin, Music, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -189,28 +190,28 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
        id: PROVIDER_IDS.GOOGLE,
        name: 'Google Ads',
        description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
-       icon: Search,
+       icon: SiGoogleads,
        connect: () => connectGoogleAdsAccount(),
      },
     {
       id: PROVIDER_IDS.FACEBOOK,
       name: 'Meta Ads Manager',
       description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
-      icon: Facebook,
+      icon: SiMeta,
       mode: 'oauth',
     },
      {
        id: PROVIDER_IDS.LINKEDIN,
        name: 'LinkedIn Ads',
        description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
-       icon: Linkedin,
+       icon: SiLinkedin,
        connect: () => connectLinkedInAdsAccount(),
      },
     {
       id: PROVIDER_IDS.TIKTOK,
       name: 'TikTok Ads',
       description: 'Bring in spend, engagement, and conversion insights from TikTok campaign flights.',
-      icon: Music,
+      icon: SiTiktok,
       mode: 'oauth',
     },
   ]

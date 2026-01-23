@@ -2,7 +2,6 @@
 
 import { memo, useCallback, useState, useEffect } from 'react'
 import { Check, ChevronRight, ExternalLink, Loader2, X, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 
 import {
   Dialog,
@@ -75,7 +74,7 @@ interface ConnectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   providerId: string | null
-  providerIcon?: LucideIcon
+  providerIcon?: React.ComponentType<{ className?: string }>
   onConnect: () => Promise<void>
   isConnecting: boolean
   connectionStep: ConnectionStep

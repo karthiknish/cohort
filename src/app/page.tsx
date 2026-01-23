@@ -33,7 +33,6 @@ export default function HomePage() {
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const user = session?.user ?? null
   const loading = sessionPending
-  const [sessionSynced, setSessionSynced] = useState(true) // Default to true now that manual sync is gone
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -110,7 +109,7 @@ export default function HomePage() {
 
   useEffect(() => {
     // Wait for session sync to complete before redirecting
-    if (loading || !user || !sessionSynced) return
+    if (loading || !user) return
     if (redirectInProgressRef.current) return
 
     const redirect = searchParams.get("redirect")
@@ -163,14 +162,13 @@ export default function HomePage() {
 
     // Clean up timeout if component unmounts (navigation succeeded)
     return () => clearTimeout(fallbackTimeout)
-  }, [loading, user, sessionSynced, router, searchParams, toast])
+  }, [loading, user, router, searchParams, toast])
 
   // When we're back on the home page without a user, clear any stale redirect-loop tracking.
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!user) {
       clearRedirectState()
-      setSessionSynced(false) // Reset so re-login will sync again
     }
   }, [user])
 
@@ -279,7 +277,6 @@ export default function HomePage() {
           authClient.getSession().catch(() => null),
           bootstrapAndSyncSession(),
         ])
-        setSessionSynced(true)
 
         toast({
           title: "Welcome to Cohorts!",
@@ -302,7 +299,6 @@ export default function HomePage() {
           authClient.getSession().catch(() => null),
           bootstrapAndSyncSession(),
         ])
-        setSessionSynced(true)
 
         // Handle remember me
         if (rememberMe && typeof window !== "undefined") {
@@ -353,7 +349,6 @@ export default function HomePage() {
         authClient.getSession().catch(() => null),
         bootstrapAndSyncSession(),
       ])
-      setSessionSynced(true)
     } catch (error) {
       const errorMessage = getFriendlyAuthErrorMessage(error)
       toast({
@@ -420,6 +415,4 @@ export default function HomePage() {
     </div>
   )
 }
-
-
 

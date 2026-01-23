@@ -19,16 +19,11 @@ export function WorkflowCard() {
   return (
     <Card className="border-muted/70 bg-background shadow-sm">
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Sparkles className="h-4 w-4" />
-          </span>
-          <div>
-            <CardTitle className="text-base">Get your ads connected in minutes</CardTitle>
-            <CardDescription>
-              Follow these steps to start pulling media performance into Cohorts.
-            </CardDescription>
-          </div>
+        <div>
+          <CardTitle className="text-base">Get your ads connected in minutes</CardTitle>
+          <CardDescription>
+            Follow these steps to start pulling media performance into Cohorts.
+          </CardDescription>
         </div>
         <Button asChild size="sm" variant="outline">
           <Link href="/dashboard/integrations">View integration checklist</Link>

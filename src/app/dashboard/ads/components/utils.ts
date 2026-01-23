@@ -1,6 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
-import { Facebook, Linkedin, Music, Search } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 
 import type { MetricRecord } from './types'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -47,12 +46,12 @@ export const TIMEFRAME_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Past 90 days', value: 90 },
 ]
 
-export const PROVIDER_ICON_MAP: Record<string, LucideIcon> = {
-  google: Search,
-  facebook: Facebook,
-  meta: Facebook,
-  linkedin: Linkedin,
-  tiktok: Music,
+export const PROVIDER_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  google: SiGoogleads,
+  facebook: SiMeta,
+  meta: SiMeta,
+  linkedin: SiLinkedin,
+  tiktok: SiTiktok,
 }
 
 export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {

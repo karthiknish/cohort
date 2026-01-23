@@ -8,7 +8,7 @@ import { cache } from 'react'
 import * as Brevo from '@getbrevo/brevo'
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '@/../convex/_generated/api'
+import { internal } from '@/../convex/_generated/api'
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
 import {
   invoicePaidTemplate,
@@ -38,8 +38,13 @@ let _convexClient: ConvexHttpClient | null = null
 function getConvexClient(): ConvexHttpClient | null {
   if (_convexClient) return _convexClient
   const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!url) return null
+  const deployKey = process.env.CONVEX_DEPLOY_KEY ?? process.env.CONVEX_ADMIN_KEY ?? process.env.CONVEX_ADMIN_TOKEN
+  if (!url || !deployKey) return null
   _convexClient = new ConvexHttpClient(url)
+  ;(_convexClient as any).setAdminAuth(deployKey, {
+    issuer: 'system',
+    subject: 'notification-service',
+  })
   return _convexClient
 }
 
@@ -78,7 +83,7 @@ function getBrevoClient(): Brevo.TransactionalEmailsApi | null {
 }
 
 const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, email: string) => {
-  return await convex.query(api.users.getNotificationPreferencesByEmail, { email })
+  return await convex.query(internal.users.getNotificationPreferencesByEmail as any, { email })
 })
 
 /**
