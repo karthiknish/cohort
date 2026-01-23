@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   experimental: {
-    staticGenerationRetryCount: 0,
+    staticGenerationRetryCount: 2,
     optimizePackageImports: [
       'lucide-react',
       '@radix-ui/react-alert-dialog',
