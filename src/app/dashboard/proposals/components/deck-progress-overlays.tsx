@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { TriangleAlert, CircleCheck, LoaderCircle, Sparkles } from "lucide-react"
+import { TriangleAlert, CircleCheck, LoaderCircle } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -34,7 +34,7 @@ const generationFlow: { label: string; helper: string; icon: LucideIcon; duratio
   {
     label: "Analyzing your input...",
     helper: "Reviewing your responses and goals to set the brief.",
-    icon: Sparkles,
+    icon: LoaderCircle,
     duration: 3000,
   },
   {
@@ -46,7 +46,7 @@ const generationFlow: { label: string; helper: string; icon: LucideIcon; duratio
   {
     label: "Drafting strategy...",
     helper: "Writing tailored recommendations and messaging.",
-    icon: Sparkles,
+    icon: LoaderCircle,
     duration: 6000,
   },
   {
@@ -57,8 +57,8 @@ const generationFlow: { label: string; helper: string; icon: LucideIcon; duratio
   },
   {
     label: "Generating presentation...",
-    helper: "Gamma is creating your presentation slides. This may take a moment.",
-    icon: Sparkles,
+    helper: "We are creating your presentation slides. This may take a moment.",
+    icon: LoaderCircle,
     duration: null, // This stage waits for actual completion
   },
 ]
@@ -118,7 +118,7 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/40 backdrop-blur-xl animate-in fade-in duration-500"
+      className="fixed inset-0 z-[2100] flex items-center justify-center bg-background/40 backdrop-blur-xl animate-in fade-in duration-500"
       role="status"
       aria-live="polite"
     >
@@ -133,7 +133,6 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
             ) : (
               <div className="relative">
                 <LoaderCircle className="h-12 w-12 animate-[spin_3s_linear_infinite] text-primary" />
-                <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-primary animate-pulse" />
               </div>
             )}
           </div>
@@ -204,13 +203,13 @@ export function DeckProgressOverlay({ stage, isVisible }: DeckProgressOverlayPro
 
   return (
     <div
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[2100] flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm"
       role="status"
       aria-live="polite"
     >
       <div className="flex flex-col items-center gap-3 text-center">
         {stage === "launching" ? (
-          <Sparkles className="h-10 w-10 text-primary" />
+          <CircleCheck className="h-10 w-10 text-primary" />
         ) : stage === "error" ? (
           <TriangleAlert className="h-10 w-10 text-destructive" />
         ) : (

@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Building2, Globe, Factory, Users2, MapPin, Facebook, Instagram, Linkedin, Twitter, Youtube, CircleAlert, CircleCheck, Sparkles } from 'lucide-react'
+import { Building2, Globe, Factory, Users2, MapPin, Facebook, Instagram, Linkedin, Twitter, Youtube, CircleAlert, CircleCheck } from 'lucide-react'
 
 import type { ProposalFormData } from '@/lib/proposals'
 import { GAMMA_PRESENTATION_THEMES } from '@/lib/gamma-themes'
@@ -61,7 +61,7 @@ function ProposalStepContentComponent({
   switch (stepId) {
     case 'company':
       return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2.5">
               <div className="flex items-center gap-2">
@@ -75,7 +75,7 @@ function ProposalStepContentComponent({
                 value={formState.company.name}
                 onChange={(event) => onUpdateField(['company', 'name'], event.target.value)}
                 className={cn(
-                   "h-11 border-muted/60 bg-background/50 focus:bg-background transition-all",
+                   "h-10 border-muted/60 bg-background/50 focus:bg-background transition-all",
                    validationErrors['company.name'] && "border-destructive/50 ring-destructive/20"
                 )}
               />
@@ -98,7 +98,7 @@ function ProposalStepContentComponent({
                 placeholder="https://acme.com"
                 value={formState.company.website}
                 onChange={(event) => onUpdateField(['company', 'website'], event.target.value)}
-                className="h-11 border-muted/60 bg-background/50 focus:bg-background transition-all"
+                className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-all"
               />
             </div>
           </div>
@@ -116,7 +116,7 @@ function ProposalStepContentComponent({
                 value={formState.company.industry}
                 onChange={(event) => onUpdateField(['company', 'industry'], event.target.value)}
                 className={cn(
-                   "h-11 border-muted/60 bg-background/50 focus:bg-background transition-all",
+                   "h-10 border-muted/60 bg-background/50 focus:bg-background transition-all",
                    validationErrors['company.industry'] && "border-destructive/50 ring-destructive/20"
                 )}
               />
@@ -138,7 +138,7 @@ function ProposalStepContentComponent({
                 placeholder="e.g. 25 employees"
                 value={formState.company.size}
                 onChange={(event) => onUpdateField(['company', 'size'], event.target.value)}
-                className="h-11 border-muted/60 bg-background/50 focus:bg-background transition-all"
+                className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-all"
               />
             </div>
           </div>
@@ -259,7 +259,7 @@ function ProposalStepContentComponent({
 
     case 'goals':
       return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="space-y-4">
             <div className="flex flex-col gap-1">
               <Label className="text-base font-semibold">Primary Business Goals</Label>
@@ -349,7 +349,7 @@ function ProposalStepContentComponent({
 
     case 'scope':
       return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="space-y-4">
             <div className="flex flex-col gap-1">
               <Label className="text-base font-semibold">Scope of Engagement</Label>
@@ -405,7 +405,7 @@ function ProposalStepContentComponent({
 
     case 'timelines':
       return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="space-y-4">
             <Label className="text-base font-semibold">Project Timeline</Label>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -448,7 +448,7 @@ function ProposalStepContentComponent({
 
     case 'value':
       return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="space-y-4">
             <Label className="text-base font-semibold">Estimated Project Value</Label>
             <p className="text-xs text-muted-foreground mb-4">Choose the budget range that best fits the project.</p>
@@ -540,7 +540,6 @@ function ProposalStepContentComponent({
           <Card className="border-dashed border-primary/20 bg-primary/5">
             <CardHeader className="space-y-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
                 <CardTitle className="text-lg">Proposal summary</CardTitle>
               </div>
               <CardDescription>Review the information before submitting.</CardDescription>

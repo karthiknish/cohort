@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Download, LoaderCircle } from 'lucide-react'
+import { ArrowLeft, Download, LoaderCircle, Presentation, Layout, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,6 +79,31 @@ export default function ProposalDeckPage() {
     const parsed = new Date(proposal.updatedAt)
     return Number.isNaN(parsed.getTime()) ? proposal.updatedAt : parsed.toLocaleString()
   }, [proposal])
+  
+  const slideGuidance = useMemo(() => {
+    const text = proposal?.gammaDeck?.instructions
+    if (!text) return []
+    
+    // Parse: "Slide 1: Title * point 1 * point 2 Slide 2: Title 2..."
+    const rawSlides = text.split(/(?=Slide \d+:)/).filter(Boolean)
+    return rawSlides.map((s, index) => {
+      const titleMatch = s.match(/Slide \d+:\s*([^*]+)/)
+      const title = titleMatch ? titleMatch[1].trim() : `Slide ${index + 1}`
+      const points = s.split('*').slice(1).map(p => p.trim()).filter(Boolean)
+      
+      return { 
+        id: index + 1,
+        title, 
+        points 
+      }
+    })
+  }, [proposal])
+
+  const getSlideIcon = (index: number) => {
+    const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket]
+    const Icon = icons[index % icons.length]
+    return <Icon className="h-4 w-4" />
+  }
 
   return (
     <div className="space-y-6">
@@ -125,16 +150,55 @@ export default function ProposalDeckPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                {lastUpdated && (
-                  <span>
-                    <strong>Last updated:</strong> {lastUpdated}
-                  </span>
-                )}
-                {proposal.gammaDeck?.instructions && (
-                  <span className="block w-full text-xs text-muted-foreground/80">
-                    Slide guidance: {proposal.gammaDeck.instructions}
-                  </span>
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  {lastUpdated && (
+                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 border border-muted/20 text-[11px] font-medium">
+                      <Clock className="h-3 w-3" />
+                      Updated: {lastUpdated}
+                    </span>
+                  )}
+                </div>
+
+                {slideGuidance.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-1 bg-primary rounded-full" />
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/80">Slide-by-Slide Guidance</h4>
+                        <p className="text-xs text-muted-foreground">Strategic walkthrough of your proposal deck</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {slideGuidance.map((slide, index) => (
+                        <Card key={slide.id} className="relative overflow-hidden border-muted/40 bg-muted/5 transition-all hover:bg-muted/10 hover:border-primary/20 group">
+                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
+                            <span className="text-4xl font-black text-primary/10">0{slide.id}</span>
+                          </div>
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex items-center gap-2 text-primary">
+                              <div className="p-1.5 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                                {getSlideIcon(index)}
+                              </div>
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Slide {slide.id}</span>
+                            </div>
+                            <CardTitle className="text-sm font-bold leading-tight mt-1">{slide.title}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-2">
+                            <ul className="space-y-2">
+                              {slide.points.map((point, i) => (
+                                <li key={i} className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
+                                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary/40" />
+                                  {point}
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
 

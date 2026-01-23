@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { AuthUser, SignUpData, authService } from '@/services/auth'
+import { authClient } from '@/lib/auth-client'
 
 // Error types for better error handling
 export type AuthErrorCode =
@@ -623,7 +624,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const getIdToken = useCallback(async () => {
-    return null
+    if (typeof window === 'undefined') return null
+    try {
+      const result = await authClient.$fetch('/convex/token')
+      const payload =
+        result && typeof result === 'object' && 'data' in result ? (result as any).data : result
+      const token = payload && typeof payload === 'object' && 'token' in payload ? (payload as any).token : null
+      return typeof token === 'string' && token.trim().length > 0 ? token : null
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[AuthContext] Failed to fetch Convex token', error)
+      }
+      return null
+    }
   }, [])
 
   const value = React.useMemo<AuthContextType>(

@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
 import { logger } from '@/lib/logger'
+import { authClient } from '@/lib/auth-client'
 
 import type {
   ProposalAnalyticsEvent,
@@ -32,8 +33,28 @@ function getConvexHttpClient(): ConvexHttpClient {
   return new ConvexHttpClient(url)
 }
 
+async function getConvexToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    const result = await authClient.$fetch('/convex/token')
+    const payload =
+      result && typeof result === 'object' && 'data' in result ? (result as any).data : result
+    const token = payload && typeof payload === 'object' && 'token' in payload ? (payload as any).token : null
+    return typeof token === 'string' && token.trim().length > 0 ? token : null
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[ProposalAnalytics] Failed to fetch Convex token', error)
+    }
+    return null
+  }
+}
+
 const queryConvex = cache(async (functionName: string, args: any) => {
   const client = getConvexHttpClient()
+  const token = await getConvexToken()
+  if (token) {
+    client.setAuth(token)
+  }
 
   try {
     return await client.query(functionName as any, args)
@@ -50,6 +71,10 @@ const queryConvex = cache(async (functionName: string, args: any) => {
 
 async function mutateConvex(functionName: string, args: any) {
   const client = getConvexHttpClient()
+  const token = await getConvexToken()
+  if (token) {
+    client.setAuth(token)
+  }
 
   try {
     return await client.mutation(functionName as any, args)

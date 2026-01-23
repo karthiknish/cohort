@@ -2,8 +2,8 @@ import { useState, useCallback, useRef } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
-import { useMutation, useQuery } from 'convex/react'
-import { proposalsApi } from '@/lib/convex-api'
+import { useAction, useMutation, useQuery } from 'convex/react'
+import { proposalGenerationApi, proposalsApi } from '@/lib/convex-api'
 import { refreshProposalDraft } from '@/services/proposals'
 import type { ProposalPresentationDeck } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
@@ -79,6 +79,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
     const workspaceId = user?.agencyId ?? null
     const convexUpdateProposal = useMutation(proposalsApi.update)
+    const generateProposalDeck = useAction(proposalGenerationApi.generateFromProposal)
 
     const activeConvexProposal = useQuery(
         proposalsApi.getByLegacyId,
@@ -156,6 +157,14 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             setLastSubmissionSnapshot(null)
 
+            // Trigger server-side AI + deck generation.
+            if (workspaceId) {
+                generateProposalDeck({ workspaceId, legacyId: activeDraftId }).catch((error) => {
+                    logError(error, 'useProposalSubmission:submitProposal:generate')
+                    console.error('[ProposalWizard] generation failed', error)
+                })
+            }
+
             // Track AI generation start for analytics
             const aiStartTime = Date.now()
             if (workspaceId) {
@@ -178,7 +187,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 })
                 response = latest as any
 
-                if (latest.status === 'ready' || latest.status === 'in_progress') {
+                if (latest.status === 'ready') {
                     break
                 }
 
@@ -204,7 +213,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             let finalDeck = response.presentationDeck ?? null
 
             if (isReady && !finalPptUrl) {
-                // Poll for the presentation deck (Gamma generates it asynchronously)
+                // Poll for the presentation deck (it generates it asynchronously)
                 const maxAttempts = 30 // Poll for up to ~60 seconds
                 const pollInterval = 2000 // 2 seconds between attempts
 
@@ -302,7 +311,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } finally {
             setIsSubmitting(false)
         }
-    }, [draftId, formState, currentStep, ensureDraftId, refreshProposals, selectedClientId, selectedClient, toast, clearErrors, setAutosaveStatus, setDraftId, setFormState, setCurrentStep, workspaceId, convexUpdateProposal])
+    }, [draftId, formState, currentStep, ensureDraftId, refreshProposals, selectedClientId, selectedClient, toast, clearErrors, setAutosaveStatus, setDraftId, setFormState, setCurrentStep, workspaceId, convexUpdateProposal, generateProposalDeck])
 
     const handleContinueEditingFromSnapshot = useCallback(async () => {
         if (!lastSubmissionSnapshot) {

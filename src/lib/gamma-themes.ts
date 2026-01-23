@@ -12,29 +12,14 @@ export type GammaPresentationTheme = {
 // Common Gamma themes - these may vary by workspace
 export const GAMMA_PRESENTATION_THEMES: GammaPresentationTheme[] = [
   {
-    id: '',
-    name: 'Default',
-    description: 'Use Gamma\'s default theme',
+    id: 'default-dark',
+    name: 'Basic Dark',
+    description: 'Dark palette with bold, modern tones.',
   },
   {
-    id: 'Prism',
-    name: 'Prism',
-    description: 'Modern, colorful design with gradient accents',
-  },
-  {
-    id: 'Chisel',
-    name: 'Chisel',
-    description: 'Clean, minimalist professional look',
-  },
-  {
-    id: 'Standard Dark',
-    name: 'Standard Dark',
-    description: 'Dark background with light text',
-  },
-  {
-    id: 'Dark Gradient',
-    name: 'Dark Gradient',
-    description: 'Dark theme with subtle gradient backgrounds',
+    id: 'default-light',
+    name: 'Basic Light',
+    description: 'Clean, bright layout with a professional finish.',
   },
 ]
 

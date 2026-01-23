@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { FileText, Sparkles, Plus, Clock, Trash2, Layout, Download, ExternalLink, RefreshCw } from 'lucide-react'
+import { FileText, Plus, Clock, Trash2, Layout, Download, ExternalLink, RefreshCw, Pencil } from 'lucide-react'
 
 import type { ProposalDraft } from '@/types/proposals'
 
@@ -60,7 +60,7 @@ interface ProposalHistoryProps {
   isLoading: boolean
   deletingProposalId: string | null
   onRefresh: () => void
-  onResume: (proposal: ProposalDraft) => void
+  onResume: (proposal: ProposalDraft, forceEdit?: boolean) => void
   onRequestDelete: (proposal: ProposalDraft) => void
   isGenerating: boolean
   downloadingDeckId: string | null
@@ -188,10 +188,21 @@ function ProposalHistoryComponent({
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-2">
+                        {proposal.status === 'draft' && !isActiveDraft && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => onResume(proposal, true)}
+                            className="h-9 px-4 font-medium"
+                          >
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant={isActiveDraft ? "default" : "outline"}
-                          onClick={() => onResume(proposal)}
+                          onClick={() => onResume(proposal, false)}
                           disabled={resumeDisabled}
                           className="h-9 px-4 font-medium"
                         >
@@ -229,7 +240,7 @@ function ProposalHistoryComponent({
                             {isDeckPreparing ? (
                               <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
                             ) : (
-                              <Sparkles className="mr-2 h-3.5 w-3.5 text-primary" />
+                              <FileText className="mr-2 h-3.5 w-3.5 text-primary" />
                             )}
                             {isDeckPreparing ? 'Preparing...' : 'Generate Deck'}
                           </Button>

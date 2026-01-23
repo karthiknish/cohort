@@ -16,7 +16,7 @@ export function proposalReadyTemplate(params: ProposalReadyTemplateParams): stri
     return wrapEmailTemplate(`
     <div class="header">Your Presentation is Ready</div>
     <div class="content">
-      <p>Your Gamma presentation has been generated and is ready for download.</p>
+      <p>Your presentation has been generated and is ready for download.</p>
       <div class="highlight">
         <strong>Title:</strong> ${proposalTitle}<br>
         ${clientName ? `<strong>Client:</strong> ${clientName}<br>` : ''}

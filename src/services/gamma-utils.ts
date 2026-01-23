@@ -87,19 +87,58 @@ async function resolveGammaInstructions(formData: ProposalFormData, candidate?: 
 
 function buildGammaInstructionPrompt(formData: ProposalFormData): string {
   const company = formData.company?.name?.trim() || 'Client'
-  return `Create a concise slide-by-slide outline for a marketing proposal deck for ${company}.\n\nUse 7-10 slides. Keep each slide title under 8 words, followed by 2-3 bullet points. Return plain text only.`
+  const industry = formData.company?.industry?.trim()
+  const goals = formData.goals?.objectives?.join(', ')
+  const audience = formData.goals?.audience?.trim()
+  const challenges = [
+    ...(formData.goals?.challenges || []),
+    formData.goals?.customChallenge
+  ].filter(Boolean).join(', ')
+  const scope = [
+    ...(formData.scope?.services || []),
+    formData.scope?.otherService
+  ].filter(Boolean).join(', ')
+  const timeline = formData.timelines?.startTime?.trim()
+
+  const context = [
+    `Company: ${company}`,
+    industry ? `Industry: ${industry}` : null,
+    goals ? `Core Objectives: ${goals}` : null,
+    audience ? `Target Audience: ${audience}` : null,
+    challenges ? `Key Challenges: ${challenges}` : null,
+    scope ? `Scope of Work: ${scope}` : null,
+    timeline ? `Desired Start Date: ${timeline}` : null,
+  ].filter(Boolean).join('\n')
+
+  return `You are a world-class marketing strategist. Create a high-converting, strategic slide-by-slide outline for a marketing proposal deck based on the following context:
+
+${context}
+
+Outline Requirements:
+- Use 7-10 slides.
+- Keep each slide title under 8 words.
+- Provide 2-3 specific, actionable bullet points per slide.
+- Ensure the narrative flows from identifying pain points to presenting a tailored solution and projected ROI.
+- Return plain text only.`
 }
 
-function buildGammaInputText(formData: ProposalFormData, summary?: string): string {
+export function buildGammaInputText(formData: ProposalFormData, summary?: string): string {
   const companyName = formData.company?.name?.trim() || 'Client'
-  const goals = Array.isArray((formData as any)?.goals) ? (formData as any).goals.join(', ') : ''
-  const budget = (formData as any)?.budget?.total ? `Budget: ${(formData as any).budget.total}` : ''
+  const industry = formData.company?.industry?.trim()
+  const goals = formData.goals?.objectives?.join(', ')
+  const budget = formData.marketing?.budget?.trim()
+  const scope = [
+    ...(formData.scope?.services || []),
+    formData.scope?.otherService
+  ].filter(Boolean).join(', ')
 
   return [
     `Client: ${companyName}`,
-    goals ? `Goals: ${goals}` : null,
-    budget || null,
-    summary ? `Summary: ${summary}` : null,
+    industry ? `Industry: ${industry}` : null,
+    goals ? `Strategic Goals: ${goals}` : null,
+    budget ? `Budget: ${budget}` : null,
+    scope ? `Proposed Scope: ${scope}` : null,
+    summary ? `AI Generated Outline:\n${summary}` : null,
   ]
     .filter(Boolean)
     .join('\n')

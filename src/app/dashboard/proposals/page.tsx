@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -37,8 +37,10 @@ import {
 
 export default function ProposalsPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { toast } = useToast()
   const { selectedClient, selectedClientId, selectClient } = useClientContext()
+  const [isWizardOpen, setIsWizardOpen] = useState(false)
 
   // Handle URL params for client selection
   useEffect(() => {
@@ -47,6 +49,17 @@ export default function ProposalsPage() {
       selectClient(clientIdParam)
     }
   }, [searchParams, selectedClientId, selectClient])
+
+  useEffect(() => {
+    if (!isWizardOpen) {
+      return
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isWizardOpen])
 
   // Local state for proposals list (needed by deck preparation)
   const [proposals, setProposals] = useState<ProposalDraft[]>([])
@@ -218,6 +231,25 @@ export default function ProposalsPage() {
     />
   )
 
+  const handleStartProposal = async () => {
+    await handleCreateNewProposal()
+    setIsWizardOpen(true)
+  }
+
+  const handleResumeProposalInModal = (proposal: ProposalDraft, forceEdit?: boolean) => {
+    if (proposal.status === 'ready' && !forceEdit) {
+      router.push(`/dashboard/proposals/${proposal.id}/deck`)
+      return
+    }
+    handleResumeProposal(proposal, forceEdit)
+    setIsWizardOpen(true)
+  }
+
+  const handleContinueEditingInModal = async () => {
+    await handleContinueEditingFromSnapshot()
+    setIsWizardOpen(true)
+  }
+
   return (
     <div ref={wizardRef} className="space-y-6">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
@@ -234,7 +266,7 @@ export default function ProposalsPage() {
             disabled={!draftId || isSubmitting}
           />
           <Button
-            onClick={handleCreateNewProposal}
+            onClick={handleStartProposal}
             disabled={!selectedClientId || isCreatingDraft}
             className="shrink-0 shadow-sm transition-all hover:shadow-md"
           >
@@ -246,41 +278,21 @@ export default function ProposalsPage() {
 
       <ProposalMetrics proposals={proposals} isLoading={isLoadingProposals} />
 
-      <Card className="border-muted/60 bg-background">
-        <CardHeader>
-          <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted} />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isBootstrapping ? (
-            <DashboardSkeleton showStepIndicator />
-          ) : submitted ? (
-            <ProposalSubmittedPanel
-              summary={summary}
-              presentationDeck={presentationDeck}
-              deckDownloadUrl={deckDownloadUrl}
-              activeProposalIdForDeck={activeProposalIdForDeck}
-              canResumeSubmission={canResumeSubmission}
-              onResumeSubmission={handleContinueEditingFromSnapshot}
-              isSubmitting={isSubmitting}
-              onRecheckDeck={handleRecheckDeck}
-              isRecheckingDeck={false}
-            />
-          ) : (
-            <ProposalDraftPanel
-              draftId={draftId}
-              autosaveStatus={autosaveStatus}
-              stepContent={renderStepContent()}
-              onBack={handleBack}
-              onNext={handleNext}
-              isFirstStep={isFirstStep}
-              isLastStep={isLastStep}
-              currentStep={currentStep}
-              totalSteps={steps.length}
-              isSubmitting={isSubmitting}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {!isWizardOpen && (
+        <Card className="border-dashed border-primary/30 bg-primary/5">
+          <CardHeader>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg font-semibold text-foreground">Start a new proposal</h3>
+              <p className="text-sm text-muted-foreground">Open the full-screen proposal builder to get started.</p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleStartProposal} disabled={!selectedClientId || isCreatingDraft}>
+              Start Proposal
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <ProposalHistory
         proposals={proposals}
@@ -288,12 +300,12 @@ export default function ProposalsPage() {
         isLoading={isLoadingProposals}
         deletingProposalId={deletingProposalId}
         onRefresh={() => void refreshProposals().then(setProposals)}
-        onResume={handleResumeProposal}
+        onResume={(proposal: ProposalDraft, forceEdit?: boolean) => handleResumeProposalInModal(proposal, forceEdit)}
         onRequestDelete={requestDeleteProposal}
         isGenerating={isSubmitting}
         downloadingDeckId={downloadingDeckId}
         onDownloadDeck={handleDownloadDeck}
-        onCreateNew={handleCreateNewProposal}
+        onCreateNew={handleStartProposal}
         canCreate={Boolean(selectedClientId)}
         isCreating={isCreatingDraft}
       />
@@ -310,6 +322,71 @@ export default function ProposalsPage() {
       />
       <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
+
+      {isWizardOpen && (
+        <div className="fixed inset-0 z-[2000] isolate bg-background">
+          <div className="flex h-full flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-muted/30 px-6 py-4">
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold">Proposal Builder</h2>
+                <p className="text-sm text-muted-foreground">Complete the steps to generate your proposal deck.</p>
+              </div>
+              <Button variant="ghost" onClick={() => setIsWizardOpen(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+              <div className="h-full space-y-4">
+                {isBootstrapping ? (
+                  <Card className="border-muted/60 bg-background">
+                    <CardContent className="p-6">
+                      <DashboardSkeleton showStepIndicator />
+                    </CardContent>
+                  </Card>
+                ) : submitted ? (
+                  <Card className="border-muted/60 bg-background">
+                    <CardContent className="p-6">
+                      <ProposalSubmittedPanel
+                        summary={summary}
+                        presentationDeck={presentationDeck}
+                        deckDownloadUrl={deckDownloadUrl}
+                        activeProposalIdForDeck={activeProposalIdForDeck}
+                        canResumeSubmission={canResumeSubmission}
+                        onResumeSubmission={handleContinueEditingInModal}
+                        isSubmitting={isSubmitting}
+                        onRecheckDeck={handleRecheckDeck}
+                        isRecheckingDeck={false}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="h-full flex flex-col space-y-4">
+                    <div className="shrink-0">
+                      <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted} />
+                    </div>
+                    <Card className="flex-1 overflow-auto border-muted/60 bg-background">
+                      <CardContent className="p-4 sm:p-6">
+                        <ProposalDraftPanel
+                          draftId={draftId}
+                          autosaveStatus={autosaveStatus}
+                          stepContent={renderStepContent()}
+                          onBack={handleBack}
+                          onNext={handleNext}
+                          isFirstStep={isFirstStep}
+                          isLastStep={isLastStep}
+                          currentStep={currentStep}
+                          totalSteps={steps.length}
+                          isSubmitting={isSubmitting}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

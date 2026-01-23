@@ -50,7 +50,7 @@ export interface UseProposalDraftsReturn {
     refreshProposals: () => Promise<ProposalDraft[]>
     ensureDraftId: () => Promise<string | null>
     handleCreateNewProposal: () => Promise<void>
-    handleResumeProposal: (proposal: ProposalDraft) => void
+    handleResumeProposal: (proposal: ProposalDraft, forceEdit?: boolean) => void;
     handleDeleteProposal: (proposal: ProposalDraft) => Promise<void>
     requestDeleteProposal: (proposal: ProposalDraft) => void
     handleDeleteDialogChange: (open: boolean) => void
@@ -288,18 +288,18 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         }
     }, [isCreatingDraft, selectedClient, selectedClientId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, workspaceId, convexCreateProposal, user?.id])
 
-    const handleResumeProposal = useCallback((proposal: ProposalDraft) => {
+    const handleResumeProposal = useCallback((proposal: ProposalDraft, forceEdit?: boolean) => {
         const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)
         const targetStep = Math.min(proposal.stepProgress ?? 0, steps.length - 1)
 
         setDraftId(proposal.id)
         onFormStateChange(mergedForm)
         onStepChange(targetStep)
-        onSubmittedChange(proposal.status === 'ready')
+        onSubmittedChange(forceEdit ? false : proposal.status === 'ready')
         onPresentationDeckChange(proposal.presentationDeck ? { ...proposal.presentationDeck, storageUrl: proposal.presentationDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
         onAiSuggestionsChange(proposal.aiSuggestions ?? null)
 
-        if (proposal.status === 'ready') {
+        if (proposal.status === 'ready' && !forceEdit) {
             onLastSubmissionSnapshotChange({
                 draftId: proposal.id,
                 form: structuredClone(mergedForm) as ProposalFormData,

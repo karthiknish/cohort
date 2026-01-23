@@ -156,6 +156,10 @@ export const proposalsApi = {
   count: (api as any).proposals.count,
 }
 
+export const proposalGenerationApi = {
+  generateFromProposal: (api as any).proposalGeneration.generateFromProposal,
+}
+
 export const proposalVersionsApi = {
   list: (api as any).proposalVersions.list,
   getByLegacyId: (api as any).proposalVersions.getByLegacyId,

@@ -750,8 +750,7 @@ export function createPresentationRequest(
             dimensions: '16x9',
         },
         imageOptions: {
-            source: 'aiGenerated',
-            model: 'imagen-3-flash',
+            source: 'pictographic',
         },
         textOptions: {
             amount: 'medium',

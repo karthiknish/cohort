@@ -518,7 +518,7 @@ export async function recordProposalDeckReadyNotification(options: {
   if (clientName) {
     details.push(`Client: ${clientName}`)
   }
-  details.push('Your Gamma presentation is ready to download.')
+  details.push('Your presentation is ready to download.')
   if (options.storageUrl) {
     details.push('Stored for quick access.')
   }

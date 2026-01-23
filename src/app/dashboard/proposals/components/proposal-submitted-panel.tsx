@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Copy, Sparkles, RefreshCw, LoaderCircle, CircleCheck, FileText, Layout, Download, ExternalLink, Presentation } from "lucide-react"
+import { Copy, RefreshCw, LoaderCircle, CircleCheck, FileText, Layout, Download, ExternalLink, Presentation, Pencil } from "lucide-react"
 
 
 import { Badge } from "@/components/ui/badge"
@@ -134,8 +134,8 @@ Timeline: ${summary.timelines.startTime}
                   onClick={onResumeSubmission}
                   disabled={isSubmitting}
                 >
-                  <RefreshCw className="mr-3 h-5 w-5" />
-                  Apply Edits
+                  <Pencil className="mr-3 h-5 w-5" />
+                  Edit Responses
                 </Button>
               )}
             </div>
@@ -345,7 +345,7 @@ Timeline: ${summary.timelines.startTime}
                       className="absolute inset-0 bg-primary/20 blur-2xl rounded-full"
                     />
                     <div className="relative p-6 rounded-[2rem] bg-muted/40 border border-muted ring-1 ring-muted-foreground/10">
-                      <Sparkles className="h-12 w-12 text-primary/40" />
+                      <LoaderCircle className="h-12 w-12 animate-spin text-primary/40" />
                     </div>
                   </div>
                   <h4 className="font-extrabold text-xl mb-2 tracking-tight">Architecting Your Deck</h4>

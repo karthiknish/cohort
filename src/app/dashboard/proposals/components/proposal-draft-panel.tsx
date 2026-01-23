@@ -1,7 +1,7 @@
 "use client"
 
 import { ReactNode } from "react"
-import { ChevronLeft, ChevronRight, Sparkles, RefreshCw } from "lucide-react"
+import { ChevronLeft, ChevronRight, RefreshCw, FileText } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -45,11 +45,11 @@ export function ProposalDraftPanel({
         <span>Draft #{draftId?.slice(0, 8).toUpperCase() ?? "NEW"}</span>
       </div>
 
-      <div className="relative min-h-[400px] rounded-xl border border-muted/40 bg-muted/5 p-6 backdrop-blur-sm shadow-inner transition-all duration-300">
+      <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 sm:p-6 backdrop-blur-sm shadow-inner transition-all duration-300">
         {stepContent}
       </div>
 
-      <div className="flex items-center justify-between pt-6 mt-2 border-t border-muted/20">
+      <div className="flex items-center justify-between pt-4 mt-2 border-t border-muted/20">
         <Button 
           variant="outline" 
           onClick={onBack} 
@@ -73,7 +73,7 @@ export function ProposalDraftPanel({
           >
             {isLastStep ? (
               <span className="flex items-center">
-                <Sparkles className="mr-2 h-4 w-4" />
+                <FileText className="mr-2 h-4 w-4" />
                 Generate Strategy
               </span>
             ) : (

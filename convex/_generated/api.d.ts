@@ -66,6 +66,7 @@ import type * as problemReports from "../problemReports.js";
 import type * as projectMilestones from "../projectMilestones.js";
 import type * as projects from "../projects.js";
 import type * as proposalAnalytics from "../proposalAnalytics.js";
+import type * as proposalGeneration from "../proposalGeneration.js";
 import type * as proposalTemplates from "../proposalTemplates.js";
 import type * as proposalVersions from "../proposalVersions.js";
 import type * as proposals from "../proposals.js";
@@ -146,6 +147,7 @@ declare const fullApi: ApiFromModules<{
   projectMilestones: typeof projectMilestones;
   projects: typeof projects;
   proposalAnalytics: typeof proposalAnalytics;
+  proposalGeneration: typeof proposalGeneration;
   proposalTemplates: typeof proposalTemplates;
   proposalVersions: typeof proposalVersions;
   proposals: typeof proposals;
