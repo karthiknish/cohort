@@ -418,6 +418,55 @@ export const bulkUpsert = zAuthenticatedMutation({
   },
 })
 
+export const bootstrapUpsert = mutation({
+  args: {
+    legacyId: v.string(),
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    role: v.optional(v.string()),
+    status: v.optional(v.string()),
+    agencyId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity || identity.subject !== args.legacyId) {
+      throw Errors.auth.unauthorized()
+    }
+
+    const existing = await ctx.db
+      .query('users')
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
+      .unique()
+
+    const normalized = normalizeEmail(args.email ?? null)
+    const timestamp = nowMs()
+    const payload = {
+      legacyId: args.legacyId,
+      email: normalized.email,
+      emailLower: normalized.emailLower,
+      name: args.name ?? null,
+      role: args.role ?? null,
+      status: args.status ?? null,
+      agencyId: args.agencyId ?? null,
+      phoneNumber: null,
+      photoUrl: null,
+      stripeCustomerId: null,
+      notificationPreferences: undefined,
+      regionalPreferences: undefined,
+      createdAtMs: existing?.createdAtMs ?? timestamp,
+      updatedAtMs: timestamp,
+    }
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload)
+      return { ok: true, created: false }
+    }
+
+    await ctx.db.insert('users', payload)
+    return { ok: true, created: true }
+  },
+})
+
 /**
  * Get Stripe customer ID for a user.
  * Used by billing to check if user already has a Stripe customer record.

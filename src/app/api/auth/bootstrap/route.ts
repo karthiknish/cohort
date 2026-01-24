@@ -185,17 +185,13 @@ export async function POST(req: NextRequest) {
     const legacyId = jwtSubject
 
     // 9. Upsert user in Convex users table
-    await convex.mutation(api.users.bulkUpsert, {
-      users: [
-        {
-          legacyId: String(legacyId),
-          email: normalizedEmail,
-          name,
-          role: finalRole,
-          status: finalStatus,
-          agencyId: existing?.agencyId ?? String(legacyId),
-        },
-      ],
+    await convex.mutation(api.users.bootstrapUpsert, {
+      legacyId: String(legacyId),
+      email: normalizedEmail,
+      name,
+      role: finalRole,
+      status: finalStatus,
+      agencyId: existing?.agencyId ?? String(legacyId),
     })
 
     const claimsNeedUpdate = Boolean(existing?.role !== finalRole || existing?.status !== finalStatus)

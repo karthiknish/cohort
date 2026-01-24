@@ -40,7 +40,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
     } = options
 
     const { toast } = useToast()
-    const { user, getIdToken } = useAuth()
+    const { user, getIdToken, isSyncing, authError } = useAuth()
 
     const workspaceId = user?.agencyId ?? null
 
@@ -69,9 +69,10 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         document.body.removeChild(anchor)
     }, [])
 
+    const canQuery = Boolean(workspaceId && draftId && !isSyncing && !authError)
     const activeConvexProposal = useQuery(
         proposalsApi.getByLegacyId,
-        !workspaceId || !draftId
+        !canQuery
             ? 'skip'
             : {
                 workspaceId,

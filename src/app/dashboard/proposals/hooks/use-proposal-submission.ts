@@ -74,16 +74,17 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     } = options
 
     const { toast } = useToast()
-    const { user, getIdToken } = useAuth()
+    const { user, getIdToken, isSyncing, authError } = useAuth()
     const { selectedClient, selectedClientId } = useClientContext()
 
     const workspaceId = user?.agencyId ?? null
     const convexUpdateProposal = useMutation(proposalsApi.update)
     const generateProposalDeck = useAction(proposalGenerationApi.generateFromProposal)
 
+    const canQuery = Boolean(workspaceId && draftId && !isSyncing && !authError)
     const activeConvexProposal = useQuery(
         proposalsApi.getByLegacyId,
-        !workspaceId || !draftId
+        !canQuery
             ? 'skip'
             : {
                 workspaceId,

@@ -75,14 +75,15 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     } = options
 
     const { toast } = useToast()
-    const { user } = useAuth()
+    const { user, isSyncing, authError } = useAuth()
     const { selectedClient, selectedClientId } = useClientContext()
 
     const workspaceId = user?.agencyId ?? null
 
+    const canQuery = Boolean(workspaceId && selectedClientId && !isSyncing && !authError)
     const convexProposals = useQuery(
         proposalsApi.list,
-        !workspaceId || !selectedClientId
+        !canQuery
             ? 'skip'
             : {
                 workspaceId,
