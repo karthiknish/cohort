@@ -268,6 +268,14 @@ export default function AnalyticsPage() {
   const rpc = totals.clicks > 0 ? totals.revenue / totals.clicks : 0
   const roi = totals.spend > 0 ? ((totals.revenue - totals.spend) / totals.spend) * 100 : 0
 
+  // Check if Google Analytics has been synced (has data for selected period)
+  const hasGaData = useMemo(() => {
+    if (selectedPlatform !== 'google-analytics') return true
+    return filteredMetrics.some((metric) => metric.providerId === 'google-analytics')
+  }, [filteredMetrics, selectedPlatform])
+
+  const isGaSelectedWithoutData = selectedPlatform === 'google-analytics' && !hasGaData && !initialMetricsLoading
+
   const platformBreakdown = useMemo(() => {
     return Object.entries(platformTotals).map(([providerId, summary]) => ({
       name: PROVIDER_LABELS[providerId] ?? providerId,
@@ -352,17 +360,16 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Google Analytics data source */}
-        {/* Google Analytics data source */}
-        <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
-          <CardHeader className="flex flex-col gap-4 border-b border-muted/10 bg-muted/5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Google Analytics Integration */}
+        <Card className="overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/50 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/10 shadow-sm transition-all hover:shadow-md hover:border-orange-300/50">
+          <CardHeader className="flex flex-col gap-4 border-b border-orange-100/50 dark:border-orange-900/30 bg-gradient-to-r from-orange-100/30 to-amber-100/20 dark:from-orange-900/20 dark:to-amber-900/10 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30">
                 <RotateCw className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Google Analytics Integration</CardTitle>
-                <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-orange-900 dark:text-orange-100">Google Analytics</CardTitle>
+                <CardDescription className="text-xs font-medium text-orange-700/70 dark:text-orange-300/60 leading-tight">
                   Import users, sessions, and conversions into your dashboard.
                 </CardDescription>
               </div>
@@ -375,7 +382,7 @@ export default function AnalyticsPage() {
                   Connected{gaAccountLabel ? `: ${gaAccountLabel}` : ''}
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-2 rounded-xl bg-muted px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border border-muted/30">
+                <div className="inline-flex items-center gap-2 rounded-xl bg-orange-100/50 dark:bg-orange-900/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 border border-orange-200/50 dark:border-orange-800/50">
                   <Link2 className="h-3.5 w-3.5" />
                   No property linked
                 </div>
@@ -388,9 +395,9 @@ export default function AnalyticsPage() {
                   size="sm"
                   onClick={() => void handleConnectGoogleAnalytics()}
                   disabled={gaLoading}
-                  className="h-9 rounded-xl border-muted/40 text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-muted/10 active:scale-[0.98]"
+                  className="h-9 rounded-xl border-orange-300/50 bg-white/80 dark:bg-orange-950/50 text-orange-700 hover:bg-orange-50 hover:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/30 text-[10px] font-bold uppercase tracking-widest transition-all active:scale-[0.98]"
                 >
-                  {gaLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+                  {gaLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-orange-600" /> : <Link2 className="h-3.5 w-3.5" />}
                   {gaConnected ? 'Reconnect' : 'Link Account'}
                 </Button>
                 <Button
@@ -398,7 +405,7 @@ export default function AnalyticsPage() {
                   size="sm"
                   onClick={() => void handleSyncGoogleAnalytics()}
                   disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
-                  className="h-9 rounded-xl bg-primary text-[10px] font-bold uppercase tracking-widest shadow-md transition-all hover:bg-primary/90 active:scale-[0.98]"
+                  className="h-9 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/30 transition-all hover:from-orange-600 hover:to-amber-600 hover:shadow-orange-500/40 active:scale-[0.98]"
                 >
                   {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-white" /> : <RotateCw className="h-3.5 w-3.5 text-white" />}
                   Sync now
@@ -406,11 +413,11 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="bg-muted/5 py-3">
+          <CardContent className="bg-gradient-to-r from-orange-50/30 to-transparent dark:from-orange-950/10 dark:to-transparent py-3">
             <div className="flex items-center gap-2">
-              <div className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-primary">TIP</div>
-              <p className="text-[10px] font-medium text-muted-foreground/70">
-                Sync writes metrics with provider <span className="font-bold text-muted-foreground underline decoration-primary/30">Google Analytics</span> for unified filtering.
+              <div className="rounded-md bg-gradient-to-r from-orange-500 to-amber-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-white">TIP</div>
+              <p className="text-[10px] font-medium text-orange-800/70 dark:text-orange-200/70">
+                Sync writes metrics with provider <span className="font-bold text-orange-900 dark:text-orange-100">Google Analytics</span> for unified filtering.
               </p>
             </div>
           </CardContent>
@@ -424,91 +431,135 @@ export default function AnalyticsPage() {
           </Alert>
         )}
 
-        {/* Performance Summary Header */}
-        {/* Performance Summary Header */}
-        <div className="flex items-center justify-between border-b border-muted/10 pb-2">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Performance Summary</h2>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {metricsNextCursor && (
-              <button
-                type="button"
-                onClick={handleLoadMoreMetrics}
-                disabled={metricsLoadingMore}
-                className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
-              >
-                {metricsLoadingMore ? (
-                  <>
-                    <LoaderCircle className="h-3 w-3 animate-spin" />
-                    Loading
-                  </>
-                ) : (
-                  <>
-                    <RotateCw className="h-3 w-3 transition-transform group-hover:rotate-180 duration-500" />
-                    Load older data
-                  </>
+        {/* Empty State for Google Analytics when not synced */}
+        {isGaSelectedWithoutData ? (
+          <Card className="overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/30 dark:to-amber-950/20">
+            <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 shadow-lg shadow-orange-500/20">
+                <svg className="h-10 w-10 text-orange-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18.5 9L13.5 14L10.5 11L7 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h3 className="mb-2 text-lg font-bold text-orange-900 dark:text-orange-100">No Analytics Data Yet</h3>
+              <p className="mb-6 max-w-md text-sm text-orange-700/80 dark:text-orange-300/70">
+                Connect your Google Analytics property and sync your data to view performance metrics, insights, and reports.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {!gaConnected && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleConnectGoogleAnalytics()}
+                    disabled={gaLoading}
+                    className="rounded-xl border-orange-300/50 bg-white/80 text-orange-700 hover:bg-orange-50 hover:border-orange-400 dark:bg-orange-950/50 dark:text-orange-300 dark:hover:bg-orange-900/30"
+                  >
+                    {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                    Link Google Analytics
+                  </Button>
                 )}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => mutateMetrics()}
-              disabled={metricsLoading || metricsRefreshing}
-              className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3 w-3 transition-transform duration-500 group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
-        </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void handleSyncGoogleAnalytics()}
+                  disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
+                  className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30 hover:from-orange-600 hover:to-amber-600"
+                >
+                  {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                  Sync Data Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Performance Summary Header */}
+            <div className="flex items-center justify-between border-b border-muted/10 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Performance Summary</h2>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {metricsNextCursor && (
+                  <button
+                    type="button"
+                    onClick={handleLoadMoreMetrics}
+                    disabled={metricsLoadingMore}
+                    className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {metricsLoadingMore ? (
+                      <>
+                        <LoaderCircle className="h-3 w-3 animate-spin" />
+                        Loading
+                      </>
+                    ) : (
+                      <>
+                        <RotateCw className="h-3 w-3 transition-transform group-hover:rotate-180 duration-500" />
+                        Load older data
+                      </>
+                    )}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => mutateMetrics()}
+                  disabled={metricsLoading || metricsRefreshing}
+                  className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 transition-transform duration-500 group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+              </div>
+            </div>
 
-        {/* Summary Cards */}
-        <AnalyticsSummaryCards
-          totals={totals}
-          averageRoaS={averageRoaS}
-          conversionRate={conversionRate}
-          averageCpc={averageCpc}
-          isLoading={initialMetricsLoading}
-        />
+            {/* Summary Cards */}
+            <AnalyticsSummaryCards
+              totals={totals}
+              averageRoaS={averageRoaS}
+              conversionRate={conversionRate}
+              averageCpc={averageCpc}
+              isLoading={initialMetricsLoading}
+            />
 
-        {/* Advanced Metric Cards */}
-        <AnalyticsMetricCards
-          mer={mer}
-          aov={aov}
-          rpc={rpc}
-          roi={roi}
-          isLoading={initialMetricsLoading}
-        />
+            {/* Advanced Metric Cards */}
+            <AnalyticsMetricCards
+              mer={mer}
+              aov={aov}
+              rpc={rpc}
+              roi={roi}
+              isLoading={initialMetricsLoading}
+            />
 
-        {/* Charts Grid */}
-        <AnalyticsCharts
-          chartData={chartData}
-          platformBreakdown={platformBreakdown}
-          isMetricsLoading={metricsLoading}
-          initialMetricsLoading={initialMetricsLoading}
-        />
+            {/* Charts Grid */}
+            <AnalyticsCharts
+              chartData={chartData}
+              platformBreakdown={platformBreakdown}
+              isMetricsLoading={metricsLoading}
+              initialMetricsLoading={initialMetricsLoading}
+            />
 
-        {/* Insights Section */}
-        <AnalyticsInsightsSection
-          insights={insights}
-          algorithmic={algorithmic}
-          insightsError={insightsError}
-          insightsLoading={insightsLoading}
-          insightsRefreshing={insightsRefreshing}
-          initialInsightsLoading={initialInsightsLoading}
-          onRefreshInsights={() => mutateInsights()}
-        />
+            {/* Insights Section */}
+            <AnalyticsInsightsSection
+              insights={insights}
+              algorithmic={algorithmic}
+              insightsError={insightsError}
+              insightsLoading={insightsLoading}
+              insightsRefreshing={insightsRefreshing}
+              initialInsightsLoading={initialInsightsLoading}
+              onRefreshInsights={() => mutateInsights()}
+            />
 
-        {/* Creatives Section */}
-        <AnalyticsCreativesSection
-          creativeBreakdown={creativeBreakdown}
-          isMetricsLoading={metricsLoading}
-          metricsRefreshing={metricsRefreshing}
-          initialMetricsLoading={initialMetricsLoading}
-          onRefreshMetrics={() => mutateMetrics()}
-        />
+            {/* Creatives Section */}
+            <AnalyticsCreativesSection
+              creativeBreakdown={creativeBreakdown}
+              isMetricsLoading={metricsLoading}
+              metricsRefreshing={metricsRefreshing}
+              initialMetricsLoading={initialMetricsLoading}
+              onRefreshMetrics={() => mutateMetrics()}
+            />
+          </>
+        )}
       </div>
     </div>
   )
