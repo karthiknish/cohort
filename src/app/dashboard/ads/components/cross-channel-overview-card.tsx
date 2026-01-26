@@ -257,7 +257,7 @@ export function CrossChannelOverviewCard({
               size="icon"
               onClick={onExport}
               disabled={!hasMetricData}
-              title="Export CSV"
+              aria-label="Export metrics as CSV"
             >
               <Download className="h-4 w-4" />
             </Button>
@@ -274,6 +274,7 @@ export function CrossChannelOverviewCard({
                 <button
                   onClick={() => toggleProvider(providerId)}
                   className="ml-1 hover:text-foreground"
+                  aria-label={`Remove ${formatProviderName(providerId)} filter`}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -309,7 +310,7 @@ export function CrossChannelOverviewCard({
                         </p>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger>
+                            <TooltipTrigger aria-label={`Metric information: ${card.helper}`}>
                               <Info className="h-3 w-3 text-muted-foreground/70" />
                             </TooltipTrigger>
                             <TooltipContent>

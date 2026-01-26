@@ -140,9 +140,17 @@ function EfficiencyScoreRing({ score, size = 'md' }: { score: number; size?: 'sm
   const circumference = 2 * Math.PI * d.radius
   const offset = circumference * (1 - score / 100)
 
+  // Determine performance level for accessibility
+  const performanceLevel = score > 70 ? 'good' : score > 40 ? 'moderate' : 'needs improvement'
+  const ariaLabel = `Efficiency Score: ${score} out of 100, performance is ${performanceLevel}`
+
   return (
-    <div className={cn('relative flex items-center justify-center', d.container)}>
-      <svg className="h-full w-full" viewBox="0 0 100 100">
+    <div
+      className={cn('relative flex items-center justify-center', d.container)}
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <svg className="h-full w-full" viewBox="0 0 100 100" aria-hidden="true">
         <circle
           className="stroke-muted/20"
           strokeWidth={d.stroke}
@@ -167,7 +175,7 @@ function EfficiencyScoreRing({ score, size = 'md' }: { score: number; size?: 'sm
           transform="rotate(-90 50 50)"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
         <span className={cn('font-black tracking-tighter', d.text)}>{score}</span>
         <span className={cn('font-bold uppercase tracking-widest text-muted-foreground/60', d.label)}>
           Score

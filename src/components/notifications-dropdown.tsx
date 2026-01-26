@@ -197,7 +197,7 @@ export function NotificationsDropdown() {
           <Bell className="h-5 w-5" />
           <span className="sr-only">View notifications</span>
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+            <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground" aria-label={`${unreadCount} unread notifications`}>
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}

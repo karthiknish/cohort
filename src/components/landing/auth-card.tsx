@@ -181,6 +181,7 @@ export function AuthCard({
                       onClick={onToggleShowPassword}
                       className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
                       disabled={isSubmitting}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
@@ -295,6 +296,7 @@ export function AuthCard({
                       onClick={onToggleShowPassword}
                       className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
                       disabled={isSubmitting}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
@@ -374,6 +376,7 @@ export function AuthCard({
                       onClick={onToggleShowConfirmPassword}
                       className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
                       disabled={isSubmitting}
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-4 w-4" />

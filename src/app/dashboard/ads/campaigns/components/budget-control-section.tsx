@@ -220,9 +220,9 @@ export function BudgetControlSection({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {modeOptions.length > 0 && (
             <div className="space-y-2">
-              <Label>Budget type</Label>
+              <Label htmlFor="budget-type">Budget type</Label>
               <Select value={mode ?? undefined} onValueChange={(v) => setMode(v as BudgetUiMode)} disabled={!canEdit || saving}>
-                <SelectTrigger>
+                <SelectTrigger id="budget-type">
                   <SelectValue placeholder="Select budget type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,8 +237,9 @@ export function BudgetControlSection({
           )}
 
           <div className={cn('space-y-2', modeOptions.length > 0 ? 'sm:col-span-2' : 'sm:col-span-3')}>
-            <Label>Budget amount ({currencyCode.toUpperCase()})</Label>
+            <Label htmlFor="budget-amount">Budget amount ({currencyCode.toUpperCase()})</Label>
             <Input
+              id="budget-amount"
               inputMode="decimal"
               placeholder="e.g. 50"
               value={amount}

@@ -332,7 +332,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSegment())}
                     className="h-10"
                   />
-                  <Button type="button" size="sm" onClick={handleAddSegment} className="h-10 px-4">
+                  <Button type="button" size="sm" onClick={handleAddSegment} className="h-10 px-4" aria-label="Add segment">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -343,10 +343,11 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                     formData.segments.map((s, i) => (
                       <Badge key={i} variant="secondary" className="gap-1 rounded-lg">
                         {s}
-                        <button 
+                        <button
                           type="button"
-                          onClick={() => handleRemoveSegment(i)} 
+                          onClick={() => handleRemoveSegment(i)}
                           className="hover:text-destructive ml-0.5"
+                          aria-label={`Remove segment: ${s}`}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -369,12 +370,13 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddInterest(newInterest))}
                     className="h-10"
                   />
-                  <Button 
-                    type="button" 
-                    size="sm" 
-                    onClick={() => handleAddInterest(newInterest)} 
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleAddInterest(newInterest)}
                     disabled={!newInterest.trim()}
                     className="h-10 px-4"
+                    aria-label="Add interest"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -405,10 +407,11 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                     {formData.interests.map((interest) => (
                       <Badge key={interest} className="gap-1 rounded-lg">
                         {interest}
-                        <button 
+                        <button
                           type="button"
-                          onClick={() => handleRemoveInterest(interest)} 
+                          onClick={() => handleRemoveInterest(interest)}
                           className="hover:text-destructive ml-0.5"
+                          aria-label={`Remove interest: ${interest}`}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -432,11 +435,13 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                       type="button"
                       onClick={() => handleAgePreset(preset.min, preset.max)}
                       className={cn(
-                        "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                        "rounded-lg border px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         formData.ageMin === preset.min && formData.ageMax === preset.max
                           ? "bg-primary text-primary-foreground border-primary"
                           : "hover:bg-muted"
                       )}
+                      aria-label={`Select age range: ${preset.label}`}
+                      aria-pressed={formData.ageMin === preset.min && formData.ageMax === preset.max}
                     >
                       {preset.label}
                     </button>
@@ -464,13 +469,15 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                         }
                       }}
                       className={cn(
-                        "flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors",
+                        "flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         gender === 'All' && formData.genders.length === 0
                           ? "bg-primary text-primary-foreground border-primary"
                           : formData.genders.includes(gender.toLowerCase())
                             ? "bg-primary text-primary-foreground border-primary"
                             : "hover:bg-muted"
                       )}
+                      aria-label={`Select gender: ${gender}`}
+                      aria-pressed={gender === 'All' ? formData.genders.length === 0 : formData.genders.includes(gender.toLowerCase())}
                     >
                       {gender}
                     </button>

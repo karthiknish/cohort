@@ -129,8 +129,9 @@ export function AutomationControlsCard({
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer">
                   <Checkbox
+                    id={`auto-sync-${status.providerId}`}
                     checked={draft.autoSyncEnabled}
                     onChange={(event) =>
                       onUpdateDraft(status.providerId, {
@@ -139,7 +140,9 @@ export function AutomationControlsCard({
                     }
                     disabled={saving}
                   />
-                  Enable automatic sync
+                  <label htmlFor={`auto-sync-${status.providerId}`} className="cursor-pointer">
+                    Enable automatic sync
+                  </label>
                 </label>
 
                 {isExpanded && (

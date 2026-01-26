@@ -70,16 +70,19 @@ function TrendIndicator({
     invertTrend?: boolean
 }) {
     if (delta === null || Math.abs(delta) < 0.0001) {
-        return <Minus className="h-4 w-4 text-muted-foreground" />
+        return <Minus className="h-4 w-4 text-muted-foreground" aria-label="No change" />
     }
 
     const isPositive = delta > 0
     const isGood = invertTrend ? !isPositive : isPositive
+    const label = isPositive
+        ? `Trending up ${isGood ? '(improvement)' : '(concern)'}`
+        : `Trending down ${isGood ? '(improvement)' : '(concern)'}`
 
     return isPositive ? (
-        <TrendingUp className={cn('h-4 w-4', isGood ? 'text-emerald-500' : 'text-red-500')} />
+        <TrendingUp className={cn('h-4 w-4', isGood ? 'text-emerald-500' : 'text-red-500')} aria-label={label} />
     ) : (
-        <TrendingDown className={cn('h-4 w-4', isGood ? 'text-emerald-500' : 'text-red-500')} />
+        <TrendingDown className={cn('h-4 w-4', isGood ? 'text-emerald-500' : 'text-red-500')} aria-label={label} />
     )
 }
 

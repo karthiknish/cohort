@@ -315,6 +315,8 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
             <button
               key={index}
               onClick={() => goToSlide(index)}
+              aria-label={index === currentSlide ? `Currently viewing slide ${index + 1}` : `Go to slide ${index + 1}`}
+              aria-current={index === currentSlide ? 'true' : undefined}
               className={cn(
                 'flex-shrink-0 rounded border-2 overflow-hidden transition-all',
                 index === currentSlide

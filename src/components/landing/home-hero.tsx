@@ -19,7 +19,7 @@ export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
     <FadeIn as="section" className="flex w-full max-w-2xl flex-col justify-center space-y-10 lg:py-12">
       <div className="space-y-6">
         <div className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-sm font-medium shadow-sm">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-500 mr-2"></span>
+          <span className="flex h-2 w-2 rounded-full bg-emerald-500 mr-2" aria-hidden="true"></span>
           Now in public beta
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl xl:text-6xl">

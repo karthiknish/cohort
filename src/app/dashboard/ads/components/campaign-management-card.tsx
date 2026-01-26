@@ -518,6 +518,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                           void handleAction(campaign.id, 'pause')
                         }}
                         disabled={actionLoading === campaign.id}
+                        aria-label="Pause campaign"
                       >
                         <Pause className="h-4 w-4" />
                       </Button>
@@ -537,6 +538,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                           void handleAction(campaign.id, 'enable')
                         }}
                         disabled={actionLoading === campaign.id}
+                        aria-label="Enable campaign"
                       >
                         <Play className="h-4 w-4" />
                       </Button>
@@ -558,6 +560,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                         setBudgetDialogOpen(true)
                       }}
                       disabled={actionLoading === campaign.id}
+                      aria-label="Update budget"
                     >
                       <DollarSign className="h-4 w-4" />
                     </Button>
@@ -581,6 +584,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                         setBiddingDialogOpen(true)
                       }}
                       disabled={actionLoading === campaign.id}
+                      aria-label="Update bidding strategy"
                     >
                       <TrendingUp className="h-4 w-4" />
                     </Button>
@@ -599,6 +603,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                         void handleAction(campaign.id, 'remove')
                       }}
                       disabled={actionLoading === campaign.id}
+                      aria-label="Remove campaign"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -664,6 +669,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                     void handleGroupAction(group.id, 'pause')
                   }}
                   disabled={actionLoading === group.id}
+                  aria-label="Pause campaign group"
                 >
                   <Pause className="h-4 w-4" />
                 </Button>
@@ -676,6 +682,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                     void handleGroupAction(group.id, 'enable')
                   }}
                   disabled={actionLoading === group.id}
+                  aria-label="Enable campaign group"
                 >
                   <Play className="h-4 w-4" />
                 </Button>
@@ -690,6 +697,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
                   setBudgetDialogOpen(true)
                 }}
                 disabled={actionLoading === group.id}
+                aria-label="Update campaign group budget"
               >
                 <DollarSign className="h-4 w-4" />
               </Button>

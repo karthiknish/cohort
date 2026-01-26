@@ -105,6 +105,9 @@ function TaskCardComponent({
                     statusColors[task.status],
                     'h-6 border px-2 py-0 cursor-pointer transition-all hover:opacity-90 gap-1.5'
                   )}
+                  role="button"
+                  aria-label={`Change status from ${formatStatusLabel(task.status)}`}
+                  aria-haspopup="menu"
                 >
                   {isPendingUpdate ? (
                     <LoaderCircle className="h-3 w-3 animate-spin" />

@@ -224,6 +224,7 @@ export default function HomePage() {
               window.location.href = '/dashboard'
             }}
             className="text-xs text-primary hover:underline"
+            aria-label="Go to dashboard manually"
           >
             Click here if not redirected automatically
           </button>

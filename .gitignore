@@ -64,3 +64,6 @@ AUDIT_AND_IMPROVEMENT_PLAN.md
 
 .gitignore
 convex/CLAUDE.md
+.agents/skills/frontend-design/LICENSE.txt
+.gitignore
+.agents/skills/frontend-design/SKILL.md

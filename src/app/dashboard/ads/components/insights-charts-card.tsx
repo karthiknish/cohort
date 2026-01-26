@@ -78,7 +78,7 @@ const metricColors = {
 // =============================================================================
 
 function ChartSkeleton() {
-  return <Skeleton className="h-[300px] w-full rounded-lg" />
+  return <Skeleton className="h-full min-h-[280px] w-full rounded-lg" />
 }
 
 function ProviderComparisonChart({ data }: { data: PerformanceAnalysis['chartData']['providerComparison'] }) {
@@ -92,7 +92,7 @@ function ProviderComparisonChart({ data }: { data: PerformanceAnalysis['chartDat
   }))
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -124,7 +124,7 @@ function EfficiencyRadarChart({
   const breakdown = data[providerId]
   if (!breakdown || breakdown.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
         No efficiency data available
       </div>
     )
@@ -137,7 +137,7 @@ function EfficiencyRadarChart({
   }))
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={chartData}>
           <PolarGrid />
@@ -167,14 +167,14 @@ function TrendChart({
   const trendData = data[providerId]
   if (!trendData || trendData.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
         Insufficient data for trend analysis
       </div>
     )
   }
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={trendData} margin={{ left: 10, right: 10 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -222,14 +222,14 @@ function FunnelChart({
   const funnelData = data[providerId]
   if (!funnelData || funnelData.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
         No funnel data available
       </div>
     )
   }
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={funnelData} layout="vertical" margin={{ left: 80, right: 40 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -265,7 +265,7 @@ function BenchmarkChart({
   const benchmarkData = data[providerId]
   if (!benchmarkData || benchmarkData.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
         No benchmark data available
       </div>
     )
@@ -279,7 +279,7 @@ function BenchmarkChart({
   }))
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ left: 10, right: 10 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -346,7 +346,7 @@ export function InsightsChartsCard({ analysis, loading = false }: InsightsCharts
           <CardDescription>Visual analysis of your ad performance</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+          <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
             Connect ad platforms and sync data to see performance charts.
           </div>
         </CardContent>

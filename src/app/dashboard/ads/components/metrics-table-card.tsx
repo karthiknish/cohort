@@ -219,20 +219,20 @@ function MetricsTableCardComponent({
       <CardContent>
         {/* Search and Filter Controls */}
         {hasMetrics && !initialMetricsLoading && (
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by provider..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-10"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 h-10 px-4">
                     <Filter className="h-4 w-4" />
                     Providers
                     {selectedProviders.length > 0 && (
@@ -252,6 +252,7 @@ function MetricsTableCardComponent({
                         key={providerId}
                         checked={selectedProviders.includes(providerId)}
                         onCheckedChange={() => toggleProvider(providerId)}
+                        className="cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           {ProviderIcon && <ProviderIcon className="h-4 w-4" />}
@@ -263,7 +264,7 @@ function MetricsTableCardComponent({
                 </DropdownMenuContent>
               </DropdownMenu>
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-muted-foreground h-10 px-3 hover:bg-muted/60">
                   <X className="h-4 w-4" />
                   Clear
                 </Button>
@@ -274,7 +275,7 @@ function MetricsTableCardComponent({
 
         {/* Results count when filtering */}
         {hasActiveFilters && hasMetrics && (
-          <p className="mb-3 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-muted-foreground">
             Showing {filteredMetrics.length} of {processedMetrics.length} rows
           </p>
         )}
@@ -309,7 +310,7 @@ function MetricsTableCardComponent({
             columns={columns}
             data={filteredMetrics}
             showPagination={false}
-            maxHeight={288}
+            maxHeight={320}
             stickyHeader
             enableVirtualization={filteredMetrics.length > 50}
             rowHeight={44}
