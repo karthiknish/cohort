@@ -1,0 +1,67 @@
+# Bun configuration for optimized development and production builds
+
+[install]
+# Disable usage analytics and send anonymous telemetry
+# telemetry = false  # Uncomment if you want to disable telemetry
+
+# Cache installed packages in node_modules/.cache
+cache = true
+
+# Explicitly set lockfile format (bun, npm, yarn, pnpm)
+# lockfile = "bun"
+
+# Don't run install scripts (faster, safer for CI)
+# npmScopes are respected by bun
+# To disable all lifecycle scripts:
+# disableScripts = true  # Uncomment for CI/production
+
+# Use production flag to skip devDependencies when needed
+# Run: bun install --production
+
+[install.cache]
+# Control where bun stores its cache
+# Default: ~/.bun/install/cache
+
+[install.scopes]
+# Scope-specific registry configuration (if needed)
+# "@myorg": "https://registry.mycompany.com"
+
+[run]
+# Shell to use for bun run
+shell = "bash"
+
+# Automatically load .env files
+preload = ["./load-env.ts"]
+
+[test]
+# Test runner configuration
+# root = "./src"
+# preload = "./test-setup.ts"
+
+[build]
+# Build target for bun build
+# target = "bun"
+# publicPath = "/static"
+
+[lockfile]
+# Print the lockfile
+# print = "yarn"
+
+# Define how to save lockfile
+save = true
+
+# Path to save lockfile
+# path = "bun.lockb"
+
+[loader]
+# Custom loaders for specific file extensions
+# ".md": "jsx"
+# ".txt": "text"
+
+[defines]
+# Global constants available at build time
+# "process.env.BUILD_DATE": "\"${new Date().toISOString()}\""
+
+# Performance optimization: ignore certain paths
+# [install.excludeEnvKeys]
+# "npm_package_*" = true

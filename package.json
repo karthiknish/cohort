@@ -3,19 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "bun --bun next dev",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
     "convex:deploy:dev": "convex deploy",
     "convex:deploy:prod": "convex deploy --env-file .env.prod -y",
     "convex:deploy:all": "bun run convex:deploy:dev && bun run convex:deploy:prod",
     "convex:codegen": "convex codegen",
-    "convex:typecheck": "bun run convex:codegen && tsc -p convex/tsconfig.json --noEmit",
-    "build": "next build",
-    "start": "next start",
+    "convex:typecheck": "bun run convex:codegen && bun --bun tsc -p convex/tsconfig.json --noEmit",
+    "build": "bun --bun next build",
+    "start": "bun --bun next start",
     "lint": "eslint",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.10.10",
