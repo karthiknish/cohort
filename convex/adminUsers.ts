@@ -15,8 +15,10 @@ const userSummaryValidator = v.object({
 
 export const listUsers = adminQuery({
   args: {
-    numItems: v.optional(v.number()),
-    cursor: v.optional(v.union(v.string(), v.null())),
+    paginationOpts: v.object({
+      numItems: v.number(),
+      cursor: v.union(v.string(), v.null()),
+    }),
   },
   returns: v.object({
     page: v.array(userSummaryValidator),
@@ -24,12 +26,7 @@ export const listUsers = adminQuery({
     isDone: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    // Convert to standard pagination format
-    const numItems = args.numItems ?? 50
-    const cursor = args.cursor ?? null
-    const paginationOpts = { numItems, cursor }
-
-    const result = await ctx.db.query('users').order('desc').paginate(paginationOpts)
+    const result = await ctx.db.query('users').order('desc').paginate(args.paginationOpts)
 
     // Transform to match validator
     return {

@@ -65,7 +65,7 @@ export async function logAuditAction(entry: Omit<AuditLogEntry, 'timestamp'>) {
           actorEmail: entry.actorEmail ?? null,
           targetId: entry.targetId ?? null,
           workspaceId: entry.workspaceId ?? null,
-          metadata: entry.metadata,
+          metadata: entry.metadata as Record<string, string | number | boolean | null> | undefined,
           ip: entry.ip ?? null,
           userAgent: entry.userAgent ?? null,
           requestId: entry.requestId ?? null,

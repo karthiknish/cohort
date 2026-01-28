@@ -1,0 +1,25 @@
+# Block all crawlers from API routes
+User-agent: *
+Disallow: /api/
+
+# Block admin pages from search engines
+Disallow: /admin/
+
+# Allow crawling of the main site
+Allow: /
+
+# Specific bot blocking
+User-agent: UptimeRobot
+Disallow: /
+
+User-agent: Pingdom
+Disallow: /
+
+User-agent: StatusCake
+Disallow: /
+
+User-agent: Site24x7
+Disallow: /
+
+User-agent: Uptrends
+Disallow: /

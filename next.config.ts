@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     staticGenerationRetryCount: 2,
     optimizePackageImports: [
       'lucide-react',
+      'date-fns',
       '@radix-ui/react-alert-dialog',
       '@radix-ui/react-avatar',
       '@radix-ui/react-collapsible',

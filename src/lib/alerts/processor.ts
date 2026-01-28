@@ -31,7 +31,8 @@ function getConvexClient(): ConvexHttpClient | null {
 }
 
 const fetchAlertRules = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
-    return await convex.query(api.alertRules.listEnabled, { workspaceId }) as AlertRule[]
+    const rules = await convex.query(api.alertRules.listEnabled, { workspaceId })
+    return rules as unknown as AlertRule[]
 })
 
 const fetchCustomFormulas = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
