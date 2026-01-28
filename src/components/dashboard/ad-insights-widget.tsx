@@ -198,7 +198,7 @@ export function AdInsightsWidget({
     const totalSpend = enrichedSummaries.reduce((sum, s) => sum + s.totalSpend, 0)
     const weightedScore = totalSpend > 0
       ? Math.round(
-        enrichedSummaries.reduce((sum, s, i) => sum + providerScores[i] * s.totalSpend, 0) / totalSpend
+        enrichedSummaries.reduce((sum, s, i) => sum + (providerScores[i] ?? 0) * s.totalSpend, 0) / totalSpend
       )
       : 0
 

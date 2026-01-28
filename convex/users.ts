@@ -64,7 +64,7 @@ export const _getByEmailInternal = internalQuery({
 
     if (rows.length === 0) return null
 
-    let best = rows[0]
+    let best = rows[0]!
     for (const row of rows) {
       const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
       const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
@@ -95,7 +95,7 @@ export const _updateUserRoleStatus = internalMutation({
 
     if (matches.length === 0) throw Errors.resource.notFound('User', args.email)
 
-    let best = matches[0]
+    let best = matches[0]!
     for (const row of matches) {
       const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
       const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
@@ -157,7 +157,7 @@ export const getByEmail = zAuthenticatedQuery({
 
     if (rows.length === 0) throw Errors.resource.notFound('User', args.email)
 
-    let best = rows[0]
+    let best = rows[0]!
     for (const row of rows) {
       const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
       const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
@@ -253,7 +253,7 @@ export const getNotificationPreferencesByEmail = internalQuery({
 
     if (rows.length === 0) throw Errors.auth.userNotFound()
 
-    let best = rows[0]
+    let best = rows[0]!
     for (const row of rows) {
       const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
       const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
@@ -501,7 +501,7 @@ export const getUserByEmailPublic = internalQuery({
 
     if (rows.length === 0) return { found: false, user: null }
 
-    let best = rows[0]
+    let best = rows[0]!
     for (const row of rows) {
       const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
       const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0

@@ -74,7 +74,7 @@ export function NavigationBreadcrumbs() {
                   <BreadcrumbLink asChild>
                     <Link href={item.href} className="flex items-center gap-1 text-sm">
                       {item.icon && (() => {
-                        const Icon = item.icon!
+                        const Icon = item.icon
                         return <Icon className="h-4 w-4" />
                       })()}
                       <span className="truncate max-w-[120px]">{item.label}</span>
@@ -83,7 +83,7 @@ export function NavigationBreadcrumbs() {
                 ) : (
                   <BreadcrumbPage className="flex items-center gap-1 text-sm">
                     {item.icon && (() => {
-                      const Icon = item.icon!
+                      const Icon = item.icon
                       return <Icon className="h-4 w-4" />
                     })()}
                     <span className="truncate max-w-[120px]">{item.label}</span>
@@ -107,13 +107,21 @@ export function NavigationBreadcrumbs() {
             <Button variant="ghost" size="sm" className="h-8 px-2">
               <div className="flex items-center gap-1">
                 {items[items.length - 2]?.icon && (() => {
-                  const Icon = items[items.length - 2].icon!
-                  return <Icon className="h-4 w-4" />
+                  const secondToLastItem = items[items.length - 2]
+                  if (secondToLastItem?.icon) {
+                    const Icon = secondToLastItem.icon
+                    return <Icon className="h-4 w-4" />
+                  }
+                  return null
                 })()}
                 <ChevronRight className="h-3 w-3" />
                 {items[items.length - 1]?.icon && (() => {
-                  const Icon = items[items.length - 1].icon!
-                  return <Icon className="h-4 w-4" />
+                  const lastItem = items[items.length - 1]
+                  if (lastItem?.icon) {
+                    const Icon = lastItem.icon
+                    return <Icon className="h-4 w-4" />
+                  }
+                  return null
                 })()}
                 <span className="text-sm font-medium">{items[items.length - 1]?.label}</span>
               </div>
@@ -125,7 +133,7 @@ export function NavigationBreadcrumbs() {
                 {item.href && !item.isCurrent ? (
                   <Link href={item.href} className="flex items-center gap-2">
                     {item.icon && (() => {
-                      const Icon = item.icon!
+                      const Icon = item.icon
                       return <Icon className="h-4 w-4" />
                     })()}
                     <span className={cn("truncate", item.isCurrent && "font-medium")}>
@@ -135,7 +143,7 @@ export function NavigationBreadcrumbs() {
                 ) : (
                   <div className="flex items-center gap-2">
                     {item.icon && (() => {
-                      const Icon = item.icon!
+                      const Icon = item.icon
                       return <Icon className="h-4 w-4" />
                     })()}
                     <span className="truncate font-medium">{item.label}</span>
@@ -351,8 +359,11 @@ function generateBreadcrumbItems(
 
   // Mark the last item as current
   if (items.length > 0) {
-    items[items.length - 1].isCurrent = true
-    delete items[items.length - 1].href
+    const lastItem = items[items.length - 1]
+    if (lastItem) {
+      lastItem.isCurrent = true
+      delete lastItem.href
+    }
   }
 
   return items

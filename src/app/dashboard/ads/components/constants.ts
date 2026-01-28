@@ -1,7 +1,20 @@
 /**
  * Constants for the Ads page and related components.
  * Centralizes magic numbers and repeated values.
+ *
+ * Theme-related constants have been moved to @/lib/themes
  */
+
+// Re-export theme-related types and constants for convenience
+export {
+  PROVIDER_IDS,
+  PROVIDER_INFO,
+  PROVIDER_THEMES,
+  PROVIDER_COLORS,
+  type ProviderId,
+  type ProviderInfo,
+  type ProviderInfoKey,
+} from '@/lib/themes'
 
 // =============================================================================
 // HTTP STATUS CODES
@@ -16,20 +29,6 @@ export const HTTP_NO_CONTENT = 204
 
 /** Default number of days to show in date range (30 days) */
 export const DEFAULT_DATE_RANGE_DAYS = 30
-
-// =============================================================================
-// PROVIDER IDENTIFIERS
-// =============================================================================
-
-export const PROVIDER_IDS = {
-  GOOGLE: 'google',
-  FACEBOOK: 'facebook',
-  META: 'meta',
-  LINKEDIN: 'linkedin',
-  TIKTOK: 'tiktok',
-} as const
-
-export type ProviderId = typeof PROVIDER_IDS[keyof typeof PROVIDER_IDS]
 
 // =============================================================================
 // API ENDPOINTS
@@ -180,123 +179,3 @@ export const CONNECTION_STEPS = {
   SYNCING_DATA: 'Starting initial data sync...',
   COMPLETE: 'Connection complete!',
 } as const
-
-// =============================================================================
-// PROVIDER DESCRIPTIONS & BENEFITS
-// =============================================================================
-
-export const PROVIDER_INFO = {
-  [PROVIDER_IDS.GOOGLE]: {
-    name: 'Google Ads',
-    shortName: 'Google',
-    description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
-    benefits: [
-      'Campaign spend and budget tracking',
-      'Conversion and ROAS metrics',
-      'Search, Display, and YouTube performance',
-    ],
-    requirements: [
-      'Active Google Ads account',
-      'Admin or Standard access to the account',
-    ],
-    loginMethod: 'popup' as const,
-    estimatedSetupTime: '30 seconds',
-    theme: {
-      color: 'text-[#4285F4]',
-      bg: 'bg-[#4285F4]/10',
-      border: 'border-[#4285F4]/20',
-      indicator: 'bg-[#4285F4]',
-    },
-  },
-  [PROVIDER_IDS.FACEBOOK]: {
-    name: 'Meta Ads Manager',
-    shortName: 'Meta',
-    description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
-    benefits: [
-      'Facebook and Instagram ad performance',
-      'Creative-level reporting',
-      'Audience and placement insights',
-    ],
-    requirements: [
-      'Meta Business account',
-      'Admin access to at least one ad account',
-    ],
-    loginMethod: 'redirect' as const,
-    estimatedSetupTime: '1 minute',
-    theme: {
-      color: 'text-[#0668E1]',
-      bg: 'bg-[#0668E1]/10',
-      border: 'border-[#0668E1]/20',
-      indicator: 'bg-[#0668E1]',
-    },
-  },
-  [PROVIDER_IDS.META]: {
-    name: 'Meta Ads Manager',
-    shortName: 'Meta',
-    description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
-    benefits: [
-      'Facebook and Instagram ad performance',
-      'Creative-level reporting',
-      'Audience and placement insights',
-    ],
-    requirements: [
-      'Meta Business account',
-      'Admin access to at least one ad account',
-    ],
-    loginMethod: 'redirect' as const,
-    estimatedSetupTime: '1 minute',
-    theme: {
-      color: 'text-[#0668E1]',
-      bg: 'bg-[#0668E1]/10',
-      border: 'border-[#0668E1]/20',
-      indicator: 'bg-[#0668E1]',
-    },
-  },
-  [PROVIDER_IDS.LINKEDIN]: {
-    name: 'LinkedIn Ads',
-    shortName: 'LinkedIn',
-    description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
-    benefits: [
-      'Sponsored content performance',
-      'Lead generation metrics',
-      'B2B audience insights',
-    ],
-    requirements: [
-      'LinkedIn Campaign Manager access',
-      'Admin or Account Manager role',
-    ],
-    loginMethod: 'popup' as const,
-    estimatedSetupTime: '30 seconds',
-    theme: {
-      color: 'text-[#0A66C2]',
-      bg: 'bg-[#0A66C2]/10',
-      border: 'border-[#0A66C2]/20',
-      indicator: 'bg-[#0A66C2]',
-    },
-  },
-  [PROVIDER_IDS.TIKTOK]: {
-    name: 'TikTok Ads',
-    shortName: 'TikTok',
-    description: 'Bring in spend, engagement, and conversion insights from TikTok campaign flights.',
-    benefits: [
-      'Campaign and ad group performance',
-      'Video engagement metrics',
-      'Conversion tracking',
-    ],
-    requirements: [
-      'TikTok Ads Manager account',
-      'Advertiser access or higher',
-    ],
-    loginMethod: 'redirect' as const,
-    estimatedSetupTime: '1 minute',
-    theme: {
-      color: 'text-[#FE2C55]',
-      bg: 'bg-[#FE2C55]/10',
-      border: 'border-[#FE2C55]/20',
-      indicator: 'bg-[#FE2C55]',
-    },
-  },
-} as const
-
-export type ProviderInfo = typeof PROVIDER_INFO[keyof typeof PROVIDER_INFO]
-export type ProviderInfoKey = keyof typeof PROVIDER_INFO

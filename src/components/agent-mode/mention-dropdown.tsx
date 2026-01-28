@@ -138,8 +138,9 @@ export function MentionDropdown({
           break
         case 'Enter':
           e.preventDefault()
-          if (filteredItems[selectedIndex]) {
-            onSelect(filteredItems[selectedIndex])
+          const selectedItem = filteredItems[selectedIndex]
+          if (selectedItem) {
+            onSelect(selectedItem)
           }
           break
         case 'Escape':
@@ -151,7 +152,8 @@ export function MentionDropdown({
           // Cycle through categories
           const categoryOrder: (MentionType | null)[] = [null, 'client', 'project', 'team', 'user']
           const currentIdx = categoryOrder.indexOf(activeCategory)
-          setActiveCategory(categoryOrder[(currentIdx + 1) % categoryOrder.length])
+          const nextCategory = categoryOrder[(currentIdx + 1) % categoryOrder.length]
+          setActiveCategory(nextCategory!)
           break
       }
     },
@@ -293,12 +295,17 @@ export function parseMentions(text: string): { cleanText: string; mentions: Ment
 
   let match
   while ((match = mentionRegex.exec(text)) !== null) {
-    mentions.push({
-      name: match[1],
-      type: match[2] as MentionType,
-      id: match[3],
-    })
-    cleanText = cleanText.replace(match[0], `@${match[1]}`)
+    const name = match[1]
+    const type = match[2]
+    const id = match[3]
+    if (name && type && id) {
+      mentions.push({
+        name,
+        type: type as MentionType,
+        id,
+      })
+      cleanText = cleanText.replace(match[0], `@${name}`)
+    }
   }
 
   return { cleanText, mentions }

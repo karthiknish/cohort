@@ -52,6 +52,7 @@ AUDIT_AND_IMPROVEMENT_PLAN.md
 .env.sentry-build-plugin
 
 # AI tool directories
+.agents/
 .agent/
 .cursor/
 .opencode/
@@ -60,10 +61,3 @@ AUDIT_AND_IMPROVEMENT_PLAN.md
 
 # Scripts
 /scripts/
-
-
-.gitignore
-convex/CLAUDE.md
-.agents/skills/frontend-design/LICENSE.txt
-.gitignore
-.agents/skills/frontend-design/SKILL.md

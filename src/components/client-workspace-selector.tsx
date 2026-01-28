@@ -37,7 +37,9 @@ function parseTeamMembers(input: string): ClientTeamMember[] {
     .map((member) => member.trim())
     .filter(Boolean)
     .map((entry) => {
-      const [name, role] = entry.split(':')
+      const parts = entry.split(':')
+      const name = parts[0]!
+      const role = parts[1]
       return {
         name: name.trim(),
         role: role ? role.trim() : 'Contributor',

@@ -2,12 +2,18 @@ import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 
+const preferenceValidator = v.object({
+  providerId: v.string(),
+  failureThreshold: v.union(v.number(), v.null()),
+})
+
 /**
  * Get a single scheduler alert preference by provider ID.
  * No auth required - called from server-side scheduler code.
  */
 export const get = query({
   args: { providerId: v.string() },
+  returns: v.union(v.null(), preferenceValidator),
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('schedulerAlertPreferences')
@@ -29,9 +35,10 @@ export const get = query({
  */
 export const list = query({
   args: {},
+  returns: v.record(v.string(), v.object({ failureThreshold: v.union(v.number(), v.null()) })),
   handler: async (ctx) => {
     const rows = await ctx.db.query('schedulerAlertPreferences').collect()
-    
+
     const result: Record<string, { failureThreshold: number | null }> = {}
     for (const row of rows) {
       result[row.providerId] = { failureThreshold: row.failureThreshold }
@@ -49,6 +56,10 @@ export const upsert = mutation({
     providerId: v.string(),
     failureThreshold: v.union(v.number(), v.null()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    created: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     // Validate threshold
     if (args.failureThreshold !== null) {
@@ -69,7 +80,7 @@ export const upsert = mutation({
         failureThreshold: args.failureThreshold,
         updatedAtMs: now,
       })
-      return { ok: true, created: false }
+      return { ok: true as const, created: false }
     }
 
     await ctx.db.insert('schedulerAlertPreferences', {
@@ -79,6 +90,6 @@ export const upsert = mutation({
       updatedAtMs: now,
     })
 
-    return { ok: true, created: true }
+    return { ok: true as const, created: true }
   },
 })

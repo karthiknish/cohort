@@ -321,7 +321,7 @@ export function InsightsChartsCard({ analysis, loading = false }: InsightsCharts
   }, [analysis])
 
   const activeProvider = selectedProvider === 'all' && providers.length > 0
-    ? providers[0].id
+    ? providers[0]!.id
     : selectedProvider
 
   if (loading) {

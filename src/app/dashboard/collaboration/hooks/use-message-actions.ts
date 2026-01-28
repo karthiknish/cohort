@@ -83,7 +83,7 @@ export function useMessageActions({
           }
           const next = [...messages]
           next[index] = {
-            ...messages[index],
+            ...messages[index]!, // Safe: we verified index !== -1
             reactions,
           }
           return next

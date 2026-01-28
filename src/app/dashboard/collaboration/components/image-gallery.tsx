@@ -30,7 +30,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
 
   // Single image layout
   if (images.length === 1) {
-    const image = images[0]
+    const image = images[0]! // Safe: we verified images.length === 1
     return (
       <>
         <figure
@@ -136,8 +136,8 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
           >
             <div className="relative aspect-[3/4] overflow-hidden">
               <LazyImage
-                src={images[0].url}
-                alt={images[0].name}
+                src={images[0]!.url}
+                alt={images[0]!.name}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">

@@ -24,7 +24,7 @@ export const getPrimaryCurrencyTotals = (totals: FinanceCurrencyTotals[] | undef
   if (!totals || totals.length === 0) {
     return null
   }
-  return totals[0]
+  return totals[0]!
 }
 
 export const normalizeMonthly = (amount: number, cadence: FinanceCostEntry['cadence']): number => {
@@ -65,15 +65,15 @@ export function buildFinanceForecast(entries: Array<{ revenue: number; totalExpe
   const recent = entries.slice(-4)
   const growthRates: number[] = []
   for (let i = 1; i < recent.length; i += 1) {
-    const prev = recent[i - 1].revenue
-    const curr = recent[i].revenue
+    const prev = recent[i - 1]!.revenue
+    const curr = recent[i]!.revenue
     if (prev > 0 && curr > 0) {
       growthRates.push((curr - prev) / prev)
     }
   }
 
   const avgGrowth = growthRates.length ? growthRates.reduce((a, b) => a + b, 0) / growthRates.length : 0
-  const last = recent[recent.length - 1]
+  const last = recent[recent.length - 1]!
   const results: Array<{ label: string; revenue: number; profit: number }> = []
   let projectedRevenue = last.revenue
   let projectedExpenses = last.totalExpenses

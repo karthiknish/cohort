@@ -1,28 +1,34 @@
-import { query } from './_generated/server'
-import { api } from './_generated/api'
-import { Errors } from './errors'
+import { workspaceQuery } from './functions'
 import { v } from 'convex/values'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
 
 const STATUSES = ['draft', 'submitted', 'approved', 'rejected', 'paid'] as const
 
 type Status = (typeof STATUSES)[number]
 
-export const report = query({
+const statusReportValidator = v.object({
+  total: v.number(),
+  count: v.number(),
+})
+
+const expenseReportRowValidator = v.object({
+  employeeId: v.string(),
+  total: v.number(),
+  currency: v.string(),
+  count: v.number(),
+  byStatus: v.record(v.string(), statusReportValidator),
+})
+
+export const report = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     from: v.optional(v.string()),
     to: v.optional(v.string()),
   },
+  returns: v.object({
+    from: v.union(v.string(), v.null()),
+    to: v.union(v.string(), v.null()),
+    rows: v.array(expenseReportRowValidator),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const from = args.from ? new Date(args.from) : null
     const to = args.to ? new Date(args.to) : null
 

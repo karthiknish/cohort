@@ -19,6 +19,10 @@ export const limit = mutation({
       })
     ),
   },
+  returns: v.object({
+    ok: v.boolean(),
+    retryAfterMs: v.union(v.number(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const opts: { key: string; count?: number; config?: any } = {
       key: args.key,

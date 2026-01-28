@@ -111,7 +111,7 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     return null
   }
 
-  const currentStage = generationFlow[stageIndex]
+  const currentStage = generationFlow[stageIndex]!
   const isFinalStage = stageIndex === generationFlow.length - 1
   const isComplete = showCompletionState || (isFinalStage && isPresentationReady)
   const progressPercent = ((stageIndex + (isComplete ? 1 : 0)) / generationFlow.length) * 100

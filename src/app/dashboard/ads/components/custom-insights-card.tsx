@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn, formatCurrency } from '@/lib/utils'
 import { calculateBenchmarks } from '@/lib/metrics'
+import { KPI_THEMES, type KpiTheme } from '@/lib/themes'
 
 import type { DerivedMetrics, GrowthRateResult, CustomKPIs } from '../hooks/use-derived-metrics'
 import type { MetricRecord } from './types'
@@ -51,7 +52,7 @@ interface KpiTileProps {
     trend?: number | null
     benchmark?: number
     invertTrend?: boolean
-    theme?: 'emerald' | 'blue' | 'violet' | 'amber' | 'rose' | 'cyan'
+    theme?: KpiTheme
 }
 
 // =============================================================================
@@ -86,46 +87,35 @@ function isAnomaly(value: number | null, benchmark: number | undefined | null, t
     return deviation > threshold
 }
 
+// Extended theme styles for KPI tiles (adds component-specific glow and gradientBorder)
 const themeStyles = {
     emerald: {
-        bg: 'bg-gradient-to-br from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/30 dark:to-teal-950/20',
-        border: 'border-emerald-200/60 dark:border-emerald-800/40',
-        accent: 'text-emerald-600 dark:text-emerald-400',
+        ...KPI_THEMES.emerald,
         glow: 'shadow-emerald-500/10',
         gradientBorder: 'before:bg-gradient-to-br before:from-emerald-500/20 before:to-teal-500/20',
     },
     blue: {
-        bg: 'bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/30 dark:to-indigo-950/20',
-        border: 'border-blue-200/60 dark:border-blue-800/40',
-        accent: 'text-blue-600 dark:text-blue-400',
+        ...KPI_THEMES.blue,
         glow: 'shadow-blue-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-blue-500/20 before:to-indigo-500/20',
+        gradientBorder: 'before:bg-gradient-to-br before:from-blue-500/20 before:to-cyan-500/20',
     },
     violet: {
-        bg: 'bg-gradient-to-br from-violet-50/50 to-purple-50/30 dark:from-violet-950/30 dark:to-purple-950/20',
-        border: 'border-violet-200/60 dark:border-violet-800/40',
-        accent: 'text-violet-600 dark:text-violet-400',
+        ...KPI_THEMES.violet,
         glow: 'shadow-violet-500/10',
         gradientBorder: 'before:bg-gradient-to-br before:from-violet-500/20 before:to-purple-500/20',
     },
     amber: {
-        bg: 'bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/30 dark:to-orange-950/20',
-        border: 'border-amber-200/60 dark:border-amber-800/40',
-        accent: 'text-amber-600 dark:text-amber-400',
+        ...KPI_THEMES.amber,
         glow: 'shadow-amber-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-amber-500/20 before:to-orange-500/20',
+        gradientBorder: 'before:bg-gradient-to-br before:from-amber-500/20 before:to-yellow-500/20',
     },
     rose: {
-        bg: 'bg-gradient-to-br from-rose-50/50 to-pink-50/30 dark:from-rose-950/30 dark:to-pink-950/20',
-        border: 'border-rose-200/60 dark:border-rose-800/40',
-        accent: 'text-rose-600 dark:text-rose-400',
+        ...KPI_THEMES.rose,
         glow: 'shadow-rose-500/10',
         gradientBorder: 'before:bg-gradient-to-br before:from-rose-500/20 before:to-pink-500/20',
     },
     cyan: {
-        bg: 'bg-gradient-to-br from-cyan-50/50 to-sky-50/30 dark:from-cyan-950/30 dark:to-sky-950/20',
-        border: 'border-cyan-200/60 dark:border-cyan-800/40',
-        accent: 'text-cyan-600 dark:text-cyan-400',
+        ...KPI_THEMES.cyan,
         glow: 'shadow-cyan-500/10',
         gradientBorder: 'before:bg-gradient-to-br before:from-cyan-500/20 before:to-sky-500/20',
     },

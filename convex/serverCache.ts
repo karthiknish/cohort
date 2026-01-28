@@ -8,11 +8,16 @@ function nowMs() {
 /**
  * Get a cache entry by its key hash.
  * Returns null if not found or expired.
+ * Server-side only - no auth required.
  */
 export const get = query({
   args: {
     keyHash: v.string(),
   },
+  returns: v.union(
+    v.null(),
+    v.object({ value: v.string() })
+  ),
   handler: async (ctx, args) => {
     const entry = await ctx.db
       .query('serverCache')
@@ -32,6 +37,7 @@ export const get = query({
 
 /**
  * Set a cache entry.
+ * Server-side only - no auth required.
  */
 export const set = mutation({
   args: {
@@ -40,6 +46,9 @@ export const set = mutation({
     value: v.string(),
     ttlMs: v.number(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
     const timestamp = nowMs()
     const expiresAtMs = timestamp + args.ttlMs
@@ -67,19 +76,23 @@ export const set = mutation({
       })
     }
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
 /**
  * Invalidate cache entries by pattern.
  * Supports exact key hash, prefix with '*', or '*' for all.
+ * Server-side only - no auth required.
  */
 export const invalidate = mutation({
   args: {
     pattern: v.string(),
     keyHash: v.optional(v.string()),
   },
+  returns: v.object({
+    deleted: v.number(),
+  }),
   handler: async (ctx, args) => {
     let deleted = 0
 
@@ -131,11 +144,16 @@ export const invalidate = mutation({
 /**
  * Clean up expired cache entries.
  * Called periodically by cron or on-demand.
+ * Server-side only - no auth required.
  */
 export const cleanupExpired = mutation({
   args: {
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    deleted: v.number(),
+    hasMore: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const limit = Math.min(args.limit ?? 500, 1000)
     const timestamp = nowMs()

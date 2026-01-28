@@ -263,7 +263,7 @@ export function useFetchMessages({
           .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
         const page = mapped.slice(0, MESSAGE_PAGE_SIZE)
-        const nextCursor = mapped.length > MESSAGE_PAGE_SIZE ? mapped[MESSAGE_PAGE_SIZE].id : null
+        const nextCursor = mapped.length > MESSAGE_PAGE_SIZE ? mapped[MESSAGE_PAGE_SIZE]!.id : null // Safe: we verified length > MESSAGE_PAGE_SIZE
         const messages = after ? page.filter((m) => m.id !== after) : page
 
         setMessagesByChannel((prev) => {

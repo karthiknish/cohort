@@ -124,7 +124,7 @@ export function getPreviewCampaignInsights(
     for (let i = 0; i < days; i++) {
         const date = new Date(start)
         date.setDate(date.getDate() + i)
-        const dateStr = date.toISOString().split('T')[0]
+        const dateStr = date.toISOString().split('T')[0]!
 
         // Generate realistic daily metrics with some variance
         const baseSpend = 150 + Math.random() * 100
@@ -230,7 +230,7 @@ export function getPreviewAdsMetrics(): PreviewAdsMetricRecord[] {
     // Generate 30 days of data for each provider
     for (let day = 0; day < 30; day++) {
         providers.forEach((providerId) => {
-            const data = providerData[providerId]
+            const data = providerData[providerId]!
             const baseSpend = (150 + Math.random() * 100) * data.spendMultiplier
             const impressions = Math.round((baseSpend / 0.005) * (0.8 + Math.random() * 0.4))
             const clicks = Math.round(impressions * data.ctr * (0.8 + Math.random() * 0.4))

@@ -19,13 +19,13 @@ function normalizeClientId(value: string | null | undefined): string | null {
 }
 
 function todayIsoDate(): string {
-  return new Date().toISOString().split('T')[0]
+  return new Date().toISOString().split('T')[0]!
 }
 
 function daysAgoIsoDate(daysAgo: number): string {
   const d = new Date()
   d.setDate(d.getDate() - daysAgo)
-  return d.toISOString().split('T')[0]
+  return d.toISOString().split('T')[0]!
 }
 
 type SeriesRow = {

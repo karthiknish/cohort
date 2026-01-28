@@ -1,10 +1,6 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
+import { workspaceQuery, workspaceMutation } from './functions'
 
 function nowMs() {
   return Date.now()
@@ -14,6 +10,19 @@ function generateId(prefix: string) {
   const rand = Math.random().toString(36).slice(2, 10)
   return `${prefix}-${Date.now().toString(36)}-${rand}`
 }
+
+const versionRowValidator = v.object({
+  legacyId: v.string(),
+  proposalLegacyId: v.string(),
+  versionNumber: v.number(),
+  formData: v.record(v.string(), v.any()),
+  status: v.string(),
+  stepProgress: v.number(),
+  changeDescription: v.union(v.string(), v.null()),
+  createdBy: v.string(),
+  createdByName: v.union(v.string(), v.null()),
+  createdAtMs: v.number(),
+})
 
 type VersionRow = {
   legacyId: string
@@ -43,16 +52,13 @@ function mapRow(row: any): VersionRow {
   }
 }
 
-export const list = query({
+export const list = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     proposalLegacyId: v.string(),
     limit: v.optional(v.number()),
   },
+  returns: v.array(versionRowValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = typeof args.limit === 'number' && Number.isFinite(args.limit) ? Math.min(Math.max(args.limit, 1), 200) : 50
 
     const rows = await ctx.db
@@ -67,12 +73,10 @@ export const list = query({
   },
 })
 
-export const getByLegacyId = query({
-  args: { workspaceId: v.string(), proposalLegacyId: v.string(), legacyId: v.string() },
+export const getByLegacyId = workspaceQuery({
+  args: { proposalLegacyId: v.string(), legacyId: v.string() },
+  returns: v.union(v.null(), versionRowValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('proposalVersions')
       .withIndex('by_workspace_proposal_legacyId', (q) =>
@@ -85,12 +89,12 @@ export const getByLegacyId = query({
   },
 })
 
-export const countByWorkspace = query({
-  args: { workspaceId: v.string() },
+export const countByWorkspace = workspaceQuery({
+  args: {},
+  returns: v.object({
+    count: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const rows = await ctx.db
       .query('proposalVersions')
       .withIndex('by_workspace', (q) => q.eq('workspaceId', args.workspaceId))
@@ -100,18 +104,17 @@ export const countByWorkspace = query({
   },
 })
 
-export const createSnapshot = mutation({
+export const createSnapshot = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     proposalLegacyId: v.string(),
     changeDescription: v.optional(v.union(v.string(), v.null())),
     createdBy: v.string(),
     createdByName: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({
+    version: versionRowValidator,
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const proposal = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.proposalLegacyId))
@@ -129,7 +132,7 @@ export const createSnapshot = mutation({
       .order('desc')
       .take(1)
 
-    const latestNumber = latest.length > 0 && typeof latest[0].versionNumber === 'number' ? latest[0].versionNumber : 0
+    const latestNumber = latest.length > 0 && typeof latest[0]!.versionNumber === 'number' ? latest[0]!.versionNumber : 0
     const versionNumber = latestNumber + 1
 
     const createdAtMs = nowMs()
@@ -166,18 +169,19 @@ export const createSnapshot = mutation({
   },
 })
 
-export const restoreToVersion = mutation({
+export const restoreToVersion = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     proposalLegacyId: v.string(),
     versionLegacyId: v.string(),
     createdBy: v.string(),
     createdByName: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({
+    success: v.literal(true),
+    restoredFromVersion: v.number(),
+    newVersion: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const proposal = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.proposalLegacyId))
@@ -206,7 +210,7 @@ export const restoreToVersion = mutation({
       .order('desc')
       .take(1)
 
-    const latestNumber = latest.length > 0 && typeof latest[0].versionNumber === 'number' ? latest[0].versionNumber : 0
+    const latestNumber = latest.length > 0 && typeof latest[0]!.versionNumber === 'number' ? latest[0]!.versionNumber : 0
     const beforeNumber = latestNumber + 1
     const afterNumber = latestNumber + 2
 
@@ -254,14 +258,14 @@ export const restoreToVersion = mutation({
     })
 
     return {
-      success: true,
+      success: true as const,
       restoredFromVersion: typeof target.versionNumber === 'number' ? target.versionNumber : 1,
       newVersion: afterNumber,
-    }
+    } as const
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = workspaceMutation({
   args: {
     versions: v.array(
       v.object({
@@ -269,7 +273,7 @@ export const bulkUpsert = mutation({
         proposalLegacyId: v.string(),
         legacyId: v.string(),
         versionNumber: v.number(),
-        formData: v.any(),
+        formData: v.record(v.string(), v.any()),
         status: v.string(),
         stepProgress: v.number(),
         changeDescription: v.union(v.string(), v.null()),
@@ -279,10 +283,10 @@ export const bulkUpsert = mutation({
       }),
     ),
   },
+  returns: v.object({
+    upserted: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     let upserted = 0
 
     for (const version of args.versions) {

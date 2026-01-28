@@ -227,7 +227,7 @@ export function useMessagesData({
     const result = new Map<string, ChannelSummary>()
     Object.entries(messagesByChannel).forEach(([channelId, list]) => {
       if (list && list.length > 0) {
-        const last = list[list.length - 1]
+        const last = list[list.length - 1]! // Safe: we verified list.length > 0
         result.set(channelId, { lastMessage: last.content, lastTimestamp: last.createdAt })
       }
     })

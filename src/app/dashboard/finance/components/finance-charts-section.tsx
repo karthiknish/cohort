@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import dynamic from 'next/dynamic'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 import {
@@ -13,6 +12,8 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { ChartConfig } from '@/components/ui/chart'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
+import { AreaChart, Area, BarChart, Bar, CartesianGrid, Line, XAxis, YAxis } from '@/components/ui/recharts-dynamic'
 
 import { formatCurrency } from '../utils'
 
@@ -30,49 +31,6 @@ interface FinanceChartsSectionProps {
   data: ChartDatum[]
   currency?: string
 }
-
-const ChartPlaceholder = () => (
-  <div className="h-[320px] w-full animate-pulse rounded-lg bg-muted/40" />
-)
-
-const ChartContainer = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartContainer), {
-  ssr: false,
-  loading: ChartPlaceholder,
-})
-const ChartTooltip = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartTooltip), {
-  ssr: false,
-  loading: () => null,
-})
-const ChartTooltipContent = dynamic(
-  () => import('@/components/ui/chart').then((m) => m.ChartTooltipContent),
-  { ssr: false, loading: () => null }
-)
-const ChartLegend = dynamic(() => import('@/components/ui/chart').then((m) => m.ChartLegend), {
-  ssr: false,
-  loading: () => null,
-})
-const ChartLegendContent = dynamic(
-  () => import('@/components/ui/chart').then((m) => m.ChartLegendContent),
-  { ssr: false, loading: () => null }
-)
-
-const AreaChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.AreaChart), {
-  ssr: false,
-  loading: ChartPlaceholder,
-})
-const Area = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Area), { ssr: false, loading: () => null })
-const BarChart = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.BarChart), {
-  ssr: false,
-  loading: ChartPlaceholder,
-})
-const Bar = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Bar), { ssr: false, loading: () => null })
-const CartesianGrid = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.CartesianGrid), {
-  ssr: false,
-  loading: () => null,
-})
-const Line = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.Line), { ssr: false, loading: () => null })
-const XAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.XAxis), { ssr: false, loading: () => null })
-const YAxis = dynamic(() => import('@/components/ui/recharts-dynamic').then((m) => m.YAxis), { ssr: false, loading: () => null })
 
 function EmptyChartState() {
   return (
@@ -131,8 +89,8 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
     // Calculate trend (compare last 2 periods if available)
     let profitTrend: 'up' | 'down' | 'neutral' = 'neutral'
     if (data.length >= 2) {
-      const lastProfit = data[data.length - 1].profit
-      const prevProfit = data[data.length - 2].profit
+      const lastProfit = data[data.length - 1]!.profit
+      const prevProfit = data[data.length - 2]!.profit
       if (lastProfit > prevProfit * 1.05) profitTrend = 'up'
       else if (lastProfit < prevProfit * 0.95) profitTrend = 'down'
     }

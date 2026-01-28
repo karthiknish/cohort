@@ -55,7 +55,7 @@ export function VirtualizedList<T>({
         estimateSize: () => estimateSize,
         overscan,
         gap,
-        getItemKey: getItemKey ? (index) => getItemKey(items[index], index) : undefined,
+        getItemKey: getItemKey ? (index) => getItemKey(items[index]!, index) : undefined,
     })
 
     const virtualItems = virtualizer.getVirtualItems()
@@ -95,7 +95,7 @@ export function VirtualizedList<T>({
                 }}
             >
                 {virtualItems.map((virtualItem) => {
-                    const item = items[virtualItem.index]
+                    const item = items[virtualItem.index]!
                     return (
                         <div
                             key={virtualItem.key}

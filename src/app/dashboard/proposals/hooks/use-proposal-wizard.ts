@@ -80,7 +80,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
                     target = next as Record<string, unknown>
                 }
             })
-            const field = path[path.length - 1]
+            const field = path[path.length - 1]!
             const array = Array.isArray(target[field]) ? (target[field] as string[]) : []
             target[field] = array.includes(value) ? array.filter((item) => item !== value) : [...array, value]
             return updated
@@ -113,7 +113,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
                     target = next as Record<string, unknown>
                 }
             })
-            target[path[path.length - 1]] = value
+            target[path[path.length - 1]!] = value
             return updated
         })
         clearErrors(path.join('.'))
@@ -133,14 +133,14 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     }, [])
 
     const stepErrors = useMemo(
-        () => collectStepValidationErrors(step.id, formState),
-        [formState, step.id]
+        () => collectStepValidationErrors(step!.id, formState),
+        [formState, step!.id]
     )
 
     const validationErrors = useMemo(() => {
         const next: Record<string, string> = { ...manualErrors }
 
-        stepErrorPaths[step.id].forEach((key) => {
+        stepErrorPaths[step!.id].forEach((key) => {
             if (stepErrors[key]) {
                 next[key] = stepErrors[key]
             } else {
@@ -149,23 +149,23 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         })
 
         return next
-    }, [manualErrors, step.id, stepErrors])
+    }, [manualErrors, step!.id, stepErrors])
 
     const handleNext = useCallback(() => {
-        if (!validateProposalStep(step.id, formState)) {
+        if (!validateProposalStep(step!.id, formState)) {
             const message = 'Please complete the required fields before continuing.'
             toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
-            const stepErrors = collectStepValidationErrors(step.id, formState)
+            const stepErrors = collectStepValidationErrors(step!.id, formState)
             setManualErrors((prev) => ({ ...prev, ...stepErrors }))
             return
         }
-        clearErrors(stepErrorPaths[step.id])
+        clearErrors(stepErrorPaths[step!.id])
         if (!isLastStep) {
             setCurrentStep((prev) => prev + 1)
         } else if (onSubmit) {
             void onSubmit()
         }
-    }, [step.id, formState, isLastStep, onSubmit, clearErrors, toast])
+    }, [step!.id, formState, isLastStep, onSubmit, clearErrors, toast])
 
     const handleBack = useCallback(() => {
         if (!isFirstStep) {
@@ -184,7 +184,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         formState,
         validationErrors,
         steps,
-        step,
+        step: step!,
         isFirstStep,
         isLastStep,
         hasPersistableData,

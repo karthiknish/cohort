@@ -6,13 +6,31 @@ import { useRouter } from 'next/navigation'
 import { Toast, ToastAction, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/components/ui/toast'
 import { useToast } from '@/components/ui/use-toast'
 
+/**
+ * Legacy Toaster component.
+ *
+ * NOTE: This component is kept for backward compatibility but is now a no-op.
+ * The actual toast rendering is handled by Sonner (via @/components/ui/sonner.tsx).
+ *
+ * The useToast hook now uses Sonner under the hood, so the toasts array will
+ * always be empty. Sonner manages its own state and renders toasts directly.
+ */
 export function Toaster() {
   const { toasts, dismiss } = useToast()
   const router = useRouter()
 
+  // Filter out toasts that are handled by Sonner (loading, info) or have no data
+  const legacyToasts = toasts.filter(
+    (t) => t.variant !== 'loading' && t.variant !== 'info'
+  )
+
+  if (legacyToasts.length === 0) {
+    return null
+  }
+
   return (
     <ToastProvider swipeDirection="right" duration={5000}>
-      {toasts.map(({ id, title, description, action, onNavigate, href, onMarkRead, persistent, undoLabel, onUndo, duration, ...props }) => {
+      {legacyToasts.map(({ id, title, description, action, onNavigate, href, onMarkRead, persistent, undoLabel, onUndo, duration, ...props }) => {
         const { onOpenChange, ...restProps } = props
 
         const handleNavigate = () => {
@@ -46,7 +64,7 @@ export function Toaster() {
         return (
           <Toast
             key={id}
-            {...restProps}
+            {...(restProps as Omit<typeof restProps, 'variant'> & { variant?: 'default' | 'success' | 'destructive' | 'warning' })}
             duration={duration ?? (persistent ? 0 : 5000)}
             onOpenChange={(open) => {
               onOpenChange?.(open)

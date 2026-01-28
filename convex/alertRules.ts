@@ -1,24 +1,54 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+import { workspaceQuery, workspaceMutation } from './functions'
 
 function nowMs() {
   return Date.now()
 }
+
+const alertRuleConditionValidator = v.object({
+  operator: v.union(
+    v.literal('gt'),
+    v.literal('lt'),
+    v.literal('gte'),
+    v.literal('lte'),
+    v.literal('eq'),
+    v.literal('ne')
+  ),
+  threshold: v.union(v.number(), v.string()),
+  windowSize: v.optional(v.union(v.number(), v.null())),
+  direction: v.optional(v.union(v.literal('up'), v.literal('down'), v.null())),
+  percentage: v.optional(v.union(v.number(), v.null())),
+})
+
+const alertRuleValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  description: v.union(v.string(), v.null()),
+  type: v.string(),
+  metric: v.string(),
+  condition: alertRuleConditionValidator,
+  severity: v.string(),
+  enabled: v.boolean(),
+  providerId: v.union(v.string(), v.null()),
+  campaignId: v.union(v.string(), v.null()),
+  formulaId: v.union(v.string(), v.null()),
+  insightType: v.union(v.string(), v.null()),
+  channels: v.array(v.string()),
+  createdAt: v.string(),
+  updatedAt: v.string(),
+})
 
 /**
  * List enabled alert rules for a workspace.
  * Used by alert processor to evaluate rules.
  * No auth required - called from server-side code.
  */
+import { query } from './_generated/server'
+
 export const listEnabled = query({
   args: { workspaceId: v.string() },
+  returns: v.array(alertRuleValidator),
   handler: async (ctx, args) => {
     const rows = await ctx.db
       .query('alertRules')
@@ -50,15 +80,12 @@ export const listEnabled = query({
 /**
  * List all alert rules for a workspace (with auth).
  */
-export const listByWorkspace = query({
+export const listByWorkspace = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     enabledOnly: v.optional(v.boolean()),
   },
+  returns: v.array(alertRuleValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const enabledOnly = args.enabledOnly === true
 
     const rows = enabledOnly
@@ -98,12 +125,10 @@ export const listByWorkspace = query({
 /**
  * Get a single alert rule by ID.
  */
-export const getByLegacyId = query({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = workspaceQuery({
+  args: { legacyId: v.string() },
+  returns: alertRuleValidator,
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('alertRules')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -136,15 +161,14 @@ export const getByLegacyId = query({
 /**
  * Create a new alert rule.
  */
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
     name: v.string(),
     description: v.optional(v.union(v.string(), v.null())),
     type: v.string(),
     metric: v.string(),
-    condition: v.any(),
+    condition: alertRuleConditionValidator,
     severity: v.string(),
     enabled: v.optional(v.boolean()),
     providerId: v.optional(v.union(v.string(), v.null())),
@@ -153,11 +177,12 @@ export const create = mutation({
     insightType: v.optional(v.union(v.string(), v.null())),
     channels: v.array(v.string()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    id: v.id('alertRules'),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+    const timestamp = ctx.now
 
     const existing = await ctx.db
       .query('alertRules')
@@ -189,22 +214,21 @@ export const create = mutation({
       updatedAtMs: timestamp,
     })
 
-    return { ok: true, id }
+    return { ok: true, id } as const
   },
 })
 
 /**
  * Update an existing alert rule.
  */
-export const update = mutation({
+export const update = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
     name: v.optional(v.string()),
     description: v.optional(v.union(v.string(), v.null())),
     type: v.optional(v.string()),
     metric: v.optional(v.string()),
-    condition: v.optional(v.any()),
+    condition: v.optional(alertRuleConditionValidator),
     severity: v.optional(v.string()),
     enabled: v.optional(v.boolean()),
     providerId: v.optional(v.union(v.string(), v.null())),
@@ -213,10 +237,10 @@ export const update = mutation({
     insightType: v.optional(v.union(v.string(), v.null())),
     channels: v.optional(v.array(v.string())),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('alertRules')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -229,7 +253,7 @@ export const update = mutation({
     }
 
     const updates: Record<string, unknown> = {
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     }
 
     if (args.name !== undefined) updates.name = args.name.trim()
@@ -247,19 +271,19 @@ export const update = mutation({
 
     await ctx.db.patch(existing._id, updates)
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
 /**
  * Delete an alert rule.
  */
-export const remove = mutation({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const remove = workspaceMutation({
+  args: { legacyId: v.string() },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('alertRules')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -273,6 +297,6 @@ export const remove = mutation({
 
     await ctx.db.delete(existing._id)
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })

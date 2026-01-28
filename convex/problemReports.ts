@@ -1,18 +1,8 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import { authenticatedQuery, authenticatedMutation } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
-
-function nowMs() {
-  return Date.now()
-}
-
-export const create = mutation({
+export const create = authenticatedMutation({
   args: {
     legacyId: v.string(),
     userId: v.union(v.string(), v.null()),
@@ -26,16 +16,17 @@ export const create = mutation({
     createdAtMs: v.optional(v.number()),
     updatedAtMs: v.optional(v.number()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    id: v.id('problemReports'),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('problemReports')
       .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
       .unique()
 
-    const timestamp = nowMs()
+    const timestamp = ctx.now
 
     const payload = {
       legacyId: args.legacyId,
@@ -59,23 +50,37 @@ export const create = mutation({
         fixed: existing.fixed ?? null,
         resolution: existing.resolution ?? null,
       })
-      return { ok: true, id: existing._id }
+      return { ok: true, id: existing._id } as const
     }
 
     const id = await ctx.db.insert('problemReports', payload)
-    return { ok: true, id }
+    return { ok: true, id } as const
   },
 })
 
-export const list = query({
+export const list = authenticatedQuery({
   args: {
     status: v.optional(v.union(v.string(), v.null())),
     limit: v.optional(v.number()),
   },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      userId: v.union(v.string(), v.null()),
+      userEmail: v.union(v.string(), v.null()),
+      userName: v.union(v.string(), v.null()),
+      workspaceId: v.union(v.string(), v.null()),
+      title: v.string(),
+      description: v.string(),
+      severity: v.string(),
+      status: v.string(),
+      fixed: v.union(v.boolean(), v.null()),
+      resolution: v.union(v.string(), v.null()),
+      createdAt: v.string(),
+      updatedAt: v.string(),
+    })
+  ),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = Math.max(1, Math.min(args.limit ?? 200, 500))
     const status = args.status ?? null
 
@@ -108,17 +113,17 @@ export const list = query({
   },
 })
 
-export const update = mutation({
+export const update = authenticatedMutation({
   args: {
     legacyId: v.string(),
     status: v.optional(v.string()),
     fixed: v.optional(v.boolean()),
     resolution: v.optional(v.string()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('problemReports')
       .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
@@ -129,7 +134,7 @@ export const update = mutation({
     }
 
     const updates: Record<string, unknown> = {
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     }
 
     if (typeof args.status === 'string') {
@@ -145,26 +150,26 @@ export const update = mutation({
     }
 
     await ctx.db.patch(existing._id, updates)
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const remove = mutation({
+export const remove = authenticatedMutation({
   args: { legacyId: v.string() },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('problemReports')
       .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
       .unique()
 
     if (!existing) {
-      return { ok: true }
+      return { ok: true } as const
     }
 
     await ctx.db.delete(existing._id)
-    return { ok: true }
+    return { ok: true } as const
   },
 })

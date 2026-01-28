@@ -40,7 +40,7 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
     return null
   }
 
-  const currentTip = tips[currentIndex]
+  const currentTip = tips[currentIndex]!
   const isFirst = currentIndex === 0
   const isLast = currentIndex === tips.length - 1
 

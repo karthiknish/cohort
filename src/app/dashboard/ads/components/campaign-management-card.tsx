@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs'
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
+import { StateWrapper } from '@/components/ui/state-wrapper'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
@@ -84,7 +85,7 @@ type Props = {
 }
 
 function toIsoDateOnly(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0]!
 }
 
 function formatRelativeDate(date: Date): string {
@@ -742,15 +743,16 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           </Button>
         </CardHeader>
         <CardContent>
-          {(loading || groupsLoading) ? (
-            <p className="text-muted-foreground text-sm">
-              Loading {view === 'groups' ? 'groups' : 'campaigns'}...
-            </p>
-          ) : (view === 'groups' ? groups.length === 0 : campaigns.length === 0) ? (
-            <p className="text-muted-foreground text-sm">
-              No {view === 'groups' ? 'groups' : 'campaigns'} found for this provider.
-            </p>
-          ) : view === 'groups' ? (
+          <StateWrapper
+            isLoading={loading || groupsLoading}
+            loadingVariant="skeleton-table"
+            skeletonRows={5}
+            skeletonColumns={view === 'groups' ? 3 : 6}
+            isEmpty={view === 'groups' ? groups.length === 0 : campaigns.length === 0}
+            emptyTitle={`No ${view === 'groups' ? 'campaign groups' : 'campaigns'} found`}
+            emptyDescription={`Connect ${providerName} and create ${view === 'groups' ? 'campaign groups' : 'campaigns'} to see them here.`}
+          >
+            {view === 'groups' ? (
             <DataTable
               columns={groupColumns}
               data={groups}
@@ -774,7 +776,8 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
               rowClassName="cursor-pointer"
               getRowId={(row) => row.id}
             />
-          )}
+            )}
+          </StateWrapper>
         </CardContent>
       </Card>
 

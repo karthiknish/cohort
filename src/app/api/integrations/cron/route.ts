@@ -130,7 +130,7 @@ export const POST = createApiHandler(
       if (resolvedProviderIds && resolvedProviderIds.length === 1) {
         const scheduled = await scheduleIntegrationSync({
           userId: resolvedUserId,
-          providerId: resolvedProviderIds[0],
+          providerId: resolvedProviderIds[0]!,
           force,
           timeframeDays,
         })

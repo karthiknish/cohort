@@ -64,6 +64,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
     // Extract slide relationships to find images per slide
     for (let i = 0; i < slideFiles.length; i++) {
       const slideFile = slideFiles[i]
+      if (!slideFile) continue
       const slideNum = parseInt(slideFile.match(/slide(\d+)/)?.[1] || '0')
 
       let imageUrl: string | null = null
@@ -89,13 +90,15 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
 
       // Extract text content from slide XML
       try {
-        const slideContent = await zip.files[slideFile].async('text')
+        const slideFileEntry = zip.files[slideFile]
+        if (!slideFileEntry) continue
+        const slideContent = await slideFileEntry.async('text')
         // Extract text from <a:t> tags (PowerPoint text elements)
         const textMatches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
         if (textMatches) {
           textContent = textMatches
-            .map((match) => match.replace(/<\/?a:t>/g, ''))
-            .filter((text) => text.trim())
+            .map((match: string | undefined) => match?.replace(/<\/?a:t>/g, '') ?? '')
+            .filter((text: string) => text.trim())
             .join(' ')
         }
       } catch {
@@ -106,7 +109,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       if (!imageUrl && Object.values(mediaFiles).length > 0) {
         const mediaValues = Object.values(mediaFiles)
         if (mediaValues[i]) {
-          imageUrl = mediaValues[i]
+          imageUrl = mediaValues[i] ?? null
         }
       }
 
@@ -216,7 +219,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  const currentSlideData = slides[currentSlide]
+  const currentSlideData = slides[currentSlide]!
 
   if (isLoading) {
     return (

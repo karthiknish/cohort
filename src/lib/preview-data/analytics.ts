@@ -41,12 +41,12 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
     const records: PreviewAnalyticsMetric[] = []
 
     providers.forEach((provider) => {
-        const providerData = baseData[provider]
+        const providerData = baseData[provider]!
         providerData.forEach((day, idx) => {
             const metric: PreviewAnalyticsMetric = {
                 id: `preview-analytics-${provider}-${idx}`,
                 providerId: provider,
-                date: isoDaysAgo(6 - idx).split('T')[0],
+                date: isoDaysAgo(6 - idx).split('T')[0]!,
                 spend: day.spend,
                 impressions: day.impressions,
                 clicks: day.clicks,

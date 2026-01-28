@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
-import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus } from 'lucide-react'
+import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, CreditCard, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon
@@ -134,6 +134,99 @@ export function NoAccessEmptyState(props: Partial<EmptyStateProps>) {
       icon={CircleAlert}
       title="Access restricted"
       description="You don't have permission to view this content."
+      {...props}
+    />
+  )
+}
+
+export function NoClientsEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={Users}
+      title="No clients yet"
+      description="Add your first client to get started with project management."
+      {...props}
+    />
+  )
+}
+
+export function NoProjectsEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={FolderOpen}
+      title="No projects found"
+      description="Create a project to start tracking work and tasks."
+      {...props}
+    />
+  )
+}
+
+export function NoTasksEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={CircleAlert}
+      title="No tasks yet"
+      description="Tasks will appear here once they're assigned."
+      {...props}
+    />
+  )
+}
+
+export function NoEventsEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={Calendar}
+      title="No upcoming events"
+      description="Your schedule is clear. New events will appear here."
+      {...props}
+    />
+  )
+}
+
+export function NoInvoicesEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={CreditCard}
+      title="No invoices"
+      description="Invoices will be listed here once created."
+      {...props}
+    />
+  )
+}
+
+export function NoMessagesEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={MessageSquare}
+      title="No messages"
+      description="Start a conversation to see messages here."
+      {...props}
+    />
+  )
+}
+
+export function NoAnalyticsEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={BarChart3}
+      title="No analytics data"
+      description="Analytics will be available once you have enough data."
+      {...props}
+    />
+  )
+}
+
+export function NetworkErrorEmptyState(props: Partial<EmptyStateProps>) {
+  return (
+    <EmptyState
+      icon={WifiOff}
+      title="Connection error"
+      description="Unable to load data. Please check your connection and try again."
+      action={props.action || {
+        label: 'Retry',
+        onClick: () => window.location.reload(),
+        icon: RefreshCw,
+      }}
       {...props}
     />
   )

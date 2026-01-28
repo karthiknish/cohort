@@ -1,16 +1,17 @@
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
 import { Errors } from './errors'
+import { workspaceQuery, workspaceMutation } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+const conversationValidator = v.object({
+  legacyId: v.string(),
+  title: v.union(v.string(), v.null()),
+  startedAt: v.union(v.number(), v.null()),
+  lastMessageAt: v.union(v.number(), v.null()),
+  messageCount: v.number(),
+})
 
-export const upsert = mutation({
+export const upsert = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
     userId: v.string(),
     title: v.optional(v.union(v.string(), v.null())),
@@ -18,11 +19,11 @@ export const upsert = mutation({
     lastMessageAt: v.optional(v.union(v.number(), v.null())),
     messageCount: v.optional(v.number()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const now = Date.now()
+    const now = ctx.now
     const existing = await ctx.db
       .query('agentConversations')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -39,7 +40,7 @@ export const upsert = mutation({
         messageCount: typeof args.messageCount === 'number' ? args.messageCount : existing.messageCount,
         updatedAt: now,
       })
-      return { ok: true }
+      return { ok: true } as const
     }
 
     await ctx.db.insert('agentConversations', {
@@ -54,20 +55,19 @@ export const upsert = mutation({
       updatedAt: now,
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const list = query({
+export const list = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     userId: v.string(),
     limit: v.number(),
   },
+  returns: v.object({
+    conversations: v.array(conversationValidator),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = Math.min(Math.max(args.limit, 1), 50)
 
     const rows = await ctx.db
@@ -90,15 +90,28 @@ export const list = query({
   },
 })
 
-export const get = query({
+export const get = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
   },
+  returns: v.object({
+    conversation: v.union(
+      v.null(),
+      v.object({
+        _id: v.id('agentConversations'),
+        workspaceId: v.string(),
+        legacyId: v.string(),
+        userId: v.string(),
+        title: v.union(v.string(), v.null()),
+        startedAt: v.union(v.number(), v.null()),
+        lastMessageAt: v.union(v.number(), v.null()),
+        messageCount: v.number(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+      })
+    ),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('agentConversations')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -110,15 +123,16 @@ export const get = query({
   },
 })
 
-export const remove = mutation({
+export const remove = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    deletedConversation: v.boolean(),
+    deletedMessages: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('agentConversations')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -143,6 +157,6 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(existing._id)
-    return { ok: true, deletedConversation: true, deletedMessages: messages.length }
+    return { ok: true as const, deletedConversation: true, deletedMessages: messages.length }
   },
 })

@@ -1,23 +1,17 @@
-import { mutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import { authenticatedMutation } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
-
-export const updateConversationTitle = mutation({
+export const updateConversationTitle = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     conversationId: v.string(),
     title: v.string(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('agentConversations')
       .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationId))
@@ -27,30 +21,29 @@ export const updateConversationTitle = mutation({
       throw Errors.resource.notFound('Conversation', args.conversationId)
     }
 
-    if (existing.userId !== identity.subject) {
+    if (existing.userId !== ctx.legacyId) {
       throw Errors.auth.forbidden()
     }
 
-    const now = Date.now()
-
     await ctx.db.patch(existing._id, {
       title: args.title.trim().slice(0, 60),
-      updatedAt: now,
+      updatedAt: ctx.now,
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const deleteConversation = mutation({
+export const deleteConversation = authenticatedMutation({
   args: {
     workspaceId: v.string(),
     conversationId: v.string(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    deletedMessages: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('agentConversations')
       .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationId))
@@ -60,7 +53,7 @@ export const deleteConversation = mutation({
       throw Errors.resource.notFound('Conversation', args.conversationId)
     }
 
-    if (existing.userId !== identity.subject) {
+    if (existing.userId !== ctx.legacyId) {
       throw Errors.auth.forbidden()
     }
 
@@ -75,6 +68,6 @@ export const deleteConversation = mutation({
     }
 
     await ctx.db.delete(existing._id)
-    return { ok: true, deletedMessages: messages.length }
+    return { ok: true as const, deletedMessages: messages.length }
   },
 })

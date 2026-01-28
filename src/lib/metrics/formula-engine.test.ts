@@ -87,11 +87,11 @@ describe('calculateMovingAverage', () => {
 
         expect(result).toHaveLength(3)
         // Day 1: avg(100) = 100
-        expect(result[0].value).toBe(100)
+        expect(result[0]!.value).toBe(100)
         // Day 2: avg(100, 200) = 150
-        expect(result[1].value).toBe(150)
+        expect(result[1]!.value).toBe(150)
         // Day 3: avg(100, 200, 150) = 150
-        expect(result[2].value).toBe(150)
+        expect(result[2]!.value).toBe(150)
     })
 
     it('returns empty array for empty metrics', () => {
@@ -109,9 +109,9 @@ describe('calculateMovingAverage', () => {
 
         expect(result).toHaveLength(2)
         // Day 1: sum(100, 50) = 150, avg = 150
-        expect(result[0].rawValue).toBe(150)
+        expect(result[0]!.rawValue).toBe(150)
         // Day 2: avg(150, 200) = 175
-        expect(result[1].value).toBe(175)
+        expect(result[1]!.value).toBe(175)
     })
 })
 
@@ -126,9 +126,9 @@ describe('calculateRoasMovingAverage', () => {
 
         expect(result).toHaveLength(2)
         // Day 1: ROAS = 300/100 = 3.0
-        expect(result[0].value).toBeCloseTo(3.0, 2)
+        expect(result[0]!.value).toBeCloseTo(3.0, 2)
         // Day 2: cumulative ROAS = 800/200 = 4.0
-        expect(result[1].value).toBeCloseTo(4.0, 2)
+        expect(result[1]!.value).toBeCloseTo(4.0, 2)
     })
 })
 

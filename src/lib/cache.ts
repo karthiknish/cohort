@@ -69,7 +69,7 @@ export class TtlCache {
     entries.sort((a, b) => a[1].touchedAt - b[1].touchedAt)
     const excess = this.store.size - this.maxEntries
     for (let i = 0; i < excess; i += 1) {
-      this.store.delete(entries[i][0])
+      this.store.delete(entries[i]![0])
     }
   }
 }

@@ -28,5 +28,5 @@ export function getGammaThemeById(id: string): GammaPresentationTheme | undefine
 }
 
 export function getDefaultGammaTheme(): GammaPresentationTheme {
-  return GAMMA_PRESENTATION_THEMES[0]
+  return GAMMA_PRESENTATION_THEMES[0]!
 }

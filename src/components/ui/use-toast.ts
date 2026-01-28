@@ -1,11 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import { toast as sonnerToast } from 'sonner'
 
 import type { ToastProps, ToastVariantProps } from '@/components/ui/toast'
-
-const TOAST_LIMIT = 20
-const TOAST_REMOVE_DELAY = 500
 
 type ToastToDismiss = string
 
@@ -14,7 +12,7 @@ type Toast = ToastProps & {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: React.ReactNode
-  variant?: ToastVariantProps['variant']
+  variant?: ToastVariantProps['variant'] | 'loading' | 'info'
   duration?: number
   persistent?: boolean
   undoLabel?: string
@@ -28,93 +26,142 @@ type ToastState = {
   toasts: Toast[]
 }
 
-type ToastAction =
-  | { type: 'ADD_TOAST'; toast: Toast }
-  | { type: 'UPDATE_TOAST'; toast: Partial<Toast> & Pick<Toast, 'id'> }
-  | { type: 'DISMISS_TOAST'; toastId?: ToastToDismiss }
-  | { type: 'REMOVE_TOAST'; toastId?: ToastToDismiss }
+const variantToMethod = {
+  default: 'message' as const,
+  destructive: 'error' as const,
+  success: 'success' as const,
+  warning: 'warning' as const,
+  info: 'info' as const,
+  loading: 'loading' as const,
+} as const
 
-const toastTimeouts = new Map<ToastToDismiss, ReturnType<typeof setTimeout>>()
+type ToastMethod = typeof variantToMethod[keyof typeof variantToMethod]
 
-const addToRemoveQueue = (toastId: ToastToDismiss) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({ type: 'REMOVE_TOAST', toastId })
-  }, TOAST_REMOVE_DELAY)
-
-  toastTimeouts.set(toastId, timeout)
-}
-
-const reducer = (state: ToastState, action: ToastAction): ToastState => {
-  switch (action.type) {
-    case 'ADD_TOAST':
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      }
-
-    case 'UPDATE_TOAST':
-      return {
-        ...state,
-        toasts: state.toasts.map((toast) => (toast.id === action.toast.id ? { ...toast, ...action.toast } : toast)),
-      }
-
-    case 'DISMISS_TOAST': {
-      const { toastId } = action
-
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((toast) => (toast.id === toastId || toastId === undefined ? { ...toast, open: false } : toast)),
-      }
-    }
-
-    case 'REMOVE_TOAST':
-      return {
-        ...state,
-        toasts: action.toastId ? state.toasts.filter((toast) => toast.id !== action.toastId) : [],
-      }
-  }
-}
-
-const listeners = new Set<(state: ToastState) => void>()
-
-let memoryState: ToastState = { toasts: [] }
-
-const dispatch = (action: ToastAction) => {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
-}
-
+/**
+ * Toast function using Sonner under the hood for robust notifications.
+ * Maintains the same API as the legacy implementation for backward compatibility.
+ */
 export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
   const id = Math.random().toString(36).slice(2, 9)
+  const method = variantToMethod[props.variant ?? 'default'] ?? 'message'
 
-  const update = (props: Toast) => dispatch({ type: 'UPDATE_TOAST', toast: props })
-  const dismiss = () => dispatch({ type: 'DISMISS_TOAST', toastId: id })
-
-  dispatch({
-    type: 'ADD_TOAST',
-    toast: {
-      ...props,
+  // Handle undo action (special case for legacy compatibility)
+  if (props.onUndo && props.undoLabel) {
+    sonnerToast.message(props.title ?? '', {
       id,
-      open: true,
-      // default auto-dismiss after 5s unless marked persistent
-      duration: typeof props.duration === 'number' ? props.duration : props.persistent ? 0 : 5000,
-    },
-  })
+      description: props.description,
+      duration: props.persistent ? 0 : (props.duration ?? 5000),
+      action: {
+        label: props.undoLabel,
+        onClick: () => {
+          props.onUndo?.()
+          sonnerToast.dismiss(id)
+        },
+      },
+    })
+  }
+  // Handle link action
+  else if (props.href && props.onNavigate) {
+    sonnerToast.message(props.title ?? '', {
+      id,
+      description: props.description,
+      duration: props.persistent ? 0 : (props.duration ?? 5000),
+      action: {
+        label: 'Open',
+        onClick: () => {
+          props.onNavigate?.()
+        },
+      },
+    })
+  }
+  // Handle custom action (React node - render as description)
+  else if (props.action) {
+    sonnerToast.message(props.title ?? '', {
+      id,
+      description: props.description,
+      duration: props.persistent ? 0 : (props.duration ?? 5000),
+    })
+  }
+  // Standard toast based on variant
+  else {
+    if (props.variant === 'loading') {
+      sonnerToast.loading(props.title ?? 'Loading...', {
+        id,
+        description: props.description,
+      })
+    } else if (props.variant === 'success') {
+      sonnerToast.success(props.title ?? '', {
+        id,
+        description: props.description,
+        duration: props.persistent ? 0 : (props.duration ?? 5000),
+      })
+    } else if (props.variant === 'destructive') {
+      sonnerToast.error(props.title ?? '', {
+        id,
+        description: props.description,
+        duration: props.persistent ? 0 : (props.duration ?? 5000),
+      })
+    } else if (props.variant === 'warning') {
+      sonnerToast.warning(props.title ?? '', {
+        id,
+        description: props.description,
+        duration: props.persistent ? 0 : (props.duration ?? 5000),
+      })
+    } else if (props.variant === 'info') {
+      sonnerToast.info(props.title ?? '', {
+        id,
+        description: props.description,
+        duration: props.persistent ? 0 : (props.duration ?? 5000),
+      })
+    } else {
+      sonnerToast.message(props.title ?? '', {
+        id,
+        description: props.description,
+        duration: props.persistent ? 0 : (props.duration ?? 5000),
+      })
+    }
+  }
+
+  const update = (updateProps: Toast) => {
+    if (updateProps.variant === 'loading') {
+      sonnerToast.loading(updateProps.title ?? 'Loading...', {
+        id,
+        description: updateProps.description,
+      })
+    } else if (updateProps.variant === 'success') {
+      sonnerToast.success(updateProps.title ?? '', {
+        id,
+        description: updateProps.description,
+        duration: updateProps.persistent ? 0 : (updateProps.duration ?? 5000),
+      })
+    } else if (updateProps.variant === 'destructive') {
+      sonnerToast.error(updateProps.title ?? '', {
+        id,
+        description: updateProps.description,
+        duration: updateProps.persistent ? 0 : (updateProps.duration ?? 5000),
+      })
+    } else if (updateProps.variant === 'warning') {
+      sonnerToast.warning(updateProps.title ?? '', {
+        id,
+        description: updateProps.description,
+        duration: updateProps.persistent ? 0 : (updateProps.duration ?? 5000),
+      })
+    } else if (updateProps.variant === 'info') {
+      sonnerToast.info(updateProps.title ?? '', {
+        id,
+        description: updateProps.description,
+        duration: updateProps.persistent ? 0 : (updateProps.duration ?? 5000),
+      })
+    } else {
+      sonnerToast.message(updateProps.title ?? '', {
+        id,
+        description: updateProps.description,
+        duration: updateProps.persistent ? 0 : (updateProps.duration ?? 5000),
+      })
+    }
+  }
+
+  const dismiss = () => sonnerToast.dismiss(id)
 
   return {
     id,
@@ -125,19 +172,18 @@ export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
 
 export type ToastT = ReturnType<typeof toast>
 
+/**
+ * Hook for managing toasts.
+ * Now powered by Sonner under the hood for better performance and UX.
+ */
 export const useToast = () => {
-  const [state, setState] = React.useState<ToastState>(memoryState)
-
-  React.useEffect(() => {
-    listeners.add(setState)
-    return () => {
-      listeners.delete(setState)
-    }
-  }, [])
+  // Sonner manages its own state, so we just provide the toast function
+  // and a dismiss function for compatibility
+  const [state] = React.useState<ToastState>({ toasts: [] })
 
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
+    dismiss: (toastId?: string) => sonnerToast.dismiss(toastId),
   }
 }

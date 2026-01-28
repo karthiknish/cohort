@@ -142,7 +142,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       if (!summary[metric.providerId]) {
         summary[metric.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
       }
-      const s = summary[metric.providerId]
+      const s = summary[metric.providerId]!
       s.spend += metric.spend
       s.impressions += metric.impressions
       s.clicks += metric.clicks

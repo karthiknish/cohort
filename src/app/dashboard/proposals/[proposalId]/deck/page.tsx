@@ -88,7 +88,7 @@ export default function ProposalDeckPage() {
     const rawSlides = text.split(/(?=Slide \d+:)/).filter(Boolean)
     return rawSlides.map((s, index) => {
       const titleMatch = s.match(/Slide \d+:\s*([^*]+)/)
-      const title = titleMatch ? titleMatch[1].trim() : `Slide ${index + 1}`
+      const title = titleMatch ? titleMatch[1]!.trim() : `Slide ${index + 1}`
       const points = s.split('*').slice(1).map(p => p.trim()).filter(Boolean)
       
       return { 
@@ -101,7 +101,7 @@ export default function ProposalDeckPage() {
 
   const getSlideIcon = (index: number) => {
     const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket]
-    const Icon = icons[index % icons.length]
+    const Icon = icons[index % icons.length]!
     return <Icon className="h-4 w-4" />
   }
 

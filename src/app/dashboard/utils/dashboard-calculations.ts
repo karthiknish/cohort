@@ -196,7 +196,7 @@ export function buildChartData(
     if (Array.isArray(metrics)) {
         metrics.forEach((m) => {
             if (!m || typeof m.date !== 'string') return
-            const date = m.date.split('T')[0]
+            const date = m.date.split('T')[0]!
             const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
             dailyMap.set(date, {
                 ...current,
@@ -217,7 +217,7 @@ export function buildChartData(
                 // YYYY-MM -> YYYY-MM-01
                 date = `${r.period}-01`
             } else if (r.createdAt) {
-                date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0] : ''
+                date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0]! : ''
             }
 
             if (date) {

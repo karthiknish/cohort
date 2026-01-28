@@ -14,9 +14,9 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatCurrency, cn } from '@/lib/utils'
+import { getProviderTheme, formatProviderName } from '@/lib/themes'
 
 import type { ProviderSummary } from './types'
-import { formatProviderName } from './utils'
 
 interface PerformanceSummaryCardProps {
   providerSummaries: Record<string, ProviderSummary>
@@ -26,39 +26,6 @@ interface PerformanceSummaryCardProps {
   metricError: string | null
   onRefresh: () => void
   onExport: () => void
-}
-
-const providerThemes: Record<string, { bg: string; border: string; accent: string; iconBg: string }> = {
-  google: {
-    bg: 'bg-gradient-to-br from-blue-50/50 to-cyan-50/30 dark:from-blue-950/30 dark:to-cyan-950/20',
-    border: 'border-blue-200/60 dark:border-blue-800/40',
-    accent: 'text-blue-600 dark:text-blue-400',
-    iconBg: 'from-blue-100 to-cyan-100 dark:from-blue-900/50 dark:to-cyan-900/50',
-  },
-  facebook: {
-    bg: 'bg-gradient-to-br from-indigo-50/50 to-violet-50/30 dark:from-indigo-950/30 dark:to-violet-950/20',
-    border: 'border-indigo-200/60 dark:border-indigo-800/40',
-    accent: 'text-indigo-600 dark:text-indigo-400',
-    iconBg: 'from-indigo-100 to-violet-100 dark:from-indigo-900/50 dark:to-violet-900/50',
-  },
-  meta: {
-    bg: 'bg-gradient-to-br from-indigo-50/50 to-violet-50/30 dark:from-indigo-950/30 dark:to-violet-950/20',
-    border: 'border-indigo-200/60 dark:border-indigo-800/40',
-    accent: 'text-indigo-600 dark:text-indigo-400',
-    iconBg: 'from-indigo-100 to-violet-100 dark:from-indigo-900/50 dark:to-violet-900/50',
-  },
-  linkedin: {
-    bg: 'bg-gradient-to-br from-sky-50/50 to-blue-50/30 dark:from-sky-950/30 dark:to-blue-950/20',
-    border: 'border-sky-200/60 dark:border-sky-800/40',
-    accent: 'text-sky-600 dark:text-sky-400',
-    iconBg: 'from-sky-100 to-blue-100 dark:from-sky-900/50 dark:to-blue-900/50',
-  },
-  tiktok: {
-    bg: 'bg-gradient-to-br from-rose-50/50 to-pink-50/30 dark:from-rose-950/30 dark:to-pink-950/20',
-    border: 'border-rose-200/60 dark:border-rose-800/40',
-    accent: 'text-rose-600 dark:text-rose-400',
-    iconBg: 'from-rose-100 to-pink-100 dark:from-rose-900/50 dark:to-pink-900/50',
-  },
 }
 
 export function PerformanceSummaryCard({
@@ -138,7 +105,7 @@ export function PerformanceSummaryCard({
         ) : (
           <div className="grid gap-5 md:grid-cols-3">
             {Object.entries(providerSummaries).map(([providerId, summary], index) => {
-              const theme = providerThemes[providerId] || providerThemes.google
+              const theme = getProviderTheme(providerId)
 
               return (
                 <div

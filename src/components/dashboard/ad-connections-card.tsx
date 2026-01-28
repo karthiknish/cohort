@@ -257,7 +257,7 @@ export function AdConnectionsCard({
         onConnect={handleDialogConnect}
         isConnecting={connectingProvider === selectedProvider?.id}
         connectionStep={connectionStep}
-        error={selectedProvider ? connectionErrors[selectedProvider.id] : null}
+        error={selectedProvider ? (connectionErrors[selectedProvider.id] ?? null) : null}
         onRetry={handleRetry}
       />
 

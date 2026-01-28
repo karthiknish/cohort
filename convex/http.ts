@@ -17,7 +17,7 @@ const ALLOWED_ORIGINS = [
 function getCorsHeaders(origin: string | null): HeadersInit {
   const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))
     ? origin
-    : ALLOWED_ORIGINS[0]
+    : ALLOWED_ORIGINS[0]!
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

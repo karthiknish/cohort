@@ -171,7 +171,7 @@ export function analyzeAdPerformance(
   const benchmarkScores: Record<string, number> = {}
   for (const summary of summaries) {
     benchmarks[summary.providerId] = runBenchmarkAnalysis(summary)
-    benchmarkScores[summary.providerId] = calculateBenchmarkScore(benchmarks[summary.providerId])
+    benchmarkScores[summary.providerId] = calculateBenchmarkScore(benchmarks[summary.providerId]!)
   }
 
   // Generate all insights
@@ -184,15 +184,15 @@ export function analyzeAdPerformance(
     allInsights.push(...generateAudienceInsights(summary))
     
     if (trends[summary.providerId]) {
-      allInsights.push(...generateTrendInsights(trends[summary.providerId], summary.providerId))
+      allInsights.push(...generateTrendInsights(trends[summary.providerId]!, summary.providerId))
     }
-    
+
     if (funnels[summary.providerId]) {
-      allInsights.push(...generateFunnelInsights(funnels[summary.providerId], summary.providerId))
+      allInsights.push(...generateFunnelInsights(funnels[summary.providerId]!, summary.providerId))
     }
-    
+
     if (benchmarks[summary.providerId]) {
-      allInsights.push(...generateBenchmarkInsights(benchmarks[summary.providerId], summary.providerId))
+      allInsights.push(...generateBenchmarkInsights(benchmarks[summary.providerId]!, summary.providerId))
     }
   }
 

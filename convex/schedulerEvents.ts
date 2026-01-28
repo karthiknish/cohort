@@ -1,12 +1,30 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+import { adminQuery } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+const providerFailureThresholdValidator = v.object({
+  providerId: v.string(),
+  failedJobs: v.number(),
+  threshold: v.union(v.number(), v.null()),
+})
+
+const schedulerEventValidator = v.object({
+  id: v.id('schedulerEvents'),
+  createdAt: v.string(),
+  source: v.string(),
+  operation: v.union(v.string(), v.null()),
+  processedJobs: v.number(),
+  successfulJobs: v.number(),
+  failedJobs: v.number(),
+  hadQueuedJobs: v.boolean(),
+  inspectedQueuedJobs: v.union(v.number(), v.null()),
+  durationMs: v.union(v.number(), v.null()),
+  severity: v.string(),
+  errors: v.array(v.string()),
+  notes: v.union(v.string(), v.null()),
+  failureThreshold: v.union(v.number(), v.null()),
+  providerFailureThresholds: v.array(providerFailureThresholdValidator),
+})
 
 /**
  * Insert a new scheduler event.
@@ -34,6 +52,10 @@ export const insert = mutation({
       })
     ),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    id: v.id('schedulerEvents'),
+  }),
   handler: async (ctx, args) => {
     // No auth required - called from server-side scheduler code
     const id = await ctx.db.insert('schedulerEvents', {
@@ -52,21 +74,22 @@ export const insert = mutation({
       failureThreshold: args.failureThreshold,
       providerFailureThresholds: args.providerFailureThresholds,
     })
-    return { ok: true, id }
+    return { ok: true as const, id }
   },
 })
 
-export const list = query({
+export const list = adminQuery({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
     severity: v.optional(v.string()),
     source: v.optional(v.string()),
   },
+  returns: v.object({
+    events: v.array(schedulerEventValidator),
+    nextCursor: v.union(v.string(), v.null()),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
 
     const all = await ctx.db.query('schedulerEvents').withIndex('by_createdAtMs', (q) => q).collect()

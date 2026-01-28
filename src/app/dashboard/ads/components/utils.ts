@@ -4,10 +4,21 @@ import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 import type { MetricRecord } from './types'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
+import { formatProviderName } from '@/lib/themes'
 
 // Re-export from retry-fetch for convenience
 export { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
 export type { RetryOptions } from './retry-fetch'
+
+// Re-export theme-related functions from centralized theme
+export {
+  formatProviderName,
+  getProviderTheme,
+  getProviderColor,
+  getProviderInfo,
+  PROVIDER_IDS,
+  type ProviderId,
+} from '@/lib/themes'
 
 // Constants
 export const METRICS_PAGE_SIZE = 100
@@ -64,7 +75,7 @@ export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
 export function normalizeFrequency(value?: number | null): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     const clamped = Math.min(
-      Math.max(Math.round(value), FREQUENCY_OPTIONS[0].value),
+      Math.max(Math.round(value), FREQUENCY_OPTIONS[0]!.value),
       FREQUENCY_OPTIONS.at(-1)?.value ?? 1440
     )
     return clamped
@@ -75,7 +86,7 @@ export function normalizeFrequency(value?: number | null): number {
 export function normalizeTimeframe(value?: number | null): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     const clamped = Math.min(
-      Math.max(Math.round(value), TIMEFRAME_OPTIONS[0].value),
+      Math.max(Math.round(value), TIMEFRAME_OPTIONS[0]!.value),
       TIMEFRAME_OPTIONS.at(-1)?.value ?? DEFAULT_TIMEFRAME_DAYS
     )
     return clamped
@@ -133,26 +144,6 @@ export function getStatusLabel(status: string): string {
     default:
       return status.charAt(0).toUpperCase() + status.slice(1)
   }
-}
-
-export function formatProviderName(providerId: string): string {
-  const mapping: Record<string, string> = {
-    google: 'Google Ads',
-    facebook: 'Meta Ads Manager',
-    meta: 'Meta Ads Manager',
-    linkedin: 'LinkedIn Ads',
-    tiktok: 'TikTok Ads',
-  }
-
-  if (mapping[providerId]) {
-    return mapping[providerId]
-  }
-
-  if (providerId.length === 0) {
-    return 'Unknown Provider'
-  }
-
-  return providerId.charAt(0).toUpperCase() + providerId.slice(1)
 }
 
 export function describeFrequency(minutes: number): string {

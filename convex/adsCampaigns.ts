@@ -224,6 +224,9 @@ export const listCampaigns = action({
         objective: c.objective,
         startTime: c.startTime,
         stopTime: c.stopTime,
+        biddingStrategy: c.bidStrategy
+          ? { type: c.bidStrategy }
+          : undefined,
       })
     )
   }, 'adsCampaigns:listCampaigns'),

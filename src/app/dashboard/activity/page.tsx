@@ -76,7 +76,7 @@ export default function ActivityPage() {
       if (!groups[key]) {
         groups[key] = []
       }
-      groups[key].push(activity)
+      groups[key]!.push(activity)
     })
     
     return groups
@@ -215,7 +215,7 @@ export default function ActivityPage() {
                         </h3>
                       </div>
                       <div className="ml-2 space-y-6 border-l-2 border-muted pl-6 pb-2">
-                        {groupedActivities[dateGroup].map((activity) => {
+                        {groupedActivities[dateGroup]!.map((activity) => {
                           const Icon = ACTIVITY_ICONS[activity.type]
                           const colorClass = ACTIVITY_COLORS[activity.type]
                           

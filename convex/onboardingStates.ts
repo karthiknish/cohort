@@ -1,24 +1,23 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import { authenticatedQuery, authenticatedMutation } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+const onboardingStateValidator = v.object({
+  userId: v.string(),
+  onboardingTourCompleted: v.boolean(),
+  onboardingTourCompletedAtMs: v.union(v.number(), v.null()),
+  welcomeSeenAtMs: v.union(v.number(), v.null()),
+  welcomeSeen: v.boolean(),
+  createdAtMs: v.number(),
+  updatedAtMs: v.number(),
+})
 
-function nowMs() {
-  return Date.now()
-}
-
-export const getByUserId = query({
+export const getByUserId = authenticatedQuery({
   args: { userId: v.string() },
+  returns: v.union(v.null(), onboardingStateValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    if (identity.subject !== args.userId) {
+    // Users can only access their own onboarding state
+    if (ctx.legacyId !== args.userId) {
       throw Errors.auth.unauthorized()
     }
 
@@ -41,7 +40,7 @@ export const getByUserId = query({
   },
 })
 
-export const upsert = mutation({
+export const upsert = authenticatedMutation({
   args: {
     userId: v.string(),
     onboardingTourCompleted: v.boolean(),
@@ -49,11 +48,12 @@ export const upsert = mutation({
     welcomeSeenAtMs: v.optional(v.union(v.number(), v.null())),
     welcomeSeen: v.optional(v.boolean()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    if (identity.subject !== args.userId) {
+    // Users can only modify their own onboarding state
+    if (ctx.legacyId !== args.userId) {
       throw Errors.auth.unauthorized()
     }
 
@@ -62,7 +62,7 @@ export const upsert = mutation({
       .withIndex('by_userId', (q) => q.eq('userId', args.userId))
       .unique()
 
-    const timestamp = nowMs()
+    const timestamp = ctx.now
     const payload = {
       userId: args.userId,
       onboardingTourCompleted: args.onboardingTourCompleted,
@@ -74,7 +74,7 @@ export const upsert = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload)
-      return { ok: true }
+      return { ok: true } as const
     }
 
     await ctx.db.insert('onboardingStates', {
@@ -82,6 +82,6 @@ export const upsert = mutation({
       createdAtMs: timestamp,
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })

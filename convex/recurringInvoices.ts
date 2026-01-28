@@ -1,20 +1,30 @@
-import { mutation, query } from './_generated/server'
+import { workspaceMutation, workspaceQuery } from './functions'
 import { v } from 'convex/values'
-
-import { api } from './_generated/api'
 import { Errors } from './errors'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
-
-function now() {
-  return Date.now()
-}
-
 type RecurringFrequency = 'weekly' | 'monthly' | 'quarterly' | 'annually'
+
+const scheduleValidator = v.object({
+  id: v.string(),
+  clientId: v.string(),
+  clientName: v.string(),
+  amount: v.number(),
+  currency: v.string(),
+  description: v.union(v.string(), v.null()),
+  frequency: v.string(),
+  dayOfMonth: v.union(v.number(), v.null()),
+  dayOfWeek: v.union(v.number(), v.null()),
+  startDate: v.string(),
+  endDate: v.union(v.string(), v.null()),
+  nextRunDate: v.string(),
+  lastRunDate: v.union(v.string(), v.null()),
+  lastInvoiceId: v.union(v.string(), v.null()),
+  isActive: v.boolean(),
+  totalInvoicesGenerated: v.number(),
+  createdBy: v.union(v.string(), v.null()),
+  createdAt: v.string(),
+  updatedAt: v.string(),
+})
 
 function calculateNextRunDate(
   frequency: RecurringFrequency,
@@ -106,17 +116,16 @@ function calculateNextRunDateFromCurrent(
   return next.toISOString()
 }
 
-export const list = query({
+export const list = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     activeOnly: v.optional(v.boolean()),
     clientId: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    schedules: v.array(scheduleValidator),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = Math.min(Math.max(args.limit ?? 100, 1), 200)
 
     let rows = await ctx.db
@@ -170,15 +179,12 @@ export const list = query({
   },
 })
 
-export const getById = query({
+export const getById = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     scheduleId: v.string(),
   },
+  returns: scheduleValidator,
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('recurringInvoices')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -214,9 +220,8 @@ export const getById = query({
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     clientId: v.string(),
     clientName: v.optional(v.string()),
     amount: v.number(),
@@ -228,11 +233,9 @@ export const create = mutation({
     startDate: v.string(),
     endDate: v.optional(v.union(v.string(), v.null())),
   },
+  returns: scheduleValidator,
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = now()
+    const timestamp = ctx.now
     const legacyId = crypto.randomUUID()
 
     const frequency = args.frequency as RecurringFrequency
@@ -261,7 +264,7 @@ export const create = mutation({
       lastInvoiceId: null,
       isActive: true,
       totalInvoicesGenerated: 0,
-      createdBy: identity.subject,
+      createdBy: ctx.legacyId,
       createdAt: timestamp,
       updatedAt: timestamp,
     })
@@ -283,16 +286,15 @@ export const create = mutation({
       lastInvoiceId: null,
       isActive: true,
       totalInvoicesGenerated: 0,
-      createdBy: identity.subject,
+      createdBy: ctx.legacyId,
       createdAt: new Date(timestamp).toISOString(),
       updatedAt: new Date(timestamp).toISOString(),
     }
   },
 })
 
-export const update = mutation({
+export const update = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     scheduleId: v.string(),
     amount: v.optional(v.number()),
     currency: v.optional(v.string()),
@@ -303,10 +305,8 @@ export const update = mutation({
     endDate: v.optional(v.union(v.string(), v.null())),
     isActive: v.optional(v.boolean()),
   },
+  returns: scheduleValidator,
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('recurringInvoices')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -318,7 +318,7 @@ export const update = mutation({
       throw Errors.resource.notFound('Schedule', args.scheduleId)
     }
 
-    const timestamp = now()
+    const timestamp = ctx.now
     const updates: Record<string, unknown> = {
       updatedAt: timestamp,
     }
@@ -360,15 +360,14 @@ export const update = mutation({
   },
 })
 
-export const remove = mutation({
+export const remove = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     scheduleId: v.string(),
   },
+  returns: v.object({
+    success: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('recurringInvoices')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -382,19 +381,20 @@ export const remove = mutation({
 
     await ctx.db.delete(existing._id)
 
-    return { success: true }
+    return { success: true as const }
   },
 })
 
-export const trigger = mutation({
+export const trigger = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     scheduleId: v.string(),
   },
+  returns: v.object({
+    success: v.literal(true),
+    invoiceId: v.string(),
+    nextRunDate: v.string(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('recurringInvoices')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -418,7 +418,7 @@ export const trigger = mutation({
       }
     }
 
-    const timestamp = now()
+    const timestamp = ctx.now
     const today = new Date()
 
     // Calculate due date (30 days from now)
@@ -435,8 +435,8 @@ export const trigger = mutation({
       amount: existing.amount,
       status: 'draft',
       stripeStatus: null,
-      issuedDate: today.toISOString().split('T')[0],
-      dueDate: dueDate.toISOString().split('T')[0],
+      issuedDate: today.toISOString().split('T')[0]!,
+      dueDate: dueDate.toISOString().split('T')[0]!,
       paidDate: null,
       amountPaid: null,
       amountRemaining: null,
@@ -469,7 +469,7 @@ export const trigger = mutation({
     })
 
     return {
-      success: true,
+      success: true as const,
       invoiceId: invoiceLegacyId,
       nextRunDate,
     }

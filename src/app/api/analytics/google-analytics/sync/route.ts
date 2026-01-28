@@ -204,9 +204,9 @@ export const POST = createApiHandler(
 
       // Property string is like "properties/123456789".
       const parts = selected.property.split('/')
-      const extracted = parts.length === 2 ? parts[1] : selected.property
+      const extracted = parts.length === 2 ? parts[1]! : selected.property
 
-      propertyId = extracted
+      propertyId = extracted ?? null
       propertyName = selected.displayName
 
       await updateIntegrationCredentials({
@@ -218,7 +218,7 @@ export const POST = createApiHandler(
       })
     }
 
-    const reportRows = await runGaReport({ accessToken, propertyId, days })
+    const reportRows = await runGaReport({ accessToken, propertyId: propertyId!, days })
 
     // Write metrics to Convex
     const convex = getConvexClient()

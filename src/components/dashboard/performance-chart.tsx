@@ -101,7 +101,8 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
     // Aggregate by date
     const map = new Map<string, { date: string; spend: number; revenue: number }>()
     metrics.forEach((m) => {
-      const key = m.date.split('T')[0] // Ensure YYYY-MM-DD
+      const parts = m.date.split('T')
+      const key = parts[0] ?? m.date
       if (!map.has(key)) {
         map.set(key, { date: key, spend: 0, revenue: 0 })
       }

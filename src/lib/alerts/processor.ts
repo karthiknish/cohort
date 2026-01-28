@@ -97,7 +97,7 @@ export async function processWorkspaceAlerts(options: {
             return { evaluated: rules.length, triggered: 0, results: [] }
         }
 
-        const current = metricsData[metricsData.length - 1]
+        const current = metricsData[metricsData.length - 1]!
         const history = metricsData.slice(0, -1)
 
         // 4. Evaluate everything

@@ -93,7 +93,7 @@ function unwrapApiData(payload: unknown): unknown {
 }
 
 function toIsoDateOnly(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0]!
 }
 
 function parseIsoDateOnly(value: string | null): Date | null {

@@ -17,19 +17,21 @@ function hasValidSessionCookie(): boolean {
   if (typeof document === 'undefined') return false
   const match = document.cookie.match(new RegExp(`(?:^|; )${SESSION_EXPIRES_COOKIE}=([^;]*)`))
   if (!match) return false
-  const expiresAt = Number.parseInt(decodeURIComponent(match[1]), 10)
+  const encodedValue = match[1]
+  if (!encodedValue) return false
+  const expiresAt = Number.parseInt(decodeURIComponent(encodedValue), 10)
   return Number.isFinite(expiresAt) && expiresAt > Date.now()
 }
 
 function hasRequiredRole(userRole: string, requiredRole?: string): boolean {
-  const roleHierarchy = {
+  const roleHierarchy: Record<string, number> = {
     client: 0,
     team: 1,
     admin: 2,
   }
-  
-  const userRoleLevel = userRole ? (roleHierarchy as Record<string, number>)[userRole] : 0
-  const requiredRoleLevel = requiredRole ? (roleHierarchy as Record<string, number>)[requiredRole] : 0
+
+  const userRoleLevel = userRole ? roleHierarchy[userRole] ?? 0 : 0
+  const requiredRoleLevel = requiredRole ? roleHierarchy[requiredRole] ?? 0 : 0
   return userRoleLevel >= requiredRoleLevel
 }
 

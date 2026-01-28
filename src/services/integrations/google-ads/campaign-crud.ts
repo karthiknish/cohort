@@ -360,7 +360,7 @@ export async function getGoogleCampaignBudgetId(options: {
 
     if (rows.length === 0) return null
 
-    const budget = rows[0].campaignBudget as { id?: string } | undefined
+    const budget = rows[0]!.campaignBudget as { id?: string } | undefined
     return budget?.id ?? null
 }
 

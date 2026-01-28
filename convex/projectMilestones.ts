@@ -1,25 +1,29 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
-
-function nowMs(): number {
-  return Date.now()
-}
+import { workspaceQuery, workspaceMutation, authenticatedMutation } from './functions'
 
 function toSortKey(ms: number | null): number {
   return typeof ms === 'number' && Number.isFinite(ms) ? ms : 0
 }
 
-export const listForProject = query({
-  args: { workspaceId: v.string(), projectId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+const milestoneValidator = v.object({
+  legacyId: v.string(),
+  projectId: v.string(),
+  title: v.string(),
+  description: v.union(v.string(), v.null()),
+  status: v.string(),
+  startDateMs: v.union(v.number(), v.null()),
+  endDateMs: v.union(v.number(), v.null()),
+  ownerId: v.union(v.string(), v.null()),
+  order: v.union(v.number(), v.null()),
+  createdAtMs: v.number(),
+  updatedAtMs: v.number(),
+})
 
+export const listForProject = workspaceQuery({
+  args: { projectId: v.string() },
+  returns: v.array(milestoneValidator),
+  handler: async (ctx, args) => {
     const rows = await ctx.db
       .query('projectMilestones')
       .withIndex('by_workspace_project_start_created_legacyId', (q) =>
@@ -44,12 +48,10 @@ export const listForProject = query({
   },
 })
 
-export const listByProjectIds = query({
-  args: { workspaceId: v.string(), projectIds: v.array(v.string()) },
+export const listByProjectIds = workspaceQuery({
+  args: { projectIds: v.array(v.string()) },
+  returns: v.record(v.string(), v.array(milestoneValidator)),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const result: Record<string, unknown[]> = {}
 
     for (const projectId of args.projectIds) {
@@ -76,13 +78,24 @@ export const listByProjectIds = query({
       }))
     }
 
-    return result
+    return result as Record<string, Array<{
+      legacyId: string
+      projectId: string
+      title: string
+      description: string | null
+      status: string
+      startDateMs: number | null
+      endDateMs: number | null
+      ownerId: string | null
+      order: number | null
+      createdAtMs: number
+      updatedAtMs: number
+    }>>
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     projectId: v.string(),
     legacyId: v.string(),
     title: v.string(),
@@ -95,11 +108,11 @@ export const create = mutation({
     createdAtMs: v.optional(v.number()),
     updatedAtMs: v.optional(v.number()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+    const timestamp = ctx.now
 
     await ctx.db.insert('projectMilestones', {
       workspaceId: args.workspaceId,
@@ -117,13 +130,12 @@ export const create = mutation({
       updatedAtMs: args.updatedAtMs ?? timestamp,
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const update = mutation({
+export const update = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     projectId: v.string(),
     legacyId: v.string(),
     title: v.optional(v.string()),
@@ -135,10 +147,10 @@ export const update = mutation({
     order: v.optional(v.union(v.number(), v.null())),
     updatedAtMs: v.optional(v.number()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const milestone = await ctx.db
       .query('projectMilestones')
       .withIndex('by_workspace_project_legacyId', (q) =>
@@ -151,7 +163,7 @@ export const update = mutation({
     }
 
     const patch: Record<string, unknown> = {
-      updatedAtMs: args.updatedAtMs ?? nowMs(),
+      updatedAtMs: args.updatedAtMs ?? ctx.now,
     }
 
     if (args.title !== undefined) patch.title = args.title
@@ -168,16 +180,16 @@ export const update = mutation({
     if (args.order !== undefined) patch.order = args.order
 
     await ctx.db.patch(milestone._id, patch)
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const remove = mutation({
-  args: { workspaceId: v.string(), projectId: v.string(), legacyId: v.string() },
+export const remove = workspaceMutation({
+  args: { projectId: v.string(), legacyId: v.string() },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const milestone = await ctx.db
       .query('projectMilestones')
       .withIndex('by_workspace_project_legacyId', (q) =>
@@ -190,11 +202,12 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(milestone._id)
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const bulkUpsert = mutation({
+// Use authenticatedMutation for bulk operations that may span multiple workspaces
+export const bulkUpsert = authenticatedMutation({
   args: {
     milestones: v.array(
       v.object({
@@ -213,13 +226,18 @@ export const bulkUpsert = mutation({
       })
     ),
   },
+  returns: v.object({
+    upserted: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     let upserted = 0
 
     for (const milestone of args.milestones) {
+      // Verify workspace access for each milestone
+      if (ctx.user.role !== 'admin' && ctx.agencyId !== milestone.workspaceId) {
+        throw Errors.auth.workspaceAccessDenied()
+      }
+
       const existing = await ctx.db
         .query('projectMilestones')
         .withIndex('by_workspace_project_legacyId', (q) =>

@@ -277,7 +277,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         const totalAdSpend = comparisonSummaries.reduce((sum, summary) => sum + summary.totalAdSpend, 0)
         const totalOutstanding = comparisonSummaries.reduce((sum, summary) => sum + summary.outstanding, 0)
         const currencySet = new Set(comparisonSummaries.map((summary) => summary.currency))
-        const singleCurrency = currencySet.size === 1 ? comparisonSummaries[0].currency : null
+        const singleCurrency = currencySet.size === 1 ? comparisonSummaries[0]!.currency : null
         const avgRoas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : null
 
         return {

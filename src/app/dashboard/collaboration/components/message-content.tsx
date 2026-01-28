@@ -30,7 +30,7 @@ const BASE_LINK_REL = "noreferrer noopener"
 function extractLanguage(className?: string): string | null {
   if (!className) return null
   const match = className.match(/language-(\w+)/)
-  return match ? match[1] : null
+  return match ? match[1] ?? null : null
 }
 
 // Common language aliases

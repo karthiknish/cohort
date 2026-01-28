@@ -37,9 +37,9 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
   const [mapReady, setMapReady] = useState(false)
   const initialViewRef = useRef<{ center: L.LatLngTuple; zoom: number }>(
     locations.length === 1
-      ? { center: [locations[0].lat, locations[0].lng], zoom: getZoomForLocation(locations[0]) }
+      ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: getZoomForLocation(locations[0]!) }
       : locations.length > 1
-        ? { center: [locations[0].lat, locations[0].lng], zoom: 4 }
+        ? { center: [locations[0]!.lat, locations[0]!.lng], zoom: 4 }
         : { center: [20, 0], zoom: 2 }
   )
 
@@ -121,8 +121,8 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
        map.invalidateSize()
 
        if (validLocations.length === 1) {
-         const zoomLevel = getZoomForLocation(validLocations[0])
-         map.setView([validLocations[0].lat, validLocations[0].lng], zoomLevel, { animate: false })
+         const zoomLevel = getZoomForLocation(validLocations[0]!)
+         map.setView([validLocations[0]!.lat, validLocations[0]!.lng], zoomLevel, { animate: false })
          return
        }
 

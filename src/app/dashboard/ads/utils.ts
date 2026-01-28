@@ -2,6 +2,10 @@ import { formatDistanceToNow } from 'date-fns'
 
 import { DISPLAY_DATE_FORMATTER, FREQUENCY_OPTIONS, TIMEFRAME_OPTIONS } from './constants'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { formatProviderName } from '@/lib/themes'
+
+// Re-export formatProviderName from centralized theme
+export { formatProviderName } from '@/lib/themes'
 
 export function getErrorMessage(error: unknown, fallback: string, context?: string): string {
   if (context) {
@@ -51,26 +55,6 @@ export function getStatusLabel(status: string): string {
         default:
             return status.charAt(0).toUpperCase() + status.slice(1)
     }
-}
-
-export function formatProviderName(providerId: string): string {
-    const mapping: Record<string, string> = {
-        google: 'Google Ads',
-        facebook: 'Meta Ads Manager',
-        meta: 'Meta Ads Manager',
-        linkedin: 'LinkedIn Ads',
-        tiktok: 'TikTok Ads',
-    }
-
-    if (mapping[providerId]) {
-        return mapping[providerId]
-    }
-
-    if (providerId.length === 0) {
-        return 'Unknown Provider'
-    }
-
-    return providerId.charAt(0).toUpperCase() + providerId.slice(1)
 }
 
 export function describeFrequency(minutes: number): string {

@@ -293,8 +293,8 @@ export default defineSchema({
     action: v.union(v.string(), v.null()),
     route: v.union(v.string(), v.null()),
     operation: v.union(v.string(), v.null()),
-    params: v.union(v.any(), v.null()),
-    executeResult: v.union(v.any(), v.null()),
+    params: v.union(v.record(v.string(), v.any()), v.null()),
+    executeResult: v.union(v.record(v.string(), v.any()), v.null()),
   })
     .index('by_workspace_conversation_createdAt', ['workspaceId', 'conversationLegacyId', 'createdAt'])
     .index('by_workspace_conversation_legacyId', ['workspaceId', 'conversationLegacyId', 'legacyId']),
@@ -351,7 +351,7 @@ export default defineSchema({
     readBy: v.array(v.string()),
     acknowledgedBy: v.array(v.string()),
 
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null()))),
 
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
@@ -798,8 +798,8 @@ export default defineSchema({
     ownerId: v.union(v.string(), v.null()),
     status: v.string(),
     stepProgress: v.number(),
-    formData: v.any(),
-    aiInsights: v.union(v.any(), v.null()),
+    formData: v.record(v.string(), v.any()),
+    aiInsights: v.union(v.record(v.string(), v.any()), v.null()),
     aiSuggestions: v.union(v.string(), v.null()),
     pdfUrl: v.union(v.string(), v.null()),
     pptUrl: v.union(v.string(), v.null()),
@@ -807,7 +807,7 @@ export default defineSchema({
     pptStorageId: v.optional(v.union(v.string(), v.null())),
     clientId: v.union(v.string(), v.null()),
     clientName: v.union(v.string(), v.null()),
-    presentationDeck: v.union(v.any(), v.null()),
+    presentationDeck: v.union(v.record(v.string(), v.any()), v.null()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
     lastAutosaveAtMs: v.number(),
@@ -823,7 +823,7 @@ export default defineSchema({
     proposalLegacyId: v.string(),
     legacyId: v.string(),
     versionNumber: v.number(),
-    formData: v.any(),
+    formData: v.record(v.string(), v.any()),
     status: v.string(),
     stepProgress: v.number(),
     changeDescription: v.union(v.string(), v.null()),
@@ -841,7 +841,7 @@ export default defineSchema({
     legacyId: v.string(),
     name: v.string(),
     description: v.union(v.string(), v.null()),
-    formData: v.any(),
+    formData: v.record(v.string(), v.any()),
     industry: v.union(v.string(), v.null()),
     tags: v.array(v.string()),
     isDefault: v.boolean(),
@@ -862,7 +862,7 @@ export default defineSchema({
     userId: v.string(),
     clientId: v.union(v.string(), v.null()),
     clientName: v.union(v.string(), v.null()),
-    metadata: v.any(),
+    metadata: v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null())),
     duration: v.union(v.number(), v.null()),
     error: v.union(v.string(), v.null()),
     createdAtMs: v.number(),
@@ -878,7 +878,14 @@ export default defineSchema({
     requestId: v.union(v.string(), v.null()),
     method: v.union(v.string(), v.null()),
     path: v.union(v.string(), v.null()),
-    response: v.any(),
+    response: v.union(
+      v.null(),
+      v.boolean(),
+      v.number(),
+      v.string(),
+      v.array(v.any()),
+      v.record(v.string(), v.any())
+    ),
     httpStatus: v.union(v.number(), v.null()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
@@ -901,7 +908,20 @@ export default defineSchema({
     description: v.union(v.string(), v.null()),
     type: v.string(), // 'threshold' | 'anomaly' | 'trend' | 'algorithmic'
     metric: v.string(), // 'spend' | 'cpc' | 'ctr' | 'roas' | 'conversions' | 'cpa' | 'revenue' | 'impressions' | 'clicks' | 'custom_formula'
-    condition: v.any(), // ThresholdCondition | AnomalyCondition | TrendCondition
+    condition: v.object({
+      operator: v.union(
+        v.literal('gt'),
+        v.literal('lt'),
+        v.literal('gte'),
+        v.literal('lte'),
+        v.literal('eq'),
+        v.literal('ne')
+      ),
+      threshold: v.union(v.number(), v.string()),
+      windowSize: v.optional(v.union(v.number(), v.null())),
+      direction: v.optional(v.union(v.literal('up'), v.literal('down'), v.null())),
+      percentage: v.optional(v.union(v.number(), v.null())),
+    }),
     severity: v.string(), // 'info' | 'warning' | 'critical'
     enabled: v.boolean(),
 
@@ -938,7 +958,7 @@ export default defineSchema({
     actorEmail: v.union(v.string(), v.null()),
     targetId: v.union(v.string(), v.null()),
     workspaceId: v.union(v.string(), v.null()),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null()))),
     ip: v.union(v.string(), v.null()),
     userAgent: v.union(v.string(), v.null()),
     requestId: v.union(v.string(), v.null()),

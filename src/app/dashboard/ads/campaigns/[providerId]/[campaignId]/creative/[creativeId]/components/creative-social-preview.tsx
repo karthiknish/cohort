@@ -351,7 +351,7 @@ export function CreativeSocialPreview(props: {
       : ['facebook', 'instagram'] // Meta ads show Facebook & Instagram
 
   // Default to the first available platform
-  const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0])
+  const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0]!)
 
   return (
     <div className="lg:col-span-5 self-start space-y-6">

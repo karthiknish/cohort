@@ -1,23 +1,46 @@
-import { query } from './_generated/server'
+import { adminQuery } from './functions'
 import { v } from 'convex/values'
-import { Errors } from './errors'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+const dailyActiveUserValidator = v.object({
+  date: v.string(),
+  count: v.number(),
+})
+
+const featureUsageValidator = v.object({
+  feature: v.string(),
+  count: v.number(),
+  trend: v.number(),
+})
 
 function startOfDay(ts: Date) {
   return new Date(ts.getFullYear(), ts.getMonth(), ts.getDate())
 }
 
-export const getStats = query({
+export const getStats = adminQuery({
   args: {},
+  returns: v.object({
+    totalUsers: v.number(),
+    activeUsersToday: v.number(),
+    activeUsersWeek: v.number(),
+    activeUsersMonth: v.number(),
+    newUsersToday: v.number(),
+    newUsersWeek: v.number(),
+    totalProjects: v.number(),
+    projectsThisWeek: v.number(),
+    totalTasks: v.number(),
+    tasksCompletedThisWeek: v.number(),
+    totalInvoices: v.number(),
+    invoicesThisWeek: v.number(),
+    totalExpenses: v.number(),
+    expensesThisWeek: v.number(),
+    totalClients: v.number(),
+    activeClientsWeek: v.number(),
+    agentConversations: v.number(),
+    agentActionsThisWeek: v.number(),
+    dailyActiveUsers: v.array(dailyActiveUserValidator),
+    featureUsage: v.array(featureUsageValidator),
+  }),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const now = new Date()
     const todayStart = startOfDay(now)
     const weekAgo = new Date(todayStart)
@@ -77,7 +100,7 @@ export const getStats = query({
         return last >= dayStartMs && last < dayEndMs
       }).length
 
-      dailyActiveUsers.push({ date: dayStart.toISOString().split('T')[0], count })
+      dailyActiveUsers.push({ date: dayStart.toISOString().split('T')[0]!, count })
     }
 
     const featureUsage = [

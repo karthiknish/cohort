@@ -37,7 +37,7 @@ export async function listMetaCampaigns(options: {
   } = options
 
   const params = new URLSearchParams({
-    fields: ['id', 'name', 'status', 'objective', 'daily_budget', 'lifetime_budget', 'start_time', 'stop_time'].join(','),
+    fields: ['id', 'name', 'status', 'effective_status', 'objective', 'daily_budget', 'lifetime_budget', 'start_time', 'stop_time', 'bid_strategy'].join(','),
     limit: '100',
   })
 
@@ -64,11 +64,13 @@ export async function listMetaCampaigns(options: {
       id?: string
       name?: string
       status?: string
+      effective_status?: string
       objective?: string
       daily_budget?: string
       lifetime_budget?: string
       start_time?: string
       stop_time?: string
+      bid_strategy?: string
     }>
   }>({
     url,
@@ -81,12 +83,13 @@ export async function listMetaCampaigns(options: {
   return campaigns.map((c) => ({
     id: c.id ?? '',
     name: c.name ?? '',
-    status: (c.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+    status: (c.effective_status ?? c.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
     objective: c.objective,
     dailyBudget: c.daily_budget ? parseInt(c.daily_budget, 10) / 100 : undefined,
     lifetimeBudget: c.lifetime_budget ? parseInt(c.lifetime_budget, 10) / 100 : undefined,
     startTime: c.start_time,
     stopTime: c.stop_time,
+    bidStrategy: c.bid_strategy,
   }))
 }
 
@@ -348,7 +351,7 @@ export async function fetchMetaCreatives(options: {
       'effective_status',
       'adset_id',
       'campaign_id',
-      'adcreatives{id,name,thumbnail_url,image_url,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action,name,caption,description},video_data{video_id,message,title,call_to_action}}}',
+      'adcreatives{id,name,thumbnail_url,image_url,url_tags,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action,name,caption,description},video_data{video_id,message,title,call_to_action}}}',
     ].join(','),
     limit: '100',
   })
@@ -443,6 +446,15 @@ export async function fetchMetaCreatives(options: {
     const accountId = storySpec?.instagram_actor_id || storySpec?.page_id
     const account = accountId ? accountDetails[accountId] : undefined
 
+    // Prefer high-quality image_url over thumbnail_url
+    // image_url is the full-quality image hosted by Meta
+    // thumbnail_url is a smaller preview image
+    const creativeImageUrl = creative?.image_url
+    const creativeThumbnailUrl = creative?.thumbnail_url
+
+    // Use the best available image source
+    const imageUrl = creativeImageUrl || creativeThumbnailUrl
+
     return {
       adId: ad.id ?? '',
       adSetId: ad.adset_id ?? '',
@@ -451,8 +463,8 @@ export async function fetchMetaCreatives(options: {
       status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
       creativeId: creative?.id,
       creativeName: creative?.name,
-      thumbnailUrl: creative?.thumbnail_url,
-      imageUrl: creative?.image_url ?? storySpec?.link_data?.picture,
+      thumbnailUrl: creativeThumbnailUrl || imageUrl,
+      imageUrl,
       callToAction: storySpec?.link_data?.call_to_action?.type ?? storySpec?.video_data?.call_to_action?.type,
       landingPageUrl: storySpec?.link_data?.link ?? storySpec?.video_data?.call_to_action?.value?.link,
       videoId: storySpec?.video_data?.video_id,
@@ -521,9 +533,12 @@ export async function fetchMetaCreatives(options: {
         }
       }
 
+      // Use thumbnails if picture is not available (thumbnails are higher quality)
+      const finalPicture = picture || (thumbnails?.[0]?.uri)
+
       return [videoId, {
         source: videoPayload?.source,
-        picture,
+        picture: finalPicture,
       }] as const
     })
   )

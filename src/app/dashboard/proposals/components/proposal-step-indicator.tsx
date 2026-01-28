@@ -33,7 +33,7 @@ function ProposalStepIndicatorComponent({
           <span className="text-primary font-bold">Step {currentStep + 1}</span>
           <span className="text-muted-foreground">of {steps.length}</span>
           <span className="mx-1 text-muted-foreground/30">•</span>
-          <span className="text-foreground">{steps[currentStep].title}</span>
+          <span className="text-foreground">{steps[currentStep]!.title}</span>
         </div>
         <span className="text-primary/70">{Math.round(submitted ? 100 : progress)}%</span>
       </div>

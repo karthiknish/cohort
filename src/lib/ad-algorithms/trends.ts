@@ -20,10 +20,10 @@ function linearRegression(points: number[]): { slope: number; intercept: number;
 
   for (let i = 0; i < n; i++) {
     sumX += i
-    sumY += points[i]
-    sumXY += i * points[i]
+    sumY += points[i]!
+    sumXY += i * points[i]!
     sumX2 += i * i
-    sumY2 += points[i] * points[i]
+    sumY2 += points[i]! * points[i]!
   }
 
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
@@ -34,8 +34,8 @@ function linearRegression(points: number[]): { slope: number; intercept: number;
   let ssRes = 0, ssTot = 0
   for (let i = 0; i < n; i++) {
     const predicted = intercept + slope * i
-    ssRes += (points[i] - predicted) ** 2
-    ssTot += (points[i] - yMean) ** 2
+    ssRes += (points[i]! - predicted) ** 2
+    ssTot += (points[i]! - yMean) ** 2
   }
   const r2 = ssTot > 0 ? 1 - (ssRes / ssTot) : 0
 
@@ -48,9 +48,9 @@ function linearRegression(points: number[]): { slope: number; intercept: number;
 function exponentialMovingAverage(points: number[], alpha: number = 0.3): number[] {
   if (points.length === 0) return []
 
-  const ema: number[] = [points[0]]
+  const ema: number[] = [points[0]!]
   for (let i = 1; i < points.length; i++) {
-    ema.push(alpha * points[i] + (1 - alpha) * ema[i - 1])
+    ema.push(alpha * points[i]! + (1 - alpha) * ema[i - 1]!)
   }
   return ema
 }
@@ -238,7 +238,7 @@ export function analyzeAllTrends(dataPoints: MetricDataPoint[]): Record<string, 
       ...analyzeTrend(dataPoints, 'revenue'),
       metric: 'roas',
       forecast7Day: roasPoints.length > 0
-        ? roasPoints[roasPoints.length - 1].value
+        ? roasPoints[roasPoints.length - 1]!.value
         : 0,
     }
   }

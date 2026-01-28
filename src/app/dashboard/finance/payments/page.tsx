@@ -89,8 +89,8 @@ export default function FinancePaymentsPage() {
     if (paymentSummary.nextDueAt) {
       return new Date(paymentSummary.nextDueAt).toLocaleDateString()
     }
-    if (upcomingPayments.length > 0 && upcomingPayments[0].dueDate) {
-      return new Date(upcomingPayments[0].dueDate).toLocaleDateString()
+    if (upcomingPayments.length > 0 && upcomingPayments[0]!.dueDate) {
+      return new Date(upcomingPayments[0]!.dueDate).toLocaleDateString()
     }
     return 'No upcoming due dates'
   }, [paymentSummary.nextDueAt, upcomingPayments])

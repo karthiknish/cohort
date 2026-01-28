@@ -589,3 +589,171 @@ export const zAdminAction = zCustomAction(action, {
     }
   },
 })
+
+/**
+ * Rate limiting presets available for use with rate-limited wrappers.
+ */
+export const RateLimitPresets = {
+  standard: 'standard' as const,
+  sensitive: 'sensitive' as const,
+  critical: 'critical' as const,
+  bulk: 'bulk' as const,
+} as const
+
+export type RateLimitPreset = keyof typeof RateLimitPresets
+
+/**
+ * Helper to check rate limits using the configured rate limiter.
+ * Returns true if allowed, throws rate limit error if exceeded.
+ */
+async function checkRateLimit(
+  ctx: MutationCtx,
+  key: string,
+  preset: RateLimitPreset = 'standard'
+): Promise<void> {
+  const { rateLimiter } = await import('./rateLimit')
+  const status = await rateLimiter.limit(ctx, preset, { key })
+
+  if (!status.ok) {
+    throw Errors.rateLimit.tooManyRequests(`Rate limit exceeded. Retry after ${status.retryAfter ?? 60} seconds.`)
+  }
+}
+
+/**
+ * Rate-limited mutation wrappers.
+ * These add rate limiting on top of the standard auth wrappers.
+ * Rate limiting is done per-user (keyed by user legacyId).
+ *
+ * Usage:
+ * ```ts
+ * export const mySensitiveMutation = rateLimitedAuthenticatedMutation({
+ *   args: { ... },
+ *   rateLimit: 'sensitive', // or 'critical', 'standard', 'bulk'
+ *   handler: async (ctx, args) => { ... }
+ * })
+ * ```
+ */
+
+type RateLimitedConfig = {
+  rateLimit?: RateLimitPreset
+}
+
+export const rateLimitedAuthenticatedMutation = customMutation(mutation, {
+  args: { idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args, config: RateLimitedConfig) => {
+    const auth = await getAuthenticatedContext(ctx)
+
+    // Check rate limit if configured
+    if (config.rateLimit) {
+      await checkRateLimit(ctx, auth.legacyId, config.rateLimit)
+    }
+
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
+      args,
+      returnValue: async (result: any) => {
+        if (commitIdempotency) await commitIdempotency(result)
+        return { ok: true, data: result }
+      },
+    }
+  },
+})
+
+export const rateLimitedWorkspaceMutation = customMutation(mutation, {
+  args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args, config: RateLimitedConfig) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
+    // Check rate limit if configured
+    if (config.rateLimit) {
+      await checkRateLimit(ctx, `${auth.legacyId}:${args.workspaceId}`, config.rateLimit)
+    }
+
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
+      args,
+      returnValue: async (result: any) => {
+        if (commitIdempotency) await commitIdempotency(result)
+        return { ok: true, data: result }
+      },
+    }
+  },
+})
+
+export const rateLimitedAdminMutation = customMutation(mutation, {
+  args: { idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args, config: RateLimitedConfig) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin') {
+      throw Errors.auth.adminRequired()
+    }
+
+    // Check rate limit if configured
+    if (config.rateLimit) {
+      await checkRateLimit(ctx, auth.legacyId, config.rateLimit)
+    }
+
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
+      args,
+      returnValue: async (result: any) => {
+        if (commitIdempotency) await commitIdempotency(result)
+        return { ok: true, data: result }
+      },
+    }
+  },
+})
+
+/**
+ * Zod-based rate-limited mutation wrappers.
+ */
+export const zRateLimitedAuthenticatedMutation = zCustomMutation(mutation, {
+  args: { idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args, config: RateLimitedConfig) => {
+    const auth = await getAuthenticatedContext(ctx)
+
+    if (config.rateLimit) {
+      await checkRateLimit(ctx, auth.legacyId, config.rateLimit)
+    }
+
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
+      args,
+      returnValue: async (result: any) => {
+        if (commitIdempotency) await commitIdempotency(result)
+        return { ok: true, data: result }
+      },
+    }
+  },
+})
+
+export const zRateLimitedWorkspaceMutation = zCustomMutation(mutation, {
+  args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args, config: RateLimitedConfig) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin' && auth.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
+    if (config.rateLimit) {
+      await checkRateLimit(ctx, `${auth.legacyId}:${args.workspaceId}`, config.rateLimit)
+    }
+
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
+      args,
+      returnValue: async (result: any) => {
+        if (commitIdempotency) await commitIdempotency(result)
+        return { ok: true, data: result }
+      },
+    }
+  },
+})

@@ -183,9 +183,9 @@ export function DataTable<TData, TValue>({
     overscan,
   })
   const virtualItems = shouldVirtualize ? virtualizer.getVirtualItems() : []
-  const paddingTop = shouldVirtualize && virtualItems.length > 0 ? virtualItems[0].start : 0
+  const paddingTop = shouldVirtualize && virtualItems.length > 0 ? virtualItems[0]!.start : 0
   const paddingBottom = shouldVirtualize && virtualItems.length > 0
-    ? virtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0)
+    ? virtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]!.end ?? 0)
     : 0
 
   React.useEffect(() => {
@@ -241,7 +241,7 @@ export function DataTable<TData, TValue>({
                     </TableRow>
                   )}
                   {virtualItems.map((virtualRow) => {
-                    const row = rows[virtualRow.index]
+                    const row = rows[virtualRow.index]!
                     return (
                       <TableRow
                         key={row.id}

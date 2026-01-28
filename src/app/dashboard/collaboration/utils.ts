@@ -61,9 +61,9 @@ export function getInitials(name: string): string {
   if (!trimmed) return 'TM'
   const parts = trimmed.split(' ').filter(Boolean)
   if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase()
+    return parts[0]!.slice(0, 2).toUpperCase() // Safe: we verified parts.length === 1
   }
-  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
+  return `${parts[0]![0] ?? ''}${parts[parts.length - 1]![0] ?? ''}`.toUpperCase() // Safe: parts.length >= 2 here
 }
 
 export function formatRelativeTime(value: string | null): string {
@@ -170,7 +170,7 @@ export function groupMessages(messages: CollaborationMessage[]): MessageGroup[] 
     const shouldStartNewGroup =
       !currentGroup ||
       dateSeparator ||
-      message.senderId !== currentGroup.messages[0].senderId ||
+      message.senderId !== currentGroup.messages[0]!.senderId || // Safe: currentGroup.messages always has at least one element
       (prevDate && messageDate.getTime() - prevDate.getTime() > 5 * 60 * 1000) // 5 minutes
 
     if (shouldStartNewGroup) {

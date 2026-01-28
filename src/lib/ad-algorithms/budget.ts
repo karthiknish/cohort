@@ -164,8 +164,8 @@ export function generateBudgetInsights(
 
   // Sort by ROAS
   const sortedByRoas = [...enriched].sort((a, b) => b.averageRoaS - a.averageRoaS)
-  const best = sortedByRoas[0]
-  const worst = sortedByRoas[sortedByRoas.length - 1]
+  const best = sortedByRoas[0]!
+  const worst = sortedByRoas[sortedByRoas.length - 1]!
 
   // Cross-platform reallocation insight
   if (best.averageRoaS > worst.averageRoaS * 1.5 && worst.totalSpend > 100) {
@@ -192,7 +192,7 @@ export function generateBudgetInsights(
   // Efficiency-based scaling insight
   const highEfficiency = enriched.filter(s => s.efficiencyScore > 70)
   if (highEfficiency.length > 0) {
-    const topPerformer = highEfficiency[0]
+    const topPerformer = highEfficiency[0]!
     insights.push({
       id: 'budget-scale-1',
       type: 'budget',

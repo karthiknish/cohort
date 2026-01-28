@@ -607,7 +607,7 @@ export function FinanceInvoiceTable({
             }}
           >
             {virtualItems.map((virtualItem) => {
-              const invoice = filteredInvoices[virtualItem.index]
+              const invoice = filteredInvoices[virtualItem.index]!
               return (
                 <div
                   key={virtualItem.key}

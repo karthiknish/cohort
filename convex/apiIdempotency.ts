@@ -68,11 +68,19 @@ export const checkAndClaim = mutation({
 
 /**
  * Mark an idempotency record as completed with the response.
+ * Response can be any JSON-serializable value (for caching API responses).
  */
 export const complete = mutation({
   args: {
     key: v.string(),
-    response: v.any(),
+    response: v.union(
+      v.null(),
+      v.boolean(),
+      v.number(),
+      v.string(),
+      v.array(v.any()), // Arrays of any JSON-serializable values
+      v.record(v.string(), v.any()) // Objects with string keys
+    ),
     httpStatus: v.number(),
   },
   handler: async (ctx, args) => {

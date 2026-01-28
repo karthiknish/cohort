@@ -65,8 +65,8 @@ function getDateRange(range: TimeRange): { startDate: string; endDate: string } 
   }
 
   return {
-    startDate: startDate.toISOString().split('T')[0],
-    endDate: endDate.toISOString().split('T')[0],
+    startDate: startDate.toISOString().split('T')[0]!,
+    endDate: endDate.toISOString().split('T')[0]!,
   }
 }
 

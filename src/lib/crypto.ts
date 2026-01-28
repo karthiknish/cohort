@@ -46,7 +46,7 @@ export function generateCodeVerifier(length = 64): string {
   const bytes = randomBytes(length)
   let result = ''
   for (let i = 0; i < length; i++) {
-    result += charset[bytes[i] % charset.length]
+    result += charset[bytes[i]! % charset.length]!
   }
   return result
 }

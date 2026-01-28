@@ -228,11 +228,11 @@ export default function DashboardPage() {
       if (!summaries[m.providerId]) {
         summaries[m.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
       }
-      summaries[m.providerId].spend += m.spend
-      summaries[m.providerId].impressions += m.impressions
-      summaries[m.providerId].clicks += m.clicks
-      summaries[m.providerId].conversions += m.conversions
-      summaries[m.providerId].revenue += m.revenue ?? 0
+      summaries[m.providerId]!.spend += m.spend
+      summaries[m.providerId]!.impressions += m.impressions
+      summaries[m.providerId]!.clicks += m.clicks
+      summaries[m.providerId]!.conversions += m.conversions
+      summaries[m.providerId]!.revenue += m.revenue ?? 0
     })
     return Object.keys(summaries).length > 0 ? summaries : undefined
   }, [metrics])

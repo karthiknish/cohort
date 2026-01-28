@@ -1,26 +1,29 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import { workspaceQuery, workspaceMutation } from './functions'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
+const typingIndicatorValidator = v.object({
+  _id: v.id('collaborationTyping'),
+  workspaceId: v.string(),
+  channelId: v.string(),
+  channelType: v.string(),
+  clientId: v.union(v.string(), v.null()),
+  projectId: v.union(v.string(), v.null()),
+  userId: v.string(),
+  name: v.string(),
+  role: v.union(v.string(), v.null()),
+  updatedAtMs: v.number(),
+  expiresAtMs: v.number(),
+})
 
-function nowMs() {
-  return Date.now()
-}
-
-export const listForChannel = query({
+export const listForChannel = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     channelId: v.string(),
     limit: v.number(),
   },
+  returns: v.array(typingIndicatorValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+    const timestamp = Date.now()
 
     const rows = await ctx.db
       .query('collaborationTyping')
@@ -34,9 +37,8 @@ export const listForChannel = query({
   },
 })
 
-export const setTyping = mutation({
+export const setTyping = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     channelId: v.string(),
     channelType: v.string(),
     clientId: v.union(v.string(), v.null()),
@@ -47,11 +49,11 @@ export const setTyping = mutation({
     isTyping: v.boolean(),
     ttlMs: v.number(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+    const timestamp = ctx.now
 
     const existing = await ctx.db
       .query('collaborationTyping')
@@ -67,7 +69,7 @@ export const setTyping = mutation({
       if (existing) {
         await ctx.db.delete(existing._id)
       }
-      return { ok: true }
+      return { ok: true } as const
     }
 
     const clampedTtl = Math.max(1_000, Math.min(args.ttlMs, 60_000))
@@ -87,10 +89,10 @@ export const setTyping = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload)
-      return { ok: true }
+      return { ok: true } as const
     }
 
     await ctx.db.insert('collaborationTyping', payload)
-    return { ok: true }
+    return { ok: true } as const
   },
 })

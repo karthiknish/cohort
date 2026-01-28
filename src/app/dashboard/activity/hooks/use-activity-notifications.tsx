@@ -134,13 +134,13 @@ export function useActivityNotifications(activities: Activity[]) {
       notificationTimeoutRef.current = setTimeout(() => {
         if (newActivities.length === 1) {
           // Single activity notification
-          showNotificationToast(newActivities[0])
-          
+          showNotificationToast(newActivities[0]!)
+
           // Broadcast to other tabs
           if (broadcastChannelRef.current) {
             broadcastChannelRef.current.postMessage({
               type: 'NEW_ACTIVITY',
-              activity: newActivities[0],
+              activity: newActivities[0]!,
             })
           }
         } else {

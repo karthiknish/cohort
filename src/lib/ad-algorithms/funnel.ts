@@ -34,7 +34,7 @@ export function analyzeFunnel(summary: AdMetricsSummary): FunnelAnalysis {
   ]
 
   const stages: FunnelStage[] = stageValues.map((stage, index) => {
-    const previousValue = index === 0 ? stage.value : stageValues[index - 1].value
+    const previousValue = index === 0 ? stage.value : stageValues[index - 1]!.value
     const dropOffRate = previousValue > 0 ? 1 - (stage.value / previousValue) : 0
     const costPerStage = stage.value > 0 ? totalSpend / stage.value : 0
 
@@ -53,10 +53,10 @@ export function analyzeFunnel(summary: AdMetricsSummary): FunnelAnalysis {
   let maxDropOff = 0
 
   for (let i = 1; i < stages.length; i++) {
-    if (stages[i].dropOffRate > maxDropOff) {
-      maxDropOff = stages[i].dropOffRate
-      bottleneckStage = stages[i].name
-      biggestDropOff = { stage: stages[i].name, rate: stages[i].dropOffRate }
+    if (stages[i]!.dropOffRate > maxDropOff) {
+      maxDropOff = stages[i]!.dropOffRate
+      bottleneckStage = stages[i]!.name
+      biggestDropOff = { stage: stages[i]!.name, rate: stages[i]!.dropOffRate }
     }
   }
 
@@ -190,7 +190,7 @@ export function calculateFunnelEfficiency(analysis: FunnelAnalysis): number {
   let stageCount = 0
 
   for (let i = 1; i < stages.length; i++) {
-    const retention = 100 - stages[i].dropOffRate
+    const retention = 100 - stages[i]!.dropOffRate
     totalRetention += retention
     stageCount++
   }

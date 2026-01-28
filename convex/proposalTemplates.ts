@@ -1,14 +1,6 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
-
-function nowMs() {
-  return Date.now()
-}
+import { workspaceQuery, workspaceMutation } from './functions'
 
 function generateId(prefix: string) {
   const rand = Math.random().toString(36).slice(2, 10)
@@ -27,12 +19,23 @@ async function unsetOtherDefaults(ctx: any, workspaceId: string, excludeLegacyId
   }
 }
 
-export const list = query({
-  args: { workspaceId: v.string(), limit: v.number() },
+export const list = workspaceQuery({
+  args: { limit: v.number() },
+  returns: v.array(
+    v.object({
+      legacyId: v.string(),
+      name: v.string(),
+      description: v.union(v.string(), v.null()),
+      formData: v.record(v.string(), v.any()),
+      industry: v.union(v.string(), v.null()),
+      tags: v.array(v.string()),
+      isDefault: v.boolean(),
+      createdBy: v.union(v.string(), v.null()),
+      createdAtMs: v.number(),
+      updatedAtMs: v.number(),
+    })
+  ),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const rows = await ctx.db
       .query('proposalTemplates')
       .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
@@ -54,12 +57,12 @@ export const list = query({
   },
 })
 
-export const count = query({
-  args: { workspaceId: v.string() },
+export const count = workspaceQuery({
+  args: {},
+  returns: v.object({
+    count: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const rows = await ctx.db
       .query('proposalTemplates')
       .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
@@ -69,12 +72,24 @@ export const count = query({
   },
 })
 
-export const getByLegacyId = query({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const getByLegacyId = workspaceQuery({
+  args: { legacyId: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      legacyId: v.string(),
+      name: v.string(),
+      description: v.union(v.string(), v.null()),
+      formData: v.record(v.string(), v.any()),
+      industry: v.union(v.string(), v.null()),
+      tags: v.array(v.string()),
+      isDefault: v.boolean(),
+      createdBy: v.union(v.string(), v.null()),
+      createdAtMs: v.number(),
+      updatedAtMs: v.number(),
+    })
+  ),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('proposalTemplates')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -96,22 +111,21 @@ export const getByLegacyId = query({
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     name: v.string(),
     description: v.union(v.string(), v.null()),
-    formData: v.any(),
+    formData: v.record(v.string(), v.any()),
     industry: v.union(v.string(), v.null()),
     tags: v.array(v.string()),
     isDefault: v.boolean(),
     createdBy: v.union(v.string(), v.null()),
   },
+  returns: v.object({
+    legacyId: v.string(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+    const timestamp = ctx.now
     let legacyId = generateId('proposal-template')
     let attempt = 0
     while (attempt < 5) {
@@ -146,22 +160,21 @@ export const create = mutation({
   },
 })
 
-export const update = mutation({
+export const update = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
     name: v.optional(v.string()),
     description: v.optional(v.union(v.string(), v.null())),
-    formData: v.optional(v.any()),
+    formData: v.optional(v.record(v.string(), v.any())),
     industry: v.optional(v.union(v.string(), v.null())),
     tags: v.optional(v.array(v.string())),
     isDefault: v.optional(v.boolean()),
     updatedAtMs: v.number(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('proposalTemplates')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -184,31 +197,31 @@ export const update = mutation({
     if (args.isDefault !== undefined) patch.isDefault = args.isDefault
 
     await ctx.db.patch(existing._id, patch)
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const remove = mutation({
-  args: { workspaceId: v.string(), legacyId: v.string() },
+export const remove = workspaceMutation({
+  args: { legacyId: v.string() },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('proposalTemplates')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!existing) {
-      return { ok: true }
+      return { ok: true } as const
     }
 
     await ctx.db.delete(existing._id)
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = workspaceMutation({
   args: {
     templates: v.array(
       v.object({
@@ -216,7 +229,7 @@ export const bulkUpsert = mutation({
         legacyId: v.string(),
         name: v.string(),
         description: v.union(v.string(), v.null()),
-        formData: v.any(),
+        formData: v.record(v.string(), v.any()),
         industry: v.union(v.string(), v.null()),
         tags: v.array(v.string()),
         isDefault: v.boolean(),
@@ -226,10 +239,10 @@ export const bulkUpsert = mutation({
       }),
     ),
   },
+  returns: v.object({
+    upserted: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     let upserted = 0
 
     // First, if any incoming template isDefault=true, ensure uniqueness.

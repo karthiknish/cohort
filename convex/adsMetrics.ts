@@ -1,26 +1,95 @@
 import { query } from './_generated/server'
+import { workspaceQuery } from './functions'
 import { v } from 'convex/values'
-import { Errors } from './errors'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+const creativeValidator = v.object({
+  spend: v.optional(v.number()),
+  impressions: v.optional(v.number()),
+  clicks: v.optional(v.number()),
+  conversions: v.optional(v.number()),
+  revenue: v.optional(v.number()),
+  url: v.optional(v.union(v.string(), v.null())),
+  type: v.string(),
+  id: v.string(),
+  name: v.string(),
+})
 
-export const listMetrics = query({
+const metricValidator = v.object({
+  providerId: v.union(v.string(), v.null()),
+  clientId: v.union(v.string(), v.null()),
+  accountId: v.union(v.string(), v.null()),
+  date: v.string(),
+  spend: v.number(),
+  impressions: v.number(),
+  clicks: v.number(),
+  conversions: v.number(),
+  revenue: v.union(v.number(), v.null()),
+  campaignId: v.union(v.string(), v.null()),
+  campaignName: v.union(v.string(), v.null()),
+  creatives: v.union(v.array(creativeValidator), v.null()),
+  createdAtMs: v.union(v.number(), v.null()),
+})
+
+const derivedMetricValidator = v.object({
+  date: v.string(),
+  spend: v.number(),
+  impressions: v.number(),
+  clicks: v.number(),
+  conversions: v.number(),
+  revenue: v.number(),
+  cpc: v.number(),
+  ctr: v.number(),
+  roas: v.number(),
+  cpa: v.number(),
+})
+
+const enrichedMetricValidator = v.object({
+  id: v.string(),
+  providerId: v.string(),
+  accountId: v.union(v.string(), v.null()),
+  date: v.string(),
+  spend: v.number(),
+  impressions: v.number(),
+  clicks: v.number(),
+  conversions: v.number(),
+  revenue: v.union(v.number(), v.null()),
+  createdAtMs: v.union(v.number(), v.null()),
+  clientId: v.union(v.string(), v.null()),
+  campaignId: v.union(v.string(), v.null()),
+  campaignName: v.union(v.string(), v.null()),
+})
+
+const summaryValidator = v.object({
+  totals: v.object({
+    spend: v.number(),
+    impressions: v.number(),
+    clicks: v.number(),
+    conversions: v.number(),
+    revenue: v.number(),
+  }),
+  providers: v.record(
+    v.string(),
+    v.object({
+      spend: v.number(),
+      impressions: v.number(),
+      clicks: v.number(),
+      conversions: v.number(),
+      revenue: v.number(),
+    })
+  ),
+  count: v.number(),
+})
+
+export const listMetrics = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
     providerIds: v.optional(v.array(v.string())),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
+  returns: v.array(metricValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const limit = Math.min(Math.max(args.limit ?? 500, 1), 2000)
 
     const all = await ctx.db
@@ -63,10 +132,6 @@ export const listMetrics = query({
 })
 
 /**
- * Fetches metrics with optional aggregation (deduplication + summary calculation).
- * This replaces the /api/metrics REST endpoint.
- */
-/**
  * Fetches recent metrics for alert evaluation (no auth - server-side use).
  * Filters by workspaceId and clientId, returns in chronological order.
  */
@@ -76,6 +141,7 @@ export const listRecentForAlerts = query({
     clientId: v.string(),
     limit: v.optional(v.number()),
   },
+  returns: v.array(derivedMetricValidator),
   handler: async (ctx, args) => {
     // No auth required - called from server-side alert processor
     const limit = Math.min(Math.max(args.limit ?? 30, 1), 100)
@@ -114,9 +180,8 @@ export const listRecentForAlerts = query({
   },
 })
 
-export const listMetricsWithSummary = query({
+export const listMetricsWithSummary = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
     clientIds: v.optional(v.array(v.string())),
     providerIds: v.optional(v.array(v.string())),
@@ -125,10 +190,12 @@ export const listMetricsWithSummary = query({
     limit: v.optional(v.number()),
     aggregate: v.optional(v.boolean()),
   },
+  returns: v.object({
+    metrics: v.array(enrichedMetricValidator),
+    nextCursor: v.union(v.string(), v.null()),
+    summary: v.union(v.null(), summaryValidator),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const shouldAggregate = args.aggregate === true
     const pageSize = Math.min(Math.max(args.limit ?? 100, 1), 500)
     const fetchLimit = shouldAggregate ? 3000 : pageSize

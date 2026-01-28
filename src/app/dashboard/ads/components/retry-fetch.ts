@@ -13,8 +13,8 @@ import { sleepWithSignal } from '@/lib/retry-utils'
  * Thrown when the network request fails (e.g., no internet, DNS failure).
  */
 export class NetworkError extends Error {
-  name = 'NetworkError' as const
-  constructor(message: string, public readonly cause?: Error) {
+  override name = 'NetworkError' as const
+  constructor(message: string, public override readonly cause?: Error) {
     super(message)
   }
 }
@@ -23,7 +23,7 @@ export class NetworkError extends Error {
  * Thrown when the API returns an error response (4xx or 5xx).
  */
 export class ApiError extends Error {
-  name = 'ApiError' as const
+  override name = 'ApiError' as const
   constructor(
     message: string,
     public readonly statusCode: number,

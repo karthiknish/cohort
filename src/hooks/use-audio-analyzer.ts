@@ -93,7 +93,7 @@ export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
                     // Calculate average volume for backward compatibility or simple scale
                     let totalSum = 0
                     for (let i = 0; i < bufferLength; i++) {
-                        totalSum += dataArray[i]
+                        totalSum += dataArray[i]!
                     }
                     const average = totalSum / bufferLength
                     setVolume(Math.min(1, average / 128))

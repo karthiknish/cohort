@@ -109,10 +109,9 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
 };
 
 // Example function for getting the current user
+// Returns the Better Auth user object or null if not authenticated
 export const getCurrentUser = query({
   args: {},
-  // Returns null if not authenticated, or the authenticated user object
-  returns: v.union(v.null(), v.any()),
   handler: async (ctx) => {
     return authComponent.getAuthUser(ctx);
   },

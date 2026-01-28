@@ -18,8 +18,8 @@ export function buildTimeRange(timeframeDays: number): { start: string; end: str
   start.setUTCDate(start.getUTCDate() - Math.max(0, timeframeDays - 1))
   
   return {
-    start: toISO(start).split('T')[0],
-    end: toISO(now).split('T')[0],
+    start: toISO(start).split('T')[0]!,
+    end: toISO(now).split('T')[0]!,
   }
 }
 

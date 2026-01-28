@@ -386,7 +386,7 @@ export const initializeAdAccount = action({
         throw Errors.integration.notConfigured('Google', 'No ad accounts available')
       }
 
-      const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]
+      const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]!
       const accountId = primaryAccount.id
       const loginCustomerId = primaryAccount.loginCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
       const managerCustomerId = primaryAccount.managerCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
@@ -431,7 +431,7 @@ export const initializeAdAccount = action({
         throw Errors.integration.notConfigured('LinkedIn', 'No ad accounts available')
       }
 
-      const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0]
+      const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0]!
 
       await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
         workspaceId: args.workspaceId,
@@ -469,7 +469,7 @@ export const initializeAdAccount = action({
         throw Errors.integration.notConfigured('Meta', 'No ad accounts available')
       }
 
-      const preferredAccount = accounts.find((account) => account.account_status === 1) ?? accounts[0]
+      const preferredAccount = accounts.find((account) => account.account_status === 1) ?? accounts[0]!
 
       await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
         workspaceId: args.workspaceId,
@@ -507,7 +507,7 @@ export const initializeAdAccount = action({
       throw Errors.integration.notConfigured('TikTok', 'No ad accounts available')
     }
 
-    const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? accounts[0]
+    const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? accounts[0]!
 
     await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
       workspaceId: args.workspaceId,

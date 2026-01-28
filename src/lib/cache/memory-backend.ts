@@ -81,7 +81,7 @@ export class MemoryCacheBackend implements CacheBackend {
 
     const excess = this.store.size - this.maxEntries
     for (let i = 0; i < excess; i += 1) {
-      this.store.delete(entries[i][0])
+      this.store.delete(entries[i]![0])
     }
   }
 }

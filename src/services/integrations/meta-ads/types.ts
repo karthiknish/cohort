@@ -194,6 +194,7 @@ export type MetaCampaign = {
   lifetimeBudget?: number
   startTime?: string
   stopTime?: string
+  bidStrategy?: string
 }
 
 export type MetaAdSet = {

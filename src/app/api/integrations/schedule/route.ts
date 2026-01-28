@@ -53,7 +53,7 @@ export const POST = createApiHandler(
   }
 
   if (sanitizedProviderIds && sanitizedProviderIds.length === 1) {
-    const providerId = sanitizedProviderIds[0]
+    const providerId = sanitizedProviderIds[0]!
     const scheduled = await scheduleIntegrationSync({ userId: targetUserId, providerId, force })
     return { userId: targetUserId, providerId, scheduled }
   }

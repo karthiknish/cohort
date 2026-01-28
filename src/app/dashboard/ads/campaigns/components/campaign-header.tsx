@@ -9,6 +9,7 @@ import { DateRangePicker, type DateRange } from '@/app/dashboard/ads/components/
 import { cn } from '@/lib/utils'
 import { formatDate, DATE_FORMATS } from '@/lib/dates'
 import { SiFacebook, SiGoogleads, SiTiktok, SiLinkedin } from 'react-icons/si'
+import { formatProviderName, getProviderColor } from '@/lib/themes'
 
 interface Campaign {
   id: string
@@ -51,19 +52,25 @@ export function CampaignHeader({
   onRefresh,
   refreshing,
 }: CampaignHeaderProps) {
-  const providerDisplay = campaign?.providerId === 'facebook' ? 'Meta Ads' :
-    campaign?.providerId === 'google' ? 'Google Ads' :
-      campaign?.providerId === 'tiktok' ? 'TikTok Ads' :
-        campaign?.providerId === 'linkedin' ? 'LinkedIn Ads' :
-          campaign?.providerId
+  const providerDisplay = formatProviderName(campaign?.providerId ?? '')
 
   const getProviderIcon = () => {
-    switch (campaign?.providerId) {
-      case 'facebook': return <SiFacebook className="h-3 w-3 text-[#1877F2]" />
-      case 'google': return <SiGoogleads className="h-3 w-3 text-[#4285F4]" />
-      case 'tiktok': return <SiTiktok className="h-3 w-3" />
-      case 'linkedin': return <SiLinkedin className="h-3 w-3 text-[#0A66C2]" />
-      default: return null
+    if (!campaign?.providerId) return null
+    const color = getProviderColor(campaign.providerId).hex
+    const colorClass = `text-[${color}]`
+
+    switch (campaign.providerId) {
+      case 'facebook':
+      case 'meta':
+        return <SiFacebook className={cn("h-3 w-3", colorClass)} />
+      case 'google':
+        return <SiGoogleads className={cn("h-3 w-3", colorClass)} />
+      case 'tiktok':
+        return <SiTiktok className={cn("h-3 w-3", colorClass)} />
+      case 'linkedin':
+        return <SiLinkedin className={cn("h-3 w-3", colorClass)} />
+      default:
+        return null
     }
   }
 

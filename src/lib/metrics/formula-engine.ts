@@ -93,14 +93,14 @@ export function calculateMovingAverage(
     const results: MovingAverageResult[] = []
 
     for (let i = 0; i < sortedDates.length; i++) {
-        const currentDate = sortedDates[i]
+        const currentDate = sortedDates[i]!
         const rawValue = dailyValues.get(currentDate) || 0
 
         // Get the window of values (current day and previous windowDays-1 days)
         const windowStart = Math.max(0, i - windowDays + 1)
         const windowValues = sortedDates
             .slice(windowStart, i + 1)
-            .map((d) => dailyValues.get(d) || 0)
+            .map((d) => dailyValues.get(d!) || 0)
 
         // Calculate average
         const sum = windowValues.reduce((a, b) => a + b, 0)
@@ -139,7 +139,7 @@ export function calculateRoasMovingAverage(
     const results: MovingAverageResult[] = []
 
     for (let i = 0; i < sortedDates.length; i++) {
-        const currentDate = sortedDates[i]
+        const currentDate = sortedDates[i]!
         const currentSpend = dailySpend.get(currentDate) || 0
         const currentRevenue = dailyRevenue.get(currentDate) || 0
         const rawRoas = currentSpend > 0 ? currentRevenue / currentSpend : 0
@@ -150,11 +150,11 @@ export function calculateRoasMovingAverage(
 
         // Sum revenue and spend in window, then calculate ROAS
         const windowRevenue = windowDates.reduce(
-            (sum, d) => sum + (dailyRevenue.get(d) || 0),
+            (sum, d) => sum + (dailyRevenue.get(d!) || 0),
             0
         )
         const windowSpend = windowDates.reduce(
-            (sum, d) => sum + (dailySpend.get(d) || 0),
+            (sum, d) => sum + (dailySpend.get(d!) || 0),
             0
         )
 
@@ -335,8 +335,8 @@ function median(values: number[]): number | null {
     if (filtered.length === 0) return null
     const sorted = [...filtered].sort((a, b) => a - b)
     const mid = Math.floor(sorted.length / 2)
-    if (sorted.length % 2 === 1) return sorted[mid]
-    return (sorted[mid - 1] + sorted[mid]) / 2
+    if (sorted.length % 2 === 1) return sorted[mid]!
+    return (sorted[mid - 1]! + sorted[mid]!) / 2
 }
 
 function safeRatio(numerator: number, denominator: number): number | null {

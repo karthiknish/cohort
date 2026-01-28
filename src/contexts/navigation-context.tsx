@@ -61,7 +61,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navKeys.forEach(key => {
         const parts = key.split('.')
         if (parts.length >= 3) {
-          clientKeys.add(parts[2]) // clientId
+          clientKeys.add(parts[2]!) // clientId
         }
       })
 

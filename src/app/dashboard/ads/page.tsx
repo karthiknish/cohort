@@ -218,7 +218,7 @@ export default function AdsPage() {
                       key={platform.id}
                       providerId={platform.id}
                       providerName={platform.name}
-                      isConnected={connectedProviders[platform.id]}
+                      isConnected={connectedProviders[platform.id]!}
                       dateRange={dateRange}
                       onRefresh={handleManualRefresh}
                     />

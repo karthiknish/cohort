@@ -266,7 +266,7 @@ export function RichComposer({
       for (let index = caretPosition - 1; index >= start; index -= 1) {
         const char = currentValue[index]
         if (char === '@') {
-          const preceding = index > 0 ? currentValue[index - 1] : ' '
+          const preceding = index > 0 ? currentValue[index - 1]! : ' ' // Safe: we check index > 0
           if (!preceding.match(/[\s([{]/)) {
             break
           }

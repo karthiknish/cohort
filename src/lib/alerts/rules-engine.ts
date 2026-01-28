@@ -239,7 +239,7 @@ export function evaluateTrendRule(
             severity: rule.severity,
             metric: rule.metric,
             message: `Insufficient data for trend detection (need ${condition.consecutivePeriods + 1} days)`,
-            currentValue: history.length > 0 ? getMetricValue(history[history.length - 1], metric) : 0,
+            currentValue: history.length > 0 ? getMetricValue(history[history.length - 1]!, metric) : 0,
             timestamp: new Date().toISOString(),
         }
     }
@@ -251,8 +251,8 @@ export function evaluateTrendRule(
     let consecutiveCount = 0
 
     for (let i = 1; i < recentData.length; i++) {
-        const prevValue = getMetricValue(recentData[i - 1], metric)
-        const currValue = getMetricValue(recentData[i], metric)
+        const prevValue = getMetricValue(recentData[i - 1]!, metric)
+        const currValue = getMetricValue(recentData[i]!, metric)
 
         if (prevValue === 0) continue
 
@@ -274,7 +274,7 @@ export function evaluateTrendRule(
     }
 
     const triggered = consecutiveCount >= condition.consecutivePeriods
-    const currentValue = getMetricValue(recentData[recentData.length - 1], metric)
+    const currentValue = getMetricValue(recentData[recentData.length - 1]!, metric)
 
     return {
         ruleId: rule.id,

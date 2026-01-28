@@ -3,11 +3,24 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { ArrowLeft, Download } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PptViewer } from '@/components/ppt-viewer'
+
+// bundle-dynamic-imports: Dynamically import heavy PptViewer with JSZip
+const PptViewer = dynamic(() => import('@/components/ppt-viewer').then(m => ({ default: m.PptViewer })), {
+  loading: () => (
+    <div className="flex items-center justify-center aspect-[16/9] rounded-lg border bg-muted/20">
+      <div className="text-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="text-sm text-muted-foreground">Loading presentation...</p>
+      </div>
+    </div>
+  ),
+  ssr: false,
+})
 
 export default function ProposalDeckViewerPage() {
   const searchParams = useSearchParams()

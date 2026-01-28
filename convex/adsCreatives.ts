@@ -246,7 +246,7 @@ export const listCreatives = action({
       adAccountId,
       campaignId: args.campaignId,
       adSetId: args.adGroupId,
-      includeVideoMedia: args.includeMedia ?? false,
+      includeVideoMedia: args.includeMedia ?? true, // Default to true for better UX
     })
 
     return normalizeMetaCreatives(metaCreatives)

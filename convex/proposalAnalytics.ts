@@ -1,14 +1,6 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
-
-function nowMs() {
-  return Date.now()
-}
+import { workspaceQuery, workspaceMutation } from './functions'
+import { query } from './_generated/server'
 
 function generateId(prefix: string) {
   const rand = Math.random().toString(36).slice(2, 10)
@@ -30,43 +22,57 @@ const EVENT_TYPES = [
   'proposal_downloaded',
 ] as const
 
-export const addEvent = mutation({
+const eventTypeValidator = v.union(
+  v.literal('draft_created'),
+  v.literal('draft_updated'),
+  v.literal('ai_generation_started'),
+  v.literal('ai_generation_completed'),
+  v.literal('ai_generation_failed'),
+  v.literal('deck_generation_started'),
+  v.literal('deck_generation_completed'),
+  v.literal('deck_generation_failed'),
+  v.literal('proposal_submitted'),
+  v.literal('proposal_sent'),
+  v.literal('proposal_viewed'),
+  v.literal('proposal_downloaded'),
+)
+
+const analyticsEventValidator = v.object({
+  legacyId: v.string(),
+  eventType: v.string(),
+  proposalId: v.string(),
+  userId: v.string(),
+  clientId: v.union(v.string(), v.null()),
+  clientName: v.union(v.string(), v.null()),
+  metadata: v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null())),
+  duration: v.union(v.number(), v.null()),
+  error: v.union(v.string(), v.null()),
+  createdAtMs: v.number(),
+})
+
+export const addEvent = workspaceMutation({
   args: {
-    workspaceId: v.string(),
-    eventType: v.union(
-      v.literal('draft_created'),
-      v.literal('draft_updated'),
-      v.literal('ai_generation_started'),
-      v.literal('ai_generation_completed'),
-      v.literal('ai_generation_failed'),
-      v.literal('deck_generation_started'),
-      v.literal('deck_generation_completed'),
-      v.literal('deck_generation_failed'),
-      v.literal('proposal_submitted'),
-      v.literal('proposal_sent'),
-      v.literal('proposal_viewed'),
-      v.literal('proposal_downloaded'),
-    ),
+    eventType: eventTypeValidator,
     proposalId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
     clientName: v.optional(v.union(v.string(), v.null())),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(v.record(v.string(), v.union(v.string(), v.number(), v.boolean(), v.null()))),
     duration: v.optional(v.union(v.number(), v.null())),
     error: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({
+    legacyId: v.string(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const legacyId = generateId('proposal-analytics')
-    const createdAtMs = nowMs()
+    const createdAtMs = ctx.now
 
     await ctx.db.insert('proposalAnalyticsEvents', {
       workspaceId: args.workspaceId,
       legacyId,
       eventType: args.eventType,
       proposalId: args.proposalId,
-      userId: identity.subject,
+      userId: ctx.legacyId,
       clientId: args.clientId ?? null,
       clientName: args.clientName ?? null,
       metadata: args.metadata ?? {},
@@ -94,7 +100,7 @@ type ListedEvent = {
   userId: string
   clientId: string | null
   clientName: string | null
-  metadata: Record<string, unknown>
+  metadata: Record<string, string | number | boolean | null>
   duration: number | null
   error: string | null
   createdAtMs: number
@@ -141,18 +147,15 @@ async function listEventsImpl(ctx: any, args: ListEventsArgs): Promise<ListedEve
   }))
 }
 
-export const listEvents = query({
+export const listEvents = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     startDateMs: v.optional(v.number()),
     endDateMs: v.optional(v.number()),
     clientId: v.optional(v.union(v.string(), v.null())),
     limit: v.optional(v.number()),
   },
+  returns: v.array(analyticsEventValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     return listEventsImpl(ctx, {
       workspaceId: args.workspaceId,
       startDateMs: args.startDateMs,
@@ -163,25 +166,33 @@ export const listEvents = query({
   },
 })
 
-type EventRow = {
-  eventType: string
-  clientId: string | null
-  duration: number | null
-  createdAtMs: number
-}
+const summaryValidator = v.object({
+  totalDrafts: v.number(),
+  totalSubmitted: v.number(),
+  totalSent: v.number(),
+  aiGenerationsAttempted: v.number(),
+  aiGenerationsSucceeded: v.number(),
+  aiGenerationsFailed: v.number(),
+  deckGenerationsAttempted: v.number(),
+  deckGenerationsSucceeded: v.number(),
+  deckGenerationsFailed: v.number(),
+  aiSuccessRate: v.number(),
+  deckSuccessRate: v.number(),
+  averageAiGenerationTime: v.union(v.number(), v.null()),
+  averageDeckGenerationTime: v.union(v.number(), v.null()),
+})
 
-export const summarize = query({
+export const summarize = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     startDateMs: v.optional(v.number()),
     endDateMs: v.optional(v.number()),
     clientId: v.optional(v.union(v.string(), v.null())),
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    summary: summaryValidator,
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const events = await listEventsImpl(ctx, {
       workspaceId: args.workspaceId,
       startDateMs: args.startDateMs,
@@ -195,18 +206,27 @@ export const summarize = query({
   },
 })
 
-export const timeSeries = query({
+const timeSeriesItemValidator = v.object({
+  date: v.string(),
+  drafts: v.number(),
+  submissions: v.number(),
+  aiGenerations: v.number(),
+  deckGenerations: v.number(),
+  aiFailures: v.number(),
+  deckFailures: v.number(),
+})
+
+export const timeSeries = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     startDateMs: v.optional(v.number()),
     endDateMs: v.optional(v.number()),
     clientId: v.optional(v.union(v.string(), v.null())),
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    timeseries: v.array(timeSeriesItemValidator),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const events = await listEventsImpl(ctx, {
       workspaceId: args.workspaceId,
       startDateMs: args.startDateMs,
@@ -220,17 +240,27 @@ export const timeSeries = query({
   },
 })
 
-export const byClient = query({
+const byClientItemValidator = v.object({
+  clientId: v.string(),
+  clientName: v.string(),
+  drafts: v.number(),
+  submissions: v.number(),
+  aiGenerations: v.number(),
+  deckGenerations: v.number(),
+  avgAiTime: v.union(v.number(), v.null()),
+  avgDeckTime: v.union(v.number(), v.null()),
+})
+
+export const byClient = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     startDateMs: v.optional(v.number()),
     endDateMs: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    byClient: v.array(byClientItemValidator),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const events = await listEventsImpl(ctx, {
       workspaceId: args.workspaceId,
       startDateMs: args.startDateMs,
@@ -243,8 +273,6 @@ export const byClient = query({
     return { byClient }
   },
 })
-
-
 
 function calculateSummary(events: Array<{ eventType: string; duration?: number | null }>) {
   let totalDrafts = 0
@@ -334,7 +362,7 @@ function calculateTimeSeries(events: Array<{ eventType: string; createdAtMs?: nu
 
   events.forEach((event) => {
     const createdAtMs = typeof event.createdAtMs === 'number' ? event.createdAtMs : 0
-    const date = new Date(createdAtMs).toISOString().split('T')[0]
+    const date = new Date(createdAtMs).toISOString().split('T')[0]!
 
     if (!dailyStats.has(date)) {
       dailyStats.set(date, {
@@ -383,6 +411,13 @@ function calculateTimeSeries(events: Array<{ eventType: string; createdAtMs?: nu
       aiFailures: stats.aiFailures,
       deckFailures: stats.deckFailures,
     }))
+}
+
+type EventRow = {
+  eventType: string
+  clientId: string | null
+  duration: number | null
+  createdAtMs: number
 }
 
 function calculateByClient(events: EventRow[]) {
@@ -461,11 +496,11 @@ function calculateByClient(events: EventRow[]) {
   return Array.from(map.values()).sort((a, b) => b.submissions - a.submissions)
 }
 
+// Public endpoint - no auth required for getting event types
 export const eventTypes = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-    return EVENT_TYPES
+  returns: v.array(eventTypeValidator),
+  handler: async () => {
+    return [...EVENT_TYPES]
   },
 })

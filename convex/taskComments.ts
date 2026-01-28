@@ -1,14 +1,6 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) throw Errors.auth.unauthorized()
-}
-
-function nowMs() {
-  return Date.now()
-}
+import { workspaceQuery, workspaceMutation, authenticatedMutation } from './functions'
 
 const attachment = v.object({
   name: v.string(),
@@ -23,12 +15,31 @@ const mention = v.object({
   role: v.union(v.string(), v.null()),
 })
 
-export const listForTask = query({
-  args: { workspaceId: v.string(), taskLegacyId: v.string(), limit: v.number() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
+const taskCommentValidator = v.object({
+  _id: v.id('taskComments'),
+  workspaceId: v.string(),
+  taskLegacyId: v.string(),
+  legacyId: v.string(),
+  content: v.string(),
+  format: v.union(v.literal('markdown'), v.literal('plaintext')),
+  authorId: v.union(v.string(), v.null()),
+  authorName: v.union(v.string(), v.null()),
+  authorRole: v.union(v.string(), v.null()),
+  createdAtMs: v.number(),
+  updatedAtMs: v.number(),
+  deleted: v.boolean(),
+  deletedAtMs: v.union(v.number(), v.null()),
+  deletedBy: v.union(v.string(), v.null()),
+  attachments: v.array(attachment),
+  mentions: v.array(mention),
+  parentCommentId: v.union(v.string(), v.null()),
+  threadRootId: v.union(v.string(), v.null()),
+})
 
+export const listForTask = workspaceQuery({
+  args: { taskLegacyId: v.string(), limit: v.number() },
+  returns: v.array(taskCommentValidator),
+  handler: async (ctx, args) => {
     const rows = await ctx.db
       .query('taskComments')
       .withIndex('by_workspace_task_createdAtMs_legacyId', (q) =>
@@ -41,12 +52,10 @@ export const listForTask = query({
   },
 })
 
-export const getByLegacyId = query({
-  args: { workspaceId: v.string(), taskLegacyId: v.string(), legacyId: v.string() },
+export const getByLegacyId = workspaceQuery({
+  args: { taskLegacyId: v.string(), legacyId: v.string() },
+  returns: v.union(v.null(), taskCommentValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('taskComments')
       .withIndex('by_workspace_task_legacyId', (q) =>
@@ -58,9 +67,8 @@ export const getByLegacyId = query({
   },
 })
 
-export const create = mutation({
+export const create = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     taskLegacyId: v.string(),
     legacyId: v.string(),
     content: v.string(),
@@ -73,11 +81,11 @@ export const create = mutation({
     parentCommentId: v.optional(v.union(v.string(), v.null())),
     threadRootId: v.optional(v.union(v.string(), v.null())),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
-    const timestamp = nowMs()
+    const timestamp = ctx.now
 
     await ctx.db.insert('taskComments', {
       workspaceId: args.workspaceId,
@@ -99,11 +107,12 @@ export const create = mutation({
       threadRootId: args.threadRootId ?? null,
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const bulkUpsert = mutation({
+// Use authenticatedMutation for bulk operations that may span multiple workspaces
+export const bulkUpsert = authenticatedMutation({
   args: {
     comments: v.array(
       v.object({
@@ -127,12 +136,18 @@ export const bulkUpsert = mutation({
       })
     ),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    upserted: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     let upserted = 0
     for (const comment of args.comments) {
+      // Verify workspace access for each comment
+      if (ctx.user.role !== 'admin' && ctx.agencyId !== comment.workspaceId) {
+        throw Errors.auth.workspaceAccessDenied()
+      }
+
       const existing = await ctx.db
         .query('taskComments')
         .withIndex('by_workspace_task_legacyId', (q) =>
@@ -172,16 +187,22 @@ export const bulkUpsert = mutation({
       upserted += 1
     }
 
-    return { ok: true, upserted }
+    return { ok: true as const, upserted }
   },
 })
 
-export const updateContent = mutation({
-  args: { workspaceId: v.string(), taskLegacyId: v.string(), legacyId: v.string(), content: v.string(), updatedBy: v.string() },
+export const updateContent = workspaceMutation({
+  args: {
+    taskLegacyId: v.string(),
+    legacyId: v.string(),
+    content: v.string(),
+    updatedBy: v.string(),
+  },
+  returns: v.union(
+    v.object({ ok: v.literal(true) }),
+    v.object({ ok: v.literal(false), error: v.literal('not_found') })
+  ),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('taskComments')
       .withIndex('by_workspace_task_legacyId', (q) =>
@@ -189,25 +210,29 @@ export const updateContent = mutation({
       )
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) return { ok: false as const, error: 'not_found' as const }
 
-    const timestamp = nowMs()
     await ctx.db.patch(row._id, {
       content: args.content,
-      updatedAtMs: timestamp,
+      updatedAtMs: ctx.now,
       // Keep parity with Firestore schema, but we don't currently store updatedBy in Convex.
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const softDelete = mutation({
-  args: { workspaceId: v.string(), taskLegacyId: v.string(), legacyId: v.string(), deletedBy: v.string() },
+export const softDelete = workspaceMutation({
+  args: {
+    taskLegacyId: v.string(),
+    legacyId: v.string(),
+    deletedBy: v.string(),
+  },
+  returns: v.union(
+    v.object({ ok: v.literal(true) }),
+    v.object({ ok: v.literal(false), error: v.literal('not_found') })
+  ),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const row = await ctx.db
       .query('taskComments')
       .withIndex('by_workspace_task_legacyId', (q) =>
@@ -215,16 +240,15 @@ export const softDelete = mutation({
       )
       .unique()
 
-    if (!row) return { ok: false, error: 'not_found' as const }
+    if (!row) return { ok: false as const, error: 'not_found' as const }
 
-    const timestamp = nowMs()
     await ctx.db.patch(row._id, {
       deleted: true,
-      deletedAtMs: timestamp,
+      deletedAtMs: ctx.now,
       deletedBy: args.deletedBy,
-      updatedAtMs: timestamp,
+      updatedAtMs: ctx.now,
     })
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })

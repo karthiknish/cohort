@@ -1,17 +1,7 @@
-import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
-import {
-  authenticatedMutation,
-  authenticatedQuery,
-  zAuthenticatedMutation,
-  zAuthenticatedQuery,
-} from './functions'
-import { z } from 'zod/v4'
-
-function nowMs() {
-  return Date.now()
-}
+import { authenticatedMutation, authenticatedQuery } from './functions'
+import { query } from './_generated/server'
 
 function sanitizeString(value: string): string {
   return value.trim()
@@ -36,12 +26,27 @@ function ensureUniqueStrings(values: string[]): string[] {
   return result
 }
 
+const customFormulaValidator = v.object({
+  workspaceId: v.string(),
+  formulaId: v.string(),
+  name: v.string(),
+  description: v.union(v.string(), v.null()),
+  formula: v.string(),
+  inputs: v.array(v.string()),
+  outputMetric: v.string(),
+  isActive: v.boolean(),
+  createdBy: v.string(),
+  createdAtMs: v.number(),
+  updatedAtMs: v.number(),
+})
+
 /**
  * List active formulas for a workspace (no auth - server-side use).
  * Used by alert processor to evaluate custom formula alerts.
  */
 export const listActiveForAlerts = query({
   args: { workspaceId: v.string() },
+  returns: v.record(v.string(), v.object({ formula: v.string(), inputs: v.array(v.string()) })),
   handler: async (ctx, args) => {
     // No auth required - called from server-side alert processor
     const rows = await ctx.db
@@ -63,12 +68,18 @@ export const listActiveForAlerts = query({
   },
 })
 
-export const listByWorkspace = zAuthenticatedQuery({
+export const listByWorkspace = authenticatedQuery({
   args: {
-    workspaceId: z.string(),
-    activeOnly: z.boolean().optional(),
+    workspaceId: v.string(),
+    activeOnly: v.optional(v.boolean()),
   },
+  returns: v.array(customFormulaValidator),
   handler: async (ctx, args) => {
+    // Workspace access check
+    if (ctx.user.role !== 'admin' && ctx.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
     const activeOnly = args.activeOnly === true
 
     const baseQuery = ctx.db
@@ -100,9 +111,15 @@ export const listByWorkspace = zAuthenticatedQuery({
   },
 })
 
-export const getByLegacyId = zAuthenticatedQuery({
-  args: { workspaceId: z.string(), legacyId: z.string() },
+export const getByLegacyId = authenticatedQuery({
+  args: { workspaceId: v.string(), legacyId: v.string() },
+  returns: v.union(v.null(), customFormulaValidator),
   handler: async (ctx, args) => {
+    // Workspace access check
+    if (ctx.user.role !== 'admin' && ctx.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
     const row = await ctx.db
       .query('customFormulas')
       .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -126,19 +143,28 @@ export const getByLegacyId = zAuthenticatedQuery({
   },
 })
 
-export const create = zAuthenticatedMutation({
+export const create = authenticatedMutation({
   args: {
-    workspaceId: z.string(),
-    legacyId: z.string(),
-    name: z.string(),
-    description: z.string().nullable().optional(),
-    formula: z.string(),
-    inputs: z.array(z.string()),
-    outputMetric: z.string(),
-    createdBy: z.string().nullable().optional(),
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    name: v.string(),
+    description: v.union(v.string(), v.null()),
+    formula: v.string(),
+    inputs: v.array(v.string()),
+    outputMetric: v.string(),
+    createdBy: v.union(v.string(), v.null()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    id: v.id('customFormulas'),
+  }),
   handler: async (ctx, args) => {
-    const timestamp = nowMs()
+    // Workspace access check
+    if (ctx.user.role !== 'admin' && ctx.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
+    const timestamp = ctx.now
 
     const existing = await ctx.db
       .query('customFormulas')
@@ -153,34 +179,42 @@ export const create = zAuthenticatedMutation({
       workspaceId: args.workspaceId,
       legacyId: args.legacyId,
       name: sanitizeString(args.name),
-      description: sanitizeOptionalString((args.description ?? null) as string | null),
+      description: sanitizeOptionalString(args.description),
       formula: sanitizeString(args.formula),
       inputs: ensureUniqueStrings(args.inputs),
       outputMetric: sanitizeString(args.outputMetric),
       isActive: true,
-      createdBy: sanitizeOptionalString((args.createdBy ?? null) as string | null),
+      createdBy: sanitizeOptionalString(args.createdBy),
       createdAtMs: timestamp,
       updatedAtMs: timestamp,
     }
 
     const id = await ctx.db.insert('customFormulas', payload)
 
-    return { ok: true, id }
+    return { ok: true as const, id }
   },
 })
 
-export const update = zAuthenticatedMutation({
+export const update = authenticatedMutation({
   args: {
-    workspaceId: z.string(),
-    legacyId: z.string(),
-    name: z.string().optional(),
-    description: z.string().nullable().optional(),
-    formula: z.string().optional(),
-    inputs: z.array(z.string()).optional(),
-    outputMetric: z.string().optional(),
-    isActive: z.boolean().optional(),
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    name: v.optional(v.string()),
+    description: v.optional(v.union(v.string(), v.null())),
+    formula: v.optional(v.string()),
+    inputs: v.optional(v.array(v.string())),
+    outputMetric: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
+    // Workspace access check
+    if (ctx.user.role !== 'admin' && ctx.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
     const existing = await ctx.db
       .query('customFormulas')
       .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -191,12 +225,12 @@ export const update = zAuthenticatedMutation({
     }
 
     const updates: Record<string, unknown> = {
-      updatedAtMs: nowMs(),
+      updatedAtMs: ctx.now,
     }
 
     if (args.name !== undefined) updates.name = sanitizeString(args.name)
     if (args.description !== undefined) {
-      updates.description = sanitizeOptionalString((args.description ?? null) as string | null)
+      updates.description = sanitizeOptionalString(args.description)
     }
     if (args.formula !== undefined) updates.formula = sanitizeString(args.formula)
     if (args.inputs !== undefined) updates.inputs = ensureUniqueStrings(args.inputs)
@@ -205,13 +239,21 @@ export const update = zAuthenticatedMutation({
 
     await ctx.db.patch(existing._id, updates)
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })
 
-export const remove = zAuthenticatedMutation({
-  args: { workspaceId: z.string(), legacyId: z.string() },
+export const remove = authenticatedMutation({
+  args: { workspaceId: v.string(), legacyId: v.string() },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
+    // Workspace access check
+    if (ctx.user.role !== 'admin' && ctx.agencyId !== args.workspaceId) {
+      throw Errors.auth.workspaceAccessDenied()
+    }
+
     const existing = await ctx.db
       .query('customFormulas')
       .withIndex('by_workspaceId_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -223,6 +265,6 @@ export const remove = zAuthenticatedMutation({
 
     await ctx.db.delete(existing._id)
 
-    return { ok: true }
+    return { ok: true } as const
   },
 })

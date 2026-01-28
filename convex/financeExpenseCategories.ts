@@ -1,26 +1,25 @@
-import { query, mutation } from './_generated/server'
+import { workspaceMutation, workspaceQuery } from './functions'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 
-function requireIdentity(identity: unknown): asserts identity {
-  if (!identity) {
-    throw Errors.auth.unauthorized()
-  }
-}
+const categoryValidator = v.object({
+  legacyId: v.string(),
+  name: v.string(),
+  code: v.union(v.string(), v.null()),
+  description: v.union(v.string(), v.null()),
+  isActive: v.boolean(),
+  isSystem: v.boolean(),
+  sortOrder: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
 
-function now() {
-  return Date.now()
-}
-
-export const list = query({
+export const list = workspaceQuery({
   args: {
-    workspaceId: v.string(),
     includeInactive: v.optional(v.boolean()),
   },
+  returns: v.array(categoryValidator),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const includeInactive = args.includeInactive ?? false
 
     const rows = await ctx.db
@@ -49,9 +48,8 @@ export const list = query({
   },
 })
 
-export const upsert = mutation({
+export const upsert = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
     name: v.string(),
     code: v.optional(v.union(v.string(), v.null())),
@@ -61,10 +59,10 @@ export const upsert = mutation({
     sortOrder: v.number(),
     createdBy: v.optional(v.string()),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('financeExpenseCategories')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -72,7 +70,7 @@ export const upsert = mutation({
       )
       .unique()
 
-    const timestamp = now()
+    const timestamp = ctx.now
 
     if (existing) {
       // Preserve system category immutability rules.
@@ -90,7 +88,7 @@ export const upsert = mutation({
         updatedAt: timestamp,
       })
 
-      return { ok: true }
+      return { ok: true as const }
     }
 
     await ctx.db.insert('financeExpenseCategories', {
@@ -107,13 +105,12 @@ export const upsert = mutation({
       updatedAt: timestamp,
     })
 
-    return { ok: true }
+    return { ok: true as const }
   },
 })
 
-export const bulkUpsert = mutation({
+export const bulkUpsert = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     categories: v.array(
       v.object({
         legacyId: v.string(),
@@ -127,10 +124,11 @@ export const bulkUpsert = mutation({
       })
     ),
   },
+  returns: v.object({
+    ok: v.literal(true),
+    upserted: v.number(),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     for (const category of args.categories) {
       const existing = await ctx.db
         .query('financeExpenseCategories')
@@ -139,7 +137,7 @@ export const bulkUpsert = mutation({
         )
         .unique()
 
-      const timestamp = now()
+      const timestamp = ctx.now
 
       if (existing) {
         if (existing.isSystem) {
@@ -172,19 +170,18 @@ export const bulkUpsert = mutation({
       })
     }
 
-    return { ok: true, upserted: args.categories.length }
+    return { ok: true as const, upserted: args.categories.length }
   },
 })
 
-export const remove = mutation({
+export const remove = workspaceMutation({
   args: {
-    workspaceId: v.string(),
     legacyId: v.string(),
   },
+  returns: v.object({
+    ok: v.literal(true),
+  }),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    requireIdentity(identity)
-
     const existing = await ctx.db
       .query('financeExpenseCategories')
       .withIndex('by_workspaceId_legacyId', (q) =>
@@ -201,6 +198,6 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(existing._id)
-    return { ok: true }
+    return { ok: true as const }
   },
 })
