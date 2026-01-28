@@ -9,6 +9,32 @@ import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { getToken } from '@convex-dev/better-auth/utils'
 import { convexSiteUrl } from '@/lib/auth-server'
 
+// User-agents to block (monitoring bots, crawlers that don't respect auth)
+const BLOCKED_USER_AGENTS = [
+  'uptimerobot',
+  'pingdom',
+  'statuscake',
+  'site24x7',
+  'uptrends',
+  'healthchecks',
+  'check-host',
+  'monitor-us',
+  'googlebot', // Block Google bot from hitting auth endpoints
+  'bingbot',
+  'semrush',
+  'bot-',
+  'crawler',
+  'spider',
+  'curl',
+  'wget',
+  'python-requests',
+  'axios',
+  'node-fetch',
+  'httpie',
+  'insomnia',
+  'postman',
+]
+
 const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, RATE_LIMITS.standard.maxRequests)
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, RATE_LIMITS.standard.windowMs)
 
@@ -25,25 +51,36 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
     const tokenResult = await getToken(convexSiteUrl, request.headers)
     return !!tokenResult?.token
   } catch (err) {
-    console.error('[Middleware] session check error:', err)
+    console.error('[Proxy] session check error:', err)
     return false
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (pathname.startsWith('/api/')) {
+    // Block common monitoring/crawling user-agents from API routes
+    const userAgent = request.headers.get('user-agent')?.toLowerCase() ?? ''
+    if (BLOCKED_USER_AGENTS.some(bot => userAgent.includes(bot))) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[Proxy] Blocked ${userAgent} from ${pathname}`)
+      }
+      return NextResponse.json(
+        { success: false, error: 'Not allowed' },
+        { status: 403 }
+      )
+    }
     const identifier = getClientIdentifier(request)
     const rateLimit = await checkConvexRateLimit(`api:${identifier}`, {
       maxRequests: API_RATE_LIMIT_MAX,
       windowMs: API_RATE_LIMIT_WINDOW_MS,
     })
 
-    console.log(`[Middleware] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`)
+    console.log(`[Proxy] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`)
 
     if (!rateLimit.allowed) {
-      console.warn(`[Middleware] Rate limit exceeded for ${identifier} on ${pathname}`)
+      console.warn(`[Proxy] Rate limit exceeded for ${identifier} on ${pathname}`)
       return NextResponse.json(
         { error: 'Too many requests. Please slow down.' },
         {
@@ -63,7 +100,7 @@ export async function middleware(request: NextRequest) {
 
   const hasSession = await hasValidSession(request)
 
-  console.log(`[Middleware] Path: ${pathname} | Has valid session: ${hasSession}`)
+  console.log(`[Proxy] Path: ${pathname} | Has valid session: ${hasSession}`)
 
   // Public auth pages should always be reachable without redirection.
   if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
