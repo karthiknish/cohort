@@ -482,9 +482,7 @@ export async function fetchMetaCreatives(options: {
       'effective_status',
       'adset_id',
       'campaign_id',
-      'creative_id',
-      'leadgen_form_id',
-      'tracking_specs',
+      'creative',
       'adcreatives{id,name,thumbnail_url,image_url,full_picture,images,image_hash,url_tags,platform_customizations,source_instagram_media_id,instagram_permalink_url,effective_instagram_media_id,portrait_customizations,call_to_action_type,object_type,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action{name,type,value},name,caption,description},video_data{video_id,message,title,call_to_action{name,type,value}}}}',
     ].join(','),
     limit: '100',
@@ -587,8 +585,10 @@ export async function fetchMetaCreatives(options: {
       const accountId = storySpec?.instagram_actor_id || storySpec?.page_id
       const account = accountId ? accountDetails[accountId] : undefined
 
-      // Check if this is a lead generation ad (has leadgen_form_id)
-      const isLeadGenAd = !!(ad as { leadgen_form_id?: string }).leadgen_form_id
+      // Check if this is a lead generation ad (look for form ID in story spec)
+      const storySpecCtaValue = storySpec?.link_data?.call_to_action?.value || storySpec?.video_data?.call_to_action?.value
+      const leadgenFormId = storySpecCtaValue?.leadgen_form_id || (ad as any).leadgen_form_id
+      const isLeadGenAd = !!leadgenFormId
 
       // For lead gen ads without traditional creatives, provide minimal info
       if (!creative && isLeadGenAd) {
@@ -598,13 +598,13 @@ export async function fetchMetaCreatives(options: {
           campaignId: ad.campaign_id ?? '',
           adName: ad.name,
           status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-          creativeId: (ad as { creative_id?: string }).creative_id,
+          creativeId: (ad as any).creative?.id,
           creativeName: undefined,
           type: 'lead_generation',
           callToAction: 'Sign Up',
           // Mark as lead gen for UI handling
           isLeadGen: true,
-          leadgenFormId: (ad as { leadgen_form_id?: string }).leadgen_form_id,
+          leadgenFormId,
         }
       }
 
@@ -660,8 +660,8 @@ export async function fetchMetaCreatives(options: {
         campaignId: ad.campaign_id ?? '',
         adName: ad.name,
         status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-        creativeId: creative?.id,
-        creativeName: creative?.name,
+        creativeId: creative?.id || (ad as any).creative?.id,
+        creativeName: creative?.name || (ad as any).creative?.name,
         type: adType,
         thumbnailUrl: optimizeMetaImageUrl(creativeThumbnailUrl) || imageUrl,
         imageUrl,

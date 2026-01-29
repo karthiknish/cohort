@@ -5,7 +5,7 @@
  * integration platform clients (Meta, Google, TikTok, LinkedIn).
  */
 
-import { parseResponseError, type IntegrationPlatform } from '@/lib/errors'
+import { parseIntegrationError, type IntegrationPlatform } from '@/lib/errors'
 import { calculateBackoffDelay, sleep, isRetryableStatus, parseRetryAfterMs, DEFAULT_RETRY_CONFIG } from '@/lib/retry-utils'
 
 // =============================================================================
@@ -184,7 +184,7 @@ export class IntegrationApiClient {
             }
 
             // Parse error
-            const error = await parseResponseError(response, this.platform)
+            const error = parseIntegrationError(response, payload, this.platform)
             lastError = error
 
             logRequest({

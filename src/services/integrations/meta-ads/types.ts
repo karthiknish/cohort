@@ -181,6 +181,7 @@ export type MetaAdCreative = {
         value?: {
           link?: string
           application?: string
+          leadgen_form_id?: string
         }
       }
     }
@@ -194,6 +195,7 @@ export type MetaAdCreative = {
         value?: {
           link?: string
           application?: string
+          leadgen_form_id?: string
         }
       }
     }
