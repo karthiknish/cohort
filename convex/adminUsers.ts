@@ -19,6 +19,8 @@ export const listUsers = adminQuery({
       numItems: v.number(),
       cursor: v.union(v.string(), v.null()),
     }),
+    // usePaginatedQuery may pass additional fields for internal tracking
+    id: v.optional(v.number()),
   },
   returns: v.object({
     page: v.array(userSummaryValidator),
