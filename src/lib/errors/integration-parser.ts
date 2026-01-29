@@ -38,9 +38,16 @@ interface ParsedPayload {
 }
 
 function extractMetaPayload(payload: unknown): ParsedPayload {
-    // Handle null/undefined payload
+    // Handle null/undefined payload - log for debugging
     if (payload == null) {
-        return { message: 'Meta API error' }
+        console.error('[Meta Error Parser] Payload is null/undefined, raw response unavailable')
+        return { message: 'Meta API request failed - unable to parse error details' }
+    }
+
+    // Handle string payload (e.g., plain text error response)
+    if (typeof payload === 'string') {
+        console.error('[Meta Error Parser] Payload is a string:', payload)
+        return { message: payload.slice(0, 200) || 'Meta API error' }
     }
 
     const data = payload as any
@@ -72,6 +79,9 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
             code: data.code,
         }
     }
+
+    // Log unparseable payload for debugging
+    console.error('[Meta Error Parser] Unable to parse payload:', JSON.stringify(data).slice(0, 500))
 
     return { message: 'Meta API error' }
 }
@@ -185,6 +195,15 @@ export function parseIntegrationError(
 ): UnifiedError {
     const httpStatus = response.status
 
+    // Log for debugging - help identify why payload might be null
+    if (payload == null) {
+        console.error(`[Error Parser] ${platform.toUpperCase()} error response has null payload`, {
+            url: response.url,
+            status: httpStatus,
+            contentType: response.headers.get('content-type'),
+        })
+    }
+
     // Extract platform-specific payload
     let parsed: ParsedPayload
     let classification: Classification
@@ -238,10 +257,23 @@ export async function readResponsePayloadSafe(response: Response): Promise<unkno
     try {
         const contentType = response.headers.get('content-type') || ''
         if (contentType.includes('application/json')) {
-            return await response.json()
+            const text = await response.text()
+            // Log for debugging empty responses
+            if (!text || text.trim() === '') {
+                console.error('[Response Parser] Empty JSON response from', response.url, 'status:', response.status)
+                return null
+            }
+            try {
+                return JSON.parse(text)
+            } catch (parseError) {
+                console.error('[Response Parser] Failed to parse JSON:', text.slice(0, 500))
+                return null
+            }
         }
-        return await response.text()
-    } catch {
+        const text = await response.text()
+        return text || null
+    } catch (error) {
+        console.error('[Response Parser] Error reading response:', error)
         return null
     }
 }
