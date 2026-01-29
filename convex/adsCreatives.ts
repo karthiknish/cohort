@@ -1,6 +1,7 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
+import { optimizeMetaImageUrl } from '../src/services/integrations/meta-ads'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -126,12 +127,12 @@ function normalizeMetaCreatives(creatives: any[]): NormalizedCreative[] {
     status: c.status,
     headlines: c.headlines,
     descriptions: c.message ? [c.message] : undefined,
-    imageUrl: c.imageUrl ?? c.videoThumbnailUrl ?? c.thumbnailUrl,
+    imageUrl: optimizeMetaImageUrl(c.imageUrl) ?? optimizeMetaImageUrl(c.videoThumbnailUrl) ?? optimizeMetaImageUrl(c.thumbnailUrl),
     videoUrl: c.videoSourceUrl ?? (c.videoId ? `https://www.facebook.com/video.php?v=${c.videoId}` : undefined),
     landingPageUrl: c.landingPageUrl,
     callToAction: c.callToAction,
     pageName: c.pageName,
-    pageProfileImageUrl: c.pageProfileImageUrl,
+    pageProfileImageUrl: optimizeMetaImageUrl(c.pageProfileImageUrl),
   }))
 }
 
