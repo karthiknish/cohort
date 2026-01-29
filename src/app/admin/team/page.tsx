@@ -71,7 +71,7 @@ export default function AdminTeamPage() {
   const { toast } = useToast()
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
-    api.adminUsers.listUsers,
+    api.adminUsers.listUsers as any,
     {},
     { initialNumItems: 50 }
   )

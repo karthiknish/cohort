@@ -68,7 +68,7 @@ export default function AdminUsersPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
-    api.adminUsers.listUsers,
+    api.adminUsers.listUsers as any,
     {},
     { initialNumItems: 50 }
   )
