@@ -348,63 +348,70 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Google Analytics Integration */}
-        <Card className="overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/50 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/10 shadow-sm transition-all hover:shadow-md hover:border-orange-300/50">
-          <CardHeader className="flex flex-col gap-4 border-b border-orange-100/50 dark:border-orange-900/30 bg-gradient-to-r from-orange-100/30 to-amber-100/20 dark:from-orange-900/20 dark:to-amber-900/10 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="overflow-hidden border-0 bg-white dark:bg-[#1f1f1f] shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] dark:shadow-[0_1px_3px_0_rgba(0,0,0,0.5)] transition-all hover:shadow-[0_1px_3px_0_rgba(60,64,67,0.3),0_2px_8px_4px_rgba(60,64,67,0.1)]">
+          <CardHeader className="flex flex-col gap-4 border-b border-[#dadce0] dark:border-[#3c4043] bg-white dark:bg-[#1f1f1f] py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30">
-                <RotateCw className="h-5 w-5" />
+              {/* Google Analytics Logo */}
+              <div className="flex h-10 w-10 items-center justify-center">
+                <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none">
+                  <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" fill="#F9AB00"/>
+                  <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" fill="#E37400"/>
+                  <circle cx="12" cy="12" r="3" fill="#fff"/>
+                </svg>
               </div>
               <div>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-orange-900 dark:text-orange-100">Google Analytics</CardTitle>
-                <CardDescription className="text-xs font-medium text-orange-700/70 dark:text-orange-300/60 leading-tight">
-                  Import users, sessions, and conversions into your dashboard.
+                <CardTitle className="text-sm font-medium text-[#202124] dark:text-[#e8eaed] tracking-normal">Google Analytics</CardTitle>
+                <CardDescription className="text-xs text-[#5f6368] dark:text-[#9aa0a6] leading-tight mt-0.5">
+                  Import users, sessions, and conversions into your dashboard
                 </CardDescription>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               {gaConnected ? (
-                <div className="inline-flex animate-in fade-in slide-in-from-right-2 duration-500 items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 border border-emerald-500/20">
-                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                  Connected{gaAccountLabel ? `: ${gaAccountLabel}` : ''}
+                <div className="inline-flex animate-in fade-in slide-in-from-right-2 duration-300 items-center gap-1.5 rounded-full bg-[#e6f4ea] dark:bg-[#1e3a2f] px-3 py-1.5 text-xs font-medium text-[#137333] dark:text-[#81c995]">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Connected{gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-2 rounded-xl bg-orange-100/50 dark:bg-orange-900/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300 border border-orange-200/50 dark:border-orange-800/50">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fce8e6] dark:bg-[#3c2a2a] px-3 py-1.5 text-xs font-medium text-[#c5221f] dark:text-[#f28b82]">
                   <Link2 className="h-3.5 w-3.5" />
-                  No property linked
+                  Not connected
                 </div>
               )}
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => void handleConnectGoogleAnalytics()}
                   disabled={gaLoading}
-                  className="h-9 rounded-xl border-orange-300/50 bg-white/80 dark:bg-orange-950/50 text-orange-700 hover:bg-orange-50 hover:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/30 text-[10px] font-bold uppercase tracking-widest transition-all active:scale-[0.98]"
+                  className="h-9 rounded-md border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#303134] text-[#1a73e8] dark:text-[#8ab4f8] hover:bg-[#f8f9fa] dark:hover:bg-[#3c4043] hover:border-[#dadce0] text-sm font-medium transition-colors"
                 >
-                  {gaLoading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-orange-600" /> : <Link2 className="h-3.5 w-3.5" />}
-                  {gaConnected ? 'Reconnect' : 'Link Account'}
+                  {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                  {gaConnected ? 'Reconnect' : 'Link property'}
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   onClick={() => void handleSyncGoogleAnalytics()}
                   disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
-                  className="h-9 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-orange-500/30 transition-all hover:from-orange-600 hover:to-amber-600 hover:shadow-orange-500/40 active:scale-[0.98]"
+                  className="h-9 rounded-md bg-[#1a73e8] hover:bg-[#1557b0] text-white text-sm font-medium shadow-none transition-colors"
                 >
-                  {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-white" /> : <RotateCw className="h-3.5 w-3.5 text-white" />}
-                  Sync now
+                  {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                  Sync data
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="bg-gradient-to-r from-orange-50/30 to-transparent dark:from-orange-950/10 dark:to-transparent py-3">
+          <CardContent className="bg-[#f8f9fa] dark:bg-[#28292a] py-3 px-4">
             <div className="flex items-center gap-2">
-              <div className="rounded-md bg-gradient-to-r from-orange-500 to-amber-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-white">TIP</div>
-              <p className="text-[10px] font-medium text-orange-800/70 dark:text-orange-200/70">
-                Sync writes metrics with provider <span className="font-bold text-orange-900 dark:text-orange-100">Google Analytics</span> for unified filtering.
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f0fe] dark:bg-[#1a3a5c]">
+                <TrendingUp className="h-3 w-3 text-[#1a73e8] dark:text-[#8ab4f8]" />
+              </div>
+              <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6]">
+                Syncing imports metrics from <span className="font-medium text-[#202124] dark:text-[#e8eaed]">Google Analytics</span> for unified reporting
               </p>
             </div>
           </CardContent>
@@ -420,16 +427,17 @@ export default function AnalyticsPage() {
 
         {/* Empty State for Google Analytics when not synced */}
         {isGaSelectedWithoutData ? (
-          <Card className="overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-orange-950/30 dark:to-amber-950/20">
+          <Card className="overflow-hidden border-0 bg-white dark:bg-[#1f1f1f] shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] dark:shadow-[0_1px_3px_0_rgba(0,0,0,0.5)]">
             <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 shadow-lg shadow-orange-500/20">
-                <svg className="h-10 w-10 text-orange-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M18.5 9L13.5 14L10.5 11L7 14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f8f9fa] dark:bg-[#28292a]">
+                <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none">
+                  <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" fill="#F9AB00"/>
+                  <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" fill="#E37400"/>
+                  <circle cx="12" cy="12" r="3" fill="#fff"/>
                 </svg>
               </div>
-              <h3 className="mb-2 text-lg font-bold text-orange-900 dark:text-orange-100">No Analytics Data Yet</h3>
-              <p className="mb-6 max-w-md text-sm text-orange-700/80 dark:text-orange-300/70">
+              <h3 className="mb-2 text-base font-medium text-[#202124] dark:text-[#e8eaed]">No analytics data yet</h3>
+              <p className="mb-6 max-w-md text-sm text-[#5f6368] dark:text-[#9aa0a6]">
                 Connect your Google Analytics property and sync your data to view performance metrics, insights, and reports.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -440,7 +448,7 @@ export default function AnalyticsPage() {
                     size="sm"
                     onClick={() => void handleConnectGoogleAnalytics()}
                     disabled={gaLoading}
-                    className="rounded-xl border-orange-300/50 bg-white/80 text-orange-700 hover:bg-orange-50 hover:border-orange-400 dark:bg-orange-950/50 dark:text-orange-300 dark:hover:bg-orange-900/30"
+                    className="rounded-md border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#303134] text-[#1a73e8] dark:text-[#8ab4f8] hover:bg-[#f8f9fa] dark:hover:bg-[#3c4043]"
                   >
                     {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
                     Link Google Analytics
@@ -451,12 +459,24 @@ export default function AnalyticsPage() {
                   size="sm"
                   onClick={() => void handleSyncGoogleAnalytics()}
                   disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
-                  className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30 hover:from-orange-600 hover:to-amber-600"
+                  className="rounded-md bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-none"
                 >
                   {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
-                  Sync Data Now
+                  Sync data now
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        ) : googleAnalyticsSyncMutation.isPending ? (
+          <Card className="overflow-hidden border-0 bg-white dark:bg-[#1f1f1f] shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] dark:shadow-[0_1px_3px_0_rgba(0,0,0,0.5)]">
+            <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f0fe] dark:bg-[#1a3a5c]">
+                <LoaderCircle className="h-10 w-10 animate-spin text-[#1a73e8] dark:text-[#8ab4f8]" />
+              </div>
+              <h3 className="mb-2 text-base font-medium text-[#202124] dark:text-[#e8eaed]">Syncing analytics data</h3>
+              <p className="max-w-md text-sm text-[#5f6368] dark:text-[#9aa0a6]">
+                Importing your Google Analytics data. This may take a moment...
+              </p>
             </CardContent>
           </Card>
         ) : (

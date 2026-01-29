@@ -36,7 +36,7 @@ export const listUsers = adminPaginatedQuery({
         createdAtMs: user.createdAtMs ?? null,
         updatedAtMs: user.updatedAtMs ?? null,
       })),
-      continueCursor: result.continueCursor,
+      continueCursor: result.continueCursor ?? null,
       isDone: result.isDone,
     }
   },
