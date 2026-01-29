@@ -13,9 +13,13 @@ interface PreviewContextValue {
 const PreviewContext = createContext<PreviewContextValue | undefined>(undefined)
 
 export function PreviewProvider({ children }: PropsWithChildren) {
-  const [isPreviewMode, setIsPreviewMode] = useState(() => isPreviewModeEnabled())
+  // Always start with false to avoid hydration mismatch, then sync from localStorage
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   useEffect(() => {
+    // Sync initial state from localStorage on mount
+    setIsPreviewMode(isPreviewModeEnabled())
+    
     const syncFromStorage = () => {
       setIsPreviewMode(isPreviewModeEnabled())
     }
