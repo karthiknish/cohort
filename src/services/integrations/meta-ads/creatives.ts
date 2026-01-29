@@ -28,6 +28,12 @@ export interface CreateAdCreativeOptions {
   pageId?: string
   instagramActorId?: string
   assetFeedSpec?: string
+  // v24.0 Website destination optimization - allows Meta to determine best landing page
+  destinationSpec?: {
+    url?: string
+    fallback_url?: string
+    additional_urls?: string[]
+  }
   maxRetries?: number
 }
 
@@ -85,6 +91,7 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
     pageId,
     instagramActorId,
     assetFeedSpec,
+    destinationSpec,
     maxRetries = 3,
   } = options
 
@@ -134,10 +141,15 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
 
   const url = `${META_API_BASE}/${formattedAccountId}/adcreatives`
 
-  const bodyData = {
+  const bodyData: Record<string, unknown> = {
     name,
     object_story_spec: objectStorySpec,
     access_token: accessToken,
+  }
+
+  // v24.0 Website destination optimization
+  if (destinationSpec) {
+    bodyData.destination_spec = destinationSpec
   }
 
   try {

@@ -122,6 +122,48 @@ export type MetaAdCreative = {
       height?: number
     }>
   }
+  platform_customizations?: {
+    instagram?: {
+      image_url?: string
+      image_hash?: string
+      video_id?: string
+    }
+    facebook?: {
+      image_url?: string
+      image_hash?: string
+      video_id?: string
+    }
+  }
+  source_instagram_media_id?: string
+  instagram_permalink_url?: string
+  effective_instagram_media_id?: string
+  portrait_customizations?: {
+    facebook?: string
+    instagram?: string
+    audience_network?: string
+    messenger?: string
+    whatsup?: string
+  }
+  degrees_of_freedom_spec?: {
+    creative_features?: string[]
+    language?: string
+  }
+  interactive_components_spec?: Array<{
+    type?: string
+    payload?: Record<string, unknown>
+  }>
+  asset_feed_spec?: string
+  ad_disclaimer_spec?: {
+    text?: string
+    disclaimer_type?: string
+  }
+  call_to_action_type?: string
+  object_type?: string
+  destination_spec?: {
+    url?: string
+    fallback_url?: string
+    additional_urls?: string[]
+  }
   object_story_spec?: {
     page_id?: string
     instagram_actor_id?: string
@@ -133,7 +175,14 @@ export type MetaAdCreative = {
       name?: string
       caption?: string
       description?: string
-      call_to_action?: { type?: string }
+      call_to_action?: {
+        type?: string
+        name?: string
+        value?: {
+          link?: string
+          application?: string
+        }
+      }
     }
     video_data?: {
       video_id?: string
@@ -141,8 +190,10 @@ export type MetaAdCreative = {
       title?: string
       call_to_action?: {
         type?: string
+        name?: string
         value?: {
           link?: string
+          application?: string
         }
       }
     }
@@ -195,6 +246,27 @@ export type MetaAdAccount = {
 // CAMPAIGN TYPES
 // =============================================================================
 
+/**
+ * Advantage+ campaign state values for v24.0 API
+ * Reference: https://developers.facebook.com/docs/marketing-api/advantage-campaigns/
+ */
+export type AdvantageState =
+  | 'advantage_plus_sales'
+  | 'advantage_plus_app'
+  | 'classic'
+
+/**
+ * Placement soft opt-out configuration for v24.0 API
+ * Allows allocating up to 5% of spend to typically excluded placements
+ * Reference: https://developers.facebook.com/docs/marketing-api/marketing-api-changelog/version24.0/
+ */
+export type PlacementSoftOptOut = {
+  facebook_positions?: string[]  // Positions to allow limited spend (e.g., ['feed', 'stories'])
+  instagram_positions?: string[]
+  audience_network_positions?: string[]
+  messenger_positions?: string[]
+}
+
 export type MetaCampaign = {
   id: string
   name: string
@@ -205,6 +277,9 @@ export type MetaCampaign = {
   startTime?: string
   stopTime?: string
   bidStrategy?: string
+  // v24.0 Advantage+ fields
+  advantageState?: AdvantageState
+  isAdsetBudgetSharingEnabled?: boolean
 }
 
 export type MetaAdSet = {
@@ -216,6 +291,18 @@ export type MetaAdSet = {
   lifetimeBudget?: number
   bidAmount?: number
   optimization_goal?: string
+  // v24.0 fields
+  placementSoftOptOut?: PlacementSoftOptOut
+}
+
+/**
+ * Destination spec for website destination optimization (v24.0)
+ * Allows Meta to automatically determine the best landing page
+ */
+export type DestinationSpec = {
+  url?: string
+  fallback_url?: string
+  additional_urls?: string[]
 }
 
 export type MetaAdMetric = {
@@ -248,6 +335,7 @@ export type MetaCreative = {
   status: 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED'
   creativeId?: string
   creativeName?: string
+  type?: string  // 'sponsored_content', 'video', 'image', 'lead_generation', etc.
   thumbnailUrl?: string
   imageUrl?: string
   videoSourceUrl?: string
@@ -259,6 +347,14 @@ export type MetaCreative = {
   pageName?: string
   pageProfileImageUrl?: string
   headlines?: string[]
+  // v24.0 additional fields
+  instagramPermalinkUrl?: string
+  sourceInstagramMediaId?: string
+  effectiveInstagramMediaId?: string
+  objectType?: string
+  // Lead gen specific fields
+  isLeadGen?: boolean
+  leadgenFormId?: string
 }
 
 // =============================================================================

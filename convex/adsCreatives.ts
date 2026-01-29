@@ -44,6 +44,10 @@ export type NormalizedCreative = {
   callToAction?: string
   pageName?: string
   pageProfileImageUrl?: string
+  // Lead gen and additional fields
+  isLeadGen?: boolean
+  leadgenFormId?: string
+  instagramPermalinkUrl?: string
 }
 
 function normalizeGoogleCreatives(creatives: any[]): NormalizedCreative[] {
@@ -123,7 +127,7 @@ function normalizeMetaCreatives(creatives: any[]): NormalizedCreative[] {
     campaignId: c.campaignId,
     campaignName: c.campaignName,
     name: c.adName ?? c.creativeName,
-    type: 'sponsored_content',
+    type: c.type ?? 'sponsored_content',
     status: c.status,
     headlines: c.headlines,
     descriptions: c.message ? [c.message] : undefined,
@@ -133,6 +137,10 @@ function normalizeMetaCreatives(creatives: any[]): NormalizedCreative[] {
     callToAction: c.callToAction,
     pageName: c.pageName,
     pageProfileImageUrl: optimizeMetaImageUrl(c.pageProfileImageUrl),
+    // Lead gen specific fields
+    isLeadGen: c.isLeadGen,
+    leadgenFormId: c.leadgenFormId,
+    instagramPermalinkUrl: c.instagramPermalinkUrl,
   }))
 }
 

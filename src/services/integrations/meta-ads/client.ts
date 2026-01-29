@@ -17,7 +17,7 @@ export { DEFAULT_RETRY_CONFIG, calculateBackoffDelay, isRetryableStatus, sleep }
 // CONSTANTS
 // =============================================================================
 
-export const META_API_VERSION = 'v18.0'
+export const META_API_VERSION = 'v24.0'
 export const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
 
 // =============================================================================
