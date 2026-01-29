@@ -1,4 +1,4 @@
-import { adminMutation, adminQuery } from './functions'
+import { adminMutation, adminQuery, adminPaginatedQuery } from './functions'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 
@@ -13,13 +13,8 @@ const userSummaryValidator = v.object({
   updatedAtMs: v.union(v.number(), v.null()),
 })
 
-export const listUsers = adminQuery({
-  args: {
-    numItems: v.number(),
-    cursor: v.union(v.string(), v.null()),
-    // usePaginatedQuery may pass additional fields for internal tracking
-    id: v.optional(v.number()),
-  },
+export const listUsers = adminPaginatedQuery({
+  args: {}, // No additional args beyond pagination
   returns: v.object({
     page: v.array(userSummaryValidator),
     continueCursor: v.union(v.string(), v.null()),

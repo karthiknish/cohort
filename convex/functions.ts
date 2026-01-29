@@ -367,6 +367,23 @@ export const adminQuery = customQuery(query, {
   },
 })
 
+// Admin paginated query wrapper - for use with usePaginatedQuery
+export const adminPaginatedQuery = customQuery(query, {
+  args: {
+    numItems: v.number(),
+    cursor: v.union(v.string(), v.null()),
+    // usePaginatedQuery may pass additional fields for internal tracking
+    id: v.optional(v.number()),
+  },
+  input: async (ctx, args) => {
+    const auth = await getAuthenticatedContext(ctx)
+    if (auth.user.role !== 'admin') {
+      throw Errors.auth.adminRequired()
+    }
+    return { ctx: { ...ctx, ...auth }, args }
+  },
+})
+
 export const adminMutation = customMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
