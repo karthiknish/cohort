@@ -524,11 +524,17 @@ export async function fetchMetaCreatives(options: {
 
   const url = `${META_API_BASE}/${formattedAccountId}/ads?${params.toString()}`
 
+  // Debug: log the request URL (sanitized)
+  const sanitizedUrl = url.replace(/access_token=[^&]+/, 'access_token=***')
+  console.log('[Meta Ads] fetchCreatives request:', sanitizedUrl)
+
   const { payload } = await metaAdsClient.executeRequest<MetaAdsListResponse>({
     url,
     operation: 'fetchCreatives',
     maxRetries,
   })
+
+  console.log('[Meta Ads] fetchCreatives response keys:', payload ? Object.keys(payload) : 'null')
 
   const ads: MetaAdData[] = Array.isArray(payload?.data) ? payload.data : []
 
