@@ -166,6 +166,12 @@ export const listCreatives = action({
       clientId,
     })
 
+    console.log(`[adsCreatives:listCreatives] Fetched integration for ${args.providerId}:`, {
+      hasAccessToken: !!integration.accessToken,
+      accountId: integration.accountId,
+      workspaceId: args.workspaceId,
+    })
+
     if (!integration.accessToken) {
       throw Errors.integration.missingToken(args.providerId)
     }

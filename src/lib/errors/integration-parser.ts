@@ -80,10 +80,16 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
         }
     }
 
-    // Log unparseable payload for debugging
-    console.error('[Meta Error Parser] Unable to parse payload:', JSON.stringify(data).slice(0, 500))
+    // Fallback: search for any "message" or "error" related string
+    if (data.message && typeof data.message === 'string') {
+        return { message: data.message }
+    }
 
-    return { message: 'Meta API error' }
+    // Log unparseable payload for debugging
+    const rawPayload = JSON.stringify(data).slice(0, 200)
+    console.error('[Meta Error Parser] Unable to parse payload:', rawPayload)
+
+    return { message: `Meta API error (Payload: ${rawPayload})` }
 }
 
 function extractGooglePayload(payload: unknown): ParsedPayload {

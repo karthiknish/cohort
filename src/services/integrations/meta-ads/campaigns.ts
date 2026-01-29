@@ -485,7 +485,7 @@ export async function fetchMetaCreatives(options: {
       'creative_id',
       'leadgen_form_id',
       'tracking_specs',
-      'adcreatives{id,name,thumbnail_url,image_url,full_picture,images,image_hash,url_tags,platform_customizations,source_instagram_media_id,instagram_permalink_url,effective_instagram_media_id,portrait_customizations,degrees_of_freedom_spec,interactive_components_spec,asset_feed_spec,ad_disclaimer_spec,call_to_action_type,object_type,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action{name,type,value},name,caption,description},video_data{video_id,message,title,call_to_action{name,type,value}}}}',
+      'adcreatives{id,name,thumbnail_url,image_url,full_picture,images,image_hash,url_tags,platform_customizations,source_instagram_media_id,instagram_permalink_url,effective_instagram_media_id,portrait_customizations,call_to_action_type,object_type,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action{name,type,value},name,caption,description},video_data{video_id,message,title,call_to_action{name,type,value}}}}',
     ].join(','),
     limit: '100',
   })
@@ -712,39 +712,44 @@ export async function fetchMetaCreatives(options: {
 
   const videoInfoEntries = await Promise.all(
     videoIds.map(async (videoId) => {
-      const videoParams = new URLSearchParams({
-        fields: 'source,picture,thumbnails{uri,width,height}',
-      })
-      await appendMetaAuthParams({ params: videoParams, accessToken, appSecret: process.env.META_APP_SECRET })
-      const videoUrl = `${META_API_BASE}/${videoId}?${videoParams.toString()}`
+      try {
+        const videoParams = new URLSearchParams({
+          fields: 'source,picture,thumbnails{uri,width,height}',
+        })
+        await appendMetaAuthParams({ params: videoParams, accessToken, appSecret: process.env.META_APP_SECRET })
+        const videoUrl = `${META_API_BASE}/${videoId}?${videoParams.toString()}`
 
-      const { payload: videoPayload } = await metaAdsClient.executeRequest<{
-        source?: string
-        picture?: string
-        thumbnails?: { data?: Array<{ uri?: string; width?: number; height?: number }> }
-      }>({
-        url: videoUrl,
-        operation: 'fetchVideoMedia',
-        maxRetries,
-      })
+        const { payload: videoPayload } = await metaAdsClient.executeRequest<{
+          source?: string
+          picture?: string
+          thumbnails?: { data?: Array<{ uri?: string; width?: number; height?: number }> }
+        }>({
+          url: videoUrl,
+          operation: 'fetchVideoMedia',
+          maxRetries,
+        })
 
-      // Select the largest thumbnail if available
-      let picture = videoPayload?.picture
-      const thumbnails = videoPayload?.thumbnails?.data
-      if (Array.isArray(thumbnails) && thumbnails.length > 0) {
-        const sorted = [...thumbnails].sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))
-        if (sorted[0]?.uri) {
-          picture = sorted[0].uri
+        // Select the largest thumbnail if available
+        let picture = videoPayload?.picture
+        const thumbnails = videoPayload?.thumbnails?.data
+        if (Array.isArray(thumbnails) && thumbnails.length > 0) {
+          const sorted = [...thumbnails].sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))
+          if (sorted[0]?.uri) {
+            picture = sorted[0].uri
+          }
         }
+
+        // Use thumbnails if picture is not available (thumbnails are higher quality)
+        const finalPicture = picture || (thumbnails?.[0]?.uri)
+
+        return [videoId, {
+          source: videoPayload?.source,
+          picture: optimizeMetaImageUrl(finalPicture),
+        }] as const
+      } catch (err) {
+        console.warn(`[Meta Ads] Failed to fetch video info for ${videoId}:`, err instanceof Error ? err.message : err)
+        return [videoId, {}] as const
       }
-
-      // Use thumbnails if picture is not available (thumbnails are higher quality)
-      const finalPicture = picture || (thumbnails?.[0]?.uri)
-
-      return [videoId, {
-        source: videoPayload?.source,
-        picture: optimizeMetaImageUrl(finalPicture),
-      }] as const
     })
   )
 
