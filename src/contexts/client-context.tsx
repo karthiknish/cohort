@@ -49,9 +49,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   // Admin users can see all clients across workspaces
   const isAdmin = user?.role === 'admin'
 
+  // Skip client query if user doesn't have agencyId (not synced to Convex yet)
+  // This prevents USER_NOT_FOUND errors on pages that don't need client data
+  const shouldSkipClients = previewEnabled || !canQuery || !user?.agencyId
+
   const convexClients = useQuery(
     clientsApi.list,
-    previewEnabled || !canQuery
+    shouldSkipClients
       ? 'skip'
       : {
         workspaceId,
