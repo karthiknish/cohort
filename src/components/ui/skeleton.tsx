@@ -163,6 +163,9 @@ export function SkeletonStats({
 // CHART SKELETON
 // =============================================================================
 
+// Static heights for skeleton bars to avoid hydration mismatch
+const SKELETON_CHART_HEIGHTS = [45, 70, 30, 85, 55, 40, 75, 60, 35, 80, 50, 65]
+
 export function SkeletonChart({ className, ...props }: SkeletonProps) {
   return (
     <div className={cn('rounded-lg border bg-card p-6 space-y-4', className)} {...props}>
@@ -171,11 +174,11 @@ export function SkeletonChart({ className, ...props }: SkeletonProps) {
         <Skeleton className="h-8 w-24" />
       </div>
       <div className="h-64 flex items-end justify-between gap-2">
-        {Array.from({ length: 12 }).map((_, i) => (
+        {SKELETON_CHART_HEIGHTS.map((height, i) => (
           <Skeleton
             key={i}
             className="flex-1"
-            style={{ height: `${Math.random() * 60 + 20}%` }}
+            style={{ height: `${height}%` }}
           />
         ))}
       </div>

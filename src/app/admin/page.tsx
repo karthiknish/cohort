@@ -472,8 +472,8 @@ export default function AdminPage() {
               <CardContent>
                 {usageLoading ? (
                   <div className="flex items-end gap-1 h-32">
-                    {[...Array(7)].map((_, i) => (
-                      <Skeleton key={i} className="flex-1 h-full" style={{ height: `${30 + Math.random() * 70}%` }} />
+                    {[65, 45, 80, 35, 70, 55, 90].map((height, i) => (
+                      <Skeleton key={i} className="flex-1 h-full" style={{ height: `${height}%` }} />
                     ))}
                   </div>
                 ) : (
