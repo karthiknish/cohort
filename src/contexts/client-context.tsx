@@ -36,7 +36,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
 
-  const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
+  const [previewEnabled, setPreviewEnabled] = useState(false)
   const selectionBeforePreviewRef = useRef<string | null>(null)
   const lastWorkspaceIdRef = useRef<string | null>(null)
 

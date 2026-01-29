@@ -404,7 +404,7 @@ export async function fetchMetaCreatives(options: {
       'effective_status',
       'adset_id',
       'campaign_id',
-      'adcreatives{id,name,thumbnail_url,image_url,full_picture,url_tags,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action,name,caption,description},video_data{video_id,message,title,call_to_action}}}',
+      'adcreatives{id,name,thumbnail_url,image_url,full_picture,images,image_hash,url_tags,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action,name,caption,description},video_data{video_id,message,title,call_to_action}}}',
     ].join(','),
     limit: '100',
   })
@@ -500,17 +500,21 @@ export async function fetchMetaCreatives(options: {
     const account = accountId ? accountDetails[accountId] : undefined
 
     // Prefer high-quality image sources in this order:
-    // 1. object_story_spec.link_data.picture - Original uploaded image (highest quality)
-    // 2. full_picture - Highest quality image from Meta (if available)
-    // 3. image_url - Standard quality image
-    // 4. thumbnail_url - Smaller preview image (lowest quality)
+    // 1. images.data[0].url - Native image URL from Meta's images array (highest quality, no CDN params)
+    // 2. object_story_spec.link_data.picture - Original uploaded image URL
+    // 3. full_picture - Highest quality image from Meta
+    // 4. image_url - Standard quality image
+    // 5. thumbnail_url - Smaller preview image (lowest quality)
+    const nativeImageUrl = creative?.images?.data?.[0]?.url
     const storySpecPicture = storySpec?.link_data?.picture
     const creativeFullPicture = creative?.full_picture
     const creativeImageUrl = creative?.image_url
     const creativeThumbnailUrl = creative?.thumbnail_url
 
     // Use the best available image source, optimized for Meta CDN quality
-    const imageUrl = optimizeMetaImageUrl(storySpecPicture || creativeFullPicture || creativeImageUrl || creativeThumbnailUrl)
+    // Note: nativeImageUrl from images.data typically doesn't need optimization as it's already high quality
+    const rawImageUrl = nativeImageUrl || storySpecPicture || creativeFullPicture || creativeImageUrl || creativeThumbnailUrl
+    const imageUrl = rawImageUrl ? optimizeMetaImageUrl(rawImageUrl) : undefined
 
     return {
       adId: ad.id ?? '',
