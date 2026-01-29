@@ -50,7 +50,11 @@ export async function listGoogleCampaigns(options: {
       campaign.maximize_conversion_value.target_roas,
       campaign.ad_schedule,
       campaign_budget.amount_micros,
-      campaign_budget.id
+      campaign_budget.id,
+      campaign.ai_max_setting.enable_ai_max,
+      campaign.ai_max_setting.bundling_required,
+      campaign.contains_eu_political_advertising,
+      campaign.brand_guidelines_enabled
     FROM campaign
     ${statusCondition}
     ORDER BY campaign.name
@@ -88,6 +92,15 @@ export async function listGoogleCampaigns(options: {
                 endHour?: number
                 endMinute?: string
             }>
+            // v22.0 AI Max for Search campaigns
+            aiMaxSetting?: {
+                enableAiMax?: boolean
+                bundlingRequired?: boolean
+            }
+            // v22.0 EU political advertising
+            containsEuPoliticalAdvertising?: boolean
+            // v22.0 Performance Max brand guidelines
+            brandGuidelinesEnabled?: boolean
         } | undefined
 
         const budget = row.campaignBudget as {
@@ -128,6 +141,15 @@ export async function listGoogleCampaigns(options: {
             startDate: campaign?.startDate,
             endDate: campaign?.endDate,
             advertisingChannelType: campaign?.advertisingChannelType,
+            // v22.0 AI Max for Search campaigns
+            aiMaxSetting: campaign?.aiMaxSetting?.enableAiMax ? {
+                enableAiMax: campaign.aiMaxSetting.enableAiMax,
+                bundlingRequired: campaign.aiMaxSetting.bundlingRequired,
+            } : undefined,
+            // v22.0 EU political advertising self-declaration
+            containsEuPoliticalAdvertising: campaign?.containsEuPoliticalAdvertising,
+            // v22.0 Performance Max brand guidelines
+            brandGuidelinesEnabled: campaign?.brandGuidelinesEnabled,
         }
     })
 }

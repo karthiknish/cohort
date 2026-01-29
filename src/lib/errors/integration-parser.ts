@@ -38,8 +38,13 @@ interface ParsedPayload {
 }
 
 function extractMetaPayload(payload: unknown): ParsedPayload {
+    // Handle null/undefined payload
+    if (payload == null) {
+        return { message: 'Meta API error' }
+    }
+
     const data = payload as any
-    
+
     // Check for standard Meta error format
     if (data.error) {
         const error = data.error
@@ -51,7 +56,7 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
             traceId: error.fbtrace_id as string | undefined,
         }
     }
-    
+
     // Check for alternate error format (data.error_code, data.error_msg)
     if (data.error_code) {
         return {
@@ -59,7 +64,7 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
             code: data.error_code as number | undefined,
         }
     }
-    
+
     // Check for response-level errors
     if (data.code && data.code !== 200) {
         return {
@@ -67,12 +72,24 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
             code: data.code,
         }
     }
-    
-    return { message: 'Failed to load audience targeting. Please try again.' }
+
+    return { message: 'Meta API error' }
 }
 
 function extractGooglePayload(payload: unknown): ParsedPayload {
-    const error = (payload as { error?: { errors?: Array<{ message?: string; domain?: string }> } })?.error
+    // Handle null/undefined payload
+    if (payload == null) {
+        return { message: 'Google API error' }
+    }
+
+    const data = payload as { error?: { errors?: Array<{ message?: string; domain?: string }> } | null }
+    const error = data?.error
+
+    // Handle null error object
+    if (error == null) {
+        return { message: 'Google API error' }
+    }
+
     const firstError = error?.errors?.[0]
 
     return {
@@ -82,6 +99,10 @@ function extractGooglePayload(payload: unknown): ParsedPayload {
 }
 
 function extractLinkedInPayload(payload: unknown): ParsedPayload {
+    if (payload == null) {
+        return { message: 'LinkedIn API error' }
+    }
+
     const data = payload as { message?: string; code?: string; status?: number }
 
     return {
@@ -91,6 +112,10 @@ function extractLinkedInPayload(payload: unknown): ParsedPayload {
 }
 
 function extractTikTokPayload(payload: unknown): ParsedPayload {
+    if (payload == null) {
+        return { message: 'TikTok API error' }
+    }
+
     const data = payload as { message?: string; code?: number; request_id?: string }
 
     return {

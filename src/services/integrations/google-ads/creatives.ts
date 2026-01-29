@@ -58,8 +58,11 @@ export async function fetchGoogleCreatives(options: {
       ad_group.id,
       ad_group.name,
       campaign.id,
-      campaign.name
+      campaign.name,
+      asset_group.asset_automation_type,
+      asset_group.status
     FROM ad_group_ad
+    LEFT JOIN asset_group ON asset_group.id = ad_group_ad.ad.id
     WHERE ad_group_ad.status != 'REMOVED'
     ${filters}
     ORDER BY campaign.name, ad_group.name
@@ -110,6 +113,18 @@ export async function fetchGoogleCreatives(options: {
                     headlines?: Array<{ text?: string }>
                     descriptions?: Array<{ text?: string }>
                 }
+                // v22.0 Demand Gen specific fields
+                demandGenMultiAssetAd?: {
+                    headlines?: Array<{ text?: string }>
+                    descriptions?: Array<{ text?: string }>
+                    marketingImages?: Array<{ asset?: string }>
+                    businessName?: string
+                    callToActionText?: string
+                    tallPortraitMarketingImages?: Array<{ asset?: string }>
+                }
+                demandGenVideoResponsiveAd?: {
+                    video?: { id?: string }
+                }
             }
             status?: string
         } | undefined
@@ -117,6 +132,11 @@ export async function fetchGoogleCreatives(options: {
         const adGroup = row.adGroup as { id?: string; name?: string } | undefined
         const campaign = row.campaign as { id?: string; name?: string } | undefined
         const ad = adGroupAd?.ad
+
+        // v22.0 Extract asset automation types from asset_group
+        const assetGroup = row.assetGroup as {
+            assetAutomationType?: string[]
+        } | undefined
 
         // Determine ad type
         let type: GoogleCreative['type'] = 'OTHER'
@@ -136,6 +156,10 @@ export async function fetchGoogleCreatives(options: {
             type = 'APP_AD'
         } else if (adTypeStr === 'HOTEL_AD') {
             type = 'HOTEL_AD'
+        } else if (adTypeStr === 'DEMAND_GEN_MULTI_ASSET_AD' || ad?.demandGenMultiAssetAd) {
+            type = 'DEMAND_GEN_MULTI_ASSET_AD'
+        } else if (adTypeStr === 'DEMAND_GEN_VIDEO_RESPONSIVE_AD' || ad?.demandGenVideoResponsiveAd) {
+            type = 'DEMAND_GEN_VIDEO_RESPONSIVE_AD'
         } else if (adTypeStr.includes('PERFORMANCE_MAX')) {
             type = 'PERFORMANCE_MAX_AD'
         } else if (adTypeStr.includes('SMART_DISPLAY')) {
@@ -160,7 +184,15 @@ export async function fetchGoogleCreatives(options: {
         } else if (ad?.appAd) {
             headlines = ad.appAd.headlines?.map(h => h.text ?? '').filter(Boolean) ?? []
             descriptions = ad.appAd.descriptions?.map(d => d.text ?? '').filter(Boolean) ?? []
+        } else if (ad?.demandGenMultiAssetAd) {
+            headlines = ad.demandGenMultiAssetAd.headlines?.map(h => h.text ?? '').filter(Boolean) ?? []
+            descriptions = ad.demandGenMultiAssetAd.descriptions?.map(d => d.text ?? '').filter(Boolean) ?? []
         }
+
+        // Extract tall portrait marketing images for Demand Gen
+        const tallPortraitImages = ad?.demandGenMultiAssetAd?.tallPortraitMarketingImages
+          ?.map(img => img.asset ?? '')
+          .filter(Boolean) ?? []
 
         return {
             adId: ad?.id ?? '',
@@ -175,9 +207,13 @@ export async function fetchGoogleCreatives(options: {
             finalUrls: ad?.finalUrls ?? [],
             displayUrl: ad?.displayUrl,
             imageUrl: ad?.imageAd?.imageUrl || ad?.responsiveDisplayAd?.marketingImages?.[0]?.asset,
-            videoId: ad?.videoAd?.video?.id,
-            businessName: ad?.responsiveDisplayAd?.businessName || ad?.callAd?.businessName,
-            callToAction: ad?.responsiveDisplayAd?.callToActionText,
+            videoId: ad?.videoAd?.video?.id || ad?.demandGenVideoResponsiveAd?.video?.id,
+            businessName: ad?.responsiveDisplayAd?.businessName || ad?.callAd?.businessName || ad?.demandGenMultiAssetAd?.businessName,
+            callToAction: ad?.responsiveDisplayAd?.callToActionText || ad?.demandGenMultiAssetAd?.callToActionText,
+            // v22.0 Demand Gen tall portrait images
+            tallPortraitMarketingImages: tallPortraitImages,
+            // v22.0 Asset automation types
+            assetAutomationType: assetGroup?.assetAutomationType as GoogleCreative['assetAutomationType'],
         }
     })
 }

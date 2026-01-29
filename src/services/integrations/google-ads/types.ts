@@ -4,8 +4,75 @@
 
 import { NormalizedMetric } from '@/types/integrations'
 
-export const GOOGLE_API_VERSION = 'v15'
+export const GOOGLE_API_VERSION = 'v22'
 export const GOOGLE_API_BASE = `https://googleads.googleapis.com/${GOOGLE_API_VERSION}`
+
+// =============================================================================
+// v22.0 NEW TYPES
+// =============================================================================
+
+/**
+ * Asset Automation Type for v22.0
+ * Controls automatic asset generation for campaigns
+ */
+export type AssetAutomationType =
+  | 'FINAL_URL_EXPANSION_TEXT_ASSET_AUTOMATION' // Auto-generate text assets from final URL
+  | 'GENERATE_LANDING_PAGE_PREVIEW' // Auto-generate landing page previews
+  | 'GENERATE_SHORTER_YOUTUBE_VIDEOS' // Auto-generate shorter YouTube videos
+  | 'GENERATE_ENHANCED_YOUTUBE_VIDEOS' // Auto-generate enhanced YouTube videos (PMax)
+  | 'GENERATE_IMAGE_ENHANCEMENT' // Auto-generate enhanced images (PMax)
+  | 'GENERATE_IMAGE_EXTRACTION' // Auto-source images from final URLs (PMax)
+  | 'GENERATE_DESIGN_VERSIONS_FOR_IMAGES' // Generate design variations for Demand Gen images
+  | 'GENERATE_VIDEOS_FROM_OTHER_ASSETS' // Generate videos from images/text (Demand Gen)
+
+/**
+ * AI Max Setting for Search campaigns (v21.0+)
+ */
+export interface AiMaxSetting {
+  enableAiMax?: boolean
+  bundlingRequired?: boolean // Read-only: indicates if AI Max must be enabled
+}
+
+/**
+ * App Campaign Bidding Strategy Goal Type (v22.0)
+ * New bidding goals without target CPA/ROAS
+ */
+export type AppCampaignBiddingStrategyGoalType =
+  | 'OPTIMIZE_IN_APP_CONVERSIONS_WITHOUT_TARGET_CPA' // Maximize conversions without target CPA
+  | 'OPTIMIZE_TOTAL_VALUE_WITHOUT_TARGET_ROAS' // Maximize conversion value without target ROAS
+
+/**
+ * Brand Guidelines for Performance Max (v19.0+, allowlist only)
+ */
+export interface BrandGuidelines {
+  brandName?: string
+  brandPrimaryColor?: string // Hex color format (e.g., "#FF0000")
+  brandSecondaryColor?: string
+  brandFont?: 'FONT_SANS_SERIF' | 'FONT_SERIF' | 'FONT_MONOSPACE' | 'FONT_CUSTOM'
+}
+
+/**
+ * Demand Gen Ad Group Settings (v19.1+)
+ */
+export interface DemandGenAdGroupSettings {
+  // Channel controls for Demand Gen campaigns
+  enabledChannels?: {
+    youTubeInStream?: boolean
+    youTubeInFeed?: boolean
+    youTubeShorts?: boolean
+    discover?: boolean
+    gmail?: boolean
+    display?: boolean
+  }
+}
+
+/**
+ * Target ROAS Tolerance for Smart Bidding Exploration (v21.0+)
+ * Allows flexibility in target ROAS for exploration
+ */
+export interface TargetRoasTolerance {
+  targetRoasTolerancePercentMillis?: number // 10000-30000 (10%-30%)
+}
 
 // =============================================================================
 // ERROR CODES
@@ -208,6 +275,15 @@ export type GoogleCampaign = {
   startDate?: string
   endDate?: string
   advertisingChannelType?: string
+  // v22.0 AI Max for Search campaigns
+  aiMaxSetting?: AiMaxSetting
+  // v22.0 EU political advertising self-declaration
+  containsEuPoliticalAdvertising?: boolean
+  // v22.0 Performance Max brand guidelines (allowlist only)
+  brandGuidelinesEnabled?: boolean
+  brandGuidelines?: BrandGuidelines
+  // v22.0 Ad set budget sharing indicator
+  hasSetBudgetSharingEnabled?: boolean
 }
 
 export type GoogleAdGroup = {
@@ -216,6 +292,14 @@ export type GoogleAdGroup = {
   name: string
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   cpcBidMicros?: number
+  targetCpaMicros?: number
+  targetCpcMicros?: number
+  // v22.0 AI Max ad group setting
+  aiMaxAdGroupSetting?: {
+    disableSearchTermMatching?: boolean
+  }
+  // v22.0 Demand Gen ad group settings
+  demandGenAdGroupSettings?: DemandGenAdGroupSettings
 }
 
 export type GoogleAdMetric = {
@@ -243,7 +327,7 @@ export type GoogleCreative = {
   campaignId: string
   adGroupName?: string
   campaignName?: string
-  type: 'RESPONSIVE_SEARCH_AD' | 'RESPONSIVE_DISPLAY_AD' | 'IMAGE_AD' | 'VIDEO_AD' | 'APP_AD' | 'CALL_ONLY_AD' | 'HOTEL_AD' | 'PERFORMANCE_MAX_AD' | 'SMART_DISPLAY_AD' | 'DISPLAY_AD' | 'SEARCH_AD' | 'OTHER'
+  type: 'RESPONSIVE_SEARCH_AD' | 'RESPONSIVE_DISPLAY_AD' | 'IMAGE_AD' | 'VIDEO_AD' | 'APP_AD' | 'CALL_ONLY_AD' | 'HOTEL_AD' | 'PERFORMANCE_MAX_AD' | 'SMART_DISPLAY_AD' | 'DISPLAY_AD' | 'SEARCH_AD' | 'DEMAND_GEN_MULTI_ASSET_AD' | 'DEMAND_GEN_VIDEO_RESPONSIVE_AD' | 'OTHER'
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   headlines: string[]
   descriptions: string[]
@@ -253,6 +337,10 @@ export type GoogleCreative = {
   videoId?: string
   businessName?: string
   callToAction?: string
+  // v22.0 Demand Gen specific fields
+  tallPortraitMarketingImages?: string[] // 9:16 aspect ratio images for Demand Gen
+  // v22.0 Performance Max asset automation
+  assetAutomationType?: AssetAutomationType[]
 }
 
 // =============================================================================
