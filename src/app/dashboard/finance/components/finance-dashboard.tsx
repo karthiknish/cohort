@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import type { ElementType } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -271,6 +271,13 @@ export function FinanceDashboard() {
   const activeSection = sectionTabs.value
   const setActiveSection = sectionTabs.setValue
 
+  // Reset activeSection if it's no longer in the available sections
+  useEffect(() => {
+    if (activeSection && !sections.some((s) => s.value === activeSection)) {
+      setActiveSection(sections[0]?.value ?? 'overview')
+    }
+  }, [activeSection, sections, setActiveSection])
+
   const handleJumpTo = useCallback(
     (value: string) => {
       setActiveSection(value)
@@ -335,20 +342,22 @@ export function FinanceDashboard() {
       <FinanceStatsGrid stats={stats} />
 
       {/* Sticky jump navigation (reduces long-scroll cognitive load) */}
-      <div className="sticky top-0 z-20 -mx-6 border-b border-muted/40 bg-background/75 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Jump to</div>
-          <Tabs value={activeSection} onValueChange={handleJumpTo}>
-            <TabsList className="w-full justify-start sm:w-auto">
-              {sections.map((s) => (
-                <TabsTrigger key={s.value} value={s.value}>
-                  {s.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+      {sections.some((s) => s.value === activeSection) && (
+        <div className="sticky top-0 z-20 -mx-6 border-b border-muted/40 bg-background/75 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs font-medium text-muted-foreground">Jump to</div>
+            <Tabs value={activeSection} onValueChange={handleJumpTo}>
+              <TabsList className="w-full justify-start sm:w-auto">
+                {sections.map((s) => (
+                  <TabsTrigger key={s.value} value={s.value}>
+                    {s.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Empty State */}
       {isEmptyState && (
