@@ -28,40 +28,58 @@ export function optimizeMetaImageUrl(imageUrl?: string): string | undefined {
     const url = new URL(imageUrl)
     const params = url.searchParams
 
-    // AGGRESSIVE: Always remove stp parameter for ads images
-    // stp contains thumbnail constraints that Meta's CDN enforces
-    const stp = params.get('stp')
-    if (stp) {
-      // Check if this is a thumbnail URL (contains tt, dst, p#x#, q#)
-      const isThumbnail = /tt\d+|dst|p\d+x\d+|q\d+/.test(stp)
+    // Check if this is a t45 ads thumbnail endpoint
+    const isAdsThumbnail = url.pathname.includes('/t45.')
 
-      if (isThumbnail) {
-        // Remove stp entirely for thumbnail URLs to get full quality
-        params.delete('stp')
+    if (isAdsThumbnail) {
+      // For t45 thumbnail URLs, we need to modify stp carefully, not delete it
+      // The t45 endpoint requires stp to function, but we can optimize within it
+      const stp = params.get('stp')
+      if (stp) {
+        let optimizedStp = stp
+
+        // Remove size constraints like p64x64, p1080x1080
+        // Replace with larger size like p1080x1080 or remove the constraint
+        optimizedStp = optimizedStp.replace(/p\d+x\d+/g, 'p1080x1080')
+
+        // Upgrade quality to max
+        optimizedStp = optimizedStp.replace(/q\d+/g, 'q100')
+
+        // Remove emergency mode compression
+        optimizedStp = optimizedStp.replace(/dst-emg\d*/g, '')
+
+        // Clean up any double underscores left from removals
+        optimizedStp = optimizedStp.replace(/_+/g, '_')
+
+        params.set('stp', optimizedStp)
       }
+
+      // Set higher quality content buffering
+      params.set('ccb', '1-7')
+    } else {
+      // For non-thumbnail endpoints (t39, etc.), be more aggressive
+      const stp = params.get('stp')
+      if (stp) {
+        const isThumbnail = /tt\d+|dst|p\d+x\d+|q\d+/.test(stp)
+        if (isThumbnail) {
+          params.delete('stp')
+        }
+      }
+
+      // Remove all quality-limiting parameters
+      params.delete('dst')
+      params.delete('tp')
+      params.delete('nc_tp')
+
+      // Remove any explicit width/height constraints
+      params.delete('w')
+      params.delete('h')
+      params.delete('width')
+      params.delete('height')
+
+      // Set higher quality content buffering
+      params.set('ccb', '1-7')
     }
-
-    // Remove all quality-limiting parameters
-    params.delete('dst') // Remove destination parameter
-    params.delete('tp') // Remove thumbnail parameter
-    params.delete('nc_tp') // Remove another thumbnail param
-
-    // Remove any explicit width/height constraints
-    params.delete('w')
-    params.delete('h')
-    params.delete('width')
-    params.delete('height')
-
-    // Set higher quality content buffering
-    params.set('ccb', '1-7')
-
-    // Handle the URL path - convert thumbnail endpoint to standard endpoint
-    // /v/t45.1600-4/ is the ads thumbnail endpoint
-    // We can try to remove the thumbnail suffix or let Meta CDN handle it
-    const pathname = url.pathname
-
-    // For t45 ads thumbnail URLs, we need to accept them but optimize the params
-    // The full image would require a different API call with full_picture field
 
     return url.toString()
   } catch {
