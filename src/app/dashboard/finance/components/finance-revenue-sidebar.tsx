@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { CalendarClock, TrendingUp, ArrowUpRight, Clock } from 'lucide-react'
 
 import {
@@ -29,11 +29,12 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
   const outstandingDisplay = formatCurrencyDistribution(currencyTotals, 'totalOutstanding', primaryCurrency)
   const hasOutstanding = totalOutstanding > 0 || currencyTotals.some((entry) => entry.totalOutstanding > 0)
 
-  // Pre-compute today's timestamp once for hydration-safe comparisons
-  const todayTimestamp = useMemo(() => {
+  // Use state for client-only date computation to avoid hydration mismatch
+  const [todayTimestamp, setTodayTimestamp] = useState<number | null>(null)
+  
+  useEffect(() => {
     const now = new Date()
-    // Use start of day in UTC for consistent comparison
-    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    setTodayTimestamp(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   }, [])
 
   return (
@@ -118,7 +119,7 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
               <div className="space-y-3">
                 {upcomingPayments.map((invoice) => {
                   const parsedDueDate = parseDate(invoice.dueDate ?? null)
-                  const isOverdue = parsedDueDate && parsedDueDate.getTime() < todayTimestamp
+                  const isOverdue = todayTimestamp !== null && parsedDueDate && parsedDueDate.getTime() < todayTimestamp
                   const amountDue = typeof invoice.amountRemaining === 'number'
                     ? invoice.amountRemaining
                     : typeof invoice.amountPaid === 'number'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo, useCallback, memo } from 'react'
+import { useState, useRef, useMemo, useCallback, memo, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   type ColumnDef,
@@ -405,10 +405,12 @@ export function FinanceInvoiceTable({
   const [sorting, setSorting] = useState<SortingState>([])
   const parentRef = useRef<HTMLDivElement>(null)
 
-  // Pre-compute today's timestamp once for hydration-safe comparisons
-  const todayTimestamp = useMemo(() => {
+  // Use state for client-only date computation to avoid hydration mismatch
+  const [todayTimestamp, setTodayTimestamp] = useState<number>(0)
+  
+  useEffect(() => {
     const now = new Date()
-    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    setTodayTimestamp(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   }, [])
 
   // Define columns for TanStack Table (used for sorting/filtering logic)

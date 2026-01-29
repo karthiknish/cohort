@@ -74,11 +74,11 @@ export function FinanceDashboardSkeleton() {
               <CardContent className="h-[320px] flex items-center justify-center">
                 <div className="w-full h-full flex flex-col justify-end gap-2 px-4 pb-8">
                   <div className="flex items-end justify-around gap-2 h-48">
-                    {Array.from({ length: 6 }).map((_, i) => (
+                    {[80, 120, 60, 140, 90, 110].map((height, i) => (
                       <div key={i} className="flex flex-col items-center gap-2 flex-1">
                         <Skeleton 
                           className="w-full rounded-t" 
-                          style={{ height: `${Math.random() * 100 + 40}px` }} 
+                          style={{ height: `${height}px` }} 
                         />
                         <Skeleton className="h-3 w-8" />
                       </div>
