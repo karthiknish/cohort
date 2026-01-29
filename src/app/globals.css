@@ -35,6 +35,10 @@
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #243041;
   --sidebar-ring: #16a34a;
+  /* Sonner toast colors */
+  --success-bg: #16a34a;
+  --success-text: #ffffff;
+  --success-border: #15803d;
 }
 
 
@@ -314,5 +318,38 @@ h6 {
   .driver-active-element {
     box-shadow: 0 0 0 4px rgba(7, 23, 64, 0.1), 0 0 20px rgba(7, 23, 64, 0.2);
     @apply !transition-all !duration-500;
+  }
+
+  /* Sonner toast variant styling - ensures proper contrast on all backgrounds */
+  [data-sonner-toast] {
+    &[data-type="error"],
+    &[data-variant="destructive"] {
+      background: hsl(var(--destructive) / 0.95) !important;
+      color: hsl(var(--destructive-foreground)) !important;
+      border: 1px solid hsl(var(--destructive)) !important;
+    }
+
+    &[data-type="success"] {
+      background: hsl(142 76% 36% / 0.95) !important;
+      color: #ffffff !important;
+      border: 1px solid hsl(142 76% 36%) !important;
+    }
+
+    &[data-type="warning"] {
+      background: hsl(38 92% 50% / 0.95) !important;
+      color: hsl(48 96% 9%) !important;
+      border: 1px solid hsl(38 92% 50%) !important;
+    }
+
+    &[data-type="info"] {
+      background: hsl(217 91% 60% / 0.95) !important;
+      color: #ffffff !important;
+      border: 1px solid hsl(217 91% 60%) !important;
+    }
+  }
+
+  [data-sonner-toast] [data-description],
+  [data-sonner-toast] [data-title] {
+    color: inherit !important;
   }
 }
