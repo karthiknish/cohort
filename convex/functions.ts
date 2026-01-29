@@ -357,13 +357,13 @@ export const authenticatedAction = customAction(action, {
 })
 
 export const adminQuery = customQuery(query, {
-  args: {},
-  input: async (ctx) => {
+  args: {} as any, // Base args - individual functions can define their own
+  input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
       throw Errors.auth.adminRequired()
     }
-    return { ctx: { ...ctx, ...auth }, args: {} }
+    return { ctx: { ...ctx, ...auth }, args }
   },
 })
 

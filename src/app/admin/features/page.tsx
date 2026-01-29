@@ -41,7 +41,7 @@ export default function AdminFeaturesPage() {
   const [featureToDelete, setFeatureToDelete] = useState<FeatureItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const featuresResponse = useQuery(api.adminFeatures.listFeatures)
+  const featuresResponse = useQuery(api.adminFeatures.listFeatures, {})
   const createFeature = useMutation(api.adminFeatures.createFeature)
   const updateFeature = useMutation(api.adminFeatures.updateFeature)
   const deleteFeature = useMutation(api.adminFeatures.deleteFeature)
