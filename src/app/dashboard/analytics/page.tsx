@@ -479,18 +479,6 @@ export default function AnalyticsPage() {
               </p>
             </CardContent>
           </Card>
-        ) : googleAnalyticsSyncMutation.isPending ? (
-          <Card className="overflow-hidden border-0 bg-white shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
-            <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f0fe]">
-                <LoaderCircle className="h-10 w-10 animate-spin text-[#1a73e8]" />
-              </div>
-              <h3 className="mb-2 text-base font-medium text-[#202124]">Syncing analytics data</h3>
-              <p className="max-w-md text-sm text-[#5f6368]">
-                Importing your Google Analytics data. This may take a moment...
-              </p>
-            </CardContent>
-          </Card>
         ) : !gaConnected ? null : (
           <>
             {/* Performance Summary Header */}
