@@ -1,116 +1,289 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { format, isToday, isYesterday, isThisWeek, isThisMonth } from 'date-fns'
-import { 
-  Clock, 
-  Filter, 
-  Search, 
-  Briefcase, 
-  CircleCheck, 
-  MessageSquare, 
-  Calendar,
-  ArrowUpRight
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import {
+  Clock,
+  Download,
+  RefreshCw,
 } from 'lucide-react'
-import Link from 'next/link'
-
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useRealtimeActivity } from '@/app/dashboard/activity/hooks/use-realtime-activity'
+import { useRealtimeActivity } from './hooks/use-realtime-activity'
 import { useClientContext } from '@/contexts/client-context'
+import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
-import type { Activity, ActivityType } from '@/types/activity'
-
-const ACTIVITY_ICONS = {
-  project_updated: Briefcase,
-  task_completed: CircleCheck,
-  message_posted: MessageSquare,
-}
-
-const ACTIVITY_COLORS = {
-  project_updated: 'bg-blue-100 text-blue-700',
-  task_completed: 'bg-emerald-100 text-emerald-700',
-  message_posted: 'bg-purple-100 text-purple-700',
-}
-
-const ACTIVITY_LABELS: Record<ActivityType, string> = {
-  project_updated: 'Project Update',
-  task_completed: 'Task Activity',
-  message_posted: 'New Message',
-}
+import { cn } from '@/lib/utils'
+import { ActivityStats } from './components/activity-stats'
+import { ActivityFilters } from './components/activity-filters'
+import { ActivityList } from './components/activity-list'
+import { ActivityDetailsModal } from './components/activity-details-modal'
+import type { EnhancedActivity, ActivityType, SortOption, DateRangeOption, StatusFilter } from './types'
 
 export default function ActivityPage() {
   const { selectedClient } = useClientContext()
   const { toast } = useToast()
-  const { activities, loading, error, retry } = useRealtimeActivity(50)
-  
+  const { activities, loading, error, retry, hasMore, loadMore } = useRealtimeActivity(20)
+
+  // Local state for enhanced features
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [dateRange, setDateRange] = useState<DateRangeOption>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [selectedActivities, setSelectedActivities] = useState<Set<string>>(new Set())
+  const [readActivities, setReadActivities] = useState<Set<string>>(new Set())
+  const [pinnedActivities, setPinnedActivities] = useState<Set<string>>(new Set())
+  const [activityReactions, setActivityReactions] = useState<
+    Record<string, Array<{ emoji: string; count: number; users: string[] }>>
+  >({})
+  const [activityComments, setActivityComments] = useState<
+    Record<string, Array<{ id: string; userId: string; userName: string; text: string; timestamp: string }>>
+  >({})
+  const [selectedActivity, setSelectedActivity] = useState<EnhancedActivity | null>(null)
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
 
-  const filteredActivities = useMemo(() => {
-    return activities.filter((activity) => {
-      const matchesType = typeFilter === 'all' || activity.type === typeFilter
-      const matchesSearch = 
-        activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        activity.entityName.toLowerCase().includes(searchQuery.toLowerCase())
-      
-      return matchesType && matchesSearch
-    })
-  }, [activities, typeFilter, searchQuery])
+  // Get current user name for comments
+  const { user } = useAuth()
+  const currentUserName = user?.name || 'You'
 
-  const groupedActivities = useMemo(() => {
-    const groups: Record<string, Activity[]> = {}
-    
-    filteredActivities.forEach((activity) => {
-      const date = new Date(activity.timestamp)
-      let key = format(date, 'MMMM d, yyyy')
-      
-      if (isToday(date)) key = 'Today'
-      else if (isYesterday(date)) key = 'Yesterday'
-      
-      if (!groups[key]) {
-        groups[key] = []
-      }
-      groups[key]!.push(activity)
-    })
-    
-    return groups
-  }, [filteredActivities])
+  // Convert basic activities to enhanced activities
+  const enhancedActivities: EnhancedActivity[] = useMemo(() => {
+    return activities.map((a) => ({
+      ...a,
+      type: a.type as ActivityType,
+      isRead: readActivities.has(a.id),
+      isPinned: pinnedActivities.has(a.id),
+      reactions: activityReactions[a.id] || [],
+    }))
+  }, [activities, readActivities, pinnedActivities, activityReactions])
 
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: 'Activity sync failed',
-        description: `${error}. Try refreshing.`,
-        variant: 'destructive',
-      })
-    }
-  }, [error, toast])
+  // Apply date range filter (in addition to other filters)
+  const dateFilteredActivities = useMemo(() => {
+    if (dateRange === 'all') return enhancedActivities
+    // Date filtering is handled within ActivityList for simplicity
+    return enhancedActivities
+  }, [enhancedActivities, dateRange])
 
-  const handleRetry = () => {
+  // Handlers
+  const handleRetry = useCallback(() => {
     toast({
       title: 'Refreshing activity',
       description: 'Syncing latest updates...',
     })
     retry()
-  }
+  }, [toast, retry])
 
-  const groupKeys = Object.keys(groupedActivities).sort((a, b) => {
-    if (a === 'Today') return -1
-    if (b === 'Today') return 1
-    if (a === 'Yesterday') return -1
-    if (b === 'Yesterday') return 1
-    return new Date(b).getTime() - new Date(a).getTime()
-  })
+  const handleMarkAsRead = useCallback((id: string) => {
+    setReadActivities((prev) => new Set(prev).add(id))
+    toast({
+      title: 'Activity marked as read',
+      description: 'This activity has been marked as read.',
+    })
+  }, [toast])
+
+  const handleMarkAllAsRead = useCallback(() => {
+    const newReadSet = new Set(readActivities)
+    enhancedActivities.forEach((a) => newReadSet.add(a.id))
+    setReadActivities(newReadSet)
+    toast({
+      title: 'All activities marked as read',
+      description: `${enhancedActivities.length} activities marked as read.`,
+    })
+  }, [readActivities, enhancedActivities, toast])
+
+  const handleTogglePin = useCallback((id: string) => {
+    setPinnedActivities((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+        toast({
+          title: 'Activity unpinned',
+          description: 'The activity has been removed from your pinned items.',
+        })
+      } else {
+        newSet.add(id)
+        toast({
+          title: 'Activity pinned',
+          description: 'The activity has been pinned to the top of your feed.',
+        })
+      }
+      return newSet
+    })
+  }, [toast])
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedActivities((prev) => {
+      if (prev.size === enhancedActivities.length) {
+        return new Set()
+      }
+      return new Set(enhancedActivities.map((a) => a.id))
+    })
+  }, [enhancedActivities])
+
+  const handleSelectionChange = useCallback((id: string, checked: boolean) => {
+    setSelectedActivities((prev) => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(id)
+      } else {
+        next.delete(id)
+      }
+      return next
+    })
+  }, [])
+
+  const handleBulkDismiss = useCallback(() => {
+    setSelectedActivities(new Set())
+    toast({
+      title: 'Activities dismissed',
+      description: `${selectedActivities.size} activities have been dismissed.`,
+    })
+  }, [selectedActivities.size, toast])
+
+  const handleClearAllPins = useCallback(() => {
+    setPinnedActivities(new Set())
+    toast({
+      title: 'All pins cleared',
+      description: 'All pinned activities have been unpinned.',
+    })
+  }, [toast])
+
+  const handleExport = useCallback(async () => {
+    const dataToExport = enhancedActivities.map((a) => ({
+      type: a.type,
+      description: a.description,
+      entity: a.entityName,
+      timestamp: a.timestamp,
+      user: a.userName || 'System',
+    }))
+
+    const csvContent = [
+      ['Type', 'Description', 'Entity', 'Timestamp', 'User'].join(','),
+      ...dataToExport.map((row) =>
+        [
+          row.type,
+          `"${row.description}"`,
+          `"${row.entity}"`,
+          row.timestamp,
+          row.user,
+        ].join(',')
+      ),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `activity-export-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: 'Export successful',
+      description: 'Activity data has been downloaded.',
+    })
+  }, [enhancedActivities, toast])
+
+  const handleAddReaction = useCallback((id: string, emoji: string) => {
+    setActivityReactions((prev) => {
+      const existing = prev[id] || []
+      const existingReaction = existing.find((r) => r.emoji === emoji)
+
+      if (existingReaction) {
+        return {
+          ...prev,
+          [id]: existing.filter((r) => r.emoji !== emoji),
+        }
+      }
+
+      return {
+        ...prev,
+        [id]: [...existing, { emoji, count: 1, users: ['currentUser'] }],
+      }
+    })
+  }, [])
+
+  const handleAddComment = useCallback((activityId: string, text: string) => {
+    const newComment = {
+      id: `comment-${Date.now()}`,
+      userId: user?.id || 'current',
+      userName: user?.name || 'You',
+      text,
+      timestamp: new Date().toISOString(),
+    }
+    setActivityComments((prev) => ({
+      ...prev,
+      [activityId]: [...(prev[activityId] || []), newComment],
+    }))
+    toast({
+      title: 'Comment added',
+      description: 'Your comment has been added.',
+    })
+  }, [toast, user])
+
+  const handleActivityClick = useCallback((activity: EnhancedActivity, e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (target.closest('button') || target.closest('a')) {
+      return
+    }
+
+    setSelectedActivity(activity)
+    setDetailsModalOpen(true)
+  }, [])
+
+  const handleViewDetails = useCallback((activity: EnhancedActivity) => {
+    setSelectedActivity(activity)
+    setDetailsModalOpen(true)
+  }, [])
+
+  const handleClearAllFilters = useCallback(() => {
+    setSearchQuery('')
+    setTypeFilter('all')
+    setDateRange('all')
+    setStatusFilter('all')
+  }, [])
+
+  // Listen for custom event to clear filters
+  useEffect(() => {
+    const handler = () => handleClearAllFilters()
+    window.addEventListener('clear-activity-filters', handler)
+    return () => window.removeEventListener('clear-activity-filters', handler)
+  }, [handleClearAllFilters])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        document.getElementById('activity-search')?.focus()
+      }
+      if (e.key === 'Escape') {
+        setSearchQuery('')
+        setTypeFilter('all')
+        setStatusFilter('all')
+        setDateRange('all')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Error handling
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: 'Activity sync failed',
+        description: `${error}. Please try again.`,
+        variant: 'destructive',
+      })
+    }
+  }, [error, toast])
 
   if (!selectedClient) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed p-8 text-center animate-in fade-in-50">
+      <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed p-8 text-center">
         <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
             <Clock className="h-10 w-10 text-muted-foreground" />
@@ -124,8 +297,11 @@ export default function ActivityPage() {
     )
   }
 
+  const unreadCount = enhancedActivities.filter((a) => !a.isRead).length
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Activity Log</h1>
@@ -134,136 +310,108 @@ export default function ActivityPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRetry} disabled={loading}>
-            <Clock className="mr-2 h-4 w-4" />
+          {unreadCount > 0 && (
+            <Badge variant="default" className="text-xs">{unreadCount} unread</Badge>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            disabled={loading}
+            title="Refresh (Cmd+R)"
+          >
+            <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
             Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} title="Export activity data">
+            <Download className="mr-2 h-4 w-4" />
+            Export
           </Button>
         </div>
       </div>
 
+      {/* Stats Summary */}
       <Card>
-        <CardHeader className="border-b border-muted/40 pb-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1 md:max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search activity..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ActivityType | 'all')}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Activity</SelectItem>
-                  <SelectItem value="task_completed">Tasks</SelectItem>
-                  <SelectItem value="message_posted">Messages</SelectItem>
-                  <SelectItem value="project_updated">Projects</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Activity Overview</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[600px]">
-            <div className="p-6">
-              {loading && activities.length === 0 ? (
-                <div className="space-y-8">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="space-y-4">
-                      <Skeleton className="h-6 w-32" />
-                      <div className="space-y-4 pl-4 border-l-2 border-muted">
-                        {[1, 2].map((j) => (
-                          <div key={j} className="flex gap-4">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-2 flex-1">
-                              <Skeleton className="h-4 w-3/4" />
-                              <Skeleton className="h-3 w-1/2" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-destructive mb-4">{error}</p>
-                  <Button variant="outline" onClick={retry}>Try Again</Button>
-                </div>
-              ) : filteredActivities.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-                    <Search className="h-6 w-6" />
-                  </div>
-                  <p className="font-medium">No activities found</p>
-                  <p className="text-sm">Try adjusting your filters or search query.</p>
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {groupKeys.map((dateGroup) => (
-                    <div key={dateGroup} className="relative">
-                      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur pb-4 pt-2">
-                        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {dateGroup}
-                        </h3>
-                      </div>
-                      <div className="ml-2 space-y-6 border-l-2 border-muted pl-6 pb-2">
-                        {groupedActivities[dateGroup]!.map((activity) => {
-                          const Icon = ACTIVITY_ICONS[activity.type]
-                          const colorClass = ACTIVITY_COLORS[activity.type]
-                          
-                          return (
-                            <div key={activity.id} className="relative group">
-                              <div className={`absolute -left-[31px] flex h-8 w-8 items-center justify-center rounded-full border-2 border-background ${colorClass}`}>
-                                <Icon className="h-4 w-4" />
-                              </div>
-                              <div className="flex flex-col gap-1 rounded-lg border border-transparent p-3 transition-colors hover:bg-muted/50 hover:border-muted">
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                                        {ACTIVITY_LABELS[activity.type]}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground">
-                                        {format(new Date(activity.timestamp), 'h:mm a')}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm font-medium leading-none">
-                                      {activity.description}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {activity.entityName}
-                                    </p>
-                                  </div>
-                                  {activity.navigationUrl && (
-                                    <Button asChild variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Link href={activity.navigationUrl}>
-                                        <ArrowUpRight className="h-4 w-4" />
-                                        <span className="sr-only">View details</span>
-                                      </Link>
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+        <CardContent>
+          <ActivityStats activities={enhancedActivities} />
         </CardContent>
       </Card>
+
+      {/* Main Activity Card */}
+      <Card>
+        <CardHeader className="border-b border-muted/40 pb-4">
+          <ActivityFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            selectedCount={selectedActivities.size}
+            totalCount={enhancedActivities.length}
+            onSelectAll={handleSelectAll}
+            onClearSelection={() => setSelectedActivities(new Set())}
+            onBulkDismiss={handleBulkDismiss}
+            onMarkAllAsRead={handleMarkAllAsRead}
+            onClearAllPins={handleClearAllPins}
+          />
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <ActivityList
+            activities={dateFilteredActivities}
+            loading={loading}
+            error={error}
+            hasMore={hasMore}
+            searchQuery={searchQuery}
+            typeFilter={typeFilter}
+            dateRange={dateRange}
+            statusFilter={statusFilter}
+            sortBy={sortBy}
+            onRetry={handleRetry}
+            onLoadMore={loadMore}
+            onTogglePin={handleTogglePin}
+            onMarkAsRead={handleMarkAsRead}
+            onAddReaction={handleAddReaction}
+            onAddComment={handleAddComment}
+            onActivityClick={handleActivityClick}
+            onViewDetails={handleViewDetails}
+            selectedActivities={selectedActivities}
+            onSelectionChange={handleSelectionChange}
+            onSelectAll={handleSelectAll}
+            comments={activityComments}
+            currentUserName={currentUserName}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Activity Details Modal */}
+      <ActivityDetailsModal
+        activity={selectedActivity}
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        onMarkAsRead={handleMarkAsRead}
+        onTogglePin={handleTogglePin}
+      />
+
+      {/* Keyboard shortcuts hint */}
+      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-4">
+        <span className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">⌘K</kbd>
+          <span>Focus search</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Esc</kbd>
+          <span>Clear filters</span>
+        </span>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useQuery } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -19,6 +19,10 @@ export function useRealtimeActivity(limitCount = 20) {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+
+  // Track current limit for pagination
+  const currentLimitRef = useRef(limitCount)
 
   const convexEnabled =
     !isPreviewMode && Boolean(user?.agencyId) && Boolean(selectedClient?.id)
@@ -29,7 +33,7 @@ export function useRealtimeActivity(limitCount = 20) {
       ? {
           workspaceId: String(user!.agencyId),
           clientId: String(selectedClient!.id),
-          limit: limitCount,
+          limit: currentLimitRef.current,
         }
       : 'skip'
   ) as Activity[] | undefined
@@ -44,10 +48,11 @@ export function useRealtimeActivity(limitCount = 20) {
     if (!isPreviewMode) return
 
     const previewActivities = getPreviewActivity(selectedClient?.id ?? null)
-    setActivities(previewActivities.slice(0, limitCount))
+    setActivities(previewActivities.slice(0, currentLimitRef.current))
     setLoading(false)
     setError(null)
-  }, [isPreviewMode, selectedClient?.id, limitCount])
+    setHasMore(previewActivities.length > currentLimitRef.current)
+  }, [isPreviewMode, selectedClient?.id])
 
   // Convex realtime path
   useEffect(() => {
@@ -61,19 +66,26 @@ export function useRealtimeActivity(limitCount = 20) {
 
     setActivities(convexActivities)
     setLoading(false)
+    // If we got back fewer items than the limit, we've reached the end
+    setHasMore(convexActivities.length === currentLimitRef.current)
   }, [convexActivities, convexEnabled])
 
-  // No REST fallback; Convex query works in all modes.
+  const loadMore = useCallback(() => {
+    currentLimitRef.current += limitCount
+  }, [limitCount])
 
   const retry = useCallback(() => {
+    currentLimitRef.current = limitCount
     void refresh()
-  }, [refresh])
+  }, [refresh, limitCount])
 
   return {
     activities,
     loading,
     error,
     retry,
+    loadMore,
+    hasMore,
     isRealTime: convexEnabled,
   }
 }
