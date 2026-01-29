@@ -44,6 +44,12 @@ export {
   executeMetaApiRequest,
 } from './client'
 
+// Utils
+export {
+  optimizeMetaImageUrl,
+  isMetaCdnUrl,
+} from './utils'
+
 // Metrics
 export {
   fetchMetaAdAccounts,

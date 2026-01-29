@@ -26,9 +26,24 @@ export function setPreviewModeEnabled(enabled: boolean) {
 }
 
 /**
- * Helper to generate ISO date strings for days in the past
+ * Fixed base date for SSR to ensure consistent dates across server and client.
+ * Using a fixed date (2024-01-15) prevents hydration mismatches.
+ */
+const SSR_BASE_DATE = new Date('2024-01-15T12:00:00.000Z')
+
+/**
+ * Helper to generate ISO date strings for days in the past.
+ * Uses a fixed base date during SSR to prevent hydration mismatches.
  */
 export function isoDaysAgo(daysAgo: number): string {
+    // During SSR, use a fixed date to ensure server/client match
+    if (typeof window === 'undefined') {
+        const d = new Date(SSR_BASE_DATE)
+        d.setDate(d.getDate() - daysAgo)
+        return d.toISOString()
+    }
+
+    // On client, use current time for accurate preview data
     const d = new Date()
     d.setDate(d.getDate() - daysAgo)
     return d.toISOString()

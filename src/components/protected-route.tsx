@@ -92,7 +92,15 @@ function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayPro
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, isSyncing, signOut } = useAuth()
   const router = useRouter()
-  const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
+  // Initialize to false to avoid hydration mismatch, then check in useEffect
+  const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(false)
+
+  // Check for session cookie on mount (client-side only)
+  useEffect(() => {
+    if (hasValidSessionCookie()) {
+      setIsAwaitingAuthRestore(true)
+    }
+  }, [])
 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {

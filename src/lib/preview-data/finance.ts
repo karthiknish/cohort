@@ -4,7 +4,8 @@ import { isoDaysAgo } from './utils'
 
 export function getPreviewFinanceSummary(clientId: string | null): FinanceSummaryResponse {
     const clientNameFromId = new Map(getPreviewClients().map((c) => [c.id, c.name]))
-    const now = new Date()
+    // During SSR, use a fixed date to prevent hydration mismatches
+    const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()
     const month = now.toISOString().slice(0, 7)
 
     const revenue = [

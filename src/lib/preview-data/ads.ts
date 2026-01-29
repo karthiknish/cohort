@@ -210,7 +210,7 @@ export function getPreviewCampaignInsights(
                         : 'Test new ad creatives and copy variations',
                 },
             ],
-            calculatedAt: new Date().toISOString(),
+            calculatedAt: (typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()).toISOString(),
         },
     }
 }

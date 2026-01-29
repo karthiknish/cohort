@@ -2,7 +2,10 @@ import type { ClientRecord, MetricRecord } from './types'
 import { isoDaysAgo } from './utils'
 
 export function getPreviewClients(): ClientRecord[] {
-    const now = new Date().toISOString()
+    // During SSR, use a fixed date to prevent hydration mismatches
+    const now = typeof window === 'undefined'
+        ? '2024-01-15T12:00:00.000Z'
+        : new Date().toISOString()
     return [
         {
             id: 'preview-tech-corp',

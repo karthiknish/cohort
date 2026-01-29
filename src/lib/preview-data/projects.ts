@@ -101,7 +101,8 @@ export function getPreviewProjects(clientId: string | null): ProjectRecord[] {
 
 export function getPreviewTasks(clientId: string | null): TaskRecord[] {
     const clientNameFromId = new Map(getPreviewClients().map((c) => [c.id, c.name]))
-    const now = new Date()
+    // During SSR, use a fixed date to prevent hydration mismatches
+    const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()
 
     const tasks: TaskRecord[] = [
         {

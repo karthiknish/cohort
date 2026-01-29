@@ -82,6 +82,7 @@ export function CreativeSocialPreview(props: {
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             onEnded={() => setIsPlaying(false)}
+            style={{ imageRendering: 'crisp-edges' }}
           />
           <button
             onClick={togglePlayPause}
@@ -104,6 +105,7 @@ export function CreativeSocialPreview(props: {
               alt={displayName}
               className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
               onError={() => setImageLoadFailed(true)}
+              style={{ imageRendering: '-webkit-optimize-contrast', imageRendering: 'high-quality' }}
             />
           ) : (
             <div className="text-muted-foreground flex flex-col items-center">
@@ -145,6 +147,7 @@ export function CreativeSocialPreview(props: {
               loading="lazy"
               decoding="async"
               onError={() => setImageLoadFailed(true)}
+              style={{ imageRendering: '-webkit-optimize-contrast', imageRendering: 'high-quality' }}
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -183,6 +186,7 @@ export function CreativeSocialPreview(props: {
                           alt=""
                           className="w-full h-full object-cover"
                           onError={() => setProfileImageError(true)}
+                          style={{ imageRendering: '-webkit-optimize-contrast', imageRendering: 'high-quality' }}
                         />
                       ) : (
                         (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -236,6 +240,7 @@ export function CreativeSocialPreview(props: {
                       alt=""
                       className="w-full h-full object-cover"
                       onError={() => setProfileImageError(true)}
+                      style={{ imageRendering: '-webkit-optimize-contrast', imageRendering: 'high-quality' }}
                     />
                   ) : (
                     (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -286,6 +291,7 @@ export function CreativeSocialPreview(props: {
                       alt=""
                       className="w-full h-full object-cover"
                       onError={() => setProfileImageError(true)}
+                      style={{ imageRendering: '-webkit-optimize-contrast', imageRendering: 'high-quality' }}
                     />
                   ) : (
                     (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()

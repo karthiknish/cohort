@@ -8,6 +8,7 @@ import {
   coerceNumber,
   META_API_BASE,
 } from './client'
+import { optimizeMetaImageUrl } from './utils'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import {
   MetaCampaign,
@@ -504,8 +505,8 @@ export async function fetchMetaCreatives(options: {
     const creativeImageUrl = creative?.image_url
     const creativeThumbnailUrl = creative?.thumbnail_url
 
-    // Use the best available image source
-    const imageUrl = creativeImageUrl || creativeThumbnailUrl
+    // Use the best available image source, optimized for Meta CDN quality
+    const imageUrl = optimizeMetaImageUrl(creativeImageUrl || creativeThumbnailUrl)
 
     return {
       adId: ad.id ?? '',
@@ -515,14 +516,14 @@ export async function fetchMetaCreatives(options: {
       status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
       creativeId: creative?.id,
       creativeName: creative?.name,
-      thumbnailUrl: creativeThumbnailUrl || imageUrl,
+      thumbnailUrl: optimizeMetaImageUrl(creativeThumbnailUrl) || imageUrl,
       imageUrl,
       callToAction: storySpec?.link_data?.call_to_action?.type ?? storySpec?.video_data?.call_to_action?.type,
       landingPageUrl: storySpec?.link_data?.link ?? storySpec?.video_data?.call_to_action?.value?.link,
       videoId: storySpec?.video_data?.video_id,
       message: storySpec?.link_data?.message ?? storySpec?.video_data?.message,
       pageName: account?.name,
-      pageProfileImageUrl: account?.picture,
+      pageProfileImageUrl: optimizeMetaImageUrl(account?.picture),
       headlines: [
         storySpec?.link_data?.name,
         storySpec?.video_data?.title,
@@ -590,7 +591,7 @@ export async function fetchMetaCreatives(options: {
 
       return [videoId, {
         source: videoPayload?.source,
-        picture: finalPicture,
+        picture: optimizeMetaImageUrl(finalPicture),
       }] as const
     })
   )
@@ -609,7 +610,7 @@ export async function fetchMetaCreatives(options: {
       videoSourceUrl: info.source,
       videoThumbnailUrl: info.picture,
       // If the creative is a video, prefer the high-quality video thumbnail for the image preview.
-      imageUrl: info.picture || creative.imageUrl,
+      imageUrl: optimizeMetaImageUrl(info.picture) || creative.imageUrl,
     }
   })
 }

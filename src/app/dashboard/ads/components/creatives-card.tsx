@@ -315,6 +315,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                         className="w-full h-full object-cover"
                         loading="lazy"
                         decoding="async"
+                        style={{ imageRendering: '-webkit-optimize-contrast', imageRendering: 'high-quality' }}
                       />
                     ) : c.videoUrl ? (
                       <Video className="h-8 w-8 text-muted-foreground" />
