@@ -112,6 +112,7 @@ export type MetaAdCreative = {
   name?: string
   thumbnail_url?: string
   image_url?: string
+  full_picture?: string
   object_story_spec?: {
     page_id?: string
     instagram_actor_id?: string

@@ -404,7 +404,7 @@ export async function fetchMetaCreatives(options: {
       'effective_status',
       'adset_id',
       'campaign_id',
-      'adcreatives{id,name,thumbnail_url,image_url,url_tags,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action,name,caption,description},video_data{video_id,message,title,call_to_action}}}',
+      'adcreatives{id,name,thumbnail_url,image_url,full_picture,url_tags,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action,name,caption,description},video_data{video_id,message,title,call_to_action}}}',
     ].join(','),
     limit: '100',
   })
@@ -499,14 +499,16 @@ export async function fetchMetaCreatives(options: {
     const accountId = storySpec?.instagram_actor_id || storySpec?.page_id
     const account = accountId ? accountDetails[accountId] : undefined
 
-    // Prefer high-quality image_url over thumbnail_url
-    // image_url is the full-quality image hosted by Meta
-    // thumbnail_url is a smaller preview image
+    // Prefer high-quality image sources in this order:
+    // 1. full_picture - Highest quality image from Meta
+    // 2. image_url - Standard quality image
+    // 3. thumbnail_url - Smaller preview image (lowest quality)
+    const creativeFullPicture = creative?.full_picture
     const creativeImageUrl = creative?.image_url
     const creativeThumbnailUrl = creative?.thumbnail_url
 
     // Use the best available image source, optimized for Meta CDN quality
-    const imageUrl = optimizeMetaImageUrl(creativeImageUrl || creativeThumbnailUrl)
+    const imageUrl = optimizeMetaImageUrl(creativeFullPicture || creativeImageUrl || creativeThumbnailUrl)
 
     return {
       adId: ad.id ?? '',
