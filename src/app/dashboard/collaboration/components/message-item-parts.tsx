@@ -4,6 +4,7 @@ import { LoaderCircle, SmilePlus, Reply, MoreHorizontal, Trash2 } from 'lucide-r
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { MessageReadReceipts } from './message-read-receipts'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -314,6 +315,11 @@ export interface MessageHeaderProps {
   createdAt?: string | null
   isEdited?: boolean
   isDeleted?: boolean
+  messageId?: string
+  currentUserId?: string | null
+  readBy?: string[]
+  channelMemberCount?: number
+  readByNames?: string[]
 }
 
 export function MessageHeader({
@@ -322,6 +328,11 @@ export function MessageHeader({
   createdAt,
   isEdited,
   isDeleted,
+  messageId,
+  currentUserId,
+  readBy,
+  channelMemberCount,
+  readByNames,
 }: MessageHeaderProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -335,6 +346,19 @@ export function MessageHeader({
         {formatTimestamp(createdAt ?? null)}
         {isEdited && !isDeleted ? ' · edited' : ''}
       </span>
+      {messageId && currentUserId && (
+        <MessageReadReceipts
+          message={{
+            id: messageId,
+            senderId: currentUserId,
+            readBy,
+            isDeleted: isDeleted ?? false,
+          } as any}
+          currentUserId={currentUserId}
+          channelMemberCount={channelMemberCount}
+          readByNames={readByNames}
+        />
+      )}
     </div>
   )
 }

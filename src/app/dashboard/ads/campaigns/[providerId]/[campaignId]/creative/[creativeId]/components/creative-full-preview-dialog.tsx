@@ -49,7 +49,8 @@ export function CreativeFullPreviewDialog(props: {
               src={creative.imageUrl}
               alt={displayName}
               className="w-full rounded-lg object-contain max-h-[60vh]"
-              style={{ imageRendering: 'auto' }}
+              loading="lazy"
+              decoding="async"
               onError={() => setImageLoadFailed(true)}
             />
           ) : creative.videoUrl ? (

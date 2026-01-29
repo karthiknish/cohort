@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
+import { differenceInDays, startOfDay, endOfDay } from 'date-fns'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
@@ -31,6 +32,9 @@ import { AnalyticsMetricCards } from './components/analytics-metric-cards'
 import { AnalyticsCharts } from './components/analytics-charts'
 import { AnalyticsInsightsSection } from './components/analytics-insights-section'
 import { AnalyticsCreativesSection } from './components/analytics-creatives-section'
+import { AnalyticsDateRangePicker, type AnalyticsDateRange } from './components/analytics-date-range-picker'
+import { AnalyticsExportButton } from './components/analytics-export-button'
+import { AutoRefreshControls } from '@/components/ui/auto-refresh-controls'
 
 export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
@@ -39,11 +43,13 @@ export default function AnalyticsPage() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
 
-  const [selectedPeriod, setSelectedPeriod] = useState<typeof PERIOD_OPTIONS[number]['value']>(() => {
-    const period = searchParams.get('period')
-    const valid = PERIOD_OPTIONS.some((opt) => opt.value === period)
-    return (valid ? period : PERIOD_OPTIONS[0].value) as typeof PERIOD_OPTIONS[number]['value']
+  // Date range state - initialize with 30 days
+  const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => {
+    const end = endOfDay(new Date())
+    const start = startOfDay(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)) // 30 days
+    return { start, end }
   })
+  const [periodDays, setPeriodDays] = useState(30)
 
   const [selectedPlatform, setSelectedPlatform] = useState(() => {
     const platform = searchParams.get('platform')
@@ -53,15 +59,20 @@ export default function AnalyticsPage() {
 
   // Keep state in sync when navigating via links that change query params.
   const platformParam = searchParams.get('platform')
-  const periodParam = searchParams.get('period')
   useEffect(() => {
     if (platformParam && PLATFORM_OPTIONS.some((opt) => opt.value === platformParam)) {
       setSelectedPlatform(platformParam)
     }
-    if (periodParam && PERIOD_OPTIONS.some((opt) => opt.value === periodParam)) {
-      setSelectedPeriod(periodParam as typeof PERIOD_OPTIONS[number]['value'])
+  }, [platformParam])
+
+  const handleDateRangeChange = (range: AnalyticsDateRange, days?: number) => {
+    setDateRange(range)
+    if (days) {
+      setPeriodDays(days)
+    } else {
+      setPeriodDays(differenceInDays(range.end, range.start) + 1)
     }
-  }, [platformParam, periodParam])
+  }
 
   const [gaConnected, setGaConnected] = useState(false)
   const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(null)
@@ -69,13 +80,6 @@ export default function AnalyticsPage() {
 
   // TanStack Query mutation for Google Analytics sync
   const googleAnalyticsSyncMutation = useGoogleAnalyticsSync()
-
-
-
-  const periodDays = useMemo(() => {
-    const option = PERIOD_OPTIONS.find((opt) => opt.value === selectedPeriod)
-    return option?.days ?? 7
-  }, [selectedPeriod])
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
@@ -195,24 +199,17 @@ export default function AnalyticsPage() {
   const initialMetricsLoading = metricsLoading && metrics.length === 0
   const initialInsightsLoading = insightsLoading && insights.length === 0
 
-  const referenceTimestamp = useMemo(() => {
-    return metrics.reduce((latest, metric) => {
-      const timestamp = new Date(metric.date).getTime()
-      return timestamp > latest ? timestamp : latest
-    }, 0)
-  }, [metrics])
-
   const filteredMetrics = useMemo(() => {
     if (!metrics.length) return []
-    const cutoff = periodDays ? referenceTimestamp - periodDays * 24 * 60 * 60 * 1000 : null
+    const startMs = dateRange.start.getTime()
+    const endMs = dateRange.end.getTime()
     return metrics.filter((metric) => {
       const inPlatform = selectedPlatform === 'all' || metric.providerId === selectedPlatform
       if (!inPlatform) return false
-      if (!cutoff) return true
       const metricDate = new Date(metric.date).getTime()
-      return metricDate >= cutoff
+      return metricDate >= startMs && metricDate <= endMs
     })
-  }, [metrics, selectedPlatform, periodDays, referenceTimestamp])
+  }, [metrics, selectedPlatform, dateRange])
 
   const aggregatedByDate = useMemo(() => {
     const map = new Map<string, { date: string; spend: number; revenue: number; clicks: number; conversions: number }>()
@@ -343,20 +340,10 @@ export default function AnalyticsPage() {
                 ))}
               </select>
             </div>
-            <div className="relative group">
-              <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value as typeof PERIOD_OPTIONS[number]['value'])}
-                className="block w-full min-w-[140px] cursor-pointer rounded-xl border border-muted/30 bg-background px-4 py-2.5 text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
-              >
-                {PERIOD_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AnalyticsDateRangePicker
+              value={dateRange}
+              onChange={handleDateRangeChange}
+            />
           </div>
         </div>
 
@@ -501,15 +488,13 @@ export default function AnalyticsPage() {
                     )}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => mutateMetrics()}
-                  disabled={metricsLoading || metricsRefreshing}
-                  className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-3 w-3 transition-transform duration-500 group-hover:rotate-180 ${metricsRefreshing ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
+                <AutoRefreshControls
+                  onRefresh={() => mutateMetrics()}
+                  disabled={isPreviewMode || metricsLoading}
+                  isRefreshing={metricsRefreshing}
+                  defaultInterval="off"
+                />
+                <AnalyticsExportButton metrics={filteredMetrics} disabled={isPreviewMode} />
               </div>
             </div>
 

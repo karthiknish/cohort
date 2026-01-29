@@ -45,4 +45,9 @@ export type CollaborationMessage = {
   threadRootId?: string | null
   threadReplyCount?: number
   threadLastReplyAt?: string | null
+  readBy?: string[] // Array of user IDs who have read this message
+  deliveredTo?: string[] // Array of user IDs who have received this message
+  isPinned?: boolean // Whether the message is pinned
+  pinnedAt?: string | null // ISO timestamp when message was pinned
+  pinnedBy?: string | null // User ID who pinned the message
 }

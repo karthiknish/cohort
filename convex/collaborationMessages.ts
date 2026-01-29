@@ -378,6 +378,11 @@ export const create = zWorkspaceMutation({
       isThreadRoot: args.isThreadRoot ?? true,
       threadReplyCount: null,
       threadLastReplyAtMs: null,
+      readBy: [], // Initialize empty readBy array
+      deliveredTo: [], // Initialize empty deliveredTo array
+      isPinned: false, // Initialize pinned state
+      pinnedAtMs: null, // Initialize pinnedAt
+      pinnedBy: null, // Initialize pinnedBy
     })
 
     if (args.isThreadRoot === false && typeof args.threadRootId === 'string' && args.threadRootId) {
@@ -501,6 +506,195 @@ export const toggleReaction = zWorkspaceMutation({
   },
 })
 
+// Mark a single message as read by a user
+export const markAsRead = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+    userId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    const row = await ctx.db
+      .query('collaborationMessages')
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!row) throw Errors.resource.notFound('Message')
+
+    // Don't mark own messages as read
+    if (row.senderId === args.userId) {
+      return { success: true, alreadyRead: true }
+    }
+
+    const readBy: string[] = Array.isArray(row.readBy) ? row.readBy : []
+
+    // Check if already read
+    if (readBy.includes(args.userId)) {
+      return { success: true, alreadyRead: true }
+    }
+
+    // Add user to readBy array
+    await ctx.db.patch(row._id, {
+      readBy: [...readBy, args.userId],
+      updatedAtMs: ctx.now,
+    })
+
+    return { success: true, alreadyRead: false }
+  },
+})
+
+// Mark multiple messages as read (batch operation)
+export const markMultipleAsRead = zWorkspaceMutation({
+  args: {
+    legacyIds: z.array(z.string()),
+    userId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    let marked = 0
+
+    for (const legacyId of args.legacyIds) {
+      const row = await ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
+        .unique()
+
+      if (!row || row.senderId === args.userId) continue
+
+      const readBy: string[] = Array.isArray(row.readBy) ? row.readBy : []
+
+      if (!readBy.includes(args.userId)) {
+        await ctx.db.patch(row._id, {
+          readBy: [...readBy, args.userId],
+          updatedAtMs: ctx.now,
+        })
+        marked += 1
+      }
+    }
+
+    return { success: true, marked }
+  },
+})
+
+// Mark all messages in a channel as read for a user
+export const markChannelAsRead = zWorkspaceMutation({
+  args: {
+    channelType: z.string(),
+    clientId: z.string().nullable().optional(),
+    projectId: z.string().nullable().optional(),
+    userId: z.string(),
+    beforeMs: z.number().optional(),
+  },
+  handler: async (ctx: any, args: any) => {
+    let q: any
+
+    if (args.channelType === 'client') {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_client_createdAtMs_legacyId', (q: any) =>
+          q
+            .eq('workspaceId', args.workspaceId)
+            .eq('channelType', args.channelType)
+            .eq('clientId', args.clientId ?? null)
+        )
+    } else if (args.channelType === 'project') {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_project_createdAtMs_legacyId', (q: any) =>
+          q
+            .eq('workspaceId', args.workspaceId)
+            .eq('channelType', args.channelType)
+            .eq('projectId', args.projectId ?? null)
+        )
+    } else {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_createdAtMs_legacyId', (q: any) =>
+          q.eq('workspaceId', args.workspaceId).eq('channelType', args.channelType)
+        )
+    }
+
+    const messages = await q.take(100)
+
+    let marked = 0
+    for (const message of messages) {
+      // Skip own messages
+      if (message.senderId === args.userId) continue
+
+      // Skip if beforeMs is set and message is newer
+      if (args.beforeMs && message.createdAtMs > args.beforeMs) continue
+
+      const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
+
+      if (!readBy.includes(args.userId)) {
+        await ctx.db.patch(message._id, {
+          readBy: [...readBy, args.userId],
+          updatedAtMs: ctx.now,
+        })
+        marked += 1
+      }
+    }
+
+    return { success: true, marked }
+  },
+})
+
+// Get unread message count for a channel
+export const getUnreadCount = zWorkspaceQuery({
+  args: {
+    channelType: z.string(),
+    clientId: z.string().nullable().optional(),
+    projectId: z.string().nullable().optional(),
+    userId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    let q: any
+
+    if (args.channelType === 'client') {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_client_createdAtMs_legacyId', (q: any) =>
+          q
+            .eq('workspaceId', args.workspaceId)
+            .eq('channelType', args.channelType)
+            .eq('clientId', args.clientId ?? null)
+        )
+    } else if (args.channelType === 'project') {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_project_createdAtMs_legacyId', (q: any) =>
+          q
+            .eq('workspaceId', args.workspaceId)
+            .eq('channelType', args.channelType)
+            .eq('projectId', args.projectId ?? null)
+        )
+    } else {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_createdAtMs_legacyId', (q: any) =>
+          q.eq('workspaceId', args.workspaceId).eq('channelType', args.channelType)
+        )
+    }
+
+    const messages = await q.take(500)
+
+    let unreadCount = 0
+    for (const message of messages) {
+      // Skip own messages
+      if (message.senderId === args.userId) continue
+
+      // Skip deleted messages
+      if (message.deleted) continue
+
+      // Check if message has been read
+      const readBy: string[] = Array.isArray(message.readBy) ? message.readBy : []
+      if (!readBy.includes(args.userId)) {
+        unreadCount += 1
+      }
+    }
+
+    return { count: unreadCount }
+  },
+})
+
 export const bulkUpsert = zWorkspaceMutation({
   args: {
     messages: z.array(
@@ -573,6 +767,11 @@ export const bulkUpsert = zWorkspaceMutation({
         isThreadRoot: message.isThreadRoot,
         threadReplyCount: message.threadReplyCount,
         threadLastReplyAtMs: message.threadLastReplyAtMs,
+        readBy: [],
+        deliveredTo: [],
+        isPinned: false,
+        pinnedAtMs: null,
+        pinnedBy: null,
       }
 
       if (existing) {
@@ -585,5 +784,151 @@ export const bulkUpsert = zWorkspaceMutation({
     }
 
     return { upserted }
+  },
+})
+
+// Mark a message as delivered to a user (called when message is received)
+export const markAsDelivered = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+    userId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    const row = await ctx.db
+      .query('collaborationMessages')
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!row) throw Errors.resource.notFound('Message')
+
+    // Don't mark own messages as delivered
+    if (row.senderId === args.userId) {
+      return { success: true, alreadyDelivered: true }
+    }
+
+    const deliveredTo: string[] = Array.isArray(row.deliveredTo) ? row.deliveredTo : []
+
+    // Check if already delivered
+    if (deliveredTo.includes(args.userId)) {
+      return { success: true, alreadyDelivered: true }
+    }
+
+    // Add user to deliveredTo array
+    await ctx.db.patch(row._id, {
+      deliveredTo: [...deliveredTo, args.userId],
+      updatedAtMs: ctx.now,
+    })
+
+    return { success: true, alreadyDelivered: false }
+  },
+})
+
+// Pin a message to the channel
+export const pinMessage = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+    userId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    const row = await ctx.db
+      .query('collaborationMessages')
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!row) throw Errors.resource.notFound('Message')
+
+    // Check if already pinned
+    if (row.isPinned) {
+      return { success: true, alreadyPinned: true }
+    }
+
+    await ctx.db.patch(row._id, {
+      isPinned: true,
+      pinnedAtMs: ctx.now,
+      pinnedBy: args.userId,
+      updatedAtMs: ctx.now,
+    })
+
+    return { success: true, alreadyPinned: false }
+  },
+})
+
+// Unpin a message from the channel
+export const unpinMessage = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+  },
+  handler: async (ctx: any, args: any) => {
+    const row = await ctx.db
+      .query('collaborationMessages')
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!row) throw Errors.resource.notFound('Message')
+
+    // Check if not pinned
+    if (!row.isPinned) {
+      return { success: true, wasNotPinned: true }
+    }
+
+    await ctx.db.patch(row._id, {
+      isPinned: false,
+      pinnedAtMs: null,
+      pinnedBy: null,
+      updatedAtMs: ctx.now,
+    })
+
+    return { success: true, wasNotPinned: false }
+  },
+})
+
+// List pinned messages for a channel
+export const listPinnedMessages = zWorkspaceQuery({
+  args: {
+    channelType: z.string(),
+    clientId: z.string().nullable().optional(),
+    projectId: z.string().nullable().optional(),
+  },
+  handler: async (ctx: any, args: any) => {
+    let q: any
+
+    if (args.channelType === 'client') {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_client_createdAtMs_legacyId', (q: any) =>
+          q
+            .eq('workspaceId', args.workspaceId)
+            .eq('channelType', args.channelType)
+            .eq('clientId', args.clientId ?? null)
+        )
+    } else if (args.channelType === 'project') {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_project_createdAtMs_legacyId', (q: any) =>
+          q
+            .eq('workspaceId', args.workspaceId)
+            .eq('channelType', args.channelType)
+            .eq('projectId', args.projectId ?? null)
+        )
+    } else {
+      q = ctx.db
+        .query('collaborationMessages')
+        .withIndex('by_workspace_channel_createdAtMs_legacyId', (q: any) =>
+          q.eq('workspaceId', args.workspaceId).eq('channelType', args.channelType)
+        )
+    }
+
+    const allMessages = await q.take(200)
+
+    // Filter for pinned messages and sort by pinnedAt
+    const pinnedMessages = allMessages
+      .filter((m: any) => m.isPinned && !m.deleted)
+      .sort((a: any, b: any) => {
+        const aPinnedAt = a.pinnedAtMs ?? 0
+        const bPinnedAt = b.pinnedAtMs ?? 0
+        return bPinnedAt - aPinnedAt // Most recently pinned first
+      })
+
+    return await Promise.all(pinnedMessages.map((row: any) => hydrateMessageRow(ctx, row)))
   },
 })

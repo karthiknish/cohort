@@ -1,6 +1,6 @@
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 
-export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'sent'
+export type ProposalStatus = 'draft' | 'in_progress' | 'ready' | 'partial_success' | 'sent' | 'failed'
 
 export interface ProposalPresentationDeck {
   generationId: string | null
@@ -13,6 +13,8 @@ export interface ProposalPresentationDeck {
   generatedFiles: Array<{ fileType: string; fileUrl: string }>
   storageUrl: string | null
   pdfStorageUrl?: string | null
+  warnings?: string[] | null
+  error?: string | null
 }
 
 /** @deprecated Use ProposalPresentationDeck instead */

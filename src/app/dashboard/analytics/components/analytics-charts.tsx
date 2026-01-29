@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AnalyticsEmptyState, NoIntegrationConnected } from '@/components/ui/analytics-empty-state'
 import { formatCurrency } from '@/lib/utils'
 import {
     ChartContainer,
@@ -70,9 +71,12 @@ export function AnalyticsCharts({
                     {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
                         <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : chartData.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
-                            No performance data for the selected filters.
-                        </div>
+                        <AnalyticsEmptyState
+                            variant="no-filters"
+                            title="No Performance Data"
+                            description="There is no performance data available for the selected filters and time period."
+                            className="h-[300px] py-6"
+                        />
                     ) : (
                         <ChartContainer config={revenueSpendChartConfig} className="h-[300px] w-full">
                             <LineChart data={chartData} accessibilityLayer>
@@ -145,9 +149,12 @@ export function AnalyticsCharts({
                     {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
                         <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : chartData.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
-                            No performance data for the selected filters.
-                        </div>
+                        <AnalyticsEmptyState
+                            variant="no-filters"
+                            title="No Performance Data"
+                            description="There is no performance data available for the selected filters and time period."
+                            className="h-[300px] py-6"
+                        />
                     ) : (
                         <ChartContainer config={roasChartConfig} className="h-[300px] w-full">
                             <BarChart data={chartData} accessibilityLayer>
@@ -205,9 +212,10 @@ export function AnalyticsCharts({
                     {initialMetricsLoading || (isMetricsLoading && platformBreakdown.length === 0) ? (
                         <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : platformBreakdown.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
-                            Connect a platform to see spend distribution.
-                        </div>
+                        <NoIntegrationConnected
+                            platform="ad"
+                            className="h-[300px] py-6"
+                        />
                     ) : (
                         <ChartContainer config={platformChartConfig} className="h-[300px] w-full">
                             <PieChart accessibilityLayer>
@@ -260,9 +268,10 @@ export function AnalyticsCharts({
                     {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
                         <Skeleton className="h-[300px] w-full rounded-xl" />
                     ) : chartData.length === 0 ? (
-                        <div className="flex h-[300px] items-center justify-center text-sm font-medium text-muted-foreground/60 italic">
-                            Welcome! Connect your first ad account to see click performance.
-                        </div>
+                        <NoIntegrationConnected
+                            platform="ad account"
+                            className="h-[300px] py-6"
+                        />
                     ) : (
                         <ChartContainer config={clicksChartConfig} className="h-[300px] w-full">
                             <LineChart data={chartData} accessibilityLayer>

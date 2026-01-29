@@ -15,5 +15,19 @@ export * from './task-kanban'
 export * from './task-bulk-toolbar'
 export * from './task-comments'
 
+// New components
+export * from './task-templates'
+export * from './tag-management'
+export * from './task-activity-log'
+export * from './task-time-tracking'
+export * from './use-task-keyboard-navigation'
+export * from './task-offline-indicator'
+export * from './task-archive-view'
+export * from './task-dependencies'
+export * from './task-kanban-bulk-toolbar'
+export * from './task-print-view'
+export * from './task-share-dialog'
+export * from './task-recurring'
+
 // Hooks
 export * from './hooks'

@@ -46,6 +46,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
+import { CreateCreativeDialog } from './create-creative-dialog'
 
 export type CampaignAd = {
   providerId: string
@@ -222,6 +223,23 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     return Array.from(statuses)
   }, [ads])
 
+  const availableAdSets = useMemo(() => {
+    const adSetMap = new Map<string, string>()
+    ads.forEach(ad => {
+      if (ad.adGroupId && !adSetMap.has(ad.adGroupId)) {
+        adSetMap.set(ad.adGroupId, ad.adGroupId)
+      }
+    })
+    return Array.from(adSetMap.values()).map(id => ({
+      id,
+      name: `Ad Set ${id.slice(-6)}`,
+    }))
+  }, [ads])
+
+  const firstAdSetId = useMemo(() => {
+    return availableAdSets[0]?.id
+  }, [availableAdSets])
+
   const filteredAds = useMemo(() => {
     return ads.filter(ad => {
       const matchesSearch = !searchQuery ||
@@ -306,6 +324,15 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <CreateCreativeDialog
+              workspaceId={workspaceId}
+              providerId={providerId}
+              campaignId={campaignId}
+              clientId={clientId}
+              adSetId={firstAdSetId}
+              availableAdSets={availableAdSets}
+              onSuccess={fetchAds}
+            />
             <div className="flex items-center rounded-lg border p-1">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -441,9 +468,9 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                           <img
                             src={ad.imageUrl}
                             alt={ad.name || 'Creative preview'}
-                            className="h-full w-full object-contain bg-muted/50 transition-transform group-hover:scale-105"
+                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
                             loading="lazy"
-                            style={{ imageRendering: 'auto' }}
+                            decoding="async"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
@@ -560,9 +587,9 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                                 <img
                                   src={ad.imageUrl}
                                   alt=""
-                                  className="h-full w-full object-contain"
+                                  className="h-full w-full object-cover"
                                   loading="lazy"
-                                  style={{ imageRendering: 'auto' }}
+                                  decoding="async"
                                 />
                               ) : ad.videoUrl ? (
                                 <Play className="h-5 w-5 text-muted-foreground" />

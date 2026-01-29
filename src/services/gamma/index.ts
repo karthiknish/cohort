@@ -52,3 +52,9 @@ export {
     gammaService,
     GammaService,
 } from './api'
+
+export {
+    CircuitBreaker,
+    getGammaCircuitBreaker,
+    resetGammaCircuitBreaker,
+} from './circuit-breaker'

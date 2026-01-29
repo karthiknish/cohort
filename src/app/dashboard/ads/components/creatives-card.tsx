@@ -312,8 +312,9 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                       <img
                         src={c.imageUrl}
                         alt=""
-                        className="w-full h-full object-contain bg-muted/50"
-                        style={{ imageRendering: 'auto' }}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : c.videoUrl ? (
                       <Video className="h-8 w-8 text-muted-foreground" />

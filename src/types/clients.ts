@@ -1,4 +1,5 @@
 export type ClientTeamMember = {
+  id?: string
   name: string
   role: string
 }

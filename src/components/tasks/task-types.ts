@@ -1,5 +1,5 @@
-import { Clock, CirclePlay, Eye, CheckCircle2, Circle } from 'lucide-react'
-import { TaskStatus, TaskPriority, TaskRecord } from '@/types/tasks'
+import { Clock, CirclePlay, Eye, CheckCircle2, Circle, Archive } from 'lucide-react'
+import { TaskStatus, TaskPriority, TaskRecord, RecurrenceRule } from '@/types/tasks'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils'
 
@@ -27,6 +27,7 @@ export const statusColors: Record<TaskStatus, string> = {
   'in-progress': 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
   review: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
   completed: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
+  archived: 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800/50',
 }
 
 export const statusLaneColors: Record<TaskStatus, string> = {
@@ -34,6 +35,7 @@ export const statusLaneColors: Record<TaskStatus, string> = {
   'in-progress': 'bg-blue-500 dark:bg-blue-400',
   review: 'bg-amber-500 dark:bg-amber-400',
   completed: 'bg-emerald-500 dark:bg-emerald-400',
+  archived: 'bg-gray-500 dark:bg-gray-400',
 }
 
 export const priorityColors: Record<TaskPriority, string> = {
@@ -48,6 +50,7 @@ export const STATUS_ICONS: Record<TaskStatus, typeof Circle> = {
   'in-progress': CirclePlay,
   review: Eye,
   completed: CheckCircle2,
+  archived: Archive,
 }
 
 export const PRIORITY_ORDER: Record<TaskPriority, number> = {
@@ -153,6 +156,8 @@ export function formatStatusLabel(status: TaskStatus): string {
       return 'Review'
     case 'completed':
       return 'Completed'
+    case 'archived':
+      return 'Archived'
     default:
       return status
   }
@@ -160,4 +165,170 @@ export function formatStatusLabel(status: TaskStatus): string {
 
 export function formatPriorityLabel(priority: TaskPriority): string {
   return priority.charAt(0).toUpperCase() + priority.slice(1)
+}
+
+// Overdue detection
+export function isOverdue(task: TaskRecord): boolean {
+  if (!task.dueDate || task.status === 'completed' || task.status === 'archived') {
+    return false
+  }
+  const dueDate = new Date(task.dueDate)
+  const now = new Date()
+  return dueDate < now
+}
+
+export function isDueSoon(task: TaskRecord, daysThreshold: number = 3): boolean {
+  if (!task.dueDate || task.status === 'completed' || task.status === 'archived') {
+    return false
+  }
+  const dueDate = new Date(task.dueDate)
+  const now = new Date()
+  const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  return diffDays >= 0 && diffDays <= daysThreshold
+}
+
+// Overdue indicator styles
+export function getOverdueIndicatorClass(task: TaskRecord): string {
+  if (isOverdue(task)) {
+    return 'bg-red-500/10 border-red-500/30'
+  }
+  if (isDueSoon(task)) {
+    return 'bg-amber-500/10 border-amber-500/30'
+  }
+  return ''
+}
+
+// Recurrence rule labels
+export function formatRecurrenceLabel(rule: RecurrenceRule): string {
+  const labels: Record<RecurrenceRule, string> = {
+    none: 'Does not repeat',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    biweekly: 'Every 2 weeks',
+    monthly: 'Monthly',
+    quarterly: 'Quarterly',
+    yearly: 'Yearly',
+  }
+  return labels[rule] || rule
+}
+
+// Format time spent
+export function formatTimeSpent(minutes: number | null | undefined): string {
+  if (!minutes || minutes === 0) return 'No time logged'
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (hours > 0 && mins > 0) {
+    return `${hours}h ${mins}m`
+  }
+  if (hours > 0) {
+    return `${hours}h`
+  }
+  return `${mins}m`
+}
+
+// Calculate task completion percentage based on subtasks
+export function getTaskCompletion(task: TaskRecord): number {
+  if (!task.subtaskCount || task.subtaskCount === 0) {
+    return task.status === 'completed' ? 100 : 0
+  }
+  // This would need actual subtask data - placeholder for now
+  return task.status === 'completed' ? 100 : 0
+}
+
+// Generate share URL for a task
+export function getTaskShareUrl(taskId: string): string {
+  if (typeof window === 'undefined') return ''
+  return `${window.location.origin}/dashboard/tasks?taskId=${taskId}`
+}
+
+// Default task templates
+export const DEFAULT_TASK_TEMPLATES = [
+  {
+    id: 'template-1',
+    name: 'Bug Report',
+    description: 'Report and track software bugs',
+    title: '[BUG] {Issue description}',
+    descriptionTemplate: 'Steps to reproduce:\n1. \n2. \n3. \n\nExpected behavior:\n\nActual behavior:\n\nEnvironment:',
+    status: 'todo' as TaskStatus,
+    priority: 'high' as TaskPriority,
+    tags: ['bug', 'urgent'],
+    estimatedHours: 2,
+  },
+  {
+    id: 'template-2',
+    name: 'Feature Request',
+    description: 'Propose a new feature',
+    title: '[FEATURE] {Feature name}',
+    descriptionTemplate: 'Problem statement:\n\nProposed solution:\n\nBenefits:\n\nAlternatives considered:',
+    status: 'todo' as TaskStatus,
+    priority: 'medium' as TaskPriority,
+    tags: ['feature', 'enhancement'],
+    estimatedHours: 4,
+  },
+  {
+    id: 'template-3',
+    name: 'Client Review',
+    description: 'Prepare and conduct client review meeting',
+    title: 'Client Review: {Client/Project}',
+    descriptionTemplate: 'Agenda:\n1. Performance review\n2. Upcoming deliverables\n3. Feedback discussion\n\nPreparation:\n- Gather metrics\n- Prepare presentation\n- Schedule meeting',
+    status: 'review' as TaskStatus,
+    priority: 'medium' as TaskPriority,
+    tags: ['client', 'review', 'meeting'],
+    estimatedHours: 3,
+  },
+  {
+    id: 'template-4',
+    name: 'Content Creation',
+    description: 'Create content for marketing',
+    title: '{Content type} for {Campaign}',
+    descriptionTemplate: 'Content brief:\n- Target audience:\n- Key message:\n- Call to action:\n- Channels:\n- Due date:\n\nAssets needed:',
+    status: 'todo' as TaskStatus,
+    priority: 'medium' as TaskPriority,
+    tags: ['content', 'marketing'],
+    estimatedHours: 2,
+  },
+  {
+    id: 'template-5',
+    name: 'Sprint Planning',
+    description: 'Plan upcoming sprint',
+    title: 'Sprint Planning - {Sprint number}',
+    descriptionTemplate: 'Sprint goals:\n\nTeam capacity:\n\nStories to include:\n\nRisks and dependencies:',
+    status: 'todo' as TaskStatus,
+    priority: 'high' as TaskPriority,
+    tags: ['planning', 'sprint', 'agile'],
+    estimatedHours: 1,
+  },
+]
+
+// Priority order for sorting (extended)
+export const STATUS_ORDER: Record<TaskStatus, number> = {
+  'in-progress': 0,
+  review: 1,
+  todo: 2,
+  completed: 3,
+  archived: 4,
+}
+
+// Get next status in workflow
+export function getNextStatus(currentStatus: TaskStatus): TaskStatus | null {
+  const workflow: Record<TaskStatus, TaskStatus | null> = {
+    todo: 'in-progress',
+    'in-progress': 'review',
+    review: 'completed',
+    completed: null,
+    archived: null,
+  }
+  return workflow[currentStatus]
+}
+
+// Get previous status in workflow
+export function getPreviousStatus(currentStatus: TaskStatus): TaskStatus | null {
+  const reverseWorkflow: Record<TaskStatus, TaskStatus | null> = {
+    'in-progress': 'todo',
+    review: 'in-progress',
+    completed: 'review',
+    todo: null,
+    archived: null,
+  }
+  return reverseWorkflow[currentStatus]
 }

@@ -54,9 +54,13 @@ export const PROVIDER_LABELS: Record<string, string> = {
 
 export const PERIOD_OPTIONS = [
   { value: '7d', label: '7 days', days: 7 },
+  { value: '14d', label: '14 days', days: 14 },
   { value: '30d', label: '30 days', days: 30 },
   { value: '90d', label: '90 days', days: 90 },
+  { value: 'custom', label: 'Custom', days: 0 },
 ] as const
+
+export type PeriodValue = typeof PERIOD_OPTIONS[number]['value']
 
 export const PLATFORM_OPTIONS = [
   { value: 'all', label: 'All platforms' },

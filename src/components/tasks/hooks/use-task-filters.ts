@@ -193,6 +193,7 @@ export function useTaskFilters({
       'in-progress': 0,
       review: 0,
       completed: 0,
+      archived: 0,
     }
     projectScopedTasks.forEach((task) => {
       counts[task.status] = (counts[task.status] ?? 0) + 1

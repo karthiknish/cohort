@@ -687,10 +687,16 @@ export default defineSchema({
     isThreadRoot: v.boolean(),
     threadReplyCount: v.union(v.number(), v.null()),
     threadLastReplyAtMs: v.union(v.number(), v.null()),
+    readBy: v.array(v.string()), // Array of user IDs who have read this message
+    deliveredTo: v.array(v.string()), // Array of user IDs who have received this message
+    isPinned: v.boolean(), // Whether the message is pinned to the channel
+    pinnedAtMs: v.union(v.number(), v.null()), // When the message was pinned
+    pinnedBy: v.union(v.string(), v.null()), // User ID who pinned the message
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_channel_createdAtMs_legacyId', ['workspaceId', 'channelType', 'createdAtMs', 'legacyId'])
     .index('by_workspace_channel_client_createdAtMs_legacyId', ['workspaceId', 'channelType', 'clientId', 'createdAtMs', 'legacyId'])
+    .index('by_workspace_channel_pinned', ['workspaceId', 'channelType', 'isPinned', 'pinnedAtMs'])
     .index('by_workspace_channel_project_createdAtMs_legacyId', ['workspaceId', 'channelType', 'projectId', 'createdAtMs', 'legacyId'])
     .index('by_workspace_threadRoot_createdAtMs_legacyId', ['workspaceId', 'threadRootId', 'createdAtMs', 'legacyId'])
     .index('by_workspace_clientId_createdAtMs_legacyId', ['workspaceId', 'clientId', 'createdAtMs', 'legacyId']),

@@ -4,6 +4,7 @@ import { RefreshCw, Info } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { NoCreativeData } from '@/components/ui/analytics-empty-state'
 import { formatCurrency } from '@/lib/utils'
 import {
     Tooltip,
@@ -77,14 +78,7 @@ export function AnalyticsCreativesSection({
                         </div>
                     </div>
                 ) : creativeBreakdown.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/20 text-muted-foreground/30 mb-4">
-                            <Info className="h-6 w-6" />
-                        </div>
-                        <p className="text-sm font-medium text-muted-foreground/60 italic max-w-sm">
-                            No creative-level data identified. Ensure Meta syncs are configured with active creative insights.
-                        </p>
-                    </div>
+                    <NoCreativeData platform="Meta" />
                 ) : (
                     <ScrollArea className="h-[400px]">
                         <table className="w-full text-left">

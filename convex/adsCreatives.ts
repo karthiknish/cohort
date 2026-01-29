@@ -373,3 +373,238 @@ export const updateCreativeStatus = action({
     return { success: true, creativeId: args.creativeId, status: metaStatus }
   }, 'adsCreatives:updateCreativeStatus'),
 })
+
+// =============================================================================
+// CREATE CREATIVE
+// =============================================================================
+
+export const createCreative = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    campaignId: v.string(),
+    adSetId: v.optional(v.string()),
+    name: v.string(),
+    objectType: v.optional(v.string()),
+    title: v.optional(v.string()),
+    body: v.optional(v.string()),
+    description: v.optional(v.string()),
+    callToActionType: v.optional(v.string()),
+    linkUrl: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    imageHash: v.optional(v.string()),
+    videoId: v.optional(v.string()),
+    pageId: v.optional(v.string()),
+    instagramActorId: v.optional(v.string()),
+    assetFeedSpec: v.optional(v.string()),
+    status: v.optional(v.union(v.literal('ACTIVE'), v.literal('PAUSED'))),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    requireIdentity(identity)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken(args.providerId)
+    }
+
+    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      throw Errors.integration.expired(args.providerId)
+    }
+
+    if (args.providerId === 'facebook') {
+      const { createMetaAdCreative, createMetaAd } = await import('@/services/integrations/meta-ads')
+
+      const adAccountId = integration.accountId
+      if (!adAccountId) {
+        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured')
+      }
+
+      // First create the ad creative
+      const creativeResult = await createMetaAdCreative({
+        accessToken: integration.accessToken,
+        adAccountId,
+        name: args.name,
+        objectType: (args.objectType as any) || 'IMAGE',
+        title: args.title,
+        body: args.body,
+        description: args.description,
+        callToActionType: args.callToActionType,
+        linkUrl: args.linkUrl,
+        imageUrl: args.imageUrl,
+        imageHash: args.imageHash,
+        videoId: args.videoId,
+        pageId: args.pageId,
+        instagramActorId: args.instagramActorId,
+        assetFeedSpec: args.assetFeedSpec,
+      })
+
+      if (!creativeResult.success) {
+        throw new Error(creativeResult.error || 'Failed to create creative')
+      }
+
+      // Then create the ad (links creative to ad set)
+      if (args.adSetId) {
+        const adResult = await createMetaAd({
+          accessToken: integration.accessToken,
+          adAccountId,
+          adSetId: args.adSetId,
+          creativeId: creativeResult.creativeId,
+          name: args.name,
+          status: (args.status as any) || 'PAUSED',
+        })
+
+        if (!adResult.success) {
+          throw new Error(adResult.error || 'Failed to create ad')
+        }
+
+        return {
+          success: true,
+          creativeId: creativeResult.creativeId,
+          adId: adResult.adId,
+          status: args.status || 'PAUSED',
+        }
+      }
+
+      return {
+        success: true,
+        creativeId: creativeResult.creativeId,
+        status: args.status || 'PAUSED',
+      }
+    }
+
+    throw new Error(`Create creative not yet implemented for ${args.providerId}`)
+  }, 'adsCreatives:createCreative'),
+})
+
+// =============================================================================
+// UPDATE CREATIVE CONTENT
+// =============================================================================
+
+export const updateCreative = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    creativeId: v.string(),
+    name: v.optional(v.string()),
+    body: v.optional(v.string()),
+    description: v.optional(v.string()),
+    callToActionType: v.optional(v.string()),
+    linkUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    requireIdentity(identity)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken(args.providerId)
+    }
+
+    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      throw Errors.integration.expired(args.providerId)
+    }
+
+    if (args.providerId === 'facebook') {
+      const { updateMetaAdCreative } = await import('@/services/integrations/meta-ads')
+
+      const result = await updateMetaAdCreative({
+        accessToken: integration.accessToken,
+        creativeId: args.creativeId,
+        name: args.name,
+        body: args.body,
+        description: args.description,
+        callToActionType: args.callToActionType,
+        linkUrl: args.linkUrl,
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update creative')
+      }
+
+      return {
+        success: true,
+        creativeId: args.creativeId,
+      }
+    }
+
+    throw new Error(`Update creative not yet implemented for ${args.providerId}`)
+  }, 'adsCreatives:updateCreative'),
+})
+
+// =============================================================================
+// UPLOAD MEDIA
+// =============================================================================
+
+export const uploadMedia = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    fileName: v.string(),
+    fileData: v.bytes(),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    requireIdentity(identity)
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken(args.providerId)
+    }
+
+    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      throw Errors.integration.expired(args.providerId)
+    }
+
+    if (args.providerId === 'facebook') {
+      const { uploadMediaToMeta } = await import('@/services/integrations/meta-ads')
+
+      const adAccountId = integration.accountId
+      if (!adAccountId) {
+        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured')
+      }
+
+      const result = await uploadMediaToMeta({
+        accessToken: integration.accessToken,
+        adAccountId,
+        fileName: args.fileName,
+        fileData: new Uint8Array(args.fileData),
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to upload media')
+      }
+
+      return {
+        success: true,
+        creativeSpec: result.creativeSpec,
+      }
+    }
+
+    throw new Error(`Upload media not yet implemented for ${args.providerId}`)
+  }, 'adsCreatives:uploadMedia'),
+})

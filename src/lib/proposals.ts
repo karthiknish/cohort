@@ -84,7 +84,7 @@ const DEFAULT_PROPOSAL_FORM: ProposalFormData = {
 export const proposalDraftSchema = z.object({
   formData: proposalFormInputSchema.optional().default({}),
   stepProgress: z.number().int().min(0).max(10).default(0),
-  status: z.enum(['draft', 'in_progress', 'ready', 'sent']).default('draft'),
+  status: z.enum(['draft', 'in_progress', 'ready', 'partial_success', 'sent', 'failed']).default('draft'),
   clientId: z.string().trim().min(1).max(120).optional(),
   clientName: z.string().trim().min(1).max(200).optional(),
 })
@@ -94,7 +94,7 @@ export type ProposalDraftInput = z.infer<typeof proposalDraftSchema>
 export const proposalDraftUpdateSchema = z.object({
   formData: proposalFormInputSchema.optional(),
   stepProgress: z.number().int().min(0).max(10).optional(),
-  status: z.enum(['draft', 'in_progress', 'ready', 'sent']).optional(),
+  status: z.enum(['draft', 'in_progress', 'ready', 'partial_success', 'sent', 'failed']).optional(),
   clientId: z.string().trim().min(1).max(120).optional(),
   clientName: z.string().trim().min(1).max(200).optional(),
 })

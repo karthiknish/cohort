@@ -20,6 +20,58 @@ import {
 } from './types'
 
 // =============================================================================
+// TYPES FOR CREATE/UPDATE OPERATIONS
+//============================================================================
+
+export interface CreateAdCreativeOptions {
+  accessToken: string
+  adAccountId: string
+  name: string
+  objectType?: 'IMAGE' | 'VIDEO' | 'CAROUSEL_IMAGE' | 'CAROUSEL_VIDEO' | 'DYNAMIC_CAROUSEL'
+  title?: string
+  body?: string
+  description?: string
+  callToActionType?: string
+  linkUrl?: string
+  imageUrl?: string
+  imageHash?: string
+  videoId?: string
+  pageId?: string
+  instagramActorId?: string
+  assetFeedSpec?: string
+  maxRetries?: number
+}
+
+export interface CreateAdOptions {
+  accessToken: string
+  adAccountId: string
+  adSetId: string
+  creativeId: string
+  name?: string
+  status?: 'ACTIVE' | 'PAUSED'
+  maxRetries?: number
+}
+
+export interface UpdateAdCreativeOptions {
+  accessToken: string
+  creativeId: string
+  name?: string
+  body?: string
+  description?: string
+  callToActionType?: string
+  linkUrl?: string
+  maxRetries?: number
+}
+
+export interface UploadMediaOptions {
+  accessToken: string
+  adAccountId: string
+  fileName: string
+  fileData: Buffer | Uint8Array
+  maxRetries?: number
+}
+
+// =============================================================================
 // LIST CAMPAIGNS
 // =============================================================================
 

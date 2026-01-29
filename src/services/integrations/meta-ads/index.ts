@@ -65,6 +65,20 @@ export {
   createMetaAudience,
 } from './campaigns'
 
+// Creatives
+export {
+  createMetaAdCreative,
+  createMetaAd,
+  updateMetaAdCreative,
+  uploadMediaToMeta,
+} from './creatives'
+export type {
+  CreateAdCreativeOptions,
+  CreateAdOptions,
+  UpdateAdCreativeOptions,
+  UploadMediaOptions,
+} from './creatives'
+
 // Insights
 export {
   calculateMetaAdsInsights,

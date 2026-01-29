@@ -103,6 +103,9 @@ export const adsCampaignInsightsApi = {
 export const adsCreativesApi = {
   listCreatives: (api as any).adsCreatives.listCreatives,
   updateCreativeStatus: (api as any).adsCreatives.updateCreativeStatus,
+  createCreative: (api as any).adsCreatives.createCreative,
+  updateCreative: (api as any).adsCreatives.updateCreative,
+  uploadMedia: (api as any).adsCreatives.uploadMedia,
 }
 
 export const adsAdMetricsApi = {

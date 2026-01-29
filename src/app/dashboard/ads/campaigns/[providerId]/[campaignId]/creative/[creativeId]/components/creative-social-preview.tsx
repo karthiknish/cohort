@@ -142,7 +142,8 @@ export function CreativeSocialPreview(props: {
               src={creative.imageUrl}
               alt={displayName}
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-              style={{ imageRendering: 'auto' }}
+              loading="lazy"
+              decoding="async"
               onError={() => setImageLoadFailed(true)}
             />
           )}

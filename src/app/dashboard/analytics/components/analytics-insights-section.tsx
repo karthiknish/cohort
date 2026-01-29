@@ -4,6 +4,7 @@ import { TrendingUp, RefreshCw, Info, Lightbulb, TriangleAlert, CircleCheck, Arr
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { NoInsightsData, NoIntegrationConnected } from '@/components/ui/analytics-empty-state'
 import { cn } from '@/lib/utils'
 import type { ProviderInsight, AlgorithmicInsight } from '../hooks'
 import { PROVIDER_LABELS } from '../hooks'
@@ -50,9 +51,7 @@ export function AnalyticsInsightsSection({
                             ))}
                         </div>
                     ) : algorithmic.length === 0 ? (
-                        <div className="rounded-xl border border-primary/10 bg-background/50 p-6 text-center">
-                            <p className="text-sm font-medium text-muted-foreground/60 italic">No specific optimizations identified for the current data set.</p>
-                        </div>
+                        <NoInsightsData className="rounded-xl border-primary/10 bg-background/50" />
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2">
                             {algorithmic.flatMap((group) =>
@@ -147,10 +146,10 @@ export function AnalyticsInsightsSection({
                             ))}
                         </div>
                     ) : insights.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-muted/40 p-10 text-center">
-                            <TrendingUp className="mx-auto h-8 w-8 text-muted-foreground/20" />
-                            <p className="mt-4 text-sm font-medium text-muted-foreground/60 italic">Link a platform and run a sync to unlock AI takeaways.</p>
-                        </div>
+                        <NoIntegrationConnected
+                            platform="ad platform"
+                            className="rounded-xl border border-dashed border-muted/40"
+                        />
                     ) : (
                         insights.map((insight) => (
                             <div key={insight.providerId} className="group relative overflow-hidden rounded-xl border border-muted/30 bg-muted/5 p-5 transition-all hover:bg-muted/10">

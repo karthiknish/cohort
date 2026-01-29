@@ -177,8 +177,9 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             let response = activeConvexProposal
             const aiDuration = Date.now() - aiStartTime
 
-            const maxAttempts = 30
-            const pollIntervalMs = 2000
+            // Increased polling timeout to match server-side timeout (5 minutes)
+            const maxAttempts = 75 // 75 attempts × 4 seconds = 5 minutes
+            const pollIntervalMs = 4000
 
             for (let attempt = 0; attempt < maxAttempts; attempt++) {
                 const latest = await refreshProposalDraft(activeDraftId, {
@@ -188,20 +189,26 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 })
                 response = latest as any
 
-                if (latest.status === 'ready') {
+                // Accept ready, partial_success, or failed as terminal states
+                if (latest.status === 'ready' || latest.status === 'partial_success' || latest.status === 'failed') {
                     break
                 }
 
                 await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
             }
 
-            const isReady = response?.status === 'ready'
+            const isReady = response?.status === 'ready' || response?.status === 'partial_success'
+            const isFailed = response?.status === 'failed'
 
             // Track AI generation completion or failure
-            if (isReady) {
+            if (isReady || isFailed) {
                 if (workspaceId) {
-                    trackAiGenerationCompleted(workspaceId, activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
-                    trackProposalSubmitted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                    if (isReady) {
+                        trackAiGenerationCompleted(workspaceId, activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
+                        trackProposalSubmitted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                    } else {
+                        trackAiGenerationFailed(workspaceId, activeDraftId, 'Generation failed', selectedClientId, selectedClient?.name).catch(console.error)
+                    }
                 }
             } else {
                 if (workspaceId) {
@@ -249,6 +256,11 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             setPresentationDeck(finalDeck ? { ...finalDeck, storageUrl: finalPptUrl ?? finalDeck.storageUrl ?? null } : null)
             setAiSuggestions(response.aiSuggestions ?? null)
 
+            // Collect warnings from the response
+            const deckWarnings = (response.presentationDeck as any)?.warnings as string[] | undefined
+            const hasPdfWarning = deckWarnings?.some(w => w.toLowerCase().includes('pdf'))
+            const isPartialSuccess = response?.status === 'partial_success'
+
             if (isReady) {
                 const formSnapshot = structuredClone(formState) as ProposalFormData
                 setLastSubmissionSnapshot({
@@ -268,9 +280,23 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             }
 
             if (finalPptUrl) {
+                if (isPartialSuccess || hasPdfWarning) {
+                    toast({
+                        title: 'Presentation ready (PPTX only)',
+                        description: 'The PowerPoint presentation is ready for download. PDF generation encountered an issue, but you can still download the PPTX file.',
+                        variant: 'default',
+                    })
+                } else {
+                    toast({
+                        title: 'Presentation ready',
+                        description: 'We saved the presentation for instant download.',
+                    })
+                }
+            } else if (isFailed) {
                 toast({
-                    title: 'Presentation ready',
-                    description: 'We saved the presentation for instant download.',
+                    title: 'Generation failed',
+                    description: 'The presentation could not be generated. Please try again or contact support if the issue persists.',
+                    variant: 'destructive',
                 })
             } else {
                 toast({
@@ -279,12 +305,12 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 })
             }
 
-            if (!isReady) {
+            if (!isReady && !isFailed) {
                 toast({
                     title: 'AI plan pending',
                     description: 'We could not finish the AI proposal yet. Please try again in a few minutes.',
                 })
-            } else {
+            } else if (!isFailed) {
                 toast({
                     title: 'Proposal ready',
                     description: 'Your AI-generated recommendations are ready for review.',
@@ -379,8 +405,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         setIsRecheckingDeck(true)
         try {
             const convexDeckUrl = activeConvexProposal?.pptUrl ?? null
+            const proposalStatus = activeConvexProposal?.status ?? 'unknown'
 
-            if (convexDeckUrl) {
+            // Handle already ready proposals (including partial_success)
+            if (convexDeckUrl && (proposalStatus === 'ready' || proposalStatus === 'partial_success')) {
                 setPresentationDeck(
                     activeConvexProposal?.presentationDeck
                         ? {
@@ -388,44 +416,104 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                             storageUrl: (activeConvexProposal.presentationDeck as any)?.storageUrl ?? convexDeckUrl,
                         }
                         : presentationDeck
-                            ? { ...presentationDeck, storageUrl: convexDeckUrl, status: 'ready' }
+                            ? { ...presentationDeck, storageUrl: convexDeckUrl, status: proposalStatus }
                             : null
                 )
+                setIsPresentationReady(true)
+                setSubmitted(true)
                 await refreshProposals()
+
+                const deckWarnings = (activeConvexProposal?.presentationDeck as any)?.warnings as string[] | undefined
+                if (deckWarnings?.length) {
+                    toast({
+                        title: 'Presentation ready with warnings',
+                        description: deckWarnings.join('. '),
+                        variant: 'default',
+                    })
+                } else {
+                    toast({
+                        title: 'Presentation ready!',
+                        description: 'Your slide deck has been generated and is ready for download.',
+                    })
+                }
+                return
+            }
+
+            // Handle failed proposals
+            if (proposalStatus === 'failed') {
+                const deckError = (activeConvexProposal?.presentationDeck as any)?.error as string | undefined
                 toast({
-                    title: 'Presentation ready!',
-                    description: 'Your slide deck has been generated and is ready for download.',
+                    title: 'Generation failed',
+                    description: deckError || 'The presentation generation failed. Please try again.',
+                    variant: 'destructive',
                 })
                 return
             }
 
-            // If not in Firebase yet, try to trigger Gamma to check/generate
-            const result = await refreshProposalDraft(proposalId, {
-                workspaceId: workspaceId ?? '',
-                convexToken: (await getIdToken()) ?? '',
-            })
-            const newDeckUrl = result.pptUrl ?? result.presentationDeck?.storageUrl ?? null
+            // If still in progress, poll for completion
+            const maxPollAttempts = 30
+            const pollInterval = 3000
 
-            if (newDeckUrl) {
-                setPresentationDeck(
-                    result.presentationDeck
-                        ? { ...result.presentationDeck, storageUrl: newDeckUrl }
-                        : presentationDeck
-                            ? { ...presentationDeck, storageUrl: newDeckUrl, status: 'ready' }
-                            : null
-                )
-                await refreshProposals()
-                toast({
-                    title: 'Presentation ready!',
-                    description: 'Your slide deck has been generated and saved.',
+            for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
+                // Check current state
+                const currentProposal = await refreshProposalDraft(proposalId, {
+                    workspaceId: workspaceId ?? '',
+                    convexToken: (await getIdToken()) ?? '',
                 })
-            } else {
-                // Still pending
-                toast({
-                    title: 'Still processing',
-                    description: 'The presentation is still being generated. Please try again in a few moments.',
-                })
+
+                const newDeckUrl = currentProposal.pptUrl ?? currentProposal.presentationDeck?.storageUrl ?? null
+                const newStatus = currentProposal.status
+
+                // Check for terminal states
+                if (newDeckUrl && (newStatus === 'ready' || newStatus === 'partial_success')) {
+                    setPresentationDeck(
+                        currentProposal.presentationDeck
+                            ? { ...currentProposal.presentationDeck, storageUrl: newDeckUrl }
+                            : presentationDeck
+                                ? { ...presentationDeck, storageUrl: newDeckUrl, status: newStatus }
+                                : null
+                    )
+                    setIsPresentationReady(true)
+                    setSubmitted(true)
+                    await refreshProposals()
+
+                    const deckWarnings = (currentProposal.presentationDeck as any)?.warnings as string[] | undefined
+                    if (deckWarnings?.length) {
+                        toast({
+                            title: 'Presentation ready with warnings',
+                            description: deckWarnings.join('. '),
+                            variant: 'default',
+                        })
+                    } else {
+                        toast({
+                            title: 'Presentation ready!',
+                            description: 'Your slide deck has been generated and is ready for download.',
+                        })
+                    }
+                    return
+                }
+
+                if (newStatus === 'failed') {
+                    const deckError = (currentProposal.presentationDeck as any)?.error as string | undefined
+                    toast({
+                        title: 'Generation failed',
+                        description: deckError || 'The presentation generation failed. Please try again.',
+                        variant: 'destructive',
+                    })
+                    return
+                }
+
+                // If not done yet, wait before next poll (skip waiting on last iteration)
+                if (attempt < maxPollAttempts - 1) {
+                    await new Promise(resolve => setTimeout(resolve, pollInterval))
+                }
             }
+
+            // Still pending after all polls
+            toast({
+                title: 'Still processing',
+                description: 'The presentation is still being generated. Please try again in a few moments.',
+            })
         } catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleRecheckDeck')
             console.error('[ProposalWizard] recheck deck failed', error)
@@ -434,7 +522,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } finally {
             setIsRecheckingDeck(false)
         }
-    }, [draftId, lastSubmissionSnapshot, presentationDeck, refreshProposals, toast, activeConvexProposal])
+    }, [draftId, lastSubmissionSnapshot, presentationDeck, refreshProposals, toast, activeConvexProposal, workspaceId, getIdToken])
 
     return {
         isSubmitting,
