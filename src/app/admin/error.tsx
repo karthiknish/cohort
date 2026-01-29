@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+import { ShieldAlert, RefreshCw, Home } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-export default function DashboardError({
+export default function AdminError({
   error,
   reset,
 }: {
@@ -15,24 +15,24 @@ export default function DashboardError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[DashboardErrorBoundary]', error)
+    console.error('[AdminErrorBoundary]', error)
   }, [error])
 
   const isDev = process.env.NODE_ENV === 'development'
   const errorDigest = error.digest
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-muted/40 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="max-w-md border-muted/60">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
+            <ShieldAlert className="h-8 w-8 text-destructive" />
           </div>
-          <CardTitle className="text-xl">Dashboard error</CardTitle>
+          <CardTitle className="text-xl">Admin panel error</CardTitle>
           <CardDescription>
             {isDev
-              ? 'The dashboard encountered an unexpected error. Check the console for details.'
-              : 'We encountered an unexpected error while loading the dashboard. This has been logged.'}
+              ? 'The admin panel encountered an unexpected error. Check the console for details.'
+              : 'We encountered an unexpected error while loading the admin panel. This has been logged.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -76,9 +76,9 @@ export default function DashboardError({
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <a href="/">
+              <a href="/dashboard">
                 <Home className="mr-2 h-4 w-4" />
-                Go to home
+                Back to dashboard
               </a>
             </Button>
           </div>
