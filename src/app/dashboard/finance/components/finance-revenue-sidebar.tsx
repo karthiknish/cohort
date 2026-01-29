@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { CalendarClock, TrendingUp, ArrowUpRight, Clock } from 'lucide-react'
 
 import {
@@ -13,6 +14,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatCurrency, formatCurrencyDistribution } from '../utils'
+import { formatDate, DATE_FORMATS, parseDate } from '@/lib/dates'
 import type { FinanceInvoice, FinancePaymentSummary } from '@/types/finance'
 
 interface FinanceRevenueSidebarProps {
@@ -26,6 +28,13 @@ interface FinanceRevenueSidebarProps {
 export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstanding, currencyTotals, primaryCurrency }: FinanceRevenueSidebarProps) {
   const outstandingDisplay = formatCurrencyDistribution(currencyTotals, 'totalOutstanding', primaryCurrency)
   const hasOutstanding = totalOutstanding > 0 || currencyTotals.some((entry) => entry.totalOutstanding > 0)
+
+  // Pre-compute today's timestamp once for hydration-safe comparisons
+  const todayTimestamp = useMemo(() => {
+    const now = new Date()
+    // Use start of day in UTC for consistent comparison
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -108,8 +117,8 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
             <ScrollArea className="max-h-[300px] pr-2">
               <div className="space-y-3">
                 {upcomingPayments.map((invoice) => {
-                  const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null
-                  const isOverdue = dueDate && dueDate < new Date()
+                  const parsedDueDate = parseDate(invoice.dueDate ?? null)
+                  const isOverdue = parsedDueDate && parsedDueDate.getTime() < todayTimestamp
                   const amountDue = typeof invoice.amountRemaining === 'number'
                     ? invoice.amountRemaining
                     : typeof invoice.amountPaid === 'number'
@@ -133,7 +142,7 @@ export function FinanceRevenueSidebar({ revenue, upcomingPayments, totalOutstand
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{invoice.dueDate ? `Due ${new Date(invoice.dueDate).toLocaleDateString()}` : 'TBC'}</span>
+                          <span>{invoice.dueDate ? `Due ${formatDate(invoice.dueDate, DATE_FORMATS.SHORT)}` : 'TBC'}</span>
                           <span>·</span>
                           <span className="text-muted-foreground/70">{invoice.number ?? 'No #'}</span>
                         </div>

@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { billingApi } from '@/lib/convex-api'
 import { formatCurrency, formatCurrencyDistribution, getPrimaryCurrencyTotals } from '@/app/dashboard/finance/utils'
+import { formatDate, DATE_FORMATS } from '@/lib/dates'
 import { useFinanceData } from '@/app/dashboard/finance/hooks/use-finance-data'
 import { FinanceInvoiceTable } from '@/app/dashboard/finance/components/finance-invoice-table'
 import { FinanceDashboardSkeleton } from '@/app/dashboard/finance/components/finance-dashboard-skeleton'
@@ -87,10 +88,10 @@ export default function FinancePaymentsPage() {
   const collectedDisplay = formatCurrencyDistribution(paymentSummary.totals, 'totalPaid', primaryCurrency)
   const nextDueDisplay = useMemo(() => {
     if (paymentSummary.nextDueAt) {
-      return new Date(paymentSummary.nextDueAt).toLocaleDateString()
+      return formatDate(paymentSummary.nextDueAt, DATE_FORMATS.SHORT)
     }
     if (upcomingPayments.length > 0 && upcomingPayments[0]!.dueDate) {
-      return new Date(upcomingPayments[0]!.dueDate).toLocaleDateString()
+      return formatDate(upcomingPayments[0]!.dueDate, DATE_FORMATS.SHORT)
     }
     return 'No upcoming due dates'
   }, [paymentSummary.nextDueAt, upcomingPayments])
@@ -160,7 +161,7 @@ export default function FinancePaymentsPage() {
           <CardContent>
             <p className="text-2xl font-semibold text-foreground">{collectedDisplay}</p>
             <p className="text-xs text-muted-foreground">
-              Last payment {paymentSummary.lastPaymentAt ? new Date(paymentSummary.lastPaymentAt).toLocaleDateString() : 'not recorded yet'}
+              Last payment {paymentSummary.lastPaymentAt ? formatDate(paymentSummary.lastPaymentAt, DATE_FORMATS.SHORT) : 'not recorded yet'}
             </p>
           </CardContent>
         </Card>
@@ -204,7 +205,7 @@ export default function FinancePaymentsPage() {
                       <div>
                         <p className="text-sm font-medium text-foreground">{invoice.clientName}</p>
                         <p className="text-xs text-muted-foreground">
-                          Due {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'TBC'}
+                          Due {invoice.dueDate ? formatDate(invoice.dueDate, DATE_FORMATS.SHORT) : 'TBC'}
                         </p>
                       </div>
                       <p className="text-sm font-semibold text-foreground">{formatCurrency(outstanding, invoice.currency ?? primaryCurrency)}</p>

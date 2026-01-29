@@ -56,6 +56,7 @@ import {
 import type { FinanceInvoice, FinanceInvoiceStatus } from '@/types/finance'
 import { exportToCsv } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { formatDate, DATE_FORMATS, parseDate } from '@/lib/dates'
 
 import { formatCurrency } from '../utils'
 
@@ -76,15 +77,16 @@ const URGENCY_STYLES = {
   critical: 'border-l-4 border-l-red-600 bg-red-50/30',
 }
 
-function getOverdueUrgency(dueDate: string | undefined, status: FinanceInvoiceStatus): { 
+function getOverdueUrgency(dueDate: string | undefined, status: FinanceInvoiceStatus, todayTimestamp: number): { 
   days: number
   level: 'warning' | 'danger' | 'critical' | null 
 } {
   if (status !== 'overdue' || !dueDate) return { days: 0, level: null }
   
-  const due = new Date(dueDate)
-  const today = new Date()
-  const diffTime = today.getTime() - due.getTime()
+  const due = parseDate(dueDate)
+  if (!due) return { days: 0, level: null }
+  
+  const diffTime = todayTimestamp - due.getTime()
   const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   
   if (days <= 7) return { days, level: 'warning' }
@@ -103,6 +105,7 @@ interface InvoiceRowProps {
   onIssueRefund?: (invoice: FinanceInvoice) => void
   sendingInvoiceId?: string | null
   refundingInvoiceId?: string | null
+  todayTimestamp: number
 }
 
 const InvoiceRow = memo(function InvoiceRow({
@@ -112,8 +115,9 @@ const InvoiceRow = memo(function InvoiceRow({
   onIssueRefund,
   sendingInvoiceId,
   refundingInvoiceId,
+  todayTimestamp,
 }: InvoiceRowProps) {
-  const urgency = getOverdueUrgency(invoice.dueDate ?? undefined, invoice.status)
+  const urgency = getOverdueUrgency(invoice.dueDate ?? undefined, invoice.status, todayTimestamp)
   
   return (
     <div
@@ -151,19 +155,19 @@ const InvoiceRow = memo(function InvoiceRow({
           {invoice.issuedDate && (
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              Issued {new Date(invoice.issuedDate).toLocaleDateString()}
+              Issued {formatDate(invoice.issuedDate, DATE_FORMATS.SHORT)}
             </span>
           )}
           {invoice.dueDate && (
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5" />
-              Due {new Date(invoice.dueDate).toLocaleDateString()}
+              Due {formatDate(invoice.dueDate, DATE_FORMATS.SHORT)}
             </span>
           )}
           {invoice.paidDate && (
             <span className="inline-flex items-center gap-1.5 text-emerald-600">
               <Calendar className="h-3.5 w-3.5" />
-              Paid {new Date(invoice.paidDate).toLocaleDateString()}
+              Paid {formatDate(invoice.paidDate, DATE_FORMATS.SHORT)}
             </span>
           )}
           {typeof invoice.amountPaid === 'number' && invoice.amountPaid > 0 && (
@@ -401,6 +405,12 @@ export function FinanceInvoiceTable({
   const [sorting, setSorting] = useState<SortingState>([])
   const parentRef = useRef<HTMLDivElement>(null)
 
+  // Pre-compute today's timestamp once for hydration-safe comparisons
+  const todayTimestamp = useMemo(() => {
+    const now = new Date()
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  }, [])
+
   // Define columns for TanStack Table (used for sorting/filtering logic)
   const columns: ColumnDef<FinanceInvoice>[] = useMemo(
     () => [
@@ -629,6 +639,7 @@ export function FinanceInvoiceTable({
                     onIssueRefund={onIssueRefund}
                     sendingInvoiceId={sendingInvoiceId}
                     refundingInvoiceId={refundingInvoiceId}
+                    todayTimestamp={todayTimestamp}
                   />
                 </div>
               )
