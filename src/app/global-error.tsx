@@ -1,11 +1,7 @@
+// professional GlobalError component
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 export default function GlobalError({
   error,
@@ -15,84 +11,46 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log error for debugging in development
-    console.error('[GlobalErrorBoundary]', error)
+    console.error('[GlobalError]', error)
   }, [error])
-
-  const isDev = process.env.NODE_ENV === 'development'
-  const errorDigest = error.digest
 
   return (
     <html lang="en">
-      <body>
-        <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-          <Card className="max-w-md border-muted/60">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-                <AlertTriangle className="h-8 w-8 text-destructive" />
-              </div>
-              <CardTitle className="text-xl">Something went wrong</CardTitle>
-              <CardDescription>
-                {isDev
-                  ? 'An unexpected error occurred. Check the console for details.'
-                  : 'We encountered an unexpected error. This has been logged and our team has been notified.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Show error digest in production for support reference */}
-              {errorDigest && !isDev && (
-                <div className="rounded-lg border border-muted/40 bg-muted/20 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Error Reference</span>
-                    <Badge variant="outline" className="text-xs font-mono">
-                      {errorDigest}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Please include this reference if you contact support.
-                  </p>
-                </div>
-              )}
-
-              {/* Show error message in development */}
-              {isDev && error.message && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
-                  <p className="text-xs font-mono text-destructive">{error.message}</p>
-                </div>
-              )}
-
-              {/* Show stack trace in development */}
-              {isDev && error.stack && (
-                <details className="rounded-lg border border-muted/40 bg-muted/20">
-                  <summary className="cursor-pointer p-2 text-xs font-medium text-muted-foreground hover:text-foreground">
-                    View Stack Trace
-                  </summary>
-                  <pre className="max-h-48 overflow-auto p-3 text-xs font-mono text-muted-foreground">
-                    {error.stack}
-                  </pre>
-                </details>
-              )}
-
-              <div className="flex flex-col gap-2 pt-2">
-                <Button onClick={reset} className="w-full">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Try again
-                </Button>
-                <Button variant="outline" asChild className="w-full">
-                  <a href="/">
-                    <Home className="mr-2 h-4 w-4" />
-                    Go to home
-                  </a>
-                </Button>
-              </div>
-
-              <p className="text-center text-xs text-muted-foreground">
-                {isDev
-                  ? 'This error page is only visible in development.'
-                  : 'We apologize for the inconvenience.'}
-              </p>
-            </CardContent>
-          </Card>
+      <head>
+        <title>Something went wrong</title>
+      </head>
+      <body style={{
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        margin: 0,
+        backgroundColor: '#f9fafb',
+        color: '#111827'
+      }}>
+        <div style={{ textAlign: 'center', padding: '2rem', maxWidth: '400px' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Something went wrong</h1>
+          <p style={{ color: '#6b7280', marginBottom: '2rem' }}>A critical error occurred. We have been notified and are looking into it.</p>
+          <button 
+            onClick={() => reset()}
+            style={{
+              backgroundColor: '#000',
+              color: '#fff',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.375rem',
+              border: 'none',
+              fontWeight: 500,
+              cursor: 'pointer'
+            }}
+          >
+            Try again
+          </button>
+          {error.digest && (
+            <div style={{ marginTop: '2rem', fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
+              Error ID: {error.digest}
+            </div>
+          )}
         </div>
       </body>
     </html>

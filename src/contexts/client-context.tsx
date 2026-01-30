@@ -53,16 +53,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   // This prevents USER_NOT_FOUND errors on pages that don't need client data
   const shouldSkipClients = previewEnabled || !canQuery || !user?.agencyId
 
-  const convexClients = useQuery(
-    clientsApi.list,
-    shouldSkipClients
+  const convexClientsArgs = useMemo(() => (shouldSkipClients
       ? 'skip'
       : {
         workspaceId,
         limit: 100,
         includeAllWorkspaces: isAdmin,
-      }
-  )
+      }), [shouldSkipClients, workspaceId, isAdmin])
+
+  const convexClients = useQuery(clientsApi.list, convexClientsArgs)
 
   const convexCreateClient = useMutation(clientsApi.create)
   const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
@@ -342,6 +341,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       : resolvedClients[0]?.id ?? null
 
     if (nextId !== selectedClientId) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[ClientProvider] Syncing selectedClientId: ${selectedClientId} -> ${nextId}`, {
+          reason: !selectedClientId ? 'initial-load' : 'ref-change'
+        })
+      }
       setSelectedClientId(nextId)
     }
   }, [clientsResolved, resolvedClients, selectedClientId, storageKey])

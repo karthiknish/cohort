@@ -118,7 +118,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   useEffect(() => {
     if (user) {
       const timeoutId = setTimeout(() => {
-        if (user.status !== 'active') {
+        if (user.status !== 'active' && window.location.pathname !== '/dashboard') {
           router.push('/dashboard')
         }
       }, 200)

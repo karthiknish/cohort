@@ -229,7 +229,7 @@ export const listCampaigns = action({
           : undefined,
       })
     )
-  }, 'adsCampaigns:listCampaigns'),
+  }, 'adsCampaigns:listCampaigns', { maxRetries: 3 }),
 })
 
 export const updateCampaign = action({
@@ -449,5 +449,5 @@ export const updateCampaign = action({
     }
 
     return { success: true, campaignId: args.campaignId, action: args.action }
-  }, 'adsCampaigns:updateCampaign'),
+  }, 'adsCampaigns:updateCampaign', { maxRetries: 3 }),
 })

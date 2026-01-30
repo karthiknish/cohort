@@ -18,6 +18,7 @@ export interface UnifiedErrorOptions {
     details?: Record<string, string[]>
     isRetryable?: boolean
     isAuthError?: boolean
+    isRateLimitError?: boolean
     retryAfterMs?: number
     platform?: IntegrationPlatform
     cause?: unknown
@@ -41,6 +42,7 @@ export class UnifiedError extends Error {
     readonly details?: Record<string, string[]>
     readonly isRetryable: boolean
     readonly isAuthError: boolean
+    readonly isRateLimitError: boolean
     readonly retryAfterMs?: number
     readonly platform?: IntegrationPlatform
 
@@ -57,6 +59,7 @@ export class UnifiedError extends Error {
         // Auto-detect if not explicitly provided
         this.isRetryable = options.isRetryable ?? isRetryableStatus(this.status)
         this.isAuthError = options.isAuthError ?? isAuthStatus(this.status)
+        this.isRateLimitError = options.isRateLimitError ?? this.status === 429
 
         // Preserve cause for debugging
         if (options.cause) {
@@ -81,6 +84,7 @@ export class UnifiedError extends Error {
                 details?: Record<string, string[]>
                 isRetryable?: boolean
                 isAuthError?: boolean
+                isRateLimitError?: boolean
                 retryAfterMs?: number
             }
 
@@ -91,6 +95,7 @@ export class UnifiedError extends Error {
                 details: anyError.details ?? defaults?.details,
                 isRetryable: anyError.isRetryable ?? defaults?.isRetryable,
                 isAuthError: anyError.isAuthError ?? defaults?.isAuthError,
+                isRateLimitError: anyError.isRateLimitError ?? defaults?.isRateLimitError,
                 retryAfterMs: anyError.retryAfterMs ?? defaults?.retryAfterMs,
                 platform: defaults?.platform,
                 cause: error,

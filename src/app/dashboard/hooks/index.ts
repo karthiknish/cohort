@@ -3,3 +3,9 @@ export type { UseDashboardDataOptions, UseDashboardDataReturn } from './use-dash
 
 export { useComparisonData } from './use-comparison-data'
 export type { UseComparisonDataOptions, UseComparisonDataReturn, ComparisonAggregate } from './use-comparison-data'
+
+export { useIntegrationStatusSummary } from './use-integration-status-summary'
+export type { IntegrationStatusSummary } from './use-integration-status-summary'
+
+export { useDashboardStats } from '../utils/dashboard-calculations'
+export type { BuildStatsOptions, StatsResult } from '../utils/dashboard-calculations'

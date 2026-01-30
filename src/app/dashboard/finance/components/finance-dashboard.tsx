@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ElementType } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -42,11 +42,14 @@ import {
   Wallet,
   ClipboardList,
   FileSpreadsheet,
-  ChevronDown
+  ChevronDown,
+  Copy,
+  Code2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
+import { useRenderLog } from '@/lib/debug-utils'
 
 // Section header component for consistency
 function SectionHeader({
@@ -90,11 +93,23 @@ function SectionHeader({
 }
 
 export function FinanceDashboard() {
+  const { clients, selectedClientId, selectedClient } = useClientContext()
   const { user } = useAuth()
-  const { selectedClientId, selectedClient } = useClientContext()
   const { toast } = useToast()
+  
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const isAdmin = user?.role === 'admin'
   const isClient = user?.role === 'client'
+
+  const financeData = useFinanceData()
+
+  useRenderLog('FinanceDashboard', {
+    selectedClientId,
+    workspaceId,
+    statsLoaded: !!financeData.stats,
+    isClient,
+    isAdmin,
+  })
 
   const {
     selectedPeriod,
@@ -102,35 +117,45 @@ export function FinanceDashboard() {
     invoiceStatusFilter,
     setInvoiceStatusFilter,
     stats,
-    costs,
+    paymentSummary,
     chartData,
     filteredInvoices,
-    upcomingPayments,
+    invoices,
+    costs,
     monthlyCostTotal,
-    handleAddCost,
-    handleRemoveCost,
+    revenueByClient,
+    categorySpend,
+    budget,
+    updateBudgetTarget,
+    updateCategoryBudget,
+    forecast,
+    upcomingPayments,
     newCost,
     setNewCost,
+    handleAddCost,
+    handleRemoveCost,
     removingCostId,
+    isSubmittingCost,
     isLoading,
     hasAttemptedLoad,
-    isSubmittingCost,
-    refresh,
     loadError,
-    revenueByClient,
-    sendingInvoiceId,
-    refundingInvoiceId,
-    sendInvoiceReminder,
-    issueInvoiceRefund,
-    forecast,
+    refresh,
     hasMoreInvoices,
     hasMoreCosts,
     loadMoreInvoices,
     loadMoreCosts,
     loadingMoreInvoices,
     loadingMoreCosts,
-  } = useFinanceData()
+    sendingInvoiceId,
+    refundingInvoiceId,
+    sendInvoiceReminder,
+    issueInvoiceRefund,
+  } = financeData
 
+  // Extract primaryCurrency to avoid dependency issues
+  const primaryCurrency = stats.primaryCurrency
+
+  // Stable handler references - prevent conditional prop from causing re-renders
   const handleSendReminder = useCallback(
     (invoice: FinanceInvoice) => {
       void sendInvoiceReminder(invoice.id)
@@ -149,7 +174,7 @@ export function FinanceDashboard() {
       }
 
       const confirmation = window.confirm(
-        `Issue a refund of ${formatCurrency(Math.max(availableRefund, 0), invoice.currency ?? stats.primaryCurrency)} for invoice ${invoice.number ?? invoice.id}?`
+        `Issue a refund of ${formatCurrency(Math.max(availableRefund, 0), invoice.currency ?? primaryCurrency)} for invoice ${invoice.number ?? invoice.id}?`
       )
 
       if (!confirmation) {
@@ -158,7 +183,35 @@ export function FinanceDashboard() {
 
       void issueInvoiceRefund(invoice.id)
     },
-    [issueInvoiceRefund, stats.primaryCurrency]
+    [issueInvoiceRefund, primaryCurrency]
+  )
+
+  // Use ref pattern to create stable callback references that don't change when isAdmin changes
+  // The ref stores the current admin status and handlers, but the callback itself is stable
+  const adminStateRef = useRef({ isAdmin, handleSendReminder, handleIssueRefund })
+
+  // Update ref when admin state changes (doesn't trigger re-render)
+  adminStateRef.current = { isAdmin, handleSendReminder, handleIssueRefund }
+
+  // Stable callbacks that read from ref - these never change reference
+  const onSendReminder = useCallback(
+    (invoice: FinanceInvoice) => {
+      const { isAdmin, handleSendReminder } = adminStateRef.current
+      if (isAdmin && handleSendReminder) {
+        handleSendReminder(invoice)
+      }
+    },
+    [] // No deps - always stable
+  )
+
+  const onIssueRefund = useCallback(
+    (invoice: FinanceInvoice) => {
+      const { isAdmin, handleIssueRefund } = adminStateRef.current
+      if (isAdmin && handleIssueRefund) {
+        handleIssueRefund(invoice)
+      }
+    },
+    [] // No deps - always stable
   )
 
   const handleExportData = useCallback(() => {
@@ -272,26 +325,45 @@ export function FinanceDashboard() {
     syncToUrl: true,
   })
 
-  const activeSection = sectionTabs.value
-  const setActiveSection = sectionTabs.setValue
-
-  // Reset activeSection if it's no longer in the available sections
-  useEffect(() => {
-    if (activeSection && !sections.some((s) => s.value === activeSection)) {
-      setActiveSection(sections[0]?.value ?? 'overview')
+  // Ensure activeSection is always valid - if not, reset to default
+  const activeSection = useMemo(() => {
+    if (sectionValues.includes(sectionTabs.value)) {
+      return sectionTabs.value
     }
-  }, [activeSection, sections, setActiveSection])
+    return defaultSectionValue
+  }, [sectionTabs.value, sectionValues, defaultSectionValue])
+  
+  const setActiveSection = sectionTabs.setValue
+  
+  // Ref to prevent rapid successive calls
+  const isHandlingJumpRef = useRef(false)
 
   const handleJumpTo = useCallback(
     (value: string) => {
+      // Prevent rapid successive calls
+      if (isHandlingJumpRef.current) return
+      
+      // Only update if value is valid and different from current
+      if (!sectionValues.includes(value)) return
+      if (value === activeSection) return
+      
+      isHandlingJumpRef.current = true
+      
       setActiveSection(value)
       const section = sections.find((s) => s.value === value)
-      if (!section) return
-      const el = document.getElementById(section.targetId)
-      if (!el) return
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (section) {
+        const el = document.getElementById(section.targetId)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+      
+      // Reset after a short delay
+      setTimeout(() => {
+        isHandlingJumpRef.current = false
+      }, 100)
     },
-    [sections, setActiveSection]
+    [sections, sectionValues, activeSection, setActiveSection]
   )
 
   if (isInitialLoading) {
@@ -300,17 +372,31 @@ export function FinanceDashboard() {
 
   // Error state with retry (no data loaded)
   if (loadError && hasAttemptedLoad && filteredInvoices.length === 0 && costs.length === 0 && chartData.length === 0) {
+    const copyError = () => {
+      navigator.clipboard.writeText(loadError)
+    }
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="rounded-full bg-destructive/10 p-4 mb-4">
           <CircleAlert className="h-8 w-8 text-destructive" />
         </div>
         <h2 className="text-xl font-semibold text-foreground mb-2">Unable to load finance data</h2>
-        <p className="text-muted-foreground text-center max-w-md mb-6">{loadError}</p>
-        <Button onClick={() => void refresh()} className="gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Try Again
-        </Button>
+        <p className="text-muted-foreground text-center max-w-md mb-4">{loadError}</p>
+        <div className="flex items-center gap-2 mb-6">
+          <Code2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Component: FinanceDashboard</span>
+        </div>
+        <div className="flex gap-3">
+          <Button onClick={() => void refresh()} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </Button>
+          <Button variant="outline" size="sm" onClick={copyError} className="gap-2">
+            <Copy className="h-4 w-4" />
+            Copy Error
+          </Button>
+        </div>
       </div>
     )
   }
@@ -321,12 +407,29 @@ export function FinanceDashboard() {
         <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
           <CircleAlert className="h-4 w-4" />
           <AlertTitle>Finance data partially unavailable</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>{loadError}</span>
-            <Button variant="outline" size="sm" onClick={() => void refresh()} className="ml-4 gap-2">
-              <RefreshCw className="h-3 w-3" />
-              Retry
-            </Button>
+          <AlertDescription>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex-1">{loadError}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigator.clipboard.writeText(loadError)}
+                  className="h-7 w-7 p-0 shrink-0"
+                  title="Copy error"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Code2 className="h-3 w-3" />
+                <span>Component: FinanceDashboard · useFinanceData</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => void refresh()} className="gap-2">
+                <RefreshCw className="h-3 w-3" />
+                Retry
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -389,9 +492,9 @@ export function FinanceDashboard() {
         className="grid scroll-mt-24 gap-6 xl:grid-cols-[minmax(0,2fr),minmax(0,1fr)] xl:items-start"
       >
         <div className="space-y-6">
-          <FinanceChartsSection data={chartData} currency={stats.primaryCurrency} />
+          <FinanceChartsSection data={chartData} currency={primaryCurrency} />
           {forecast && forecast.length > 0 && (
-            <FinanceForecastCard data={forecast} currency={stats.primaryCurrency} />
+            <FinanceForecastCard data={forecast} currency={primaryCurrency} />
           )}
         </div>
         <div className="xl:sticky xl:top-6">
@@ -400,7 +503,7 @@ export function FinanceDashboard() {
             upcomingPayments={upcomingPayments}
             totalOutstanding={stats.totalOutstanding}
             currencyTotals={stats.currencyTotals}
-            primaryCurrency={stats.primaryCurrency}
+            primaryCurrency={primaryCurrency}
           />
         </div>
       </section>
@@ -425,8 +528,8 @@ export function FinanceDashboard() {
                 invoices={filteredInvoices}
                 selectedStatus={invoiceStatusFilter}
                 onSelectStatus={setInvoiceStatusFilter}
-                onSendReminder={isAdmin ? handleSendReminder : undefined}
-                onIssueRefund={isAdmin ? handleIssueRefund : undefined}
+                onSendReminder={onSendReminder}
+                onIssueRefund={onIssueRefund}
                 sendingInvoiceId={sendingInvoiceId}
                 refundingInvoiceId={refundingInvoiceId}
                 onLoadMore={loadMoreInvoices}
@@ -476,7 +579,7 @@ export function FinanceDashboard() {
                   <SectionHeader
                     icon={Receipt}
                     title="Company Costs"
-                    description={`${formatCurrency(monthlyCostTotal, stats.primaryCurrency)}/mo`}
+                    description={`${formatCurrency(monthlyCostTotal, primaryCurrency)}/mo`}
                     count={costs.length}
                   />
                 </CardHeader>
@@ -495,7 +598,7 @@ export function FinanceDashboard() {
                     onLoadMore={loadMoreCosts}
                     hasMore={hasMoreCosts}
                     loadingMore={loadingMoreCosts}
-                    currency={stats.primaryCurrency}
+                    currency={primaryCurrency}
                     embedded
                   />
                 </CardContent>
@@ -519,7 +622,7 @@ export function FinanceDashboard() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0">
-                  <FinanceExpensesCard currency={stats.primaryCurrency} embedded />
+                  <FinanceExpensesCard currency={primaryCurrency} embedded />
                 </CardContent>
               </CollapsibleContent>
             </Card>
@@ -544,7 +647,7 @@ export function FinanceDashboard() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0">
-                <FinancePurchaseOrdersCard currency={stats.primaryCurrency} embedded />
+                <FinancePurchaseOrdersCard currency={primaryCurrency} embedded />
               </CardContent>
             </CollapsibleContent>
           </Card>
@@ -568,7 +671,7 @@ export function FinanceDashboard() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0">
-                <FinanceExpenseReportCard currency={stats.primaryCurrency} embedded />
+                <FinanceExpenseReportCard currency={primaryCurrency} embedded />
               </CardContent>
             </CollapsibleContent>
           </Card>

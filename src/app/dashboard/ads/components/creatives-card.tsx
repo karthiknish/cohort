@@ -2,7 +2,37 @@
 
 import { useCallback, useState } from 'react'
 import { useAction } from 'convex/react'
-import { RefreshCw, Image, Video, FileText, ExternalLink, BarChart2, CheckSquare, Square } from 'lucide-react'
+import { RefreshCw, Image, Video, FileText, ExternalLink, BarChart2, CheckSquare, Square, ImageOff } from 'lucide-react'
+
+// Component to handle image loading with fallback
+function CreativeImage({ src, alt, fallbackSrc }: { src?: string; alt?: string; fallbackSrc?: string }) {
+  const [error, setError] = useState(false)
+  const [currentSrc, setCurrentSrc] = useState(src)
+
+  if (!src || error) {
+    return <ImageOff className="h-8 w-8 text-muted-foreground" />
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt || ''}
+      className="w-full h-full object-cover"
+      loading="lazy"
+      decoding="async"
+      style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+      onError={() => {
+        if (fallbackSrc && currentSrc !== fallbackSrc) {
+          // Try fallback URL first
+          setCurrentSrc(fallbackSrc)
+        } else {
+          // Show error state
+          setError(true)
+        }
+      }}
+    />
+  )
+}
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,11 +85,13 @@ type Creative = {
   headlines?: string[]
   descriptions?: string[]
   imageUrl?: string
+  thumbnailUrl?: string
   videoUrl?: string
   landingPageUrl?: string
   callToAction?: string
   pageName?: string
   pageProfileImageUrl?: string
+  isLeadGen?: boolean
 }
 
 type Props = {
@@ -116,6 +148,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
     const t = type.toLowerCase()
     if (t.includes('video')) return <Video className="h-4 w-4" />
     if (t.includes('image') || t.includes('display')) return <Image className="h-4 w-4" />
+    if (t.includes('lead')) return <span className="text-xs font-medium">LG</span>
     return <FileText className="h-4 w-4" />
   }
 
@@ -223,6 +256,9 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                           <span className="text-xs text-muted-foreground capitalize">
                             {creative.type.toLowerCase().replace(/_/g, ' ')}
                           </span>
+                          {creative.isLeadGen && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">Lead</Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -309,13 +345,10 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                   {/* Visual Preview */}
                   <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border">
                     {c.imageUrl ? (
-                      <img
+                      <CreativeImage
                         src={c.imageUrl}
                         alt=""
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+                        fallbackSrc={c.thumbnailUrl}
                       />
                     ) : c.videoUrl ? (
                       <Video className="h-8 w-8 text-muted-foreground" />

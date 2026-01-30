@@ -152,7 +152,22 @@ export type MetaAdCreative = {
     type?: string
     payload?: Record<string, unknown>
   }>
-  asset_feed_spec?: string
+  asset_feed_spec?: {
+    images?: Array<{
+      hash?: string
+      url?: string
+      url_tags?: string
+    }>
+    videos?: Array<{
+      video_id?: string
+      thumbnail_url?: string
+      url_tags?: string
+    }>
+    bodies?: Array<{ text?: string }>
+    titles?: Array<{ text?: string }>
+    descriptions?: Array<{ text?: string }>
+    link_urls?: Array<{ website_url?: string }>
+  }
   ad_disclaimer_spec?: {
     text?: string
     disclaimer_type?: string
@@ -217,6 +232,7 @@ export type MetaAdData = {
   effective_status?: string
   adset_id?: string
   campaign_id?: string
+  leadgen_form_id?: string
   adcreatives?: {
     data?: MetaAdCreative[]
   }

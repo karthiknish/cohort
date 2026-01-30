@@ -1,4 +1,5 @@
 import { mutation, query } from './_generated/server'
+import type { QueryCtx } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import {
@@ -37,7 +38,7 @@ export const listForClient = zAuthenticatedQuery({
     clientId: z.string(),
     limit: z.number(),
   },
-  handler: async (ctx, args): Promise<Activity[]> => {
+  handler: async (ctx: QueryCtx, args: { workspaceId: string; clientId: string; limit: number }): Promise<Activity[]> => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 

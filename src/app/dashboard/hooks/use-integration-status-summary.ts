@@ -35,7 +35,7 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
     const uniq = Array.from(new Set(clientIds.filter(Boolean)))
     uniq.sort()
     return uniq
-  }, [clientIds])
+  }, [JSON.stringify(clientIds)]) // Use stringified version to catch content changes vs reference changes
 
   const previewSummary = useMemo<{
     summary: IntegrationStatusSummary
@@ -111,5 +111,5 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
     }
   }, [isPreviewMode, previewSummary, stableClientIds.length, statusesByClient, user?.id, workspaceId])
 
-  return liveSummary
+  return useMemo(() => liveSummary, [liveSummary])
 }

@@ -475,7 +475,7 @@ export function CreativeSocialPreview(props: {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${efficiencyScore}%` }}
-                    transition={{ duration: 1.5, cubicBezier: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                     className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full shadow-[0_0_20px_rgba(var(--primary),0.5)]"
                   />
                 </div>

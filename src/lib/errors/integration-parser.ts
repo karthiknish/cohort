@@ -251,6 +251,7 @@ export function parseIntegrationError(
         platform,
         isRetryable: classification.isRetryable,
         isAuthError: classification.isAuthError,
+        isRateLimitError: classification.isRateLimitError,
         retryAfterMs,
         details: parsed.traceId ? { traceId: [parsed.traceId] } : undefined,
     })

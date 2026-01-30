@@ -222,5 +222,5 @@ export const getCampaignInsights = action({
       insights,
       currency: accountCurrency,
     }
-  }, 'adsCampaignInsights:getCampaignInsights'),
+  }, 'adsCampaignInsights:getCampaignInsights', { maxRetries: 3 }),
 })

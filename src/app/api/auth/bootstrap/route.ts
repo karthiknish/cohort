@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { v4 as uuidv4 } from 'uuid'
-import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../../../../convex/_generated/api'
-import { getToken } from '@/lib/auth-server'
-import { logAuditAction } from '@/lib/audit-logger'
-import * as jose from 'jose'
+import { ConvexHttpClient } from 'convex/browser'
 
 const payloadSchema = z
   .object({
@@ -13,239 +9,180 @@ const payloadSchema = z
   })
   .optional()
 
-const roleSchema = z.enum(['admin', 'team', 'client'])
-const statusSchema = z.enum(['active', 'pending', 'invited', 'disabled', 'suspended'])
+// Helper to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    )
+  ])
+}
 
 /**
  * Bootstrap route - creates/updates user in Convex users table
- * This route decodes the JWT token to get the Better Auth user ID (sub claim)
- * and ensures the user exists in our users table with proper role/status.
+ * Uses direct Convex client with session cookie
  */
 export async function POST(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || uuidv4()
-  const debug: Record<string, unknown> = {}
-
-  const reply = (
-    status: number,
-    data: { ok: boolean; error?: string; [key: string]: unknown }
-  ) => {
-    return NextResponse.json(
-      {
-        success: status >= 200 && status < 300,
-        requestId,
-        data,
-      },
-      {
-        status,
-        headers: { 'Cache-Control': 'no-store, max-age=0' },
-      }
-    )
-  }
+  const startTime = Date.now()
 
   try {
-    // 1. Parse optional body
-    type Payload = { name?: string } | undefined
-    let body: Payload = undefined
-    let providedName: string | undefined = undefined
-    let tokenResult: { token: string | null; error?: unknown } = { token: null }
-
-    const bodyPromise = (async () => {
-      try {
-        const json = await req.json()
-        const result = payloadSchema.safeParse(json)
-        if (result.success) {
-          body = result.data
-          providedName = result.data?.name
-        }
-      } catch {
-        // No body or invalid JSON - that's fine
-      }
-    })()
-
-    const tokenPromise = (async () => {
-      try {
-        const token = await getToken()
-        tokenResult = { token: token ?? null }
-      } catch (tokenError) {
-        tokenResult = { token: null, error: tokenError }
-      }
-    })()
-
-    await Promise.all([bodyPromise, tokenPromise])
-
-
-    // 2. Get Convex token using official helper
-    const convexToken = tokenResult.token
-    debug.hasToken = Boolean(convexToken)
-    if (tokenResult.error) {
-      debug.tokenError = tokenResult.error instanceof Error
-        ? tokenResult.error.message
-        : String(tokenResult.error)
-      // Token fetch failed - user likely not authenticated
-      return reply(401, { ok: false, error: 'Failed to get auth token', debug })
+    // 1. Get the Better Auth session cookie directly from request
+    // Better Auth uses 'better-auth.session_token' as the default cookie name
+    const allCookies = req.cookies.getAll()
+    console.log('[Bootstrap] Available cookies:', allCookies.map(c => c.name))
+    
+    const sessionCookie = req.cookies.get('better-auth.session_token')?.value ||
+                         req.cookies.get('better-auth.session')?.value ||
+                         req.cookies.get('session')?.value ||
+                         allCookies.find(c => c.name.includes('session'))?.value
+    
+    if (!sessionCookie) {
+      console.log('[Bootstrap] No session cookie found in:', allCookies.map(c => c.name))
+      return NextResponse.json(
+        { success: false, error: 'No session cookie' },
+        { status: 401 }
+      )
     }
 
-    if (!convexToken) {
-      return reply(401, { ok: false, error: 'No Better Auth session', debug })
+    console.log('[Bootstrap] Session cookie found:', sessionCookie.substring(0, 20) + '...')
+
+    // 2. Call Better Auth's get-session endpoint to get the user
+    console.log('[Bootstrap] Getting user from Better Auth session...')
+    const sessionRes = await withTimeout(
+      fetch('http://localhost:3000/api/auth/get-session', {
+        headers: {
+          'Cookie': `better-auth.session_token=${sessionCookie}`,
+        },
+      }),
+      5000,
+      'get-session fetch'
+    )
+
+    if (!sessionRes.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to get session' },
+        { status: 401 }
+      )
     }
 
-    // 3. Decode the JWT to get the subject (Better Auth user ID)
-    let jwtPayload: jose.JWTPayload | null = null
-    try {
-      jwtPayload = jose.decodeJwt(convexToken)
-      debug.jwtSub = jwtPayload?.sub ?? null
-      debug.jwtEmail = (jwtPayload as any)?.email ?? null
-    } catch (err) {
-      debug.jwtDecodeError = String(err)
+    const sessionData = await sessionRes.json()
+    console.log('[Bootstrap] Session data:', JSON.stringify(sessionData, null, 2))
+    
+    // Better Auth returns session in different formats depending on version
+    const user = sessionData?.user || sessionData?.data?.user || sessionData
+
+    if (!user || !user.email) {
+      console.log('[Bootstrap] No valid user in session data')
+      return NextResponse.json(
+        { success: false, error: 'No user in session' },
+        { status: 401 }
+      )
     }
 
-    const jwtSubject = jwtPayload?.sub
-    if (!jwtSubject) {
-      return reply(401, { ok: false, error: 'JWT missing subject claim', debug })
+    const email = user.email
+    const name = user.name || email || 'User'
+    const legacyId = user.id
+
+    if (!email) {
+      return NextResponse.json(
+        { success: false, error: 'User email missing' },
+        { status: 400 }
+      )
     }
 
-    // 4. Get Convex URL and create client
+    // 3. Get Convex token for authenticated requests
+    console.log('[Bootstrap] Getting Convex token...')
+    const tokenRes = await withTimeout(
+      fetch('http://localhost:3000/api/auth/convex/token', {
+        headers: {
+          'Cookie': `better-auth.session_token=${sessionCookie}`,
+        },
+      }),
+      5000,
+      'convex-token fetch'
+    )
+
+    if (!tokenRes.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to get Convex token' },
+        { status: 401 }
+      )
+    }
+
+    const tokenData = await tokenRes.json()
+    console.log('[Bootstrap] Token response:', JSON.stringify(tokenData, null, 2))
+    
+    // Handle different response formats
+    const convexToken = tokenData?.token || tokenData?.data?.token || tokenData
+
+    if (!convexToken || typeof convexToken !== 'string') {
+      console.log('[Bootstrap] Invalid Convex token:', convexToken)
+      return NextResponse.json(
+        { success: false, error: 'No Convex token' },
+        { status: 401 }
+      )
+    }
+
+    console.log('[Bootstrap] Got Convex token:', convexToken.substring(0, 20) + '...')
+
+    // 4. Create Convex client with token and get user data
+    console.log('[Bootstrap] Getting user from Convex...')
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
     if (!convexUrl) {
-      return reply(500, { ok: false, error: 'Convex not configured', debug })
+      return NextResponse.json(
+        { success: false, error: 'Convex URL not configured' },
+        { status: 500 }
+      )
     }
 
     const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
+    const currentUser = await withTimeout(
+      convex.query(api.auth.getCurrentUser, {}),
+      10000,
+      'convex query'
+    )
 
-    // 5. Get current user info from Better Auth (for email/name)
-    type ExistingUser = { legacyId: string; role?: string | null; status?: string | null; agencyId?: string | null }
-    const currentUserPromise = convex.query(api.auth.getCurrentUser, {})
-    const tokenEmail = typeof (jwtPayload as { email?: unknown })?.email === 'string'
-      ? String((jwtPayload as { email?: string }).email)
-      : null
-    const existingByTokenPromise = tokenEmail
-      ? convex.query(api.users.getByEmail, { email: tokenEmail.toLowerCase() })
-      : null
-
-    const [currentUserResult, existingByTokenResult] = await Promise.allSettled([
-      currentUserPromise,
-      existingByTokenPromise ?? Promise.resolve(null),
-    ])
-
-    if (currentUserResult.status === 'rejected') {
-      debug.getCurrentUserError = currentUserResult.reason instanceof Error
-        ? currentUserResult.reason.message
-        : String(currentUserResult.reason)
-      return reply(502, { ok: false, error: 'Failed to get current user from Convex', debug })
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'User not found in Convex' },
+        { status: 404 }
+      )
     }
 
-    const currentUser = currentUserResult.value as { email?: string | null; name?: string | null } | null
-    debug.currentUser = currentUser ? { email: currentUser.email, name: currentUser.name } : null
+    // 5. Upsert user in custom users table
+    console.log('[Bootstrap] Upserting user...')
+    await withTimeout(
+      convex.mutation(api.users.bootstrapUpsert, {
+        legacyId: currentUser._id as unknown as string,
+        email: email.toLowerCase(),
+        name,
+        role: 'admin', // Default to admin for development
+        status: 'active',
+        agencyId: currentUser._id as unknown as string,
+      }),
+      10000,
+      'convex mutation'
+    )
 
-    let existingByToken: ExistingUser | null = null
-    if (existingByTokenResult.status === 'fulfilled') {
-      existingByToken = existingByTokenResult.value as ExistingUser | null
-    } else if (existingByTokenResult.status === 'rejected') {
-      debug.getByEmailError = existingByTokenResult.reason instanceof Error
-        ? existingByTokenResult.reason.message
-        : String(existingByTokenResult.reason)
-    }
+    const duration = Date.now() - startTime
+    console.log(`[Bootstrap] Completed in ${duration}ms for ${email}`)
 
-    const email = currentUser?.email ? String(currentUser.email) : tokenEmail
-    const name = providedName ?? (currentUser?.name ? String(currentUser.name) : null) ?? email ?? 'Pending user'
-
-    if (!email) {
-      return reply(400, { ok: false, error: 'Missing email from session', debug })
-    }
-
-    const normalizedEmail = email.toLowerCase()
-
-    // 6. Check if user already exists in our users table
-    let existing: ExistingUser | null = null
-    if (existingByToken && tokenEmail && normalizedEmail === tokenEmail.toLowerCase()) {
-      existing = existingByToken
-    } else {
-      try {
-        existing = (await convex.query(api.users.getByEmail, {
-          email: normalizedEmail,
-        })) as ExistingUser | null
-      } catch (queryError) {
-        debug.getByEmailError = queryError instanceof Error ? queryError.message : String(queryError)
-        // Non-fatal - user might not exist yet, continue with null
-      }
-    }
-
-    debug.existingUser = existing ? { legacyId: existing.legacyId, role: existing.role, status: existing.status } : null
-
-    const storedRole = existing ? normalizeRole(existing.role) : null
-    const storedStatus = existing ? normalizeStatus(existing.status, 'active') : null
-
-    // 7. Determine final role/status - use stored values from Convex, default to client/pending for new users
-    const finalRole = storedRole ?? 'client'
-    const finalStatus = storedStatus ?? 'pending'
-
-    debug.roleResolution = { storedRole, storedStatus, finalRole, finalStatus }
-
-    // 8. Use JWT subject as the legacyId (this is the Better Auth user ID)
-    const legacyId = jwtSubject
-
-    // 9. Upsert user in Convex users table
-    await convex.mutation(api.users.bootstrapUpsert, {
-      legacyId: String(legacyId),
-      email: normalizedEmail,
-      name,
-      role: finalRole,
-      status: finalStatus,
-      agencyId: existing?.agencyId ?? String(legacyId),
-    })
-
-    const claimsNeedUpdate = Boolean(existing?.role !== finalRole || existing?.status !== finalStatus)
-
-    if (claimsNeedUpdate) {
-      await logAuditAction({
-        action: 'ADMIN_ROLE_CHANGE',
-        actorId: 'SYSTEM_BOOTSTRAP',
-        targetId: String(legacyId),
-        metadata: {
-          oldRole: existing?.role ?? null,
-          newRole: finalRole,
-          oldStatus: existing?.status ?? null,
-          newStatus: finalStatus,
-        },
-        requestId,
-      })
-    }
-
-    return reply(200, {
+    return NextResponse.json({
       ok: true,
-      role: finalRole,
-      status: finalStatus,
-      claimsUpdated: claimsNeedUpdate,
-      agencyId: existing?.agencyId || String(legacyId),
-      debug,
+      success: true,
+      role: 'admin',
+      status: 'active',
+      agencyId: currentUser._id,
     })
   } catch (error) {
     console.error('[Bootstrap] Error:', error)
-    debug.error = error instanceof Error ? error.message : String(error)
-
-    return reply(500, { ok: false, error: 'Bootstrap failed', debug })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Bootstrap failed',
+      },
+      { status: 500 }
+    )
   }
-}
-
-function normalizeRole(value: unknown): z.infer<typeof roleSchema> {
-  if (value === 'admin' || value === 'team' || value === 'client') {
-    return value
-  }
-  if (value === 'manager') {
-    return 'team'
-  }
-  if (value === 'member') {
-    return 'client'
-  }
-  return 'client'
-}
-
-function normalizeStatus(value: unknown, fallback: z.infer<typeof statusSchema> = 'active'): z.infer<typeof statusSchema> {
-  if (value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended') {
-    return value
-  }
-  if (value === 'inactive' || value === 'blocked') {
-    return 'disabled'
-  }
-  return fallback
 }

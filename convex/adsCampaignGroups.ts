@@ -70,7 +70,7 @@ export const listCampaignGroups = action({
         currency: group.currency,
       })
     )
-  }, 'adsCampaignGroups:listCampaignGroups'),
+  }, 'adsCampaignGroups:listCampaignGroups', { maxRetries: 3 }),
 })
 
 export const updateCampaignGroup = action({
@@ -121,5 +121,5 @@ export const updateCampaignGroup = action({
     }
 
     return { success: true }
-  }, 'adsCampaignGroups:updateCampaignGroup'),
+  }, 'adsCampaignGroups:updateCampaignGroup', { maxRetries: 3 }),
 })

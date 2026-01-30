@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 
 import { AuthProvider } from '@/contexts/auth-context'
 import { AnalyticsProvider } from '@/components/providers/analytics-provider'
@@ -11,18 +11,21 @@ import { QueryProvider } from '@/components/providers/query-provider'
 
 interface AppProvidersProps {
   children: ReactNode
+  initialToken?: string | null
 }
 
-export function AppProviders({ children }: AppProvidersProps) {
+export function AppProviders({ children, initialToken }: AppProvidersProps) {
   return (
     <AuthProvider>
-      <ConvexClientProvider>
+      <ConvexClientProvider initialToken={initialToken}>
         <QueryProvider>
-          <AnalyticsProvider>
-            <PostHogProvider>
-              <MotionProvider>{children}</MotionProvider>
-            </PostHogProvider>
-          </AnalyticsProvider>
+          <Suspense fallback={null}>
+            <AnalyticsProvider>
+              <PostHogProvider>
+                <MotionProvider>{children}</MotionProvider>
+              </PostHogProvider>
+            </AnalyticsProvider>
+          </Suspense>
         </QueryProvider>
       </ConvexClientProvider>
     </AuthProvider>

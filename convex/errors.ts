@@ -182,18 +182,113 @@ export function isAppError(error: unknown, code?: string): error is ConvexError<
 }
 
 /**
- * Wrap an async function with standardized error handling.
+ * Check if error is a rate limit error from any platform.
+ */
+function isRateLimitError(error: unknown): boolean {
+  if (error instanceof ConvexError) {
+    const data = error.data as AppErrorData
+    // Check for known rate limit error codes
+    if (data?.code === ErrorCode.RATE_LIMIT.TOO_MANY_REQUESTS) return true
+  }
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase()
+    return (
+      msg.includes('rate limit') ||
+      msg.includes('too many calls') ||
+      msg.includes('user request limit') ||
+      msg.includes('quota exceeded') ||
+      msg.includes('too_many_requests')
+    )
+  }
+  return false
+}
+
+/**
+ * Sleep/delay utility for retries
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Calculate exponential backoff delay
+ */
+function calculateBackoffDelay(attempt: number, baseDelay = 1000): number {
+  return Math.min(baseDelay * Math.pow(2, attempt), 30000) // Max 30 seconds
+}
+
+interface WithRetryOptions {
+  maxRetries?: number
+  retryDelay?: number
+  shouldRetry?: (error: unknown) => boolean
+}
+
+/**
+ * Wrap an async function with retry logic
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: WithRetryOptions = {}
+): Promise<T> {
+  const { maxRetries = 3, retryDelay = 1000, shouldRetry = isRateLimitError } = options
+  
+  let lastError: unknown
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      
+      // Don't retry if it's not a retryable error
+      if (!shouldRetry(error)) {
+        throw error
+      }
+      
+      // Don't sleep after the last attempt
+      if (attempt < maxRetries - 1) {
+        const delay = calculateBackoffDelay(attempt, retryDelay)
+        console.warn(`[retry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms...`)
+        await sleep(delay)
+      }
+    }
+  }
+  
+  throw lastError
+}
+
+/**
+ * Wrap an async function with standardized error handling and optional retry.
  */
 export async function withErrorHandling<T>(
   fn: () => Promise<T>,
-  context?: string
+  context?: string,
+  retryOptions?: WithRetryOptions
 ): Promise<T> {
+  const execute = retryOptions 
+    ? () => withRetry(fn, retryOptions)
+    : fn
+    
   try {
-    return await fn()
+    return await execute()
   } catch (error) {
     if (error instanceof ConvexError) {
+      // Check if it's already a rate limit error we created
+      const data = error.data as AppErrorData
+      if (data?.code === ErrorCode.RATE_LIMIT.TOO_MANY_REQUESTS) {
+        throw error // Already formatted correctly
+      }
       throw error
     }
+    
+    // Check for rate limit errors and provide user-friendly message
+    if (isRateLimitError(error)) {
+      console.warn(`[${context ?? 'rateLimit'}] Rate limit hit:`, error)
+      throw Errors.rateLimit.tooManyRequests(
+        'Ad platform rate limit reached. Please wait a moment and try again.'
+      )
+    }
+    
     console.error(`[${context ?? 'error'}]`, error)
     throw Errors.base.internal(asErrorMessage(error))
   }

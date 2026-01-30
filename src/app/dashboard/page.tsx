@@ -51,7 +51,6 @@ import { ClientProposalsCard } from './components/client-proposals-card'
 import { ClientInvoicesCard } from './components/client-invoices-card'
 import { AttentionSummaryCard } from '@/components/dashboard/attention-summary-card'
 import { WorkspaceTrendsCard } from '@/components/dashboard/workspace-trends-card'
-import { useIntegrationStatusSummary } from './hooks/use-integration-status-summary'
 import { AdvancedMetricsPreviewCards } from '@/components/dashboard/advanced-metrics-preview-cards'
 import { PlatformComparisonSummaryCard } from '@/components/dashboard/platform-comparison-summary-card'
 
@@ -63,8 +62,14 @@ import { formatRoas } from '@/lib/dashboard-utils'
 import { MiniTaskKanban } from './components'
 
 // Extracted hooks and utilities
-import { useDashboardData, useComparisonData } from './hooks'
-import { useDashboardStats, buildChartData } from './utils/dashboard-calculations'
+import {
+  useDashboardData,
+  useComparisonData,
+  useIntegrationStatusSummary,
+  useDashboardStats
+} from './hooks'
+import { buildChartData } from './utils/dashboard-calculations'
+import { useRenderLog } from '@/lib/debug-utils'
 
 const DEFAULT_TASKS: DashboardTaskItem[] = [
   {
@@ -99,40 +104,55 @@ export default function DashboardPage() {
 
   const canCompareAcrossClients = user?.role === 'admin'
 
-  // Sync comparison client IDs with available clients
-  useEffect(() => {
-    setComparisonClientIds((current) => {
-      if (clients.length === 0) {
-        return []
-      }
-      const validIds = current.filter((id) => clients.some((client) => client.id === id))
-      if (validIds.length === current.length && (current.length > 0 || !selectedClientId)) {
-        return current
-      }
-      if (validIds.length === 0 && selectedClientId) {
-        return [selectedClientId]
-      }
-      return validIds
-    })
-  }, [clients, selectedClientId])
+  useRenderLog('DashboardPage', {
+    selectedClientId,
+    clientsCount: clients?.length ?? 0,
+    comparisonClientIds,
+  })
 
-  // Restrict comparison to single client for non-admins
+  // Debug: Track re-renders and their causes
   useEffect(() => {
-    if (canCompareAcrossClients) {
-      return
+    if (process.env.NODE_ENV === 'development') {
+      const timestamp = new Date().toISOString()
+      console.log(`[DashboardPage] Render at ${timestamp}`, {
+        selectedClientId,
+        clientsCount: clients?.length ?? 0,
+        canCompare: canCompareAcrossClients,
+        comparisonClientIdsLength: comparisonClientIds.length
+      })
     }
+  })
+
+  // Consolidate comparison client ID synchronization to prevent infinite re-renders
+  useEffect(() => {
     setComparisonClientIds((current) => {
-      if (selectedClientId) {
-        if (current.length === 1 && current[0] === selectedClientId) {
-          return current
-        }
-        return [selectedClientId]
+      // 1. Filter out IDs that no longer exist in the clients list
+      const validCurrentIds = current.filter(id => clients.some(c => c.id === id))
+      
+      // 2. Determine intended selection based on role and selectedClientId
+      let targetIds: string[]
+      if (canCompareAcrossClients) {
+        // Admin/Team can have multiple or empty, but if empty and we have a selection, use it
+        targetIds = validCurrentIds.length > 0 ? validCurrentIds : (selectedClientId ? [selectedClientId] : [])
+      } else {
+        // Clients are restricted to exactly one selection (the active one)
+        targetIds = selectedClientId ? [selectedClientId] : []
       }
-      return current.length > 1 ? current.slice(0, 1) : current
+
+      // 3. Only update state if the selection has actually changed (deep equality check for simple arrays)
+      if (
+        targetIds.length !== current.length ||
+        !targetIds.every((id, index) => id === current[index])
+      ) {
+        return targetIds
+      }
+      
+      return current
     })
-  }, [canCompareAcrossClients, selectedClientId])
+  }, [clients, selectedClientId, canCompareAcrossClients])
 
   // Dashboard data hook
+  const dashboardOptions = useMemo(() => ({ selectedClientId: selectedClientId ?? null }), [selectedClientId])
   const {
     financeSummary,
     financeLoading,
@@ -151,7 +171,7 @@ export default function DashboardPage() {
     lastRefreshed,
     handleRefresh,
     isRefreshing,
-  } = useDashboardData({ selectedClientId: selectedClientId ?? null })
+  } = useDashboardData(dashboardOptions)
 
   const integrationScopeClientIds = useMemo(() => {
     if (user?.role === 'admin' && comparisonClientIds.length > 0) return comparisonClientIds

@@ -20,6 +20,11 @@ export const convexSiteUrl = requireEnv(
 
 export const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
+const authUtilities = convexBetterAuthNextJs({
+  convexUrl,
+  convexSiteUrl,
+});
+
 export const {
   handler,
   preloadAuthQuery,
@@ -28,7 +33,4 @@ export const {
   fetchAuthQuery,
   fetchAuthMutation,
   fetchAuthAction,
-} = convexBetterAuthNextJs({
-  convexUrl,
-  convexSiteUrl,
-});
+} = authUtilities;

@@ -3,16 +3,6 @@
 import { useState, useRef, useMemo, useCallback, memo, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
-  type ColumnDef,
-  type SortingState,
-  type ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import {
   BellRing,
   Calendar,
   Download,
@@ -341,13 +331,13 @@ function EmptyState({ selectedStatus, onShowAll }: EmptyStateProps) {
 interface SortButtonProps {
   label: string
   sortKey: string
-  currentSort: SortingState
+  currentSort: { key: string; direction: 'asc' | 'desc' } | null
   onSort: (key: string) => void
 }
 
 function SortButton({ label, sortKey, currentSort, onSort }: SortButtonProps) {
-  const isActive = currentSort[0]?.id === sortKey
-  const direction = currentSort[0]?.desc ? 'desc' : 'asc'
+  const isActive = currentSort?.key === sortKey
+  const direction = currentSort?.direction
   
   return (
     <Button
@@ -402,7 +392,7 @@ export function FinanceInvoiceTable({
   embedded,
 }: FinanceInvoiceTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
   const parentRef = useRef<HTMLDivElement>(null)
 
   // Use state for client-only date computation to avoid hydration mismatch
@@ -413,81 +403,49 @@ export function FinanceInvoiceTable({
     setTodayTimestamp(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   }, [])
 
-  // Define columns for TanStack Table (used for sorting/filtering logic)
-  const columns: ColumnDef<FinanceInvoice>[] = useMemo(
-    () => [
-      {
-        accessorKey: 'clientName',
-        header: 'Client',
-        filterFn: 'includesString',
-      },
-      {
-        accessorKey: 'number',
-        header: 'Number',
-        filterFn: 'includesString',
-      },
-      {
-        accessorKey: 'amount',
-        header: 'Amount',
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-      },
-      {
-        accessorKey: 'issuedDate',
-        header: 'Issued Date',
-      },
-      {
-        accessorKey: 'dueDate',
-        header: 'Due Date',
-      },
-      {
-        accessorKey: 'description',
-        header: 'Description',
-        filterFn: 'includesString',
-      },
-    ],
-    []
-  )
-
-  // Use TanStack Table for sorting and filtering
-  const table = useReactTable({
-    data: invoices,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    state: {
-      sorting,
-      globalFilter: searchQuery,
-    },
-    globalFilterFn: (row, columnId, filterValue) => {
-      const searchLower = (filterValue as string).toLowerCase()
-      return Boolean(
-        row.original.clientName?.toLowerCase().includes(searchLower) ||
-        row.original.number?.toLowerCase().includes(searchLower) ||
-        row.original.id.toLowerCase().includes(searchLower) ||
-        row.original.description?.toLowerCase().includes(searchLower)
+  // Simple filtering and sorting without TanStack Table to avoid infinite loop
+  const filteredInvoices = useMemo(() => {
+    let result = [...invoices]
+    
+    // Apply search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase()
+      result = result.filter(inv => 
+        inv.clientName?.toLowerCase().includes(searchLower) ||
+        inv.number?.toLowerCase().includes(searchLower) ||
+        inv.id.toLowerCase().includes(searchLower) ||
+        inv.description?.toLowerCase().includes(searchLower)
       )
-    },
-    getRowId: (row) => row.id,
-  })
-
-  const filteredInvoices = table.getRowModel().rows.map((row) => row.original)
+    }
+    
+    // Apply sorting
+    if (sortConfig) {
+      result.sort((a, b) => {
+        const aVal = (a as any)[sortConfig.key]
+        const bVal = (b as any)[sortConfig.key]
+        
+        if (aVal === bVal) return 0
+        if (aVal == null) return 1
+        if (bVal == null) return -1
+        
+        const comparison = aVal < bVal ? -1 : 1
+        return sortConfig.direction === 'asc' ? comparison : -comparison
+      })
+    }
+    
+    return result
+  }, [invoices, searchQuery, sortConfig])
 
   const handleSort = useCallback((key: string) => {
-    setSorting((prev) => {
-      const existing = prev[0]
-      if (existing?.id === key) {
+    setSortConfig((prev) => {
+      if (prev?.key === key) {
         // Toggle direction or remove
-        if (existing.desc) {
-          return [] // Remove sorting
+        if (prev.direction === 'desc') {
+          return null // Remove sorting
         }
-        return [{ id: key, desc: true }]
+        return { key, direction: 'desc' }
       }
-      return [{ id: key, desc: false }]
+      return { key, direction: 'asc' }
     })
   }, [])
 
@@ -593,10 +551,10 @@ export function FinanceInvoiceTable({
   const SortControls = filteredInvoices.length > 0 && (
     <div className={cn('flex items-center gap-2 py-2 text-xs text-muted-foreground', embedded ? 'px-0' : 'px-6')}>
       <span>Sort by:</span>
-      <SortButton label="Amount" sortKey="amount" currentSort={sorting} onSort={handleSort} />
-      <SortButton label="Date" sortKey="issuedDate" currentSort={sorting} onSort={handleSort} />
-      <SortButton label="Due" sortKey="dueDate" currentSort={sorting} onSort={handleSort} />
-      <SortButton label="Client" sortKey="clientName" currentSort={sorting} onSort={handleSort} />
+      <SortButton label="Amount" sortKey="amount" currentSort={sortConfig} onSort={handleSort} />
+      <SortButton label="Date" sortKey="issuedDate" currentSort={sortConfig} onSort={handleSort} />
+      <SortButton label="Due" sortKey="dueDate" currentSort={sortConfig} onSort={handleSort} />
+      <SortButton label="Client" sortKey="clientName" currentSort={sortConfig} onSort={handleSort} />
     </div>
   )
 

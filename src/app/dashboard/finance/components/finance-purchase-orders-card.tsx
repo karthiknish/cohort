@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { LoaderCircle, Plus, RefreshCw, Send, Trash, CheckCircle2, XCircle, PackageCheck, PackageOpen, Ban } from 'lucide-react'
+import { LoaderCircle, Plus, RefreshCw, Send, Trash, CheckCircle2, XCircle, PackageCheck, PackageOpen, Ban, Copy, Code2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -94,8 +94,25 @@ export function FinancePurchaseOrdersCard({ currency, embedded = false }: { curr
 
       <ContentWrapper className={embedded ? '' : 'space-y-6 pt-6'}>
         {loadError ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-            {loadError}
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <p className="text-sm text-destructive">{loadError}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Code2 className="h-3 w-3" />
+                  <span>Component: FinancePurchaseOrdersCard</span>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigator.clipboard.writeText(loadError)}
+                className="h-8 w-8 p-0 shrink-0"
+                title="Copy error"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ) : null}
 

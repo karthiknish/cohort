@@ -63,11 +63,13 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
     const [comparisonLoading, setComparisonLoading] = useState(false)
     const [comparisonError, setComparisonError] = useState<string | null>(null)
 
-    const comparisonTargets = comparisonClientIds.length > 0
-        ? comparisonClientIds
-        : selectedClientId
-            ? [selectedClientId]
-            : []
+    const comparisonTargets = useMemo(() => {
+        return comparisonClientIds.length > 0
+            ? comparisonClientIds
+            : selectedClientId
+                ? [selectedClientId]
+                : []
+    }, [comparisonClientIds, selectedClientId])
 
     const comparisonHasSelection = comparisonTargets.length > 0
 
@@ -291,7 +293,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         }
     }, [comparisonSummaries])
 
-    return {
+    return useMemo(() => ({
         comparisonSummaries,
         comparisonLoading,
         comparisonError,
@@ -299,5 +301,13 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         comparisonAggregate,
         comparisonTargets,
         comparisonHasSelection,
-    }
+    }), [
+        comparisonSummaries,
+        comparisonLoading,
+        comparisonError,
+        comparisonInsights,
+        comparisonAggregate,
+        comparisonTargets,
+        comparisonHasSelection,
+    ])
 }

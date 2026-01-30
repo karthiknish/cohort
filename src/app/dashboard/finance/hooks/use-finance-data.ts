@@ -135,38 +135,29 @@ export function useFinanceData(): FinanceHookReturn {
 
   const resolvedWorkspaceId = workspaceId ? String(workspaceId) : null
 
-  const revenue = useQuery(
-    api.financeRevenue.list,
-    resolvedWorkspaceId
-      ? {
+  const revenueArgs = useMemo(() => (resolvedWorkspaceId ? {
           workspaceId: resolvedWorkspaceId,
           clientId: selectedClientId ?? null,
           limit: 36,
-        }
-      : 'skip'
-  )
+        } : 'skip'), [resolvedWorkspaceId, selectedClientId])
 
-  const invoicePage = useQuery(
-    api.financeInvoices.list,
-    resolvedWorkspaceId
-      ? {
+  const revenue = useQuery(api.financeRevenue.list, revenueArgs)
+
+  const invoiceArgs = useMemo(() => (resolvedWorkspaceId ? {
           workspaceId: resolvedWorkspaceId,
           clientId: selectedClientId ?? null,
           limit: 200,
-        }
-      : 'skip'
-  )
+        } : 'skip'), [resolvedWorkspaceId, selectedClientId])
 
-  const costPage = useQuery(
-    api.financeCosts.list,
-    resolvedWorkspaceId
-      ? {
+  const invoicePage = useQuery(api.financeInvoices.list, invoiceArgs)
+
+  const costArgs = useMemo(() => (resolvedWorkspaceId ? {
           workspaceId: resolvedWorkspaceId,
           clientId: selectedClientId ?? null,
           limit: 200,
-        }
-      : 'skip'
-  )
+        } : 'skip'), [resolvedWorkspaceId, selectedClientId])
+
+  const costPage = useQuery(api.financeCosts.list, costArgs)
 
   const createCostMutation = useMutation(api.financeCosts.create)
   const deleteCostMutation = useMutation(api.financeCosts.remove)
@@ -193,8 +184,17 @@ export function useFinanceData(): FinanceHookReturn {
       return
     }
 
-    setHasAttemptedLoad(true)
-    setLoadError(null)
+    // Only update if not already in the desired state to prevent redundant re-renders
+    setHasAttemptedLoad(prev => {
+      if (prev === true) return prev
+      return true
+    })
+    
+    setLoadError(prev => {
+      if (prev === null) return prev
+      return null
+    })
+    
     retryCountRef.current = 0
   }, [costPage, invoicePage, revenue])
 
@@ -337,6 +337,10 @@ export function useFinanceData(): FinanceHookReturn {
   // Calculate period-over-period growth (would need historical data for real implementation)
   // For now, we'll remove the growth indicator to avoid showing misleading data
 
+  // Use refs to access current paymentSummary values without creating dependency cycles
+  const paymentSummaryRef = useRef(paymentSummary)
+  paymentSummaryRef.current = paymentSummary
+  
   const statCards: StatCard[] = useMemo(
     () => [
       {
@@ -354,7 +358,7 @@ export function useFinanceData(): FinanceHookReturn {
       {
         name: 'Outstanding',
         value: outstandingDisplay,
-        helper: `${paymentSummary.openCount} open · ${paymentSummary.overdueCount} overdue`,
+        helper: `${paymentSummaryRef.current.openCount} open · ${paymentSummaryRef.current.overdueCount} overdue`,
         icon: CreditCard,
       },
       {
@@ -377,8 +381,6 @@ export function useFinanceData(): FinanceHookReturn {
     [
       netProfit,
       refundDisplay,
-      paymentSummary.openCount,
-      paymentSummary.overdueCount,
       hasMultipleCurrencies,
       hasRefunds,
       selectedPeriod,
@@ -389,7 +391,6 @@ export function useFinanceData(): FinanceHookReturn {
       collectedDisplay,
       profitMarginPercentage,
       refundTotal,
-      paymentSummary.totals.length,
     ]
   )
 
@@ -619,51 +620,63 @@ export function useFinanceData(): FinanceHookReturn {
     }))
   }, [])
 
-  return {
-    selectedPeriod,
-    setSelectedPeriod,
-    invoiceStatusFilter,
-    setInvoiceStatusFilter,
-    stats: {
-      cards: statCards,
-      totalOutstanding,
-      currencyTotals: paymentSummary.totals,
-      primaryCurrency: primaryCurrencyTotals.currency,
-    },
-    paymentSummary,
-    chartData,
-    filteredInvoices,
-    invoices,
-    costs: costsWithMonthly,
-    monthlyCostTotal,
-    revenueByClient,
-    categorySpend,
-    budget,
-    updateBudgetTarget,
-    updateCategoryBudget,
-    forecast,
-    upcomingPayments,
-    newCost,
-    setNewCost,
-    handleAddCost,
-    handleRemoveCost,
-    removingCostId,
-    isSubmittingCost,
-    isLoading: revenue === undefined || invoicePage === undefined || costPage === undefined,
-    hasAttemptedLoad,
-    loadError,
-    refresh: async () => {},
-    hasMoreInvoices: false,
-    hasMoreCosts: false,
-    loadMoreInvoices,
-    loadMoreCosts,
-    loadingMoreInvoices: false,
-    loadingMoreCosts: false,
-    sendingInvoiceId,
-    refundingInvoiceId,
-    sendInvoiceReminder: handleSendInvoiceReminder,
-    issueInvoiceRefund: handleIssueInvoiceRefund,
-  }
+
+    const refresh = useCallback(async () => {
+        // Refresh is handled reactively by Convex useQuery
+    }, [])
+
+    const isLoading = revenue === undefined || invoicePage === undefined || costPage === undefined
+
+    // Memoize the stats object to prevent unnecessary re-renders
+    const stats = useMemo(() => ({
+        cards: statCards,
+        totalOutstanding,
+        currencyTotals: paymentSummary.totals,
+        primaryCurrency: primaryCurrencyTotals.currency,
+    }), [statCards, totalOutstanding, paymentSummary.totals, primaryCurrencyTotals.currency])
+
+    // Return all values - without useMemo wrapper to avoid dependency issues
+    // Individual values are already memoized where it matters
+    return {
+        selectedPeriod,
+        setSelectedPeriod,
+        invoiceStatusFilter,
+        setInvoiceStatusFilter,
+        stats,
+        paymentSummary,
+        chartData,
+        filteredInvoices,
+        invoices,
+        costs: costsWithMonthly,
+        monthlyCostTotal,
+        revenueByClient,
+        categorySpend,
+        budget,
+        updateBudgetTarget,
+        updateCategoryBudget,
+        forecast,
+        upcomingPayments,
+        newCost,
+        setNewCost,
+        handleAddCost,
+        handleRemoveCost,
+        removingCostId,
+        isSubmittingCost,
+        isLoading,
+        hasAttemptedLoad,
+        loadError,
+        refresh,
+        hasMoreInvoices: false,
+        hasMoreCosts: false,
+        loadMoreInvoices,
+        loadMoreCosts,
+        loadingMoreInvoices: false,
+        loadingMoreCosts: false,
+        sendingInvoiceId,
+        refundingInvoiceId,
+        sendInvoiceReminder: handleSendInvoiceReminder,
+        issueInvoiceRefund: handleIssueInvoiceRefund,
+    }
 }
 
 export function calculatePaymentSummary(invoices: FinanceInvoice[]): FinancePaymentSummary {

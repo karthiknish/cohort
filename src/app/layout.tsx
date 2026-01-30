@@ -1,8 +1,9 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
-import { Suspense } from 'react'
+
+export const dynamic = 'force-dynamic'
 import './globals.css'
-import { Agentation } from "agentation";
 import { cn } from '@/lib/utils'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
@@ -34,6 +35,14 @@ export const metadata: Metadata = {
   description: 'Unified client management & analytics dashboard for marketing agencies',
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#ffffff',
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -50,21 +59,21 @@ export default function RootLayout({
           'min-h-screen bg-background font-sans antialiased text-foreground'
         )}
       >
-       
         <Suspense fallback={null}>
           <GoogleAnalyticsScript />
-          <AppProviders>
-            <div className="flex min-h-screen flex-col">
-              <SiteHeader />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
-            </div>
-            <PWAProvider />
-          </AppProviders>
         </Suspense>
+        <AppProviders>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </div>
+          <Suspense fallback={null}>
+            <PWAProvider />
+          </Suspense>
+        </AppProviders>
         <Toaster />
         <SonnerToaster />
-        {process.env.NODE_ENV === "development" && <Agentation key="agentation-tool" />}
       </body>
     </html>
   )

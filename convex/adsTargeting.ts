@@ -330,5 +330,5 @@ export const getTargeting = action({
     }
 
     return { targeting, insights: buildInsights(targeting) }
-  }, 'adsTargeting:getTargeting'),
+  }, 'adsTargeting:getTargeting', { maxRetries: 3 }),
 })

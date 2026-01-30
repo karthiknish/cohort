@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { adminQuery, adminMutation } from './functions'
+import { adminQuery, adminMutation, type AuthenticatedQueryCtx, type AuthenticatedMutationCtx } from './functions'
 import { Errors } from './errors'
 
 function nowMs() {
@@ -13,7 +13,7 @@ const referenceValidator = v.object({
 
 export const listFeatures = adminQuery({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx: AuthenticatedQueryCtx) => {
     const rows = await ctx.db.query('platformFeatures').order('desc').collect()
 
     return {
@@ -46,7 +46,7 @@ export const createFeature = adminMutation({
     imageUrl: v.union(v.string(), v.null()),
     references: v.array(referenceValidator),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: AuthenticatedMutationCtx, args) => {
     const timestamp = nowMs()
 
     const id = await ctx.db.insert('platformFeatures', {
@@ -86,7 +86,7 @@ export const bulkUpsertFeatures = adminMutation({
       })
     ),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: AuthenticatedMutationCtx, args) => {
     for (const feature of args.features) {
       const existing = await ctx.db
         .query('platformFeatures')
@@ -118,7 +118,7 @@ export const bulkUpsertFeatures = adminMutation({
 
 export const getFeature = adminQuery({
   args: { id: v.id('platformFeatures') },
-  handler: async (ctx, args) => {
+  handler: async (ctx: AuthenticatedQueryCtx, args) => {
     const row = await ctx.db.get(args.id)
     if (!row) return null
 
@@ -153,7 +153,7 @@ export const updateFeature = adminMutation({
     imageUrl: v.optional(v.union(v.string(), v.null())),
     references: v.optional(v.array(referenceValidator)),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: AuthenticatedMutationCtx, args) => {
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw Errors.resource.notFound('Feature')
@@ -178,7 +178,7 @@ export const updateFeature = adminMutation({
 
 export const deleteFeature = adminMutation({
   args: { id: v.id('platformFeatures') },
-  handler: async (ctx, args) => {
+  handler: async (ctx: AuthenticatedMutationCtx, args) => {
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw Errors.resource.notFound('Feature')

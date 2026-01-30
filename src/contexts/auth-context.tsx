@@ -160,8 +160,14 @@ interface BootstrapResult {
 async function callBootstrap(retries = 3): Promise<BootstrapResult> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
+      console.log(`[AuthContext] Bootstrap attempt ${attempt + 1}/${retries}...`)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+      // Increased timeout to 60s for development (Convex cold-start can be slow)
+      const timeoutMs = process.env.NODE_ENV === 'development' ? 60000 : 15000
+      const timeoutId = setTimeout(() => {
+        console.warn(`[AuthContext] Bootstrap timeout after ${timeoutMs}ms, aborting...`)
+        controller.abort()
+      }, timeoutMs)
 
       const response = await fetch('/api/auth/bootstrap', {
         method: 'POST',
@@ -172,6 +178,7 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
       })
 
       clearTimeout(timeoutId)
+      console.log(`[AuthContext] Bootstrap response: ${response.status}`)
 
       if (response.ok) {
         let json: unknown
@@ -210,16 +217,18 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
         }
 
         // Bootstrap returned ok: false - log the error
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[AuthContext] Bootstrap returned ok: false', data?.error, data?.debug)
-        }
+        console.error('[AuthContext] Bootstrap returned ok: false', {
+          error: data?.error,
+          debug: data?.debug,
+          fullResponse: json
+        })
 
         return {
           success: false,
           error: createAuthError(
             'BOOTSTRAP_FAILED',
             data?.error || 'Bootstrap returned failure',
-            { debug: data?.debug },
+            { debug: data?.debug, status: response.status },
             true
           ),
         }
@@ -374,6 +383,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const lastAppliedUserKeyRef = useRef<string | null>(null)
   const currentUserRef = useRef<AuthUser | null>(null)
+  const isBootstrappingRef = useRef(false)
 
   const clearAuthError = useCallback(() => {
     setAuthError(null)
@@ -404,48 +414,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Call bootstrap to ensure user exists in Convex users table.
       // This returns the user's role, status, and agencyId from Convex.
-      if (authUser) {
-        const bootstrapResult = await callBootstrap()
+      if (authUser && !isBootstrappingRef.current) {
+        isBootstrappingRef.current = true
+        try {
+          const bootstrapResult = await callBootstrap()
 
-        // Update user with data from Convex (role, status, agencyId)
-        if (bootstrapResult.success && bootstrapResult.data) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[AuthContext] Applying bootstrap result:', bootstrapResult.data)
-          }
-          setUser((prev) => {
-            if (!prev) return prev
-            // Always use user.id as fallback for agencyId if bootstrap doesn't provide one
-            const resolvedAgencyId = bootstrapResult.data!.agencyId || prev.agencyId || prev.id
+          // Update user with data from Convex (role, status, agencyId)
+          if (bootstrapResult.success && bootstrapResult.data) {
             if (process.env.NODE_ENV !== 'production') {
-              console.log('[AuthContext] Setting agencyId:', resolvedAgencyId)
+              console.log('[AuthContext] Applying bootstrap result:', bootstrapResult.data)
             }
-            const updated = {
-              ...prev,
-              role: (bootstrapResult.data!.role as AuthUser['role']) || prev.role,
-              status: (bootstrapResult.data!.status as AuthUser['status']) || prev.status,
-              agencyId: resolvedAgencyId,
+            setUser((prev) => {
+              if (!prev) return prev
+              // Always use user.id as fallback for agencyId if bootstrap doesn't provide one
+              const resolvedAgencyId = bootstrapResult.data!.agencyId || prev.agencyId || prev.id
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('[AuthContext] Setting agencyId:', resolvedAgencyId)
+              }
+              const updated = {
+                ...prev,
+                role: (bootstrapResult.data!.role as AuthUser['role']) || prev.role,
+                status: (bootstrapResult.data!.status as AuthUser['status']) || prev.status,
+                agencyId: resolvedAgencyId,
+              }
+              currentUserRef.current = updated
+              return updated
+            })
+          } else {
+            // Bootstrap failed - set error but still ensure agencyId fallback
+            if (bootstrapResult.error) {
+              console.error('[AuthContext] Bootstrap failed:', bootstrapResult.error)
+              setAuthError(bootstrapResult.error)
             }
-            currentUserRef.current = updated
-            return updated
-          })
-        } else {
-          // Bootstrap failed - set error but still ensure agencyId fallback
-          if (bootstrapResult.error) {
-            console.error('[AuthContext] Bootstrap failed:', bootstrapResult.error)
-            setAuthError(bootstrapResult.error)
-          }
 
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('[AuthContext] Bootstrap failed, using fallback agencyId')
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[AuthContext] Bootstrap failed, using fallback agencyId')
+            }
+            setUser((prev) => {
+              if (!prev) return prev
+              // Always ensure agencyId is set - use user.id as fallback
+              const resolvedAgencyId = prev.agencyId && prev.agencyId.length > 0 ? prev.agencyId : prev.id
+              const updated = { ...prev, agencyId: resolvedAgencyId }
+              currentUserRef.current = updated
+              return updated
+            })
           }
-          setUser((prev) => {
-            if (!prev) return prev
-            // Always ensure agencyId is set - use user.id as fallback
-            const resolvedAgencyId = prev.agencyId && prev.agencyId.length > 0 ? prev.agencyId : prev.id
-            const updated = { ...prev, agencyId: resolvedAgencyId }
-            currentUserRef.current = updated
-            return updated
-          })
+        } finally {
+          isBootstrappingRef.current = false
         }
       }
     } catch (error) {
@@ -483,6 +498,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return unsubscribe
   }, [applyUser])
+
+  // Timeout safeguard: Force loading to false after 10 seconds to prevent infinite loading
+  useEffect(() => {
+    if (!loading) return
+
+    const timeoutId = setTimeout(() => {
+      console.warn('[AuthContext] Loading timeout reached - forcing loading to false')
+      setLoading(false)
+      setAuthError(createAuthError(
+        'BOOTSTRAP_FAILED',
+        'Authentication initialization timed out after 10 seconds. The application will continue to load, but you may need to refresh if you experience issues.',
+        { timeout: 10000 },
+        true
+      ))
+    }, 10000)
+
+    return () => clearTimeout(timeoutId)
+  }, [loading])
 
   const signIn = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setLoading(true)

@@ -4,6 +4,7 @@ import { workspaceQuery, workspaceMutation } from './functions'
 
 const typingIndicatorValidator = v.object({
   _id: v.id('collaborationTyping'),
+  _creationTime: v.number(),
   workspaceId: v.string(),
   channelId: v.string(),
   channelType: v.string(),

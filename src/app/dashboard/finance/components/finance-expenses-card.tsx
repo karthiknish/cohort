@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { LoaderCircle, Plus, Trash, CheckCircle2, XCircle, Send, DollarSign, Settings, RefreshCw } from 'lucide-react'
+import { LoaderCircle, Plus, Trash, CheckCircle2, XCircle, Send, DollarSign, Settings, RefreshCw, Copy, Code2 } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import type { ColumnDef } from '@tanstack/react-table'
 
@@ -614,12 +614,13 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label>Status filter</Label>
+        {/* Filters Section */}
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex-1">
+              <Label htmlFor="status-filter" className="mb-1.5 block">Status filter</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger id="status-filter">
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
@@ -633,8 +634,8 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="employee-filter">Employee ID</Label>
+            <div className="flex-1">
+              <Label htmlFor="employee-filter" className="mb-1.5 block">Employee ID</Label>
               <Input
                 id="employee-filter"
                 value={employeeFilter}
@@ -642,20 +643,23 @@ export function FinanceExpensesCard({ currency, embedded = false }: { currency: 
                 placeholder="(optional) uid"
               />
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label>Total (by status)</Label>
-              <div className="flex flex-wrap gap-2">
-                {['draft', 'submitted', 'approved', 'rejected', 'paid'].map((s) => {
-                  const key = `${s}:${resolvedCurrency}`
-                  const total = totalByStatus.get(key) ?? 0
-                  return (
-                    <Badge key={s} variant="secondary" className="gap-1">
-                      <DollarSign className="h-3 w-3" /> {s}: {formatCurrency(Math.round(total), resolvedCurrency)}
-                    </Badge>
-                  )
-                })}
-              </div>
+          {/* Total by Status - Full width for better responsive display */}
+          <div className="space-y-1.5">
+            <Label className="text-sm text-muted-foreground">Total by status</Label>
+            <div className="flex flex-wrap gap-2">
+              {['draft', 'submitted', 'approved', 'rejected', 'paid'].map((s) => {
+                const key = `${s}:${resolvedCurrency}`
+                const total = totalByStatus.get(key) ?? 0
+                return (
+                  <Badge key={s} variant="secondary" className="gap-1 text-xs">
+                    <span className="capitalize">{s}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="font-medium">{formatCurrency(Math.round(total), resolvedCurrency)}</span>
+                  </Badge>
+                )
+              })}
             </div>
           </div>
         </div>

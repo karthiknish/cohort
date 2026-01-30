@@ -158,18 +158,22 @@ export class IntegrationApiClient {
 
             // Parse response - clone first to allow re-reading if needed
             let payload: T
+            let rawBody: string | null = null
             try {
                 const contentType = response.headers.get('content-type') || ''
                 // Clone the response before consuming to preserve the original for error handling
                 const responseClone = response.clone()
                 if (contentType.includes('application/json')) {
-                    payload = await responseClone.json() as T
+                    rawBody = await responseClone.text()
+                    console.log(`[${this.platform.toUpperCase()} API] Raw response body:`, rawBody?.slice(0, 500))
+                    payload = JSON.parse(rawBody) as T
                 } else {
-                    payload = await responseClone.text() as unknown as T
+                    rawBody = await responseClone.text()
+                    payload = rawBody as unknown as T
                 }
             } catch (parseError) {
-                console.error(`[${this.platform.toUpperCase()} API] Failed to parse response:`, parseError)
-                payload = { error: 'Failed to parse response' } as unknown as T
+                console.error(`[${this.platform.toUpperCase()} API] Failed to parse response:`, parseError, 'Raw body:', rawBody?.slice(0, 500))
+                payload = { error: 'Failed to parse response', rawBody: rawBody?.slice(0, 500) } as unknown as T
             }
 
             // Check success
@@ -187,6 +191,7 @@ export class IntegrationApiClient {
             }
 
             // Parse error
+            console.log(`[${this.platform.toUpperCase()} API] Error response payload:`, payload)
             const error = parseIntegrationError(response, payload, this.platform)
             lastError = error
 
@@ -215,8 +220,8 @@ export class IntegrationApiClient {
                 throw error
             }
 
-            // Handle rate limits
-            if (response.status === 429) {
+            // Handle rate limits (HTTP 429 or platform-specific rate limit errors in body)
+            if (response.status === 429 || error.isRateLimitError) {
                 const retryAfterMs = error.retryAfterMs
                     ?? parseRetryAfterMs(response.headers)
                     ?? calculateBackoffDelay(attempt) * 2
@@ -308,6 +313,12 @@ export class IntegrationApiClient {
 export const metaAdsClient = new IntegrationApiClient({
     platform: 'meta',
     baseUrl: 'https://graph.facebook.com/v24.0',
+    isSuccess: (response, payload) => {
+        // Meta returns 200 even for errors - check for error object in payload
+        if (!response.ok) return false
+        const data = payload as { error?: { code?: number; message?: string } }
+        return !data.error
+    },
 })
 
 export const googleAdsClient = new IntegrationApiClient({

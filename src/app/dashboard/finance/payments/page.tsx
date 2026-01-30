@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { CreditCard, LoaderCircle, RefreshCw } from 'lucide-react'
+import { CreditCard, LoaderCircle, RefreshCw, Copy, Code2 } from 'lucide-react'
 import { useAction } from 'convex/react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -105,7 +105,26 @@ export default function FinancePaymentsPage() {
       {loadError && (
         <Alert variant="destructive">
           <AlertTitle>Payments unavailable</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
+          <AlertDescription>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span>{loadError}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigator.clipboard.writeText(loadError)}
+                  className="h-7 w-7 p-0 shrink-0"
+                  title="Copy error"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Code2 className="h-3 w-3" />
+                <span>Component: FinancePaymentsPage · useFinanceData</span>
+              </div>
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 

@@ -39,6 +39,7 @@ export type NormalizedCreative = {
   headlines?: string[]
   descriptions?: string[]
   imageUrl?: string
+  thumbnailUrl?: string
   videoUrl?: string
   landingPageUrl?: string
   callToAction?: string
@@ -131,7 +132,10 @@ function normalizeMetaCreatives(creatives: any[]): NormalizedCreative[] {
     status: c.status,
     headlines: c.headlines,
     descriptions: c.message ? [c.message] : undefined,
+    // Try to get best quality image, fallback to thumbnail
     imageUrl: optimizeMetaImageUrl(c.imageUrl) ?? optimizeMetaImageUrl(c.videoThumbnailUrl) ?? optimizeMetaImageUrl(c.thumbnailUrl),
+    // Keep original thumbnail for fallback if optimized fails
+    thumbnailUrl: c.thumbnailUrl,
     videoUrl: c.videoSourceUrl ?? (c.videoId ? `https://www.facebook.com/video.php?v=${c.videoId}` : undefined),
     landingPageUrl: c.landingPageUrl,
     callToAction: c.callToAction,
@@ -265,7 +269,7 @@ export const listCreatives = action({
     })
 
     return normalizeMetaCreatives(metaCreatives)
-  }, 'adsCreatives:listCreatives'),
+  }, 'adsCreatives:listCreatives', { maxRetries: 3 }),
 })
 
 export const updateCreativeStatus = action({
@@ -386,7 +390,7 @@ export const updateCreativeStatus = action({
     })
 
     return { success: true, creativeId: args.creativeId, status: metaStatus }
-  }, 'adsCreatives:updateCreativeStatus'),
+  }, 'adsCreatives:updateCreativeStatus', { maxRetries: 3 }),
 })
 
 // =============================================================================
@@ -497,7 +501,7 @@ export const createCreative = action({
     }
 
     throw new Error(`Create creative not yet implemented for ${args.providerId}`)
-  }, 'adsCreatives:createCreative'),
+  }, 'adsCreatives:createCreative', { maxRetries: 3 }),
 })
 
 // =============================================================================

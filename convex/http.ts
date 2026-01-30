@@ -1,7 +1,7 @@
 import { httpRouter } from 'convex/server'
 import { httpAction } from './_generated/server'
 
-import { authComponent, createAuth } from './auth'
+import { authComponent, createAuth } from './betterAuth/auth'
 import { adSyncNotification, externalWebhook, stripeWebhook } from './httpActions'
 import { run as adSyncWorker } from './adSyncWorker'
 
