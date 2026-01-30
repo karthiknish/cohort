@@ -1,4 +1,5 @@
 'use client'
+import { useMemo } from 'react'
 import {
     TrendingUp,
     TrendingDown,
@@ -288,7 +289,7 @@ export function ComparisonViewCard({
 }: ComparisonViewCardProps) {
     const viewTabs = usePersistedTab({
         defaultValue: 'period',
-        allowedValues: ['period', 'platform'] as const,
+        allowedValues: useMemo(() => ['period', 'platform'] as const, []),
         storageNamespace: 'dashboard:ads:comparison',
         syncToUrl: false,
     })

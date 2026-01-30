@@ -57,7 +57,7 @@ export default function NotificationsPage() {
   const filterTabs = usePersistedTab<FilterType>({
     param: 'tab',
     defaultValue: 'all',
-    allowedValues: ['all', 'unread', 'mentions', 'system'] as const,
+    allowedValues: useMemo(() => ['all', 'unread', 'mentions', 'system'] as const, []),
     storageNamespace: 'dashboard:notifications',
     syncToUrl: true,
   })

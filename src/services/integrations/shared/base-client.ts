@@ -156,16 +156,19 @@ export class IntegrationApiClient {
 
             const duration = Date.now() - startTime
 
-            // Parse response
+            // Parse response - clone first to allow re-reading if needed
             let payload: T
             try {
                 const contentType = response.headers.get('content-type') || ''
+                // Clone the response before consuming to preserve the original for error handling
+                const responseClone = response.clone()
                 if (contentType.includes('application/json')) {
-                    payload = await response.json() as T
+                    payload = await responseClone.json() as T
                 } else {
-                    payload = await response.text() as unknown as T
+                    payload = await responseClone.text() as unknown as T
                 }
-            } catch {
+            } catch (parseError) {
+                console.error(`[${this.platform.toUpperCase()} API] Failed to parse response:`, parseError)
                 payload = { error: 'Failed to parse response' } as unknown as T
             }
 

@@ -84,7 +84,7 @@ export default function TasksPage() {
   const taskTabs = usePersistedTab({
     param: 'tab',
     defaultValue: 'all-tasks',
-    allowedValues: ['all-tasks', 'my-tasks'] as const,
+    allowedValues: useMemo(() => ['all-tasks', 'my-tasks'] as const, []),
     storageNamespace: 'dashboard:tasks',
     syncToUrl: true,
   })

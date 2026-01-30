@@ -262,8 +262,10 @@ export function parseIntegrationError(
 export async function readResponsePayloadSafe(response: Response): Promise<unknown> {
     try {
         const contentType = response.headers.get('content-type') || ''
+        // Clone response before reading to avoid "body stream already read" errors
+        const responseClone = response.clone()
         if (contentType.includes('application/json')) {
-            const text = await response.text()
+            const text = await responseClone.text()
             // Log for debugging empty responses
             if (!text || text.trim() === '') {
                 console.error('[Response Parser] Empty JSON response from', response.url, 'status:', response.status)
@@ -276,7 +278,7 @@ export async function readResponsePayloadSafe(response: Response): Promise<unkno
                 return null
             }
         }
-        const text = await response.text()
+        const text = await responseClone.text()
         return text || null
     } catch (error) {
         console.error('[Response Parser] Error reading response:', error)
