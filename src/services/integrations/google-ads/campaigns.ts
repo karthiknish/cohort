@@ -1,15 +1,10 @@
 // =============================================================================
-// GOOGLE ADS CAMPAIGNS - Re-export from modular files
+// GOOGLE ADS CAMPAIGNS - Re-export from modular structure
 // =============================================================================
-//
-// This file re-exports all campaign-related functions from their respective
-// modules. This maintains backward compatibility with existing imports from
-// '@/services/integrations/google-ads/campaigns'.
-//
-// For new code, prefer importing from the specific module files.
-// =============================================================================
+// This file is kept for backward compatibility.
+// New code should import from './campaign-modules' directly.
 
-// Campaign CRUD operations
+// Campaign CRUD
 export {
   listGoogleCampaigns,
   updateGoogleCampaignStatus,
@@ -35,3 +30,39 @@ export {
   fetchGoogleAudienceTargeting,
   createGoogleAudience,
 } from './audience-targeting'
+
+// Campaign modules (new)
+export {
+  // Objective configs
+  GOOGLE_SALES_OBJECTIVE_CONFIG,
+  GOOGLE_LEADS_OBJECTIVE_CONFIG,
+  GOOGLE_WEBSITE_TRAFFIC_OBJECTIVE_CONFIG,
+  GOOGLE_BRAND_AWARENESS_OBJECTIVE_CONFIG,
+  GOOGLE_APP_PROMOTION_OBJECTIVE_CONFIG,
+  GOOGLE_OBJECTIVE_CONFIGS,
+  GOOGLE_AVAILABLE_OBJECTIVES,
+  getGoogleObjectiveConfig,
+  
+  // Constants
+  SALES_CONVERSION_GOALS,
+  LEAD_FORM_EXTENSIONS,
+  TRAFFIC_SOURCES,
+  IMPRESSION_SHARE_TARGETS,
+  FREQUENCY_CAP_LEVELS,
+  APP_CAMPAIGN_SUBTYPES,
+  APP_STORES,
+  GOOGLE_CAMPAIGN_OBJECTIVES,
+  GOOGLE_BIDDING_STRATEGIES,
+  BIDDING_STRATEGIES_BY_OBJECTIVE,
+  
+  // Types
+  type GoogleCampaignObjective,
+  type GoogleCampaignObjectiveConfig,
+  type SalesCampaignSettings,
+  type LeadsCampaignSettings,
+  type WebsiteTrafficCampaignSettings,
+  type BrandAwarenessCampaignSettings,
+  type AppPromotionCampaignSettings,
+  type CreateGoogleCampaignOptions,
+  type UpdateGoogleCampaignOptions,
+} from './campaign-modules'
