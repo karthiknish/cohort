@@ -9,8 +9,9 @@ interface RefreshParams {
   forceRefresh?: boolean
 }
 
+// Token refresh endpoints - updated to latest API versions
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
-const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v18.0/oauth/access_token'
+const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v24.0/oauth/access_token'
 const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
 const LINKEDIN_TOKEN_ENDPOINT = 'https://www.linkedin.com/oauth/v2/accessToken'
 
@@ -242,9 +243,12 @@ export async function refreshGoogleAccessToken({ userId, clientId }: RefreshPara
 }
 
 export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
+  logger.info('[Meta Token Refresh] Starting token refresh', { userId, clientId, apiVersion: 'v24.0' })
+
   const integration = await getAdIntegration({ userId, providerId: 'facebook', clientId })
 
   if (!integration?.accessToken) {
+    logger.error('[Meta Token Refresh] No access token available', { userId, clientId })
     throw new IntegrationTokenError('No Meta Ads access token available', 'facebook', userId)
   }
 
@@ -252,6 +256,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
   const appSecret = process.env.META_APP_SECRET
 
   if (!appId || !appSecret) {
+    logger.error('[Meta Token Refresh] App credentials not configured')
     throw new IntegrationTokenError('Meta app credentials are not configured', 'facebook', userId)
   }
 
@@ -266,6 +271,8 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
 
   for (let attempt = 0; attempt < TOKEN_REFRESH_CONFIG.maxRetries; attempt++) {
     try {
+      logger.debug('[Meta Token Refresh] Attempting refresh', { userId, attempt: attempt + 1, maxRetries: TOKEN_REFRESH_CONFIG.maxRetries })
+      
       const response = await fetch(`${META_TOKEN_ENDPOINT}?${params.toString()}`)
 
       if (!response.ok) {
@@ -279,20 +286,30 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
         }
 
         const errorMessage = parsedError?.error?.message ?? errorPayload
-
+        const errorCode = parsedError?.error?.code
 
         // Check if error is retryable (5xx errors or specific Meta error codes)
         const isRetryable = response.status >= 500 || response.status === 429
 
+        logger.warn('[Meta Token Refresh] Request failed', { 
+          userId, 
+          attempt: attempt + 1, 
+          status: response.status, 
+          errorCode,
+          isRetryable,
+          errorMessage: errorMessage.substring(0, 200)
+        })
+
         if (isRetryable && attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-          console.warn(`[Meta Token Refresh] Attempt ${attempt + 1} failed (${response.status}), retrying...`)
+          const delayMs = calculateBackoffDelay(attempt)
+          logger.info('[Meta Token Refresh] Retrying after delay', { userId, delayMs, nextAttempt: attempt + 2 })
           lastError = new IntegrationTokenError(
             `Failed to refresh Meta Ads token (${response.status}): ${errorMessage}`,
             'facebook',
             userId,
             { isRetryable: true, httpStatus: response.status }
           )
-          await sleep(calculateBackoffDelay(attempt))
+          await sleep(delayMs)
           continue
         }
 
@@ -312,6 +329,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
       }
 
       if (!tokenPayload.access_token) {
+        logger.error('[Meta Token Refresh] Response missing access_token', { userId })
         throw new IntegrationTokenError('Meta token response missing access_token', 'facebook', userId)
       }
 
@@ -325,7 +343,12 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
         accessTokenExpiresAt: expiresAt ?? undefined,
       })
 
-      console.log(`[Meta Token Refresh] Successfully refreshed token for user ${userId}, expires in ${tokenPayload.expires_in ?? 'unknown'} seconds`)
+      logger.info('[Meta Token Refresh] Successfully refreshed token', { 
+        userId, 
+        clientId,
+        expiresIn: tokenPayload.expires_in,
+        expiresAt: expiresAt?.toISOString()
+      })
 
       return tokenPayload.access_token
     } catch (error) {
@@ -337,13 +360,20 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
       lastError = error instanceof Error ? error : new Error('Unknown error')
 
       if (attempt < TOKEN_REFRESH_CONFIG.maxRetries - 1) {
-        console.warn(`[Meta Token Refresh] Network error on attempt ${attempt + 1}, retrying...`, lastError.message)
-        await sleep(calculateBackoffDelay(attempt))
+        const delayMs = calculateBackoffDelay(attempt)
+        logger.warn('[Meta Token Refresh] Network error, retrying', { 
+          userId, 
+          attempt: attempt + 1, 
+          error: lastError.message,
+          delayMs 
+        })
+        await sleep(delayMs)
         continue
       }
     }
   }
 
+  logger.error('[Meta Token Refresh] All retries exhausted', { userId, clientId, lastError: lastError?.message })
   throw lastError ?? new IntegrationTokenError('Meta token refresh failed after all retries', 'facebook', userId)
 }
 

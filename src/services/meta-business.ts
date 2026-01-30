@@ -3,6 +3,10 @@ import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/ads-admin'
 import { fetchMetaAdAccounts } from '@/services/integrations/meta-ads'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
+import { logger } from '@/lib/logger'
+
+// Meta Graph API version - updated to v24.0 (latest as of January 2026)
+const META_API_VERSION = 'v24.0'
 
 interface MetaOAuthContext {
   state: string
@@ -85,13 +89,17 @@ export async function completeMetaOAuthFlow(options: {
   const appId = process.env.META_APP_ID
   const appSecret = process.env.META_APP_SECRET
 
+  logger.info('[Meta OAuth Flow] Starting OAuth completion', { userId, clientId, apiVersion: META_API_VERSION })
+
   if (!appId || !appSecret) {
+    logger.error('[Meta OAuth Flow] App credentials not configured')
     throw new MetaOAuthError('Meta app credentials are not configured')
   }
 
   // Exchange code for short-lived token
   let tokenResponse
   try {
+    logger.debug('[Meta OAuth Flow] Exchanging code for short-lived token', { userId })
     tokenResponse = await exchangeMetaCodeForToken({
       appId,
       appSecret,
@@ -100,13 +108,16 @@ export async function completeMetaOAuthFlow(options: {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Token exchange failed'
-    console.error('[Meta OAuth] Code exchange failed:', message)
+    logger.error('[Meta OAuth Flow] Code exchange failed', { userId, error: message })
     throw new MetaOAuthError(`Failed to exchange authorization code: ${message}`)
   }
 
   if (!tokenResponse.access_token) {
+    logger.error('[Meta OAuth Flow] No access token received', { userId })
     throw new MetaOAuthError('No access token received from Meta')
   }
+
+  logger.info('[Meta OAuth Flow] Short-lived token obtained', { userId, expiresIn: tokenResponse.expires_in })
 
   // Exchange for long-lived token with retry logic
   let longLivedToken: string = tokenResponse.access_token
@@ -114,8 +125,10 @@ export async function completeMetaOAuthFlow(options: {
 
   for (let attempt = 0; attempt < OAUTH_RETRY_CONFIG.maxRetries; attempt++) {
     try {
+      logger.debug('[Meta OAuth Flow] Attempting long-lived token exchange', { userId, attempt: attempt + 1 })
+      
       const longLivedResponse = await fetch(
-        `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
+        `https://graph.facebook.com/${META_API_VERSION}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
           appId,
         )}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(tokenResponse.access_token)}`,
       )
@@ -133,14 +146,23 @@ export async function completeMetaOAuthFlow(options: {
         const errorMessage = parsedError?.error?.message ?? errorPayload
         const isRetryable = longLivedResponse.status >= 500 || longLivedResponse.status === 429
 
+        logger.warn('[Meta OAuth Flow] Long-lived token exchange failed', { 
+          userId, 
+          attempt: attempt + 1,
+          status: longLivedResponse.status,
+          isRetryable,
+          errorMessage: errorMessage.substring(0, 200)
+        })
+
         if (isRetryable && attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
-          console.warn(`[Meta OAuth] Long-lived token exchange attempt ${attempt + 1} failed (${longLivedResponse.status}), retrying...`)
-          await sleep(calculateBackoffDelay(attempt))
+          const delayMs = calculateBackoffDelay(attempt)
+          logger.info('[Meta OAuth Flow] Retrying long-lived token exchange', { userId, delayMs })
+          await sleep(delayMs)
           continue
         }
 
         // If we can't get long-lived token, we can still proceed with short-lived
-        console.warn(`[Meta OAuth] Failed to get long-lived token, using short-lived: ${errorMessage}`)
+        logger.warn('[Meta OAuth Flow] Using short-lived token instead', { userId, error: errorMessage.substring(0, 200) })
         break
       }
 
@@ -149,21 +171,22 @@ export async function completeMetaOAuthFlow(options: {
       if (extended.access_token) {
         longLivedToken = extended.access_token
         expiresIn = extended.expires_in
-        console.log(`[Meta OAuth] Successfully obtained long-lived token, expires in ${expiresIn} seconds`)
+        logger.info('[Meta OAuth Flow] Long-lived token obtained successfully', { userId, expiresIn })
       }
 
       break
     } catch (networkError) {
       const message = networkError instanceof Error ? networkError.message : 'Network error'
-      console.warn(`[Meta OAuth] Network error on attempt ${attempt + 1}: ${message}`)
+      logger.warn('[Meta OAuth Flow] Network error during long-lived token exchange', { userId, attempt: attempt + 1, error: message })
 
       if (attempt < OAUTH_RETRY_CONFIG.maxRetries - 1) {
-        await sleep(calculateBackoffDelay(attempt))
+        const delayMs = calculateBackoffDelay(attempt)
+        await sleep(delayMs)
         continue
       }
 
       // Use short-lived token if long-lived exchange fails
-      console.warn('[Meta OAuth] All attempts to get long-lived token failed, using short-lived token')
+      logger.warn('[Meta OAuth Flow] All long-lived token attempts failed, using short-lived', { userId })
       break
     }
   }
@@ -173,13 +196,15 @@ export async function completeMetaOAuthFlow(options: {
   let accountName: string | null = null
   try {
     if (longLivedToken) {
+      logger.debug('[Meta OAuth Flow] Fetching ad accounts', { userId })
       const accounts = await fetchMetaAdAccounts({ accessToken: longLivedToken })
       const preferredAccount = accounts.find((account) => account.account_status === 1) ?? accounts[0]
       accountId = preferredAccount?.id ?? null
       accountName = preferredAccount?.name ?? null
+      logger.info('[Meta OAuth Flow] Ad accounts resolved', { userId, accountId, accountName })
     }
   } catch (error) {
-    console.warn('[Meta OAuth] Failed to resolve account name during OAuth completion:', error)
+    logger.warn('[Meta OAuth Flow] Failed to resolve account name', { userId, error: error instanceof Error ? error.message : 'Unknown error' })
   }
 
   await persistIntegrationTokens({
@@ -193,8 +218,9 @@ export async function completeMetaOAuthFlow(options: {
     accessTokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
   })
 
-  console.log(`[Meta OAuth] Successfully persisted integration for user ${userId}`)
+  logger.info('[Meta OAuth Flow] Integration persisted successfully', { userId, clientId, accountId })
 
   // Enqueue initial sync job
   await enqueueSyncJob({ userId, providerId: 'facebook', clientId: clientId ?? null, jobType: 'initial-backfill' })
+  logger.info('[Meta OAuth Flow] Initial sync job enqueued', { userId, clientId })
 }

@@ -4,6 +4,7 @@
 
 import { cache } from 'react'
 import { formatDate } from '@/lib/dates'
+import { logger } from '@/lib/logger'
 
 import {
   appendMetaAuthParams,
@@ -43,8 +44,11 @@ export async function fetchMetaAdAccounts(options: {
   } = options
 
   if (!accessToken) {
+    logger.error('[Meta Ads] fetchMetaAdAccounts called without access token')
     throw new Error('Missing Meta access token')
   }
+
+  logger.info('[Meta Ads] Fetching ad accounts', { limit, maxPages, maxRetries })
 
   const allAccounts: MetaAdAccount[] = []
   let nextUrl: string | null = null

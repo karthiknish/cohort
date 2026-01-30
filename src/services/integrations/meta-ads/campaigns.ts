@@ -2,6 +2,8 @@
 // META ADS CAMPAIGNS - Campaign CRUD, ad-level metrics, creatives, targeting
 // =============================================================================
 
+import { logger } from '@/lib/logger'
+
 import {
   appendMetaAuthParams,
   buildTimeRange,
@@ -471,6 +473,15 @@ export async function fetchMetaCreatives(options: {
     videoLookupLimit = 20,
   } = options
 
+  logger.info('[Meta Ads] Fetching creatives', { 
+    adAccountId, 
+    campaignId, 
+    adSetId, 
+    statusFilter,
+    includeVideoMedia,
+    maxRetries 
+  })
+
   // Ensure adAccountId has act_ prefix if it's just a number
   const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
 
@@ -502,7 +513,7 @@ export async function fetchMetaCreatives(options: {
     filtering.push({
       field: 'campaign.id',
       operator: 'EQUAL',
-      value: campaignId,
+      value: campaignId!,
     })
   }
 
@@ -510,7 +521,7 @@ export async function fetchMetaCreatives(options: {
     filtering.push({
       field: 'adset.id',
       operator: 'EQUAL',
-      value: adSetId,
+      value: adSetId!,
     })
   }
 
@@ -534,7 +545,7 @@ export async function fetchMetaCreatives(options: {
 
   console.log('[Meta Ads] fetchCreatives response keys:', payload ? Object.keys(payload) : 'null')
 
-  const ads: MetaAdData[] = Array.isArray(payload?.data) ? payload.data : []
+  const ads: MetaAdData[] = Array.isArray(payload?.data) ? (payload.data as MetaAdData[]) : []
 
   // Collect unique Page and Instagram Actor IDs
   const accountIds = Array.from(

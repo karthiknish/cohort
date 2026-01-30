@@ -185,7 +185,7 @@ export const listCampaigns = action({
       (async () => {
         try {
           const res = await fetch(
-            `https://graph.facebook.com/v21.0/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${integration.accessToken}`
+            `https://graph.facebook.com/v24.0/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${integration.accessToken}`
           )
           const data =
             (await res.json().catch(() => ({}))) as {

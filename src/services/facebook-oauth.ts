@@ -1,5 +1,7 @@
 import { URLSearchParams } from 'node:url'
 
+import { logger } from '@/lib/logger'
+
 interface BuildMetaAuthUrlOptions {
   businessConfigId: string
   appId: string
@@ -10,8 +12,9 @@ interface BuildMetaAuthUrlOptions {
 
 const DEFAULT_SCOPES = ['ads_management', 'ads_read', 'business_management']
 
-// Meta Graph API version - update this when upgrading
-const META_GRAPH_API_VERSION = 'v18.0'
+// Meta Graph API version - updated to v24.0 (latest as of January 2026)
+// Changelog: https://developers.facebook.com/docs/graph-api/changelog/
+const META_GRAPH_API_VERSION = 'v24.0'
 
 export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): string {
   const { businessConfigId, appId, redirectUri, state, scopes = DEFAULT_SCOPES } = options
@@ -44,16 +47,15 @@ export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): str
 
   const finalUrl = `https://www.facebook.com/${META_GRAPH_API_VERSION}/dialog/oauth?${params.toString()}`
 
-  // Debug: Log all OAuth parameters
-  console.log('[buildMetaBusinessLoginUrl] OAuth URL Details:', {
+  // Debug: Log all OAuth parameters (sanitized)
+  logger.debug('[Meta OAuth] Generated login URL', {
     config_id: businessConfigId,
     client_id: appId,
     redirect_uri: redirectUri,
-    redirect_uri_encoded: encodeURIComponent(redirectUri),
     response_type: 'code',
     scopes: scopes.join(','),
     state_present: !!state,
-    final_url: finalUrl,
+    api_version: META_GRAPH_API_VERSION,
   })
 
   return finalUrl
@@ -107,13 +109,17 @@ export class MetaTokenExchangeError extends Error {
 export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Promise<MetaTokenResponse> {
   const { appId, appSecret, redirectUri, code } = options
 
+  logger.info('[Meta OAuth] Starting code exchange', { apiVersion: META_GRAPH_API_VERSION })
+
   if (!appId || !appSecret) {
+    logger.error('[Meta OAuth] Missing app credentials')
     throw new MetaTokenExchangeError({
       message: 'Meta app credentials are required to exchange the code'
     })
   }
 
   if (!code) {
+    logger.error('[Meta OAuth] Missing authorization code')
     throw new MetaTokenExchangeError({
       message: 'Authorization code is required'
     })
@@ -128,11 +134,17 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
 
   const url = `https://graph.facebook.com/${META_GRAPH_API_VERSION}/oauth/access_token?${params.toString()}`
 
+  logger.debug('[Meta OAuth] Token exchange request', { 
+    apiVersion: META_GRAPH_API_VERSION,
+    redirectUri 
+  })
+
   let response: Response
   try {
     response = await fetch(url)
   } catch (networkError) {
     const message = networkError instanceof Error ? networkError.message : 'Network error'
+    logger.error('[Meta OAuth] Network error during token exchange', { error: message })
     throw new MetaTokenExchangeError({
       message: `Network error during Meta token exchange: ${message}`
     })
@@ -165,10 +177,17 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
   const tokenData = responseData as MetaTokenResponse
 
   if (!tokenData.access_token) {
+    logger.error('[Meta OAuth] Token response missing access_token')
     throw new MetaTokenExchangeError({
       message: 'Meta token response missing access_token'
     })
   }
+
+  logger.info('[Meta OAuth] Token exchange successful', { 
+    hasToken: true,
+    expiresIn: tokenData.expires_in,
+    tokenType: tokenData.token_type 
+  })
 
   return tokenData
 }

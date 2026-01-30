@@ -304,7 +304,7 @@ export class IntegrationApiClient {
 
 export const metaAdsClient = new IntegrationApiClient({
     platform: 'meta',
-    baseUrl: 'https://graph.facebook.com/v18.0',
+    baseUrl: 'https://graph.facebook.com/v24.0',
 })
 
 export const googleAdsClient = new IntegrationApiClient({

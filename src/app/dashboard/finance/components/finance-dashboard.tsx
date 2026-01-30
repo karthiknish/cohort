@@ -260,10 +260,13 @@ export function FinanceDashboard() {
     return base
   }, [isAdmin, isClient])
 
+  // Memoize section values to prevent infinite re-renders (React error #301)
+  const sectionValues = useMemo(() => sections.map((s) => s.value), [sections])
+
   const sectionTabs = usePersistedTab<string>({
     param: 'section',
     defaultValue: sections[0]?.value ?? 'overview',
-    allowedValues: sections.map((s) => s.value),
+    allowedValues: sectionValues,
     storageNamespace: 'dashboard:finance',
     syncToUrl: true,
   })

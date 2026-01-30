@@ -8,7 +8,9 @@ import { calculateBackoffDelay as calculateBackoffDelayLib, parseRetryAfterMs, s
 
 export const EMAIL_WEBHOOK_URL = process.env.CONTACT_EMAIL_WEBHOOK_URL
 export const SLACK_WEBHOOK_URL = process.env.CONTACT_SLACK_WEBHOOK_URL
-export const WHATSAPP_API_VERSION = process.env.WHATSAPP_BUSINESS_API_VERSION ?? 'v18.0'
+// Updated to v24.0 (latest as of January 2026)
+// Changelog: https://developers.facebook.com/docs/whatsapp/business-platform/changelog
+export const WHATSAPP_API_VERSION = process.env.WHATSAPP_BUSINESS_API_VERSION ?? 'v24.0'
 export const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_BUSINESS_ACCESS_TOKEN
 export const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_BUSINESS_PHONE_NUMBER_ID
 
