@@ -207,6 +207,20 @@ export default function TasksPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient?.id, selectedClient?.name])
 
+  // Auto-open create sheet when action=create is in URL
+  useEffect(() => {
+    const action = searchParams.get('action')
+    if (action === 'create') {
+      form.handleCreateOpenChange(true)
+      // Clean up the URL without refreshing
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('action')
+      const next = params.toString()
+      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Keyboard shortcuts
   useKeyboardShortcut({
     combo: 'mod+k',

@@ -51,7 +51,7 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
               <p>No pending tasks on your radar.</p>
             </div>
             <Button asChild size="sm" variant="outline" className="mt-2">
-              <Link href="/dashboard/tasks/new">Create a task</Link>
+              <Link href="/dashboard/tasks?action=create">Create a task</Link>
             </Button>
           </div>
         )}
