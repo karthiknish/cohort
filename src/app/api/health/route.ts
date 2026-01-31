@@ -105,8 +105,7 @@ export const GET = createApiHandler(
 
     // Check environment variables
     const requiredEnvVars = [
-      'NEXT_PUBLIC_CONVEX_URL',
-      'CONVEX_URL'
+      'NEXT_PUBLIC_CONVEX_URL'
     ]
 
     const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName])

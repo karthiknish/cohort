@@ -7,7 +7,7 @@ export type ConvexAdminClientOptions = {
 }
 
 function getConvexDeploymentUrl(): string | null {
-  return process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL ?? null
+  return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? null
 }
 
 function getConvexDeployKey(): string | null {
