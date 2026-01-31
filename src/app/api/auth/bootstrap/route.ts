@@ -20,11 +20,29 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 /**
+ * Get the base URL for internal API calls.
+ * Uses NEXT_PUBLIC_APP_URL env var or constructs from request headers.
+ */
+function getBaseUrl(req: NextRequest): string {
+  // Prefer explicit env var for production
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  
+  // Construct from request headers (works on Vercel)
+  const proto = req.headers.get('x-forwarded-proto') || 'http'
+  const host = req.headers.get('host') || 'localhost:3000'
+  return `${proto}://${host}`
+}
+
+/**
  * Bootstrap route - creates/updates user in Convex users table
  * Uses direct Convex client with session cookie
  */
 export async function POST(req: NextRequest) {
   const startTime = Date.now()
+  const baseUrl = getBaseUrl(req)
+  console.log('[Bootstrap] Using base URL:', baseUrl)
 
   try {
     // 1. Get the Better Auth session cookie directly from request
@@ -50,7 +68,7 @@ export async function POST(req: NextRequest) {
     // 2. Call Better Auth's get-session endpoint to get the user
     console.log('[Bootstrap] Getting user from Better Auth session...')
     const sessionRes = await withTimeout(
-      fetch('http://localhost:3000/api/auth/get-session', {
+      fetch(`${baseUrl}/api/auth/get-session`, {
         headers: {
           'Cookie': `better-auth.session_token=${sessionCookie}`,
         },
@@ -94,7 +112,7 @@ export async function POST(req: NextRequest) {
     // 3. Get Convex token for authenticated requests
     console.log('[Bootstrap] Getting Convex token...')
     const tokenRes = await withTimeout(
-      fetch('http://localhost:3000/api/auth/convex/token', {
+      fetch(`${baseUrl}/api/auth/convex/token`, {
         headers: {
           'Cookie': `better-auth.session_token=${sessionCookie}`,
         },

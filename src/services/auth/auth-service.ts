@@ -266,6 +266,10 @@ export class AuthService {
 
   async signOut(): Promise<void> {
     try {
+      // First, clear custom session cookies via API
+      await this.clearSessionCookies()
+      
+      // Then sign out from Better Auth
       await authClient.signOut()
       this.currentUser = null
       this.notifyListeners(null)
@@ -274,6 +278,33 @@ export class AuthService {
         throw new NetworkError('Failed to sign out. Please check your connection.')
       }
       throw new ServiceUnavailableError('Failed to sign out. Please try again.')
+    }
+  }
+
+  private async clearSessionCookies(): Promise<void> {
+    try {
+      // Get CSRF token from cookie to pass in header
+      const csrfCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('cohorts_csrf='))
+      const csrfToken = csrfCookie ? csrfCookie.split('=')[1] : ''
+
+      const response = await fetch('/api/auth/session', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken || '',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok && response.status !== 401) {
+        // Log but don't throw - we still want to try better-auth signOut
+        console.warn('[AuthService] Session cookie clear failed:', response.status)
+      }
+    } catch (error) {
+      // Log but don't throw - we still want to try better-auth signOut
+      console.warn('[AuthService] Failed to clear session cookies:', error)
     }
   }
 
