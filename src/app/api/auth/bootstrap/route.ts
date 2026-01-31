@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { api } from '../../../../../convex/_generated/api'
 import { ConvexHttpClient } from 'convex/browser'
-
-const payloadSchema = z
-  .object({
-    name: z.string().trim().min(1).max(120).optional(),
-  })
-  .optional()
+import { getToken, isAuthenticated, fetchAuthMutation } from '@/lib/auth-server'
 
 // Helper to add timeout to promises
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -37,7 +31,12 @@ function getBaseUrl(req: NextRequest): string {
 
 /**
  * Bootstrap route - creates/updates user in Convex users table
- * Uses direct Convex client with session cookie
+ * 
+ * Flow:
+ * 1. Check Better Auth session via cookies
+ * 2. Get Convex JWT using getToken utility
+ * 3. Get Better Auth user from Convex
+ * 4. Upsert user in custom users table
  */
 export async function POST(req: NextRequest) {
   const startTime = Date.now()
@@ -45,104 +44,30 @@ export async function POST(req: NextRequest) {
   console.log('[Bootstrap] Using base URL:', baseUrl)
 
   try {
-    // 1. Get all cookies from request and forward them
-    // Better Auth uses 'better-auth.session_token' or '__Secure-better-auth.session_token' in production
-    const allCookies = req.cookies.getAll()
-    console.log('[Bootstrap] Available cookies:', allCookies.map(c => c.name))
+    // 1. Check if user is authenticated via Better Auth
+    const authenticated = await isAuthenticated()
+    console.log('[Bootstrap] isAuthenticated:', authenticated)
     
-    // Build the full cookie string to forward to internal API calls
-    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ')
-    
-    // Check if we have a session cookie (with or without __Secure- prefix)
-    const hasSessionCookie = allCookies.some(c => 
-      c.name === 'better-auth.session_token' || 
-      c.name === '__Secure-better-auth.session_token' ||
-      c.name.includes('session_token')
-    )
-    
-    if (!hasSessionCookie) {
-      console.log('[Bootstrap] No session cookie found in:', allCookies.map(c => c.name))
+    if (!authenticated) {
+      // Log cookies for debugging
+      const allCookies = req.cookies.getAll()
+      console.log('[Bootstrap] No auth session. Available cookies:', allCookies.map(c => c.name))
       return NextResponse.json(
-        { success: false, error: 'No session cookie' },
+        { success: false, error: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    console.log('[Bootstrap] Session cookie found, forwarding all cookies...')
-
-    // 2. Call Better Auth's get-session endpoint to get the user
-    // Forward ALL cookies from the original request
-    console.log('[Bootstrap] Getting user from Better Auth session...')
-    const sessionRes = await withTimeout(
-      fetch(`${baseUrl}/api/auth/get-session`, {
-        headers: {
-          'Cookie': cookieHeader,
-        },
-      }),
-      5000,
-      'get-session fetch'
-    )
-
-    if (!sessionRes.ok) {
-      console.log('[Bootstrap] get-session failed with status:', sessionRes.status)
-      return NextResponse.json(
-        { success: false, error: 'Failed to get session' },
-        { status: 401 }
-      )
-    }
-
-    const sessionData = await sessionRes.json()
-    console.log('[Bootstrap] Session data:', JSON.stringify(sessionData, null, 2))
-    
-    // Better Auth returns session in different formats depending on version
-    const user = sessionData?.user || sessionData?.data?.user || sessionData
-
-    if (!user || !user.email) {
-      console.log('[Bootstrap] No valid user in session data')
-      return NextResponse.json(
-        { success: false, error: 'No user in session' },
-        { status: 401 }
-      )
-    }
-
-    const email = user.email
-    const name = user.name || email || 'User'
-    const legacyId = user.id
-
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: 'User email missing' },
-        { status: 400 }
-      )
-    }
-
-    // 3. Get Convex token for authenticated requests
+    // 2. Get Convex token using the auth utility
     console.log('[Bootstrap] Getting Convex token...')
-    const tokenRes = await withTimeout(
-      fetch(`${baseUrl}/api/auth/convex/token`, {
-        headers: {
-          'Cookie': cookieHeader,
-        },
-      }),
+    const convexToken = await withTimeout(
+      getToken(),
       5000,
-      'convex-token fetch'
+      'getToken'
     )
-
-    if (!tokenRes.ok) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to get Convex token' },
-        { status: 401 }
-      )
-    }
-
-    const tokenData = await tokenRes.json()
-    console.log('[Bootstrap] Token response:', JSON.stringify(tokenData, null, 2))
     
-    // Handle different response formats
-    const convexToken = tokenData?.token || tokenData?.data?.token || tokenData
-
-    if (!convexToken || typeof convexToken !== 'string') {
-      console.log('[Bootstrap] Invalid Convex token:', convexToken)
+    if (!convexToken) {
+      console.log('[Bootstrap] No Convex token returned')
       return NextResponse.json(
         { success: false, error: 'No Convex token' },
         { status: 401 }
@@ -151,8 +76,7 @@ export async function POST(req: NextRequest) {
 
     console.log('[Bootstrap] Got Convex token:', convexToken.substring(0, 20) + '...')
 
-    // 4. Create Convex client with token and get user data
-    console.log('[Bootstrap] Getting user from Convex...')
+    // 3. Create Convex client with token and get Better Auth user
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
     if (!convexUrl) {
       return NextResponse.json(
@@ -161,7 +85,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
+    const convex = new ConvexHttpClient(convexUrl)
+    convex.setAuth(convexToken)
+    
+    console.log('[Bootstrap] Getting Better Auth user from Convex...')
     const currentUser = await withTimeout(
       convex.query(api.auth.getCurrentUser, {}),
       10000,
@@ -169,22 +96,40 @@ export async function POST(req: NextRequest) {
     )
 
     if (!currentUser) {
+      console.log('[Bootstrap] No Better Auth user found in Convex')
       return NextResponse.json(
-        { success: false, error: 'User not found in Convex' },
+        { success: false, error: 'User not found in Convex auth tables' },
         { status: 404 }
       )
     }
 
-    // 5. Upsert user in custom users table
-    console.log('[Bootstrap] Upserting user...')
+    console.log('[Bootstrap] Better Auth user:', JSON.stringify({
+      _id: currentUser._id,
+      email: currentUser.email,
+      name: currentUser.name,
+    }, null, 2))
+
+    const email = currentUser.email
+    const name = currentUser.name || email || 'User'
+    const legacyId = currentUser._id as unknown as string
+
+    if (!email) {
+      return NextResponse.json(
+        { success: false, error: 'User email missing' },
+        { status: 400 }
+      )
+    }
+
+    // 4. Upsert user in custom users table
+    console.log('[Bootstrap] Upserting user in custom users table...')
     await withTimeout(
       convex.mutation(api.users.bootstrapUpsert, {
-        legacyId: currentUser._id as unknown as string,
+        legacyId,
         email: email.toLowerCase(),
         name,
-        role: 'admin', // Default to admin for development
+        role: 'admin', // Default to admin for new users
         status: 'active',
-        agencyId: currentUser._id as unknown as string,
+        agencyId: legacyId,
       }),
       10000,
       'convex mutation'
@@ -198,7 +143,7 @@ export async function POST(req: NextRequest) {
       success: true,
       role: 'admin',
       status: 'active',
-      agencyId: currentUser._id,
+      agencyId: legacyId,
     })
   } catch (error) {
     console.error('[Bootstrap] Error:', error)
