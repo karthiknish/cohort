@@ -9,7 +9,7 @@ const http = httpRouter()
 
 // Allowed origins for CORS (add your production URL when deploying)
 const ALLOWED_ORIGINS = [
-  'http://localhost:3000',
+  process.env.NEXT_PUBLIC_SITE_URL,
   'http://localhost:3001',
   process.env.SITE_URL,
 ].filter(Boolean) as string[]

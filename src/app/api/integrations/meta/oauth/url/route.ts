@@ -23,7 +23,7 @@ export const POST = createApiHandler(
     const appId = process.env.META_APP_ID
     const businessConfigId = process.env.META_BUSINESS_CONFIG_ID
     const redirectUri = process.env.META_OAUTH_REDIRECT_URI
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     if (!appId || !businessConfigId || !redirectUri) {
       throw new ServiceUnavailableError('Meta business login is not configured')

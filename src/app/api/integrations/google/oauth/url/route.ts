@@ -21,7 +21,7 @@ export const POST = createApiHandler(
 
     const googleClientId = process.env.GOOGLE_ADS_CLIENT_ID
     const redirectUri = process.env.GOOGLE_ADS_OAUTH_REDIRECT_URI
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     if (!googleClientId || !redirectUri) {
       throw new ServiceUnavailableError('Google Ads OAuth is not configured')

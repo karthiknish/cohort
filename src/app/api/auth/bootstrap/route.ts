@@ -31,7 +31,7 @@ function getBaseUrl(req: NextRequest): string {
   
   // Construct from request headers (works on Vercel)
   const proto = req.headers.get('x-forwarded-proto') || 'http'
-  const host = req.headers.get('host') || 'localhost:3000'
+  const host = req.headers.get('host') || process.env.NEXT_PUBLIC_SITE_URL?.replace(/^https?:\/\//, '') || 'localhost:3000'
   return `${proto}://${host}`
 }
 

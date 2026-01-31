@@ -328,7 +328,7 @@ export const createCheckoutSession = zAuthenticatedAction({
 
     const customerId = await ensureStripeCustomer(ctx, stripe, uid, email)
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const origin = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
     const successUrl = buildReturnUrl(origin, args.successPath ?? '/settings?checkout=success')
     const cancelUrl = buildReturnUrl(origin, args.cancelPath ?? '/settings?checkout=cancelled')
 
@@ -378,7 +378,7 @@ export const createPortalSession = zAuthenticatedAction({
     const email = ctx.user.email ?? null
 
     const stripe = getStripeClient()
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const origin = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     const returnPath =
       typeof args.returnUrl === 'string' && args.returnUrl.trim().length > 0

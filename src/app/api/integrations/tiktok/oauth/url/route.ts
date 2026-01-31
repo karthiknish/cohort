@@ -21,7 +21,7 @@ export const POST = createApiHandler(
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY
     const redirectUri = process.env.TIKTOK_OAUTH_REDIRECT_URI
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     if (!clientKey || !redirectUri) {
       throw new ServiceUnavailableError('TikTok OAuth is not configured')

@@ -19,7 +19,7 @@ export const GET = createApiHandler(
     rateLimit: 'sensitive',
   },
   async (req, { query }) => {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     try {
       // Check for OAuth error from Google

@@ -21,7 +21,7 @@ export const POST = createApiHandler(
 
     const linkedInClientId = process.env.LINKEDIN_CLIENT_ID
     const redirectUri = process.env.LINKEDIN_OAUTH_REDIRECT_URI
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
     if (!linkedInClientId || !redirectUri) {
       throw new ServiceUnavailableError('LinkedIn Ads OAuth is not configured')
