@@ -45,17 +45,22 @@ export async function POST(req: NextRequest) {
   console.log('[Bootstrap] Using base URL:', baseUrl)
 
   try {
-    // 1. Get the Better Auth session cookie directly from request
-    // Better Auth uses 'better-auth.session_token' as the default cookie name
+    // 1. Get all cookies from request and forward them
+    // Better Auth uses 'better-auth.session_token' or '__Secure-better-auth.session_token' in production
     const allCookies = req.cookies.getAll()
     console.log('[Bootstrap] Available cookies:', allCookies.map(c => c.name))
     
-    const sessionCookie = req.cookies.get('better-auth.session_token')?.value ||
-                         req.cookies.get('better-auth.session')?.value ||
-                         req.cookies.get('session')?.value ||
-                         allCookies.find(c => c.name.includes('session'))?.value
+    // Build the full cookie string to forward to internal API calls
+    const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ')
     
-    if (!sessionCookie) {
+    // Check if we have a session cookie (with or without __Secure- prefix)
+    const hasSessionCookie = allCookies.some(c => 
+      c.name === 'better-auth.session_token' || 
+      c.name === '__Secure-better-auth.session_token' ||
+      c.name.includes('session_token')
+    )
+    
+    if (!hasSessionCookie) {
       console.log('[Bootstrap] No session cookie found in:', allCookies.map(c => c.name))
       return NextResponse.json(
         { success: false, error: 'No session cookie' },
@@ -63,14 +68,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('[Bootstrap] Session cookie found:', sessionCookie.substring(0, 20) + '...')
+    console.log('[Bootstrap] Session cookie found, forwarding all cookies...')
 
     // 2. Call Better Auth's get-session endpoint to get the user
+    // Forward ALL cookies from the original request
     console.log('[Bootstrap] Getting user from Better Auth session...')
     const sessionRes = await withTimeout(
       fetch(`${baseUrl}/api/auth/get-session`, {
         headers: {
-          'Cookie': `better-auth.session_token=${sessionCookie}`,
+          'Cookie': cookieHeader,
         },
       }),
       5000,
@@ -78,6 +84,7 @@ export async function POST(req: NextRequest) {
     )
 
     if (!sessionRes.ok) {
+      console.log('[Bootstrap] get-session failed with status:', sessionRes.status)
       return NextResponse.json(
         { success: false, error: 'Failed to get session' },
         { status: 401 }
@@ -114,7 +121,7 @@ export async function POST(req: NextRequest) {
     const tokenRes = await withTimeout(
       fetch(`${baseUrl}/api/auth/convex/token`, {
         headers: {
-          'Cookie': `better-auth.session_token=${sessionCookie}`,
+          'Cookie': cookieHeader,
         },
       }),
       5000,
