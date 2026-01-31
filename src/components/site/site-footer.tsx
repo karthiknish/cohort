@@ -12,7 +12,7 @@ export function SiteFooter() {
         <div className="grid gap-10 sm:grid-cols-2">
           <div className="space-y-3">
             <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
-          <Image src="/logo_new.svg" alt="Cohorts" width={50} height={50} className="h-20 w-20" priority />
+          <Image src="/logo.svg" alt="Cohorts" width={50} height={50} className="h-20 w-20" priority />
         </Link>
             <p className="text-sm text-muted-foreground">
               The unified command center for high-performing marketing agencies. Streamline campaigns, track revenue,

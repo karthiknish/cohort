@@ -29,7 +29,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-muted/50 bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
-          <Image src="/logo_new.svg" alt="Cohorts" width={80} height={80} className="h-20 w-20" priority />
+          <Image src="/logo.svg" alt="Cohorts" width={80} height={80} className="h-20 w-20" priority />
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
