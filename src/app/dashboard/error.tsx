@@ -23,6 +23,14 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
   const componentName = 'DashboardError'
   const componentStack = (error as any).componentStack
 
+  // Check for specific error types
+  const isUserNotFoundError = error.message?.includes('USER_NOT_FOUND') || 
+    error.message?.includes('account is being set up')
+  const isAuthError = error.message?.includes('Authentication required') ||
+    error.message?.includes('UNAUTHORIZED') ||
+    error.message?.includes('Access denied') ||
+    error.message?.includes('FORBIDDEN')
+
   // Extract React internal info from stack if available
   const reactErrorInfo = useMemo(() => {
     if (!error.stack) return null
@@ -63,6 +71,75 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
       componentStack || 'No component stack available',
     ].filter(Boolean).join('\n')
     navigator.clipboard.writeText(details)
+  }
+
+  // Render specific UI for account setup error
+  if (isUserNotFoundError) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-muted/40 p-4">
+        <Card className="max-w-lg border-muted/60">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
+              <RefreshCw className="h-8 w-8 text-amber-500 animate-spin" />
+            </div>
+            <CardTitle className="text-xl">Setting up your account...</CardTitle>
+            <CardDescription>
+              Your account is being initialized. This usually takes just a few seconds.
+              Please wait a moment and then try again.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-2 pt-2">
+              <Button onClick={reset} className="w-full">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try again
+              </Button>
+              <Button variant="outline" asChild className="w-full">
+                <a href="/">
+                  <Home className="mr-2 h-4 w-4" />
+                  Go to home
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Render specific UI for auth errors
+  if (isAuthError) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-muted/40 p-4">
+        <Card className="max-w-lg border-muted/60">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10">
+              <AlertTriangle className="h-8 w-8 text-orange-500" />
+            </div>
+            <CardTitle className="text-xl">Session expired</CardTitle>
+            <CardDescription>
+              Your session has expired or you don't have permission to access this page.
+              Please sign in again to continue.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-2 pt-2">
+              <Button asChild className="w-full">
+                <a href="/auth/signin">
+                  Sign in
+                </a>
+              </Button>
+              <Button variant="outline" asChild className="w-full">
+                <a href="/">
+                  <Home className="mr-2 h-4 w-4" />
+                  Go to home
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

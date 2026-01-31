@@ -128,7 +128,9 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
     .unique()
 
   if (!user) {
-    throw Errors.auth.userNotFound()
+    throw Errors.auth.userNotFound(
+      'Your account is being set up. Please wait a moment and refresh the page.'
+    )
   }
 
   if (user.status === 'disabled' || user.status === 'suspended') {
