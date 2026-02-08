@@ -219,7 +219,7 @@ export function AdInsightsWidget({
         <CardHeader className="pb-3">
           <Skeleton className="h-5 w-32" />
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 pt-0">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </CardContent>
@@ -242,8 +242,8 @@ export function AdInsightsWidget({
             Ad Insights
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center gap-2 py-4 text-center text-sm text-muted-foreground">
+        <CardContent className="pt-0">
+          <div className="flex flex-col items-center gap-3 py-4 text-center text-sm text-muted-foreground">
             <TrendingUp className="h-6 w-6 text-muted-foreground/50" />
             <p>Connect ad platforms to see AI-powered insights</p>
             <Button asChild variant="outline" size="sm">
@@ -289,7 +289,7 @@ export function AdInsightsWidget({
               : 'Attention recommended'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-1">
+      <CardContent className="space-y-1 pt-0">
         {insights.length === 0 ? (
           <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
             <CircleCheck className="h-4 w-4 text-emerald-500" />

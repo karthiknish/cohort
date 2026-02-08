@@ -63,8 +63,8 @@ export function OnboardingCard() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 sm:grid-cols-3">
+      <CardContent className="pt-0">
+        <div className="grid gap-3 sm:grid-cols-3">
           {onboardingSteps.map((step, index) => (
             <div
               key={step.title}

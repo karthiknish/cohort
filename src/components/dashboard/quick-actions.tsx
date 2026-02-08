@@ -144,7 +144,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
       <CardContent>
         {/* Mobile create actions */}
         {!compact && (
-          <div className="grid gap-2 sm:hidden mb-4">
+          <div className="grid gap-3 sm:hidden mb-4">
             {filteredCreateActions.map((action) => {
               const Icon = action.icon
               return (
@@ -160,7 +160,7 @@ export function QuickActions({ compact }: QuickActionsProps) {
           </div>
         )}
 
-        <div className={`grid gap-4 ${compact ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+        <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
           {filteredQuickLinks.map((link) => {
             const Icon = link.icon
             return (

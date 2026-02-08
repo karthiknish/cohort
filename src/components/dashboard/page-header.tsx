@@ -40,9 +40,9 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-3', className)}>
       {backHref && (
-        <Button variant="ghost" size="sm" asChild className="gap-1 -ml-2 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
           <Link href={backHref}>
             <ArrowLeft className="h-4 w-4" />
             {backLabel}
@@ -50,8 +50,8 @@ export function PageHeader({
         </Button>
       )}
       
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-3">
             {Icon && (
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -90,7 +90,7 @@ export function PageHeader({
         </div>
         
         {actions && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {actions}
           </div>
         )}

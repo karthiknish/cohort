@@ -22,16 +22,16 @@ export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, last
   return (
     <FadeIn>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">
             {getGreeting()}, {userDisplayName || 'there'}
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Here&apos;s what&apos;s happening across your workspaces today.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex flex-col items-end mr-2">
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex flex-col items-end gap-0.5 mr-2">
             <span className="text-sm font-medium">
               {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </span>

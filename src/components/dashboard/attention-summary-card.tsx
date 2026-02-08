@@ -68,7 +68,7 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
         </div>
       </CardHeader>
 
-      <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-0">
         {/* Tasks */}
         <div className="rounded-xl border bg-card p-3">
           <div className="flex items-center justify-between">

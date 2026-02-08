@@ -31,8 +31,8 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
   }, [expanded, primaryCount, stats])
 
   return (
-    <div className="space-y-3">
-      <FadeInStagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-4">
+      <FadeInStagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {visibleStats.map((stat) => (
           <FadeInItem key={stat.id}>
             <StatsCard stat={stat} loading={loading} />

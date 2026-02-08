@@ -28,15 +28,15 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
           </Link>
         </Button>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex-1 pt-0">
         {loading ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
         ) : tasks.length > 0 ? (
-          <div className="space-y-1 max-h-[320px] overflow-auto">
+          <div className="space-y-2 max-h-[320px] overflow-auto">
             {tasks.map((task) => (
               <FadeInItem key={task.id}>
                 <TaskItem task={task} />

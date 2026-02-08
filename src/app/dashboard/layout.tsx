@@ -24,9 +24,9 @@ export default function DashboardLayout({
               <div className="flex flex-1 flex-col bg-muted/20">
                 <Header />
                 <ScrollArea className="flex-1">
-                  <main className="min-h-full px-6 py-6">
+                  <main className="min-h-full space-y-6 px-6 py-6">
                     <NavigationBreadcrumbs />
-                    <PreviewDataBanner className="mb-6" />
+                    <PreviewDataBanner />
                     <ClientAccessGate>
                       {children}
                     </ClientAccessGate>
