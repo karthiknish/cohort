@@ -692,6 +692,7 @@ export default defineSchema({
     isPinned: v.boolean(), // Whether the message is pinned to the channel
     pinnedAtMs: v.union(v.number(), v.null()), // When the message was pinned
     pinnedBy: v.union(v.string(), v.null()), // User ID who pinned the message
+    sharedTo: v.union(v.array(v.union(v.literal('slack'), v.literal('teams'), v.literal('whatsapp'))), v.null()), // External platforms message was shared to
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_channel_createdAtMs_legacyId', ['workspaceId', 'channelType', 'createdAtMs', 'legacyId'])

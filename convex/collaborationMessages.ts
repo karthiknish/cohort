@@ -383,6 +383,7 @@ export const create = zWorkspaceMutation({
       isPinned: false, // Initialize pinned state
       pinnedAtMs: null, // Initialize pinnedAt
       pinnedBy: null, // Initialize pinnedBy
+      sharedTo: null, // Initialize sharedTo as null
     })
 
     if (args.isThreadRoot === false && typeof args.threadRootId === 'string' && args.threadRootId) {
@@ -445,6 +446,28 @@ export const softDelete = zWorkspaceMutation({
       deleted: true,
       deletedAtMs: ctx.now,
       deletedBy: args.deletedBy,
+      updatedAtMs: ctx.now,
+    })
+
+    return args.legacyId
+  },
+})
+
+export const updateSharedTo = zWorkspaceMutation({
+  args: {
+    legacyId: z.string(),
+    sharedTo: z.array(z.union([z.literal('slack'), z.literal('teams'), z.literal('whatsapp')])),
+  },
+  handler: async (ctx: any, args: any) => {
+    const row = await ctx.db
+      .query('collaborationMessages')
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!row) throw Errors.resource.notFound('Message')
+
+    await ctx.db.patch(row._id, {
+      sharedTo: args.sharedTo,
       updatedAtMs: ctx.now,
     })
 

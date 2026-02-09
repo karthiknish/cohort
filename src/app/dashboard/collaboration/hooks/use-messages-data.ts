@@ -1,11 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConvex, useMutation } from 'convex/react'
+import { useConvex, useMutation, useQuery } from 'convex/react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { useToast } from '@/components/ui/use-toast'
-import { collaborationApi } from '@/lib/convex-api'
+import { api, collaborationApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
 import type { ClientTeamMember } from '@/types/clients'
@@ -53,6 +53,7 @@ export function useMessagesData({
   const { toast } = useToast()
   const convex = useConvex()
   const createMessage = useMutation((collaborationApi as any).createMessage)
+  const updateSharedTo = useMutation((collaborationApi as any).updateSharedTo)
 
   const [messagesByChannel, setMessagesByChannel] = useState<MessagesByChannelState>({})
   const [nextCursorByChannel, setNextCursorByChannel] = useState<Record<string, string | null>>({})
@@ -330,6 +331,113 @@ export function useMessagesData({
     [handleToggleReactionBase]
   )
 
+  // Send message to external platforms based on notification preferences
+  const sendToExternalPlatforms = useCallback(
+    async (message: CollaborationMessage, wsId: string) => {
+      try {
+        // Fetch notification preferences
+        const prefs = await convex.query((api as any).settings.getMyNotificationPreferences, {
+          workspaceId: wsId,
+        })
+
+        if (!prefs) return
+
+        const sharedTo: Array<'slack' | 'teams' | 'whatsapp'> = []
+
+        // Send to Slack if enabled
+        if (prefs.slackCollaboration && prefs.slackWebhookUrl) {
+          try {
+            const response = await fetch('/api/integrations/slack/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                channel: '#general',
+                messageType: 'collaboration',
+                text: message.content,
+                webhookUrl: prefs.slackWebhookUrl,
+                metadata: {
+                  senderName: message.senderName,
+                  conversationUrl: `${window.location.origin}/dashboard/collaboration`,
+                },
+              }),
+            })
+
+            if (response.ok) {
+              sharedTo.push('slack')
+            }
+          } catch (error) {
+            console.error('Failed to send to Slack:', error)
+          }
+        }
+
+        // Send to Teams if enabled
+        if (prefs.teamsCollaboration && prefs.teamsWebhookUrl) {
+          try {
+            const response = await fetch('/api/integrations/teams/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messageType: 'collaboration',
+                text: message.content,
+                webhookUrl: prefs.teamsWebhookUrl,
+                metadata: {
+                  senderName: message.senderName,
+                  conversationUrl: `${window.location.origin}/dashboard/collaboration`,
+                },
+              }),
+            })
+
+            if (response.ok) {
+              sharedTo.push('teams')
+            }
+          } catch (error) {
+            console.error('Failed to send to Teams:', error)
+          }
+        }
+
+        // Send to WhatsApp if enabled
+        if (prefs.whatsappCollaboration && prefs.phoneNumber) {
+          try {
+            const response = await fetch('/api/integrations/whatsapp/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: prefs.phoneNumber,
+                messageType: 'collaboration',
+                text: message.content,
+                metadata: {
+                  senderName: message.senderName,
+                },
+              }),
+            })
+
+            if (response.ok) {
+              sharedTo.push('whatsapp')
+            }
+          } catch (error) {
+            console.error('Failed to send to WhatsApp:', error)
+          }
+        }
+
+        // Update message with sharedTo info if any platforms were successful
+        if (sharedTo.length > 0) {
+          try {
+            await updateSharedTo({
+              workspaceId: wsId,
+              legacyId: message.id,
+              sharedTo,
+            })
+          } catch (error) {
+            console.error('Failed to update message sharedTo:', error)
+          }
+        }
+      } catch (error) {
+        console.error('Error sending to external platforms:', error)
+      }
+    },
+    [convex, updateSharedTo]
+  )
+
   const isSendDisabled = useMemo(() => {
     if (sending || uploading) return true
     const hasContent = messageInput.trim().length > 0
@@ -459,6 +567,11 @@ export function useMessagesData({
 
         clearAttachments()
         setMessageInputState('')
+
+        // Send to external platforms based on notification preferences
+        if (workspaceId) {
+          void sendToExternalPlatforms(createdMessage, workspaceId)
+        }
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
       } catch (error) {

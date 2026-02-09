@@ -50,4 +50,5 @@ export type CollaborationMessage = {
   isPinned?: boolean // Whether the message is pinned
   pinnedAt?: string | null // ISO timestamp when message was pinned
   pinnedBy?: string | null // User ID who pinned the message
+  sharedTo?: Array<'slack' | 'teams' | 'whatsapp'> // Platforms this message was shared to
 }

@@ -48,6 +48,7 @@ import { ThreadSection } from './thread-section'
 import { ImageUrlPreview } from './image-url-preview'
 import { LinkPreviewCard } from './link-preview-card'
 import { MessageContent } from './message-content'
+import { SharedPlatformIcons } from './message-share-button'
 
 const MAX_PREVIEW_LENGTH = 80
 
@@ -547,6 +548,11 @@ export function CollaborationMessagePane({
               disabled={disableReactionActions}
               onToggle={(emoji) => onToggleReaction(message.id, emoji)}
             />
+          )}
+
+          {/* External Platform Icons */}
+          {!message.isDeleted && message.sharedTo && message.sharedTo.length > 0 && (
+            <SharedPlatformIcons sharedTo={message.sharedTo} />
           )}
 
           {/* Deleted Message Info */}

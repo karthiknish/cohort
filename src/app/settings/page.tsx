@@ -77,11 +77,17 @@ export default function SettingsPage() {
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [whatsappTasksEnabled, setWhatsappTasksEnabled] = useState(false)
   const [whatsappCollaborationEnabled, setWhatsappCollaborationEnabled] = useState(false)
+  const [slackTasksEnabled, setSlackTasksEnabled] = useState(false)
+  const [slackCollaborationEnabled, setSlackCollaborationEnabled] = useState(false)
+  const [teamsTasksEnabled, setTeamsTasksEnabled] = useState(false)
+  const [teamsCollaborationEnabled, setTeamsCollaborationEnabled] = useState(false)
   const [emailAdAlertsEnabled, setEmailAdAlertsEnabled] = useState(true)
   const [emailPerformanceDigestEnabled, setEmailPerformanceDigestEnabled] = useState(true)
   const [emailTaskActivityEnabled, setEmailTaskActivityEnabled] = useState(true)
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [profilePhone, setProfilePhone] = useState('')
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState(process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || '')
+  const [teamsWebhookUrl, setTeamsWebhookUrl] = useState(process.env.NEXT_PUBLIC_TEAMS_WEBHOOK_URL || '')
 
   // Update phone when user changes
   useEffect(() => {
@@ -228,10 +234,28 @@ export default function SettingsPage() {
   // Toggle notification preference
   const handlePreferenceToggle = useCallback(
     async (
-      type: 'tasks' | 'collaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity',
+      type: 'tasks' | 'collaboration' | 'slackTasks' | 'slackCollaboration' | 'teamsTasks' | 'teamsCollaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity',
       checked: boolean
     ) => {
       if (notificationsLoading || savingPreferences) {
+        return
+      }
+
+      // Handle local state for Slack and Teams
+      if (type === 'slackTasks') {
+        setSlackTasksEnabled(checked)
+        return
+      }
+      if (type === 'slackCollaboration') {
+        setSlackCollaborationEnabled(checked)
+        return
+      }
+      if (type === 'teamsTasks') {
+        setTeamsTasksEnabled(checked)
+        return
+      }
+      if (type === 'teamsCollaboration') {
+        setTeamsCollaborationEnabled(checked)
         return
       }
 
@@ -419,11 +443,17 @@ export default function SettingsPage() {
             notificationError={notificationError}
             whatsappTasksEnabled={whatsappTasksEnabled}
             whatsappCollaborationEnabled={whatsappCollaborationEnabled}
+            slackTasksEnabled={slackTasksEnabled}
+            slackCollaborationEnabled={slackCollaborationEnabled}
+            teamsTasksEnabled={teamsTasksEnabled}
+            teamsCollaborationEnabled={teamsCollaborationEnabled}
             emailAdAlertsEnabled={emailAdAlertsEnabled}
             emailPerformanceDigestEnabled={emailPerformanceDigestEnabled}
             emailTaskActivityEnabled={emailTaskActivityEnabled}
             savingPreferences={savingPreferences}
             profilePhone={profilePhone}
+            slackWebhookUrl={slackWebhookUrl}
+            teamsWebhookUrl={teamsWebhookUrl}
             onPreferenceToggle={handlePreferenceToggle}
           />
 
