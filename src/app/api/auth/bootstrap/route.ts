@@ -90,6 +90,7 @@ export const POST = createApiHandler(
     )
 
     return {
+      ok: true,
       role: 'admin',
       status: 'active',
       agencyId: legacyId,
