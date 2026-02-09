@@ -37,9 +37,16 @@ export default function SettingsPage() {
     | {
         whatsappTasks: boolean
         whatsappCollaboration: boolean
+        slackTasks: boolean
+        slackCollaboration: boolean
+        slackWebhookUrl: string | null
+        teamsTasks: boolean
+        teamsCollaboration: boolean
+        teamsWebhookUrl: string | null
         emailAdAlerts: boolean
         emailPerformanceDigest: boolean
         emailTaskActivity: boolean
+        emailCollaboration: boolean
         phoneNumber: string | null
       }
     | null
@@ -84,6 +91,7 @@ export default function SettingsPage() {
   const [emailAdAlertsEnabled, setEmailAdAlertsEnabled] = useState(true)
   const [emailPerformanceDigestEnabled, setEmailPerformanceDigestEnabled] = useState(true)
   const [emailTaskActivityEnabled, setEmailTaskActivityEnabled] = useState(true)
+  const [emailCollaborationEnabled, setEmailCollaborationEnabled] = useState(false)
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [profilePhone, setProfilePhone] = useState('')
   const [slackWebhookUrl, setSlackWebhookUrl] = useState(process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL || '')
@@ -129,9 +137,20 @@ export default function SettingsPage() {
 
     setWhatsappTasksEnabled(Boolean(notificationPrefs.whatsappTasks))
     setWhatsappCollaborationEnabled(Boolean(notificationPrefs.whatsappCollaboration))
+    setSlackTasksEnabled(Boolean(notificationPrefs.slackTasks))
+    setSlackCollaborationEnabled(Boolean(notificationPrefs.slackCollaboration))
+    setTeamsTasksEnabled(Boolean(notificationPrefs.teamsTasks))
+    setTeamsCollaborationEnabled(Boolean(notificationPrefs.teamsCollaboration))
     setEmailAdAlertsEnabled(Boolean(notificationPrefs.emailAdAlerts))
     setEmailPerformanceDigestEnabled(Boolean(notificationPrefs.emailPerformanceDigest))
     setEmailTaskActivityEnabled(Boolean(notificationPrefs.emailTaskActivity))
+    setEmailCollaborationEnabled(Boolean(notificationPrefs.emailCollaboration))
+    if (notificationPrefs.slackWebhookUrl) {
+      setSlackWebhookUrl(notificationPrefs.slackWebhookUrl)
+    }
+    if (notificationPrefs.teamsWebhookUrl) {
+      setTeamsWebhookUrl(notificationPrefs.teamsWebhookUrl)
+    }
     setNotificationError(null)
     setNotificationsLoading(false)
 
@@ -146,9 +165,14 @@ export default function SettingsPage() {
       input: {
         tasks: boolean
         collaboration: boolean
+        slackTasks?: boolean
+        slackCollaboration?: boolean
+        teamsTasks?: boolean
+        teamsCollaboration?: boolean
         emailAdAlerts?: boolean
         emailPerformanceDigest?: boolean
         emailTaskActivity?: boolean
+        emailCollaboration?: boolean
       },
       options: { silent?: boolean } = {}
     ): Promise<NotificationPreferencesResponse | null> => {
@@ -179,9 +203,14 @@ export default function SettingsPage() {
         const updated = (await updateNotificationPrefs({
           whatsappTasks: input.tasks,
           whatsappCollaboration: input.collaboration,
+          slackTasks: input.slackTasks ?? slackTasksEnabled,
+          slackCollaboration: input.slackCollaboration ?? slackCollaborationEnabled,
+          teamsTasks: input.teamsTasks ?? teamsTasksEnabled,
+          teamsCollaboration: input.teamsCollaboration ?? teamsCollaborationEnabled,
           emailAdAlerts: input.emailAdAlerts,
           emailPerformanceDigest: input.emailPerformanceDigest,
           emailTaskActivity: input.emailTaskActivity,
+          emailCollaboration: input.emailCollaboration ?? emailCollaborationEnabled,
           phoneNumber: trimmedPhone.length ? trimmedPhone : null,
         })) as unknown
 
@@ -190,18 +219,28 @@ export default function SettingsPage() {
         const preferences: NotificationPreferencesResponse = {
           whatsappTasks: Boolean(payload.whatsappTasks),
           whatsappCollaboration: Boolean(payload.whatsappCollaboration),
+          slackTasks: Boolean(payload.slackTasks),
+          slackCollaboration: Boolean(payload.slackCollaboration),
+          teamsTasks: Boolean(payload.teamsTasks),
+          teamsCollaboration: Boolean(payload.teamsCollaboration),
           emailAdAlerts: Boolean(payload.emailAdAlerts),
           emailPerformanceDigest: Boolean(payload.emailPerformanceDigest),
           emailTaskActivity: Boolean(payload.emailTaskActivity),
+          emailCollaboration: Boolean(payload.emailCollaboration),
           phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
         }
 
         if (isMountedRef.current) {
           setWhatsappTasksEnabled(preferences.whatsappTasks)
           setWhatsappCollaborationEnabled(preferences.whatsappCollaboration)
+          setSlackTasksEnabled(preferences.slackTasks)
+          setSlackCollaborationEnabled(preferences.slackCollaboration)
+          setTeamsTasksEnabled(preferences.teamsTasks)
+          setTeamsCollaborationEnabled(preferences.teamsCollaboration)
           setEmailAdAlertsEnabled(preferences.emailAdAlerts)
           setEmailPerformanceDigestEnabled(preferences.emailPerformanceDigest)
           setEmailTaskActivityEnabled(preferences.emailTaskActivity)
+          setEmailCollaborationEnabled(preferences.emailCollaboration)
           if (preferences.phoneNumber && preferences.phoneNumber !== profilePhone) {
             setProfilePhone(preferences.phoneNumber)
           }
@@ -234,7 +273,7 @@ export default function SettingsPage() {
   // Toggle notification preference
   const handlePreferenceToggle = useCallback(
     async (
-      type: 'tasks' | 'collaboration' | 'slackTasks' | 'slackCollaboration' | 'teamsTasks' | 'teamsCollaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity',
+      type: 'tasks' | 'collaboration' | 'slackTasks' | 'slackCollaboration' | 'teamsTasks' | 'teamsCollaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity' | 'emailCollaboration',
       checked: boolean
     ) => {
       if (notificationsLoading || savingPreferences) {
@@ -450,6 +489,7 @@ export default function SettingsPage() {
             emailAdAlertsEnabled={emailAdAlertsEnabled}
             emailPerformanceDigestEnabled={emailPerformanceDigestEnabled}
             emailTaskActivityEnabled={emailTaskActivityEnabled}
+            emailCollaborationEnabled={emailCollaborationEnabled}
             savingPreferences={savingPreferences}
             profilePhone={profilePhone}
             slackWebhookUrl={slackWebhookUrl}

@@ -476,11 +476,23 @@ export default defineSchema({
 
     notificationPreferences: v.optional(
       v.object({
+        // WhatsApp notifications
         whatsappTasks: v.boolean(),
         whatsappCollaboration: v.boolean(),
+        // Slack notifications
+        slackTasks: v.boolean(),
+        slackCollaboration: v.boolean(),
+        // Teams notifications
+        teamsTasks: v.boolean(),
+        teamsCollaboration: v.boolean(),
+        // Email notifications
         emailAdAlerts: v.boolean(),
         emailPerformanceDigest: v.boolean(),
         emailTaskActivity: v.boolean(),
+        emailCollaboration: v.boolean(),
+        // Webhook URLs and phone numbers
+        slackWebhookUrl: v.optional(v.union(v.string(), v.null())),
+        teamsWebhookUrl: v.optional(v.union(v.string(), v.null())),
       })
     ),
     regionalPreferences: v.optional(
@@ -692,7 +704,7 @@ export default defineSchema({
     isPinned: v.boolean(), // Whether the message is pinned to the channel
     pinnedAtMs: v.union(v.number(), v.null()), // When the message was pinned
     pinnedBy: v.union(v.string(), v.null()), // User ID who pinned the message
-    sharedTo: v.union(v.array(v.union(v.literal('slack'), v.literal('teams'), v.literal('whatsapp'))), v.null()), // External platforms message was shared to
+    sharedTo: v.optional(v.union(v.array(v.union(v.literal('slack'), v.literal('teams'), v.literal('whatsapp'), v.literal('email'))), v.null())), // External platforms message was shared to
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_channel_createdAtMs_legacyId', ['workspaceId', 'channelType', 'createdAtMs', 'legacyId'])

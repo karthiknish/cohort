@@ -17,12 +17,13 @@ interface NotificationPreferencesCardProps {
   emailAdAlertsEnabled: boolean
   emailPerformanceDigestEnabled: boolean
   emailTaskActivityEnabled: boolean
+  emailCollaborationEnabled: boolean
   savingPreferences: boolean
   profilePhone: string
   slackWebhookUrl: string
   teamsWebhookUrl: string
   onPreferenceToggle: (
-    type: 'tasks' | 'collaboration' | 'slackTasks' | 'slackCollaboration' | 'teamsTasks' | 'teamsCollaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity',
+    type: 'tasks' | 'collaboration' | 'slackTasks' | 'slackCollaboration' | 'teamsTasks' | 'teamsCollaboration' | 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity' | 'emailCollaboration',
     checked: boolean
   ) => void
 }
@@ -39,6 +40,7 @@ export function NotificationPreferencesCard({
   emailAdAlertsEnabled,
   emailPerformanceDigestEnabled,
   emailTaskActivityEnabled,
+  emailCollaborationEnabled,
   savingPreferences,
   profilePhone,
   slackWebhookUrl,
@@ -92,13 +94,27 @@ export function NotificationPreferencesCard({
 
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Tasks & Collaboration</p>
+                  <p className="text-sm font-medium text-foreground">Tasks & Activity</p>
                   <p className="text-sm text-muted-foreground">Emails for task updates, comments, and mentions.</p>
                 </div>
                 <Checkbox
                   checked={emailTaskActivityEnabled}
                   onChange={(e) => {
                     onPreferenceToggle('emailTaskActivity', e.target.checked)
+                  }}
+                  disabled={notificationsLoading || savingPreferences}
+                />
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Collaboration Messages</p>
+                  <p className="text-sm text-muted-foreground">Receive email notifications for new collaboration chat messages.</p>
+                </div>
+                <Checkbox
+                  checked={emailCollaborationEnabled}
+                  onChange={(e) => {
+                    onPreferenceToggle('emailCollaboration', e.target.checked)
                   }}
                   disabled={notificationsLoading || savingPreferences}
                 />

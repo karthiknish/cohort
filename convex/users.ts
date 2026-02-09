@@ -34,9 +34,16 @@ const userZ = z.object({
     .object({
       whatsappTasks: z.boolean(),
       whatsappCollaboration: z.boolean(),
+      slackTasks: z.boolean(),
+      slackCollaboration: z.boolean(),
+      teamsTasks: z.boolean(),
+      teamsCollaboration: z.boolean(),
       emailAdAlerts: z.boolean(),
       emailPerformanceDigest: z.boolean(),
       emailTaskActivity: z.boolean(),
+      emailCollaboration: z.boolean(),
+      slackWebhookUrl: z.string().nullable().optional(),
+      teamsWebhookUrl: z.string().nullable().optional(),
     })
     .nullable(),
   regionalPreferences: z
@@ -340,9 +347,16 @@ export const bulkUpsert = zAuthenticatedMutation({
           .object({
             whatsappTasks: z.boolean(),
             whatsappCollaboration: z.boolean(),
+            slackTasks: z.boolean(),
+            slackCollaboration: z.boolean(),
+            teamsTasks: z.boolean(),
+            teamsCollaboration: z.boolean(),
             emailAdAlerts: z.boolean(),
             emailPerformanceDigest: z.boolean(),
             emailTaskActivity: z.boolean(),
+            emailCollaboration: z.boolean(),
+            slackWebhookUrl: z.string().nullable().optional(),
+            teamsWebhookUrl: z.string().nullable().optional(),
           })
           .optional(),
         regionalPreferences: z
@@ -387,9 +401,16 @@ export const bulkUpsert = zAuthenticatedMutation({
           | {
               whatsappTasks: boolean
               whatsappCollaboration: boolean
+              slackTasks: boolean
+              slackCollaboration: boolean
+              teamsTasks: boolean
+              teamsCollaboration: boolean
               emailAdAlerts: boolean
               emailPerformanceDigest: boolean
               emailTaskActivity: boolean
+              emailCollaboration: boolean
+              slackWebhookUrl?: string | null
+              teamsWebhookUrl?: string | null
             }
           | undefined,
         regionalPreferences: (user.regionalPreferences ?? undefined) as

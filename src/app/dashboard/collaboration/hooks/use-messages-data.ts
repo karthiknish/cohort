@@ -342,7 +342,7 @@ export function useMessagesData({
 
         if (!prefs) return
 
-        const sharedTo: Array<'slack' | 'teams' | 'whatsapp'> = []
+        const sharedTo: Array<'slack' | 'teams' | 'whatsapp' | 'email'> = []
 
         // Send to Slack if enabled
         if (prefs.slackCollaboration && prefs.slackWebhookUrl) {
@@ -416,6 +416,30 @@ export function useMessagesData({
             }
           } catch (error) {
             console.error('Failed to send to WhatsApp:', error)
+          }
+        }
+
+        // Send to Email if enabled
+        if (prefs.emailCollaboration) {
+          try {
+            const response = await fetch('/api/integrations/email/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messageType: 'collaboration',
+                text: message.content,
+                metadata: {
+                  senderName: message.senderName,
+                  conversationUrl: `${window.location.origin}/dashboard/collaboration`,
+                },
+              }),
+            })
+
+            if (response.ok) {
+              sharedTo.push('email')
+            }
+          } catch (error) {
+            console.error('Failed to send to Email:', error)
           }
         }
 
