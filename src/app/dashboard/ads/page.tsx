@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, Suspense, lazy } from 'react'
 
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 
@@ -14,21 +14,24 @@ import { AdConnectionsCard } from '@/components/dashboard/ad-connections-card'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { DateRangePicker } from './components/date-range-picker'
+import { Skeleton } from '@/components/ui/skeleton'
 
+// Static imports for critical components
 import {
-  AdsSkeleton,
-  CampaignManagementCard,
   CrossChannelOverviewCard,
-  CustomInsightsCard,
-  ComparisonViewCard,
-  FormulaBuilderCard,
   PerformanceSummaryCard,
   MetricsTableCard,
   WorkflowCard,
   SetupAlerts,
-  AlgorithmicInsightsCard,
-  InsightsChartsCard,
 } from './components'
+
+// Lazy imports for heavy components
+const CampaignManagementCard = lazy(() => import('./components/campaign-management-card').then(m => ({ default: m.CampaignManagementCard })))
+const CustomInsightsCard = lazy(() => import('./components/custom-insights-card').then(m => ({ default: m.CustomInsightsCard })))
+const ComparisonViewCard = lazy(() => import('./components/comparison-view-card').then(m => ({ default: m.ComparisonViewCard })))
+const FormulaBuilderCard = lazy(() => import('./components/formula-builder-card').then(m => ({ default: m.FormulaBuilderCard })))
+const AlgorithmicInsightsCard = lazy(() => import('./components/algorithmic-insights-card').then(m => ({ default: m.AlgorithmicInsightsCard })))
+const InsightsChartsCard = lazy(() => import('./components/insights-charts-card').then(m => ({ default: m.InsightsChartsCard })))
 
 import {
   useAdsMetrics,
@@ -144,9 +147,9 @@ export default function AdsPage() {
     })
   }, [connectionErrors, loadMoreError, metricError, suppressMetricsErrors, toast])
 
-  // Loading state
+  // Loading state - let the loading.tsx handle the skeleton UI
   const isInitialLoading = initialMetricsLoading && !integrationStatuses
-  if (isInitialLoading) return <AdsSkeleton />
+  if (isInitialLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /></div>
 
   const showWorkflow =
     !isPreviewMode &&
@@ -210,20 +213,22 @@ export default function AdsPage() {
                 <h2 className="text-lg font-semibold">Campaign Management</h2>
                 <DateRangePicker value={dateRange} onChange={setDateRange} />
               </div>
-              <div className="mt-4 grid gap-4">
-                {adPlatforms
-                  .filter((p) => connectedProviders[p.id])
-                  .map((platform) => (
-                    <CampaignManagementCard
-                      key={platform.id}
-                      providerId={platform.id}
-                      providerName={platform.name}
-                      isConnected={connectedProviders[platform.id]!}
-                      dateRange={dateRange}
-                      onRefresh={handleManualRefresh}
-                    />
-                  ))}
-              </div>
+              <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+                <div className="mt-4 grid gap-4">
+                  {adPlatforms
+                    .filter((p) => connectedProviders[p.id])
+                    .map((platform) => (
+                      <CampaignManagementCard
+                        key={platform.id}
+                        providerId={platform.id}
+                        providerName={platform.name}
+                        isConnected={connectedProviders[platform.id]!}
+                        dateRange={dateRange}
+                        onRefresh={handleManualRefresh}
+                      />
+                    ))}
+                </div>
+              </Suspense>
             </FadeIn>
           )}
         </>
@@ -255,43 +260,53 @@ export default function AdsPage() {
       </FadeIn>
 
       <FadeIn>
-        <AlgorithmicInsightsCard
-          insights={algorithmicInsights.insights}
-          globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
-          providerEfficiencyScores={algorithmicInsights.providerEfficiencyScores}
-          loading={metricsLoading || initialMetricsLoading}
-        />
+        <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+          <AlgorithmicInsightsCard
+            insights={algorithmicInsights.insights}
+            globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
+            providerEfficiencyScores={algorithmicInsights.providerEfficiencyScores}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </Suspense>
       </FadeIn>
 
       <FadeIn>
-        <InsightsChartsCard
-          analysis={algorithmicInsights.analysis}
-          loading={metricsLoading || initialMetricsLoading}
-        />
+        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+          <InsightsChartsCard
+            analysis={algorithmicInsights.analysis}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </Suspense>
       </FadeIn>
 
       <FadeIn>
-        <ComparisonViewCard
-          periodComparison={periodComparison}
-          providerComparison={providerComparison}
-          loading={metricsLoading || initialMetricsLoading}
-        />
+        <Suspense fallback={<Skeleton className="h-[250px] w-full" />}>
+          <ComparisonViewCard
+            periodComparison={periodComparison}
+            providerComparison={providerComparison}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </Suspense>
       </FadeIn>
 
       <FadeIn>
-        <CustomInsightsCard
-          derivedMetrics={hasMetricData ? derivedMetrics : null}
-          processedMetrics={processedMetrics}
-          loading={metricsLoading || initialMetricsLoading}
-        />
+        <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+          <CustomInsightsCard
+            derivedMetrics={hasMetricData ? derivedMetrics : null}
+            processedMetrics={processedMetrics}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </Suspense>
       </FadeIn>
 
       <FadeIn>
-        <FormulaBuilderCard
-          formulaEditor={formulaEditor}
-          metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
-          loading={metricsLoading || initialMetricsLoading}
-        />
+        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+          <FormulaBuilderCard
+            formulaEditor={formulaEditor}
+            metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </Suspense>
       </FadeIn>
 
       <FadeIn>

@@ -56,7 +56,7 @@ function isRetryableError(error: AgentError): boolean {
   // Auth errors should trigger token refresh, not retry
   if (error instanceof AgentAuthError) return false
   // Use the retryable flag for other errors
-  return error.retryable
+  return error.isRetryable
 }
 
 /**
@@ -143,9 +143,9 @@ export async function fetchWithRetry<T = unknown>(
 
       // 429 - Wait for Retry-After header
       if (response.status === 429) {
-        const retryAfter = error.retryAfter || 60
+        const retryAfterSeconds = error.retryAfterMs ? error.retryAfterMs / 1000 : 60
         if (attempts < maxRetries) {
-          const delayMs = retryAfter * 1000
+          const delayMs = retryAfterSeconds * 1000
           onRetry?.(attempts, error, delayMs)
           await wait(delayMs, signal)
           continue

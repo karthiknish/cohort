@@ -1,21 +1,22 @@
 import { authService } from '@/services/auth'
-export class ApiClientError extends Error {
-  readonly status?: number
-  readonly code?: string
-  readonly details?: unknown
+import { UnifiedError } from './errors/unified-error'
 
+export class ApiClientError extends UnifiedError {
   constructor(
     message: string,
     options: { status?: number; code?: string; details?: unknown; cause?: unknown } = {}
   ) {
-    super(message)
+    super({
+      message,
+      status: options.status,
+      code: options.code,
+      details:
+        options.details && typeof options.details === 'object' && !Array.isArray(options.details)
+          ? (options.details as Record<string, string[]>)
+          : undefined,
+      cause: options.cause,
+    })
     this.name = 'ApiClientError'
-    this.status = options.status
-    this.code = options.code
-    this.details = options.details
-    if (options.cause) {
-      this.cause = options.cause
-    }
   }
 }
 import { CacheManager } from '@/lib/cache/cache-manager'

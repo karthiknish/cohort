@@ -1,74 +1,53 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
-import { ConvexHttpClient } from 'convex/browser'
-
-import { getToken } from '@/lib/auth-server'
+import { createApiHandler } from '@/lib/api-handler'
 import { debugApi } from '@/lib/convex-api'
+import { ConvexHttpClient } from 'convex/browser'
+import { getToken } from '@/lib/auth-server'
 
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url)
+const querySchema = z.object({
+  mode: z.enum(['count', 'list', 'whoami']).default('count'),
+  limit: z.string().optional().default('200').transform((val) => {
+    const num = parseInt(val, 10)
+    if (!Number.isFinite(num) || num < 1) return 200
+    return Math.min(num, 1000)
+  }),
+})
 
-  const mode = url.searchParams.get('mode') ?? 'count'
-  const limit = Number(url.searchParams.get('limit') ?? '200')
-  const resolvedLimit = Number.isFinite(limit) ? limit : 200
+export const GET = createApiHandler(
+  {
+    auth: 'required',
+    querySchema,
+    rateLimit: 'standard',
+  },
+  async (_req, { query }) => {
+    const { mode, limit } = query
 
-  const requestId = req.headers.get('x-vercel-id') ?? crypto.randomUUID()
+    const convexUrl = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
+    if (!convexUrl) {
+      return { success: false, error: 'Convex not configured', code: 'CONFIG_ERROR' }
+    }
 
-  const convexUrl = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!convexUrl) {
-    return NextResponse.json(
-      { ok: false, requestId, error: 'Convex not configured', debug: { hasConvexUrl: false } },
-      { status: 500 }
-    )
-  }
+    const convexToken = await getToken()
+    if (!convexToken) {
+      return { success: false, error: 'No Convex token available', code: 'AUTH_ERROR' }
+    }
 
-  let convexToken: string | null = null
-  try {
-    convexToken = (await getToken()) ?? null
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        requestId,
-        error: 'Failed to read Better Auth session',
-        debug: { convexUrl, tokenError: error instanceof Error ? error.message : String(error) },
-      },
-      { status: 401 }
-    )
-  }
+    const convex = new ConvexHttpClient(convexUrl)
+    convex.setAuth(convexToken)
 
-  if (!convexToken) {
-    return NextResponse.json(
-      { ok: false, requestId, error: 'No Better Auth session', debug: { convexUrl } },
-      { status: 401 }
-    )
-  }
-
-  const convex = new ConvexHttpClient(convexUrl, { auth: convexToken })
-
-  try {
     const whoami = await convex.query(debugApi.whoami, {})
 
     if (mode === 'whoami') {
-      return NextResponse.json({ ok: true, requestId, mode, whoami })
+      return { whoami }
     }
 
     if (mode === 'list') {
-      const rows = await convex.query(debugApi.listAnyClients, { limit: resolvedLimit })
-      return NextResponse.json({ ok: true, requestId, mode, whoami, rows })
+      const rows = await convex.query(debugApi.listAnyClients, { limit })
+      return { whoami, rows, count: rows.length }
     }
 
-    const result = await convex.query(debugApi.countClientsByWorkspace, { limit: resolvedLimit })
-    return NextResponse.json({ ok: true, requestId, mode, whoami, result })
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        requestId,
-        error: error instanceof Error ? error.message : String(error),
-        debug: { convexUrl },
-      },
-      { status: 500 }
-    )
+    const result = await convex.query(debugApi.countClientsByWorkspace, { limit })
+    return { whoami, result }
   }
-}
+)

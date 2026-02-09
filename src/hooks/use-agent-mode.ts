@@ -209,8 +209,9 @@ export function useAgentMode(): UseAgentModeReturn {
     }
 
     // Start countdown for rate limit errors
-    if (err.type === 'rate-limit' && err.retryAfter) {
-      startRateLimitCountdown(err.retryAfter)
+    const retryAfterSeconds = err.retryAfterMs ? err.retryAfterMs / 1000 : undefined
+    if (err.type === 'rate-limit' && retryAfterSeconds) {
+      startRateLimitCountdown(retryAfterSeconds)
     }
 
     // Show user-friendly error message

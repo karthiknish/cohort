@@ -1,10 +1,11 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+
 import { AuthUser, SignUpData, authService } from '@/services/auth'
 import { authClient } from '@/lib/auth-client'
+import { isNetworkError as checkIsNetworkError } from '@/lib/error-utils'
 
-// Error types for better error handling
 export type AuthErrorCode =
   | 'BOOTSTRAP_FAILED'
   | 'SESSION_SYNC_FAILED'
@@ -28,13 +29,6 @@ function createAuthError(
   retryable = false
 ): AuthError {
   return { code, message, details, retryable }
-}
-
-function isNetworkError(error: unknown): boolean {
-  if (error instanceof TypeError && error.message.includes('fetch')) return true
-  if (error instanceof Error && error.name === 'AbortError') return true
-  if (error instanceof Error && error.message.toLowerCase().includes('network')) return true
-  return false
 }
 
 // Helper to sync session cookies (sets cohorts_role, cohorts_status, etc.)
@@ -125,7 +119,7 @@ async function syncSessionCookies(retries = 2): Promise<{ success: boolean; erro
         console.warn('[AuthContext] Session sync error:', error)
       }
 
-      if (isNetworkError(error)) {
+      if (checkIsNetworkError(error)) {
         if (attempt < retries) {
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
           continue
@@ -305,7 +299,7 @@ async function callBootstrap(retries = 3): Promise<BootstrapResult> {
         console.warn('[AuthContext] Bootstrap call error:', error)
       }
 
-      if (isNetworkError(error)) {
+      if (checkIsNetworkError(error)) {
         if (attempt < retries - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
           continue

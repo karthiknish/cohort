@@ -3,12 +3,17 @@ import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 
 import type { MetricRecord } from './types'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
+import { getRetryableErrorMessage } from './retry-fetch'
 import { formatProviderName } from '@/lib/themes'
+import { UnifiedError } from '@/lib/errors/unified-error'
 
 // Re-export from retry-fetch for convenience
-export { ApiError, NetworkError, getRetryableErrorMessage } from './retry-fetch'
+export { getRetryableErrorMessage } from './retry-fetch'
 export type { RetryOptions } from './retry-fetch'
+
+// Re-export UnifiedError as the standard error class
+export { UnifiedError as ApiError }
+export { UnifiedError as NetworkError }
 
 // Re-export theme-related functions from centralized theme
 export {

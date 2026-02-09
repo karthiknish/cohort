@@ -1,45 +1,44 @@
 import { ConvexError } from 'convex/values'
 
 import { AppErrorData } from './convex-errors'
-
-/**
- * Agent-specific error classes for better error handling and categorization.
- */
+import { UnifiedError } from './errors/unified-error'
 
 export type AgentErrorType = 'network' | 'rate-limit' | 'auth' | 'server' | 'validation' | 'unknown'
 
 export interface AgentErrorDetails {
   type: AgentErrorType
   message: string
-  retryAfter?: number // seconds until retry is allowed (for rate limiting)
+  retryAfter?: number
   retryable: boolean
   originalError?: unknown
 }
 
-/**
- * Base class for Agent Mode errors
- */
-export class AgentError extends Error {
+export class AgentError extends UnifiedError {
   readonly type: AgentErrorType
-  readonly retryAfter?: number
-  readonly retryable: boolean
   readonly originalError?: unknown
 
   constructor(details: AgentErrorDetails) {
-    super(details.message)
+    super({
+      message: details.message,
+      status: details.type === 'auth' ? 401 : details.type === 'rate-limit' ? 429 : details.type === 'server' ? 503 : 500,
+      code: details.type.toUpperCase().replace('-', '_'),
+      isRetryable: details.retryable,
+      isAuthError: details.type === 'auth',
+      isRateLimitError: details.type === 'rate-limit',
+      retryAfterMs: details.retryAfter ? details.retryAfter * 1000 : undefined,
+      cause: details.originalError,
+    })
     this.name = 'AgentError'
     this.type = details.type
-    this.retryAfter = details.retryAfter
-    this.retryable = details.retryable
     this.originalError = details.originalError
   }
 
-  toJSON() {
+  override toJSON() {
     return {
       type: this.type,
       message: this.message,
-      retryAfter: this.retryAfter,
-      retryable: this.retryable,
+      retryAfter: this.retryAfterMs ? this.retryAfterMs / 1000 : undefined,
+      retryable: this.isRetryable,
     }
   }
 }

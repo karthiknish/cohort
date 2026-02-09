@@ -28,6 +28,39 @@ const STORAGE_KEY_SELECTED = 'cohorts.dashboard.selectedClient'
 
 const ClientContext = createContext<ClientContextValue | undefined>(undefined)
 
+// Helper function to map convex rows to ClientRecord
+function mapClients(rows: any[]): ClientRecord[] {
+  const list = rows.map((row) => ({
+    id: row.legacyId,
+    name: row.name,
+    accountManager: row.accountManager,
+    teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
+    billingEmail: row.billingEmail ?? null,
+    stripeCustomerId: row.stripeCustomerId ?? null,
+    lastInvoiceStatus: row.lastInvoiceStatus ?? null,
+    lastInvoiceAmount: row.lastInvoiceAmount ?? null,
+    lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
+    lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
+    lastInvoiceNumber: row.lastInvoiceNumber ?? null,
+    lastInvoiceUrl: row.lastInvoiceUrl ?? null,
+    lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
+    createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
+    updatedAt: row.updatedAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
+  }))
+
+  list.sort((a, b) => a.name.localeCompare(b.name))
+  return list
+}
+
+// Helper to extract rows from convex result
+function extractRows(convexClients: any): any[] {
+  if (Array.isArray(convexClients)) return convexClients
+  if (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray(convexClients.items)) {
+    return convexClients.items
+  }
+  return []
+}
+
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, isSyncing } = useAuth()
 
@@ -38,7 +71,6 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   const [previewEnabled, setPreviewEnabled] = useState(false)
   const selectionBeforePreviewRef = useRef<string | null>(null)
-  const lastWorkspaceIdRef = useRef<string | null>(null)
 
   // Use utility to get workspaceId - handles empty string and fallback to user.id
   const workspaceId = getWorkspaceId(user)
@@ -50,7 +82,6 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === 'admin'
 
   // Skip client query if user doesn't have agencyId (not synced to Convex yet)
-  // This prevents USER_NOT_FOUND errors on pages that don't need client data
   const shouldSkipClients = previewEnabled || !canQuery || !user?.agencyId
 
   const convexClientsArgs = useMemo(() => (shouldSkipClients
@@ -66,67 +97,30 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const convexCreateClient = useMutation(clientsApi.create)
   const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
 
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production' || window.location.search.includes('debug=true')) {
-      console.log('[ClientProvider] State Update:', {
-        authLoading,
-        isSyncing,
-        workspaceId,
-        canQuery,
-        hasConvexResult: convexClients !== undefined,
-        convexResultLength: Array.isArray(convexClients) ? convexClients.length : (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)) ? (convexClients as any).items.length : 'N/A',
-        rawConvexResult: convexClients
-      })
-    }
-  }, [authLoading, isSyncing, workspaceId, canQuery, convexClients])
-
   const storageKey = useMemo(() => {
     return workspaceId ? `${STORAGE_KEY_SELECTED}:${workspaceId}` : STORAGE_KEY_SELECTED
   }, [workspaceId])
 
-  useEffect(() => {
-    if (previewEnabled) {
-      return
-    }
-
-    if (!workspaceId) {
-      if (selectedClientId !== null) {
-        setSelectedClientId(null)
-      }
-      lastWorkspaceIdRef.current = null
-      return
-    }
-
-    if (lastWorkspaceIdRef.current && lastWorkspaceIdRef.current !== workspaceId) {
-      if (selectedClientId !== null) {
-        setSelectedClientId(null)
-      }
-    }
-    lastWorkspaceIdRef.current = workspaceId
-
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    if (selectedClientId) {
-      return
-    }
-
-    try {
-      const storedSelected = window.localStorage.getItem(storageKey)
-      if (storedSelected && storedSelected !== selectedClientId) {
-        setSelectedClientId(storedSelected)
-      }
-    } catch (storageError) {
-      console.warn('[ClientProvider] failed to hydrate stored client selection', storageError)
-    }
-  }, [previewEnabled, selectedClientId, storageKey, workspaceId])
-
+  // Single effect for preview mode setup and teardown
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const syncPreview = () => {
-      setPreviewEnabled(isPreviewModeEnabled())
+      const isEnabled = isPreviewModeEnabled()
+      setPreviewEnabled(isEnabled)
+
+      if (isEnabled) {
+        // Entering preview mode
+        selectionBeforePreviewRef.current = selectedClientId
+        const previewClients = getPreviewClients()
+        setSelectedClientId(previewClients[0]?.id ?? null)
+        setError(null)
+        setLoading(false)
+      } else if (selectionBeforePreviewRef.current !== null) {
+        // Leaving preview mode - restore previous selection
+        setSelectedClientId(selectionBeforePreviewRef.current)
+        selectionBeforePreviewRef.current = null
+      }
     }
 
     const onStorage = (event: StorageEvent) => {
@@ -135,124 +129,39 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const onPreviewEvent = () => {
-      syncPreview()
-    }
-
     window.addEventListener('storage', onStorage)
-    window.addEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener)
+    window.addEventListener(PREVIEW_MODE_EVENT, syncPreview as EventListener)
     syncPreview()
 
     return () => {
       window.removeEventListener('storage', onStorage)
-      window.removeEventListener(PREVIEW_MODE_EVENT, onPreviewEvent as EventListener)
+      window.removeEventListener(PREVIEW_MODE_EVENT, syncPreview as EventListener)
     }
-  }, [])
+  }, [selectedClientId])
 
+  // Single effect for data loading, error handling, and client selection
   useEffect(() => {
-    if (!previewEnabled) {
-      return
-    }
-
-    // Entering preview mode: snapshot selection.
-    if (selectionBeforePreviewRef.current === null) {
-      selectionBeforePreviewRef.current = selectedClientId
-    }
-
-    const previewClients = getPreviewClients()
-    const previewSelection = previewClients[0]?.id ?? null
-    if (previewSelection !== selectedClientId) {
-      setSelectedClientId(previewSelection)
-    }
-    setError(null)
-    setLoading(false)
-  }, [previewEnabled, selectedClientId])
-
-  const clientsResolved = previewEnabled || (canQuery && convexClients !== undefined)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    // In preview mode, don't persist selection (avoid overwriting the real workspace selection).
+    // Handle preview mode
     if (previewEnabled) {
-      return
-    }
-
-    if (!workspaceId) {
-      return
-    }
-
-    if (!selectedClientId) {
-      if (clientsResolved) {
-        window.localStorage.removeItem(storageKey)
-      }
-      return
-    }
-
-    try {
-      window.localStorage.setItem(storageKey, selectedClientId)
-    } catch (storageError) {
-      console.warn('[ClientProvider] failed to persist client selection', storageError)
-    }
-  }, [clientsResolved, previewEnabled, selectedClientId, storageKey, workspaceId])
-
-  const fetchClients = useCallback(async (): Promise<ClientRecord[]> => {
-    if (previewEnabled) {
-      return getPreviewClients()
-    }
-
-    if (!workspaceId) {
-      return []
-    }
-
-    if (convexClients === undefined) {
-      return []
-    }
-
-    const rows = Array.isArray(convexClients) ? convexClients : (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)) ? (convexClients as any).items : []
-    const list: ClientRecord[] = rows.map((row: any) => ({
-      id: row.legacyId,
-      name: row.name,
-      accountManager: row.accountManager,
-      teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
-      billingEmail: row.billingEmail ?? null,
-      stripeCustomerId: row.stripeCustomerId ?? null,
-      lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-      lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-      lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-      lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
-      lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-      lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-      lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
-      createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
-      updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
-    }))
-
-    list.sort((a, b) => a.name.localeCompare(b.name))
-    return list
-  }, [previewEnabled, workspaceId, convexClients])
-
-  useEffect(() => {
-    if (previewEnabled) {
-      setSelectedClientId((current) => current ?? getPreviewClients()[0]?.id ?? null)
-      setError(null)
       setLoading(false)
+      setError(null)
       return
     }
 
+    // Wait for auth
     if (authLoading || isSyncing) {
       return
     }
 
+    // No workspace
     if (!workspaceId) {
       setSelectedClientId(null)
-      setError(null)
       setLoading(false)
+      setError(null)
       return
     }
 
+    // Loading state
     if (convexClients === undefined) {
       setLoading(true)
       return
@@ -260,11 +169,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(false)
 
-    const rows = Array.isArray(convexClients)
-      ? convexClients
-      : convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)
-        ? (convexClients as any).items
-        : []
+    const rows = extractRows(convexClients)
 
     if (rows.length === 0) {
       setError('No clients found for this workspace')
@@ -272,25 +177,48 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
 
     setError(null)
-  }, [authLoading, isSyncing, previewEnabled, workspaceId, convexClients, retryKey])
 
+    // Sync selected client
+    const clients = mapClients(rows)
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
+    const targetId = stored && clients.some((c) => c.id === stored) ? stored : clients[0]?.id ?? null
+
+    if (targetId !== selectedClientId) {
+      setSelectedClientId(targetId)
+    }
+  }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey, selectedClientId, retryKey])
+
+  // Effect for persisting selection to localStorage
   useEffect(() => {
-    if (previewEnabled) {
-      return
-    }
+    if (typeof window === 'undefined') return
+    if (previewEnabled) return
+    if (!workspaceId) return
 
-    // Leaving preview mode: restore prior selection if possible and refresh from API.
-    if (selectionBeforePreviewRef.current !== null) {
-      const previousSelection = selectionBeforePreviewRef.current
-      selectionBeforePreviewRef.current = null
-      setSelectedClientId(previousSelection)
+    if (selectedClientId) {
+      try {
+        window.localStorage.setItem(storageKey, selectedClientId)
+      } catch (e) {
+        console.warn('[ClientProvider] failed to persist client selection', e)
+      }
+    } else {
+      window.localStorage.removeItem(storageKey)
     }
+  }, [previewEnabled, selectedClientId, storageKey, workspaceId])
 
-    if (!authLoading && !isSyncing && user?.id) {
-      void fetchClients()
-    }
-  }, [previewEnabled, authLoading, isSyncing, user?.id, fetchClients])
+  // Debug logging in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production' && !window.location.search.includes('debug=true')) return
 
+    console.log('[ClientProvider] State:', {
+      authLoading,
+      isSyncing,
+      workspaceId,
+      canQuery,
+      hasConvexResult: convexClients !== undefined,
+    })
+  }, [authLoading, isSyncing, workspaceId, canQuery, convexClients])
+
+  // Memoized clients list
   const resolvedClients = useMemo<ClientRecord[]>(() => {
     if (previewEnabled) {
       return getPreviewClients()
@@ -300,59 +228,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       return []
     }
 
-    const rows = Array.isArray(convexClients) ? convexClients : (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray((convexClients as any).items)) ? (convexClients as any).items : []
-    const list: ClientRecord[] = rows.map((row: any) => ({
-      id: row.legacyId,
-      name: row.name,
-      accountManager: row.accountManager,
-      teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
-      billingEmail: row.billingEmail ?? null,
-      stripeCustomerId: row.stripeCustomerId ?? null,
-      lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-      lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-      lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-      lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
-      lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-      lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-      lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
-      createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
-      updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
-    }))
-
-    list.sort((a, b) => a.name.localeCompare(b.name))
-    return list
+    return mapClients(extractRows(convexClients))
   }, [previewEnabled, workspaceId, convexClients])
 
-  useEffect(() => {
-    if (resolvedClients.length === 0) {
-      if (clientsResolved && selectedClientId !== null) {
-        setSelectedClientId(null)
-      }
-      return
-    }
-
-    if (selectedClientId && resolvedClients.some((client) => client.id === selectedClientId)) {
-      return
-    }
-
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
-    const nextId = stored && resolvedClients.some((client) => client.id === stored)
-      ? stored
-      : resolvedClients[0]?.id ?? null
-
-    if (nextId !== selectedClientId) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[ClientProvider] Syncing selectedClientId: ${selectedClientId} -> ${nextId}`, {
-          reason: !selectedClientId ? 'initial-load' : 'ref-change'
-        })
-      }
-      setSelectedClientId(nextId)
-    }
-  }, [clientsResolved, resolvedClients, selectedClientId, storageKey])
-
   const refreshClients = useCallback(async () => {
-    return await fetchClients()
-  }, [fetchClients])
+    return resolvedClients
+  }, [resolvedClients])
 
   const retryClients = useCallback(() => {
     setError(null)
@@ -360,11 +241,6 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const selectClient = useCallback((clientId: string | null) => {
-    if (!clientId) {
-      setSelectedClientId(null)
-      return
-    }
-
     setSelectedClientId(clientId)
   }, [])
 
@@ -438,9 +314,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [workspaceId, convexSoftDeleteClient])
 
   const selectedClient = useMemo(() => {
-    if (!selectedClientId) {
-      return null
-    }
+    if (!selectedClientId) return null
     return resolvedClients.find((client) => client.id === selectedClientId) ?? null
   }, [resolvedClients, selectedClientId])
 

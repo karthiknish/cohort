@@ -1,25 +1,27 @@
-export async function bootstrapAndSyncSession(): Promise<void> {
-  const bootstrapRes = await fetch('/api/auth/bootstrap', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-    credentials: 'include',
-  })
+import { apiFetch, ApiClientError } from '@/lib/api-client'
 
-  if (!bootstrapRes.ok) {
-    const payload = await bootstrapRes.json().catch(() => null)
-    throw new Error(payload?.data?.error ?? 'Failed to bootstrap user')
+export async function bootstrapAndSyncSession(): Promise<void> {
+  try {
+    await apiFetch('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      credentials: 'include',
+    })
+  } catch (error) {
+    const message = error instanceof ApiClientError ? error.message : 'Failed to bootstrap user'
+    throw new Error(message)
   }
 
-  const sessionRes = await fetch('/api/auth/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-  })
-
-  if (!sessionRes.ok) {
-    const payload = await sessionRes.json().catch(() => null)
-    throw new Error(payload?.error ?? payload?.message ?? 'Failed to sync session')
+  try {
+    await apiFetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    })
+  } catch (error) {
+    const message = error instanceof ApiClientError ? error.message : 'Failed to sync session'
+    throw new Error(message)
   }
 }
 
