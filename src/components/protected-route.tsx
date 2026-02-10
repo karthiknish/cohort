@@ -90,7 +90,7 @@ function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayPro
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, loading, isSyncing, signOut } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
   // Initialize to false to avoid hydration mismatch, then check in useEffect
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(false)
@@ -105,14 +105,14 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {
     if (!isAwaitingAuthRestore) return
-    if (!loading && !isSyncing) {
+    if (!loading) {
       setIsAwaitingAuthRestore(false)
       return
     }
     if (!hasValidSessionCookie()) {
       setIsAwaitingAuthRestore(false)
     }
-  }, [isAwaitingAuthRestore, loading, isSyncing])
+  }, [isAwaitingAuthRestore, loading])
 
   // Wait for auth to settle and handle pending status
   useEffect(() => {
@@ -138,11 +138,10 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     }
   }, [signOut, router])
 
-  // Show loading or sync overlay during auth states
-  if (loading || isSyncing || isAwaitingAuthRestore) {
+  if (loading || isAwaitingAuthRestore) {
     return (
       <AccessOverlay
-        title={isSyncing ? 'Syncing your session' : 'Loading your workspace'}
+        title="Loading your workspace"
         message="Just a moment while we secure your account and verify your permissions."
         showSpinner
       />

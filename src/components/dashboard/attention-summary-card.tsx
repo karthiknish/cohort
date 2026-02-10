@@ -151,10 +151,10 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
             <PlugZap className={cn('h-4 w-4', (integrationSummary?.failedCount ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground')} />
           </div>
           <div className="mt-2 space-y-1">
-            <p className="text-xl font-semibold tabular-nums">
+            <div className="text-xl font-semibold tabular-nums">
               {loading?.integrations ? <Skeleton className="h-7 w-8" /> : (integrationSummary?.failedCount ?? 0)}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            </div>
+            <div className="text-xs text-muted-foreground">
               {loading?.integrations ? (
                  <Skeleton className="h-3 w-36" />
               ) : integrationSummary ? (
@@ -162,7 +162,7 @@ export function AttentionSummaryCard({ taskSummary, financeSummary, proposals, i
               ) : (
                 'Select workspaces to view'
               )}
-            </p>
+            </div>
           </div>
           <div className="mt-3">
             <Link href="/dashboard/ads">

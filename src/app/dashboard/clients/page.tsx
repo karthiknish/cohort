@@ -80,13 +80,6 @@ function ClientsDashboardContent() {
     }
   }, [searchParams, selectedClientId, selectClient])
 
-  // Fetch stats and invoices on mount or client change
-  useEffect(() => {
-    if (selectedClient) {
-      clientsData.fetchClientStats()
-    }
-  }, [selectedClient, clientsData.fetchClientStats])
-
   // Invoice summary
   const invoiceSummary: InvoiceSummary | null = useMemo(() => {
     if (!selectedClient) return null
@@ -174,7 +167,7 @@ function ClientsDashboardContent() {
     if (refreshing) return
     setRefreshing(true)
     try {
-      await Promise.all([refreshClients(), clientsData.fetchClientStats()])
+      await refreshClients()
       toast({
         title: 'Refreshed',
         description: 'Client data has been updated.',

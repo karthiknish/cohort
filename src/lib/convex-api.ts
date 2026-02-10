@@ -137,6 +137,7 @@ export const collaborationApi = {
   updateMessage: (api as any).collaborationMessages.updateMessage,
   softDeleteMessage: (api as any).collaborationMessages.softDelete,
   toggleReaction: (api as any).collaborationMessages.toggleReaction,
+  updateSharedTo: (api as any).collaborationMessages.updateSharedTo,
   setTyping: (api as any).collaborationTyping.setTyping,
   listTyping: (api as any).collaborationTyping.listForChannel,
   generateUploadUrl: (api as any).files.generateUploadUrl,

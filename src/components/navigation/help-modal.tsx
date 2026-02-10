@@ -372,6 +372,10 @@ export function useHelpModal() {
     let cancelled = false
 
     async function run() {
+      // Wait for onboarding state to load before making decisions
+      // onboardingState is undefined while loading, null if no record exists
+      if (onboardingState === undefined) return
+
       // Local fallback cache (kept for fast repeat loads)
       const hasSeenWelcomeLocal = typeof window !== 'undefined'
         ? window.localStorage.getItem('cohorts_welcome_seen')

@@ -3,7 +3,6 @@ import { ConvexHttpClient } from 'convex/browser'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/lib/api-errors'
-import { getToken, isAuthenticated } from '@/lib/auth-server'
 import { api } from '../../../../../convex/_generated/api'
 
 // Helper to add timeout to promises
@@ -18,37 +17,45 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 const bodySchema = z.object({}).strict()
 
-/**
- * Bootstrap route - creates/updates user in Convex users table
- *
- * Flow:
- * 1. Check Better Auth session via cookies
- * 2. Get Convex JWT using getToken utility
- * 3. Get Better Auth user from Convex
- * 4. Upsert user in custom users table
- */
+async function fetchConvexTokenFromRequest(req: Request): Promise<string | null> {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const response = await fetch(`${siteUrl}/api/auth/convex/token`, {
+      method: 'GET',
+      headers: {
+        'Cookie': req.headers.get('cookie') || '',
+      },
+    })
+    if (!response.ok) return null
+    const data = await response.json()
+    return data?.token || null
+  } catch {
+    return null
+  }
+}
+
 export const POST = createApiHandler(
   {
-    auth: 'optional',
+    auth: 'required',
     bodySchema,
     rateLimit: 'sensitive',
     skipIdempotency: true,
   },
-  async () => {
-    // 1. Check if user is authenticated via Better Auth
-    const authenticated = await isAuthenticated()
-    if (!authenticated) {
+  async (req, { auth }) => {
+    if (!auth.uid) {
       throw new UnauthorizedError('Not authenticated')
     }
 
-    // 2. Get Convex token using the auth utility
-    const convexToken = await withTimeout(getToken(), 5000, 'getToken')
+    const convexToken = await withTimeout(
+      fetchConvexTokenFromRequest(req),
+      5000,
+      'fetchConvexToken'
+    )
 
     if (!convexToken) {
       throw new UnauthorizedError('No Convex token')
     }
 
-    // 3. Create Convex client with token and get Better Auth user
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
     if (!convexUrl) {
       throw new Error('Convex URL not configured')
@@ -60,7 +67,7 @@ export const POST = createApiHandler(
     const currentUser = await withTimeout(
       convex.query(api.auth.getCurrentUser, {}),
       10000,
-      'convex query'
+      'getCurrentUser'
     )
 
     if (!currentUser) {
@@ -75,18 +82,17 @@ export const POST = createApiHandler(
       throw new ValidationError('User email missing')
     }
 
-    // 4. Upsert user in custom users table
     await withTimeout(
       convex.mutation(api.users.bootstrapUpsert, {
         legacyId,
         email: email.toLowerCase(),
         name,
-        role: 'admin', // Default to admin for new users
+        role: 'admin',
         status: 'active',
         agencyId: legacyId,
       }),
       10000,
-      'convex mutation'
+      'bootstrapUpsert'
     )
 
     return {

@@ -2,7 +2,7 @@
 // CLIENTS PAGE - Data Management Hook
 // =============================================================================
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useAction } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
@@ -49,8 +49,6 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
   const createInvoice = useAction(financeInvoicesApi.createAndSend)
 
   // Local state
-  const [stats, setStats] = useState<ClientStats | null>(null)
-  const [statsLoading, setStatsLoading] = useState(false)
   const [invoiceHistory, setInvoiceHistory] = useState<InvoiceData[]>([])
   const [invoiceHistoryLoading, setInvoiceHistoryLoading] = useState(false)
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
@@ -88,7 +86,7 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
 
     setAdAccountsConnected(Array.isArray(formulasConnectivity) ? formulasConnectivity.length > 0 : false)
     setAdStatusLoading(false)
-  }, [selectedClient, formulasConnectivity])
+  }, [selectedClient?.id, formulasConnectivity])
 
   // Initialize email from client
   useEffect(() => {
@@ -98,55 +96,51 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
         email: prev.email || selectedClient.billingEmail || '',
       }))
     }
-  }, [selectedClient])
+  }, [selectedClient?.id, selectedClient?.billingEmail])
 
-  // Fetch client stats
-  const fetchClientStats = useCallback(async () => {
-    if (!selectedClient) {
-      setStats(null)
-      return
+  // Compute stats reactively from Convex queries
+  const stats = useMemo(() => {
+    if (!selectedClient) return null
+
+    let projects: { status?: string }[] = []
+    let tasks: { status?: string }[] = []
+    let proposals: { status?: string }[] = []
+
+    if (isPreviewMode) {
+      projects = getPreviewProjects(selectedClient.id)
+      tasks = getPreviewTasks(selectedClient.id)
+      proposals = getPreviewProposals(selectedClient.id)
+    } else {
+      projects = Array.isArray(projectsRealtime) ? projectsRealtime : []
+      tasks = Array.isArray(tasksRealtime) ? tasksRealtime : []
+      proposals = Array.isArray(proposalsRealtime) ? proposalsRealtime : []
     }
 
-    setStatsLoading(true)
-    try {
-      let projects: { status?: string }[] = []
-      let tasks: { status?: string }[] = []
-      let proposals: { status?: string }[] = []
+    const totalProjects = projects.length
+    const activeProjects = projects.filter((p: { status?: string }) =>
+      p.status === 'active' || p.status === 'in_progress'
+    ).length
 
-      if (isPreviewMode) {
-        projects = getPreviewProjects(selectedClient.id)
-        tasks = getPreviewTasks(selectedClient.id)
-        proposals = getPreviewProposals(selectedClient.id)
-      } else {
-        projects = Array.isArray(projectsRealtime) ? projectsRealtime : []
-        tasks = Array.isArray(tasksRealtime) ? tasksRealtime : []
-        proposals = Array.isArray(proposalsRealtime) ? proposalsRealtime : []
-      }
+    const openTasks = tasks.filter((t: { status?: string }) =>
+      t.status === 'todo' || t.status === 'in-progress'
+    ).length
+    const completedTasks = tasks.filter((t: { status?: string }) =>
+      t.status === 'done' || t.status === 'completed'
+    ).length
 
-      const totalProjects = projects.length
-      const activeProjects = projects.filter((p: { status?: string }) =>
-        p.status === 'active' || p.status === 'in_progress'
-      ).length
+    const pendingProposals = proposals.filter((p: { status?: string }) =>
+      p.status === 'draft' || p.status === 'pending' || p.status === 'sent'
+    ).length
 
-      const openTasks = tasks.filter((t: { status?: string }) =>
-        t.status === 'todo' || t.status === 'in-progress'
-      ).length
-      const completedTasks = tasks.filter((t: { status?: string }) =>
-        t.status === 'done' || t.status === 'completed'
-      ).length
-
-      const pendingProposals = proposals.filter((p: { status?: string }) =>
-        p.status === 'draft' || p.status === 'pending' || p.status === 'sent'
-      ).length
-
-      setStats({ activeProjects, totalProjects, openTasks, completedTasks, pendingProposals })
-    } catch (error) {
-      console.error('Failed to fetch client stats:', error)
-      setStats(null)
-    } finally {
-      setStatsLoading(false)
-    }
+    return { activeProjects, totalProjects, openTasks, completedTasks, pendingProposals }
   }, [selectedClient, isPreviewMode, proposalsRealtime, tasksRealtime, projectsRealtime])
+
+  // Stats loading state based on query loading
+  const statsLoading = !isPreviewMode && (
+    projectsRealtime === undefined ||
+    tasksRealtime === undefined ||
+    proposalsRealtime === undefined
+  )
 
   // Fetch invoice history
   const fetchInvoiceHistory = useCallback(async () => {
@@ -331,7 +325,6 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
     setCreateInvoiceForm,
     setRefundDialogOpen,
     // Handlers
-    fetchClientStats,
     fetchInvoiceHistory,
     handleCreateInvoice,
     handleSendReminder,

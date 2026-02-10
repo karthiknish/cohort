@@ -439,6 +439,52 @@ export const bulkUpsert = zAuthenticatedMutation({
   },
 })
 
+// Safe version that returns null instead of throwing - for client-side queries
+export const getByLegacyIdSafe = query({
+  args: { legacyId: v.string() },
+  handler: async (ctx, args): Promise<{
+    legacyId: string
+    email: string | null
+    name: string | null
+    role: string | null
+    status: string | null
+    agencyId: string | null
+    phoneNumber: string | null
+    photoUrl: string | null
+    notificationPreferences: any
+    regionalPreferences: any
+    createdAtMs: number | null
+    updatedAtMs: number | null
+  } | null> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity || identity.subject !== args.legacyId) {
+      return null
+    }
+
+    const row = await ctx.db
+      .query('users')
+      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!row) return null
+
+    return {
+      legacyId: row.legacyId,
+      email: row.email,
+      name: row.name,
+      role: row.role,
+      status: row.status,
+      agencyId: row.agencyId,
+      phoneNumber: row.phoneNumber ?? null,
+      photoUrl: row.photoUrl ?? null,
+      notificationPreferences: row.notificationPreferences ?? null,
+      regionalPreferences: row.regionalPreferences ?? null,
+      createdAtMs: row.createdAtMs,
+      updatedAtMs: row.updatedAtMs,
+    }
+  },
+})
+
 export const bootstrapUpsert = mutation({
   args: {
     legacyId: v.string(),

@@ -101,6 +101,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     return workspaceId ? `${STORAGE_KEY_SELECTED}:${workspaceId}` : STORAGE_KEY_SELECTED
   }, [workspaceId])
 
+  // Ref to track selectedClientId without triggering effect re-runs
+  const selectedClientIdRef = useRef(selectedClientId)
+  selectedClientIdRef.current = selectedClientId
+
   // Single effect for preview mode setup and teardown
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -110,8 +114,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       setPreviewEnabled(isEnabled)
 
       if (isEnabled) {
-        // Entering preview mode
-        selectionBeforePreviewRef.current = selectedClientId
+        // Entering preview mode - use ref to get current value without deps
+        selectionBeforePreviewRef.current = selectedClientIdRef.current
         const previewClients = getPreviewClients()
         setSelectedClientId(previewClients[0]?.id ?? null)
         setError(null)
@@ -137,7 +141,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('storage', onStorage)
       window.removeEventListener(PREVIEW_MODE_EVENT, syncPreview as EventListener)
     }
-  }, [selectedClientId])
+  }, []) // Empty deps - uses ref to access selectedClientId
 
   // Single effect for data loading, error handling, and client selection
   useEffect(() => {
@@ -178,15 +182,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     setError(null)
 
-    // Sync selected client
+    // Sync selected client - use ref to avoid infinite loop
     const clients = mapClients(rows)
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
     const targetId = stored && clients.some((c) => c.id === stored) ? stored : clients[0]?.id ?? null
 
-    if (targetId !== selectedClientId) {
+    if (targetId !== selectedClientIdRef.current) {
       setSelectedClientId(targetId)
     }
-  }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey, selectedClientId, retryKey])
+  }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey, retryKey])
 
   // Effect for persisting selection to localStorage
   useEffect(() => {
@@ -231,9 +235,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     return mapClients(extractRows(convexClients))
   }, [previewEnabled, workspaceId, convexClients])
 
+  const clientsRef = useRef(resolvedClients)
+  clientsRef.current = resolvedClients
+
   const refreshClients = useCallback(async () => {
-    return resolvedClients
-  }, [resolvedClients])
+    return clientsRef.current
+  }, [])
 
   const retryClients = useCallback(() => {
     setError(null)

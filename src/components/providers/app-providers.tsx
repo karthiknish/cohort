@@ -16,8 +16,8 @@ interface AppProvidersProps {
 
 export function AppProviders({ children, initialToken }: AppProvidersProps) {
   return (
-    <AuthProvider>
-      <ConvexClientProvider initialToken={initialToken}>
+    <ConvexClientProvider initialToken={initialToken}>
+      <AuthProvider>
         <QueryProvider>
           <Suspense fallback={null}>
             <AnalyticsProvider>
@@ -27,7 +27,7 @@ export function AppProviders({ children, initialToken }: AppProvidersProps) {
             </AnalyticsProvider>
           </Suspense>
         </QueryProvider>
-      </ConvexClientProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ConvexClientProvider>
   )
 }
