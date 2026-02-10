@@ -1,6 +1,14 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  fadeInUpVariants,
+  slideInLeftVariants,
+  slideInRightVariants,
+  scaleVariants,
+  shimmerVariants,
+  transitions,
+} from '@/lib/dashboard-animations'
+import {
   FileText,
   Image as ImageIcon,
   Video,
@@ -114,11 +122,12 @@ export function CreativeSocialPreview(props: {
             </div>
           )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl cursor-pointer"
-            >
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            variants={scaleVariants}
+            className="h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl cursor-pointer"
+          >
               <Video className="h-6 w-6 text-white" />
             </motion.div>
           </div>
@@ -168,9 +177,10 @@ export function CreativeSocialPreview(props: {
       <AnimatePresence mode="wait">
         <motion.div
           key={activePlatform}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial="hidden"
+          animate="visible"
           exit={{ opacity: 0, x: -20 }}
+          variants={slideInLeftVariants}
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="w-full"
         >
@@ -436,8 +446,9 @@ export function CreativeSocialPreview(props: {
 
       {performanceSummary && efficiencyScore !== null ? (
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUpVariants}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <Card className="border-none bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] shadow-[0_20px_50px_-10px_rgba(var(--primary),0.1)] rounded-[2.5rem] overflow-hidden">

@@ -13,6 +13,17 @@ import type { ProposalPresentationDeck } from "@/types/proposals"
 import { cn } from "@/lib/utils"
 
 import { motion } from "framer-motion"
+import {
+  fadeInUpVariants,
+  slideInLeftVariants,
+  slideInRightVariants,
+  subtlePulseVariants,
+  blobVariants,
+  blobVariantsSlow,
+  progressVariants,
+  shimmerVariants,
+  transitions,
+} from '@/lib/dashboard-animations'
 
 interface ProposalSubmittedPanelProps {
   summary: ProposalFormData
@@ -63,44 +74,33 @@ Timeline: ${summary.timelines.startTime}
   return (
     <div className="space-y-8">
       {/* Premium Hero Section with Mesh Gradient */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeInUpVariants}
         className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-background p-10 shadow-2xl shadow-primary/5"
       >
         {/* Animated Mesh Gradient Blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-          <motion.div 
-            animate={{ 
-              x: [0, 100, 0],
-              y: [0, 50, 0],
-              scale: [1, 1.2, 1]
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-[20%] -right-[10%] h-[300px] w-[300px] rounded-full bg-primary/10 blur-[100px]" 
+          <motion.div
+            animate="animate"
+            variants={blobVariants}
+            className="absolute -top-[20%] -right-[10%] h-[300px] w-[300px] rounded-full bg-primary/10 blur-[100px]"
           />
-          <motion.div 
-            animate={{ 
-              x: [0, -80, 0],
-              y: [0, 100, 0],
-              scale: [1, 1.1, 1]
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px]" 
+          <motion.div
+            animate="animate"
+            variants={blobVariantsSlow}
+            className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px]"
           />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-full w-full bg-[radial-gradient(circle_at_center,transparent_0%,hsl(var(--background)/0.75)_100%)]" />
         </div>
         
         <div className="relative flex flex-col md:flex-row items-center gap-10">
           <div className="relative shrink-0">
-            {/* Pulsing Ring Background */}
-            <motion.div 
-              animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.1, 0.3, 0.1]
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            <motion.div
+              initial="initial"
+              animate="animate"
+              variants={subtlePulseVariants}
               className="absolute inset-0 bg-primary rounded-3xl"
             />
             <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-primary shadow-2xl shadow-primary/30">
@@ -145,9 +145,10 @@ Timeline: ${summary.timelines.startTime}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <motion.div
-           initial={{ opacity: 0, x: -20 }}
-           animate={{ opacity: 1, x: 0 }}
-           transition={{ duration: 0.5, delay: 0.2 }}
+          initial="hidden"
+          animate="visible"
+          variants={slideInLeftVariants}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card className="h-full border-muted/60 shadow-sm overflow-hidden flex flex-col bg-background/50 backdrop-blur-sm">
             <CardHeader className="bg-muted/30 border-b border-muted/40 pb-4">
@@ -210,9 +211,10 @@ Timeline: ${summary.timelines.startTime}
           </Card>
         </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={slideInRightVariants}
           transition={{ duration: 0.5, delay: 0.3 }}
           className="lg:col-span-2"
         >
