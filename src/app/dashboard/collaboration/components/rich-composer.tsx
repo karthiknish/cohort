@@ -8,7 +8,7 @@ import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { ClientTeamMember } from '@/types/clients'
-import { VoiceInputButton } from '@/components/ui/voice-input-simple'
+import { VoiceInputButton } from '@/components/ui/voice-input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 import { cn } from '@/lib/utils'

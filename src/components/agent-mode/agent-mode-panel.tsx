@@ -1,16 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Mic, MicOff, Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff } from 'lucide-react'
+import { Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { useVoiceInput } from '@/hooks/use-voice-input'
 import { useMentionData } from '@/hooks/use-mention-data'
-import { VoiceWaveform } from '@/components/ui/voice-waveform'
+import { VoiceInputButton } from '@/components/ui/voice-input'
 import { MentionDropdown, formatMention, type MentionItem } from './mention-dropdown'
 import { AgentMessageCard } from './agent-message-card'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/hooks/use-agent-mode'
@@ -145,22 +144,16 @@ export function AgentModePanel({
   // Fetch data for mentions
   const { clients, projects, teams, users, isLoading: mentionsLoading } = useMentionData()
 
-  const {
-    isSupported,
-    isListening,
-    toggleListening,
-    transcript,
-    error: voiceError,
-    timeRemaining,
-    clearError: clearVoiceError,
-  } = useVoiceInput({
-    onResult: (text: string) => {
-      if (text.trim()) {
-        onSendMessage(text)
-        setInputValue('')
-      }
-    },
-  })
+  const handleVoiceTranscript = useCallback((text: string) => {
+    if (text.trim()) {
+      onSendMessage(text)
+      setInputValue('')
+    }
+  }, [onSendMessage])
+
+  const handleVoiceInterim = useCallback((text: string) => {
+    setInputValue(text)
+  }, [])
 
   // Focus input when panel opens
   useEffect(() => {
@@ -183,12 +176,7 @@ export function AgentModePanel({
     }
   }, [messages])
 
-  // Update input with voice transcript in real-time
-  useEffect(() => {
-    if (transcript && isListening) {
-      setInputValue(transcript)
-    }
-  }, [transcript, isListening])
+
 
   const handleSubmit = () => {
     if (inputValue.trim() && !isProcessing) {
@@ -461,29 +449,18 @@ export function AgentModePanel({
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
-                      placeholder={isListening ? 'Listening... say something!' : 'Type your request…'}
-                      className={cn(
-                        'flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm',
-                        isListening && 'placeholder:text-primary placeholder:font-medium'
-                      )}
+                      placeholder="Type your request…"
+                      className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm"
                       disabled={isInputDisabled}
                     />
 
-                    {isSupported && (
-                      <Button
-                        variant={isListening ? 'destructive' : 'outline'}
-                        size="icon"
-                        onClick={toggleListening}
-                        className={cn(
-                          'h-10 w-10 shrink-0 rounded-full transition-all',
-                          isListening && 'animate-pulse ring-2 ring-destructive/50'
-                        )}
-                        disabled={isInputDisabled}
-                        title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
-                      >
-                        {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                      </Button>
-                    )}
+                    <VoiceInputButton
+                      variant="standalone"
+                      showWaveform={false}
+                      onTranscript={handleVoiceTranscript}
+                      onInterimTranscript={handleVoiceInterim}
+                      disabled={isInputDisabled}
+                    />
 
                     <Button
                       size="icon"
@@ -496,32 +473,7 @@ export function AgentModePanel({
                     </Button>
                   </div>
 
-                  {!isSupported && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Voice input works best in Chrome.
-                    </p>
-                  )}
 
-                  {voiceError && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-xs text-destructive flex-1">{voiceError}</p>
-                      <Button variant="ghost" size="sm" onClick={clearVoiceError} className="h-6 px-2 text-xs">
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Voice Waveform - shows when listening */}
-                  {isListening && (
-                    <div className="mt-3">
-                      <VoiceWaveform isActive={isListening} />
-                      {timeRemaining !== null && (
-                        <p className="mt-1 text-center text-xs text-muted-foreground">
-                          {timeRemaining}s remaining
-                        </p>
-                      )}
-                    </div>
-                  )}
 
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {QUICK_SUGGESTIONS.map((suggestion) => (
@@ -577,28 +529,7 @@ export function AgentModePanel({
                 </div>
               )}
 
-              {/* Voice error */}
-              {voiceError && (
-                <div className="border-t bg-destructive/10 px-4 py-2.5 flex items-center gap-2">
-                  <WifiOff className="h-4 w-4 text-destructive shrink-0" />
-                  <p className="text-xs text-destructive flex-1">{voiceError}</p>
-                  <Button variant="ghost" size="sm" onClick={clearVoiceError} className="h-6 px-2 text-xs">
-                    Dismiss
-                  </Button>
-                </div>
-              )}
 
-              {/* Voice Waveform - shows when listening */}
-              {isListening && (
-                <div className="flex flex-col items-center py-3 border-t bg-muted/10">
-                  <VoiceWaveform isActive={isListening} />
-                  {timeRemaining !== null && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {timeRemaining}s remaining
-                    </p>
-                  )}
-                </div>
-              )}
 
               {/* Input */}
               <div className="relative flex items-center gap-2 border-t bg-muted/30 p-3">
@@ -620,29 +551,18 @@ export function AgentModePanel({
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={isListening ? 'Listening... say something!' : 'Type @ to mention • Where would you like to go?'}
-                  className={cn(
-                    'flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm',
-                    isListening && 'placeholder:text-primary placeholder:font-medium'
-                  )}
+                  placeholder="Type @ to mention • Where would you like to go?"
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm"
                   disabled={isInputDisabled}
                 />
 
-                {isSupported && (
-                  <Button
-                    variant={isListening ? 'destructive' : 'outline'}
-                    size="icon"
-                    onClick={toggleListening}
-                    className={cn(
-                      'h-10 w-10 shrink-0 rounded-full transition-all',
-                      isListening && 'animate-pulse ring-2 ring-destructive/50'
-                    )}
-                    disabled={isInputDisabled}
-                    title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
-                  >
-                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </Button>
-                )}
+                <VoiceInputButton
+                  variant="standalone"
+                  showWaveform={false}
+                  onTranscript={handleVoiceTranscript}
+                  onInterimTranscript={handleVoiceInterim}
+                  disabled={isInputDisabled}
+                />
 
                 <Button
                   size="icon"
