@@ -61,7 +61,6 @@ export function useMessagesData({
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
   const [messageInput, setMessageInputState] = useState('')
-  const [senderSelection, setSenderSelection] = useState('')
   const [sending, setSending] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<CollaborationMessage[]>([])
@@ -240,10 +239,9 @@ export function useMessagesData({
   const canLoadMore = selectedChannel ? Boolean(nextCursorByChannel[selectedChannel.id]) : false
 
   const resolveSenderDetails = useCallback(() => {
-    const resolvedName = senderSelection.trim() || fallbackDisplayName
-    const participant = participantNameMap.get(resolvedName.toLowerCase())
-    return { senderName: resolvedName, senderRole: participant?.role ?? null }
-  }, [fallbackDisplayName, participantNameMap, senderSelection])
+    const participant = participantNameMap.get(fallbackDisplayName.toLowerCase())
+    return { senderName: fallbackDisplayName, senderRole: participant?.role ?? fallbackRole }
+  }, [fallbackDisplayName, fallbackRole, participantNameMap])
 
   const {
     stopTyping,
@@ -265,6 +263,7 @@ export function useMessagesData({
     loadThreadReplies,
     loadMoreThreadReplies,
     clearThreadReplies,
+    addThreadReplyToState,
   } = useThreads({ workspaceId })
 
   const mutateChannelMessages = useCallback(
@@ -336,9 +335,7 @@ export function useMessagesData({
     async (message: CollaborationMessage, wsId: string) => {
       try {
         // Fetch notification preferences
-        const prefs = await convex.query((api as any).settings.getMyNotificationPreferences, {
-          workspaceId: wsId,
-        })
+        const prefs = await convex.query((api as any).settings.getMyNotificationPreferences, {})
 
         if (!prefs) return
 
@@ -589,6 +586,13 @@ export function useMessagesData({
           return [...messages, createdMessage]
         })
 
+        // Also add to thread replies if this is a reply
+        if (options?.parentMessageId) {
+          const parentMessage = channelMessages.find((m) => m.id === options.parentMessageId)
+          const threadRootId = parentMessage?.threadRootId || parentMessage?.id || options.parentMessageId
+          addThreadReplyToState(threadRootId, createdMessage)
+        }
+
         clearAttachments()
         setMessageInputState('')
 
@@ -606,7 +610,9 @@ export function useMessagesData({
       }
     },
     [
+      addThreadReplyToState,
       channels,
+      channelMessages,
       channelParticipants,
       clearAttachments,
       createMessage,
@@ -712,17 +718,6 @@ export function useMessagesData({
     [channels, convex, mutateChannelMessages, nextCursorByChannel, toast, workspaceId]
   )
 
-  useEffect(() => {
-    if (!selectedChannelId) return
-
-    setSenderSelection((current) => {
-      if (current && channelParticipants.some((member) => member.name === current)) {
-        return current
-      }
-      return channelParticipants[0]?.name ?? fallbackDisplayName
-    })
-  }, [selectedChannelId, channelParticipants, fallbackDisplayName])
-
   const setMessageInput = useCallback(
     (value: string) => {
       setMessageInputState(value)
@@ -741,8 +736,6 @@ export function useMessagesData({
     isCurrentChannelLoading,
     messagesError: activeMessagesError,
     channelSummaries,
-    senderSelection,
-    setSenderSelection,
     messageInput,
     setMessageInput,
     typingParticipants,

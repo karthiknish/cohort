@@ -3,52 +3,11 @@
 import type { ChangeEvent, RefObject, ClipboardEvent } from 'react'
 import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { Channel } from '../types'
 import type { PendingAttachment } from '../hooks/types'
 import { RichComposer } from './rich-composer'
-
-export interface SenderSelectorProps {
-  value: string
-  onChange: (value: string) => void
-  participants: ClientTeamMember[]
-  disabled?: boolean
-}
-
-export function SenderSelector({
-  value,
-  onChange,
-  participants,
-  disabled = false,
-}: SenderSelectorProps) {
-  return (
-    <Select
-      value={value}
-      onValueChange={onChange}
-      disabled={participants.length === 0 || disabled}
-    >
-      <SelectTrigger className="h-8 w-full text-xs sm:w-56">
-        <SelectValue placeholder="Choose teammate" />
-      </SelectTrigger>
-      <SelectContent>
-        {participants.map((participant) => (
-          <SelectItem key={participant.name} value={participant.name} className="text-xs">
-            {participant.name}
-            {participant.role ? ` • ${participant.role}` : ''}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
 
 export interface PendingAttachmentsListProps {
   attachments: PendingAttachment[]
@@ -160,8 +119,6 @@ export interface MessageComposerProps {
   onAddAttachments: (files: FileList | File[]) => void
   onRemoveAttachment: (attachmentId: string) => void
   channelParticipants: ClientTeamMember[]
-  senderSelection: string
-  onSenderSelectionChange: (value: string) => void
   replyingToMessage: CollaborationMessage | null
   onCancelReply: () => void
   onComposerFocus: () => void
@@ -185,8 +142,6 @@ export function MessageComposer({
   uploading,
   onRemoveAttachment,
   channelParticipants,
-  senderSelection,
-  onSenderSelectionChange,
   replyingToMessage,
   onCancelReply,
   onComposerFocus,
@@ -201,15 +156,6 @@ export function MessageComposer({
   return (
     <div className="border-t border-muted/40 bg-background p-4">
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <SenderSelector
-            value={senderSelection}
-            onChange={onSenderSelectionChange}
-            participants={channelParticipants}
-            disabled={sending}
-          />
-        </div>
-
         <PendingAttachmentsList
           attachments={pendingAttachments}
           uploading={uploading}

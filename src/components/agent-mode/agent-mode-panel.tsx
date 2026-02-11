@@ -10,8 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import { useVoiceInput } from '@/hooks/use-voice-input'
 import { useMentionData } from '@/hooks/use-mention-data'
+import { VoiceWaveform } from '@/components/ui/voice-waveform'
 import { MentionDropdown, formatMention, type MentionItem } from './mention-dropdown'
-import { VoiceWaveform } from './voice-waveform'
 import { AgentMessageCard } from './agent-message-card'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/hooks/use-agent-mode'
 import type { AgentError } from '@/lib/agent-errors'
@@ -145,16 +145,16 @@ export function AgentModePanel({
   // Fetch data for mentions
   const { clients, projects, teams, users, isLoading: mentionsLoading } = useMentionData()
 
-  const { 
-    isSupported, 
-    isListening, 
-    toggleListening, 
-    transcript, 
+  const {
+    isSupported,
+    isListening,
+    toggleListening,
+    transcript,
     error: voiceError,
     timeRemaining,
     clearError: clearVoiceError,
   } = useVoiceInput({
-    onResult: (text) => {
+    onResult: (text: string) => {
       if (text.trim()) {
         onSendMessage(text)
         setInputValue('')

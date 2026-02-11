@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { LoaderCircle, Plus, Trash, X, Building2, Users, Briefcase } from 'lucide-react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { LoaderCircle, Plus, Trash, Building2, Users, Briefcase } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { ClientTeamMember } from '@/types/clients'
@@ -16,6 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MentionInput, MentionableUser } from '@/components/ui/mention-input'
+import { api } from '../../convex/_generated/api'
+import { useQuery } from 'convex/react'
 
 type ClientWorkspaceSelectorProps = {
   className?: string
@@ -46,16 +56,35 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
 
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [newClientName, setNewClientName] = useState('')
-  const [newAccountManager, setNewAccountManager] = useState('')
-  const [newTeamMembers, setNewTeamMembers] = useState('')
+  const [accountManagerInput, setAccountManagerInput] = useState('')
+  const [accountManagerMentions, setAccountManagerMentions] = useState<MentionableUser[]>([])
+  const [teamInput, setTeamInput] = useState('')
+  const [teamMentions, setTeamMentions] = useState<MentionableUser[]>([])
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  const allUsers = useQuery(
+    api.users.listAllUsers,
+    isAdmin ? { limit: 500 } : 'skip'
+  ) as Array<{ id: string; name: string; email?: string; role?: string }> | undefined
+
+  const mentionableUsers: MentionableUser[] = useMemo(() => {
+    if (!allUsers) return []
+    return allUsers.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    }))
+  }, [allUsers])
+
   const resetForm = () => {
     setNewClientName('')
-    setNewAccountManager('')
-    setNewTeamMembers('')
+    setAccountManagerInput('')
+    setAccountManagerMentions([])
+    setTeamInput('')
+    setTeamMentions([])
     setSaving(false)
     setRemovingId(null)
     setErrorMessage(null)
@@ -70,14 +99,17 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
 
   const handleCreateClient = async () => {
     const name = newClientName.trim()
-    const accountManager = newAccountManager.trim()
+    const accountManager = accountManagerMentions[0]?.name ?? ''
 
     if (!name || !accountManager) {
       setErrorMessage('Client name and account manager are required')
       return
     }
 
-    const teamMembers = parseTeamMembers(newTeamMembers)
+    const teamMembers: ClientTeamMember[] = teamMentions.map((user) => ({
+      name: user.name,
+      role: user.role ?? 'Contributor',
+    }))
 
     setSaving(true)
     setErrorMessage(null)
@@ -172,6 +204,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
               <SelectItem
                 key={client.id}
                 value={client.id}
+                hideIndicator
                 className="cursor-pointer py-2.5 px-3 rounded-md mx-1 my-0.5 transition-colors hover:bg-primary/5 focus:bg-primary/5 data-[state=checked]:bg-primary/10 data-[state=checked]:font-medium"
               >
                 <div className="flex items-center gap-3">
@@ -198,136 +231,115 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             <span className="sr-only">Manage clients</span>
           </Button>
 
-          {isSheetOpen && (
-            <div className="fixed inset-0 z-[1500] flex items-center justify-center">
-              <div 
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => !saving && handleSheetChange(false)}
-              />
-              <div className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border bg-background/95 backdrop-blur-md shadow-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-xl font-semibold">Manage Workspaces</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Create and organize client workspaces.</p>
+          <Dialog open={isSheetOpen} onOpenChange={handleSheetChange}>
+            <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Manage Workspaces</DialogTitle>
+                <DialogDescription>Create and organize client workspaces.</DialogDescription>
+              </DialogHeader>
+
+              <form
+                className="space-y-5"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleCreateClient()
+                }}
+              >
+                <div className="space-y-2.5">
+                  <label className="text-sm font-medium" htmlFor="client-name">
+                    Client name
+                  </label>
+                  <Input
+                    id="client-name"
+                    value={newClientName}
+                    onChange={(event) => setNewClientName(event.target.value)}
+                    placeholder="e.g. Horizon Ventures"
+                    required
+                    className="h-11 rounded-lg"
+                  />
+                </div>
+                <MentionInput
+                  label="Account manager"
+                  value={accountManagerInput}
+                  onChange={(value, mentions) => {
+                    setAccountManagerInput(value)
+                    setAccountManagerMentions(mentions.slice(0, 1))
+                  }}
+                  users={mentionableUsers}
+                  placeholder="Type @ to search users..."
+                  disabled={saving}
+                  singleSelect
+                />
+                <MentionInput
+                  label="Team members"
+                  value={teamInput}
+                  onChange={(value, mentions) => {
+                    setTeamInput(value)
+                    setTeamMentions(mentions)
+                  }}
+                  users={mentionableUsers}
+                  placeholder="Type @ to add team members..."
+                  disabled={saving}
+                  allowMultiple
+                  maxMentions={10}
+                />
+                {clients.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-muted-foreground">Existing workspaces</p>
+                    <div className="space-y-2">
+                      {clients.map((client) => (
+                        <div
+                          key={client.id}
+                          className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                              <Building2 className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="font-medium">{client.name}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-full"
+                            onClick={() => void handleRemoveClient(client.id)}
+                            disabled={clients.length === 1 || removingId === client.id || saving}
+                          >
+                            {removingId === client.id ? (
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
+                {errorMessage && (
+                  <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
+                    <p className="text-sm text-destructive">{errorMessage}</p>
+                  </div>
+                )}
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 pt-4 border-t border-border/50">
                   <Button
-                    size="icon"
-                    variant="ghost"
+                    type="button"
+                    variant="outline"
                     onClick={() => handleSheetChange(false)}
                     disabled={saving}
-                    className="rounded-full h-9 w-9"
+                    className="rounded-lg"
                   >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Close</span>
+                    Close
+                  </Button>
+                  <Button type="submit" disabled={saving} className="rounded-lg">
+                    {saving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                    Save client
                   </Button>
                 </div>
-
-                <form
-                  className="space-y-5"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    void handleCreateClient()
-                  }}
-                >
-                  <div className="space-y-2.5">
-                    <label className="text-sm font-medium" htmlFor="client-name">
-                      Client name
-                    </label>
-                    <Input
-                      id="client-name"
-                      value={newClientName}
-                      onChange={(event) => setNewClientName(event.target.value)}
-                      placeholder="e.g. Horizon Ventures"
-                      required
-                      className="h-11 rounded-lg"
-                    />
-                  </div>
-                  <div className="space-y-2.5">
-                    <label className="text-sm font-medium" htmlFor="account-manager">
-                      Account manager
-                    </label>
-                    <Input
-                      id="account-manager"
-                      value={newAccountManager}
-                      onChange={(event) => setNewAccountManager(event.target.value)}
-                      placeholder="Primary owner"
-                      required
-                      className="h-11 rounded-lg"
-                    />
-                  </div>
-                  <div className="space-y-2.5">
-                    <label className="text-sm font-medium" htmlFor="team-members">
-                      Team members
-                    </label>
-                    <Input
-                      id="team-members"
-                      value={newTeamMembers}
-                      onChange={(event) => setNewTeamMembers(event.target.value)}
-                      placeholder="Comma separated: Alex Chen: Paid Media, Priya Patel"
-                      className="h-11 rounded-lg"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Use commas to separate teammates. Add optional roles with a colon.
-                    </p>
-                  </div>
-                  {clients.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-muted-foreground">Existing workspaces</p>
-                      <div className="space-y-2">
-                        {clients.map((client) => (
-                          <div
-                            key={client.id}
-                            className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                <Building2 className="h-3.5 w-3.5" />
-                              </div>
-                              <span className="font-medium">{client.name}</span>
-                            </div>
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-full"
-                              onClick={() => void handleRemoveClient(client.id)}
-                              disabled={clients.length === 1 || removingId === client.id || saving}
-                            >
-                              {removingId === client.id ? (
-                                <LoaderCircle className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {errorMessage && (
-                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
-                      <p className="text-sm text-destructive">{errorMessage}</p>
-                    </div>
-                  )}
-                  <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 pt-4 border-t border-border/50">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSheetChange(false)}
-                      disabled={saving}
-                      className="rounded-lg"
-                    >
-                      Close
-                    </Button>
-                    <Button type="submit" disabled={saving} className="rounded-lg">
-                      {saving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                      Save client
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
+              </form>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

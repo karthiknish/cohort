@@ -289,6 +289,20 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
     [queryClient, workspaceId]
   )
 
+  const addThreadReplyToState = useCallback((rootId: string, message: CollaborationMessage) => {
+    const trimmedRootId = rootId.trim()
+    if (!trimmedRootId || !message.id) return
+
+    setThreadMessagesByRootId((prev) => {
+      const existing = prev[trimmedRootId] ?? []
+      if (existing.some((m) => m.id === message.id)) return prev
+      const updated = [...existing, message].sort(
+        (a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
+      )
+      return { ...prev, [trimmedRootId]: updated }
+    })
+  }, [])
+
   return {
     threadMessagesByRootId,
     threadNextCursorByRootId,
@@ -298,5 +312,6 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
     loadMoreThreadReplies,
     clearThreadReplies,
     addThreadReply,
+    addThreadReplyToState,
   }
 }

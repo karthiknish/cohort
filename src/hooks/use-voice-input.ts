@@ -2,60 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-/**
- * Hook for voice input using the Web Speech API.
- * 
- * Features:
- * - Automatic timeout on silence
- * - Auto-retry on network errors
- * - Max duration safety limit
- * - Detailed error messages
- * 
- * Note: Web Speech API has limited browser support (mainly Chrome).
- * For production, consider using a cloud speech-to-text service.
- */
-
 export interface UseVoiceInputOptions {
-  /** Called when speech is recognized */
   onResult?: (transcript: string) => void
-  /** Called when an error occurs */
   onError?: (error: string) => void
-  /** Language for recognition (default: 'en-US') */
   language?: string
-  /** Continuous listening mode (default: false) */
   continuous?: boolean
-  /** Auto-stop after this many seconds of silence (default: 10) */
   silenceTimeout?: number
-  /** Maximum listening duration in seconds (default: 60) */
   maxDuration?: number
-  /** Maximum retry attempts on network errors (default: 2) */
   maxRetries?: number
 }
 
 export interface UseVoiceInputReturn {
-  /** Whether the browser supports speech recognition */
   isSupported: boolean
-  /** Whether currently listening for speech */
   isListening: boolean
-  /** Start listening for speech */
   startListening: () => void
-  /** Stop listening for speech */
   stopListening: () => void
-  /** Toggle listening state */
   toggleListening: () => void
-  /** Current transcript (interim or final) */
   transcript: string
-  /** Error message, if any */
   error: string | null
-  /** Seconds remaining until max duration (null if not listening) */
   timeRemaining: number | null
-  /** Current retry attempt (0 if not retrying) */
   retryCount: number
-  /** Clear the current error */
   clearError: () => void
 }
 
-// Type for the Web Speech API (not available in all browsers)
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList
   resultIndex: number
@@ -81,30 +50,30 @@ interface SpeechRecognition extends EventTarget {
   onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
   onend: (() => void) | null
   onstart: (() => void) | null
-  onspeechend: (() => void) | null
-  onsoundend: (() => void) | null
 }
 
-// Human-friendly error messages
 const ERROR_MESSAGES: Record<string, string | null> = {
   'not-allowed': 'Microphone access denied. Please allow microphone access in your browser settings.',
   'no-speech': 'No speech detected. Tap the microphone and try speaking again.',
   'network': 'Network error. Retrying...',
   'audio-capture': 'No microphone found. Please check your audio settings.',
-  'aborted': null, // Not an error - user or system aborted
+  'aborted': null,
   'service-not-allowed': 'Speech service not available. Try using Chrome browser.',
   'language-not-supported': 'Language not supported for speech recognition.',
 }
 
 function getSpeechRecognition(): SpeechRecognitionType | null {
   if (typeof window === 'undefined') return null
-  
   return (
     (window as unknown as { SpeechRecognition?: SpeechRecognitionType }).SpeechRecognition ||
     (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionType }).webkitSpeechRecognition ||
     null
   )
 }
+
+// Global singleton to prevent multiple instances
+let globalRecognition: SpeechRecognition | null = null
+let globalIsListening = false
 
 export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInputReturn {
   const {
@@ -116,39 +85,44 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     maxDuration = 60,
     maxRetries = 2,
   } = options
-  
+
   const [isSupported, setIsSupported] = useState(false)
-  const [isListening, setIsListening] = useState(false)
+  const [isListeningState, setIsListeningState] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [retryCount, setRetryCount] = useState(0)
-  
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
-  const onResultRef = useRef(onResult)
-  const onErrorRef = useRef(onError)
+
+  const optionsRef = useRef(options)
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const maxDurationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const lastSpeechTimeRef = useRef<number>(Date.now())
-  const retryCountRef = useRef(0)
-  const shouldRetryRef = useRef(false)
-  
-  // Keep refs in sync
+  const isMountedRef = useRef(true)
+
+  // Keep options ref in sync without causing re-renders
   useEffect(() => {
-    onResultRef.current = onResult
-    onErrorRef.current = onError
-  }, [onResult, onError])
-  
-  // Check browser support on mount
+    optionsRef.current = options
+  })
+
+  // Check browser support once on mount
   useEffect(() => {
     const SpeechRecognition = getSpeechRecognition()
     setIsSupported(SpeechRecognition !== null)
+
+    return () => {
+      isMountedRef.current = false
+    }
   }, [])
 
-  const clearError = useCallback(() => {
-    setError(null)
-  }, [])
+  // Sync with global state
+  useEffect(() => {
+    const checkGlobalState = setInterval(() => {
+      if (isMountedRef.current && globalIsListening !== isListeningState) {
+        setIsListeningState(globalIsListening)
+      }
+    }, 100)
+    return () => clearInterval(checkGlobalState)
+  }, [isListeningState])
 
   const clearTimers = useCallback(() => {
     if (silenceTimeoutRef.current) {
@@ -166,90 +140,94 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
     setTimeRemaining(null)
   }, [])
 
-  const resetSilenceTimer = useCallback(() => {
-    lastSpeechTimeRef.current = Date.now()
-    
-    if (silenceTimeoutRef.current) {
-      clearTimeout(silenceTimeoutRef.current)
-    }
-    
-    silenceTimeoutRef.current = setTimeout(() => {
-      if (recognitionRef.current && isListening) {
-        console.log('[useVoiceInput] Silence timeout reached, stopping')
-        const msg = 'Stopped listening due to silence. Tap mic to try again.'
-        setError(msg)
-        onErrorRef.current?.(msg)
-        recognitionRef.current.stop()
+  const stopListening = useCallback(() => {
+    clearTimers()
+
+    if (globalRecognition) {
+      try {
+        globalRecognition.stop()
+      } catch {
+        // Ignore errors during stop
       }
-    }, silenceTimeout * 1000)
-  }, [silenceTimeout, isListening])
+      globalRecognition = null
+    }
+
+    globalIsListening = false
+    setIsListeningState(false)
+  }, [clearTimers])
 
   const startListening = useCallback(() => {
     const SpeechRecognition = getSpeechRecognition()
-    
+
     if (!SpeechRecognition) {
       const msg = 'Speech recognition is not supported in this browser. Try Chrome.'
       setError(msg)
-      onErrorRef.current?.(msg)
+      optionsRef.current.onError?.(msg)
       return
     }
-    
-    // Clean up any existing instance
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort()
-      } catch {
-        // Ignore errors during cleanup
-      }
-    }
-    
+
+    // Stop any existing recognition
+    stopListening()
+
     clearTimers()
     setError(null)
     setTranscript('')
-    retryCountRef.current = 0
     setRetryCount(0)
-    shouldRetryRef.current = false
-    
+
     const recognition = new SpeechRecognition()
+    globalRecognition = recognition
     recognition.continuous = continuous
     recognition.interimResults = true
     recognition.lang = language
-    
+
     recognition.onstart = () => {
-      setIsListening(true)
+      globalIsListening = true
+      setIsListeningState(true)
       setTimeRemaining(maxDuration)
-      
-      // Start max duration countdown
+
       const startTime = Date.now()
       countdownIntervalRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000)
         const remaining = Math.max(0, maxDuration - elapsed)
         setTimeRemaining(remaining)
-        
+
         if (remaining <= 0) {
           clearTimers()
         }
       }, 1000)
-      
-      // Set max duration safety timeout
+
       maxDurationTimeoutRef.current = setTimeout(() => {
-        if (recognitionRef.current) {
-          console.log('[useVoiceInput] Max duration reached, stopping')
-          recognitionRef.current.stop()
+        if (globalRecognition) {
+          stopListening()
         }
       }, maxDuration * 1000)
-      
-      // Start initial silence timer
-      resetSilenceTimer()
+
+      if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current)
+      silenceTimeoutRef.current = setTimeout(() => {
+        if (globalIsListening && globalRecognition) {
+          const msg = 'Stopped listening due to silence. Tap mic to try again.'
+          setError(msg)
+          optionsRef.current.onError?.(msg)
+          stopListening()
+        }
+      }, silenceTimeout * 1000)
     }
-    
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       try {
         const results = event.results
         if (!results || results.length === 0) return
 
-        // Reset silence timer on any result
-        resetSilenceTimer()
+        // Reset silence timer
+        if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current)
+        silenceTimeoutRef.current = setTimeout(() => {
+          if (globalIsListening && globalRecognition) {
+            const msg = 'Stopped listening due to silence. Tap mic to try again.'
+            setError(msg)
+            optionsRef.current.onError?.(msg)
+            stopListening()
+          }
+        }, silenceTimeout * 1000)
 
         let finalTranscript = ''
         let interimTranscript = ''
@@ -270,131 +248,77 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
         const currentTranscript = (finalTranscript || interimTranscript).trim()
         setTranscript(currentTranscript)
 
-        // Clear error on successful speech
         if (currentTranscript) {
           setError(null)
-          // Reset retry count on successful speech
-          retryCountRef.current = 0
           setRetryCount(0)
         }
 
         if (finalTranscript.trim()) {
-          onResultRef.current?.(finalTranscript.trim())
+          optionsRef.current.onResult?.(finalTranscript.trim())
         }
       } catch (err) {
-        console.error('[useVoiceInput] onresult error:', err)
         const msg = 'Voice input encountered an unexpected error'
         setError(msg)
-        setIsListening(false)
-        onErrorRef.current?.(msg)
+        setIsListeningState(false)
+        optionsRef.current.onError?.(msg)
       }
     }
-    
+
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       const errorType = event.error
       const errorMessage = ERROR_MESSAGES[errorType] ?? event.message ?? `Error: ${errorType}`
-      
-      console.log('[useVoiceInput] Error:', errorType, event.message)
 
-      // Handle aborted - not an error
       if (errorType === 'aborted') {
-        setIsListening(false)
+        globalIsListening = false
+        setIsListeningState(false)
         clearTimers()
         return
       }
 
-      // Handle network error with retry
-      if (errorType === 'network' && retryCountRef.current < maxRetries) {
-        retryCountRef.current++
-        setRetryCount(retryCountRef.current)
-        shouldRetryRef.current = true
-        setError(`Network error. Retrying (${retryCountRef.current}/${maxRetries})...`)
-        // Don't call onError for retryable errors
-        return
-      }
-
-      // Final error
       setError(errorMessage)
-      setIsListening(false)
+      globalIsListening = false
+      setIsListeningState(false)
       clearTimers()
       if (errorMessage) {
-        onErrorRef.current?.(errorMessage)
+        optionsRef.current.onError?.(errorMessage)
       }
     }
-    
-    recognition.onend = () => {
-      setIsListening(false)
-      clearTimers()
-      
-      const currentRecognition = recognitionRef.current
-      if (currentRecognition === recognition) {
-        recognitionRef.current = null
-      }
 
-      // Auto-retry on network error
-      if (shouldRetryRef.current && retryCountRef.current <= maxRetries) {
-        shouldRetryRef.current = false
-        console.log('[useVoiceInput] Auto-retrying after network error...')
-        setTimeout(() => {
-          startListening()
-        }, 500)
+    recognition.onend = () => {
+      globalIsListening = false
+      setIsListeningState(false)
+      clearTimers()
+
+      if (globalRecognition === recognition) {
+        globalRecognition = null
       }
     }
-    
-    recognitionRef.current = recognition
-    
+
     try {
       recognition.start()
     } catch (err) {
-      console.error('[useVoiceInput] Start error:', err)
       const msg = 'Failed to start voice input. Please try again.'
       setError(msg)
-      setIsListening(false)
-      onErrorRef.current?.(msg)
+      setIsListeningState(false)
+      optionsRef.current.onError?.(msg)
     }
-  }, [continuous, language, clearTimers, resetSilenceTimer, maxDuration, maxRetries])
-  
-  const stopListening = useCallback(() => {
-    shouldRetryRef.current = false // Prevent auto-retry when manually stopped
-    clearTimers()
-    
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop()
-      } catch {
-        // Ignore errors during stop
-      }
-      recognitionRef.current = null
-    }
-    setIsListening(false)
-  }, [clearTimers])
-  
+  }, [continuous, language, silenceTimeout, maxDuration, clearTimers, stopListening])
+
   const toggleListening = useCallback(() => {
-    if (isListening) {
+    if (globalIsListening) {
       stopListening()
     } else {
       startListening()
     }
-  }, [isListening, startListening, stopListening])
-  
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      clearTimers()
-      shouldRetryRef.current = false
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort()
-        } catch {
-          // Ignore
-        }
-      }
-    }
-  }, [clearTimers])
-  
+  }, [startListening, stopListening])
+
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
+
   return {
     isSupported,
-    isListening,
+    isListening: isListeningState,
     startListening,
     stopListening,
     toggleListening,

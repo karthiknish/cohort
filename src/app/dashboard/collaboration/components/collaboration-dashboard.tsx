@@ -45,8 +45,6 @@ export function CollaborationDashboard() {
     totalParticipants,
     channelParticipants,
     sharedFiles,
-    senderSelection,
-    setSenderSelection,
     messageInput,
     setMessageInput,
     messageSearchQuery,
@@ -179,9 +177,11 @@ export function CollaborationDashboard() {
                 <Users className="h-3 w-3" /> {totalParticipants} teammates
               </Badge>
               {selectedChannel && (
-                <Badge variant="outline" className="flex items-center gap-1 bg-primary/5 text-primary border-primary/20">
-                  <MessageSquare className="h-3 w-3" /> {channelMessages.length} messages
-                </Badge>
+                <>
+                  <Badge variant="outline" className="flex items-center gap-1 bg-primary/5 text-primary border-primary/20">
+                    <MessageSquare className="h-3 w-3" /> {channelMessages.length} messages
+                  </Badge>
+                </>
               )}
               <div className="flex items-center gap-1">
                 <Button
@@ -238,8 +238,6 @@ export function CollaborationDashboard() {
                 onLoadMore={selectedChannel ? () => { void handleLoadMore(selectedChannel.id) } : undefined}
                 canLoadMore={canLoadMore}
                 loadingMore={loadingMore}
-                senderSelection={senderSelection}
-                onSenderSelectionChange={setSenderSelection}
                 messageInput={messageInput}
                 onMessageInputChange={setMessageInput}
                 messageSearchQuery={messageSearchQuery}

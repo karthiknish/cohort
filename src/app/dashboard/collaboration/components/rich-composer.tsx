@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, ComponentType, DragEvent, KeyboardEvent, MouseEvent } from 'react'
-import { AtSign, Bold, Code, Italic, List, ListOrdered, Paperclip, Quote, Upload } from 'lucide-react'
+import { AtSign, Bold, Code, Italic, List, ListOrdered, Mic, Paperclip, Quote, Upload } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { ClientTeamMember } from '@/types/clients'
+import { VoiceInputButton } from '@/components/ui/voice-input-simple'
 
 import { cn } from '@/lib/utils'
 import { buildMentionMarkup } from '../utils/mentions'
@@ -489,6 +490,11 @@ export function RichComposer({
             <span className="hidden sm:inline">Attach</span>
           </Button>
         )}
+        <div className="mx-1 h-4 w-px bg-muted/60" />
+        <VoiceInputButton
+          onTranscript={(transcript) => onChange(value + (value && !value.endsWith(' ') ? ' ' : '') + transcript)}
+          disabled={disabled}
+        />
       </div>
       <div className="relative">
         <Textarea

@@ -121,7 +121,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
       const normalizedLang = normalizeLanguage(language)
       const codeString = String(children).replace(/\n$/, "")
 
-      if (inline) {
+      if (inline || !codeString.includes('\n')) {
         return (
           <code className={cn(
             "rounded bg-muted px-1.5 py-0.5 text-[13px] font-mono text-primary/90",
@@ -132,9 +132,8 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         )
       }
 
-      // Multi-line code block with syntax highlighting
       return (
-        <div className="group relative mt-3 rounded-lg border border-muted/60 overflow-hidden">
+        <span className="block group relative mt-3 rounded-lg border border-muted/60 overflow-hidden">
           {/* Language label and copy button */}
           <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5 border-b border-muted/40">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -159,7 +158,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
           >
             {codeString}
           </SyntaxHighlighter>
-        </div>
+        </span>
       )
     },
     a: ({ href, children }: AnchorProps) => {
@@ -169,15 +168,6 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
             {children}
           </span>
-        )
-      }
-      if (isLikelyImageUrl(href)) {
-        return (
-          <LazyImage
-            src={href}
-            alt={typeof children === "string" ? children : "Shared image"}
-            className="mt-3 max-h-80 w-full max-w-xl rounded-md border border-muted/50 object-contain"
-          />
         )
       }
       return (

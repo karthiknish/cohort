@@ -80,8 +80,6 @@ export interface UseCollaborationDataReturn {
   sharedFiles: CollaborationAttachment[]
 
   // Composer
-  senderSelection: string
-  setSenderSelection: (sender: string) => void
   messageInput: string
   setMessageInput: (value: string) => void
   pendingAttachments: PendingAttachment[]

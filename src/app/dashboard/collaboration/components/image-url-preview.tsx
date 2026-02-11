@@ -46,7 +46,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
     <>
       <figure
         className={cn(
-          "group relative inline-block max-w-md overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted",
+          "group relative block max-w-md overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted my-2",
           className
         )}
         onClick={() => setPreviewOpen(true)}

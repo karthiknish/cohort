@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery, useConvexAuth } from 'convex/react'
 import Link from 'next/link'
 import {
   BarChart3,
@@ -356,9 +356,11 @@ export function useHelpModal() {
   const userId = user?.id
   const userCreatedAt = user?.createdAt
 
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth()
+
   const onboardingState = useQuery(
     onboardingApi.getByUserId,
-    userId ? { userId } : 'skip'
+    userId && isConvexAuthenticated ? { userId } : 'skip'
   ) as { welcomeSeenAtMs?: number | null; welcomeSeen?: boolean } | null | undefined
 
   const upsertOnboarding = useMutation(onboardingApi.upsert)

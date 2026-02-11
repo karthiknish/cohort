@@ -39,7 +39,6 @@ export {
 
 // Composer components
 export {
-  SenderSelector,
   PendingAttachmentsList,
   ReplyIndicator,
   MessageComposer,
@@ -70,7 +69,7 @@ export { LinkPreviewCard } from './link-preview-card'
 export type { CollaborationMessagePaneProps } from './message-pane'
 export type { MessageActionsBarProps, ReplyActionsBarProps, MessageEditFormProps, MessageHeaderProps, MessageAvatarProps, DeletedMessageInfoProps, DeletingOverlayProps } from './message-item-parts'
 export type { MessagePaneHeaderProps, MessageSearchBarProps, MessagesErrorStateProps, DateSeparatorProps } from './message-pane-parts'
-export type { SenderSelectorProps, PendingAttachmentsListProps, ReplyIndicatorProps, MessageComposerProps } from './message-composer'
+export type { PendingAttachmentsListProps, ReplyIndicatorProps, MessageComposerProps } from './message-composer'
 export type { ThreadToggleButtonProps, ThreadErrorProps, ThreadLoadingProps, ThreadLoadMoreButtonProps, ThreadReplyButtonProps, StartThreadButtonProps, ThreadRetryButtonProps, ThreadSectionProps } from './thread-section'
 export type { MessageAttachmentsProps } from './message-attachments'
 export type { MessageReactionsProps } from './message-reactions'

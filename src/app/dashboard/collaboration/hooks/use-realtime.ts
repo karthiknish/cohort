@@ -135,7 +135,7 @@ export function useRealtimeMessages({
           limit: REALTIME_MESSAGE_LIMIT + 1,
         }
       : 'skip'
-  ) as Array<ConvexMessageRow> | undefined
+  ) as { items: Array<ConvexMessageRow>; nextCursor: string | null } | undefined
 
   useEffect(() => {
     if (!convexEnabled || !channelId) {
@@ -155,9 +155,9 @@ export function useRealtimeMessages({
       return
     }
 
-    const rows = Array.isArray(convexRows) ? convexRows : []
-    const hasMore = rows.length > REALTIME_MESSAGE_LIMIT
-    const pageRows = hasMore ? rows.slice(0, REALTIME_MESSAGE_LIMIT) : rows
+    const rows = Array.isArray(convexRows.items) ? convexRows.items : []
+    const hasMore = Boolean(convexRows.nextCursor)
+    const pageRows = rows
 
     const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
     const nextCursor =
@@ -171,10 +171,19 @@ export function useRealtimeMessages({
       // `listChannel` is ordered desc; UI expects oldest->newest.
       .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
-    setMessagesByChannel((prev) => ({
-      ...prev,
-      [channelId]: next,
-    }))
+    setMessagesByChannel((prev) => {
+      const existing = prev[channelId] ?? []
+      const serverMessageIds = new Set(next.map((m) => m.id))
+      // Preserve local-only messages (e.g., just sent, not yet in query result)
+      const localOnlyMessages = existing.filter((m) => !serverMessageIds.has(m.id))
+      const merged = [...next, ...localOnlyMessages].sort(
+        (a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
+      )
+      return {
+        ...prev,
+        [channelId]: merged,
+      }
+    })
     setNextCursorByChannel((prev) => ({
       ...prev,
       [channelId]: nextCursor,

@@ -62,8 +62,6 @@ export interface CollaborationMessagePaneProps {
   onLoadMore?: () => void
   canLoadMore?: boolean
   loadingMore?: boolean
-  senderSelection: string
-  onSenderSelectionChange: (value: string) => void
   messageInput: string
   onMessageInputChange: (value: string) => void
   messageSearchQuery: string
@@ -106,8 +104,6 @@ export function CollaborationMessagePane({
   onLoadMore,
   canLoadMore = false,
   loadingMore = false,
-  senderSelection,
-  onSenderSelectionChange,
   messageInput,
   onMessageInputChange,
   messageSearchQuery,
@@ -516,18 +512,18 @@ export function CollaborationMessagePane({
             <MessageContent content={message.content ?? ''} mentions={message.mentions} />
           )}
 
-          {/* Attachments */}
-          {!message.isDeleted && Array.isArray(message.attachments) && message.attachments.length > 0 && (
-            <MessageAttachments attachments={message.attachments} />
-          )}
-
           {/* Image URL Previews */}
-          {!message.isDeleted && imageUrlPreviews.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+          {!message.isDeleted && !editingMessageId && imageUrlPreviews.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
               {imageUrlPreviews.map((url) => (
                 <ImageUrlPreview key={`${message.id}-img-${url}`} url={url} />
               ))}
             </div>
+          )}
+
+          {/* Attachments */}
+          {!message.isDeleted && Array.isArray(message.attachments) && message.attachments.length > 0 && (
+            <MessageAttachments attachments={message.attachments} />
           )}
 
           {/* Link Previews */}
@@ -589,7 +585,10 @@ export function CollaborationMessagePane({
   }
 
   return (
-    <div className="flex min-h-[480px] flex-1 flex-col bg-background/50 lg:h-[640px]">
+    <div className="flex min-h-[480px] flex-1 flex-col bg-background/50 lg:h-[640px] relative overflow-hidden">
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[100%] -left-[100%] w-[300%] h-[300%] animate-shimmer bg-gradient-to-br from-transparent via-muted/30 to-transparent opacity-50" />
+      </div>
       <MessagePaneHeader
         channel={channel}
         channelParticipants={channelParticipants}
@@ -709,8 +708,6 @@ export function CollaborationMessagePane({
         onAddAttachments={onAddAttachments}
         onRemoveAttachment={onRemoveAttachment}
         channelParticipants={channelParticipants}
-        senderSelection={senderSelection}
-        onSenderSelectionChange={onSenderSelectionChange}
         replyingToMessage={replyingToMessage}
         onCancelReply={handleCancelReply}
         onComposerFocus={onComposerFocus}

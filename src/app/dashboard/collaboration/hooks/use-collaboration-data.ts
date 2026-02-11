@@ -116,8 +116,6 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     channelParticipants,
     sharedFiles,
 
-    senderSelection: messages.senderSelection,
-    setSenderSelection: messages.setSenderSelection,
     messageInput: messages.messageInput,
     setMessageInput: messages.setMessageInput,
     pendingAttachments,

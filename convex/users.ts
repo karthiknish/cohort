@@ -219,6 +219,34 @@ export const listWorkspaceMembers = zAuthenticatedQuery({
   },
 })
 
+export const listAllUsers = zAuthenticatedQuery({
+  args: { limit: z.number().optional() },
+  returns: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().optional(),
+      role: z.string().optional(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 500, 1), 1000)
+
+    const rows = await ctx.db
+      .query('users')
+      .take(limit)
+
+    return rows
+      .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
+      .map((row) => ({
+        id: row.legacyId,
+        name: row.name ?? row.email ?? 'Unnamed user',
+        email: row.email ?? undefined,
+        role: row.role ?? undefined,
+      }))
+  },
+})
+
 /**
  * Get workspace ID for a given user ID.
  * Returns agencyId if set, otherwise falls back to userId.
