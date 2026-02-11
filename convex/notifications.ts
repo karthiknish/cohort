@@ -1,4 +1,4 @@
-import { query, mutation } from './_generated/server'
+import { query, mutation, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import {
@@ -245,5 +245,58 @@ export const ack = zWorkspaceMutation({
     }
 
     return { ok: true }
+  },
+})
+
+export const createInternal = internalMutation({
+  args: {
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    kind: v.string(),
+    title: v.string(),
+    body: v.string(),
+    actorId: v.union(v.string(), v.null()),
+    actorName: v.union(v.string(), v.null()),
+    resourceType: v.string(),
+    resourceId: v.string(),
+    recipientRoles: v.array(v.string()),
+    recipientClientId: v.union(v.string(), v.null()),
+    recipientClientIds: v.optional(v.array(v.string())),
+    recipientUserIds: v.optional(v.array(v.string())),
+    metadata: v.optional(v.any()),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query('notifications')
+      .withIndex('by_workspaceId_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (existing) {
+      return { ok: true, id: existing._id }
+    }
+
+    const id = await ctx.db.insert('notifications', {
+      workspaceId: args.workspaceId,
+      legacyId: args.legacyId,
+      kind: args.kind,
+      title: args.title,
+      body: args.body,
+      actorId: args.actorId,
+      actorName: args.actorName,
+      resourceType: args.resourceType,
+      resourceId: args.resourceId,
+      recipientRoles: args.recipientRoles,
+      recipientClientId: args.recipientClientId,
+      recipientClientIds: args.recipientClientIds,
+      recipientUserIds: args.recipientUserIds,
+      metadata: args.metadata,
+      createdAtMs: args.createdAtMs,
+      updatedAtMs: args.updatedAtMs,
+      readBy: [],
+      acknowledgedBy: [],
+    })
+    return { ok: true, id }
   },
 })

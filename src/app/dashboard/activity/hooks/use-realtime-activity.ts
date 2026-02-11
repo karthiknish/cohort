@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
-import { useQuery } from 'convex/react'
+import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useMutation } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { api } from '@/lib/convex-api'
+import { notificationsApi } from '@/lib/convex-api'
 
 import { getPreviewActivity } from '@/lib/preview-data'
 import type { Activity } from '@/types/activity'
@@ -20,9 +21,7 @@ export function useRealtimeActivity(limitCount = 20) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-
-  // Track current limit for pagination
-  const currentLimitRef = useRef(limitCount)
+  const [currentLimit, setCurrentLimit] = useState(limitCount)
 
   const convexEnabled =
     !isPreviewMode && Boolean(user?.agencyId) && Boolean(selectedClient?.id)
@@ -33,13 +32,14 @@ export function useRealtimeActivity(limitCount = 20) {
       ? {
           workspaceId: String(user!.agencyId),
           clientId: String(selectedClient!.id),
-          limit: currentLimitRef.current,
+          limit: currentLimit,
         }
       : 'skip'
   ) as Activity[] | undefined
 
+  const ackMutation = useMutation(notificationsApi.ack)
+
   const refresh = useCallback(async () => {
-    // Convex query is the source of truth; "refresh" just clears error.
     setError(null)
   }, [])
 
@@ -48,11 +48,11 @@ export function useRealtimeActivity(limitCount = 20) {
     if (!isPreviewMode) return
 
     const previewActivities = getPreviewActivity(selectedClient?.id ?? null)
-    setActivities(previewActivities.slice(0, currentLimitRef.current))
+    setActivities(previewActivities.slice(0, currentLimit))
     setLoading(false)
     setError(null)
-    setHasMore(previewActivities.length > currentLimitRef.current)
-  }, [isPreviewMode, selectedClient?.id])
+    setHasMore(previewActivities.length > currentLimit)
+  }, [isPreviewMode, selectedClient?.id, currentLimit])
 
   // Convex realtime path
   useEffect(() => {
@@ -66,18 +66,33 @@ export function useRealtimeActivity(limitCount = 20) {
 
     setActivities(convexActivities)
     setLoading(false)
-    // If we got back fewer items than the limit, we've reached the end
-    setHasMore(convexActivities.length === currentLimitRef.current)
-  }, [convexActivities, convexEnabled])
+    setHasMore(convexActivities.length === currentLimit)
+  }, [convexActivities, convexEnabled, currentLimit])
 
   const loadMore = useCallback(() => {
-    currentLimitRef.current += limitCount
+    setCurrentLimit((prev) => prev + limitCount)
   }, [limitCount])
 
   const retry = useCallback(() => {
-    currentLimitRef.current = limitCount
+    setCurrentLimit(limitCount)
     void refresh()
   }, [refresh, limitCount])
+
+  const markAsRead = useCallback(
+    async (ids: string[]) => {
+      if (!user?.agencyId || ids.length === 0) return
+      try {
+        await ackMutation({
+          workspaceId: String(user.agencyId),
+          ids,
+          action: 'read',
+        })
+      } catch {
+        // Silently fail - UI will update on next query refresh
+      }
+    },
+    [ackMutation, user?.agencyId]
+  )
 
   return {
     activities,
@@ -87,5 +102,6 @@ export function useRealtimeActivity(limitCount = 20) {
     loadMore,
     hasMore,
     isRealTime: convexEnabled,
+    markAsRead,
   }
 }

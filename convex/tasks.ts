@@ -19,9 +19,7 @@ import {
 } from './functions'
 import { z } from 'zod/v4'
 import { v } from 'convex/values'
-
-
-
+import { internal } from './_generated/api'
 
 import { Errors } from './errors'
  
@@ -294,6 +292,41 @@ export const createTask = zAuthenticatedMutation({
       deletedAtMs: null,
     })
 
+    const nowMs = ctx.now
+    const segments = [`Priority: ${args.priority}`, `Status: ${args.status}`]
+    if (args.assignedTo?.length) segments.push(`Assigned: ${args.assignedTo.join(', ')}`)
+    if (args.dueDateMs) {
+      segments.push(`Due: ${new Date(args.dueDateMs).toLocaleDateString()}`)
+    }
+    if (args.client) segments.push(`Client: ${args.client}`)
+
+    const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
+    const baseRoles = clientId ? ['admin', 'team', 'client'] : ['admin', 'team']
+
+    await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+      workspaceId: args.workspaceId,
+      legacyId: `task:created:${legacyId}`,
+      kind: 'task.created',
+      title: `Task created: ${args.title}`,
+      body: segments.join(' · '),
+      actorId: ctx.legacyId ?? null,
+      actorName: null,
+      resourceType: 'task',
+      resourceId: legacyId,
+      recipientRoles: baseRoles,
+      recipientClientId: clientId,
+      recipientClientIds: clientId ? [clientId] : undefined,
+      metadata: {
+        status: args.status,
+        priority: args.priority,
+        assignedTo: args.assignedTo,
+        clientId,
+        clientName: args.client ?? null,
+      },
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+    })
+
     return legacyId
   },
 })
@@ -334,6 +367,46 @@ export const patchTask = zAuthenticatedMutation({
     if (args.update.tags !== undefined) patch.tags = args.update.tags
 
     await ctx.db.patch(row._id, patch)
+
+    const changes: string[] = []
+    if (args.update.status !== undefined) changes.push(`Status → ${args.update.status}`)
+    if (args.update.priority !== undefined) changes.push(`Priority → ${args.update.priority}`)
+    if (args.update.title !== undefined) changes.push(`Title → ${args.update.title}`)
+    if (args.update.assignedTo !== undefined) changes.push(`Assigned → ${args.update.assignedTo.join(', ') || 'unassigned'}`)
+    if (args.update.dueDateMs !== undefined) {
+      changes.push(args.update.dueDateMs ? `Due → ${new Date(args.update.dueDateMs).toLocaleDateString()}` : 'Due date removed')
+    }
+    if (args.update.tags !== undefined) changes.push(`Tags → ${args.update.tags.join(', ') || 'none'}`)
+
+    if (changes.length > 0) {
+      const nowMs = ctx.now
+      const clientId = typeof row.clientId === 'string' && row.clientId.length > 0 ? row.clientId : null
+      const baseRoles = clientId ? ['admin', 'team', 'client'] : ['admin', 'team']
+
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `task:updated:${args.legacyId}:${nowMs}`,
+        kind: 'task.updated',
+        title: `Task updated: ${row.title}`,
+        body: changes.join(' · '),
+        actorId: ctx.legacyId ?? null,
+        actorName: null,
+        resourceType: 'task',
+        resourceId: args.legacyId,
+        recipientRoles: baseRoles,
+        recipientClientId: clientId,
+        recipientClientIds: clientId ? [clientId] : undefined,
+        metadata: {
+          status: (args.update.status ?? row.status) as string,
+          priority: (args.update.priority ?? row.priority) as string,
+          clientId,
+          clientName: (row as any).client ?? null,
+          changes,
+        },
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs,
+      })
+    }
 
     return { ok: true }
   },

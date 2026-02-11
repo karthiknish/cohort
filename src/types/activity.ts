@@ -1,14 +1,25 @@
-export type ActivityType = 'project_updated' | 'task_completed' | 'message_posted'
+export type ActivityType =
+  | 'project_updated'
+  | 'task_activity'
+  | 'message_posted'
+  | 'client_added'
+  | 'invoice_sent'
+  | 'proposal_created'
 
 export interface Activity {
   id: string
   type: ActivityType
-  timestamp: string // ISO string
+  timestamp: string
   clientId: string
-  entityId: string // projectId, taskId, or messageId
-  entityName: string // for display purposes
-  description: string // human-readable description
-  navigationUrl: string // URL to navigate to the related item
+  entityId: string
+  entityName: string
+  description: string
+  navigationUrl: string
+  userId?: string
+  userName?: string
+  userAvatar?: string
+  isRead?: boolean
+  kind?: string
 }
 
 export interface ActivityResponse {

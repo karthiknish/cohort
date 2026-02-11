@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter } from 'lucide-react'
+import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter, User, Receipt, FileText } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,16 +21,22 @@ import { useRealtimeActivity } from '@/app/dashboard/activity/hooks/use-realtime
 import { useActivityNotifications } from '@/app/dashboard/activity/hooks/use-activity-notifications'
 import type { Activity } from '@/types/activity'
 
-const ACTIVITY_ICONS = {
+const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
   project_updated: Briefcase,
-  task_completed: CircleCheck,
+  task_activity: CircleCheck,
   message_posted: MessageSquare,
+  client_added: User,
+  invoice_sent: Receipt,
+  proposal_created: FileText,
 }
 
-const ACTIVITY_COLORS = {
+const ACTIVITY_COLORS: Record<string, string> = {
   project_updated: 'text-blue-600',
-  task_completed: 'text-green-600',
+  task_activity: 'text-green-600',
   message_posted: 'text-purple-600',
+  client_added: 'text-cyan-600',
+  invoice_sent: 'text-amber-600',
+  proposal_created: 'text-indigo-600',
 }
 
 function formatRelativeTime(timestamp: string): string {
@@ -56,8 +62,8 @@ interface ActivityItemProps {
 }
 
 function ActivityItem({ activity }: ActivityItemProps) {
-  const Icon = ACTIVITY_ICONS[activity.type]
-  const colorClass = ACTIVITY_COLORS[activity.type]
+  const Icon = ACTIVITY_ICONS[activity.type] ?? Briefcase
+  const colorClass = ACTIVITY_COLORS[activity.type] ?? 'text-gray-600'
 
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -205,7 +211,7 @@ export function ActivityWidget() {
             </SelectTrigger>
             <SelectContent align="end">
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="task_completed">Tasks</SelectItem>
+              <SelectItem value="task_activity">Tasks</SelectItem>
               <SelectItem value="message_posted">Messages</SelectItem>
               <SelectItem value="project_updated">Projects</SelectItem>
             </SelectContent>

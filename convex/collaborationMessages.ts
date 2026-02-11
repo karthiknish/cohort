@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import type { Id } from './_generated/dataModel'
+import { internal } from './_generated/api'
 import { Errors } from './errors'
 import {
   workspaceMutation,
@@ -400,6 +401,83 @@ export const create = zWorkspaceMutation({
           updatedAtMs: ctx.now,
         })
       }
+    }
+
+    const nowMs = ctx.now
+    const content = typeof args.content === 'string' ? args.content : ''
+    const snippet = content.length > 200 ? `${content.slice(0, 197)}…` : content
+    const preview = args.senderName ? `${args.senderName}: ${snippet || '(no message content)'}` : (snippet || '(no message content)')
+
+    const isClientChannel = args.channelType === 'client'
+    const isProjectChannel = args.channelType === 'project'
+    const clientId = (isClientChannel || isProjectChannel) && typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
+
+    const baseRoles = clientId ? ['admin', 'team', 'client'] : ['admin', 'team']
+
+    const messageTitle = isClientChannel
+      ? 'Client channel update'
+      : isProjectChannel
+        ? 'Project channel update'
+        : 'New collaboration message'
+
+    await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+      workspaceId: args.workspaceId,
+      legacyId: `collab:${args.legacyId}`,
+      kind: 'collaboration.message',
+      title: messageTitle,
+      body: preview,
+      actorId: args.senderId ?? null,
+      actorName: args.senderName ?? null,
+      resourceType: 'collaboration',
+      resourceId: args.legacyId,
+      recipientRoles: baseRoles,
+      recipientClientId: clientId,
+      recipientClientIds: clientId ? [clientId] : undefined,
+      metadata: {
+        channelType: args.channelType,
+        clientId,
+        senderId: args.senderId ?? null,
+        senderRole: args.senderRole ?? null,
+        projectId: isProjectChannel && typeof args.projectId === 'string' ? args.projectId : null,
+      },
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+    })
+
+    const mentions = Array.isArray(args.mentions) ? args.mentions : []
+    for (const mention of mentions) {
+      if (!mention || typeof mention !== 'object') continue
+      const mentionSlug = typeof mention.slug === 'string' ? mention.slug : ''
+      const mentionName = typeof mention.name === 'string' ? mention.name : ''
+      if (!mentionSlug) continue
+
+      const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
+
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `collab:${args.legacyId}:mention:${mentionSlug}`,
+        kind: 'collaboration.mention',
+        title: `${args.senderName ?? 'Someone'} mentioned you`,
+        body: mentionSnippet || '(no message content)',
+        actorId: args.senderId ?? null,
+        actorName: args.senderName ?? null,
+        resourceType: 'collaboration',
+        resourceId: args.legacyId,
+        recipientRoles: ['admin', 'team', 'client'],
+        recipientClientId: clientId,
+        recipientClientIds: clientId ? [clientId] : undefined,
+        metadata: {
+          channelType: args.channelType,
+          clientId,
+          senderId: args.senderId ?? null,
+          senderName: args.senderName ?? null,
+          mentionedName: mentionName,
+          mentionSlug,
+          projectId: isProjectChannel && typeof args.projectId === 'string' ? args.projectId : null,
+        },
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs,
+      })
     }
 
     return args.legacyId

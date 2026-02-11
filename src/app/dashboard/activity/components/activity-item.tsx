@@ -69,7 +69,7 @@ export function ActivityItem({
   const colorClass = ACTIVITY_COLORS[activity.type]
 
   return (
-    <div className={cn('relative group', !activity.isRead && 'bg-muted/20/50')}>
+    <div className={cn('relative group', !activity.isRead && 'bg-muted/30')}>
       {/* Selection checkbox with larger touch target */}
       <div className="absolute left-[-32px] sm:left-[-34px] top-3 sm:top-4">
         <div className="sm:hidden p-2 -m-2 cursor-pointer" onClick={() => onSelectionChange(activity.id, !isSelected)}>
@@ -112,7 +112,7 @@ export function ActivityItem({
           'flex flex-col gap-1 rounded-lg border p-3 transition-colors cursor-pointer',
           activity.isRead
             ? 'border-transparent bg-transparent hover:bg-muted/50 hover:border-muted'
-            : 'border-primary/20 bg-primary/5/30 hover:bg-primary/10',
+            : 'border-primary/20 bg-primary/5 hover:bg-primary/10',
           isSelected && 'ring-2 ring-primary ring-offset-2'
         )}
       >
@@ -149,7 +149,7 @@ export function ActivityItem({
                       e.stopPropagation()
                       onAddReaction(activity.id, reaction.emoji)
                     }}
-                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted hover:bg-muted-70 text-xs"
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted hover:bg-muted/70 text-xs"
                   >
                     <span>{reaction.emoji}</span>
                     <span className="text-muted-foreground">{reaction.count}</span>
@@ -159,10 +159,10 @@ export function ActivityItem({
             )}
 
             {/* Comments count */}
-            {(!activity.comments || activity.comments === 0) && (
+            {typeof activity.comments === 'number' && activity.comments > 0 && (
               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                 <MessageCircle className="h-3 w-3" />
-                0
+                {activity.comments}
               </div>
             )}
 

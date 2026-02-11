@@ -1,6 +1,6 @@
 export type ActivityType =
   | 'project_updated'
-  | 'task_completed'
+  | 'task_activity'
   | 'message_posted'
   | 'client_added'
   | 'invoice_sent'
@@ -22,6 +22,7 @@ export interface EnhancedActivity {
   userAvatar?: string
   isRead?: boolean
   isPinned?: boolean
+  kind?: string
   metadata?: {
     changes?: Array<{ field: string; oldValue: string; newValue: string }>
     impact?: 'low' | 'medium' | 'high'
@@ -37,9 +38,9 @@ export type DateRangeOption = 'all' | 'today' | 'yesterday' | 'week' | 'month' |
 
 export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   project_updated: 'Project Update',
-  task_completed: 'Task Activity',
+  task_activity: 'Task Activity',
   message_posted: 'New Message',
   client_added: 'New Client',
-  invoice_sent: 'Invoice Sent',
-  proposal_created: 'Proposal Created',
+  invoice_sent: 'Invoice',
+  proposal_created: 'Proposal',
 }

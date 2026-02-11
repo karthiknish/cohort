@@ -124,7 +124,7 @@ export function ActivityFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Activity</SelectItem>
-            <SelectItem value="task_completed">Tasks</SelectItem>
+            <SelectItem value="task_activity">Tasks</SelectItem>
             <SelectItem value="message_posted">Messages</SelectItem>
             <SelectItem value="project_updated">Projects</SelectItem>
             <SelectItem value="client_added">Clients</SelectItem>

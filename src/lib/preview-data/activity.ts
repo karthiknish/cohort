@@ -6,7 +6,7 @@ export function getPreviewActivity(clientId: string | null): Activity[] {
     const activities: Activity[] = [
         {
             id: 'preview-activity-1',
-            type: 'task_completed',
+            type: 'task_activity',
             timestamp: isoDaysAgo(0),
             clientId: 'preview-tech-corp',
             entityId: 'preview-task-1',
@@ -36,7 +36,7 @@ export function getPreviewActivity(clientId: string | null): Activity[] {
         },
         {
             id: 'preview-activity-4',
-            type: 'task_completed',
+            type: 'task_activity',
             timestamp: isoDaysAgo(1),
             clientId: 'preview-retail-store',
             entityId: 'preview-task-4',
@@ -66,7 +66,7 @@ export function getPreviewActivity(clientId: string | null): Activity[] {
         },
         {
             id: 'preview-activity-7',
-            type: 'task_completed',
+            type: 'task_activity',
             timestamp: isoDaysAgo(4),
             clientId: 'preview-tech-corp',
             entityId: 'preview-task-5',

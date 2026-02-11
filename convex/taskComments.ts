@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { internal } from './_generated/api'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation, authenticatedMutation } from './functions'
 
@@ -106,6 +107,74 @@ export const create = workspaceMutation({
       parentCommentId: args.parentCommentId ?? null,
       threadRootId: args.threadRootId ?? null,
     })
+
+    const task = await ctx.db
+      .query('tasks')
+      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.taskLegacyId))
+      .unique()
+
+    const taskTitle = task?.title ?? 'Task'
+    const taskClientId = typeof task?.clientId === 'string' && task.clientId.length > 0 ? task.clientId : null
+    const baseRoles = taskClientId ? ['admin', 'team', 'client'] : ['admin', 'team']
+
+    const content = typeof args.content === 'string' ? args.content : ''
+    const snippet = content.length > 200 ? `${content.slice(0, 197)}…` : content
+
+    await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+      workspaceId: args.workspaceId,
+      legacyId: `task:comment:${args.legacyId}`,
+      kind: 'task.comment',
+      title: `New comment: ${taskTitle}`,
+      body: snippet || '(no content)',
+      actorId: args.authorId ?? null,
+      actorName: args.authorName ?? null,
+      resourceType: 'task',
+      resourceId: args.taskLegacyId,
+      recipientRoles: baseRoles,
+      recipientClientId: taskClientId,
+      recipientClientIds: taskClientId ? [taskClientId] : undefined,
+      metadata: {
+        taskId: args.taskLegacyId,
+        commentId: args.legacyId,
+        clientId: taskClientId,
+        clientName: (task as any)?.client ?? null,
+      },
+      createdAtMs: timestamp,
+      updatedAtMs: timestamp,
+    })
+
+    const mentions = args.mentions ?? []
+    for (const mention of mentions) {
+      if (!mention || typeof mention.slug !== 'string' || !mention.slug) continue
+
+      const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
+      const senderName = args.authorName ?? 'Someone'
+
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `task:mention:${args.legacyId}:${mention.slug}`,
+        kind: 'task.mention',
+        title: `${senderName} mentioned you`,
+        body: mentionSnippet || '(no content)',
+        actorId: args.authorId ?? null,
+        actorName: senderName,
+        resourceType: 'task',
+        resourceId: args.taskLegacyId,
+        recipientRoles: ['admin', 'team', 'client'],
+        recipientClientId: taskClientId,
+        recipientClientIds: taskClientId ? [taskClientId] : undefined,
+        metadata: {
+          taskId: args.taskLegacyId,
+          taskTitle,
+          commentId: args.legacyId,
+          mentionedName: mention.name,
+          mentionSlug: mention.slug,
+          clientId: taskClientId,
+        },
+        createdAtMs: timestamp,
+        updatedAtMs: timestamp,
+      })
+    }
 
     return { ok: true } as const
   },

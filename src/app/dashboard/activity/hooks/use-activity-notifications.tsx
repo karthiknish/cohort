@@ -48,7 +48,7 @@ export function useActivityNotifications(activities: Activity[]) {
           icon = <Folder className="h-4 w-4" />
         }
         break
-      case 'task_completed':
+      case 'task_activity':
         if (config.showTaskCompletions) {
           shouldNotify = true
           message = `Task "${activity.entityName}" was completed`
@@ -148,11 +148,11 @@ export function useActivityNotifications(activities: Activity[]) {
           const activityTypes = newActivities.map(a => a.type)
           let message = ''
           
-          if (activityTypes.includes('project_updated') && activityTypes.includes('task_completed')) {
+          if (activityTypes.includes('project_updated') && activityTypes.includes('task_activity')) {
             message = `${newActivities.length} new updates`
           } else if (activityTypes.every(t => t === 'project_updated')) {
             message = `${newActivities.length} project updates`
-          } else if (activityTypes.every(t => t === 'task_completed')) {
+          } else if (activityTypes.every(t => t === 'task_activity')) {
             message = `${newActivities.length} tasks completed`
           } else if (activityTypes.every(t => t === 'message_posted')) {
             message = `${newActivities.length} new messages`

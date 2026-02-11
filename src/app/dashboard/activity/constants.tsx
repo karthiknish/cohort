@@ -2,8 +2,9 @@ import {
   Briefcase,
   CircleCheck,
   MessageSquare,
-  Calendar,
+  Receipt,
   User,
+  FileText,
 } from 'lucide-react'
 import type { ActivityType } from './types'
 
@@ -12,17 +13,17 @@ export const ACTIVITY_ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   project_updated: Briefcase,
-  task_completed: CircleCheck,
+  task_activity: CircleCheck,
   message_posted: MessageSquare,
   client_added: User,
-  invoice_sent: Calendar,
-  proposal_created: Briefcase,
+  invoice_sent: Receipt,
+  proposal_created: FileText,
 }
 
 export const ACTIVITY_COLORS: Record<ActivityType, string> = {
   project_updated:
     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  task_completed:
+  task_activity:
     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   message_posted:
     'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',

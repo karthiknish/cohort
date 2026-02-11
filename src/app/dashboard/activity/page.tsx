@@ -23,7 +23,7 @@ import type { EnhancedActivity, ActivityType, SortOption, DateRangeOption, Statu
 export default function ActivityPage() {
   const { selectedClient } = useClientContext()
   const { toast } = useToast()
-  const { activities, loading, error, retry, hasMore, loadMore } = useRealtimeActivity(20)
+  const { activities, loading, error, retry, hasMore, loadMore, markAsRead } = useRealtimeActivity(20)
 
   // Local state for enhanced features
   const [searchQuery, setSearchQuery] = useState('')
@@ -32,7 +32,6 @@ export default function ActivityPage() {
   const [dateRange, setDateRange] = useState<DateRangeOption>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [selectedActivities, setSelectedActivities] = useState<Set<string>>(new Set())
-  const [readActivities, setReadActivities] = useState<Set<string>>(new Set())
   const [pinnedActivities, setPinnedActivities] = useState<Set<string>>(new Set())
   const [activityReactions, setActivityReactions] = useState<
     Record<string, Array<{ emoji: string; count: number; users: string[] }>>
@@ -52,11 +51,11 @@ export default function ActivityPage() {
     return activities.map((a) => ({
       ...a,
       type: a.type as ActivityType,
-      isRead: readActivities.has(a.id),
+      isRead: a.isRead ?? false,
       isPinned: pinnedActivities.has(a.id),
       reactions: activityReactions[a.id] || [],
     }))
-  }, [activities, readActivities, pinnedActivities, activityReactions])
+  }, [activities, pinnedActivities, activityReactions])
 
   // Apply date range filter (in addition to other filters)
   const dateFilteredActivities = useMemo(() => {
@@ -75,22 +74,22 @@ export default function ActivityPage() {
   }, [toast, retry])
 
   const handleMarkAsRead = useCallback((id: string) => {
-    setReadActivities((prev) => new Set(prev).add(id))
+    void markAsRead([id])
     toast({
       title: 'Activity marked as read',
       description: 'This activity has been marked as read.',
     })
-  }, [toast])
+  }, [toast, markAsRead])
 
   const handleMarkAllAsRead = useCallback(() => {
-    const newReadSet = new Set(readActivities)
-    enhancedActivities.forEach((a) => newReadSet.add(a.id))
-    setReadActivities(newReadSet)
+    const unreadIds = enhancedActivities.filter((a) => !a.isRead).map((a) => a.id)
+    if (unreadIds.length === 0) return
+    void markAsRead(unreadIds)
     toast({
       title: 'All activities marked as read',
-      description: `${enhancedActivities.length} activities marked as read.`,
+      description: `${unreadIds.length} activities marked as read.`,
     })
-  }, [readActivities, enhancedActivities, toast])
+  }, [enhancedActivities, toast, markAsRead])
 
   const handleTogglePin = useCallback((id: string) => {
     setPinnedActivities((prev) => {
