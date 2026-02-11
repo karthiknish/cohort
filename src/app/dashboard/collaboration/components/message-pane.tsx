@@ -441,7 +441,7 @@ export function CollaborationMessagePane({
     )
 
     const bubbleClass = cn(
-      'relative min-w-0 flex-1 space-y-1.5 p-4 rounded-2xl transition-all duration-200',
+      'relative min-w-0 flex-1 flex flex-col space-y-1.5 p-4 rounded-2xl transition-all duration-200',
       isReply ? 'bg-muted/10 border border-muted/30' : 'bg-muted/5 border border-transparent group-hover:bg-muted/10 group-hover:border-muted/20',
       (isSearchResult || isReply) && 'shadow-sm'
     )
@@ -646,6 +646,8 @@ export function CollaborationMessagePane({
                 return (
                   <div
                     key={item.id}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualItem.index}
                     style={{
                       position: 'absolute',
                       top: 0,

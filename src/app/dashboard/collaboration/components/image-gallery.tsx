@@ -35,7 +35,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
       <>
         <figure
           className={cn(
-            "group relative max-w-xl overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted",
+            "group relative max-w-xl overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted my-2",
             className
           )}
           onClick={() => handleImageClick(0)}

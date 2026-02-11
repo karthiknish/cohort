@@ -106,7 +106,7 @@ function highlightChildren(children: ReactNode, terms?: string[]) {
 function createMarkdownComponents(highlightTerms?: string[]): Components {
   return {
     p: ({ children }) => (
-      <p className="leading-relaxed text-sm text-foreground [&:not(:first-child)]:mt-2">{highlightChildren(children, highlightTerms)}</p>
+      <div className="leading-relaxed text-sm text-foreground [&:not(:first-child)]:mt-2">{highlightChildren(children, highlightTerms)}</div>
     ),
     strong: ({ children }) => <strong className="font-semibold text-foreground">{highlightChildren(children, highlightTerms)}</strong>,
     em: ({ children }) => <em className="italic text-foreground">{highlightChildren(children, highlightTerms)}</em>,
@@ -182,7 +182,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         <LazyImage
           src={src}
           alt={alt ?? "Shared image"}
-          className="mt-3 max-h-80 w-full max-w-xl rounded-md border border-muted/50 object-contain"
+          className="block my-3 max-h-80 w-full max-w-xl rounded-md border border-muted/50 object-contain"
         />
       )
     },

@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, ComponentType, DragEvent, KeyboardEvent, MouseEvent } from 'react'
-import { AtSign, Bold, Code, Italic, List, ListOrdered, Mic, Paperclip, Quote, Upload } from 'lucide-react'
+import { AtSign, Bold, Code, Italic, List, ListOrdered, Mic, Paperclip, Quote, Smile, Upload } from 'lucide-react'
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { ClientTeamMember } from '@/types/clients'
 import { VoiceInputButton } from '@/components/ui/voice-input-simple'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 import { cn } from '@/lib/utils'
 import { buildMentionMarkup } from '../utils/mentions'
@@ -67,6 +69,23 @@ export function RichComposer({
   const [highlightedMention, setHighlightedMention] = useState(0)
   const mentionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+
+  const handleEmojiClick = useCallback((emojiData: EmojiClickData) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const newValue = value.slice(0, start) + emojiData.emoji + value.slice(end)
+    onChange(newValue)
+
+    requestAnimationFrame(() => {
+      const newCursor = start + emojiData.emoji.length
+      textarea.setSelectionRange(newCursor, newCursor)
+      textarea.focus()
+    })
+  }, [value, onChange])
 
   const uniqueParticipants = useMemo(() => {
     const map = new Map<string, ClientTeamMember>()
@@ -491,6 +510,27 @@ export function RichComposer({
           </Button>
         )}
         <div className="mx-1 h-4 w-px bg-muted/60" />
+        <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              disabled={disabled}
+              className="h-7 w-7"
+            >
+              <Smile className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <EmojiPicker
+              onEmojiClick={handleEmojiClick}
+              theme={Theme.LIGHT}
+              width={320}
+              height={400}
+            />
+          </PopoverContent>
+        </Popover>
         <VoiceInputButton
           onTranscript={(transcript) => onChange(value + (value && !value.endsWith(' ') ? ' ' : '') + transcript)}
           disabled={disabled}
