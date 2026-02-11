@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { CHART_COLORS } from '@/lib/colors'
 import { formatCurrency } from '../utils'
 
 interface ForecastDatum {
@@ -34,11 +35,11 @@ export function FinanceForecastCard({ data, currency }: FinanceForecastCardProps
   const chartConfig = {
     revenue: {
       label: 'Projected Revenue',
-      color: 'hsl(var(--primary))',
+      color: CHART_COLORS.hsl.primary,
     },
     profit: {
       label: 'Projected Profit',
-      color: 'hsl(142.1 76.2% 36.3%)', // Emerald color
+      color: CHART_COLORS.hsl.emerald,
     },
   } satisfies import('@/components/ui/chart').ChartConfig
 

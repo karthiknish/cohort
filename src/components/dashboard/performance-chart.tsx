@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { ChartConfig } from '@/components/ui/chart'
+import { CHART_COLORS } from '@/lib/colors'
 
 interface MetricRecord {
   date: string
@@ -86,11 +87,11 @@ import {
 const chartConfig = {
   revenue: {
     label: 'Revenue',
-    color: 'hsl(160 84% 39%)', // Emerald-500
+    color: CHART_COLORS.hsl.emerald,
   },
   spend: {
     label: 'Ad Spend',
-    color: 'hsl(0 84% 60%)', // Red-500
+    color: CHART_COLORS.hsl.red,
   },
 } satisfies ChartConfig
 

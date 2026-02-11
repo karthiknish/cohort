@@ -21,6 +21,7 @@ import type { Channel } from '../types'
 import type { ChannelSummary } from '../hooks/types'
 
 import { CheckSquare, FileText } from 'lucide-react'
+import { SEMANTIC_COLORS } from '@/lib/colors'
 
 export function CollaborationDashboard() {
   const searchParams = useSearchParams()
@@ -344,7 +345,7 @@ function CollaborationKanban({ channels, channelSummaries, onSelect }: Collabora
                 <div className="flex items-center gap-3">
                   <div
                     className="h-2.5 w-2.5 rounded-full shadow-sm"
-                    style={{ backgroundColor: typeKey === 'team' ? '#6366f1' : typeKey === 'client' ? '#10b981' : '#f59e0b' }}
+                    style={{ backgroundColor: typeKey === 'team' ? SEMANTIC_COLORS.priority.low : typeKey === 'client' ? SEMANTIC_COLORS.status.active : SEMANTIC_COLORS.status.warning }}
                   />
                   <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
                     {columnLabel[typeKey]}

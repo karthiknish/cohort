@@ -7,6 +7,7 @@ import {
   scaleVariants,
   shimmerVariants,
   transitions,
+  easings,
 } from '@/lib/dashboard-animations'
 import {
   FileText,
@@ -181,7 +182,7 @@ export function CreativeSocialPreview(props: {
           animate="visible"
           exit={{ opacity: 0, x: -20 }}
           variants={slideInLeftVariants}
-          transition={{ duration: 0.3, ease: "easeOut" }}
+          transition={transitions.normal}
           className="w-full"
         >
           {activePlatform === 'instagram' && (
@@ -449,7 +450,7 @@ export function CreativeSocialPreview(props: {
           initial="hidden"
           animate="visible"
           variants={fadeInUpVariants}
-          transition={{ delay: 0.2, duration: 0.5 }}
+          transition={{ ...transitions.slow, delay: 0.2 }}
         >
           <Card className="border-none bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] shadow-[0_20px_50px_-10px_rgba(var(--primary),0.1)] rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pb-4 pt-8 px-8">
@@ -486,7 +487,7 @@ export function CreativeSocialPreview(props: {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${efficiencyScore}%` }}
-                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 1.5, ease: easings.easeOut }}
                     className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full shadow-[0_0_20px_rgba(var(--primary),0.5)]"
                   />
                 </div>

@@ -5,6 +5,7 @@ import { FolderKanban, CircleCheck, TriangleAlert } from 'lucide-react'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib } from '@/lib/retry-utils'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { SEMANTIC_COLORS } from '@/lib/colors'
 
 export type StatusFilter = 'all' | ProjectStatus
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount'
@@ -21,10 +22,10 @@ export const STATUS_CLASSES: Record<ProjectStatus, string> = {
 }
 
 export const STATUS_ACCENT_COLORS: Record<ProjectStatus, string> = {
-  planning: '#64748b', // slate-500
-  active: '#10b981', // emerald-500
-  on_hold: '#f59e0b', // amber-500
-  completed: '#3b82f6', // blue-500
+  planning: SEMANTIC_COLORS.project.planning,
+  active: SEMANTIC_COLORS.project.active,
+  on_hold: SEMANTIC_COLORS.project.onHold,
+  completed: SEMANTIC_COLORS.project.completed,
 }
 
 export const STATUS_ICONS: Record<ProjectStatus, React.ComponentType<{ className?: string }>> = {
@@ -139,11 +140,11 @@ export function formatShortDate(date: Date): string {
 export function milestoneStatusColor(status: string): string {
   switch (status) {
     case 'completed':
-      return '#22c55e'
+      return SEMANTIC_COLORS.status.success
     case 'in_progress':
-      return '#3b82f6'
+      return SEMANTIC_COLORS.status.info
     case 'blocked':
-      return '#f97316'
+      return SEMANTIC_COLORS.priority.high
     case 'planned':
     default:
       return '#6366f1'

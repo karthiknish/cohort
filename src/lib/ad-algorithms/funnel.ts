@@ -1,12 +1,9 @@
-// =============================================================================
-// FUNNEL ANALYSIS ALGORITHMS
-// =============================================================================
-
 import type {
   AdMetricsSummary,
   FunnelStage,
   FunnelAnalysis,
 } from './types'
+import { CHART_COLORS, GRAYS } from '@/lib/colors'
 
 /**
  * Standard ad funnel stages
@@ -167,12 +164,12 @@ export function getFunnelChartData(analysis: FunnelAnalysis): {
   fill: string
   dropOff: number
 }[] {
-  const colors = ['#3b82f6', '#22c55e', '#f59e0b']
-  
+  const colors = [CHART_COLORS.primary[0], CHART_COLORS.primary[1], CHART_COLORS.primary[3]]
+
   return analysis.stages.map((stage, index) => ({
     name: stage.name,
     value: stage.value,
-    fill: colors[index] || '#6b7280',
+    fill: colors[index] || GRAYS[500],
     dropOff: stage.dropOffRate,
   }))
 }

@@ -1,9 +1,5 @@
-/**
- * Integration Alert Email Template
- * Used when an ad platform connection is lost or needs attention.
- */
-
 import { wrapEmailTemplate } from './utils'
+import { EMAIL_COLORS } from '@/lib/colors'
 
 export interface IntegrationAlertTemplateParams {
     providerId: string
@@ -19,39 +15,39 @@ export function integrationAlertTemplate(params: IntegrationAlertTemplateParams)
 
     return wrapEmailTemplate(`
         <div style="margin-bottom: 24px;">
-            <div style="font-size: 24px; font-weight: 700; color: #dc2626; margin-bottom: 8px;">
+            <div style="font-size: 24px; font-weight: 700; color: ${EMAIL_COLORS.error.text}; margin-bottom: 8px;">
                 Action Required: ${providerName} Connection Lost
             </div>
-            <div style="font-size: 16px; color: #4b5563; line-height: 1.5;">
+            <div style="font-size: 16px; color: ${EMAIL_COLORS.body}; line-height: 1.5;">
                 Your connection to <strong>${providerName} Ads</strong> has been interrupted and needs your attention to resume data syncing.
             </div>
         </div>
 
         <div class="content">
-            <div style="padding: 20px; background: #fef2f2; border-radius: 12px; border: 1px solid #fee2e2; margin-bottom: 24px;">
-                <div style="font-weight: 600; color: #991b1b; font-size: 14px; text-transform: uppercase, letter-spacing: 0.05em; margin-bottom: 8px;">
+            <div style="padding: 20px; background: ${EMAIL_COLORS.error.bg}; border-radius: 12px; border: 1px solid ${EMAIL_COLORS.error.border}; margin-bottom: 24px;">
+                <div style="font-weight: 600; color: ${EMAIL_COLORS.error.darkText}; font-size: 14px; text-transform: uppercase, letter-spacing: 0.05em; margin-bottom: 8px;">
                     Reason for failure
                 </div>
-                <div style="font-size: 16px; color: #b91c1c;">
+                <div style="font-size: 16px; color: ${EMAIL_COLORS.error.text};">
                     ${reason}
                 </div>
                 ${errorDetail ? `
-                    <div style="margin-top: 12px; font-size: 13px; color: #ef4444; font-family: monospace;">
+                    <div style="margin-top: 12px; font-size: 13px; color: ${EMAIL_COLORS.error.text}; font-family: monospace;">
                         ${errorDetail}
                     </div>
                 ` : ''}
             </div>
 
             <div style="margin-bottom: 24px;">
-                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 12px;">What should you do?</h3>
-                <p style="font-size: 15px; color: #4b5563; line-height: 1.6;">
+                <h3 style="font-size: 18px; font-weight: 600; color: ${EMAIL_COLORS.heading}; margin-bottom: 12px;">What should you do?</h3>
+                <p style="font-size: 15px; color: ${EMAIL_COLORS.body}; line-height: 1.6;">
                     ${actionRequired || 'Please login to your dashboard and reconnect the integration to ensure your data continues to flow correctly.'}
                 </p>
             </div>
         </div>
 
         <div style="text-align: center; margin-top: 32px;">
-            <a href="https://cohorts.app/dashboard/settings/integrations" class="button" style="background: #111827; padding: 14px 28px;">
+            <a href="https://cohorts.app/dashboard/settings/integrations" class="button" style="background: ${EMAIL_COLORS.button.dark}; padding: 14px 28px;">
                 Reconnect ${providerName}
             </a>
         </div>

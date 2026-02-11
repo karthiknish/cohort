@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { CHART_COLORS } from '@/lib/colors'
 
 export interface FunnelStep {
   id: string
@@ -174,12 +175,11 @@ export function FunnelChart({
   )
 }
 
-// Predefined funnel templates
 export function createAdSpendFunnel(impressions: number, clicks: number, conversions: number): FunnelStep[] {
   return [
-    { id: 'impressions', name: 'Impressions', count: impressions || 0, color: '#3b82f6' },
-    { id: 'clicks', name: 'Clicks', count: clicks || 0, color: '#8b5cf6' },
-    { id: 'conversions', name: 'Conversions', count: conversions || 0, color: '#10b981' },
+    { id: 'impressions', name: 'Impressions', count: impressions || 0, color: CHART_COLORS.funnel.impressions },
+    { id: 'clicks', name: 'Clicks', count: clicks || 0, color: CHART_COLORS.funnel.clicks },
+    { id: 'conversions', name: 'Conversions', count: conversions || 0, color: CHART_COLORS.funnel.conversions },
   ]
 }
 
@@ -191,10 +191,10 @@ export function createEcommerceFunnel(
   purchase: number
 ): FunnelStep[] {
   return [
-    { id: 'visitors', name: 'Visitors', count: visitors || 0, color: '#3b82f6' },
-    { id: 'views', name: 'Product Views', count: productViews || 0, color: '#6366f1' },
-    { id: 'cart', name: 'Add to Cart', count: addToCart || 0, color: '#8b5cf6' },
-    { id: 'checkout', name: 'Checkout', count: checkout || 0, color: '#a855f7' },
-    { id: 'purchase', name: 'Purchase', count: purchase || 0, color: '#10b981' },
+    { id: 'visitors', name: 'Visitors', count: visitors || 0, color: CHART_COLORS.funnel.visitors },
+    { id: 'views', name: 'Product Views', count: productViews || 0, color: CHART_COLORS.funnel.views },
+    { id: 'cart', name: 'Add to Cart', count: addToCart || 0, color: CHART_COLORS.funnel.cart },
+    { id: 'checkout', name: 'Checkout', count: checkout || 0, color: CHART_COLORS.funnel.checkout },
+    { id: 'purchase', name: 'Purchase', count: purchase || 0, color: CHART_COLORS.funnel.purchase },
   ]
 }

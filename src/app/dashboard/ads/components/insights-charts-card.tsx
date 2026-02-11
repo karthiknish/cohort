@@ -43,6 +43,7 @@ import {
   Tooltip,
 } from 'recharts'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
+import { PROVIDER_COLORS, CHART_COLORS, GRAYS } from '@/lib/colors'
 
 // =============================================================================
 // TYPES
@@ -58,20 +59,14 @@ interface InsightsChartsCardProps {
 // =============================================================================
 
 const providerColors: Record<string, string> = {
-  google: '#4285F4',
-  facebook: '#1877F2',
-  meta: '#1877F2',
-  linkedin: '#0A66C2',
-  tiktok: '#000000',
+  google: PROVIDER_COLORS.google.DEFAULT,
+  facebook: PROVIDER_COLORS.facebook,
+  meta: PROVIDER_COLORS.meta,
+  linkedin: PROVIDER_COLORS.linkedin,
+  tiktok: GRAYS[900],
 }
 
-const metricColors = {
-  spend: '#ef4444',
-  revenue: '#22c55e',
-  roas: '#3b82f6',
-  ctr: '#f59e0b',
-  efficiency: '#8b5cf6',
-}
+const metricColors = CHART_COLORS.metrics
 
 // =============================================================================
 // SUB-COMPONENTS
@@ -291,11 +286,11 @@ function BenchmarkChart({
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.percentile > 75 ? '#22c55e' : entry.percentile > 50 ? '#3b82f6' : entry.percentile > 25 ? '#f59e0b' : '#ef4444'}
+                fill={entry.percentile > 75 ? CHART_COLORS.metrics.revenue : entry.percentile > 50 ? CHART_COLORS.metrics.roas : entry.percentile > 25 ? CHART_COLORS.metrics.ctr : CHART_COLORS.metrics.spend}
               />
             ))}
           </Bar>
-          <Bar dataKey="benchmark" name="Industry Average" fill="#9ca3af" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="benchmark" name="Industry Average" fill={GRAYS[400]} radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

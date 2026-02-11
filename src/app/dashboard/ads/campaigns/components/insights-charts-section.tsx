@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { ChartConfig } from '@/components/ui/chart'
+import { CHART_COLORS } from '@/lib/colors'
 
 // Direct imports from recharts to avoid dynamic import conflicts
 import {
@@ -40,44 +41,44 @@ import {
 const engagementChartConfig = {
   clicks: {
     label: 'Clicks',
-    color: 'hsl(221 83% 53%)',
+    color: CHART_COLORS.hsl.blue,
   },
   ctr: {
     label: 'CTR',
-    color: 'hsl(160 84% 39%)',
+    color: CHART_COLORS.hsl.emerald,
   },
 } satisfies ChartConfig
 
 const conversionsChartConfig = {
   conversions: {
     label: 'Conversions',
-    color: 'hsl(160 84% 39%)',
+    color: CHART_COLORS.hsl.emerald,
   },
   revenue: {
     label: 'Revenue',
-    color: 'hsl(262 83% 58%)',
+    color: CHART_COLORS.hsl.indigo,
   },
 } satisfies ChartConfig
 
 const costChartConfig = {
   cpc: {
     label: 'CPC',
-    color: 'hsl(38 92% 50%)',
+    color: CHART_COLORS.hsl.amber,
   },
   cpa: {
     label: 'CPA',
-    color: 'hsl(0 84% 60%)',
+    color: CHART_COLORS.hsl.red,
   },
 } satisfies ChartConfig
 
 const reachChartConfig = {
   reach: {
     label: 'Reach',
-    color: 'hsl(199 89% 48%)',
+    color: CHART_COLORS.hsl.blue,
   },
   impressions: {
     label: 'Impressions',
-    color: 'hsl(221 83% 53%)',
+    color: CHART_COLORS.hsl.blue,
   },
 } satisfies ChartConfig
 

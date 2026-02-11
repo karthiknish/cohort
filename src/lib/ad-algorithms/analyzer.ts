@@ -1,7 +1,3 @@
-// =============================================================================
-// PERFORMANCE ANALYZER - Main Orchestrator
-// =============================================================================
-
 import type {
   MetricDataPoint,
   AdMetricsSummary,
@@ -18,6 +14,7 @@ import type {
 import { enrichSummaryWithMetrics, getEfficiencyBreakdown } from './efficiency'
 import { analyzeAllTrends, getTrendChartData } from './trends'
 import { analyzeFunnel, getFunnelChartData, calculateFunnelEfficiency } from './funnel'
+import { PROVIDER_COLORS, GRAYS } from '@/lib/colors'
 import { runBenchmarkAnalysis, getBenchmarkChartData, calculateBenchmarkScore } from './benchmarks'
 import { calculateOptimalAllocation, generateBudgetInsights, projectBudgetImpact } from './budget'
 import {
@@ -256,11 +253,11 @@ export function analyzeAdPerformance(
  */
 function buildProviderComparisonData(summaries: EnrichedMetricsSummary[]): ProviderComparisonData[] {
   const colors: Record<string, string> = {
-    google: '#4285F4',
-    facebook: '#1877F2',
-    meta: '#1877F2',
-    linkedin: '#0A66C2',
-    tiktok: '#000000',
+    google: PROVIDER_COLORS.google.DEFAULT,
+    facebook: PROVIDER_COLORS.facebook,
+    meta: PROVIDER_COLORS.meta,
+    linkedin: PROVIDER_COLORS.linkedin,
+    tiktok: GRAYS[900],
   }
 
   const names: Record<string, string> = {

@@ -1,6 +1,4 @@
-// =============================================================================
-// CAMPAIGN OBJECTIVE TYPES - Shared types for objective-specific components
-// =============================================================================
+import { CHART_COLORS } from '@/lib/colors'
 
 export type CampaignObjective =
   | 'OUTCOME_SALES'
@@ -87,7 +85,7 @@ export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [
     displayName: 'Sales',
     description: 'Find people likely to purchase your products or services',
     icon: 'ShoppingCart',
-    color: '#22c55e',
+    color: CHART_COLORS.primary[1],
     optimizationGoals: ['OFFSITE_CONVERSIONS', 'CONVERSIONS', 'LINK_CLICKS', 'LANDING_PAGE_VIEWS'],
     supportedCreativeTypes: ['link', 'image', 'video', 'carousel', 'collection'],
     defaultCallToAction: 'SHOP_NOW',
@@ -98,7 +96,7 @@ export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [
     displayName: 'Leads',
     description: 'Collect leads for your business with forms',
     icon: 'Users',
-    color: '#3b82f6',
+    color: CHART_COLORS.primary[0],
     optimizationGoals: ['LEAD_GENERATION', 'LINK_CLICKS', 'REACH'],
     supportedCreativeTypes: ['lead_generation', 'link', 'image', 'video'],
     defaultCallToAction: 'SIGN_UP',
@@ -109,7 +107,7 @@ export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [
     displayName: 'Traffic',
     description: 'Send people to a website, app or event',
     icon: 'ExternalLink',
-    color: '#f59e0b',
+    color: CHART_COLORS.primary[2],
     optimizationGoals: ['LINK_CLICKS', 'LANDING_PAGE_VIEWS', 'REACH', 'IMPRESSIONS'],
     supportedCreativeTypes: ['link', 'image', 'video', 'carousel'],
     defaultCallToAction: 'LEARN_MORE',
@@ -119,7 +117,7 @@ export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [
     displayName: 'Engagement',
     description: 'Get more messages, video views or post engagement',
     icon: 'Heart',
-    color: '#ec4899',
+    color: CHART_COLORS.primary[4],
     optimizationGoals: ['POST_ENGAGEMENT', 'PAGE_ENGAGEMENT', 'EVENT_RESPONSES', 'REACH'],
     supportedCreativeTypes: ['link', 'image', 'video', 'carousel', 'event'],
     defaultCallToAction: 'LEARN_MORE',
@@ -129,7 +127,7 @@ export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [
     displayName: 'Awareness',
     description: 'Introduce your brand to new people',
     icon: 'Eye',
-    color: '#8b5cf6',
+    color: CHART_COLORS.primary[3],
     optimizationGoals: ['AD_RECALL_LIFT', 'REACH', 'IMPRESSIONS'],
     supportedCreativeTypes: ['link', 'image', 'video', 'carousel'],
     defaultCallToAction: 'LEARN_MORE',
@@ -139,7 +137,7 @@ export const CAMPAIGN_OBJECTIVES: CampaignObjectiveConfig[] = [
     displayName: 'App Promotion',
     description: 'Find new users for your app',
     icon: 'Smartphone',
-    color: '#06b6d4',
+    color: CHART_COLORS.primary[5],
     optimizationGoals: ['APP_INSTALLS', 'APP_ENGAGEMENT', 'LINK_CLICKS'],
     supportedCreativeTypes: ['app_install', 'image', 'video', 'carousel'],
     defaultCallToAction: 'INSTALL_NOW',

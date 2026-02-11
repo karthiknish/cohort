@@ -148,7 +148,7 @@ Timeline: ${summary.timelines.startTime}
           initial="hidden"
           animate="visible"
           variants={slideInLeftVariants}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ ...transitions.slow, delay: 0.2 }}
         >
           <Card className="h-full border-muted/60 shadow-sm overflow-hidden flex flex-col bg-background/50 backdrop-blur-sm">
             <CardHeader className="bg-muted/30 border-b border-muted/40 pb-4">
@@ -215,7 +215,7 @@ Timeline: ${summary.timelines.startTime}
           initial="hidden"
           animate="visible"
           variants={slideInRightVariants}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ ...transitions.slow, delay: 0.3 }}
           className="lg:col-span-2"
         >
           <Card className="h-full border-muted/60 shadow-sm overflow-hidden flex flex-col bg-background/50 backdrop-blur-sm">

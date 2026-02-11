@@ -1,6 +1,4 @@
-// =============================================================================
-// GOOGLE ADS CAMPAIGN OBJECTIVE TYPES
-// =============================================================================
+import { CHART_COLORS } from '@/lib/colors'
 
 export type GoogleCampaignObjective =
   | 'SALES'
@@ -76,7 +74,7 @@ export const GOOGLE_OBJECTIVE_CONFIGS = [
     label: 'Sales',
     description: 'Drive online sales with bidding optimized for conversions and revenue',
     icon: 'ShoppingCart',
-    color: '#22c55e',
+    color: CHART_COLORS.primary[1],
     channelTypes: ['Search', 'Display', 'Shopping', 'Performance Max', 'Demand Gen'],
   },
   {
@@ -84,7 +82,7 @@ export const GOOGLE_OBJECTIVE_CONFIGS = [
     label: 'Leads',
     description: 'Generate leads with bidding optimized for form submissions',
     icon: 'Users',
-    color: '#3b82f6',
+    color: CHART_COLORS.primary[0],
     channelTypes: ['Search', 'Display', 'Performance Max', 'Demand Gen', 'Video'],
   },
   {
@@ -92,7 +90,7 @@ export const GOOGLE_OBJECTIVE_CONFIGS = [
     label: 'Website Traffic',
     description: 'Drive quality visits to your website',
     icon: 'ExternalLink',
-    color: '#f59e0b',
+    color: CHART_COLORS.primary[2],
     channelTypes: ['Search', 'Display', 'Discovery', 'Performance Max', 'Demand Gen'],
   },
   {
@@ -100,7 +98,7 @@ export const GOOGLE_OBJECTIVE_CONFIGS = [
     label: 'Brand Awareness',
     description: 'Build brand recognition with reach-focused campaigns',
     icon: 'Eye',
-    color: '#8b5cf6',
+    color: CHART_COLORS.primary[3],
     channelTypes: ['Display', 'Video', 'Discovery', 'Demand Gen'],
   },
   {
@@ -108,7 +106,7 @@ export const GOOGLE_OBJECTIVE_CONFIGS = [
     label: 'App Promotion',
     description: 'Drive app installs and in-app actions',
     icon: 'Smartphone',
-    color: '#06b6d4',
+    color: CHART_COLORS.primary[5],
     channelTypes: ['App Campaigns'],
   },
 ]

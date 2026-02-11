@@ -1,45 +1,46 @@
 import type { ChartConfig } from '@/components/ui/chart'
+import { CHART_COLORS } from '@/lib/colors'
 
 export const revenueSpendChartConfig = {
     revenue: {
         label: 'Revenue',
-        color: 'hsl(160 84% 39%)', // Emerald-500
+        color: CHART_COLORS.hsl.emerald,
     },
     spend: {
         label: 'Spend',
-        color: 'hsl(0 84% 60%)', // Red-500
+        color: CHART_COLORS.hsl.red,
     },
 } satisfies ChartConfig
 
 export const roasChartConfig = {
     roas: {
         label: 'ROAS',
-        color: 'hsl(239 84% 67%)', // Indigo-500
+        color: CHART_COLORS.hsl.indigo,
     },
 } satisfies ChartConfig
 
 export const clicksChartConfig = {
     clicks: {
         label: 'Clicks',
-        color: 'hsl(38 92% 50%)', // Amber-500
+        color: CHART_COLORS.hsl.amber,
     },
 } satisfies ChartConfig
 
 export const platformChartConfig = {
     google: {
         label: 'Google Ads',
-        color: 'hsl(217 91% 60%)', // Blue
+        color: CHART_COLORS.hsl.blue,
     },
     facebook: {
         label: 'Meta Ads',
-        color: 'hsl(214 89% 52%)', // Facebook Blue
+        color: CHART_COLORS.hsl.facebook,
     },
     linkedin: {
         label: 'LinkedIn Ads',
-        color: 'hsl(239 84% 67%)', // Indigo
+        color: CHART_COLORS.hsl.indigo,
     },
     tiktok: {
         label: 'TikTok Ads',
-        color: 'hsl(339 80% 55%)', // Pink
+        color: CHART_COLORS.hsl.pink,
     },
 } satisfies ChartConfig

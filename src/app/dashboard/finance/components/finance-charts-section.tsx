@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import type { ChartConfig } from '@/components/ui/chart'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
 import { AreaChart, Area, BarChart, Bar, CartesianGrid, Line, XAxis, YAxis } from '@/components/ui/recharts-dynamic'
+import { CHART_COLORS } from '@/lib/colors'
 
 import { formatCurrency } from '../utils'
 
@@ -50,15 +51,15 @@ function EmptyChartState() {
 const revenueExpensesConfig = {
   revenue: {
     label: "Revenue",
-    color: "hsl(var(--primary))",
+    color: CHART_COLORS.hsl.primary,
   },
   totalExpenses: {
     label: "Expenses",
-    color: "hsl(var(--destructive))",
+    color: CHART_COLORS.hsl.destructive,
   },
   profit: {
     label: "Profit",
-    color: "#8b5cf6",
+    color: CHART_COLORS.primary[3],
   },
 } satisfies ChartConfig
 
@@ -66,11 +67,11 @@ const revenueExpensesConfig = {
 const expenseBreakdownConfig = {
   operatingExpenses: {
     label: "Campaign Spend",
-    color: "#8b5cf6",
+    color: CHART_COLORS.primary[3],
   },
   companyCosts: {
     label: "Company Costs",
-    color: "#f59e0b",
+    color: CHART_COLORS.primary[2],
   },
 } satisfies ChartConfig
 

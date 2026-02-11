@@ -1,5 +1,9 @@
 import { motion } from 'framer-motion'
 import {
+  fadeInDownVariants,
+  transitions,
+} from '@/lib/dashboard-animations'
+import {
   ArrowLeft,
   RefreshCw,
   Edit2,
@@ -63,9 +67,10 @@ export function CreativeHeader(props: {
 
   return (
     <motion.div
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      initial="hidden"
+      animate="visible"
+      variants={fadeInDownVariants}
+      transition={transitions.slow}
       className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-6 px-1 border-b bg-background/80 backdrop-blur-md mb-8"
     >
       <div className="flex items-center gap-5">

@@ -35,7 +35,6 @@
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #243041;
   --sidebar-ring: #16a34a;
-  /* Sonner toast colors */
   --success-bg: #16a34a;
   --success-text: #ffffff;
   --success-border: #15803d;
@@ -325,31 +324,31 @@ h6 {
     z-index: 9999 !important;
   }
 
-  /* Sonner toast variant styling - ensures proper contrast on all backgrounds */
   [data-sonner-toast] {
     &[data-type="error"],
     &[data-variant="destructive"] {
-      background: #dc2626 !important;
-      color: #ffffff !important;
-      border: 1px solid #b91c1c !important;
+      background: var(--destructive) !important;
+      color: var(--destructive-foreground) !important;
+      border: 1px solid var(--destructive) !important;
+      filter: brightness(0.9) !important;
     }
 
     &[data-type="success"] {
-      background: #16a34a !important;
-      color: #ffffff !important;
-      border: 1px solid #15803d !important;
+      background: var(--success-bg) !important;
+      color: var(--success-text) !important;
+      border: 1px solid var(--success-border) !important;
     }
 
     &[data-type="warning"] {
-      background: #f59e0b !important;
-      color: #78350f !important;
-      border: 1px solid #d97706 !important;
+      background: var(--accent) !important;
+      color: var(--accent-foreground) !important;
+      border: 1px solid color-mix(in srgb, var(--accent) 80%, black) !important;
     }
 
     &[data-type="info"] {
-      background: #3b82f6 !important;
-      color: #ffffff !important;
-      border: 1px solid #2563eb !important;
+      background: color-mix(in srgb, var(--primary) 80%, white) !important;
+      color: var(--primary-foreground) !important;
+      border: 1px solid var(--primary) !important;
     }
   }
 

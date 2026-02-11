@@ -37,6 +37,7 @@ import { Download, ZoomIn, ZoomOut, RefreshCw, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
+import { CHART_COLORS, GRAYS } from '@/lib/colors'
 
 export type ChartType = 'line' | 'bar' | 'area' | 'pie'
 export type TimeRange = '7d' | '14d' | '30d' | '90d' | '12m' | 'all'
@@ -65,16 +66,7 @@ interface InteractiveChartProps {
   isRefreshing?: boolean
 }
 
-const COLORS = [
-  '#3b82f6', // blue
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#f59e0b', // amber
-  '#10b981', // emerald
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#84cc16', // lime
-]
+const COLORS = CHART_COLORS.primary
 
 /**
  * Interactive chart component with multiple chart types and export
@@ -246,9 +238,9 @@ export function InteractiveChart({
             <Line
               type="monotone"
               dataKey={dataKey}
-              stroke="#3b82f6"
+              stroke={CHART_COLORS.primary[0]}
               strokeWidth={2}
-              dot={{ fill: '#3b82f6', r: 4 }}
+              dot={{ fill: CHART_COLORS.primary[0], r: 4 }}
               activeDot={{ r: 6 }}
             />
           </LineChart>
@@ -275,7 +267,7 @@ export function InteractiveChart({
               tickFormatter={valueFormatter}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey={dataKey} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey={dataKey} fill={CHART_COLORS.primary[0]} radius={[4, 4, 0, 0]} />
           </BarChart>
         )
 
@@ -299,8 +291,8 @@ export function InteractiveChart({
             <Area
               type="monotone"
               dataKey={dataKey}
-              stroke="#3b82f6"
-              fill="#3b82f6"
+              stroke={CHART_COLORS.primary[0]}
+              fill={CHART_COLORS.primary[0]}
               fillOpacity={0.3}
             />
           </AreaChart>
@@ -455,7 +447,7 @@ export function SparklineChart({
   className?: string
   trend?: 'up' | 'down' | 'neutral'
 }) {
-  const color = trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#6b7280'
+  const color = trend === 'up' ? CHART_COLORS.metrics.revenue : trend === 'down' ? CHART_COLORS.metrics.spend : GRAYS[500]
 
   return (
     <div className={cn('inline-block', className)}>
