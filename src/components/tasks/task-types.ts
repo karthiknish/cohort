@@ -101,6 +101,43 @@ export const buildInitialFormState = (client?: { id: string | null; name: string
   tags: '',
 })
 
+// Convert ClientTeamMember[] to MentionableUser[] for MentionInput
+export function teamMembersToMentionable(
+  members: Array<{ id?: string; name: string; role?: string }>
+): Array<{ id: string; name: string; role?: string }> {
+  return members.map((m, idx) => ({
+    id: m.id ?? `member-${idx}`,
+    name: m.name,
+    role: m.role,
+  }))
+}
+
+/**
+ * Extract plain user names from a MentionInput value string.
+ * Handles both `@[Name]` mention format and plain comma-separated names.
+ */
+export function parseMentionNames(value: string): string[] {
+  const mentionRegex = /@\[([^\]]+)\]/g
+  const names: string[] = []
+  let match: RegExpExecArray | null
+
+  while ((match = mentionRegex.exec(value)) !== null) {
+    const name = match[1]?.trim()
+    if (name) names.push(name)
+  }
+
+  // If no @[...] mentions found, fall back to comma-separated parsing
+  if (names.length === 0) {
+    return value
+      .split(',')
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0)
+  }
+
+  return names
+}
+
+
 // Utility functions
 export const sleep = sleepLib
 

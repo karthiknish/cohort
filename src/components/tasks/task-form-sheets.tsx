@@ -6,6 +6,7 @@ import { format, parseISO, isValid } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { MentionInput, type MentionableUser } from '@/components/ui/mention-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -33,7 +34,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { TaskPriority, TaskStatus } from '@/types/tasks'
 import type { ClientTeamMember } from '@/types/clients'
-import { TaskFormState } from './task-types'
+import { TaskFormState, teamMembersToMentionable } from './task-types'
 import { TaskCommentsPanel } from './task-comments'
 
 export type CreateTaskSheetProps = {
@@ -44,6 +45,7 @@ export type CreateTaskSheetProps = {
   creating: boolean
   createError: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  participants: ClientTeamMember[]
 }
 
 export function CreateTaskSheet({
@@ -54,7 +56,9 @@ export function CreateTaskSheet({
   creating,
   createError,
   onSubmit,
+  participants,
 }: CreateTaskSheetProps) {
+  const mentionableUsers = teamMembersToMentionable(participants)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-md px-0">
@@ -136,15 +140,16 @@ export function CreateTaskSheet({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-assigned">Assigned to</Label>
-              <Input
-                id="task-assigned"
+              <Label>Assigned to</Label>
+              <MentionInput
                 value={formState.assignedTo}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, assignedTo: event.target.value }))
+                onChange={(value) =>
+                  setFormState((prev) => ({ ...prev, assignedTo: value }))
                 }
-                placeholder="Separate multiple names with commas"
+                users={mentionableUsers}
+                placeholder="Type @ to assign team members"
                 disabled={creating}
+                allowMultiple
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -259,6 +264,7 @@ export function EditTaskSheet({
   currentUserRole,
   participants,
 }: EditTaskSheetProps) {
+  const mentionableUsers = teamMembersToMentionable(participants)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-md px-0">
@@ -338,15 +344,16 @@ export function EditTaskSheet({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-task-assignees">Assigned to</Label>
-              <Input
-                id="edit-task-assignees"
+              <Label>Assigned to</Label>
+              <MentionInput
                 value={formState.assignedTo}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, assignedTo: event.target.value }))
+                onChange={(value) =>
+                  setFormState((prev) => ({ ...prev, assignedTo: value }))
                 }
-                placeholder="e.g. Alice, Bob (comma separated)"
+                users={mentionableUsers}
+                placeholder="Type @ to assign team members"
                 disabled={updating}
+                allowMultiple
               />
             </div>
             <div className="space-y-2">

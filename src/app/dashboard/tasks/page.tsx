@@ -534,6 +534,7 @@ export default function TasksPage() {
           creating={form.creating}
           createError={form.createError}
           onSubmit={form.handleCreateSubmit}
+          participants={selectedClient?.teamMembers ?? []}
         />
 
         {/* Edit Task Sheet */}

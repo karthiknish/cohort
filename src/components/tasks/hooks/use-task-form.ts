@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type FormEvent } from 'react'
 import { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks'
-import { TaskFormState, buildInitialFormState } from '../task-types'
+import { TaskFormState, buildInitialFormState, parseMentionNames } from '../task-types'
 import type { CreateTaskPayload, UpdateTaskPayload } from './use-tasks'
 
 export type UseTaskFormOptions = {
@@ -114,10 +114,7 @@ export function useTaskForm({
     setCreating(true)
     setCreateError(null)
 
-    const assignedMembers = formState.assignedTo
-      .split(',')
-      .map((m) => m.trim())
-      .filter((m) => m.length > 0)
+    const assignedMembers = parseMentionNames(formState.assignedTo)
 
     const normalizedTags = formState.tags
       .split(',')
@@ -155,7 +152,7 @@ export function useTaskForm({
       description: task.description || '',
       status: task.status,
       priority: task.priority,
-      assignedTo: (task.assignedTo ?? []).join(', '),
+      assignedTo: (task.assignedTo ?? []).map((name) => `@[${name}]`).join(' '),
       clientId: task.clientId || null,
       clientName: task.client || '',
       dueDate: task.dueDate || '',
@@ -186,10 +183,7 @@ export function useTaskForm({
     setUpdating(true)
     setUpdateError(null)
 
-    const assignedMembers = editFormState.assignedTo
-      .split(',')
-      .map((m) => m.trim())
-      .filter((m) => m.length > 0)
+    const assignedMembers = parseMentionNames(editFormState.assignedTo)
 
     const normalizedTags = editFormState.tags
       .split(',')
