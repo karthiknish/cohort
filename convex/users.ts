@@ -203,12 +203,27 @@ export const listWorkspaceMembers = zAuthenticatedQuery({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
 
-    const rows = await ctx.db
-      .query('users')
-      .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
-      .take(limit)
+    // Query users who are part of this workspace:
+    // 1. Users whose agencyId matches the workspaceId (team members)
+    // 2. Users whose legacyId matches the workspaceId (agency admin/owner)
+    const [membersByAgency, agencyAdmin] = await Promise.all([
+      ctx.db
+        .query('users')
+        .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
+        .take(limit),
+      ctx.db
+        .query('users')
+        .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.workspaceId))
+        .unique(),
+    ])
 
-    return rows
+    // Combine results, avoiding duplicates
+    const allRows = agencyAdmin
+      ? [agencyAdmin, ...membersByAgency.filter((r) => r.legacyId !== agencyAdmin.legacyId)]
+      : membersByAgency
+
+    return allRows
+      .slice(0, limit)
       .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
       .map((row) => ({
         id: row.legacyId,
@@ -238,6 +253,76 @@ export const listAllUsers = zAuthenticatedQuery({
 
     return rows
       .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
+      .map((row) => ({
+        id: row.legacyId,
+        name: row.name ?? row.email ?? 'Unnamed user',
+        email: row.email ?? undefined,
+        role: row.role ?? undefined,
+      }))
+  },
+})
+
+export const listDMParticipants = zAuthenticatedQuery({
+  args: {
+    workspaceId: z.string(),
+    currentUserRole: z.string().nullable(),
+    currentUserId: z.string(),
+    limit: z.number().optional(),
+  },
+  returns: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string().optional(),
+      role: z.string().optional(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
+    const role = args.currentUserRole?.toLowerCase()
+
+    if (role === 'admin') {
+      const rows = await ctx.db.query('users').take(limit)
+      return rows
+        .filter((row) => row.status !== 'disabled' && row.status !== 'suspended' && row.legacyId !== args.currentUserId)
+        .map((row) => ({
+          id: row.legacyId,
+          name: row.name ?? row.email ?? 'Unnamed user',
+          email: row.email ?? undefined,
+          role: row.role ?? undefined,
+        }))
+    }
+
+    const [membersByAgency, agencyAdmin] = await Promise.all([
+      ctx.db
+        .query('users')
+        .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
+        .take(limit),
+      ctx.db
+        .query('users')
+        .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.workspaceId))
+        .unique(),
+    ])
+
+    const allRows = agencyAdmin
+      ? [agencyAdmin, ...membersByAgency.filter((r) => r.legacyId !== agencyAdmin.legacyId)]
+      : membersByAgency
+
+    if (role === 'client') {
+      return allRows
+        .filter((row) => row.status !== 'disabled' && row.status !== 'suspended' && row.legacyId !== args.currentUserId && row.role !== 'client')
+        .slice(0, limit)
+        .map((row) => ({
+          id: row.legacyId,
+          name: row.name ?? row.email ?? 'Unnamed user',
+          email: row.email ?? undefined,
+          role: row.role ?? undefined,
+        }))
+    }
+
+    return allRows
+      .filter((row) => row.status !== 'disabled' && row.status !== 'suspended' && row.legacyId !== args.currentUserId)
+      .slice(0, limit)
       .map((row) => ({
         id: row.legacyId,
         name: row.name ?? row.email ?? 'Unnamed user',

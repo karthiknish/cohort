@@ -14,6 +14,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 import { ActivityStats } from './components/activity-stats'
 import { ActivityFilters } from './components/activity-filters'
 import { ActivityList } from './components/activity-list'
@@ -284,8 +285,8 @@ export default function ActivityPage() {
     return (
       <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed p-8 text-center">
         <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-            <Clock className="h-10 w-10 text-muted-foreground" />
+          <div className={DASHBOARD_THEME.icons.container}>
+            <Clock className={DASHBOARD_THEME.icons.medium} />
           </div>
           <h3 className="mt-4 text-lg font-semibold">No client selected</h3>
           <p className="mb-4 mt-2 text-sm text-muted-foreground">
@@ -299,13 +300,13 @@ export default function ActivityPage() {
   const unreadCount = enhancedActivities.filter((a) => !a.isRead).length
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className={DASHBOARD_THEME.layout.header}>
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Activity Log</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real-time timeline of updates, tasks, and collaboration across the workspace.
+          <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.activity?.title ?? 'Activity Log'}</h1>
+          <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1')}>
+            {PAGE_TITLES.activity?.description ?? 'Real-time timeline of updates, tasks, and collaboration across the workspace.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -318,11 +319,12 @@ export default function ActivityPage() {
             onClick={handleRetry}
             disabled={loading}
             title="Refresh (Cmd+R)"
+            className={getButtonClasses('outline')}
           >
-            <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
+            <RefreshCw className={cn('mr-2 h-4 w-4', loading && DASHBOARD_THEME.animations.spin)} />
             Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport} title="Export activity data">
+          <Button variant="outline" size="sm" onClick={handleExport} title="Export activity data" className={getButtonClasses('outline')}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -330,8 +332,8 @@ export default function ActivityPage() {
       </div>
 
       {/* Stats Summary */}
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className={DASHBOARD_THEME.cards.base}>
+        <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'pb-3')}>
           <CardTitle className="text-base">Activity Overview</CardTitle>
         </CardHeader>
         <CardContent>
@@ -340,8 +342,8 @@ export default function ActivityPage() {
       </Card>
 
       {/* Main Activity Card */}
-      <Card>
-        <CardHeader className="border-b border-muted/40 pb-4">
+      <Card className={DASHBOARD_THEME.cards.base}>
+        <CardHeader className={DASHBOARD_THEME.cards.header}>
           <ActivityFilters
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

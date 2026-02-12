@@ -13,6 +13,8 @@ import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import { ProposalStepContent } from './components/proposal-step-content'
 import { ProposalStepIndicator } from './components/proposal-step-indicator'
 import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
@@ -251,8 +253,8 @@ export default function ProposalsPage() {
   }
 
   return (
-    <div ref={wizardRef} className="space-y-6">
-      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+    <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
+      <div className={DASHBOARD_THEME.layout.header}>
         <ProposalWizardHeader />
         <div className="flex flex-wrap items-center gap-3">
           <ProposalTemplateSelector
@@ -268,7 +270,7 @@ export default function ProposalsPage() {
           <Button
             onClick={handleStartProposal}
             disabled={!selectedClientId || isCreatingDraft}
-            className="shrink-0 shadow-sm transition-all hover:shadow-md"
+            className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm transition-all hover:shadow-md')}
           >
             <Plus className="mr-2 h-4 w-4" />
             New Proposal

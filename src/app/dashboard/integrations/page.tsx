@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { usePreview } from '@/contexts/preview-context'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 
 import { SetupAlerts, ADS_WORKFLOW_STEPS } from '../ads/components'
 import { useAdsConnections } from '../ads/hooks/use-ads-connections'
@@ -41,16 +42,16 @@ export default function IntegrationsPage() {
   } = useAdsConnections()
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       <FadeIn>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className={DASHBOARD_THEME.layout.header}>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
-            <p className="text-sm text-muted-foreground">
-              Connect your ad platforms and verify sync status.
+            <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.integrations?.title ?? 'Integrations'}</h1>
+            <p className={DASHBOARD_THEME.layout.subtitle}>
+              {PAGE_TITLES.integrations?.description ?? 'Connect your ad platforms and verify sync status.'}
             </p>
           </div>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className={getButtonClasses('outline')}>
             <Link href="/dashboard/ads">Go to Ads Hub</Link>
           </Button>
         </div>

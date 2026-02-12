@@ -92,6 +92,7 @@ export const list = zWorkspaceQuery({
         if (args.role && !(row.recipientRoles ?? []).includes(args.role)) return false
         if (args.clientId && row.recipientClientId !== args.clientId) return false
         if (args.unread && (row.readBy ?? []).includes(userId)) return false
+        if (row.actorId && row.actorId === userId) return false
         return true
       })
       .filter((row) => {
@@ -200,6 +201,7 @@ export const getUnreadCount = zWorkspaceQuery({
       if (args.role && !(row.recipientRoles ?? []).includes(args.role)) continue
       if (args.clientId && row.recipientClientId !== args.clientId) continue
       if ((row.readBy ?? []).includes(userId)) continue
+      if (row.actorId && row.actorId === userId) continue
       count += 1
     }
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, Suspense, lazy } from 'react'
 
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
+import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -149,7 +150,7 @@ export default function AdsPage() {
 
   // Loading state - let the loading.tsx handle the skeleton UI
   const isInitialLoading = initialMetricsLoading && !integrationStatuses
-  if (isInitialLoading) return <div className="space-y-6"><Skeleton className="h-8 w-48" /></div>
+  if (isInitialLoading) return <div className={DASHBOARD_THEME.layout.container}><Skeleton className="h-8 w-48" /></div>
 
   const showWorkflow =
     !isPreviewMode &&
@@ -158,12 +159,12 @@ export default function AdsPage() {
       automationStatuses.every((s) => s.status !== 'success'))
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       <FadeIn>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">Ads Hub</h1>
-          <p className="text-sm text-muted-foreground">
-            Connect paid media accounts, trigger data syncs, and review cross-channel performance in one place.
+          <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.ads?.title ?? 'Ads Hub'}</h1>
+          <p className={DASHBOARD_THEME.layout.subtitle}>
+            {PAGE_TITLES.ads?.description ?? 'Connect paid media accounts, trigger data syncs, and review cross-channel performance in one place.'}
           </p>
         </div>
       </FadeIn>

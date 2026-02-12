@@ -49,6 +49,11 @@ import { ImageUrlPreview } from './image-url-preview'
 import { LinkPreviewCard } from './link-preview-card'
 import { MessageContent } from './message-content'
 import { SharedPlatformIcons } from './message-share-button'
+import { 
+  MessageList, 
+  collaborationToUnifiedMessage, 
+  type UnifiedMessage 
+} from './message-list'
 
 const MAX_PREVIEW_LENGTH = 80
 
@@ -214,6 +219,13 @@ export function CollaborationMessagePane({
     setExpandedThreadIds({})
     onClearThreadReplies()
   }, [channel?.id, onClearThreadReplies])
+
+  // Scroll to bottom when channel changes and messages load
+  useEffect(() => {
+    if (!isLoading && visibleMessages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+    }
+  }, [channel?.id, isLoading])
 
   // Handlers
   const handleStartEdit = (message: CollaborationMessage) => {
@@ -674,24 +686,121 @@ export function CollaborationMessagePane({
             </div>
           )}
 
-          {isSearchActive && messageGroups.map((group) => (
-            <div key={group.id} className="group-block mb-4">
-              {group.dateSeparator && <DateSeparator label={group.dateSeparator} />}
-              {group.messages.map((message, messageIndex) => {
-                const isFirstInGroup = messageIndex === 0
-                return (
-                  <div key={message.id}>
-                    {renderMessage(message, {
-                      isReply: false,
-                      isSearchResult: false,
-                      showAvatar: isFirstInGroup,
-                      showHeader: isFirstInGroup,
-                    })}
-                  </div>
+          {isSearchActive && (
+            <MessageList
+              messages={visibleMessages.map(collaborationToUnifiedMessage)}
+              currentUserId={currentUserId ?? null}
+              currentUserRole={currentUserRole}
+              isLoading={false}
+              hasMore={false}
+              onLoadMore={() => {}}
+              onToggleReaction={async (messageId, emoji) => onToggleReaction(messageId, emoji)}
+              reactionPendingByMessage={reactionPendingByMessage}
+              variant="channel"
+              showAvatars={true}
+              renderMessageContent={(message) => {
+                const originalMsg = visibleMessages.find(m => m.id === message.id)
+                if (!originalMsg) return null
+                return <MessageContent content={originalMsg.content ?? ''} mentions={originalMsg.mentions} />
+              }}
+              renderMessageAttachments={(message) => {
+                const originalMsg = visibleMessages.find(m => m.id === message.id)
+                if (!originalMsg?.attachments || originalMsg.attachments.length === 0) return null
+                return <MessageAttachments attachments={originalMsg.attachments} />
+              }}
+              renderMessageExtras={(message) => {
+                const originalMsg = visibleMessages.find(m => m.id === message.id)
+                if (!originalMsg?.sharedTo || originalMsg.sharedTo.length === 0) return null
+                return <SharedPlatformIcons sharedTo={originalMsg.sharedTo} />
+              }}
+              renderThreadSection={(message) => {
+                const originalMsg = visibleMessages.find(m => m.id === message.id)
+                if (!originalMsg || message.deleted) return null
+                
+                const threadRootId =
+                  typeof originalMsg.threadRootId === 'string' && originalMsg.threadRootId.trim().length > 0
+                    ? originalMsg.threadRootId.trim()
+                    : originalMsg.id
+                const threadReplies = threadMessagesByRootId[threadRootId] ?? []
+                const threadLoading = threadLoadingByRootId[threadRootId] ?? false
+                const threadError = threadErrorsByRootId[threadRootId] ?? null
+                const threadNextCursor = threadNextCursorByRootId[threadRootId] ?? null
+                const replyCount = Math.max(
+                  typeof originalMsg.threadReplyCount === 'number' ? originalMsg.threadReplyCount : 0,
+                  threadReplies.length
                 )
-              })}
-            </div>
-          ))}
+                const lastReplyIso =
+                  originalMsg.threadLastReplyAt ??
+                  (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
+                
+                return (
+                  <ThreadSection
+                    threadRootId={threadRootId}
+                    replyCount={replyCount}
+                    lastReplyIso={lastReplyIso}
+                    isOpen={Boolean(expandedThreadIds[threadRootId])}
+                    isLoading={threadLoading}
+                    error={threadError}
+                    hasNextCursor={!!threadNextCursor}
+                    replies={threadReplies}
+                    onToggle={() => handleThreadToggle(threadRootId)}
+                    onRetry={() => handleRetryThreadLoad(threadRootId)}
+                    onLoadMore={() => handleLoadMoreThread(threadRootId)}
+                    onReply={() => handleReply(originalMsg)}
+                    renderReply={(reply) =>
+                      renderMessage(reply, { isReply: true, isSearchResult: true })
+                    }
+                  />
+                )
+              }}
+              renderMessageActions={(message) => {
+                const originalMsg = visibleMessages.find(m => m.id === message.id)
+                if (!originalMsg) return null
+                
+                const canManageMessage =
+                  !originalMsg.isDeleted &&
+                  ((originalMsg.senderId && originalMsg.senderId === currentUserId) || currentUserRole === 'admin')
+                
+                return (
+                  <MessageActionsBar
+                    message={originalMsg}
+                    canReact={!originalMsg.isDeleted && !!currentUserId}
+                    canManage={canManageMessage}
+                    isUpdating={messageUpdatingId === originalMsg.id}
+                    isDeleting={messageDeletingId === originalMsg.id}
+                    disableReactionActions={originalMsg.isDeleted || !currentUserId}
+                    onReaction={(emoji) => onToggleReaction(originalMsg.id, emoji)}
+                    onReply={() => handleReply(originalMsg)}
+                    onEdit={() => handleStartEdit(originalMsg)}
+                    onDelete={() => handleConfirmDelete(originalMsg.id)}
+                    onCreateTask={() => handleCreateTaskFromMessage(originalMsg)}
+                  />
+                )
+              }}
+              renderEditForm={(message) => {
+                if (editingMessageId !== message.id) return null
+                return (
+                  <MessageEditForm
+                    value={editingValue}
+                    onChange={setEditingValue}
+                    onConfirm={handleConfirmEdit}
+                    onCancel={handleCancelEdit}
+                    isUpdating={messageUpdatingId === message.id}
+                    editingPreview={editingPreview}
+                  />
+                )
+              }}
+              renderDeletedInfo={(message) => {
+                const originalMsg = visibleMessages.find(m => m.id === message.id)
+                if (!originalMsg) return null
+                return <DeletedMessageInfo deletedBy={originalMsg.deletedBy} deletedAt={originalMsg.deletedAt} />
+              }}
+              editingMessageId={editingMessageId}
+              deletingMessageId={messageDeletingId}
+              updatingMessageId={messageUpdatingId}
+              emptyState={<NoSearchResultsState />}
+            />
+          )}
 
           <div ref={messagesEndRef} />
         </div>

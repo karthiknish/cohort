@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 
 const PERIOD_OPTIONS = [
   { value: '1m', label: 'Last month' },
@@ -46,11 +48,11 @@ export function FinanceHeader({
   onExportData,
 }: FinanceHeaderProps) {
   return (
-    <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+    <div className={DASHBOARD_THEME.layout.header}>
       <div className="space-y-1.5">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Finance</h1>
-        <p className="text-base text-muted-foreground max-w-2xl">
-          Manage invoices, track revenue, and keep company-wide costs tied directly to your reporting charts.
+        <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.finance?.title ?? 'Finance'}</h1>
+        <p className={cn(DASHBOARD_THEME.layout.subtitle, 'text-base max-w-2xl')}>
+          {PAGE_TITLES.finance?.description ?? 'Manage invoices, track revenue, and keep company-wide costs tied directly to your reporting charts.'}
         </p>
         {scopeLabel ? (
           <p className="text-xs text-muted-foreground">
@@ -73,18 +75,18 @@ export function FinanceHeader({
           </SelectContent>
         </Select>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => void onRefresh()} disabled={refreshing} className="shadow-sm">
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <Button variant="outline" onClick={() => void onRefresh()} disabled={refreshing} className={cn(getButtonClasses('outline'), 'shadow-sm')}>
+            <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && DASHBOARD_THEME.animations.spin)} />
             Refresh
           </Button>
           {onExportData && (
-            <Button variant="outline" onClick={() => void onExportData()} className="shadow-sm">
+            <Button variant="outline" onClick={() => void onExportData()} className={cn(getButtonClasses('outline'), 'shadow-sm')}>
               <Download className="mr-2 h-4 w-4" />
               Export all
             </Button>
           )}
           {manageInvoicesHref ? (
-            <Button asChild variant="outline" className="shadow-sm">
+            <Button asChild variant="outline" className={cn(getButtonClasses('outline'), 'shadow-sm')}>
               <Link href={manageInvoicesHref} className="inline-flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Manage invoices
@@ -92,7 +94,7 @@ export function FinanceHeader({
             </Button>
           ) : null}
           {paymentsHref && (
-            <Button asChild variant="outline" className="shadow-sm">
+            <Button asChild variant="outline" className={cn(getButtonClasses('outline'), 'shadow-sm')}>
               <Link href={paymentsHref} className="inline-flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 Payments
@@ -100,7 +102,7 @@ export function FinanceHeader({
             </Button>
           )}
           {onCreateInvoice && (
-            <Button onClick={onCreateInvoice} className="shadow-sm">
+            <Button onClick={onCreateInvoice} className={cn(getButtonClasses('primary'), 'shadow-sm')}>
               <Plus className="mr-2 h-4 w-4" /> Create Invoice
             </Button>
           )}

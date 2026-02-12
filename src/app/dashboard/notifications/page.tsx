@@ -29,6 +29,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { WorkspaceNotification } from '@/types/notifications'
 import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -228,22 +229,22 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-          <p className="text-muted-foreground">Stay updated on what matters most</p>
+          <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.notifications?.title ?? 'Notifications'}</h1>
+          <p className={DASHBOARD_THEME.layout.subtitle}>{PAGE_TITLES.notifications?.description ?? 'Stay updated on what matters most'}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            {loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading} className={getButtonClasses('outline')}>
+            {loading ? <LoaderCircle className={cn('mr-2 h-4 w-4', DASHBOARD_THEME.animations.spin)} /> : null}
             Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight}>
+          <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight} className={getButtonClasses('outline')}>
             <CheckCheck className="mr-2 h-4 w-4" />
             Mark all read
           </Button>
-          <Button variant="outline" size="sm" onClick={handleClearAll} disabled={notifications.length === 0 || ackInFlight}>
+          <Button variant="outline" size="sm" onClick={handleClearAll} disabled={notifications.length === 0 || ackInFlight} className={getButtonClasses('outline')}>
             <Trash2 className="mr-2 h-4 w-4" />
             Clear all
           </Button>

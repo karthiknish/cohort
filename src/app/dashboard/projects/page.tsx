@@ -22,8 +22,15 @@ import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewProjects } from '@/lib/preview-data'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
+import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
+import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
+import type { MilestoneRecord } from '@/types/milestones'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog'
 import { Button } from '@/components/ui/button'
@@ -53,12 +60,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
-import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { emitDashboardRefresh } from '@/lib/refresh-bus'
-import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
-import type { MilestoneRecord } from '@/types/milestones'
 
 // Import extracted components
 import {
@@ -534,11 +535,11 @@ export default function ProjectsPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+      <div className={DASHBOARD_THEME.layout.container}>
+        <div className={DASHBOARD_THEME.layout.header}>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-            <p className="text-muted-foreground">
+            <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.projects?.title ?? 'Projects'}</h1>
+            <p className={DASHBOARD_THEME.layout.subtitle}>
               Portfolio overview for {portfolioLabel}.
               {retryCount > 0 && (
                 <span className="ml-2 text-amber-600">
@@ -564,11 +565,11 @@ export default function ProjectsPage() {
                       }
                     })
                   }}
-                  className="inline-flex items-center gap-2"
+                  className={cn(getButtonClasses('outline'), 'inline-flex items-center gap-2')}
                   disabled={loading}
                   aria-label="Refresh projects"
                 >
-                  {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {loading ? <LoaderCircle className={cn('h-4 w-4', DASHBOARD_THEME.animations.spin)} /> : <RefreshCw className="h-4 w-4" />}
                   <span className="hidden sm:inline">Refresh</span>
                 </Button>
               </TooltipTrigger>
@@ -614,7 +615,7 @@ export default function ProjectsPage() {
         </AlertDialog>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={DASHBOARD_THEME.stats.container}>
           <SummaryCard
             label="Total projects"
             icon={Briefcase}
@@ -633,11 +634,11 @@ export default function ProjectsPage() {
             value={openTaskTotal}
             description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
           />
-          <Card className="overflow-hidden border-muted/50 bg-background shadow-sm transition-all hover:shadow-md">
+          <Card className={cn(DASHBOARD_THEME.stats.card, 'overflow-hidden')}>
             <CardContent className="flex items-center gap-5 p-5">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 leading-none">Portfolio Health</p>
+                  <p className={DASHBOARD_THEME.stats.label}>Portfolio Health</p>
                   <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{completionRate}%</span>
                 </div>
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">

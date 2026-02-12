@@ -16,6 +16,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getBadgeClasses } from '@/lib/dashboard-theme'
 import {
   Card,
   CardDescription,
@@ -229,10 +230,10 @@ function ClientsDashboardContent() {
 
   if (!selectedClient) {
     return (
-      <Card className="mx-auto max-w-2xl border-muted/60 bg-gradient-to-br from-muted/20 to-background">
+      <Card className={cn('mx-auto max-w-2xl', DASHBOARD_THEME.cards.base, 'bg-gradient-to-br from-muted/20 to-background')}>
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 rounded-full bg-primary/10 p-4">
-            <UsersIcon className="h-8 w-8 text-primary" />
+          <div className={DASHBOARD_THEME.icons.container}>
+            <UsersIcon className={DASHBOARD_THEME.icons.medium} />
           </div>
           <CardTitle className="text-xl">Select a client workspace</CardTitle>
           <CardDescription className="text-base">
@@ -262,28 +263,24 @@ function ClientsDashboardContent() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-2 duration-500">
+      <div className={cn(DASHBOARD_THEME.layout.container, DASHBOARD_THEME.animations.fadeIn)}>
         {/* Header */}
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+        <div className={DASHBOARD_THEME.layout.header}>
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm border border-primary/20">
-              <UsersIcon className="h-6 w-6" />
+            <div className={DASHBOARD_THEME.icons.container}>
+              <UsersIcon className={DASHBOARD_THEME.icons.small} />
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{selectedClient.name}</h1>
+                <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
                 {invoiceSummary?.isOutstanding && (
-                  <Badge variant="destructive" className="animate-pulse rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest border-2 border-background shadow-sm">
-                    Payment Due
-                  </Badge>
+                  <Badge className={getBadgeClasses('destructive')}>Payment Due</Badge>
                 )}
                 {invoiceSummary?.isPaid && (
-                  <Badge variant="secondary" className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest border border-primary/20 shadow-sm">
-                    Paid
-                  </Badge>
+                  <Badge className={getBadgeClasses('primary')}>Paid</Badge>
                 )}
               </div>
-              <p className="text-sm font-medium text-muted-foreground/70">
+              <p className={DASHBOARD_THEME.layout.subtitle}>
                 Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
                 {clientAge && <span className="text-muted-foreground/40 font-normal"> · Partnered {clientAge}</span>}
               </p>
@@ -293,7 +290,7 @@ function ClientsDashboardContent() {
           <div className="flex flex-wrap items-center gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10 rounded-xl border-muted/30 bg-background px-4 text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]">
+                <Button variant="outline" size="sm" className={cn(getButtonClasses('outline'), 'h-10 px-4')}>
                   <Settings className="mr-2 h-3.5 w-3.5" />
                   Settings
                 </Button>
@@ -326,9 +323,9 @@ function ClientsDashboardContent() {
                   size="sm"
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="h-10 w-10 rounded-xl border-muted/30 bg-background p-0 shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+                  className={cn(getButtonClasses('outline'), 'h-10 w-10 p-0')}
                 >
-                  <RefreshCcw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+                  <RefreshCcw className={cn('h-4 w-4', refreshing && DASHBOARD_THEME.animations.pulse)} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>
@@ -350,7 +347,7 @@ function ClientsDashboardContent() {
             asChild
             variant="outline"
             size="sm"
-            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
           >
             <Link href={`/dashboard/projects?clientId=${selectedClient.id}`}>Projects</Link>
           </Button>
@@ -358,7 +355,7 @@ function ClientsDashboardContent() {
             asChild
             variant="outline"
             size="sm"
-            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
           >
             <Link href={`/dashboard/tasks?clientId=${selectedClient.id}`}>Tasks</Link>
           </Button>
@@ -366,7 +363,7 @@ function ClientsDashboardContent() {
             asChild
             variant="outline"
             size="sm"
-            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
           >
             <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`}>Proposals</Link>
           </Button>
@@ -374,7 +371,7 @@ function ClientsDashboardContent() {
             asChild
             variant="outline"
             size="sm"
-            className="h-9 rounded-xl border-muted/40 bg-background px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm transition-all hover:bg-muted/5 hover:text-primary active:scale-[0.98]"
+            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
           >
             <Link href={`/dashboard/finance?clientId=${selectedClient.id}`}>Finance</Link>
           </Button>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react'
 
 import {
   Card,
@@ -15,6 +15,8 @@ import type { ChartConfig } from '@/components/ui/chart'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
 import { AreaChart, Area, BarChart, Bar, CartesianGrid, Line, XAxis, YAxis } from '@/components/ui/recharts-dynamic'
 import { CHART_COLORS } from '@/lib/colors'
+import { DASHBOARD_THEME, getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 
 import { formatCurrency } from '../utils'
 
@@ -36,8 +38,8 @@ interface FinanceChartsSectionProps {
 function EmptyChartState() {
   return (
     <div className="flex h-full flex-col items-center justify-center text-center p-8">
-      <div className="rounded-full bg-muted/30 p-4 mb-4">
-        <TrendingUp className="h-8 w-8 text-muted-foreground/60" />
+      <div className={cn(DASHBOARD_THEME.icons.container, 'bg-muted/30 mb-4')}>
+        <Sparkles className={DASHBOARD_THEME.icons.medium} />
       </div>
       <h3 className="text-lg font-medium text-foreground mb-1">No data yet</h3>
       <p className="text-sm text-muted-foreground max-w-[200px]">
@@ -102,60 +104,61 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
   const isEmpty = !data.length
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       {/* Summary Cards Row */}
       {summaryStats && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card className="border-muted/40 bg-gradient-to-br from-emerald-50/50 to-background">
+        <div className={DASHBOARD_THEME.stats.container}>
+          <Card className={cn(DASHBOARD_THEME.stats.card, 'border-muted/40 bg-gradient-to-br from-emerald-50/50 to-background')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Revenue</p>
+                  <p className={DASHBOARD_THEME.stats.label}>Total Revenue</p>
                   <p className="text-2xl font-bold text-emerald-600 mt-1">
                     {formatCurrency(summaryStats.totalRevenue, resolvedCurrency)}
                   </p>
                 </div>
-                <div className="rounded-full bg-emerald-100 p-2">
+                <div className={cn(DASHBOARD_THEME.icons.container, 'bg-emerald-100')}>
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-muted/40 bg-gradient-to-br from-red-50/50 to-background">
+          <Card className={cn(DASHBOARD_THEME.stats.card, 'border-muted/40 bg-gradient-to-br from-red-50/50 to-background')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Expenses</p>
+                  <p className={DASHBOARD_THEME.stats.label}>Total Expenses</p>
                   <p className="text-2xl font-bold text-red-600 mt-1">
                     {formatCurrency(summaryStats.totalExpenses, resolvedCurrency)}
                   </p>
                 </div>
-                <div className="rounded-full bg-red-100 p-2">
+                <div className={cn(DASHBOARD_THEME.icons.container, 'bg-red-100')}>
                   <TrendingDown className="h-5 w-5 text-red-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-muted/40 bg-gradient-to-br from-violet-50/50 to-background">
+          <Card className={cn(DASHBOARD_THEME.stats.card, 'border-muted/40 bg-gradient-to-br from-violet-50/50 to-background')}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Net Profit</p>
+                  <p className={DASHBOARD_THEME.stats.label}>Net Profit</p>
                   <p className={`text-2xl font-bold mt-1 ${summaryStats.totalProfit >= 0 ? 'text-violet-600' : 'text-red-600'}`}>
                     {formatCurrency(summaryStats.totalProfit, resolvedCurrency)}
                   </p>
                 </div>
                 <Badge 
                   variant="secondary" 
-                  className={`${
+                  className={cn(
+                    DASHBOARD_THEME.badges.base,
                     summaryStats.profitTrend === 'up' 
                       ? 'bg-emerald-100 text-emerald-700' 
                       : summaryStats.profitTrend === 'down'
                         ? 'bg-red-100 text-red-700'
                         : 'bg-muted text-muted-foreground'
-                  }`}
+                  )}
                 >
                   {summaryStats.profitTrend === 'up' && <TrendingUp className="h-3 w-3 mr-1" />}
                   {summaryStats.profitTrend === 'down' && <TrendingDown className="h-3 w-3 mr-1" />}
@@ -171,7 +174,7 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Revenue vs Expenses Chart */}
-        <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
+        <Card className={cn(DASHBOARD_THEME.cards.base, 'hover:shadow-md transition-shadow')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">Revenue vs Expenses</CardTitle>
             <CardDescription>Monthly comparison with profit trend overlay.</CardDescription>
@@ -254,7 +257,7 @@ export function FinanceChartsSection({ data, currency }: FinanceChartsSectionPro
         </Card>
 
         {/* Expense Breakdown Chart */}
-        <Card className="border-muted/60 bg-background shadow-sm hover:shadow-md transition-shadow">
+        <Card className={cn(DASHBOARD_THEME.cards.base, 'hover:shadow-md transition-shadow')}>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">Expense Breakdown</CardTitle>
             <CardDescription>Campaign spend vs company operating costs.</CardDescription>

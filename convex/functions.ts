@@ -196,7 +196,7 @@ async function checkIdempotency(
  * Uses a generic 'cursor' object to allow for different sort fields.
  */
 export const PaginationValidators = {
-  limit: v.number(),
+  limit: v.optional(v.number()),
   cursor: v.optional(
     v.union(
       v.null(),

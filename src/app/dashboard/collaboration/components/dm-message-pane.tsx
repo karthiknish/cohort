@@ -1,17 +1,14 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { 
   Send, MoreVertical, Archive, BellOff, Bell, ArchiveRestore, 
-  Smile, Share2, Mail
+  Share2, Mail, LoaderCircle
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,16 +22,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
-import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
 import { useToast } from '@/components/ui/use-toast'
+import { RichComposer } from './rich-composer'
+import { MessageList, type UnifiedMessage } from './message-list'
 
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
-
-const REACTIONS = COLLABORATION_REACTIONS.map((emoji) => ({
-  emoji,
-  label: emoji,
-}))
 
 const PLATFORM_CONFIG = {
   slack: { label: 'Slack', color: 'bg-[#E01E5A]' },
@@ -72,16 +64,6 @@ function WhatsAppIcon({ className }: { className?: string }) {
   )
 }
 
-function formatTime(ms: number): string {
-  const date = new Date(ms)
-  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-}
-
-function formatDate(ms: number): string {
-  const date = new Date(ms)
-  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
-}
-
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -91,29 +73,39 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-function groupMessagesByDate(messages: DirectMessage[]): Map<string, DirectMessage[]> {
-  const groups = new Map<string, DirectMessage[]>()
-  
-  for (const message of messages) {
-    if (message.deleted) continue
-    const dateKey = formatDate(message.createdAtMs)
-    const existing = groups.get(dateKey) ?? []
-    existing.push(message)
-    groups.set(dateKey, existing)
+function toUnifiedMessage(msg: DirectMessage): UnifiedMessage {
+  return {
+    id: msg.legacyId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    senderRole: msg.senderRole,
+    content: msg.content,
+    createdAtMs: msg.createdAtMs,
+    edited: msg.edited,
+    deleted: msg.deleted,
+    reactions: msg.reactions ?? undefined,
+    attachments: msg.attachments?.map(a => ({
+      url: a.url,
+      name: a.name,
+      mimeType: a.type ?? undefined,
+      size: a.size ? parseInt(a.size, 10) : undefined,
+    })) ?? undefined,
+    sharedTo: msg.sharedTo ?? undefined,
   }
-  
-  return groups
 }
 
 interface DMMessagePaneProps {
   conversation: DirectConversation | null
   messages: DirectMessage[]
   isLoading: boolean
+  isLoadingMore: boolean
   hasMore: boolean
   onLoadMore: () => void
   onSendMessage: (content: string) => Promise<void>
   isSending: boolean
   onToggleReaction: (messageLegacyId: string, emoji: string) => Promise<void>
+  onDeleteMessage?: (messageLegacyId: string) => Promise<void>
+  onEditMessage?: (messageLegacyId: string, newContent: string) => Promise<void>
   onArchive: (archived: boolean) => Promise<void>
   onMute: (muted: boolean) => Promise<void>
   currentUserId: string | null
@@ -124,11 +116,14 @@ export function DMMessagePane({
   conversation,
   messages,
   isLoading,
+  isLoadingMore,
   hasMore,
   onLoadMore,
   onSendMessage,
   isSending,
   onToggleReaction,
+  onDeleteMessage,
+  onEditMessage,
   onArchive,
   onMute,
   currentUserId,
@@ -136,15 +131,16 @@ export function DMMessagePane({
 }: DMMessagePaneProps) {
   const [inputValue, setInputValue] = useState('')
   const [sharingTo, setSharingTo] = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
-  const groupedMessages = conversation ? groupMessagesByDate(messages) : new Map()
+  const unifiedMessages = messages.map(toUnifiedMessage)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (scrollContainerRef.current && messages.length > 0) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+    }
+  }, [conversation?.legacyId])
 
   const handleSend = async () => {
     const content = inputValue.trim()
@@ -154,12 +150,9 @@ export function DMMessagePane({
     await onSendMessage(content)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
+  const handleReaction = useCallback(async (messageId: string, emoji: string) => {
+    await onToggleReaction(messageId, emoji)
+  }, [onToggleReaction])
 
   const handleShare = async (message: DirectMessage, platform: 'slack' | 'teams' | 'whatsapp' | 'email') => {
     if (!onShareToPlatform) return
@@ -182,9 +175,85 @@ export function DMMessagePane({
     }
   }
 
+  const renderMessageExtras = (message: UnifiedMessage) => {
+    const originalMsg = messages.find(m => m.legacyId === message.id)
+    if (!originalMsg?.sharedTo || originalMsg.sharedTo.length === 0) return null
+    
+    return (
+      <div className="flex items-center gap-1 mt-1">
+        <span className="text-[10px] text-muted-foreground">Sent to:</span>
+        {originalMsg.sharedTo.map((platform) => (
+          <TooltipProvider key={platform}>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                  {platform === 'slack' && <SlackIcon className="h-3 w-3" />}
+                  {platform === 'teams' && <TeamsIcon className="h-3 w-3" />}
+                  {platform === 'whatsapp' && <WhatsAppIcon className="h-3 w-3" />}
+                  {platform === 'email' && <Mail className="h-3 w-3" />}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Shared to {PLATFORM_CONFIG[platform]?.label || platform}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ))}
+      </div>
+    )
+  }
+
+  const renderMessageActions = (message: UnifiedMessage) => {
+    if (!onShareToPlatform) return null
+    
+    const originalMsg = messages.find(m => m.legacyId === message.id)
+    if (!originalMsg) return null
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-6 w-6">
+            <Share2 className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem 
+            onClick={() => handleShare(originalMsg, 'slack')}
+            disabled={sharingTo === `${message.id}-slack`}
+          >
+            <SlackIcon className="h-4 w-4 mr-2" />
+            Share to Slack
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleShare(originalMsg, 'teams')}
+            disabled={sharingTo === `${message.id}-teams`}
+          >
+            <TeamsIcon className="h-4 w-4 mr-2" />
+            Share to Teams
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => handleShare(originalMsg, 'whatsapp')}
+            disabled={sharingTo === `${message.id}-whatsapp`}
+          >
+            <WhatsAppIcon className="h-4 w-4 mr-2" />
+            Share to WhatsApp
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem 
+            onClick={() => handleShare(originalMsg, 'email')}
+            disabled={sharingTo === `${message.id}-email`}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Share via Email
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center border-muted/40 lg:h-[640px]">
+      <div className="flex-1 flex items-center justify-center border-muted/40 h-full">
         <div className="text-center p-8">
           <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
             <Send className="h-8 w-8 text-muted-foreground" />
@@ -199,8 +268,8 @@ export function DMMessagePane({
   }
 
   return (
-    <div className="flex-1 flex flex-col border-muted/40 lg:h-[640px]">
-      <div className="p-4 border-b border-muted/40">
+    <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+      <div className="p-4 border-b border-muted/40 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Avatar>
@@ -273,209 +342,39 @@ export function DMMessagePane({
         </div>
       </div>
 
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        {hasMore && (
-          <div className="flex justify-center pb-4">
-            <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={isLoading}>
-              Load older messages
-            </Button>
-          </div>
-        )}
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-hidden">
+        <MessageList
+          messages={unifiedMessages}
+          currentUserId={currentUserId}
+          isLoading={isLoading || isLoadingMore}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
+          onToggleReaction={handleReaction}
+          renderMessageExtras={renderMessageExtras}
+          renderMessageActions={renderMessageActions}
+          variant="dm"
+        />
+      </div>
 
-        {isLoading && messages.length === 0 ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={cn('flex gap-2', i % 2 === 0 && 'justify-end')}>
-                <div className="h-10 w-10 rounded-full bg-muted animate-pulse shrink-0" />
-                <div className="space-y-2">
-                  <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                  <div className="h-16 w-48 bg-muted animate-pulse rounded-lg" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
-              <div key={date}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Separator className="flex-1" />
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {date}
-                  </span>
-                  <Separator className="flex-1" />
-                </div>
-                
-                <div className="space-y-3">
-                  {msgs.map((message: DirectMessage) => {
-                    const isOwn = message.senderId === currentUserId
-                    
-                    return (
-                      <div
-                        key={message.legacyId}
-                        className={cn('flex gap-2 group', isOwn && 'flex-row-reverse')}
-                      >
-                        <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarFallback className={cn(
-                            'text-xs',
-                            isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                          )}>
-                            {getInitials(message.senderName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className={cn('max-w-[70%]', isOwn && 'items-end')}>
-                          <div className={cn(
-                            'rounded-lg px-3 py-2',
-                            isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                          )}>
-                            <p className="text-sm whitespace-pre-wrap break-words">
-                              {message.content}
-                            </p>
-                          </div>
-                          
-                          <div className={cn(
-                            'flex items-center gap-1 mt-1',
-                            isOwn && 'justify-end'
-                          )}>
-                            <span className="text-[10px] text-muted-foreground">
-                              {formatTime(message.createdAtMs)}
-                            </span>
-                            {message.edited && (
-                              <span className="text-[10px] text-muted-foreground">(edited)</span>
-                            )}
-                          </div>
-                          
-                          {message.reactions && message.reactions.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {message.reactions.map((reaction: { emoji: string; count: number; userIds: string[] }) => (
-                                <button
-                                  key={reaction.emoji}
-                                  type="button"
-                                  onClick={() => onToggleReaction(message.legacyId, reaction.emoji)}
-                                  className={cn(
-                                    'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs',
-                                    reaction.userIds.includes(currentUserId ?? '')
-                                      ? 'bg-primary/10 border border-primary/20'
-                                      : 'bg-muted'
-                                  )}
-                                >
-                                  <span>{reaction.emoji}</span>
-                                  <span className="text-muted-foreground">{reaction.count}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {message.sharedTo && message.sharedTo.length > 0 && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className="text-[10px] text-muted-foreground">Sent to:</span>
-                              {message.sharedTo.map((platform) => (
-                                <TooltipProvider key={platform}>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                                        {platform === 'slack' && <SlackIcon className="h-3 w-3" />}
-                                        {platform === 'teams' && <TeamsIcon className="h-3 w-3" />}
-                                        {platform === 'whatsapp' && <WhatsAppIcon className="h-3 w-3" />}
-                                        {platform === 'email' && <Mail className="h-3 w-3" />}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Shared to {PLATFORM_CONFIG[platform]?.label || platform}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ))}
-                            </div>
-                          )}
-                          
-                          <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <Smile className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                {REACTIONS.slice(0, 8).map((reaction) => (
-                                  <DropdownMenuItem
-                                    key={reaction.emoji}
-                                    onClick={() => onToggleReaction(message.legacyId, reaction.emoji)}
-                                  >
-                                    <span className="mr-2">{reaction.emoji}</span>
-                                    {reaction.label}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            
-                            {onShareToPlatform && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <Share2 className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  <DropdownMenuItem 
-                                    onClick={() => handleShare(message, 'slack')}
-                                    disabled={sharingTo === `${message.legacyId}-slack`}
-                                  >
-                                    <SlackIcon className="h-4 w-4 mr-2" />
-                                    Share to Slack
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => handleShare(message, 'teams')}
-                                    disabled={sharingTo === `${message.legacyId}-teams`}
-                                  >
-                                    <TeamsIcon className="h-4 w-4 mr-2" />
-                                    Share to Teams
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => handleShare(message, 'whatsapp')}
-                                    disabled={sharingTo === `${message.legacyId}-whatsapp`}
-                                  >
-                                    <WhatsAppIcon className="h-4 w-4 mr-2" />
-                                    Share to WhatsApp
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    onClick={() => handleShare(message, 'email')}
-                                    disabled={sharingTo === `${message.legacyId}-email`}
-                                  >
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Share via Email
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </ScrollArea>
-
-      <div className="p-4 border-t border-muted/40">
-        <div className="flex gap-2">
-          <Input
+      <div className="p-4 border-t border-muted/40 shrink-0">
+        <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+          <RichComposer
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onChange={setInputValue}
+            onSend={handleSend}
+            disabled={!conversation || isSending}
             placeholder={`Message ${conversation.otherParticipantName}...`}
-            disabled={isSending}
-            className="flex-1"
+            participants={[]}
           />
-          <Button onClick={handleSend} disabled={!inputValue.trim() || isSending}>
-            <Send className="h-4 w-4" />
+        </div>
+        <div className="flex justify-end mt-2">
+          <Button onClick={handleSend} disabled={!inputValue.trim() || isSending} size="sm">
+            {isSending ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            <span className="ml-2">Send</span>
           </Button>
         </div>
       </div>

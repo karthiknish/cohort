@@ -19,7 +19,8 @@ import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
 import { usePreview } from '@/contexts/preview-context'
 import { isFeatureEnabled } from '@/lib/features'
-import { exportToCsv } from '@/lib/utils'
+import { exportToCsv, cn } from '@/lib/utils'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
 import { useToast } from '@/components/ui/use-toast'
@@ -363,7 +364,7 @@ export default function TasksPage() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <div className={DASHBOARD_THEME.layout.container}>
         {/* Header */}
         <TasksHeader
           loading={loading}
@@ -376,11 +377,11 @@ export default function TasksPage() {
 
         {/* Summary Cards */}
         {initialLoading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className={DASHBOARD_THEME.stats.container}>
             {Array.from({ length: 5 }).map((_, idx) => (
-              <Card key={idx} className="border-muted/60 bg-background">
+              <Card key={idx} className={DASHBOARD_THEME.cards.base}>
                 <CardContent className="flex items-center gap-3 p-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className={DASHBOARD_THEME.skeletons.avatar} />
                   <div className="space-y-2">
                     <Skeleton className="h-3 w-20" />
                     <Skeleton className="h-6 w-14" />
@@ -403,10 +404,10 @@ export default function TasksPage() {
           onValueChange={filters.setActiveTab}
           className="space-y-4"
         >
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <TabsList>
-              <TabsTrigger value="all-tasks">All Tasks</TabsTrigger>
-              <TabsTrigger value="my-tasks">My Tasks</TabsTrigger>
+          <div className={DASHBOARD_THEME.layout.header}>
+            <TabsList className={DASHBOARD_THEME.tabs.list}>
+              <TabsTrigger className={DASHBOARD_THEME.tabs.trigger} value="all-tasks">All Tasks</TabsTrigger>
+              <TabsTrigger className={DASHBOARD_THEME.tabs.trigger} value="my-tasks">My Tasks</TabsTrigger>
             </TabsList>
             <TaskViewControls
               viewMode={filters.viewMode}
@@ -416,8 +417,8 @@ export default function TasksPage() {
             />
           </div>
 
-          <Card className="border-muted/60 bg-background">
-            <CardHeader className="border-b border-muted/40 pb-4">
+          <Card className={DASHBOARD_THEME.cards.base}>
+            <CardHeader className={DASHBOARD_THEME.cards.header}>
               <CardTitle>
                 {filters.activeTab === 'my-tasks' ? 'My Assignments' : 'All Tasks'}
               </CardTitle>

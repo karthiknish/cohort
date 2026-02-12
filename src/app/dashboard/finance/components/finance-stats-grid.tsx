@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 interface StatCard {
   name: string
@@ -85,7 +86,8 @@ const StatCardComponent = memo(function StatCardComponent({
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden border-muted/60 bg-background transition-all hover:shadow-lg hover:border-primary/20',
+        DASHBOARD_THEME.stats.card,
+        'group relative overflow-hidden',
         isClickable && 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]'
       )}
       onClick={isClickable ? handleClick : undefined}
@@ -106,7 +108,7 @@ const StatCardComponent = memo(function StatCardComponent({
           <div className="space-y-2 flex-1">
             {/* Header with tooltip */}
             <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium text-muted-foreground">{stat.name}</p>
+              <p className={DASHBOARD_THEME.stats.label}>{stat.name}</p>
               {tooltip && (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
@@ -129,7 +131,7 @@ const StatCardComponent = memo(function StatCardComponent({
             </div>
 
             {/* Value with animation */}
-            <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            <p className={cn(DASHBOARD_THEME.stats.value, 'text-2xl tabular-nums')}>
               {stat.value}
             </p>
 
@@ -138,7 +140,7 @@ const StatCardComponent = memo(function StatCardComponent({
               {stat.trend !== undefined ? (
                 <TrendIndicator value={stat.trend.value} label={stat.trend.label} />
               ) : (
-                <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                <p className={DASHBOARD_THEME.stats.description}>
                   {stat.helper}
                 </p>
               )}
@@ -146,14 +148,14 @@ const StatCardComponent = memo(function StatCardComponent({
           </div>
 
           {/* Icon */}
-          <div className="flex items-center justify-center rounded-xl bg-primary/10 p-2.5 text-primary ring-1 ring-primary/20 group-hover:bg-primary/15 group-hover:ring-primary/30 transition-all">
+          <div className={cn(DASHBOARD_THEME.icons.container, 'group-hover:bg-primary/15 group-hover:ring-primary/30 transition-all')}>
             <Icon className="h-5 w-5" />
           </div>
         </div>
 
         {/* Click hint for interactive cards */}
         {isClickable && (
-          <div className="absolute bottom-2 right-3 text-[10px] font-medium text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute bottom-2 right-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">
             Click to view
           </div>
         )}
@@ -167,7 +169,7 @@ export const FinanceStatsGrid = memo(function FinanceStatsGrid({
   onStatClick 
 }: FinanceStatsGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={DASHBOARD_THEME.stats.container}>
       {stats.cards.map((stat) => (
         <StatCardComponent
           key={stat.name}

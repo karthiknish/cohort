@@ -24,6 +24,7 @@ interface NewDMDialogProps {
   onUserSelect: (user: { id: string; name: string; role?: string | null }) => Promise<void>
   workspaceId: string | null
   currentUserId: string | null
+  currentUserRole: string | null | undefined
 }
 
 export function NewDMDialog({
@@ -32,20 +33,20 @@ export function NewDMDialog({
   onUserSelect,
   workspaceId,
   currentUserId,
+  currentUserRole,
 }: NewDMDialogProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
-  const workspaceMembers = useQuery(
-    (api as any).users.listWorkspaceMembers,
-    workspaceId ? { workspaceId } : 'skip'
+  const dmParticipants = useQuery(
+    (api as any).users.listDMParticipants,
+    workspaceId && currentUserId ? { workspaceId, currentUserId, currentUserRole: currentUserRole ?? null } : 'skip'
   )
 
   const filteredUsers = useMemo(() => {
-    if (!workspaceMembers) return []
-    
-    return workspaceMembers
-      .filter((member: any) => member._id !== currentUserId)
+    if (!dmParticipants) return []
+
+    return dmParticipants
       .filter((member: any) => {
         if (!searchQuery.trim()) return true
         const query = searchQuery.toLowerCase()
@@ -54,13 +55,13 @@ export function NewDMDialog({
           member.email?.toLowerCase().includes(query)
         )
       })
-  }, [workspaceMembers, currentUserId, searchQuery])
+  }, [dmParticipants, searchQuery])
 
-  const handleUserClick = async (user: { _id: string; name?: string | null; role?: string | null }) => {
+  const handleUserClick = async (user: { id: string; name?: string; role?: string | null }) => {
     setIsCreating(true)
     try {
       await onUserSelect({
-        id: user._id,
+        id: user.id,
         name: user.name ?? 'Unknown User',
         role: user.role,
       })
@@ -112,7 +113,7 @@ export function NewDMDialog({
             <div className="space-y-1 pr-4">
               {filteredUsers.map((user: any) => (
                 <button
-                  key={user._id}
+                  key={user.id}
                   type="button"
                   onClick={() => handleUserClick(user)}
                   disabled={isCreating}

@@ -16,6 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context'
 import { adsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 
 // Extracted hooks and types
 import {
@@ -308,20 +310,20 @@ export default function AnalyticsPage() {
   }, [aggregatedByDate])
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       {/* Header */}
       <div className="space-y-8 pb-10">
         {/* Header Section */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className={DASHBOARD_THEME.layout.header}>
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className={getIconContainerClasses('medium')}>
                 <TrendingUp className="h-6 w-6" />
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Analytics</h1>
+              <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.analytics?.title ?? 'Analytics'}</h1>
             </div>
-            <p className="text-sm font-medium text-muted-foreground/80 max-w-xl">
-              Real-time performance metrics and cross-platform creative insights for your active campaigns.
+            <p className={cn(DASHBOARD_THEME.layout.subtitle, 'text-sm font-medium max-w-xl')}>
+              {PAGE_TITLES.analytics?.description ?? 'Real-time performance metrics and cross-platform creative insights for your active campaigns.'}
             </p>
           </div>
 

@@ -202,8 +202,9 @@ export const list = zWorkspacePaginatedQueryActive({
 
     q = applyManualPagination(q, args.cursor, 'nameLower', 'asc')
 
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'nameLower')
+    const limit = args.limit ?? 50
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'nameLower')
 
     return {
       items: result.items.map((row: any) => ({

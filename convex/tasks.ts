@@ -58,8 +58,9 @@ export const list = zWorkspacePaginatedQueryActive({
 
     q = applyManualPagination(q, args.cursor)
 
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+    const limit = args.limit ?? 50
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
 
     return {
       items: result.items.map((row: any) => ({
@@ -135,8 +136,9 @@ export const listByStatus = zWorkspacePaginatedQueryActive({
 
     q = applyManualPagination(q, args.cursor)
 
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+    const limit = args.limit ?? 50
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
 
     return {
       items: result.items.map((row: any) => ({
@@ -182,8 +184,9 @@ export const listForProject = zWorkspacePaginatedQueryActive({
 
     q = applyManualPagination(q, args.cursor)
 
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+    const limit = args.limit ?? 50
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
 
     return {
       items: result.items.map((row: any) => ({

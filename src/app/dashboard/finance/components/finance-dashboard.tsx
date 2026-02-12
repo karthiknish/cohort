@@ -32,6 +32,8 @@ import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { FinanceInvoice } from '@/types/finance'
 import { formatCurrency } from '../utils'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import {
   BarChart3,
   RefreshCw,
@@ -44,9 +46,12 @@ import {
   FileSpreadsheet,
   ChevronDown,
   Copy,
-  Code2
+  Code2,
+  Plus,
+  Send,
+  Download,
+  Sparkles
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
 import { useRenderLog } from '@/lib/debug-utils'
@@ -66,8 +71,8 @@ function SectionHeader({
   return (
     <div className="flex items-center gap-3 py-1">
       <div className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-        "bg-muted text-muted-foreground group-data-[state=open]:bg-primary/10 group-data-[state=open]:text-primary"
+        DASHBOARD_THEME.icons.container,
+        "group-data-[state=open]:bg-primary/10 group-data-[state=open]:text-primary transition-colors"
       )}>
         <Icon className="h-4 w-4" />
       </div>
@@ -378,8 +383,8 @@ export function FinanceDashboard() {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
-        <div className="rounded-full bg-destructive/10 p-4 mb-4">
-          <CircleAlert className="h-8 w-8 text-destructive" />
+        <div className={cn(DASHBOARD_THEME.icons.container, 'bg-destructive/10 text-destructive mb-4')}>
+          <CircleAlert className={DASHBOARD_THEME.icons.medium} />
         </div>
         <h2 className="text-xl font-semibold text-foreground mb-2">Unable to load finance data</h2>
         <p className="text-muted-foreground text-center max-w-md mb-4">{loadError}</p>
@@ -388,11 +393,11 @@ export function FinanceDashboard() {
           <span className="text-xs text-muted-foreground">Component: FinanceDashboard</span>
         </div>
         <div className="flex gap-3">
-          <Button onClick={() => void refresh()} className="gap-2">
+          <Button onClick={() => void refresh()} className={cn(getButtonClasses('primary'), 'gap-2')}>
             <RefreshCw className="h-4 w-4" />
             Try Again
           </Button>
-          <Button variant="outline" size="sm" onClick={copyError} className="gap-2">
+          <Button variant="outline" size="sm" onClick={copyError} className={cn(getButtonClasses('outline'), 'gap-2')}>
             <Copy className="h-4 w-4" />
             Copy Error
           </Button>
@@ -402,7 +407,7 @@ export function FinanceDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={DASHBOARD_THEME.layout.container}>
       {loadError && (
         <Alert variant="destructive" className="border-destructive/50 bg-destructive/5">
           <CircleAlert className="h-4 w-4" />
@@ -452,11 +457,11 @@ export function FinanceDashboard() {
       {sections.some((s) => s.value === activeSection) && (
         <div className="sticky top-0 z-20 -mx-6 border-b border-muted/40 bg-background/75 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-xs font-medium text-muted-foreground">Jump to</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">Jump to</div>
             <Tabs value={activeSection} onValueChange={handleJumpTo}>
-              <TabsList className="w-full justify-start sm:w-auto">
+              <TabsList className={cn(DASHBOARD_THEME.tabs.list, 'w-full justify-start sm:w-auto')}>
                 {sections.map((s) => (
-                  <TabsTrigger key={s.value} value={s.value}>
+                  <TabsTrigger key={s.value} value={s.value} className={DASHBOARD_THEME.tabs.trigger}>
                     {s.label}
                   </TabsTrigger>
                 ))}
@@ -464,6 +469,33 @@ export function FinanceDashboard() {
             </Tabs>
           </div>
         </div>
+      )}
+
+      {/* Empty State */}
+      {isEmptyState && (
+        <Card className={cn(DASHBOARD_THEME.cards.base, 'border-primary/30 bg-primary/5')}>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className={cn(DASHBOARD_THEME.icons.container, 'mb-4')}>
+              <Sparkles className={DASHBOARD_THEME.icons.medium} />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Get started with Finance</h3>
+            <p className="text-sm text-muted-foreground max-w-md mb-6">
+              Add your first invoice or cost to unlock revenue, expense, and profit charts.
+            </p>
+            {!isClient && (
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button className={cn(getButtonClasses('primary'), 'gap-2')}>
+                  <Plus className="h-4 w-4" />
+                  Add Invoice
+                </Button>
+                <Button variant="outline" className={cn(getButtonClasses('outline'), 'gap-2')}>
+                  <Receipt className="h-4 w-4" />
+                  Add Cost
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty State */}
@@ -491,7 +523,7 @@ export function FinanceDashboard() {
         id="finance-overview"
         className="grid scroll-mt-24 gap-6 xl:grid-cols-[minmax(0,2fr),minmax(0,1fr)] xl:items-start"
       >
-        <div className="space-y-6">
+        <div className={DASHBOARD_THEME.layout.container}>
           <FinanceChartsSection data={chartData} currency={primaryCurrency} />
           {forecast && forecast.length > 0 && (
             <FinanceForecastCard data={forecast} currency={primaryCurrency} />
@@ -511,9 +543,9 @@ export function FinanceDashboard() {
       {/* Invoices Section */}
       <section id="finance-invoices" className="scroll-mt-24">
       <Collapsible defaultOpen>
-        <Card className="overflow-hidden">
+        <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
           <CollapsibleTrigger className="group w-full text-left">
-            <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+            <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20')}>
               <SectionHeader
                 icon={FileText}
                 title="Invoices"
@@ -547,9 +579,9 @@ export function FinanceDashboard() {
       {!isClient && (
         <section id="finance-recurring" className="scroll-mt-24">
         <Collapsible defaultOpen={false}>
-          <Card className="overflow-hidden">
+          <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
             <CollapsibleTrigger className="group w-full text-left">
-              <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+              <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20')}>
                 <SectionHeader
                   icon={Repeat}
                   title="Recurring Invoices"
@@ -569,13 +601,13 @@ export function FinanceDashboard() {
 
       {/* Costs & Expenses Grid - Admin/Team only */}
       {!isClient && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={DASHBOARD_THEME.stats.container}>
           {/* Costs Section */}
           <section id="finance-costs" className="scroll-mt-24">
           <Collapsible defaultOpen>
-            <Card className="overflow-hidden h-fit">
+            <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden h-fit')}>
               <CollapsibleTrigger className="group w-full text-left">
-                <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20')}>
                   <SectionHeader
                     icon={Receipt}
                     title="Company Costs"
@@ -610,9 +642,9 @@ export function FinanceDashboard() {
           {/* Expenses Section */}
           <section id="finance-expenses" className="scroll-mt-24">
           <Collapsible defaultOpen>
-            <Card className="overflow-hidden h-fit">
+            <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden h-fit')}>
               <CollapsibleTrigger className="group w-full text-left">
-                <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+                <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20')}>
                   <SectionHeader
                     icon={Wallet}
                     title="Expenses"
@@ -635,9 +667,9 @@ export function FinanceDashboard() {
       {!isClient && (
         <section id="finance-purchase-orders" className="scroll-mt-24">
         <Collapsible defaultOpen={false}>
-          <Card className="overflow-hidden">
+          <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
             <CollapsibleTrigger className="group w-full text-left">
-              <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+              <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20')}>
                 <SectionHeader
                   icon={ClipboardList}
                   title="Purchase Orders"
@@ -659,9 +691,9 @@ export function FinanceDashboard() {
       {!isClient && isAdmin && (
         <section id="finance-expense-reports" className="scroll-mt-24">
         <Collapsible defaultOpen={false}>
-          <Card className="overflow-hidden">
+          <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
             <CollapsibleTrigger className="group w-full text-left">
-              <CardHeader className="cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20">
+              <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'cursor-pointer py-4 transition-colors hover:bg-muted/30 group-data-[state=open]:bg-muted/20')}>
                 <SectionHeader
                   icon={FileSpreadsheet}
                   title="Expense Reports"

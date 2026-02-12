@@ -201,8 +201,9 @@ export const listMessages = zWorkspacePaginatedQueryActive({
 
     q = applyManualPagination(q, args.cursor)
 
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
+    const limit = args.limit ?? 50
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
     const items = await Promise.all(result.items.map((row: any) => hydrateMessageRow(ctx, row)))
 
     return {
