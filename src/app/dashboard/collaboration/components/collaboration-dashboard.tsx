@@ -3,31 +3,49 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { MessageSquare, Users, Briefcase, X, Columns3, List } from 'lucide-react'
+import { 
+  MessageSquare, Users, Briefcase, X, Columns3, List, 
+  MessageCircle, Inbox, Hash
+} from 'lucide-react'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
 import { CollaborationChannelList } from './channel-list'
 import { CollaborationMessagePane } from './message-pane'
 import { CollaborationSidebar } from './sidebar'
+import { DMSidebar } from './dm-sidebar'
+import { DMMessagePane } from './dm-message-pane'
+import { NewDMDialog } from './new-dm-dialog'
+import { UnifiedInboxView } from './unified-inbox-view'
 import { useCollaborationData } from '../hooks'
+import { useDirectMessages } from '../hooks/use-direct-messages'
 import { CollaborationSkeleton } from './collaboration-skeleton'
 import { isFeatureEnabled } from '@/lib/features'
 import type { Channel } from '../types'
 import type { ChannelSummary } from '../hooks/types'
 
-import { CheckSquare, FileText } from 'lucide-react'
 import { SEMANTIC_COLORS } from '@/lib/colors'
+import { useAuth } from '@/contexts/auth-context'
+
+type ViewTab = 'channels' | 'dms' | 'inbox'
 
 export function CollaborationDashboard() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
+  const [activeTab, setActiveTab] = useState<ViewTab>('channels')
+  const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false)
+  
+  const { user } = useAuth()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const currentUserId = user?.id ?? null
+  
   const {
     channels,
     filteredChannels,
@@ -68,7 +86,7 @@ export function CollaborationDashboard() {
     handleLoadMore,
     canLoadMore,
     loadingMore,
-    currentUserId,
+    currentUserId: channelUserId,
     currentUserRole,
     threadMessagesByRootId,
     threadNextCursorByRootId,
@@ -79,6 +97,11 @@ export function CollaborationDashboard() {
     clearThreadReplies,
     reactionPendingByMessage,
   } = useCollaborationData()
+
+  const dm = useDirectMessages({
+    workspaceId,
+    currentUserId,
+  })
 
   const requestedProjectId = searchParams.get('projectId')
   const requestedProjectName = searchParams.get('projectName')
@@ -122,9 +145,16 @@ export function CollaborationDashboard() {
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
   }, [pathname, router, searchParams])
 
+  const handleStartNewDM = useCallback(async (targetUser: { id: string; name: string; role?: string | null }) => {
+    await dm.startNewDM(targetUser)
+    setIsNewDMDialogOpen(false)
+  }, [dm])
+
   if (isBootstrapping) {
     return <CollaborationSkeleton />
   }
+
+  const totalUnread = dm.unreadCount
 
   return (
     <div className="space-y-6">
@@ -165,49 +195,68 @@ export function CollaborationDashboard() {
       <Card className="border-muted/60 bg-background shadow-sm">
         <CardHeader className="border-b border-muted/40 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">Channels</h2>
-            </div>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ViewTab)} className="w-auto">
+              <TabsList className="bg-muted/50">
+                <TabsTrigger value="channels" className="gap-1.5 data-[state=active]:bg-background">
+                  <Hash className="h-4 w-4" />
+                  Channels
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {totalChannels}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="dms" className="gap-1.5 data-[state=active]:bg-background">
+                  <MessageCircle className="h-4 w-4" />
+                  Direct Messages
+                  {totalUnread > 0 && (
+                    <Badge variant="default" className="ml-1 h-5 px-1.5 text-xs">
+                      {totalUnread}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="inbox" className="gap-1.5 data-[state=active]:bg-background">
+                  <Inbox className="h-4 w-4" />
+                  Unified Inbox
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <Badge variant="outline" className="flex items-center gap-1 bg-muted/50">
-                <MessageSquare className="h-3 w-3" /> {totalChannels} channels
-              </Badge>
               <Badge variant="outline" className="flex items-center gap-1 bg-muted/50">
                 <Users className="h-3 w-3" /> {totalParticipants} teammates
               </Badge>
-              {selectedChannel && (
-                <>
-                  <Badge variant="outline" className="flex items-center gap-1 bg-primary/5 text-primary border-primary/20">
-                    <MessageSquare className="h-3 w-3" /> {channelMessages.length} messages
-                  </Badge>
-                </>
+              {activeTab === 'channels' && selectedChannel && (
+                <Badge variant="outline" className="flex items-center gap-1 bg-primary/5 text-primary border-primary/20">
+                  <MessageSquare className="h-3 w-3" /> {channelMessages.length} messages
+                </Badge>
               )}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="List view"
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'board' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
-                  aria-label="Kanban view"
-                  onClick={() => setViewMode('board')}
-                >
-                  <Columns3 className="h-4 w-4" />
-                </Button>
-              </div>
+              {activeTab === 'channels' && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="List view"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'board' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="Kanban view"
+                    onClick={() => setViewMode('board')}
+                  >
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
-        <CardContent className={viewMode === 'board' ? "p-4" : "flex flex-col p-0 lg:flex-row"}>
-          {viewMode === 'board' ? (
+        
+        <CardContent className={activeTab === 'channels' && viewMode === 'board' ? "p-4" : "flex flex-col p-0 lg:flex-row"}>
+          {activeTab === 'channels' && viewMode === 'board' ? (
             <CollaborationKanban
               channels={filteredChannels}
               channelSummaries={channelSummaries}
@@ -216,7 +265,7 @@ export function CollaborationDashboard() {
                 setViewMode('list')
               }}
             />
-          ) : (
+          ) : activeTab === 'channels' ? (
             <>
               <CollaborationChannelList
                 channels={channels}
@@ -267,7 +316,7 @@ export function CollaborationDashboard() {
                 messageUpdatingId={messageUpdatingId}
                 messageDeletingId={messageDeletingId}
                 messagesEndRef={messagesEndRef}
-                currentUserId={currentUserId}
+                currentUserId={channelUserId}
                 currentUserRole={currentUserRole}
                 threadMessagesByRootId={threadMessagesByRootId}
                 threadNextCursorByRootId={threadNextCursorByRootId}
@@ -294,10 +343,47 @@ export function CollaborationDashboard() {
                 </>
               )}
             </>
+          ) : activeTab === 'dms' ? (
+            <>
+              <DMSidebar
+                conversations={dm.conversations}
+                selectedConversation={dm.selectedConversation}
+                onSelectConversation={dm.selectConversation}
+                isLoading={dm.isLoadingConversations}
+                unreadCount={dm.unreadCount}
+                onNewDM={() => setIsNewDMDialogOpen(true)}
+              />
+              
+              <DMMessagePane
+                conversation={dm.selectedConversation}
+                messages={dm.messages}
+                isLoading={dm.isLoadingMessages}
+                hasMore={dm.hasMoreMessages}
+                onLoadMore={dm.loadMoreMessages}
+                onSendMessage={dm.sendMessage}
+                isSending={dm.isSending}
+                onToggleReaction={dm.toggleReaction}
+                onArchive={dm.archiveConversation}
+                onMute={dm.muteConversation}
+                currentUserId={currentUserId}
+              />
+              
+              <NewDMDialog
+                open={isNewDMDialogOpen}
+                onOpenChange={setIsNewDMDialogOpen}
+                onUserSelect={handleStartNewDM}
+                workspaceId={workspaceId}
+                currentUserId={currentUserId}
+              />
+            </>
+          ) : (
+            <UnifiedInboxView
+              workspaceId={workspaceId}
+              currentUserId={currentUserId}
+            />
           )}
         </CardContent>
       </Card>
-
     </div>
   )
 }

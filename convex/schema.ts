@@ -987,4 +987,227 @@ export default defineSchema({
     .index('by_actorId_timestampMs', ['actorId', 'timestampMs'])
     .index('by_action_timestampMs', ['action', 'timestampMs'])
     .index('by_workspaceId_timestampMs', ['workspaceId', 'timestampMs']),
+
+  // Direct conversations (1:1 DMs between users)
+  directConversations: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    // Two participants in the conversation (sorted for uniqueness)
+    participantOneId: v.string(),
+    participantOneName: v.string(),
+    participantOneRole: v.union(v.string(), v.null()),
+    participantTwoId: v.string(),
+    participantTwoName: v.string(),
+    participantTwoRole: v.union(v.string(), v.null()),
+    // Conversation metadata
+    lastMessageSnippet: v.union(v.string(), v.null()),
+    lastMessageAtMs: v.union(v.number(), v.null()),
+    lastMessageSenderId: v.union(v.string(), v.null()),
+    // Per-participant read state
+    readByParticipantOne: v.boolean(),
+    readByParticipantTwo: v.boolean(),
+    lastReadByParticipantOneAtMs: v.union(v.number(), v.null()),
+    lastReadByParticipantTwoAtMs: v.union(v.number(), v.null()),
+    // Archive/mute state per participant
+    archivedByParticipantOne: v.boolean(),
+    archivedByParticipantTwo: v.boolean(),
+    mutedByParticipantOne: v.boolean(),
+    mutedByParticipantTwo: v.boolean(),
+    // Timestamps
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_participantOne_participantTwo', ['workspaceId', 'participantOneId', 'participantTwoId'])
+    .index('by_workspace_participantOne_updatedAtMs', ['workspaceId', 'participantOneId', 'updatedAtMs'])
+    .index('by_workspace_participantTwo_updatedAtMs', ['workspaceId', 'participantTwoId', 'updatedAtMs'])
+    .index('by_workspace_lastMessageAtMs', ['workspaceId', 'lastMessageAtMs']),
+
+  // Direct messages (messages in 1:1 conversations)
+  directMessages: defineTable({
+    workspaceId: v.string(),
+    conversationLegacyId: v.string(),
+    legacyId: v.string(),
+    senderId: v.string(),
+    senderName: v.string(),
+    senderRole: v.union(v.string(), v.null()),
+    content: v.string(),
+    // Message state
+    edited: v.boolean(),
+    editedAtMs: v.union(v.number(), v.null()),
+    deleted: v.boolean(),
+    deletedAtMs: v.union(v.number(), v.null()),
+    deletedBy: v.union(v.string(), v.null()),
+    // Attachments and reactions
+    attachments: v.union(
+      v.array(
+        v.object({
+          name: v.string(),
+          url: v.string(),
+          storageId: v.optional(v.union(v.string(), v.null())),
+          type: v.optional(v.union(v.string(), v.null())),
+          size: v.optional(v.union(v.string(), v.null())),
+        })
+      ),
+      v.null()
+    ),
+    reactions: v.union(
+      v.array(
+        v.object({
+          emoji: v.string(),
+          count: v.number(),
+          userIds: v.array(v.string()),
+        })
+      ),
+      v.null()
+    ),
+    // Read/delivery receipts
+    readBy: v.array(v.string()),
+    deliveredTo: v.array(v.string()),
+    readAtMs: v.union(v.number(), v.null()), // When recipient first read
+    // External sharing
+    sharedTo: v.optional(v.union(v.array(v.union(v.literal('slack'), v.literal('teams'), v.literal('whatsapp'), v.literal('email'))), v.null())),
+    // Timestamps
+    createdAtMs: v.number(),
+    updatedAtMs: v.union(v.number(), v.null()),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_conversation_createdAtMs_legacyId', ['workspaceId', 'conversationLegacyId', 'createdAtMs', 'legacyId'])
+    .index('by_workspace_sender_createdAtMs', ['workspaceId', 'senderId', 'createdAtMs']),
+
+  // Conversation assignments (for smart routing)
+  conversationAssignments: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    // What's being assigned (can be a DM conversation, channel, or specific message)
+    resourceType: v.union(v.literal('direct_conversation'), v.literal('channel'), v.literal('message')),
+    resourceId: v.string(),
+    // Assignment details
+    assignedToId: v.string(),
+    assignedToName: v.string(),
+    assignedById: v.union(v.string(), v.null()),
+    assignedByName: v.union(v.string(), v.null()),
+    // Routing metadata
+    routingReason: v.union(v.string(), v.null()), // 'manual', 'auto-skill', 'auto-geography', 'escalation'
+    routingRuleId: v.union(v.string(), v.null()),
+    priority: v.union(v.literal('low'), v.literal('normal'), v.literal('high'), v.literal('urgent')),
+    // Status
+    status: v.union(v.literal('active'), v.literal('completed'), v.literal('escalated'), v.literal('transferred')),
+    escalatedFromId: v.union(v.string(), v.null()), // Previous assignment if escalated
+    // SLA tracking
+    slaDeadlineMs: v.union(v.number(), v.null()),
+    slaBreached: v.boolean(),
+    firstResponseAtMs: v.union(v.number(), v.null()),
+    resolvedAtMs: v.union(v.number(), v.null()),
+    // Timestamps
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_resource', ['workspaceId', 'resourceType', 'resourceId'])
+    .index('by_workspace_assignedTo_status', ['workspaceId', 'assignedToId', 'status'])
+    .index('by_workspace_status_priority', ['workspaceId', 'status', 'priority'])
+    .index('by_workspace_slaDeadline', ['workspaceId', 'slaDeadlineMs']),
+
+  // Message analytics (response times, engagement metrics)
+  messageAnalytics: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    // What's being tracked
+    conversationType: v.union(v.literal('direct'), v.literal('channel'), v.literal('thread')),
+    conversationId: v.string(),
+    messageId: v.string(),
+    senderId: v.string(),
+    // Response metrics
+    firstReadAtMs: v.union(v.number(), v.null()),
+    firstResponseAtMs: v.union(v.number(), v.null()),
+    responseTimeMs: v.union(v.number(), v.null()), // Time from message to first response
+    timeToReadMs: v.union(v.number(), v.null()), // Time from send to first read
+    // Engagement metrics
+    reactionCount: v.number(),
+    replyCount: v.number(),
+    shareCount: v.number(),
+    // Delivery metrics
+    deliveryAttempts: v.number(),
+    deliveryStatus: v.union(v.literal('pending'), v.literal('delivered'), v.literal('failed')),
+    deliveredAtMs: v.union(v.number(), v.null()),
+    // Channel context
+    channelType: v.union(v.string(), v.null()),
+    clientId: v.union(v.string(), v.null()),
+    projectId: v.union(v.string(), v.null()),
+    // Timestamps
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_conversation_createdAtMs', ['workspaceId', 'conversationId', 'createdAtMs'])
+    .index('by_workspace_sender_createdAtMs', ['workspaceId', 'senderId', 'createdAtMs'])
+    .index('by_workspace_conversationType_responseTime', ['workspaceId', 'conversationType', 'responseTimeMs']),
+
+  // Unified inbox items (aggregates all conversations: DMs, channels, external)
+  inboxItems: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    userId: v.string(), // User this inbox item belongs to
+    // Source info
+    sourceType: v.union(v.literal('direct_message'), v.literal('channel'), v.literal('whatsapp'), v.literal('slack'), v.literal('teams'), v.literal('email')),
+    sourceId: v.string(), // Conversation/channel ID
+    sourceName: v.string(), // Display name
+    // Related entities
+    clientId: v.union(v.string(), v.null()),
+    projectId: v.union(v.string(), v.null()),
+    otherParticipantId: v.union(v.string(), v.null()), // For DMs
+    otherParticipantName: v.union(v.string(), v.null()),
+    // Last activity
+    lastMessageSnippet: v.union(v.string(), v.null()),
+    lastMessageAtMs: v.union(v.number(), v.null()),
+    lastMessageSenderId: v.union(v.string(), v.null()),
+    lastMessageSenderName: v.union(v.string(), v.null()),
+    // Unread state
+    unreadCount: v.number(),
+    isRead: v.boolean(),
+    lastReadAtMs: v.union(v.number(), v.null()),
+    // Organization
+    pinned: v.boolean(),
+    pinnedAtMs: v.union(v.number(), v.null()),
+    archived: v.boolean(),
+    archivedAtMs: v.union(v.number(), v.null()),
+    muted: v.boolean(),
+    mutedAtMs: v.union(v.number(), v.null()),
+    // Assignment (for routing)
+    assignedToId: v.union(v.string(), v.null()),
+    assignedToName: v.union(v.string(), v.null()),
+    priority: v.union(v.literal('low'), v.literal('normal'), v.literal('high'), v.literal('urgent'), v.null()),
+    // Timestamps
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_user_updatedAtMs', ['workspaceId', 'userId', 'updatedAtMs'])
+    .index('by_workspace_user_sourceType', ['workspaceId', 'userId', 'sourceType'])
+    .index('by_workspace_user_archived_updatedAtMs', ['workspaceId', 'userId', 'archived', 'updatedAtMs'])
+    .index('by_workspace_user_pinned_updatedAtMs', ['workspaceId', 'userId', 'pinned', 'updatedAtMs'])
+    .index('by_workspace_user_unread', ['workspaceId', 'userId', 'isRead']),
+
+  // Privacy masking rules (for anonymized conversations)
+  privacyMasks: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    // What's being masked
+    resourceType: v.union(v.literal('conversation'), v.literal('channel'), v.literal('user')),
+    resourceId: v.string(),
+    // Masking configuration
+    maskType: v.union(v.literal('pseudonym'), v.literal('relay_number'), v.literal('anonymous')),
+    displayName: v.string(), // The masked display name shown to others
+    realName: v.union(v.string(), v.null()), // The real name (admin only)
+    relayIdentifier: v.union(v.string(), v.null()), // Relay phone/email if applicable
+    // Access control
+    visibleToRoles: v.array(v.string()), // Which roles can see real identity
+    visibleToUserIds: v.array(v.string()), // Specific users who can see real identity
+    // Timestamps
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_resource', ['workspaceId', 'resourceType', 'resourceId']),
 })
