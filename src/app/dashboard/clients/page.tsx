@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Download,
-  MoreHorizontal,
   RefreshCcw,
   Settings,
   Users as UsersIcon,
@@ -15,8 +14,8 @@ import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency, exportToCsv, cn } from '@/lib/utils'
-import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getBadgeClasses } from '@/lib/dashboard-theme'
+import { exportToCsv, cn } from '@/lib/utils'
+import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
 import {
   Card,
   CardDescription,
@@ -24,7 +23,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +39,6 @@ import {
 
 import {
   ClientsDashboardSkeleton,
-  InvoiceManagementCard,
   TeamMembersCard,
   ClientStatsGrid,
   ClientDetailsCard,
@@ -50,8 +47,7 @@ import {
 import { ClientPipelineBoard } from './components/client-pipeline-board'
 import { useClientsData } from './use-clients-data'
 import { formatDate, getRelativeTimeString } from './utils'
-import type { InvoiceSummary, OnboardingItem } from './types'
-import type { ClientRecord } from '@/types/clients'
+import type { OnboardingItem } from './types'
 
 export default function ClientsDashboardPage() {
   return (
@@ -69,7 +65,6 @@ function ClientsDashboardContent() {
 
   const [refreshing, setRefreshing] = useState(false)
   const [teamSearch, setTeamSearch] = useState('')
-  const [showInvoiceHistory, setShowInvoiceHistory] = useState(false)
 
   const clientsData = useClientsData(selectedClient, isPreviewMode)
 
@@ -81,40 +76,15 @@ function ClientsDashboardContent() {
     }
   }, [searchParams, selectedClientId, selectClient])
 
-  // Invoice summary
-  const invoiceSummary: InvoiceSummary | null = useMemo(() => {
-    if (!selectedClient) return null
-
-    const status = selectedClient.lastInvoiceStatus ?? 'draft'
-    const isOutstanding = status === 'open' || status === 'uncollectible' || status === 'overdue'
-    const isPaid = status === 'paid'
-
-    return {
-      status,
-      isOutstanding,
-      isPaid,
-      amount: selectedClient.lastInvoiceAmount ?? null,
-      currency: selectedClient.lastInvoiceCurrency ?? 'usd',
-      issuedAt: selectedClient.lastInvoiceIssuedAt ?? null,
-      paidAt: selectedClient.lastInvoicePaidAt ?? null,
-      identifier: selectedClient.lastInvoiceNumber ?? null,
-      url: selectedClient.lastInvoiceUrl ?? null,
-    }
-  }, [selectedClient])
-
   // Onboarding items
   const onboardingItems: OnboardingItem[] = useMemo(() => {
     if (!selectedClient) return []
 
     const teamMembers = selectedClient?.teamMembers ?? []
 
-    const contactInfoComplete = Boolean(selectedClient.billingEmail && selectedClient.accountManager)
-    const billingInfoAdded = Boolean(selectedClient.stripeCustomerId || selectedClient.billingEmail)
+    const contactInfoComplete = Boolean(selectedClient.accountManager)
     const teamMembersInvited = teamMembers.length > 0
     const firstProjectCreated = (clientsData.stats?.totalProjects ?? 0) > 0
-    const firstInvoiceSent = Boolean(
-      selectedClient.lastInvoiceIssuedAt || selectedClient.lastInvoiceStatus || clientsData.invoiceHistory.length > 0
-    )
     const adsConnected = clientsData.adAccountsConnected === true
 
     return [
@@ -122,13 +92,7 @@ function ClientsDashboardContent() {
         id: 'contact-info',
         label: 'Contact info complete',
         done: contactInfoComplete,
-        helper: contactInfoComplete ? 'Contact details are set.' : 'Add billing contact and owner details.',
-      },
-      {
-        id: 'billing-info',
-        label: 'Billing info added',
-        done: billingInfoAdded,
-        helper: billingInfoAdded ? 'Billing details saved.' : 'Add billing email or customer ID.',
+        helper: contactInfoComplete ? 'Core ownership details are set.' : 'Assign a clear account owner.',
       },
       {
         id: 'team-members',
@@ -143,12 +107,6 @@ function ClientsDashboardContent() {
         helper: firstProjectCreated ? 'Projects underway.' : 'Create the first project.',
       },
       {
-        id: 'first-invoice',
-        label: 'First invoice sent',
-        done: firstInvoiceSent,
-        helper: firstInvoiceSent ? 'Invoicing started.' : 'Send your first invoice.',
-      },
-      {
         id: 'ad-accounts',
         label: 'Ad accounts connected',
         done: adsConnected,
@@ -159,7 +117,6 @@ function ClientsDashboardContent() {
   }, [
     selectedClient,
     clientsData.stats?.totalProjects,
-    clientsData.invoiceHistory.length,
     clientsData.adAccountsConnected,
     clientsData.adStatusLoading,
   ])
@@ -192,19 +149,11 @@ function ClientsDashboardContent() {
       {
         Name: selectedClient.name,
         'Account Manager': selectedClient.accountManager || 'Unassigned',
-        'Billing Email': selectedClient.billingEmail || 'Not provided',
         'Team Size': teamMembers.length,
         'Active Projects': clientsData.stats?.activeProjects ?? '—',
         'Total Projects': clientsData.stats?.totalProjects ?? '—',
         'Open Tasks': clientsData.stats?.openTasks ?? '—',
         'Completed Tasks': clientsData.stats?.completedTasks ?? '—',
-        'Last Invoice Status': selectedClient.lastInvoiceStatus || 'None',
-        'Last Invoice Amount': selectedClient.lastInvoiceAmount
-          ? formatCurrency(selectedClient.lastInvoiceAmount, selectedClient.lastInvoiceCurrency || 'USD')
-          : '—',
-        'Last Invoice Date': selectedClient.lastInvoiceIssuedAt
-          ? formatDate(selectedClient.lastInvoiceIssuedAt)
-          : '—',
         'Created At': selectedClient.createdAt ? formatDate(selectedClient.createdAt) : '—',
       },
     ]
@@ -216,12 +165,16 @@ function ClientsDashboardContent() {
     })
   }
 
-  const handleToggleInvoiceHistory = () => {
-    if (!showInvoiceHistory && clientsData.invoiceHistory.length === 0) {
-      clientsData.fetchInvoiceHistory()
-    }
-    setShowInvoiceHistory(!showInvoiceHistory)
-  }
+  const teamMembers = selectedClient?.teamMembers ?? []
+  const filteredTeamMembers = useMemo(() => {
+    if (!teamSearch.trim()) return teamMembers
+    const query = teamSearch.toLowerCase()
+    return teamMembers.filter(
+      (member) =>
+        member.name.toLowerCase().includes(query) ||
+        member.role?.toLowerCase().includes(query)
+    )
+  }, [teamMembers, teamSearch])
 
   // Show skeleton while loading
   if (loading && !selectedClient) {
@@ -244,17 +197,6 @@ function ClientsDashboardContent() {
     )
   }
 
-  const teamMembers = selectedClient?.teamMembers ?? []
-  const filteredTeamMembers = useMemo(() => {
-    if (!teamSearch.trim()) return teamMembers
-    const query = teamSearch.toLowerCase()
-    return teamMembers.filter(
-      (member) =>
-        member.name.toLowerCase().includes(query) ||
-        (member.role && member.role.toLowerCase().includes(query))
-    )
-  }, [teamMembers, teamSearch])
-
   const clientIndex = clients.findIndex((record) => record.id === selectedClient.id)
   const clientAge = selectedClient.createdAt
     ? getRelativeTimeString(new Date(selectedClient.createdAt))
@@ -273,12 +215,6 @@ function ClientsDashboardContent() {
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
-                {invoiceSummary?.isOutstanding && (
-                  <Badge className={getBadgeClasses('destructive')}>Payment Due</Badge>
-                )}
-                {invoiceSummary?.isPaid && (
-                  <Badge className={getBadgeClasses('primary')}>Paid</Badge>
-                )}
               </div>
               <p className={DASHBOARD_THEME.layout.subtitle}>
                 Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
@@ -367,14 +303,6 @@ function ClientsDashboardContent() {
           >
             <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`}>Proposals</Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-          >
-            <Link href={`/dashboard/finance?clientId=${selectedClient.id}`}>Finance</Link>
-          </Button>
         </div>
 
         <ClientPipelineBoard clients={clients} selectedClientId={selectedClient.id} />
@@ -393,32 +321,9 @@ function ClientsDashboardContent() {
           <div className="space-y-6">
             <ClientOnboardingChecklist clientName={selectedClient.name} items={onboardingItems} />
 
-            {/* Invoice Management Card */}
-            <InvoiceManagementCard
-              clientName={selectedClient.name}
-              invoiceSummary={invoiceSummary}
-              invoiceHistory={clientsData.invoiceHistory}
-              invoiceHistoryLoading={clientsData.invoiceHistoryLoading}
-              showInvoiceHistory={showInvoiceHistory}
-              createInvoiceOpen={clientsData.createInvoiceOpen}
-              createInvoiceLoading={clientsData.createInvoiceLoading}
-              createInvoiceForm={clientsData.createInvoiceForm}
-              sendingReminder={clientsData.sendingReminder}
-              refundDialogOpen={clientsData.refundDialogOpen}
-              refundLoading={clientsData.refundLoading}
-              suggestedEmail={selectedClient.billingEmail ?? null}
-              onCreateInvoiceOpenChange={clientsData.setCreateInvoiceOpen}
-              onCreateInvoiceFormChange={clientsData.setCreateInvoiceForm}
-              onCreateInvoice={() => clientsData.handleCreateInvoice(refreshClients)}
-              onSendReminder={() => clientsData.handleSendReminder(invoiceSummary)}
-              onRefundDialogOpenChange={clientsData.setRefundDialogOpen}
-              onIssueRefund={() => clientsData.handleIssueRefund(invoiceSummary, refreshClients)}
-              onToggleInvoiceHistory={handleToggleInvoiceHistory}
-            />
-
             {/* Client Details Card */}
             <ClientDetailsCard
-              billingEmail={selectedClient.billingEmail ?? null}
+              teamMembersCount={teamMembers.length}
               clientIndex={clientIndex}
               totalClients={clients.length}
               createdAt={selectedClient.createdAt ?? null}

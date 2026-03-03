@@ -124,17 +124,6 @@ export const PROVIDER_COLORS = {
   meta: '#0668E1',
   linkedin: '#0A66C2',
   tiktok: '#FE2C55',
-  slack: {
-    red: '#E01E5A',
-    blue: '#36C5F0',
-    green: '#2EB67D',
-    yellow: '#ECB22E',
-  },
-  teams: {
-    purple: '#5059C9',
-    blue: '#7B83EB',
-  },
-  whatsapp: '#25D366',
 } as const
 
 export const SEMANTIC_COLORS = {

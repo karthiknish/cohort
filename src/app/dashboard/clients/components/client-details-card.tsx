@@ -1,8 +1,7 @@
 'use client'
 
-import { Calendar, Mail } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 
-import { Separator } from '@/components/ui/separator'
 import {
   Card,
   CardContent,
@@ -13,7 +12,7 @@ import {
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 
 interface ClientDetailsCardProps {
-  billingEmail: string | null
+  teamMembersCount: number
   clientIndex: number
   totalClients: number
   createdAt: string | null
@@ -24,7 +23,7 @@ function formatDate(value: string | null): string {
 }
 
 export function ClientDetailsCard({
-  billingEmail,
+  teamMembersCount,
   clientIndex,
   totalClients,
   createdAt,
@@ -40,12 +39,12 @@ export function ClientDetailsCard({
       <CardContent className="pt-6 space-y-5">
         <div className="group flex items-center gap-4">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm border border-primary/10 transition-colors group-hover:bg-primary/10">
-            <Mail className="h-4 w-4" />
+            <Calendar className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Billing Corridor</p>
-            <p className="mt-0.5 truncate text-xs font-black text-foreground" title={billingEmail ?? ''}>
-              {billingEmail || 'Not configured'}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Team Footprint</p>
+            <p className="mt-0.5 text-xs font-black text-foreground">
+              {teamMembersCount} active collaborators
             </p>
           </div>
         </div>

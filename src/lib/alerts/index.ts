@@ -22,7 +22,6 @@ export {
     getTriggeredAlerts,
     toNotificationPayload,
     groupAlertsBySeverity,
-    formatAlertsForSlack,
     formatAlertsForEmail,
 } from './evaluator'
 

@@ -128,7 +128,6 @@ export function ActivityFilters({
             <SelectItem value="message_posted">Messages</SelectItem>
             <SelectItem value="project_updated">Projects</SelectItem>
             <SelectItem value="client_added">Clients</SelectItem>
-            <SelectItem value="invoice_sent">Invoices</SelectItem>
             <SelectItem value="proposal_created">Proposals</SelectItem>
           </SelectContent>
         </Select>

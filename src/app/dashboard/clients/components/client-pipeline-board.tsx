@@ -17,15 +17,15 @@ import type { ClientPipelineBoardProps } from '../types'
 
 export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelineBoardProps) {
   const stages = [
-    { id: 'onboarding', label: 'Onboarding', helper: 'No invoices yet' },
-    { id: 'invoicing', label: 'Invoicing', helper: 'Draft or open invoices' },
-    { id: 'paying', label: 'Paying', helper: 'Paid or recurring' },
+    { id: 'onboarding', label: 'Onboarding', helper: 'Getting the core team in place' },
+    { id: 'growth', label: 'Growth', helper: 'Expanding delivery coverage' },
+    { id: 'established', label: 'Established', helper: 'Stable multi-role pod' },
   ] as const
 
   const deriveStage = (client: ClientRecord): (typeof stages)[number]['id'] => {
-    const status = client.lastInvoiceStatus?.toLowerCase() ?? ''
-    if (['paid', 'succeeded', 'settled'].includes(status)) return 'paying'
-    if (['open', 'uncollectible', 'overdue', 'draft', 'pending', 'sent'].includes(status)) return 'invoicing'
+    const teamSize = Array.isArray(client.teamMembers) ? client.teamMembers.length : 0
+    if (teamSize >= 4) return 'established'
+    if (teamSize >= 2) return 'growth'
     return 'onboarding'
   }
 
@@ -91,11 +91,8 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                       </div>
 
                       <div className="mt-4 flex items-center justify-between border-t border-muted/10 pt-3">
-                        <span className={cn(
-                          "text-[9px] font-black uppercase tracking-[0.15em]",
-                          client.lastInvoiceStatus === 'paid' ? "text-primary" : "text-muted-foreground/40"
-                        )}>
-                          {client.lastInvoiceStatus ?? 'No Billing'}
+                        <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50">
+                          Team {Array.isArray(client.teamMembers) ? client.teamMembers.length : 0}
                         </span>
                         <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30">
                           {client.createdAt ? new Date(client.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'NEW'}

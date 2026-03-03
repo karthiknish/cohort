@@ -16,9 +16,6 @@ export { getPreviewClients, getPreviewMetrics } from './clients'
 // Analytics
 export { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from './analytics'
 
-// Finance
-export { getPreviewFinanceSummary } from './finance'
-
 // Projects, tasks, proposals
 export { getPreviewProjects, getPreviewTasks, getPreviewProposals } from './projects'
 

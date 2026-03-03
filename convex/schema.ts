@@ -6,227 +6,6 @@ export default defineSchema({
   // NOTE: We key records by workspaceId + legacyId for backward compatibility
   // with existing UI code and data references.
 
-  financeExpenseCategories: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    code: v.optional(v.union(v.string(), v.null())),
-    description: v.optional(v.union(v.string(), v.null())),
-    isActive: v.boolean(),
-    isSystem: v.boolean(),
-    sortOrder: v.number(),
-    createdBy: v.optional(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId']),
-
-  financeVendors: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.string(),
-    email: v.union(v.string(), v.null()),
-    phone: v.union(v.string(), v.null()),
-    website: v.union(v.string(), v.null()),
-    notes: v.union(v.string(), v.null()),
-    isActive: v.boolean(),
-    createdBy: v.union(v.string(), v.null()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_name', ['workspaceId', 'name']),
-
-  financeExpenses: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-
-    description: v.string(),
-    categoryId: v.union(v.string(), v.null()),
-    categoryName: v.union(v.string(), v.null()),
-    vendorId: v.union(v.string(), v.null()),
-    vendorName: v.union(v.string(), v.null()),
-
-    amount: v.number(),
-    currency: v.string(),
-    costType: v.string(),
-    incurredAt: v.union(v.string(), v.null()),
-
-    status: v.string(),
-    employeeId: v.union(v.string(), v.null()),
-
-    submittedAt: v.union(v.number(), v.null()),
-    approvedAt: v.union(v.number(), v.null()),
-    rejectedAt: v.union(v.number(), v.null()),
-    decidedBy: v.union(v.string(), v.null()),
-    decisionNote: v.union(v.string(), v.null()),
-
-    attachments: v.array(
-      v.object({
-        name: v.string(),
-        url: v.string(),
-        type: v.string(),
-        size: v.string(),
-      })
-    ),
-
-    createdBy: v.union(v.string(), v.null()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_employeeId_createdAt', ['workspaceId', 'employeeId', 'createdAt'])
-    .index('by_workspaceId_status_createdAt', ['workspaceId', 'status', 'createdAt']),
-
-  financePurchaseOrders: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-
-    number: v.union(v.string(), v.null()),
-    status: v.string(),
-    vendorId: v.union(v.string(), v.null()),
-    vendorName: v.union(v.string(), v.null()),
-    currency: v.string(),
-
-    items: v.array(
-      v.object({
-        description: v.string(),
-        quantity: v.number(),
-        unitPrice: v.number(),
-      })
-    ),
-    totalAmount: v.number(),
-
-    notes: v.union(v.string(), v.null()),
-    requestedBy: v.union(v.string(), v.null()),
-
-    submittedAt: v.union(v.number(), v.null()),
-    approvedAt: v.union(v.number(), v.null()),
-    rejectedAt: v.union(v.number(), v.null()),
-    decidedBy: v.union(v.string(), v.null()),
-    decisionNote: v.union(v.string(), v.null()),
-    orderedAt: v.union(v.number(), v.null()),
-    receivedAt: v.union(v.number(), v.null()),
-
-    createdBy: v.union(v.string(), v.null()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_createdBy_createdAt', ['workspaceId', 'createdBy', 'createdAt'])
-    .index('by_workspaceId_vendorId_createdAt', ['workspaceId', 'vendorId', 'createdAt'])
-    .index('by_workspaceId_status_createdAt', ['workspaceId', 'status', 'createdAt']),
-
-  financeCosts: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-
-    clientId: v.union(v.string(), v.null()),
-    category: v.string(),
-    amount: v.number(),
-    cadence: v.string(),
-    currency: v.string(),
-
-    createdBy: v.union(v.string(), v.null()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_clientId_createdAt', ['workspaceId', 'clientId', 'createdAt']),
-
-  financeInvoices: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-
-    clientId: v.union(v.string(), v.null()),
-    clientName: v.string(),
-    amount: v.number(),
-    status: v.string(),
-    stripeStatus: v.union(v.string(), v.null()),
-    issuedDate: v.union(v.string(), v.null()),
-    dueDate: v.union(v.string(), v.null()),
-    paidDate: v.union(v.string(), v.null()),
-    amountPaid: v.union(v.number(), v.null()),
-    amountRemaining: v.union(v.number(), v.null()),
-    amountRefunded: v.union(v.number(), v.null()),
-    currency: v.union(v.string(), v.null()),
-    description: v.union(v.string(), v.null()),
-    hostedInvoiceUrl: v.union(v.string(), v.null()),
-    number: v.union(v.string(), v.null()),
-    paymentIntentId: v.union(v.string(), v.null()),
-    collectionMethod: v.union(v.string(), v.null()),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_clientId_createdAt', ['workspaceId', 'clientId', 'createdAt'])
-    .index('by_legacyId', ['legacyId']),
-
-  // Recurring invoice schedules (migrated from Firestore `workspaces/{workspaceId}/recurringInvoices`).
-  recurringInvoices: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-
-    clientId: v.string(),
-    clientName: v.string(),
-    amount: v.number(),
-    currency: v.string(),
-    description: v.union(v.string(), v.null()),
-    frequency: v.string(), // 'weekly' | 'monthly' | 'quarterly' | 'annually'
-    dayOfMonth: v.union(v.number(), v.null()),
-    dayOfWeek: v.union(v.number(), v.null()),
-    startDate: v.string(),
-    endDate: v.union(v.string(), v.null()),
-    nextRunDate: v.string(),
-    lastRunDate: v.union(v.string(), v.null()),
-    lastInvoiceId: v.union(v.string(), v.null()),
-    isActive: v.boolean(),
-    totalInvoicesGenerated: v.number(),
-    createdBy: v.union(v.string(), v.null()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_clientId', ['workspaceId', 'clientId'])
-    .index('by_workspaceId_isActive_nextRunDate', ['workspaceId', 'isActive', 'nextRunDate']),
-
-  financeRevenue: defineTable({
-    workspaceId: v.string(),
-    legacyId: v.string(),
-
-    clientId: v.union(v.string(), v.null()),
-    period: v.string(),
-    label: v.union(v.string(), v.null()),
-    revenue: v.number(),
-    operatingExpenses: v.number(),
-    currency: v.union(v.string(), v.null()),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index('by_workspaceId', ['workspaceId'])
-    .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_period', ['workspaceId', 'period'])
-    .index('by_workspaceId_clientId_period', ['workspaceId', 'clientId', 'period']),
-
-  stripeWebhookEvents: defineTable({
-    eventId: v.string(),
-    eventType: v.string(),
-    livemode: v.boolean(),
-    createdAtMs: v.number(),
-    processedAtMs: v.number(),
-  })
-    .index('by_eventId', ['eventId'])
-    .index('by_createdAtMs_eventId', ['createdAtMs', 'eventId']),
-
   adminNotifications: defineTable({
     type: v.string(),
     title: v.string(),
@@ -472,27 +251,14 @@ export default defineSchema({
 
     phoneNumber: v.optional(v.union(v.string(), v.null())),
     photoUrl: v.optional(v.union(v.string(), v.null())),
-    stripeCustomerId: v.optional(v.union(v.string(), v.null())),
 
     notificationPreferences: v.optional(
       v.object({
-        // WhatsApp notifications
-        whatsappTasks: v.boolean(),
-        whatsappCollaboration: v.boolean(),
-        // Slack notifications
-        slackTasks: v.boolean(),
-        slackCollaboration: v.boolean(),
-        // Teams notifications
-        teamsTasks: v.boolean(),
-        teamsCollaboration: v.boolean(),
         // Email notifications
         emailAdAlerts: v.boolean(),
         emailPerformanceDigest: v.boolean(),
         emailTaskActivity: v.boolean(),
         emailCollaboration: v.boolean(),
-        // Webhook URLs and phone numbers
-        slackWebhookUrl: v.optional(v.union(v.string(), v.null())),
-        teamsWebhookUrl: v.optional(v.union(v.string(), v.null())),
       })
     ),
     regionalPreferences: v.optional(
@@ -704,7 +470,7 @@ export default defineSchema({
     isPinned: v.boolean(), // Whether the message is pinned to the channel
     pinnedAtMs: v.union(v.number(), v.null()), // When the message was pinned
     pinnedBy: v.union(v.string(), v.null()), // User ID who pinned the message
-    sharedTo: v.optional(v.union(v.array(v.union(v.literal('slack'), v.literal('teams'), v.literal('whatsapp'), v.literal('email'))), v.null())), // External platforms message was shared to
+    sharedTo: v.optional(v.union(v.array(v.literal('email')), v.null())), // External platforms message was shared to
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_channel_createdAtMs_legacyId', ['workspaceId', 'channelType', 'createdAtMs', 'legacyId'])
@@ -743,15 +509,6 @@ export default defineSchema({
         role: v.string(),
       })
     ),
-    billingEmail: v.union(v.string(), v.null()),
-    stripeCustomerId: v.union(v.string(), v.null()),
-    lastInvoiceStatus: v.union(v.string(), v.null()),
-    lastInvoiceAmount: v.union(v.number(), v.null()),
-    lastInvoiceCurrency: v.union(v.string(), v.null()),
-    lastInvoiceIssuedAtMs: v.union(v.number(), v.null()),
-    lastInvoiceNumber: v.union(v.string(), v.null()),
-    lastInvoiceUrl: v.union(v.string(), v.null()),
-    lastInvoicePaidAtMs: v.union(v.number(), v.null()),
     createdBy: v.union(v.string(), v.null()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
@@ -948,7 +705,7 @@ export default defineSchema({
     campaignId: v.union(v.string(), v.null()),
     formulaId: v.union(v.string(), v.null()),
     insightType: v.union(v.string(), v.null()), // 'efficiency' | 'budget' | 'creative' | 'audience' | 'all'
-    channels: v.array(v.string()), // ['email', 'slack', 'in-app']
+    channels: v.array(v.string()), // ['email', 'in-app']
 
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
@@ -1066,7 +823,7 @@ export default defineSchema({
     deliveredTo: v.array(v.string()),
     readAtMs: v.union(v.number(), v.null()), // When recipient first read
     // External sharing
-    sharedTo: v.optional(v.union(v.array(v.union(v.literal('slack'), v.literal('teams'), v.literal('whatsapp'), v.literal('email'))), v.null())),
+    sharedTo: v.optional(v.union(v.array(v.literal('email')), v.null())),
     // Timestamps
     createdAtMs: v.number(),
     updatedAtMs: v.union(v.number(), v.null()),
@@ -1150,7 +907,7 @@ export default defineSchema({
     legacyId: v.string(),
     userId: v.string(), // User this inbox item belongs to
     // Source info
-    sourceType: v.union(v.literal('direct_message'), v.literal('channel'), v.literal('whatsapp'), v.literal('slack'), v.literal('teams'), v.literal('email')),
+    sourceType: v.union(v.literal('direct_message'), v.literal('channel'), v.literal('email')),
     sourceId: v.string(), // Conversation/channel ID
     sourceName: v.string(), // Display name
     // Related entities

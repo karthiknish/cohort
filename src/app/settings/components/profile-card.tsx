@@ -16,19 +16,10 @@ import { validateFile } from '@/lib/utils'
 
 interface ProfileCardProps {
   onPhoneChange?: (phone: string) => void
-  whatsappTasksEnabled?: boolean
-  whatsappCollaborationEnabled?: boolean
-  saveNotificationPreferences?: (
-    input: { tasks: boolean; collaboration: boolean },
-    options?: { silent?: boolean }
-  ) => Promise<unknown>
 }
 
 export function ProfileCard({
   onPhoneChange,
-  whatsappTasksEnabled = false,
-  whatsappCollaborationEnabled = false,
-  saveNotificationPreferences,
 }: ProfileCardProps) {
   const { toast } = useToast()
   const convex = useConvex()
@@ -113,13 +104,6 @@ export function ProfileCard({
         setProfileName(nextName)
         setProfilePhone(nextPhone)
         toast({ title: 'Profile updated', description: 'Your changes were saved.' })
-
-        if ((whatsappTasksEnabled || whatsappCollaborationEnabled) && saveNotificationPreferences) {
-          void saveNotificationPreferences(
-            { tasks: whatsappTasksEnabled, collaboration: whatsappCollaborationEnabled },
-            { silent: true }
-          )
-        }
       } catch (submitError) {
         const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
         setProfileError(message)
@@ -128,7 +112,7 @@ export function ProfileCard({
         setSavingProfile(false)
       }
     },
-    [profileName, profilePhone, saveNotificationPreferences, toast, updateMyProfile, user, whatsappCollaborationEnabled, whatsappTasksEnabled],
+    [profileName, profilePhone, toast, updateMyProfile, user],
   )
 
   const handleAvatarButtonClick = useCallback(() => {
@@ -340,7 +324,7 @@ export function ProfileCard({
           {profileError ? <p className="text-sm text-destructive">{profileError}</p> : null}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              We use this information across proposals, invoices, and automated notifications.
+              We use this information across proposals and automated notifications.
             </p>
             <Button type="submit" disabled={!canSaveProfile}>
               {savingProfile ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}

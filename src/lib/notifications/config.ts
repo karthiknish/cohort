@@ -7,12 +7,6 @@ import { calculateBackoffDelay as calculateBackoffDelayLib, parseRetryAfterMs, s
 // =============================================================================
 
 export const EMAIL_WEBHOOK_URL = process.env.CONTACT_EMAIL_WEBHOOK_URL
-export const SLACK_WEBHOOK_URL = process.env.CONTACT_SLACK_WEBHOOK_URL
-// Updated to v24.0 (latest as of January 2026)
-// Changelog: https://developers.facebook.com/docs/whatsapp/business-platform/changelog
-export const WHATSAPP_API_VERSION = process.env.WHATSAPP_BUSINESS_API_VERSION ?? 'v24.0'
-export const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_BUSINESS_ACCESS_TOKEN
-export const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_BUSINESS_PHONE_NUMBER_ID
 
 // Retry configuration
 export const RETRY_CONFIG = {
@@ -72,16 +66,3 @@ export async function fetchWithTimeout(
   }
 }
 
-/**
- * Sanitize a WhatsApp phone number to digits only
- */
-export function sanitizeWhatsAppNumber(input: unknown): string | null {
-  if (typeof input !== 'string') {
-    return null
-  }
-  const digits = input.replace(/\D+/g, '')
-  if (digits.length < 8) {
-    return null
-  }
-  return digits
-}

@@ -35,17 +35,8 @@ function mapClients(rows: any[]): ClientRecord[] {
     name: row.name,
     accountManager: row.accountManager,
     teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
-    billingEmail: row.billingEmail ?? null,
-    stripeCustomerId: row.stripeCustomerId ?? null,
-    lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-    lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-    lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-    lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
-    lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-    lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-    lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
     createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
-    updatedAt: row.updatedAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
+    updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
   }))
 
   list.sort((a, b) => a.name.localeCompare(b.name))
@@ -280,7 +271,6 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       name,
       accountManager,
       teamMembers,
-      billingEmail: null,
       createdBy: user?.id ?? null,
     })
 
@@ -289,15 +279,6 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       name,
       accountManager,
       teamMembers,
-      billingEmail: null,
-      stripeCustomerId: null,
-      lastInvoiceStatus: null,
-      lastInvoiceAmount: null,
-      lastInvoiceCurrency: null,
-      lastInvoiceIssuedAt: null,
-      lastInvoiceNumber: null,
-      lastInvoiceUrl: null,
-      lastInvoicePaidAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

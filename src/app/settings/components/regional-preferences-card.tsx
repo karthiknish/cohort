@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { usePreferences } from '@/contexts/preferences-context'
 import { CurrencySelect } from '@/components/ui/currency-select'
-import { type CurrencyCode } from '@/constants/currencies'
+import type { CurrencyCode } from '@/constants/currencies'
 
 export function RegionalPreferencesCard() {
   const { preferences, loading: preferencesLoading, updateCurrency } = usePreferences()
@@ -29,7 +29,7 @@ export function RegionalPreferencesCard() {
           <div className="space-y-1">
             <Label htmlFor="currency-select">Default currency</Label>
             <p className="text-sm text-muted-foreground">
-              Amounts in analytics, finance, and reports will display in this currency.
+              Amounts in analytics and reports will display in this currency.
             </p>
           </div>
           <CurrencySelect

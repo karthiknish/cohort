@@ -32,18 +32,10 @@ const userZ = z.object({
   photoUrl: z.string().nullable(),
   notificationPreferences: z
     .object({
-      whatsappTasks: z.boolean(),
-      whatsappCollaboration: z.boolean(),
-      slackTasks: z.boolean(),
-      slackCollaboration: z.boolean(),
-      teamsTasks: z.boolean(),
-      teamsCollaboration: z.boolean(),
       emailAdAlerts: z.boolean(),
       emailPerformanceDigest: z.boolean(),
       emailTaskActivity: z.boolean(),
       emailCollaboration: z.boolean(),
-      slackWebhookUrl: z.string().nullable().optional(),
-      teamsWebhookUrl: z.string().nullable().optional(),
     })
     .nullable(),
   regionalPreferences: z
@@ -388,61 +380,6 @@ export const getNotificationPreferencesByEmail = internalQuery({
   },
 })
 
-/**
- * Get users in a workspace with WhatsApp notifications enabled.
- * Returns phone numbers for users with the specified notification type enabled.
- * No auth required - called from server-side notification code.
- */
-export const getWhatsAppRecipientsForWorkspace = internalQuery({
-  args: {
-    workspaceId: v.string(),
-    notificationType: v.union(
-      v.literal('tasks'),
-      v.literal('collaboration'),
-      v.literal('billing')
-    ),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const limit = Math.min(args.limit ?? 50, 100)
-
-    const rows = await ctx.db
-      .query('users')
-      .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
-      .take(limit)
-
-    const phoneNumbers: string[] = []
-
-    for (const row of rows) {
-      if (!row.phoneNumber) continue
-
-      const prefs = row.notificationPreferences
-      if (!prefs) continue
-
-      // Check if the specific notification type is enabled
-      let enabled = false
-      switch (args.notificationType) {
-        case 'tasks':
-          enabled = prefs.whatsappTasks === true
-          break
-        case 'collaboration':
-          enabled = prefs.whatsappCollaboration === true
-          break
-        case 'billing':
-          // No specific billing preference in schema, use tasks as fallback
-          enabled = prefs.whatsappTasks === true
-          break
-      }
-
-      if (enabled) {
-        phoneNumbers.push(row.phoneNumber)
-      }
-    }
-
-    return { phoneNumbers }
-  },
-})
-
 export const bulkUpsert = zAuthenticatedMutation({
   args: {
     users: z.array(
@@ -455,21 +392,12 @@ export const bulkUpsert = zAuthenticatedMutation({
         agencyId: z.string().nullable().optional(),
         phoneNumber: z.string().nullable().optional(),
         photoUrl: z.string().nullable().optional(),
-        stripeCustomerId: z.string().nullable().optional(),
         notificationPreferences: z
           .object({
-            whatsappTasks: z.boolean(),
-            whatsappCollaboration: z.boolean(),
-            slackTasks: z.boolean(),
-            slackCollaboration: z.boolean(),
-            teamsTasks: z.boolean(),
-            teamsCollaboration: z.boolean(),
             emailAdAlerts: z.boolean(),
             emailPerformanceDigest: z.boolean(),
             emailTaskActivity: z.boolean(),
             emailCollaboration: z.boolean(),
-            slackWebhookUrl: z.string().nullable().optional(),
-            teamsWebhookUrl: z.string().nullable().optional(),
           })
           .optional(),
         regionalPreferences: z
@@ -509,21 +437,12 @@ export const bulkUpsert = zAuthenticatedMutation({
         agencyId: (user.agencyId ?? null) as string | null,
         phoneNumber: (user.phoneNumber ?? null) as string | null,
         photoUrl: (user.photoUrl ?? null) as string | null,
-        stripeCustomerId: (user.stripeCustomerId ?? null) as string | null,
         notificationPreferences: (user.notificationPreferences ?? undefined) as
           | {
-              whatsappTasks: boolean
-              whatsappCollaboration: boolean
-              slackTasks: boolean
-              slackCollaboration: boolean
-              teamsTasks: boolean
-              teamsCollaboration: boolean
               emailAdAlerts: boolean
               emailPerformanceDigest: boolean
               emailTaskActivity: boolean
               emailCollaboration: boolean
-              slackWebhookUrl?: string | null
-              teamsWebhookUrl?: string | null
             }
           | undefined,
         regionalPreferences: (user.regionalPreferences ?? undefined) as
@@ -630,7 +549,6 @@ export const bootstrapUpsert = mutation({
       agencyId: args.agencyId ?? null,
       phoneNumber: null,
       photoUrl: null,
-      stripeCustomerId: null,
       notificationPreferences: undefined,
       regionalPreferences: undefined,
       createdAtMs: existing?.createdAtMs ?? timestamp,
@@ -644,26 +562,6 @@ export const bootstrapUpsert = mutation({
 
     await ctx.db.insert('users', payload)
     return { ok: true, created: true }
-  },
-})
-
-/**
- * Get Stripe customer ID for a user.
- * Used by billing to check if user already has a Stripe customer record.
- */
-export const getStripeCustomerId = internalQuery({
-  args: { legacyId: v.string() },
-  handler: async (ctx, args) => {
-    // No auth required - called from server-side billing code
-    const row = await ctx.db
-      .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
-      .unique()
-
-    return {
-      stripeCustomerId: row?.stripeCustomerId ?? null,
-      userExists: !!row,
-    }
   },
 })
 
@@ -707,53 +605,3 @@ export const getUserByEmailPublic = internalQuery({
   },
 })
 
-/**
- * Set Stripe customer ID for a user.
- * Creates user record if it doesn't exist.
- */
-export const setStripeCustomerId = internalMutation({
-  args: {
-    legacyId: v.string(),
-    stripeCustomerId: v.string(),
-    email: v.optional(v.union(v.string(), v.null())),
-    name: v.optional(v.union(v.string(), v.null())),
-  },
-  handler: async (ctx, args) => {
-    // No auth required - called from server-side billing code
-    const existing = await ctx.db
-      .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
-      .unique()
-
-    const timestamp = nowMs()
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        stripeCustomerId: args.stripeCustomerId,
-        updatedAtMs: timestamp,
-      })
-      return { ok: true, created: false }
-    }
-
-    // Create minimal user record if it doesn't exist
-    const normalized = normalizeEmail(args.email ?? null)
-    await ctx.db.insert('users', {
-      legacyId: args.legacyId,
-      email: normalized.email,
-      emailLower: normalized.emailLower,
-      name: args.name ?? null,
-      role: null,
-      status: null,
-      agencyId: null,
-      phoneNumber: null,
-      photoUrl: null,
-      stripeCustomerId: args.stripeCustomerId,
-      createdAtMs: timestamp,
-      updatedAtMs: timestamp,
-    })
-
-    return { ok: true, created: true }
-  },
-})
-
-// Public mutation - no auth required for test user management

@@ -20,10 +20,10 @@ const onboardingSteps = [
     actionLabel: 'Go to Ads',
   },
   {
-    title: 'Set up finance tracking',
-    description: 'Log invoices, retainers, and operating costs to track profitability and cash flow.',
-    href: '/dashboard/finance',
-    actionLabel: 'Go to Finance',
+    title: 'Create your first task',
+    description: 'Capture your first deliverable and assign ownership so execution starts immediately.',
+    href: '/dashboard/tasks?new=true',
+    actionLabel: 'Go to Tasks',
   },
 ] as const
 

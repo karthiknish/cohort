@@ -330,7 +330,7 @@ export function useMessagesData({
     [handleToggleReactionBase]
   )
 
-  // Send message to external platforms based on notification preferences
+  // Send message to external channels based on notification preferences
   const sendToExternalPlatforms = useCallback(
     async (message: CollaborationMessage, wsId: string) => {
       try {
@@ -339,118 +339,40 @@ export function useMessagesData({
 
         if (!prefs) return
 
-        const sharedTo: Array<'slack' | 'teams' | 'whatsapp' | 'email'> = []
-
-        // Send to Slack if enabled
-        if (prefs.slackCollaboration && prefs.slackWebhookUrl) {
-          try {
-            const response = await fetch('/api/integrations/slack/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                channel: '#general',
-                messageType: 'collaboration',
-                text: message.content,
-                webhookUrl: prefs.slackWebhookUrl,
-                metadata: {
-                  senderName: message.senderName,
-                  conversationUrl: `${window.location.origin}/dashboard/collaboration`,
-                },
-              }),
-            })
-
-            if (response.ok) {
-              sharedTo.push('slack')
-            }
-          } catch (error) {
-            console.error('Failed to send to Slack:', error)
-          }
-        }
-
-        // Send to Teams if enabled
-        if (prefs.teamsCollaboration && prefs.teamsWebhookUrl) {
-          try {
-            const response = await fetch('/api/integrations/teams/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                messageType: 'collaboration',
-                text: message.content,
-                webhookUrl: prefs.teamsWebhookUrl,
-                metadata: {
-                  senderName: message.senderName,
-                  conversationUrl: `${window.location.origin}/dashboard/collaboration`,
-                },
-              }),
-            })
-
-            if (response.ok) {
-              sharedTo.push('teams')
-            }
-          } catch (error) {
-            console.error('Failed to send to Teams:', error)
-          }
-        }
-
-        // Send to WhatsApp if enabled
-        if (prefs.whatsappCollaboration && prefs.phoneNumber) {
-          try {
-            const response = await fetch('/api/integrations/whatsapp/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                to: prefs.phoneNumber,
-                messageType: 'collaboration',
-                text: message.content,
-                metadata: {
-                  senderName: message.senderName,
-                },
-              }),
-            })
-
-            if (response.ok) {
-              sharedTo.push('whatsapp')
-            }
-          } catch (error) {
-            console.error('Failed to send to WhatsApp:', error)
-          }
-        }
-
         // Send to Email if enabled
-        if (prefs.emailCollaboration) {
-          try {
-            const response = await fetch('/api/integrations/email/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                messageType: 'collaboration',
-                text: message.content,
-                metadata: {
-                  senderName: message.senderName,
-                  conversationUrl: `${window.location.origin}/dashboard/collaboration`,
-                },
-              }),
-            })
-
-            if (response.ok) {
-              sharedTo.push('email')
-            }
-          } catch (error) {
-            console.error('Failed to send to Email:', error)
-          }
+        if (!prefs.emailCollaboration) {
+          return
         }
 
-        // Update message with sharedTo info if any platforms were successful
-        if (sharedTo.length > 0) {
+        try {
+          const response = await fetch('/api/integrations/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messageType: 'collaboration',
+              text: message.content,
+              metadata: {
+                senderName: message.senderName,
+                conversationUrl: `${window.location.origin}/dashboard/collaboration`,
+              },
+            }),
+          })
+
+          if (!response.ok) {
+            return
+          }
+
           try {
             await updateSharedTo({
               workspaceId: wsId,
               legacyId: message.id,
-              sharedTo,
+              sharedTo: ['email'],
             })
           } catch (error) {
             console.error('Failed to update message sharedTo:', error)
           }
+        } catch (error) {
+          console.error('Failed to send to Email:', error)
         }
       } catch (error) {
         console.error('Error sending to external platforms:', error)

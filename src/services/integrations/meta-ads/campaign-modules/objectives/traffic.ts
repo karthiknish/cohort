@@ -47,5 +47,4 @@ export const TRAFFIC_DESTINATIONS = [
   { value: 'WEBSITE', label: 'Website' },
   { value: 'APP', label: 'App' },
   { value: 'MESSENGER', label: 'Messenger' },
-  { value: 'WHATSAPP', label: 'WhatsApp' },
 ] as const

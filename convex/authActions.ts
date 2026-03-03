@@ -52,7 +52,6 @@ export const exportUserData = action({
           name: client.name,
           accountManager: client.accountManager,
           teamMembers: client.teamMembers,
-          billingEmail: client.billingEmail,
           createdAt: client.createdAtMs ? new Date(client.createdAtMs).toISOString() : null,
           updatedAt: client.updatedAtMs ? new Date(client.updatedAtMs).toISOString() : null,
         }))
@@ -84,22 +83,6 @@ export const exportUserData = action({
           totalAmount: proposal.totalAmount,
           createdAt: proposal.createdAtMs ? new Date(proposal.createdAtMs).toISOString() : null,
           updatedAt: proposal.updatedAtMs ? new Date(proposal.updatedAtMs).toISOString() : null,
-        }))
-
-        const invoices = await ctx.runQuery(api.financeInvoices.list, {
-          workspaceId,
-          limit: 500,
-        })
-        const invoicesList = invoices?.invoices
-        exportData.invoices = (Array.isArray(invoicesList) ? invoicesList : []).map((invoice: any) => ({
-          id: invoice.legacyId ?? invoice.id,
-          number: invoice.number,
-          status: invoice.status,
-          amount: invoice.amount,
-          currency: invoice.currency,
-          clientId: invoice.clientId,
-          dueDate: invoice.dueDate,
-          issuedDate: invoice.issuedDate,
         }))
 
         const notificationsResult = await ctx.runQuery(api.notifications.list, {

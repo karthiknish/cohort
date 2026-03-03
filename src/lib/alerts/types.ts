@@ -106,7 +106,7 @@ export interface AlertRule {
 /**
  * Notification channel for alerts
  */
-export type AlertChannel = 'email' | 'slack' | 'in-app'
+export type AlertChannel = 'email' | 'in-app'
 
 // =============================================================================
 // ALERT RESULT

@@ -3,7 +3,6 @@ export type ActivityType =
   | 'task_activity'
   | 'message_posted'
   | 'client_added'
-  | 'invoice_sent'
   | 'proposal_created'
 
 export interface Activity {

@@ -1,10 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useConvex } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
-import { apiFetch } from '@/lib/api-client'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { clientsApi } from '@/lib/convex-api'
@@ -71,26 +70,6 @@ export interface UseAdminClientsReturn {
     handleTeamDialogChange: (open: boolean) => void
     handleAddTeamMember: () => Promise<void>
 
-    // Invoice state
-    clientPendingInvoice: ClientRecord | null
-    isInvoiceDialogOpen: boolean
-    invoiceAmount: string
-    invoiceDescription: string
-    invoiceDueDate: Date | undefined
-    invoiceEmail: string
-    creatingInvoice: boolean
-    invoiceError: string | null
-    selectedInvoiceClientId: string | undefined
-
-    // Invoice actions
-    setInvoiceAmount: (value: string) => void
-    setInvoiceDescription: (value: string) => void
-    setInvoiceDueDate: (date: Date | undefined) => void
-    setInvoiceEmail: (value: string) => void
-    setSelectedInvoiceClientId: (id: string | undefined) => void
-    requestInvoiceForClient: (client: ClientRecord) => void
-    handleInvoiceDialogChange: (open: boolean) => void
-    handleCreateInvoice: () => Promise<void>
 }
 
 export function useAdminClients(): UseAdminClientsReturn {
@@ -156,17 +135,6 @@ export function useAdminClients(): UseAdminClientsReturn {
     const [clientAccountManager, setClientAccountManager] = useState('')
     const [teamMemberFields, setTeamMemberFields] = useState<TeamMemberField[]>([createEmptyMemberField()])
 
-    // Invoice dialog state
-    const [clientPendingInvoice, setClientPendingInvoice] = useState<ClientRecord | null>(null)
-    const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
-    const [invoiceAmount, setInvoiceAmount] = useState('')
-    const [invoiceDescription, setInvoiceDescription] = useState('')
-    const [invoiceDueDate, setInvoiceDueDate] = useState<Date | undefined>(undefined)
-    const [invoiceEmail, setInvoiceEmail] = useState('')
-    const [creatingInvoice, setCreatingInvoice] = useState(false)
-    const [invoiceError, setInvoiceError] = useState<string | null>(null)
-    const [selectedInvoiceClientId, setSelectedInvoiceClientId] = useState<string | undefined>(undefined)
-
     // Transform Convex data to ClientRecord format
     const clients = useMemo<ClientRecord[]>(() => {
         const data = clientsQuery.data
@@ -179,15 +147,6 @@ export function useAdminClients(): UseAdminClientsReturn {
             name: row.name,
             accountManager: row.accountManager,
             teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
-            billingEmail: row.billingEmail ?? null,
-            stripeCustomerId: row.stripeCustomerId ?? null,
-            lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-            lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-            lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-            lastInvoiceIssuedAt: row.lastInvoiceIssuedAtMs ? new Date(row.lastInvoiceIssuedAtMs).toISOString() : null,
-            lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-            lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-            lastInvoicePaidAt: row.lastInvoicePaidAtMs ? new Date(row.lastInvoicePaidAtMs).toISOString() : null,
             createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
             updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
         }))
@@ -218,20 +177,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         // No infinite scroll with single query
         await clientsQuery.refetch()
     }, [clientsQuery])
-
-    // Sync invoice client selection
-    useEffect(() => {
-        if (clients.length === 0) {
-            setSelectedInvoiceClientId(undefined)
-            return
-        }
-        setSelectedInvoiceClientId((current) => {
-            if (current && clients.some((client) => client.id === current)) {
-                return current
-            }
-            return clients[0]?.id
-        })
-    }, [clients])
 
     // Delete dialog handlers
     const handleDeleteDialogChange = useCallback((open: boolean) => {
@@ -321,115 +266,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         }
     }, [clientPendingMembers, workspaceId, memberName, memberRole, addTeamMemberMutation, toast])
 
-    // Invoice dialog handlers
-    const handleInvoiceDialogChange = useCallback(
-        (open: boolean) => {
-            if (!open && creatingInvoice) return
-            setIsInvoiceDialogOpen(open)
-            if (!open) {
-                setClientPendingInvoice(null)
-                setInvoiceAmount('')
-                setInvoiceDescription('')
-                setInvoiceDueDate(undefined)
-                setInvoiceEmail('')
-                setInvoiceError(null)
-            }
-        },
-        [creatingInvoice]
-    )
-
-    const requestInvoiceForClient = useCallback((client: ClientRecord) => {
-        setClientPendingInvoice(client)
-        setInvoiceAmount('')
-        setInvoiceDescription('')
-        setInvoiceDueDate(undefined)
-        setInvoiceEmail(client.billingEmail ?? '')
-        setInvoiceError(null)
-        setIsInvoiceDialogOpen(true)
-    }, [])
-
-    const handleCreateInvoice = useCallback(async () => {
-        if (!clientPendingInvoice) return
-
-        const amountValue = Number(invoiceAmount)
-        if (!Number.isFinite(amountValue) || amountValue <= 0) {
-            setInvoiceError('Enter a positive amount to invoice.')
-            return
-        }
-
-        const normalizedEmail = invoiceEmail.trim().toLowerCase()
-        if (!normalizedEmail) {
-            setInvoiceError('Add a billing email before sending the invoice.')
-            return
-        }
-
-        let dueDateIso: string | undefined
-        if (invoiceDueDate) {
-            dueDateIso = invoiceDueDate.toISOString()
-        }
-
-        setCreatingInvoice(true)
-        setInvoiceError(null)
-
-        try {
-            // Invoice creation still uses API route (Stripe integration requires server-side)
-            const { invoice } = await apiFetch<{
-                invoice: {
-                    id: string
-                    number: string | null
-                    status: string | null
-                    amount: number
-                    currency: string | null
-                    amountDue: number | null
-                    issuedAt: string | null
-                    hostedInvoiceUrl: string | null
-                }
-                client: {
-                    id: string
-                    billingEmail?: string | null
-                    stripeCustomerId?: string | null
-                    lastInvoiceStatus?: string | null
-                    lastInvoiceAmount?: number | null
-                    lastInvoiceCurrency?: string | null
-                    lastInvoiceIssuedAt?: string | null
-                    lastInvoiceNumber?: string | null
-                    lastInvoiceUrl?: string | null
-                }
-            }>(`/api/clients/${encodeURIComponent(clientPendingInvoice.id)}/invoice`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    amount: amountValue,
-                    description: invoiceDescription.trim().length > 0 ? invoiceDescription.trim() : undefined,
-                    dueDate: dueDateIso,
-                    email: normalizedEmail,
-                }),
-            })
-
-            const invoiceLabel = invoice.number ?? invoice.id
-            toast({
-                title: 'Invoice sent',
-                description: `Invoice ${invoiceLabel} emailed to ${normalizedEmail}.`,
-            })
-
-            if (invoice.hostedInvoiceUrl) {
-                try {
-                    window.open(invoice.hostedInvoiceUrl, '_blank', 'noopener')
-                } catch (openError) {
-                    console.warn('[AdminClients] Failed to open invoice preview', openError)
-                }
-            }
-
-            handleInvoiceDialogChange(false)
-        } catch (err: unknown) {
-            logError(err, 'useAdminClients:handleCreateInvoice')
-            const message = asErrorMessage(err)
-            setInvoiceError(message)
-            toast({ title: 'Invoice error', description: message, variant: 'destructive' })
-        } finally {
-            setCreatingInvoice(false)
-        }
-    }, [clientPendingInvoice, handleInvoiceDialogChange, invoiceAmount, invoiceDescription, invoiceDueDate, invoiceEmail, toast])
-
     // Client form handlers
     const resetClientForm = useCallback(() => {
         setClientName('')
@@ -481,7 +317,6 @@ export function useAdminClients(): UseAdminClientsReturn {
                 name,
                 accountManager,
                 teamMembers,
-                billingEmail: null,
                 createdBy: user?.id ?? null,
             })
 
@@ -540,24 +375,5 @@ export function useAdminClients(): UseAdminClientsReturn {
         requestAddTeamMember,
         handleTeamDialogChange,
         handleAddTeamMember,
-
-        // Invoice
-        clientPendingInvoice,
-        isInvoiceDialogOpen,
-        invoiceAmount,
-        invoiceDescription,
-        invoiceDueDate,
-        invoiceEmail,
-        creatingInvoice,
-        invoiceError,
-        selectedInvoiceClientId,
-        setInvoiceAmount,
-        setInvoiceDescription,
-        setInvoiceDueDate,
-        setInvoiceEmail,
-        setSelectedInvoiceClientId,
-        requestInvoiceForClient,
-        handleInvoiceDialogChange,
-        handleCreateInvoice,
     }
 }

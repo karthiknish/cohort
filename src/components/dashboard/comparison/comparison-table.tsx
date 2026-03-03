@@ -66,13 +66,13 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
             </th>
             <th className="pb-3 pr-2 font-medium">
               <div className="flex items-center gap-1">
-                Outstanding
+                Conversions
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3 w-3" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Total unpaid invoices</p>
+                    <p>Total conversion events in the selected period</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -101,7 +101,7 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 </span>
               </td>
               <td className="py-3 text-muted-foreground">{formatCpa(row.cpa, row.currency)}</td>
-              <td className="py-3 pr-2 text-muted-foreground">{formatCurrency(row.outstanding, row.currency)}</td>
+              <td className="py-3 pr-2 text-muted-foreground">{row.totalConversions.toLocaleString('en-US')}</td>
             </tr>
           ))}
         </tbody>

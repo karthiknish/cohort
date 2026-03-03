@@ -1,8 +1,5 @@
-import Stripe from 'stripe'
 import { httpAction } from './_generated/server'
-import { api, internal } from './_generated/api'
-
-const WEBHOOK_TOLERANCE_SECONDS = 300
+import { internal } from './_generated/api'
 
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -17,74 +14,6 @@ function getHeader(request: Request, name: string): string | null {
   const value = request.headers.get(name)
   return typeof value === 'string' && value.length > 0 ? value : null
 }
-
-export const stripeWebhook = httpAction(async (ctx, request) => {
-  if (request.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405)
-  }
-
-  const signature = getHeader(request, 'stripe-signature')
-  if (!signature) {
-    return jsonResponse({ error: 'Missing stripe-signature' }, 400)
-  }
-
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-
-  if (!webhookSecret || !stripeSecretKey) {
-    // Don’t leak server env details to the caller.
-    return jsonResponse({ error: 'Server configuration error' }, 503)
-  }
-
-  const body = await request.text()
-
-  const stripe = new Stripe(stripeSecretKey)
-
-  let event: Stripe.Event
-  try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-  } catch (err: unknown) {
-    return jsonResponse({ error: 'Invalid signature' }, 400)
-  }
-
-  const eventAge = Math.floor(Date.now() / 1000) - event.created
-  if (eventAge > WEBHOOK_TOLERANCE_SECONDS) {
-    return jsonResponse({ error: 'Event too old' }, 400)
-  }
-
-  // Record the event idempotently (dedupe by `eventId`).
-  const recordResult = await ctx.runMutation(internal.webhooks.recordStripeWebhookEvent, {
-    eventId: event.id,
-    eventType: event.type,
-    livemode: event.livemode,
-    createdAtMs: event.created * 1000,
-  })
-
-  if (recordResult.duplicate) {
-    return jsonResponse({ received: true, duplicate: true })
-  }
-
-  // Handle different event types
-  if (event.type.startsWith('invoice.')) {
-    await ctx.runMutation(internal.webhooks.handleStripeInvoiceEvent, {
-      eventType: event.type,
-      invoice: event.data.object,
-    })
-  }
-
-  if (event.type === 'charge.refunded') {
-    const charge = event.data.object as Stripe.Charge & { invoice?: string | { id?: string } | null }
-    const invoiceRef = charge.invoice
-    const invoiceId = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id ?? null
-    await ctx.runMutation(internal.webhooks.handleStripeChargeRefunded, {
-      chargeId: charge.id,
-      amountRefunded: charge.amount_refunded ?? 0,
-      invoiceId: invoiceId ?? undefined,
-    })
-  }
-
-  return jsonResponse({ received: true })
-})
 
 export const adSyncNotification = httpAction(async (ctx, request) => {
   if (request.method !== 'POST') {

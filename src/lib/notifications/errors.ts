@@ -3,7 +3,6 @@
 export const NOTIFICATION_ERROR_CODES = {
   // Configuration Errors
   WEBHOOK_NOT_CONFIGURED: 'WEBHOOK_NOT_CONFIGURED',
-  WHATSAPP_NOT_CONFIGURED: 'WHATSAPP_NOT_CONFIGURED',
   INVALID_CONFIG: 'INVALID_CONFIG',
 
   // Validation Errors
@@ -13,13 +12,11 @@ export const NOTIFICATION_ERROR_CODES = {
 
   // Delivery Errors
   WEBHOOK_FAILED: 'WEBHOOK_FAILED',
-  WHATSAPP_SEND_FAILED: 'WHATSAPP_SEND_FAILED',
   FIRESTORE_WRITE_FAILED: 'FIRESTORE_WRITE_FAILED',
   CONVEX_QUERY_FAILED: 'CONVEX_QUERY_FAILED',
 
   // Rate Limiting
   RATE_LIMITED: 'RATE_LIMITED',
-  WHATSAPP_RATE_LIMITED: 'WHATSAPP_RATE_LIMITED',
 
   // Network Errors
   NETWORK_ERROR: 'NETWORK_ERROR',
@@ -31,7 +28,7 @@ export const NOTIFICATION_ERROR_CODES = {
 
 export type NotificationErrorCode = (typeof NOTIFICATION_ERROR_CODES)[keyof typeof NOTIFICATION_ERROR_CODES]
 
-export type NotificationChannel = 'email' | 'slack' | 'whatsapp' | 'firestore' | 'unknown'
+export type NotificationChannel = 'email' | 'firestore' | 'unknown'
 
 export interface NotificationErrorOptions {
   message: string
@@ -66,11 +63,9 @@ export class NotificationError extends Error {
   private checkIsRetryable(): boolean {
     const retryableErrors: string[] = [
       NOTIFICATION_ERROR_CODES.WEBHOOK_FAILED,
-      NOTIFICATION_ERROR_CODES.WHATSAPP_SEND_FAILED,
       NOTIFICATION_ERROR_CODES.FIRESTORE_WRITE_FAILED,
       NOTIFICATION_ERROR_CODES.CONVEX_QUERY_FAILED,
       NOTIFICATION_ERROR_CODES.RATE_LIMITED,
-      NOTIFICATION_ERROR_CODES.WHATSAPP_RATE_LIMITED,
       NOTIFICATION_ERROR_CODES.NETWORK_ERROR,
       NOTIFICATION_ERROR_CODES.TIMEOUT,
     ]

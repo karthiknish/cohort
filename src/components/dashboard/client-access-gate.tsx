@@ -1,6 +1,6 @@
 "use client"
 
-import { PropsWithChildren, useState } from 'react'
+import { useState, type PropsWithChildren } from 'react'
 import Link from 'next/link'
 import { LoaderCircle, RefreshCcw } from 'lucide-react'
 
@@ -89,7 +89,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
       <Card className="mx-auto max-w-xl border-primary/30 bg-primary/5">
         <CardHeader>
           <CardTitle className="text-lg">Select a client workspace</CardTitle>
-          <CardDescription>Choose a client to unlock analytics, tasks, collaboration, and finance tools.</CardDescription>
+          <CardDescription>Choose a client to unlock analytics, tasks, collaboration, and project tools.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ClientWorkspaceSelector className="w-full" />

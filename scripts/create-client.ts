@@ -26,7 +26,6 @@ async function createClient() {
       teamMembers: [
         { name: 'Karthik Nishanth', role: 'Account Manager' }
       ],
-      billingEmail: 'karthik.nishanth06@gmail.com',
       createdBy: workspaceId,
     })
     

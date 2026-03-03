@@ -82,32 +82,6 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     actions: ['add task', 'create task', 'check tasks', 'manage assignments', 'see what to do'],
   },
   
-  // Finance
-  {
-    route: '/dashboard/finance',
-    name: 'Finance',
-    description: 'Financial overview with invoices, costs, revenue tracking, and billing',
-    keywords: ['finance', 'financial', 'invoices', 'invoice', 'billing', 'costs', 'expenses', 'payments', 'money', 'revenue', 'profit', 'budget', 'accounting'],
-    aliases: ['invoices and costs', 'financial overview', 'billing', 'money matters', 'financial dashboard', 'accounts receivable'],
-    actions: ['create invoice', 'add expense', 'check revenue', 'view billing', 'track costs'],
-  },
-  {
-    route: '/dashboard/finance?tab=invoices',
-    name: 'Invoices',
-    description: 'Create and manage client invoices',
-    keywords: ['invoices', 'invoice', 'bills', 'bill', 'billing'],
-    aliases: ['invoice list', 'create invoice', 'send invoice', 'manage invoices'],
-    actions: ['create invoice', 'send bill', 'view invoices'],
-  },
-  {
-    route: '/dashboard/finance?tab=costs',
-    name: 'Costs & Expenses',
-    description: 'Track business expenses and costs',
-    keywords: ['costs', 'cost', 'expenses', 'expense', 'spending'],
-    aliases: ['expense tracker', 'cost management', 'log expense'],
-    actions: ['add expense', 'log cost', 'track spending'],
-  },
-  
   // Proposals
   {
     route: '/dashboard/proposals',
@@ -123,7 +97,7 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     route: '/dashboard/collaboration',
     name: 'Collaboration',
     description: 'Team chat, messaging, and communication hub',
-    keywords: ['collaboration', 'chat', 'messages', 'message', 'team', 'communication', 'discuss', 'conversation', 'talk', 'slack', 'threads'],
+    keywords: ['collaboration', 'chat', 'messages', 'message', 'team', 'communication', 'discuss', 'conversation', 'talk', 'threads'],
     aliases: ['team chat', 'collaboration hub', 'messaging', 'communicate', 'discussions', 'chat room'],
     actions: ['send message', 'chat with team', 'check messages', 'start conversation'],
   },

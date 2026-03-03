@@ -12,12 +12,6 @@ export interface AuthUser {
   agencyId: string
   createdAt: string
   updatedAt: string
-  notificationPreferences?: {
-    whatsapp?: {
-      tasks?: boolean
-      collaboration?: boolean
-    }
-  }
 }
 
 export interface SignUpData {

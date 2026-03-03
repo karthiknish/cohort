@@ -15,14 +15,9 @@ function getOperationsDocumentation(): string {
 When the user wants to CREATE or UPDATE data, use:
 {"action": "execute", "operation": "<operation>", "params": {...}, "message": "Confirmation message"}
 
-### Financial Operations
-- **createCost**: Add expense to Finance
-  Params: { category: string, amount: number, cadence?: "one-off"|"monthly"|"quarterly"|"annual" }
-  Example: "add $1000 ad spend" → {"action": "execute", "operation": "createCost", "params": {"category": "Ad Spend", "amount": 1000}, "message": "Done! Added $1,000 Ad Spend expense."}
-
 ### Task Operations  
 - **createTask**: Create a new task
-  Params: { title: string, priority?: "low"|"medium"|"high", description?: string }
+  Params: { title: string, priority?: "low"|"medium"|"high", description?: string, dueDate?: string }
   Example: "remind me to review proposals" → {"action": "execute", "operation": "createTask", "params": {"title": "Review proposals"}, "message": "Done! Task created."}
 `
 }
@@ -45,7 +40,7 @@ const agentRequestContext = v.object({
 })
 
 const SYSTEM_PROMPT = `You are a friendly AI assistant for "Cohorts", a marketing agency dashboard.
-You can help users NAVIGATE to pages AND EXECUTE actions like adding expenses or creating tasks.
+You can help users NAVIGATE to pages AND EXECUTE actions like creating tasks.
 
 ## Available Dashboard Pages:
 ${buildRoutesForPrompt()}
@@ -57,20 +52,18 @@ ${getOperationsDocumentation()}
 **When user wants to navigate somewhere**, respond with JSON:
 {"action": "navigate", "route": "/dashboard/analytics", "message": "Taking you to Analytics..."}
 
-**When user wants to CREATE/ADD something** (expenses, tasks, etc.), respond with:
-{"action": "execute", "operation": "createCost", "params": {"category": "Ad Spend", "amount": 1000}, "message": "Done! I've added $1,000..."}
+**When user wants to CREATE/ADD something** (like tasks), respond with:
+{"action": "execute", "operation": "createTask", "params": {"title": "Review proposals"}, "message": "Done! Task created."}
 
 **When you need clarification**, ask a brief question:
 {"action": "clarify", "message": "How much would you like to add? And what category?"}
 
 **For greetings or general questions**, be friendly:
-{"action": "chat", "message": "Hey! I can help you navigate or add data. What do you need?"}
+{"action": "chat", "message": "Hey! I can help you navigate or create tasks. What do you need?"}
 
 ## Tips for Understanding Users
-- "add X in ad spend/marketing" → EXECUTE createCost
 - "create a task to..." or "remind me to..." → EXECUTE createTask
 - "check my numbers" or "see performance" → navigate to Analytics
-- "money stuff", "billing", "invoices" → navigate to Finance
 - "show tasks", "my to-do list" → navigate to Tasks
 
 **Always respond with valid JSON only. Be brief but friendly.**`
@@ -136,24 +129,30 @@ function formatConversationHistory(context?: {
 async function safeExecuteOperation(ctx: any, args: { workspaceId: string; operation: string; params: Record<string, unknown> }) {
   const operation = args.operation
 
-  if (operation === 'createCost' || operation === 'addExpense') {
-    const category = typeof args.params.category === 'string' ? args.params.category : 'Ad Spend'
-    const amountRaw = (args.params as any).amount
-    const amount = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw)
-    const cadence = typeof args.params.cadence === 'string' ? args.params.cadence : 'monthly'
-    const currency = typeof args.params.currency === 'string' ? args.params.currency : 'USD'
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return { success: false, data: { error: 'Invalid amount' } }
+  if (operation === 'createTask') {
+    const title = typeof args.params.title === 'string' ? args.params.title.trim() : ''
+    if (!title) {
+      return { success: false, data: { error: 'Task title is required' } }
     }
 
-    const result = await ctx.runMutation('financeCosts:create', {
+    const description = typeof args.params.description === 'string' ? args.params.description.trim() : ''
+    const priorityRaw = typeof args.params.priority === 'string' ? args.params.priority.toLowerCase() : 'medium'
+    const priority = ['low', 'medium', 'high'].includes(priorityRaw) ? priorityRaw : 'medium'
+
+    const dueDateRaw = typeof args.params.dueDate === 'string' ? args.params.dueDate : null
+    const dueDateMs = dueDateRaw ? Date.parse(dueDateRaw) : null
+
+    const result = await ctx.runMutation('tasks:createTask', {
       workspaceId: args.workspaceId,
-      clientId: null,
-      category,
-      amount,
-      cadence,
-      currency,
+      title,
+      description: description || null,
+      status: 'todo',
+      priority,
+      assignedTo: [],
+      clientId: '',
+      client: null,
+      dueDateMs: Number.isFinite(dueDateMs) ? dueDateMs : null,
+      tags: [],
     })
 
     return { success: true, data: result }

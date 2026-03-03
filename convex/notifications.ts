@@ -18,8 +18,6 @@ function toNotificationKind(input: string): WorkspaceNotificationKind {
     'collaboration.message',
     'collaboration.mention',
     'proposal.deck.ready',
-    'invoice.sent',
-    'invoice.paid',
   ]
 
   return (allowed as readonly string[]).includes(input) ? (input as WorkspaceNotificationKind) : 'task.created'
@@ -29,7 +27,6 @@ function toResource(type: string, id: string): WorkspaceNotificationResource {
   if (type === 'project') return { type: 'project', id }
   if (type === 'collaboration') return { type: 'collaboration', id }
   if (type === 'proposal') return { type: 'proposal', id }
-  if (type === 'invoice') return { type: 'invoice', id }
   return { type: 'task', id }
 }
 

@@ -8,7 +8,7 @@ import {
 
 export const listInboxItems = zWorkspacePaginatedQueryActive({
   args: {
-    sourceType: z.enum(['direct_message', 'channel', 'whatsapp', 'slack', 'teams', 'email']).optional(),
+    sourceType: z.enum(['direct_message', 'channel', 'email']).optional(),
     includeArchived: z.boolean().optional(),
     onlyUnread: z.boolean().optional(),
     onlyPinned: z.boolean().optional(),
@@ -87,9 +87,6 @@ export const getUnreadCounts = zWorkspaceQueryActive({
     const counts: Record<string, number> = {
       direct_message: 0,
       channel: 0,
-      whatsapp: 0,
-      slack: 0,
-      teams: 0,
       email: 0,
     }
 

@@ -43,7 +43,6 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
                     <div className="flex items-center gap-2">
                       {type.value === 'WEBSITE' && <Globe className="w-4 h-4" />}
                       {type.value === 'MESSENGER' && <MessageCircle className="w-4 h-4" />}
-                      {type.value === 'WHATSAPP' && <MessageCircle className="w-4 h-4" />}
                       <div className="flex flex-col items-start">
                         <span>{type.label}</span>
                         <span className="text-xs text-muted-foreground">{type.description}</span>

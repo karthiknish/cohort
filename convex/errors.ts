@@ -35,11 +35,6 @@ export const ErrorCode = {
     NOT_CONFIGURED: 'INTEGRATION_NOT_CONFIGURED',
     MISSING_TOKEN: 'MISSING_TOKEN',
   },
-  BILLING: {
-    PAYMENT_ERROR: 'PAYMENT_ERROR',
-    STRIPE_ERROR: 'STRIPE_ERROR',
-    PLAN_NOT_AVAILABLE: 'PLAN_NOT_AVAILABLE',
-  },
   RATE_LIMIT: {
     TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
   },
@@ -137,15 +132,6 @@ export const Errors = {
       ),
     missingToken: (provider: string) =>
       appError(ErrorCode.INTEGRATION.MISSING_TOKEN, `${provider} integration is missing access token`, { provider }),
-  },
-
-  billing: {
-    paymentError: (message: string, details?: Record<string, Value>) =>
-      appError(ErrorCode.BILLING.PAYMENT_ERROR, message, details),
-    stripe: (message: string, details?: Record<string, Value>) =>
-      appError(ErrorCode.BILLING.STRIPE_ERROR, message, details),
-    planNotAvailable: (message = 'Plan is not available') =>
-      appError(ErrorCode.BILLING.PLAN_NOT_AVAILABLE, message),
   },
 
   rateLimit: {

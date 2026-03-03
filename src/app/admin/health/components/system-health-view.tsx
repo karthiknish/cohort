@@ -9,7 +9,6 @@ import {
     XCircle,
     RefreshCw,
     Server,
-    ShieldCheck,
     Zap,
     Mail,
     PieChart,
@@ -110,8 +109,6 @@ export function SystemHealthView() {
         switch (key) {
             case 'convex':
                 return <Database className="h-4 w-4" />
-            case 'stripe':
-                return <ShieldCheck className="h-4 w-4" />
             case 'redis':
                 return <Zap className="h-4 w-4" />
             case 'brevo':
@@ -135,8 +132,6 @@ export function SystemHealthView() {
         switch (key) {
             case 'convex':
                 return 'Real-time database'
-            case 'stripe':
-                return 'Payment processing'
             case 'brevo':
                 return 'Email delivery'
             case 'posthog':

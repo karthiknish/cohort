@@ -11,7 +11,6 @@ import {
   Trash2,
   Filter,
   MessageSquare,
-  DollarSign,
   BarChart,
   CircleCheck,
   Mail,
@@ -98,9 +97,7 @@ export default function NotificationsPage() {
     if (activeFilter === 'mentions') {
       items = items.filter((n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
     } else if (activeFilter === 'system') {
-      items = items.filter(
-        (n: WorkspaceNotification) => n.kind === 'invoice.sent' || n.kind === 'invoice.paid' || n.kind === 'proposal.deck.ready'
-      )
+      items = items.filter((n: WorkspaceNotification) => n.kind === 'proposal.deck.ready')
     }
 
     return items
@@ -208,9 +205,6 @@ export default function NotificationsPage() {
         return <MessageSquare className="h-6 w-6" />
       case 'task.comment':
         return <MessageSquare className="h-6 w-6" />
-      case 'invoice.sent':
-      case 'invoice.paid':
-        return <DollarSign className="h-6 w-6" />
       case 'proposal.deck.ready':
         return <BarChart className="h-6 w-6" />
       case 'task.created':
@@ -223,7 +217,7 @@ export default function NotificationsPage() {
 
   const getNotificationCategory = (kind: WorkspaceNotification['kind']) => {
     if (kind === 'collaboration.mention' || kind === 'task.mention') return 'Mention'
-    if (kind === 'invoice.sent' || kind === 'invoice.paid' || kind === 'proposal.deck.ready') return 'System'
+    if (kind === 'proposal.deck.ready') return 'System'
     if (kind === 'task.created' || kind === 'task.updated' || kind === 'task.comment') return 'Task'
     return 'General'
   }
@@ -301,7 +295,7 @@ export default function NotificationsPage() {
                     {activeFilter === 'all' && 'Everything that happened in your workspace'}
                     {activeFilter === 'unread' && 'Notifications you haven\'t read yet'}
                     {activeFilter === 'mentions' && 'Times you were mentioned in conversations'}
-                    {activeFilter === 'system' && 'Automated updates about invoices, proposals, and more'}
+                    {activeFilter === 'system' && 'Automated updates about generated proposal decks'}
                   </CardDescription>
                 </div>
                 {unreadCount > 0 && activeFilter !== 'unread' && (

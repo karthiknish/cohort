@@ -14,7 +14,6 @@ function requireIdentity(identity: unknown): asserts identity {
 type ActivityType =
   | 'task_activity'
   | 'message_posted'
-  | 'invoice_sent'
   | 'project_updated'
   | 'proposal_created'
 
@@ -47,8 +46,6 @@ const KIND_TO_TYPE: Record<string, ActivityType> = {
   'task.mention': 'task_activity',
   'collaboration.message': 'message_posted',
   'collaboration.mention': 'message_posted',
-  'invoice.sent': 'invoice_sent',
-  'invoice.paid': 'invoice_sent',
   'project.created': 'project_updated',
   'proposal.deck.ready': 'proposal_created',
 }
@@ -56,7 +53,6 @@ const KIND_TO_TYPE: Record<string, ActivityType> = {
 const RESOURCE_TO_URL: Record<string, string> = {
   task: '/dashboard/tasks',
   collaboration: '/dashboard/collaboration',
-  invoice: '/dashboard/invoices',
   project: '/dashboard/projects',
   proposal: '/dashboard/proposals',
 }

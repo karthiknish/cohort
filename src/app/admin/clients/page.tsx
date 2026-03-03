@@ -13,15 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/components/ui/use-toast'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -30,20 +21,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
-import { Calendar as CalendarIcon, FileText, LoaderCircle, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
+import { LoaderCircle, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
 import { useAdminClients } from './hooks'
 
 export default function AdminClientsPage() {
   const { user } = useAuth()
-  const { toast } = useToast()
 
   const {
     // Client list
@@ -88,25 +70,6 @@ export default function AdminClientsPage() {
     requestAddTeamMember,
     handleTeamDialogChange,
     handleAddTeamMember,
-
-    // Invoice
-    clientPendingInvoice,
-    isInvoiceDialogOpen,
-    invoiceAmount,
-    invoiceDescription,
-    invoiceDueDate,
-    invoiceEmail,
-    creatingInvoice,
-    invoiceError,
-    selectedInvoiceClientId,
-    setInvoiceAmount,
-    setInvoiceDescription,
-    setInvoiceDueDate,
-    setInvoiceEmail,
-    setSelectedInvoiceClientId,
-    requestInvoiceForClient,
-    handleInvoiceDialogChange,
-    handleCreateInvoice,
   } = useAdminClients()
 
   if (!user) {
@@ -180,70 +143,6 @@ export default function AdminClientsPage() {
             </CardContent>
           </Card>
         </div>
-
-         <Card>
-           <CardHeader>
-             <CardTitle className="text-lg">Raise invoice</CardTitle>
-             <CardDescription>Send a Stripe invoice to any client workspace.</CardDescription>
-           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin-invoice-client">Client workspace</Label>
-              <Select
-                value={selectedInvoiceClientId ?? undefined}
-                onValueChange={(value) => setSelectedInvoiceClientId(value)}
-                disabled={clients.length === 0 || clientsLoading || creatingInvoice}
-              >
-                <SelectTrigger id="admin-invoice-client">
-                  <SelectValue placeholder={clientsLoading ? 'Loading clients…' : 'Select client'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Opens the invoice composer to choose amount, due date, and billing email.
-              </p>
-              <Button
-                type="button"
-                onClick={() => {
-                  if (!selectedInvoiceClientId) {
-                    toast({
-                      title: 'Select a client',
-                      description: 'Pick the workspace you want to invoice first.',
-                      variant: 'destructive',
-                    })
-                    return
-                  }
-                  const client = clients.find((record) => record.id === selectedInvoiceClientId)
-                  if (!client) {
-                    toast({
-                      title: 'Client unavailable',
-                      description: 'Refresh the list and try again.',
-                      variant: 'destructive',
-                    })
-                    return
-                  }
-                  requestInvoiceForClient(client)
-                }}
-                disabled={!selectedInvoiceClientId || creatingInvoice || clients.length === 0}
-                className="inline-flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Start invoice
-              </Button>
-            </div>
-            {clients.length === 0 && !clientsLoading ? (
-              <p className="text-sm text-muted-foreground">Add a client workspace before raising invoices.</p>
-            ) : null}
-          </CardContent>
-        </Card>
 
          <Card>
            <CardHeader>
@@ -374,14 +273,6 @@ export default function AdminClientsPage() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Team {client.teamMembers.length}</Badge>
                           <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => requestInvoiceForClient(client)}
-                            disabled={creatingInvoice}
-                          >
-                            <FileText className="mr-2 h-4 w-4" /> Invoice
-                          </Button>
-                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => requestAddTeamMember(client)}
@@ -418,46 +309,6 @@ export default function AdminClientsPage() {
                               {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
                             </span>
                           ))}
-                        </div>
-                      )}
-                      {(client.lastInvoiceStatus || typeof client.lastInvoiceAmount === 'number' || client.lastInvoiceIssuedAt || client.lastInvoiceNumber) && (
-                        <div className="mt-4 rounded-md border bg-muted p-3 text-xs text-muted-foreground">
-                          <div className="flex flex-wrap items-center gap-2 text-foreground">
-                            <span className="font-bold">Latest invoice</span>
-                            {client.lastInvoiceStatus ? (
-                              <Badge variant="outline" className="capitalize">
-                                {client.lastInvoiceStatus.replace(/_/g, ' ')}
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {typeof client.lastInvoiceAmount === 'number' ? (
-                            <p className="mt-1 text-foreground">
-                              {new Intl.NumberFormat('en-US', {
-                                style: 'currency',
-                                currency: client.lastInvoiceCurrency?.toUpperCase() ?? 'USD',
-                              }).format(client.lastInvoiceAmount)}
-                              {client.lastInvoiceNumber ? ` • ${client.lastInvoiceNumber}` : ''}
-                            </p>
-                          ) : (
-                            <p className="mt-1">No invoices issued yet.</p>
-                          )}
-                          {client.lastInvoiceIssuedAt ? (
-                            <p className="mt-1">
-                              Sent {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(client.lastInvoiceIssuedAt))}
-                            </p>
-                          ) : null}
-                          {client.lastInvoiceUrl ? (
-                            <p className="mt-1">
-                              <a
-                                href={client.lastInvoiceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-primary underline"
-                              >
-                                View hosted invoice
-                              </a>
-                            </p>
-                          ) : null}
                         </div>
                       )}
                     </div>
@@ -563,129 +414,6 @@ export default function AdminClientsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invoice Dialog */}
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={handleInvoiceDialogChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send invoice</DialogTitle>
-            <DialogDescription>
-              Email a Stripe invoice to {clientPendingInvoice?.name ?? 'this client'} and track the payment in their workspace.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="invoice-amount-input">Amount (USD)</Label>
-              <Input
-                id="invoice-amount-input"
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="5000"
-                value={invoiceAmount}
-                onChange={(event) => setInvoiceAmount(event.target.value)}
-                disabled={creatingInvoice}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="invoice-description-input">Line item description</Label>
-              <Textarea
-                id="invoice-description-input"
-                placeholder="Describe the scope or milestone you are invoicing for"
-                value={invoiceDescription}
-                onChange={(event) => setInvoiceDescription(event.target.value)}
-                disabled={creatingInvoice}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Due date (optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !invoiceDueDate && 'text-muted-foreground'
-                      )}
-                      disabled={creatingInvoice}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {invoiceDueDate ? format(invoiceDueDate, 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={invoiceDueDate}
-                      onSelect={setInvoiceDueDate}
-                      initialFocus
-                      disabled={(date: Date) => date < new Date()}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="invoice-email-input">Billing email</Label>
-                <Input
-                  id="invoice-email-input"
-                  type="email"
-                  placeholder="billing@clientco.com"
-                  value={invoiceEmail}
-                  onChange={(event) => setInvoiceEmail(event.target.value)}
-                  disabled={creatingInvoice}
-                />
-              </div>
-            </div>
-             {(clientPendingInvoice?.lastInvoiceStatus || typeof clientPendingInvoice?.lastInvoiceAmount === 'number' || clientPendingInvoice?.lastInvoiceNumber) && (
-               <div className="rounded-md border bg-muted p-3 text-xs text-muted-foreground">
-                 <div className="flex flex-wrap items-center gap-2 text-foreground">
-                   <span className="font-medium">Latest invoice</span>
-                  {clientPendingInvoice?.lastInvoiceStatus ? (
-                    <Badge variant="outline" className="capitalize">
-                      {clientPendingInvoice.lastInvoiceStatus.replace(/_/g, ' ')}
-                    </Badge>
-                  ) : null}
-                </div>
-                {clientPendingInvoice?.lastInvoiceNumber ? (
-                  <p className="mt-1 text-foreground">Invoice {clientPendingInvoice.lastInvoiceNumber}</p>
-                ) : null}
-                {typeof clientPendingInvoice?.lastInvoiceAmount === 'number' ? (
-                  <p className="mt-1">
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: clientPendingInvoice.lastInvoiceCurrency?.toUpperCase() ?? 'USD',
-                    }).format(clientPendingInvoice.lastInvoiceAmount)}
-                  </p>
-                ) : (
-                  <p className="mt-1">No invoice amount recorded.</p>
-                )}
-                {clientPendingInvoice?.lastInvoiceIssuedAt ? (
-                  <p className="mt-1">
-                    Sent on {new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(clientPendingInvoice.lastInvoiceIssuedAt))}
-                  </p>
-                ) : null}
-                {clientPendingInvoice?.lastInvoiceUrl ? (
-                  <p className="mt-1">
-                    <a href={clientPendingInvoice.lastInvoiceUrl} target="_blank" rel="noreferrer" className="text-primary underline">
-                      View last invoice
-                    </a>
-                  </p>
-                ) : null}
-              </div>
-            )}
-            {invoiceError && <p className="text-sm text-destructive">{invoiceError}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleInvoiceDialogChange(false)} disabled={creatingInvoice}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={() => void handleCreateInvoice()} disabled={creatingInvoice}>
-              {creatingInvoice && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-              Send invoice
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

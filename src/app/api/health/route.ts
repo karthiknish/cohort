@@ -42,34 +42,6 @@ export const GET = createApiHandler(
       }
     }
 
-    // Check Stripe connectivity (if configured)
-    try {
-      const checkStart = Date.now()
-
-      if (process.env.STRIPE_SECRET_KEY) {
-        const { getStripeClient } = await import('@/lib/stripe')
-        const stripe = getStripeClient()
-
-        // Simple account check
-        await stripe.accounts.retrieve()
-
-        checks.stripe = {
-          status: 'ok',
-          responseTime: Date.now() - checkStart
-        }
-      } else {
-        checks.stripe = {
-          status: 'ok',
-          message: 'Not configured'
-        }
-      }
-    } catch (error) {
-      checks.stripe = {
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Stripe connection failed'
-      }
-    }
-
     // Note: Rate limiting is enforced via Convex; we don't separately health-check it here.
 
     // Check Brevo connectivity

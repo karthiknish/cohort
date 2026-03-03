@@ -85,17 +85,6 @@ export const OPERATION_ERROR_MESSAGES = {
     noPermission: 'You don\'t have permission to share this item.',
   },
 
-  // Payments & Billing
-  payment: {
-    failed: 'Payment could not be processed. Please check your payment details.',
-    declined: 'Your payment was declined. Please try a different payment method.',
-    expired: 'Your payment method has expired. Please update your billing information.',
-  },
-  subscription: {
-    failed: 'Unable to update your subscription. Please try again.',
-    cancelled: 'Your subscription has been cancelled.',
-  },
-
   // Export & Import
   export: {
     failed: 'Unable to export your data. Please try again.',

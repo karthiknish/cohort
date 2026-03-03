@@ -50,7 +50,7 @@ export type CollaborationMessage = {
   isPinned?: boolean
   pinnedAt?: string | null
   pinnedBy?: string | null
-  sharedTo?: Array<'slack' | 'teams' | 'whatsapp'>
+  sharedTo?: Array<'email'>
 }
 
 export type DirectConversationStatus = 'active' | 'archived' | 'muted'
@@ -102,12 +102,12 @@ export type DirectMessage = {
   readBy: string[]
   deliveredTo: string[]
   readAtMs?: number | null
-  sharedTo?: Array<'slack' | 'teams' | 'whatsapp' | 'email'> | null
+  sharedTo?: Array<'email'> | null
   createdAtMs: number
   updatedAtMs?: number | null
 }
 
-export type InboxSource = 'direct_message' | 'channel' | 'whatsapp' | 'slack' | 'teams' | 'email'
+export type InboxSource = 'direct_message' | 'channel' | 'email'
 
 export type InboxPriority = 'low' | 'normal' | 'high' | 'urgent'
 

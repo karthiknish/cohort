@@ -2,17 +2,20 @@
 // CLIENTS PAGE - Data Management Hook
 // =============================================================================
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useAction } from 'convex/react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
-import { usePreview } from '@/contexts/preview-context'
-import { financeInvoicesApi, projectsApi, proposalsApi, tasksApi, api } from '@/lib/convex-api'
-import { getPreviewProjects, getPreviewTasks, getPreviewProposals, getPreviewFinanceSummary } from '@/lib/preview-data'
-import { useToast } from '@/components/ui/use-toast'
-import type { ClientStats, InvoiceData, CreateInvoiceForm } from './types'
+import { customFormulasApi, projectsApi, proposalsApi, tasksApi } from '@/lib/convex-api'
+import { getPreviewProjects, getPreviewTasks, getPreviewProposals } from '@/lib/preview-data'
+import type { ClientRecord } from '@/types/clients'
 
-export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
-  const { toast } = useToast()
+type QueryRow = Record<string, unknown>
+
+function toStatus(row: QueryRow): string | null {
+  return typeof row.status === 'string' ? row.status : null
+}
+
+export function useClientsData(selectedClient: ClientRecord | null, isPreviewMode: boolean) {
   const { user } = useAuth()
   const workspaceId = user?.agencyId ?? null
 
@@ -20,57 +23,30 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
   const proposalsRealtime = useQuery(
     proposalsApi.list,
     workspaceId && selectedClient ? { workspaceId, clientId: selectedClient.id, limit: 100 } : 'skip'
-  )
+  ) as QueryRow[] | undefined
 
   const tasksRealtime = useQuery(
     tasksApi.listByClient,
     !isPreviewMode && workspaceId && selectedClient
       ? { workspaceId, clientId: selectedClient.id, limit: 200 }
       : 'skip'
-  ) as Array<any> | undefined
+  ) as QueryRow[] | undefined
 
   const projectsRealtime = useQuery(
     projectsApi.list,
     !isPreviewMode && workspaceId && selectedClient
       ? { workspaceId, clientId: selectedClient.id, limit: 200 }
       : 'skip'
-  ) as Array<any> | undefined
+  ) as QueryRow[] | undefined
 
-  const invoicesRealtime = useQuery(
-    financeInvoicesApi.list,
-    !isPreviewMode && workspaceId && selectedClient
-      ? { workspaceId, clientId: selectedClient.id, limit: 10 }
-      : 'skip'
-  )
-
-  // Actions
-  const remindInvoice = useAction(financeInvoicesApi.remind)
-  const refundInvoice = useAction(financeInvoicesApi.refund)
-  const createInvoice = useAction(financeInvoicesApi.createAndSend)
-
-  // Local state
-  const [invoiceHistory, setInvoiceHistory] = useState<InvoiceData[]>([])
-  const [invoiceHistoryLoading, setInvoiceHistoryLoading] = useState(false)
-  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
-  const [createInvoiceLoading, setCreateInvoiceLoading] = useState(false)
-  const [createInvoiceForm, setCreateInvoiceForm] = useState<CreateInvoiceForm>({
-    amount: '',
-    email: '',
-    description: '',
-    dueDate: '',
-    lineItems: [],
-  })
-  const [sendingReminder, setSendingReminder] = useState(false)
-  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
-  const [refundLoading, setRefundLoading] = useState(false)
   const [adStatusLoading, setAdStatusLoading] = useState(false)
   const [adAccountsConnected, setAdAccountsConnected] = useState<boolean | null>(null)
 
   // Formulas connectivity check
   const formulasConnectivity = useQuery(
-    (api as any).customFormulas.listByWorkspace,
+    customFormulasApi.listByWorkspace,
     selectedClient ? { workspaceId: selectedClient.id, activeOnly: true } : 'skip'
-  )
+  ) as QueryRow[] | undefined
 
   // Check ad connectivity
   useEffect(() => {
@@ -86,25 +62,15 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
 
     setAdAccountsConnected(Array.isArray(formulasConnectivity) ? formulasConnectivity.length > 0 : false)
     setAdStatusLoading(false)
-  }, [selectedClient?.id, formulasConnectivity])
-
-  // Initialize email from client
-  useEffect(() => {
-    if (selectedClient?.billingEmail) {
-      setCreateInvoiceForm((prev) => ({
-        ...prev,
-        email: prev.email || selectedClient.billingEmail || '',
-      }))
-    }
-  }, [selectedClient?.id, selectedClient?.billingEmail])
+  }, [selectedClient, formulasConnectivity])
 
   // Compute stats reactively from Convex queries
   const stats = useMemo(() => {
     if (!selectedClient) return null
 
-    let projects: { status?: string }[] = []
-    let tasks: { status?: string }[] = []
-    let proposals: { status?: string }[] = []
+    let projects: QueryRow[] = []
+    let tasks: QueryRow[] = []
+    let proposals: QueryRow[] = []
 
     if (isPreviewMode) {
       projects = getPreviewProjects(selectedClient.id)
@@ -117,20 +83,24 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
     }
 
     const totalProjects = projects.length
-    const activeProjects = projects.filter((p: { status?: string }) =>
-      p.status === 'active' || p.status === 'in_progress'
-    ).length
+    const activeProjects = projects.filter((project) => {
+      const status = toStatus(project)
+      return status === 'active' || status === 'in_progress'
+    }).length
 
-    const openTasks = tasks.filter((t: { status?: string }) =>
-      t.status === 'todo' || t.status === 'in-progress'
-    ).length
-    const completedTasks = tasks.filter((t: { status?: string }) =>
-      t.status === 'done' || t.status === 'completed'
-    ).length
+    const openTasks = tasks.filter((task) => {
+      const status = toStatus(task)
+      return status === 'todo' || status === 'in-progress'
+    }).length
+    const completedTasks = tasks.filter((task) => {
+      const status = toStatus(task)
+      return status === 'done' || status === 'completed'
+    }).length
 
-    const pendingProposals = proposals.filter((p: { status?: string }) =>
-      p.status === 'draft' || p.status === 'pending' || p.status === 'sent'
-    ).length
+    const pendingProposals = proposals.filter((proposal) => {
+      const status = toStatus(proposal)
+      return status === 'draft' || status === 'pending' || status === 'sent'
+    }).length
 
     return { activeProjects, totalProjects, openTasks, completedTasks, pendingProposals }
   }, [selectedClient, isPreviewMode, proposalsRealtime, tasksRealtime, projectsRealtime])
@@ -142,192 +112,15 @@ export function useClientsData(selectedClient: any, isPreviewMode: boolean) {
     proposalsRealtime === undefined
   )
 
-  // Fetch invoice history
-  const fetchInvoiceHistory = useCallback(async () => {
-    if (!selectedClient) {
-      setInvoiceHistory([])
-      return
-    }
-
-    setInvoiceHistoryLoading(true)
-    try {
-      let invoices: any[] = []
-
-      if (isPreviewMode) {
-        const previewFinance = getPreviewFinanceSummary(selectedClient.id)
-        invoices = previewFinance.invoices ?? []
-      } else {
-        invoices = invoicesRealtime?.invoices ?? []
-      }
-
-      setInvoiceHistory(invoices.map((inv: Record<string, unknown>) => ({
-        id: inv.id as string || '',
-        number: inv.number as string | null,
-        status: inv.status as string || 'draft',
-        amount: typeof inv.amount === 'number' ? inv.amount : 0,
-        currency: inv.currency as string || 'usd',
-        issuedDate: inv.issuedDate as string | null,
-        dueDate: inv.dueDate as string | null,
-        paidDate: inv.paidDate as string | null,
-        hostedInvoiceUrl: inv.hostedInvoiceUrl as string | null,
-        description: inv.description as string | null,
-        clientName: inv.clientName as string || selectedClient.name,
-        amountPaid: typeof inv.amountPaid === 'number' ? inv.amountPaid : null,
-        amountRefunded: typeof inv.amountRefunded === 'number' ? inv.amountRefunded : null,
-        amountRemaining: typeof inv.amountRemaining === 'number' ? inv.amountRemaining : null,
-      })))
-    } catch (error) {
-      console.error('Failed to fetch invoice history:', error)
-    } finally {
-      setInvoiceHistoryLoading(false)
-    }
-  }, [selectedClient, isPreviewMode, invoicesRealtime])
-
-  // Create invoice handler
-  const handleCreateInvoice = async (refreshClients: () => Promise<any[]>) => {
-    if (!selectedClient || !workspaceId) return
-
-    const amountValue = Number(createInvoiceForm.amount)
-    if (!amountValue || Number.isNaN(amountValue) || amountValue <= 0) {
-      toast({
-        title: 'Invalid amount',
-        description: 'Enter a positive amount for the invoice.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!createInvoiceForm.email?.trim()) {
-      toast({
-        title: 'Billing email required',
-        description: 'Add a billing email before sending an invoice.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setCreateInvoiceLoading(true)
-    try {
-      await createInvoice({
-        workspaceId,
-        clientId: selectedClient.id,
-        clientName: selectedClient.name,
-        amount: amountValue,
-        email: createInvoiceForm.email.trim(),
-        description: createInvoiceForm.description?.trim() || undefined,
-        dueDate: createInvoiceForm.dueDate || undefined,
-        stripeCustomerId: selectedClient.stripeCustomerId ?? null,
-      })
-
-      toast({
-        title: 'Invoice created',
-        description: 'Your invoice has been created and sent.',
-      })
-
-      setCreateInvoiceOpen(false)
-      setCreateInvoiceForm((prev) => ({ ...prev, amount: '', description: '', dueDate: '', lineItems: [] }))
-      await Promise.all([refreshClients(), fetchInvoiceHistory()])
-    } catch (error) {
-      console.error('Failed to create invoice:', error)
-      toast({
-        title: 'Failed to create invoice',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setCreateInvoiceLoading(false)
-    }
-  }
-
-  // Send reminder handler
-  const handleSendReminder = async (invoiceSummary: any) => {
-    const targetInvoiceId = invoiceSummary?.identifier?.replace(/^#/, '')
-    if (!targetInvoiceId || !selectedClient) return
-
-    setSendingReminder(true)
-    try {
-      await remindInvoice({
-        workspaceId: workspaceId as string,
-        invoiceId: targetInvoiceId,
-      })
-
-      toast({
-        title: 'Reminder sent',
-        description: 'Invoice reminder has been sent to the client.',
-      })
-    } catch (error) {
-      console.error('Failed to send reminder:', error)
-      toast({
-        title: 'Failed to send reminder',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setSendingReminder(false)
-    }
-  }
-
-  // Issue refund handler
-  const handleIssueRefund = async (invoiceSummary: any, refreshClients: () => Promise<any[]>) => {
-    const invoiceId = invoiceSummary?.identifier?.replace(/^#/, '')
-    if (!invoiceId || !selectedClient) return
-
-    setRefundLoading(true)
-    try {
-      const result = await refundInvoice({
-        workspaceId: workspaceId as string,
-        invoiceId,
-      })
-
-      const refundAmount = typeof result?.refund?.amount === 'number' ? result.refund.amount : 0
-      const refundCurrency = typeof result?.refund?.currency === 'string' ? result.refund.currency : 'usd'
-
-      toast({
-        title: 'Refund issued',
-        description: `Refund of $${refundAmount.toFixed(2)} ${refundCurrency.toUpperCase()} has been processed.`,
-      })
-
-      setRefundDialogOpen(false)
-      await Promise.all([refreshClients(), fetchInvoiceHistory()])
-    } catch (error) {
-      console.error('Failed to issue refund:', error)
-      toast({
-        title: 'Failed to issue refund',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setRefundLoading(false)
-    }
-  }
-
   return {
     // Queries
     proposalsRealtime,
     tasksRealtime,
     projectsRealtime,
-    invoicesRealtime,
     // State
     stats,
     statsLoading,
-    invoiceHistory,
-    invoiceHistoryLoading,
-    createInvoiceOpen,
-    createInvoiceLoading,
-    createInvoiceForm,
-    sendingReminder,
-    refundDialogOpen,
-    refundLoading,
     adStatusLoading,
     adAccountsConnected,
-    // Setters
-    setCreateInvoiceOpen,
-    setCreateInvoiceForm,
-    setRefundDialogOpen,
-    // Handlers
-    fetchInvoiceHistory,
-    handleCreateInvoice,
-    handleSendReminder,
-    handleIssueRefund,
   }
 }

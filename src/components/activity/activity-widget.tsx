@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter, User, Receipt, FileText } from 'lucide-react'
+import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter, User, FileText } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,7 +26,6 @@ const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
   task_activity: CircleCheck,
   message_posted: MessageSquare,
   client_added: User,
-  invoice_sent: Receipt,
   proposal_created: FileText,
 }
 
@@ -35,7 +34,6 @@ const ACTIVITY_COLORS: Record<string, string> = {
   task_activity: 'text-green-600',
   message_posted: 'text-purple-600',
   client_added: 'text-cyan-600',
-  invoice_sent: 'text-amber-600',
   proposal_created: 'text-indigo-600',
 }
 

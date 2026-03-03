@@ -9,7 +9,6 @@ import {
   ListChecks,
   MessageSquare,
   BarChart3,
-  CreditCard,
   FileText,
   Megaphone,
   Activity,
@@ -36,7 +35,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-interface BreadcrumbItem {
+interface NavBreadcrumbItem {
   label: string
   href?: string
   icon?: React.ComponentType<{ className?: string }>
@@ -68,7 +67,7 @@ export function NavigationBreadcrumbs() {
       <Breadcrumb className="hidden md:flex">
         <BreadcrumbList>
           {items.map((item, index) => (
-            <div key={index} className="flex items-center">
+            <div key={`${item.label}-${item.href ?? 'current'}`} className="flex items-center">
               <BreadcrumbItem>
                 {item.href && !item.isCurrent ? (
                   <BreadcrumbLink asChild>
@@ -128,8 +127,8 @@ export function NavigationBreadcrumbs() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
-            {items.map((item, index) => (
-              <DropdownMenuItem key={index} asChild>
+            {items.map((item) => (
+              <DropdownMenuItem key={`${item.label}-${item.href ?? 'current'}`} asChild>
                 {item.href && !item.isCurrent ? (
                   <Link href={item.href} className="flex items-center gap-2">
                     {item.icon && (() => {
@@ -162,8 +161,8 @@ function generateBreadcrumbItems(
   pathname: string,
   searchParams: URLSearchParams,
   selectedClient: { id: string | null; name: string | null }
-): BreadcrumbItem[] {
-  const items: BreadcrumbItem[] = []
+): NavBreadcrumbItem[] {
+  const items: NavBreadcrumbItem[] = []
 
   // Dashboard root
   items.push({
@@ -185,7 +184,7 @@ function generateBreadcrumbItems(
   const currentSection = pathSegments[0]
 
   switch (currentSection) {
-    case 'projects':
+    case 'projects': {
       items.push({
         label: 'Projects',
         href: '/dashboard/projects',
@@ -202,8 +201,9 @@ function generateBreadcrumbItems(
         })
       }
       break
+    }
 
-    case 'tasks':
+    case 'tasks': {
       items.push({
         label: 'Tasks',
         href: '/dashboard/tasks',
@@ -220,8 +220,9 @@ function generateBreadcrumbItems(
         })
       }
       break
+    }
 
-    case 'collaboration':
+    case 'collaboration': {
       items.push({
         label: 'Collaboration',
         href: '/dashboard/collaboration',
@@ -238,6 +239,7 @@ function generateBreadcrumbItems(
         })
       }
       break
+    }
 
     case 'analytics':
       items.push({
@@ -245,22 +247,6 @@ function generateBreadcrumbItems(
         href: '/dashboard/analytics',
         icon: BarChart3,
       })
-      break
-
-    case 'finance':
-      items.push({
-        label: 'Finance',
-        href: '/dashboard/finance',
-        icon: CreditCard,
-      })
-
-      // Sub-pages for finance
-      if (pathSegments[1] === 'payments') {
-        items.push({
-          label: 'Payments',
-          isCurrent: true,
-        })
-      }
       break
 
     case 'proposals':
@@ -284,7 +270,7 @@ function generateBreadcrumbItems(
       }
       break
 
-    case 'ads':
+    case 'ads': {
       items.push({
         label: 'Ads',
         href: '/dashboard/ads',
@@ -329,6 +315,7 @@ function generateBreadcrumbItems(
         }
       }
       break
+    }
 
     case 'activity':
       items.push({

@@ -7,17 +7,6 @@ import {
 import { z } from 'zod/v4'
  
 const notificationPreferencesZ = z.object({
-  // WhatsApp
-  whatsappTasks: z.boolean(),
-  whatsappCollaboration: z.boolean(),
-  // Slack
-  slackTasks: z.boolean(),
-  slackCollaboration: z.boolean(),
-  slackWebhookUrl: z.string().nullable().optional(),
-  // Teams
-  teamsTasks: z.boolean(),
-  teamsCollaboration: z.boolean(),
-  teamsWebhookUrl: z.string().nullable().optional(),
   // Email
   emailAdAlerts: z.boolean(),
   emailPerformanceDigest: z.boolean(),
@@ -51,18 +40,10 @@ function nowMs() {
 }
 
 const defaultNotificationPreferences = {
-  whatsappTasks: false,
-  whatsappCollaboration: false,
-  slackTasks: false,
-  slackCollaboration: false,
-  teamsTasks: false,
-  teamsCollaboration: false,
   emailAdAlerts: true,
   emailPerformanceDigest: true,
   emailTaskActivity: true,
   emailCollaboration: false,
-  slackWebhookUrl: null,
-  teamsWebhookUrl: null,
 }
 
 export const getMyProfile = zAuthenticatedQuery({
@@ -125,17 +106,6 @@ export const getMyNotificationPreferences = zAuthenticatedQuery({
 
 export const updateMyNotificationPreferences = zAuthenticatedMutation({
   args: {
-    // WhatsApp
-    whatsappTasks: z.boolean(),
-    whatsappCollaboration: z.boolean(),
-    // Slack
-    slackTasks: z.boolean(),
-    slackCollaboration: z.boolean(),
-    slackWebhookUrl: z.string().nullable().optional(),
-    // Teams
-    teamsTasks: z.boolean(),
-    teamsCollaboration: z.boolean(),
-    teamsWebhookUrl: z.string().nullable().optional(),
     // Email
     emailAdAlerts: z.boolean().optional(),
     emailPerformanceDigest: z.boolean().optional(),
@@ -149,17 +119,6 @@ export const updateMyNotificationPreferences = zAuthenticatedMutation({
     const row = ctx.user
 
     const next = {
-      // WhatsApp
-      whatsappTasks: args.whatsappTasks,
-      whatsappCollaboration: args.whatsappCollaboration,
-      // Slack
-      slackTasks: args.slackTasks,
-      slackCollaboration: args.slackCollaboration,
-      slackWebhookUrl: args.slackWebhookUrl ?? null,
-      // Teams
-      teamsTasks: args.teamsTasks,
-      teamsCollaboration: args.teamsCollaboration,
-      teamsWebhookUrl: args.teamsWebhookUrl ?? null,
       // Email
       emailAdAlerts: args.emailAdAlerts ?? true,
       emailPerformanceDigest: args.emailPerformanceDigest ?? true,

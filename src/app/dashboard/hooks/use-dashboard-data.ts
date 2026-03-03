@@ -2,30 +2,23 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useConvexAuth } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
-import { getPreviewFinanceSummary, getPreviewMetrics, getPreviewTasks } from '@/lib/preview-data'
-import type { FinanceSummaryResponse } from '@/types/finance'
+import { getPreviewMetrics, getPreviewTasks } from '@/lib/preview-data'
 import type { TaskRecord } from '@/types/tasks'
 import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
 import { mapTasksForDashboard } from '@/lib/dashboard-utils'
-import { summarizeTasks, DEFAULT_TASK_SUMMARY, type TaskSummary } from '../components'
+import { summarizeTasks, type TaskSummary } from '../components'
 import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
 import { useQuery } from 'convex/react'
-import { adsMetricsApi, financeSummaryApi, proposalsApi, tasksApi } from '@/lib/convex-api'
+import { adsMetricsApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
 import { getWorkspaceId } from '@/lib/utils'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 export interface UseDashboardDataOptions {
     selectedClientId: string | null
 }
 
 export interface UseDashboardDataReturn {
-    // Finance
-    financeSummary: FinanceSummaryResponse | null
-    financeLoading: boolean
-    financeError: string | null
-
     // Metrics
     metrics: MetricRecord[]
     metricsLoading: boolean
@@ -51,7 +44,7 @@ export interface UseDashboardDataReturn {
 
 export function useDashboardData(options: UseDashboardDataOptions): UseDashboardDataReturn {
     const { selectedClientId } = options
-    const { user, getIdToken } = useAuth()
+    const { user } = useAuth()
     const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
     const workspaceId = getWorkspaceId(user)
     const { isPreviewMode } = usePreview()
@@ -59,7 +52,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     // Don't run Convex queries until Convex auth is ready
     const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id && !!workspaceId
 
-    const [refreshKey, setRefreshKey] = useState(0)
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
     const proposalsArgs = useMemo(() => (isPreviewMode || !workspaceId || !canQueryConvex
@@ -80,19 +72,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
                 limit: 200,
             }), [isPreviewMode, workspaceId, canQueryConvex, selectedClientId])
 
-    const convexTasks = useQuery(tasksApi.listByClient, tasksArgs) as Array<any> | undefined
-
-    const financeArgs = useMemo(() => (isPreviewMode || !workspaceId || !canQueryConvex
-            ? 'skip'
-            : {
-                workspaceId,
-                clientId: selectedClientId ?? null,
-                invoiceLimit: 200,
-                costLimit: 200,
-                revenueLimit: 36,
-            }), [isPreviewMode, workspaceId, canQueryConvex, selectedClientId])
-
-    const financeRealtime = useQuery(financeSummaryApi.get, financeArgs) as FinanceSummaryResponse | undefined
+    const convexTasks = useQuery(tasksApi.listByClient, tasksArgs) as unknown[] | undefined
 
     const metricsArgs = useMemo(() => (isPreviewMode || !workspaceId || !canQueryConvex
             ? 'skip'
@@ -105,7 +85,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const metricsRealtime = useQuery(adsMetricsApi.listMetricsWithSummary, metricsArgs) as { metrics: MetricRecord[] } | undefined
 
     const triggerReload = useCallback(() => {
-        setRefreshKey((prev) => prev + 1)
         setLastRefreshed(new Date())
     }, [])
 
@@ -126,19 +105,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         return unsubscribe
     }, [isPreviewMode, selectedClientId, triggerReload])
 
-    // Derived Data: Finance
-    const financeSummary = useMemo(() => {
-        if (isPreviewMode) return getPreviewFinanceSummary(selectedClientId ?? null)
-        if (!user?.id) return null
-        return financeRealtime ?? null
-    }, [isPreviewMode, selectedClientId, user?.id, financeRealtime])
-
-    const financeLoading = useMemo(() => {
-        if (isPreviewMode) return false
-        if (!user?.id) return false
-        return financeRealtime === undefined
-    }, [isPreviewMode, user?.id, financeRealtime])
-
     // Derived Data: Metrics
     const metrics = useMemo(() => {
         if (isPreviewMode) return getPreviewMetrics(selectedClientId ?? null)
@@ -158,23 +124,26 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         if (!user?.id || convexTasks === undefined) return []
         
         const rows = Array.isArray(convexTasks) ? convexTasks : []
-        return rows.map((row: any) => ({
-            id: String(row.legacyId),
-            title: String(row.title ?? ''),
-            description: typeof row.description === 'string' ? row.description : null,
-            status: row.status,
-            priority: row.priority,
-            assignedTo: Array.isArray(row.assignedTo) ? row.assignedTo : [],
-            clientId: row.clientId ?? null,
-            client: row.client ?? null,
-            projectId: row.projectId ?? null,
-            projectName: row.projectName ?? null,
-            dueDate: typeof row.dueDateMs === 'number' ? new Date(row.dueDateMs).toISOString() : null,
-            tags: Array.isArray(row.tags) ? row.tags : [],
-            createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-            updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-            deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-        })) as TaskRecord[]
+        return rows.map((raw) => {
+            const row = (raw ?? {}) as Record<string, unknown>
+            return {
+                id: String(row.legacyId),
+                title: String(row.title ?? ''),
+                description: typeof row.description === 'string' ? row.description : null,
+                status: row.status as TaskRecord['status'],
+                priority: row.priority as TaskRecord['priority'],
+                assignedTo: Array.isArray(row.assignedTo) ? row.assignedTo : [],
+                clientId: typeof row.clientId === 'string' ? row.clientId : null,
+                client: typeof row.client === 'string' ? row.client : null,
+                projectId: typeof row.projectId === 'string' ? row.projectId : null,
+                projectName: typeof row.projectName === 'string' ? row.projectName : null,
+                dueDate: typeof row.dueDateMs === 'number' ? new Date(row.dueDateMs).toISOString() : null,
+                tags: Array.isArray(row.tags) ? row.tags : [],
+                createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+                updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+                deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+            }
+        }) as TaskRecord[]
     }, [isPreviewMode, selectedClientId, user?.id, convexTasks])
 
     const taskItems = useMemo(() => mapTasksForDashboard(rawTasks), [rawTasks])
@@ -191,27 +160,33 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         const shouldLoad = user?.role === 'client' || user?.role === 'admin' || user?.role === 'team'
         if (!user?.id || !shouldLoad || convexProposals === undefined) return []
 
-        return convexProposals.map((row: any) => ({
+        return convexProposals.map((raw: unknown) => {
+            const row = (raw ?? {}) as Record<string, unknown>
+            const deck = (row.presentationDeck ?? null) as ProposalDraft['presentationDeck']
+            const pptUrl = typeof row.pptUrl === 'string' ? row.pptUrl : null
+
+            return {
             id: String(row.legacyId),
             status: (row.status ?? 'draft') as ProposalDraft['status'],
             stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
             formData: mergeProposalForm(row.formData ?? null),
             aiInsights: row.aiInsights ?? null,
             aiSuggestions: row.aiSuggestions ?? null,
-            pdfUrl: row.pdfUrl ?? null,
-            pptUrl: row.pptUrl ?? null,
+            pdfUrl: (row.pdfUrl as string | null | undefined) ?? null,
+            pptUrl,
             createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
             updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
             lastAutosaveAt: typeof row.lastAutosaveAtMs === 'number' ? new Date(row.lastAutosaveAtMs).toISOString() : null,
-            clientId: row.clientId ?? null,
-            clientName: row.clientName ?? null,
-            presentationDeck: row.presentationDeck
+            clientId: typeof row.clientId === 'string' ? row.clientId : null,
+            clientName: typeof row.clientName === 'string' ? row.clientName : null,
+            presentationDeck: deck
                 ? {
-                    ...row.presentationDeck,
-                    storageUrl: row.presentationDeck.storageUrl ?? row.pptUrl ?? null,
+                    ...deck,
+                    storageUrl: deck.storageUrl ?? pptUrl,
                 }
                 : null,
-        })) as ProposalDraft[]
+            }
+        }) as ProposalDraft[]
     }, [isPreviewMode, user?.id, user?.role, convexProposals])
 
     const proposalsLoading = useMemo(() => {
@@ -220,12 +195,9 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         return convexProposals === undefined
     }, [isPreviewMode, user?.id, convexProposals])
 
-    const isRefreshing = financeLoading || metricsLoading || tasksLoading || proposalsLoading
+    const isRefreshing = metricsLoading || tasksLoading || proposalsLoading
 
     return useMemo(() => ({
-        financeSummary,
-        financeLoading,
-        financeError: null,
         metrics,
         metricsLoading,
         metricsError: null,
@@ -241,8 +213,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
         proposalsLoading,
         proposalsError: null,
     }), [
-        financeSummary,
-        financeLoading,
         metrics,
         metricsLoading,
         taskItems,

@@ -11,8 +11,6 @@ import { ConvexHttpClient } from 'convex/browser'
 import { internal } from '@/../convex/_generated/api'
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
 import {
-  invoicePaidTemplate,
-  invoiceSentTemplate,
   projectCreatedTemplate,
   taskAssignedTemplate,
   mentionTemplate,
@@ -21,9 +19,8 @@ import {
   workspaceInviteTemplate,
   performanceDigestTemplate,
   taskActivityTemplate,
-  invoicePaymentFailedTemplate,
 } from './email-templates'
-import type { IntegrationAlertTemplateParams, WorkspaceInviteTemplateParams, PerformanceDigestTemplateParams, TaskActivityTemplateParams, InvoicePaymentFailedTemplateParams } from './email-templates'
+import type { IntegrationAlertTemplateParams, WorkspaceInviteTemplateParams, PerformanceDigestTemplateParams, TaskActivityTemplateParams } from './email-templates'
 
 // =============================================================================
 // CONFIGURATION
@@ -173,49 +170,6 @@ export async function sendTransactionalEmail(options: BrevoSendOptions): Promise
 // =============================================================================
 // NOTIFICATION FUNCTIONS
 // =============================================================================
-
-export async function notifyInvoicePaidEmail(options: {
-  recipientEmail: string
-  recipientName?: string
-  clientName: string
-  amount: string
-  invoiceNumber: string | null
-  paidAt: string
-}): Promise<BrevoEmailResult> {
-  const { recipientEmail, recipientName, clientName, amount, invoiceNumber, paidAt } = options
-
-  const subject = `💰 Payment received: ${amount} from ${clientName}`
-  const htmlContent = invoicePaidTemplate({ clientName, amount, invoiceNumber, paidAt })
-
-  return sendTransactionalEmail({
-    to: [{ email: recipientEmail, name: recipientName }],
-    subject,
-    htmlContent,
-    tags: ['invoice-paid'],
-  })
-}
-
-export async function notifyInvoiceSentEmail(options: {
-  recipientEmail: string
-  recipientName?: string
-  clientName: string
-  amount: string
-  invoiceNumber: string | null
-  dueDate: string | null
-  invoiceUrl: string | null
-}): Promise<BrevoEmailResult> {
-  const { recipientEmail, recipientName, clientName, amount, invoiceNumber, dueDate, invoiceUrl } = options
-
-  const subject = `📄 Invoice sent to ${clientName}: ${amount}`
-  const htmlContent = invoiceSentTemplate({ clientName, amount, invoiceNumber, dueDate, invoiceUrl })
-
-  return sendTransactionalEmail({
-    to: [{ email: recipientEmail, name: recipientName }],
-    subject,
-    htmlContent,
-    tags: ['invoice-sent'],
-  })
-}
 
 export async function notifyProjectCreatedEmail(options: {
   recipientEmail: string
@@ -386,23 +340,6 @@ export async function notifyTaskActivityEmail(options: {
     subject,
     htmlContent,
     tags: ['task-activity'],
-  })
-}
-
-export async function notifyInvoicePaymentFailedEmail(options: {
-  recipientEmail: string
-  recipientName?: string
-} & InvoicePaymentFailedTemplateParams): Promise<BrevoEmailResult> {
-  const { recipientEmail, recipientName, ...params } = options
-
-  const subject = `⚠️ Payment failed for ${params.clientName}`
-  const htmlContent = invoicePaymentFailedTemplate(params)
-
-  return sendTransactionalEmail({
-    to: [{ email: recipientEmail, name: recipientName }],
-    subject,
-    htmlContent,
-    tags: ['invoice-failed'],
   })
 }
 

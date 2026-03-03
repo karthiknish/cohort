@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowUpRight, DollarSign, Trophy, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, DollarSign, Trophy, TrendingUp } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
 
     const byRevenue = [...summaries].sort((a, b) => b.totalRevenue - a.totalRevenue)
     const bySpend = [...summaries].sort((a, b) => b.totalAdSpend - a.totalAdSpend)
-    const byOutstanding = [...summaries].sort((a, b) => b.outstanding - a.outstanding)
+    const byConversions = [...summaries].sort((a, b) => b.totalConversions - a.totalConversions)
 
     const roasCandidates = summaries.filter((s) => Number.isFinite(s.roas) && s.roas !== 0)
     const roasLeader = [...roasCandidates].sort((a, b) => (b.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : b.roas) - (a.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : a.roas))[0]
@@ -32,7 +32,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
     return {
       revenueLeader: byRevenue[0],
       spendLeader: bySpend[0],
-      outstandingLeader: byOutstanding[0],
+      conversionsLeader: byConversions[0],
       roasLeader,
     }
   }, [summaries])
@@ -84,13 +84,13 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
           </div>
         )}
 
-        {insights.outstandingLeader && (
+        {insights.conversionsLeader && (
           <div className="rounded-xl border bg-card p-3">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <TriangleAlert className="h-4 w-4 text-destructive" /> Most outstanding
+              <TrendingUp className="h-4 w-4 text-primary" /> Most conversions
             </p>
-            <p className="mt-1 text-sm font-semibold">{insights.outstandingLeader.clientName}</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(insights.outstandingLeader.outstanding, insights.outstandingLeader.currency)}</p>
+            <p className="mt-1 text-sm font-semibold">{insights.conversionsLeader.clientName}</p>
+            <p className="text-xs text-muted-foreground">{insights.conversionsLeader.totalConversions.toLocaleString('en-US')} conversions</p>
           </div>
         )}
 

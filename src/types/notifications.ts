@@ -9,15 +9,12 @@ export type WorkspaceNotificationKind =
   | 'collaboration.message'
   | 'collaboration.mention'
   | 'proposal.deck.ready'
-  | 'invoice.sent'
-  | 'invoice.paid'
 
 export type WorkspaceNotificationResource =
   | { type: 'task'; id: string }
   | { type: 'project'; id: string }
   | { type: 'collaboration'; id: string }
   | { type: 'proposal'; id: string }
-  | { type: 'invoice'; id: string }
 
 export type WorkspaceNotification = {
   id: string

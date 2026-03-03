@@ -6,19 +6,16 @@ import Link from 'next/link'
 import {
   BarChart3,
   CheckSquare,
-  CreditCard,
   FileText,
   MessageSquare,
   Home,
   Briefcase,
   Megaphone,
-  Activity,
   Users,
   Keyboard,
   ArrowRight,
   Sparkles,
   CircleHelp,
-  X,
 } from 'lucide-react'
 
 import {
@@ -34,7 +31,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/contexts/auth-context'
 import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/hooks/use-keyboard-shortcuts'
-import { apiFetch } from '@/lib/api-client'
 import { onboardingApi } from '@/lib/convex-api'
 import { useOnboardingTour } from '@/hooks/use-onboarding-tour'
 
@@ -81,13 +77,6 @@ const navigationGuide = [
     tips: ['Assign tasks to team members', 'Set priorities and due dates'],
   },
   {
-    name: 'Finance',
-    href: '/dashboard/finance',
-    icon: CreditCard,
-    description: 'Track invoices, costs, and revenue. Monitor cash flow and profitability.',
-    tips: ['Log operating costs to track margins', 'Create and send invoices to clients'],
-  },
-  {
     name: 'Proposals',
     href: '/dashboard/proposals',
     icon: FileText,
@@ -129,9 +118,9 @@ const gettingStartedSteps = [
     action: { label: 'Setup Integrations', href: '/dashboard/ads' },
   },
   {
-    title: 'Log your first invoice',
-    description: 'Track revenue and costs in the Finance section to monitor profitability.',
-    action: { label: 'Open Finance', href: '/dashboard/finance' },
+    title: 'Create your first task',
+    description: 'Capture an immediate priority and assign ownership so your team can execute quickly.',
+    action: { label: 'Open Tasks', href: '/dashboard/tasks?new=true' },
   },
   {
     title: 'Create a proposal',
@@ -142,12 +131,7 @@ const gettingStartedSteps = [
 
 export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
   const [activeTab, setActiveTab] = useState(showWelcome ? 'welcome' : 'navigation')
-  const [isMac, setIsMac] = useState(false)
   const { startTour } = useOnboardingTour()
-
-  useEffect(() => {
-    setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform))
-  }, [])
 
   useEffect(() => {
     if (showWelcome) {
@@ -361,7 +345,12 @@ export function useHelpModal() {
   const onboardingState = useQuery(
     onboardingApi.getByUserId,
     userId && isConvexAuthenticated ? { userId } : 'skip'
-  ) as { welcomeSeenAtMs?: number | null; welcomeSeen?: boolean } | null | undefined
+  ) as {
+    welcomeSeenAtMs?: number | null
+    welcomeSeen?: boolean
+    onboardingTourCompleted?: boolean
+    onboardingTourCompletedAtMs?: number | null
+  } | null | undefined
 
   const upsertOnboarding = useMutation(onboardingApi.upsert)
 
@@ -390,8 +379,8 @@ export function useHelpModal() {
         try {
           await upsertOnboarding({
             userId: uid,
-            onboardingTourCompleted: Boolean((onboardingState as any)?.onboardingTourCompleted),
-            onboardingTourCompletedAtMs: (onboardingState as any)?.onboardingTourCompletedAtMs ?? null,
+            onboardingTourCompleted: Boolean(onboardingState?.onboardingTourCompleted),
+            onboardingTourCompletedAtMs: onboardingState?.onboardingTourCompletedAtMs ?? null,
             welcomeSeen: true,
             welcomeSeenAtMs: Date.now(),
           })
@@ -417,8 +406,8 @@ export function useHelpModal() {
         try {
           await upsertOnboarding({
             userId: uid,
-            onboardingTourCompleted: Boolean((onboardingState as any)?.onboardingTourCompleted),
-            onboardingTourCompletedAtMs: (onboardingState as any)?.onboardingTourCompletedAtMs ?? null,
+            onboardingTourCompleted: Boolean(onboardingState?.onboardingTourCompleted),
+            onboardingTourCompletedAtMs: onboardingState?.onboardingTourCompletedAtMs ?? null,
             welcomeSeen: true,
             welcomeSeenAtMs: Date.now(),
           })
@@ -449,8 +438,8 @@ export function useHelpModal() {
     try {
       await upsertOnboarding({
         userId,
-        onboardingTourCompleted: Boolean((onboardingState as any)?.onboardingTourCompleted),
-        onboardingTourCompletedAtMs: (onboardingState as any)?.onboardingTourCompletedAtMs ?? null,
+        onboardingTourCompleted: Boolean(onboardingState?.onboardingTourCompleted),
+        onboardingTourCompletedAtMs: onboardingState?.onboardingTourCompletedAtMs ?? null,
         welcomeSeen: true,
         welcomeSeenAtMs: Date.now(),
       })

@@ -170,24 +170,6 @@ export function groupAlertsBySeverity(alerts: AlertResult[]): {
 }
 
 /**
- * Format alerts for Slack notification
- */
-export function formatAlertsForSlack(alerts: AlertResult[], providerId?: string): string {
-    if (alerts.length === 0) return ''
-
-    const header = `:rotating_light: *Ad Metrics Alert${providerId ? ` (${providerId})` : ''}*\n`
-
-    const alertLines = alerts.map((alert) => {
-        const emoji =
-            alert.severity === 'critical' ? ':red_circle:' :
-                alert.severity === 'warning' ? ':warning:' : ':information_source:'
-        return `${emoji} *${alert.ruleName}*: ${alert.message}`
-    })
-
-    return header + alertLines.join('\n')
-}
-
-/**
  * Format alerts for email notification
  */
 export function formatAlertsForEmail(alerts: AlertResult[], providerId?: string): {

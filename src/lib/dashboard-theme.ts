@@ -70,7 +70,6 @@ export const PAGE_ICONS = {
   clients: 'Users',
   projects: 'Briefcase',
   tasks: 'ListTodo',
-  finance: 'DollarSign',
   analytics: 'BarChart3',
   ads: 'Target',
   collaboration: 'MessageSquare',
@@ -93,10 +92,6 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
   tasks: {
     title: 'Tasks',
     description: 'Track and manage work items across projects.',
-  },
-  finance: {
-    title: 'Finance',
-    description: 'Invoices, expenses, and financial reporting.',
   },
   analytics: {
     title: 'Analytics',

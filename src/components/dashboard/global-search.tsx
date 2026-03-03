@@ -21,7 +21,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-export type SearchResultType = 'tasks' | 'projects' | 'messages' | 'clients' | 'files' | 'proposals' | 'invoices'
+export type SearchResultType = 'tasks' | 'projects' | 'messages' | 'clients' | 'files' | 'proposals'
 
 export interface SearchResult {
   id: string
@@ -48,7 +48,6 @@ interface GlobalSearchProps {
     clients?: (query: string) => Promise<SearchResult[]>
     files?: (query: string) => Promise<SearchResult[]>
     proposals?: (query: string) => Promise<SearchResult[]>
-    invoices?: (query: string) => Promise<SearchResult[]>
   }
   onResultClick?: (result: SearchResult) => void
   shortcut?: string
@@ -61,7 +60,6 @@ const SEARCH_TYPE_ICONS: Record<SearchResultType, React.ComponentType<{ classNam
   clients: Users,
   files: FileText,
   proposals: FileText,
-  invoices: FileText,
 }
 
 const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
@@ -71,7 +69,6 @@ const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   clients: 'Client',
   files: 'File',
   proposals: 'Proposal',
-  invoices: 'Invoice',
 }
 
 /**

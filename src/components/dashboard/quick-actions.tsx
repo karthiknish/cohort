@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BarChart3, CreditCard, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase } from 'lucide-react'
+import { BarChart3, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase } from 'lucide-react'
 
 import { useMemo } from 'react'
 
@@ -36,10 +36,10 @@ const adminQuickLinks: QuickLink[] = [
     roles: ['admin', 'team'],
   },
   {
-    title: 'Track cash flow',
-    description: 'Log operating costs and monitor profitability trends on the Finance tab.',
-    href: '/dashboard/finance',
-    icon: CreditCard,
+    title: 'Manage projects',
+    description: 'Review active projects, milestones, and delivery timelines in one place.',
+    href: '/dashboard/projects',
+    icon: Briefcase,
     badge: null,
     roles: ['admin', 'team'],
   },

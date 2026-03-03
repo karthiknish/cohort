@@ -66,23 +66,6 @@ export interface Task {
   tags: string[];
 }
 
-export interface Invoice {
-  id: string;
-  clientId: string;
-  invoiceNumber: string;
-  amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue';
-  dueDate: Date;
-  lineItems: {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-  }[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface Proposal {
   id: string;
   clientId: string;

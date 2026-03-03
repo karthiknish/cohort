@@ -4,7 +4,6 @@ import {
   subDays
 } from 'date-fns'
 import { parseDate, formatDate, DATE_FORMATS } from './dates'
-import type { FinanceSummaryResponse } from '@/types/finance'
 import type { TaskRecord } from '@/types/tasks'
 import type { ClientComparisonSummary, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
 import { formatCurrency } from '@/lib/utils'
@@ -31,26 +30,22 @@ export async function resolveJson(response: Response, fallbackMessage: string): 
 type BuildComparisonSummaryArgs = {
   clientId: string
   clientName: string
-  finance: FinanceSummaryResponse | null
   metrics: MetricRecord[]
   periodDays: number
 }
 
-export function buildClientComparisonSummary({ clientId, clientName, finance, metrics, periodDays }: BuildComparisonSummaryArgs): ClientComparisonSummary {
+export function buildClientComparisonSummary({ clientId, clientName, metrics, periodDays }: BuildComparisonSummaryArgs): ClientComparisonSummary {
   const cutoff = subDays(new Date(), periodDays).getTime()
-  const revenueRecords = finance?.revenue ?? []
-  const filteredRevenue = revenueRecords.filter((record) => isRevenueRecordWithinPeriod(record, cutoff))
-  const totalRevenue = filteredRevenue.reduce((sum, record) => sum + record.revenue, 0)
-  const totalOperatingExpenses = filteredRevenue.reduce((sum, record) => sum + record.operatingExpenses, 0)
 
   const filteredMetrics = metrics.filter((record) => isMetricWithinPeriod(record, cutoff))
+  const totalRevenue = filteredMetrics.reduce((sum, record) => sum + (record.revenue ?? 0), 0)
+  const totalOperatingExpenses = 0
   const totalAdSpend = filteredMetrics.reduce((sum, record) => sum + record.spend, 0)
   const totalConversions = filteredMetrics.reduce((sum, record) => sum + record.conversions, 0)
   const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : 0
   const cpa = totalConversions > 0 ? totalAdSpend / totalConversions : null
 
-  const outstanding = sumOutstandingTotals(finance?.payments?.totals ?? [])
-  const currency = determineDominantCurrency(finance)
+  const currency = 'USD'
 
   return {
     clientId,
@@ -61,7 +56,6 @@ export function buildClientComparisonSummary({ clientId, clientName, finance, me
     totalConversions,
     roas,
     cpa,
-    outstanding,
     currency,
     periodDays,
   }
@@ -79,54 +73,6 @@ export function groupMetricsByClient(records: MetricRecord[]): Map<string | null
     map.set(key, [record])
   })
   return map
-}
-
-function sumOutstandingTotals(totals: { totalOutstanding: number; currency?: string | null }[]): number {
-  if (!Array.isArray(totals) || totals.length === 0) {
-    return 0
-  }
-  return totals.reduce((sum, entry) => sum + (Number.isFinite(entry.totalOutstanding) ? entry.totalOutstanding : 0), 0)
-}
-
-function determineDominantCurrency(finance: FinanceSummaryResponse | null): string {
-  const revenueCurrency = finance?.revenue?.find((record) => typeof record.currency === 'string' && record.currency)?.currency
-  if (revenueCurrency) {
-    return revenueCurrency
-  }
-  const paymentsCurrency = finance?.payments?.totals?.find((total) => typeof total.currency === 'string' && total.currency)
-  if (paymentsCurrency?.currency) {
-    return paymentsCurrency.currency
-  }
-  return 'USD'
-}
-
-function isRevenueRecordWithinPeriod(record: { createdAt?: string | null; period?: string }, cutoff: number): boolean {
-  const timestamp = parsePeriodDate(record)
-  if (timestamp === null) {
-    return true
-  }
-  return timestamp >= cutoff
-}
-
-function parsePeriodDate(record: { createdAt?: string | null; period?: string }): number | null {
-  if (record.createdAt) {
-    const parsed = parseDate(record.createdAt)
-    if (parsed) {
-      return parsed.getTime()
-    }
-  }
-  if (record.period) {
-    const parsedPeriod = parseDate(record.period)
-    if (parsedPeriod) {
-      return parsedPeriod.getTime()
-    }
-    // attempt to parse YYYY-MM strings by appending day
-    const asMonth = parseDate(`${record.period}-01`)
-    if (asMonth) {
-      return asMonth.getTime()
-    }
-  }
-  return null
 }
 
 function isMetricWithinPeriod(record: MetricRecord, cutoff: number): boolean {

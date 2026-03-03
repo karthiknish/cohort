@@ -28,7 +28,7 @@ export type DashboardWidget = {
   visible: boolean
   collapsible: boolean
   collapsed?: boolean
-  category: 'analytics' | 'tasks' | 'finance' | 'collaboration' | 'projects' | 'admin'
+  category: 'analytics' | 'tasks' | 'collaboration' | 'projects' | 'admin'
 }
 
 interface DashboardCustomizationProps {
@@ -176,7 +176,6 @@ export function DashboardCustomization({
     const grouped: Record<string, DashboardWidget[]> = {
       analytics: [],
       tasks: [],
-      finance: [],
       collaboration: [],
       projects: [],
       admin: [],

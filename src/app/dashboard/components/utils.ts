@@ -18,10 +18,10 @@ export const DEFAULT_TASK_SUMMARY: TaskSummary = {
 }
 
 export const ROLE_PRIORITY: Record<'admin' | 'team' | 'client' | 'default', string[]> = {
-  admin: ['net-margin', 'outstanding', 'roas', 'total-revenue', 'overdue-invoices', 'ad-spend', 'open-tasks', 'conversions'],
-  team: ['due-soon', 'high-priority-tasks', 'open-tasks', 'ad-spend', 'roas', 'conversions', 'net-margin', 'total-revenue'],
-  client: ['ad-spend', 'outstanding', 'next-due', 'roas', 'open-tasks', 'due-soon', 'net-margin', 'total-revenue'],
-  default: ['total-revenue', 'net-margin', 'roas', 'ad-spend', 'open-tasks', 'conversions', 'outstanding', 'due-soon'],
+  admin: ['net-margin', 'roas', 'total-revenue', 'ad-spend', 'ctr', 'open-tasks', 'conversions', 'active-channels'],
+  team: ['due-soon', 'open-tasks', 'ad-spend', 'ctr', 'roas', 'conversions', 'net-margin', 'total-revenue'],
+  client: ['ad-spend', 'roas', 'ctr', 'open-tasks', 'due-soon', 'conversions', 'active-channels', 'total-revenue'],
+  default: ['total-revenue', 'net-margin', 'roas', 'ad-spend', 'ctr', 'open-tasks', 'conversions', 'due-soon'],
 }
 
 export function summarizeTasks(tasks: TaskRecord[]): TaskSummary {

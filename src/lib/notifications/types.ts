@@ -40,36 +40,10 @@ export type WorkspaceNotificationInput = {
 }
 
 // =============================================================================
-// WHATSAPP TYPES
-// =============================================================================
-
-export type WhatsAppNotificationKind =
-  | 'task-created'
-  | 'collaboration-message'
-  | 'invoice-sent'
-  | 'invoice-paid'
-
-export interface WhatsAppSendResult {
-  success: boolean
-  to: string
-  messageId?: string
-  error?: Error
-}
-
-export interface WhatsAppDispatchResult {
-  totalRecipients: number
-  successCount: number
-  failureCount: number
-  errors: Error[]
-}
-
-// =============================================================================
 // HEALTH CHECK TYPES
 // =============================================================================
 
 export interface NotificationHealthStatus {
   email: { configured: boolean; healthy: boolean; error?: string }
-  slack: { configured: boolean; healthy: boolean; error?: string }
-  whatsapp: { configured: boolean; healthy: boolean; error?: string }
   firestore: { configured: boolean; healthy: boolean; error?: string }
 }

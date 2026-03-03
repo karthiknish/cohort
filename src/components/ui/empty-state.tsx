@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
-import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, CreditCard, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
+import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon
@@ -178,17 +178,6 @@ export function NoEventsEmptyState(props: Partial<EmptyStateProps>) {
       icon={Calendar}
       title="No upcoming events"
       description="Your schedule is clear. New events will appear here."
-      {...props}
-    />
-  )
-}
-
-export function NoInvoicesEmptyState(props: Partial<EmptyStateProps>) {
-  return (
-    <EmptyState
-      icon={CreditCard}
-      title="No invoices"
-      description="Invoices will be listed here once created."
       {...props}
     />
   )

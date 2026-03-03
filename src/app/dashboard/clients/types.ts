@@ -12,9 +12,6 @@ export interface ClientStats {
   pendingProposals: number
 }
 
-// Re-export from InvoiceManagementCard to avoid type duplication
-export type { InvoiceData, CreateInvoiceForm, InvoiceSummary } from './components/invoice-management-card'
-
 export type OnboardingItem = {
   id: string
   label: string

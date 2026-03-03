@@ -29,10 +29,6 @@ export const getStats = adminQuery({
     projectsThisWeek: v.number(),
     totalTasks: v.number(),
     tasksCompletedThisWeek: v.number(),
-    totalInvoices: v.number(),
-    invoicesThisWeek: v.number(),
-    totalExpenses: v.number(),
-    expensesThisWeek: v.number(),
     totalClients: v.number(),
     activeClientsWeek: v.number(),
     agentConversations: v.number(),
@@ -62,11 +58,9 @@ export const getStats = adminQuery({
     const newUsersWeek = users.filter((u) => (u.createdAtMs ?? 0) >= weekAgoMs).length
 
     // Fetch each collection once and reuse for filtering
-    const [projects, tasks, invoices, expenses, clients, conversations] = await Promise.all([
+    const [projects, tasks, clients, conversations] = await Promise.all([
       ctx.db.query('projects').collect(),
       ctx.db.query('tasks').collect(),
-      ctx.db.query('financeInvoices').collect(),
-      ctx.db.query('financeExpenses').collect(),
       ctx.db.query('clients').collect(),
       ctx.db.query('agentConversations').collect(),
     ])
@@ -76,12 +70,6 @@ export const getStats = adminQuery({
 
     const totalTasks = tasks.length
     const tasksCompletedThisWeek = tasks.filter((t: any) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs).length
-
-    const totalInvoices = invoices.length
-    const invoicesThisWeek = invoices.filter((i: any) => (i.createdAtMs ?? 0) >= weekAgoMs).length
-
-    const totalExpenses = expenses.length
-    const expensesThisWeek = expenses.filter((e: any) => (e.createdAtMs ?? 0) >= weekAgoMs).length
 
     const totalClients = clients.length
 
@@ -106,8 +94,6 @@ export const getStats = adminQuery({
     const featureUsage = [
       { feature: 'Projects', count: projectsThisWeek, trend: projectsThisWeek > 0 ? 15 : 0 },
       { feature: 'Tasks', count: tasksCompletedThisWeek, trend: tasksCompletedThisWeek > 0 ? 8 : 0 },
-      { feature: 'Invoices', count: invoicesThisWeek, trend: invoicesThisWeek > 0 ? 12 : 0 },
-      { feature: 'Expenses', count: expensesThisWeek, trend: expensesThisWeek > 0 ? 5 : 0 },
       { feature: 'Agent Mode', count: agentActionsThisWeek, trend: agentActionsThisWeek > 0 ? 25 : 0 },
     ].sort((a, b) => b.count - a.count)
 
@@ -123,11 +109,6 @@ export const getStats = adminQuery({
       projectsThisWeek,
       totalTasks,
       tasksCompletedThisWeek,
-
-      totalInvoices,
-      invoicesThisWeek,
-      totalExpenses,
-      expensesThisWeek,
 
       totalClients,
       activeClientsWeek: 0,

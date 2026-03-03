@@ -41,7 +41,7 @@ interface AgentModePanelProps {
 const QUICK_SUGGESTIONS = [
   'Go to Analytics',
   'Show my Tasks',
-  'Check Finance',
+  'Open Projects',
   'Open Proposals',
   'View Ads Hub',
   'Team Chat',

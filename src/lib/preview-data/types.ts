@@ -1,5 +1,4 @@
 import type { ClientRecord } from '@/types/clients'
-import type { FinanceSummaryResponse } from '@/types/finance'
 import type { MetricRecord } from '@/types/dashboard'
 import type { TaskRecord } from '@/types/tasks'
 import type { ProjectRecord } from '@/types/projects'
@@ -10,7 +9,6 @@ import type { Activity } from '@/types/activity'
 // Re-export imported types for convenience
 export type {
     ClientRecord,
-    FinanceSummaryResponse,
     MetricRecord,
     TaskRecord,
     ProjectRecord,

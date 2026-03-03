@@ -51,7 +51,7 @@ export interface CampaignFormData {
   
   // Traffic
   destinationUrl?: string
-  destinationType?: 'WEBSITE' | 'APP' | 'MESSENGER' | 'WHATSAPP'
+  destinationType?: 'WEBSITE' | 'APP' | 'MESSENGER'
   
   // Engagement
   engagementType?: 'POST_ENGAGEMENT' | 'PAGE_ENGAGEMENT' | 'EVENT_RESPONSES'
@@ -172,5 +172,4 @@ export const DESTINATION_TYPES = [
   { value: 'WEBSITE', label: 'Website', description: 'Send traffic to your website' },
   { value: 'APP', label: 'App', description: 'Open your mobile app' },
   { value: 'MESSENGER', label: 'Messenger', description: 'Start Messenger conversation' },
-  { value: 'WHATSAPP', label: 'WhatsApp', description: 'Start WhatsApp conversation' },
 ] as const

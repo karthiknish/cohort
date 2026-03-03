@@ -52,7 +52,7 @@ export function useOnboardingTour() {
             element: '#tour-sidebar',
             popover: {
                 title: 'The Navigation',
-                description: 'Access all your tools here: Clients, Ads integrations, Finance tracking, Team chat, and Projects.',
+                description: 'Access all your tools here: Clients, Ads integrations, Team chat, Tasks, and Projects.',
                 position: 'right' as const,
             }
         },
@@ -67,7 +67,7 @@ export function useOnboardingTour() {
         {
             popover: {
                 title: 'Full Feature Suite',
-                description: 'Cohorts is more than just a dashboard. Explore these sections:<br/>• <b>Ads</b>: Manage integrations<br/>• <b>Finance</b>: Track spend & revenue<br/>• <b>Collaboration</b>: Team chat & threads<br/>• <b>Projects & Tasks</b>: Deliverable tracking',
+                description: 'Cohorts is more than just a dashboard. Explore these sections:<br/>• <b>Ads</b>: Manage integrations<br/>• <b>Analytics</b>: Monitor performance trends<br/>• <b>Collaboration</b>: Team chat & threads<br/>• <b>Projects & Tasks</b>: Deliverable tracking',
             }
         },
         {

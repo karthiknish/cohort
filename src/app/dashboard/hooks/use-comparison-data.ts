@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useConvexAuth, useConvex } from 'convex/react'
-import { getPreviewFinanceSummary, getPreviewMetrics } from '@/lib/preview-data'
-import type { FinanceSummaryResponse } from '@/types/finance'
+import { getPreviewMetrics } from '@/lib/preview-data'
 import type { MetricRecord, ClientComparisonSummary, ComparisonInsight } from '@/types/dashboard'
 import {
     buildClientComparisonSummary,
@@ -15,7 +14,7 @@ import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 import { formatCurrency } from '@/lib/utils'
 import { Trophy, ArrowUpRight, TriangleAlert } from 'lucide-react'
 import type { ClientRecord } from '@/types/clients'
-import { adsMetricsApi, financeSummaryApi } from '@/lib/convex-api'
+import { adsMetricsApi } from '@/lib/convex-api'
 
 function isAuthError(error: unknown): boolean {
     const code = extractErrorCode(error)
@@ -42,7 +41,7 @@ export interface UseComparisonDataReturn {
 export interface ComparisonAggregate {
     totalRevenue: number
     totalAdSpend: number
-    totalOutstanding: number
+    totalConversions: number
     avgRoas: number | null
     selectionCount: number
     currency: string | null
@@ -106,7 +105,6 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                     return buildClientComparisonSummary({
                         clientId,
                         clientName: name,
-                        finance: getPreviewFinanceSummary(clientId),
                         metrics: getPreviewMetrics(clientId),
                         periodDays: comparisonPeriodDays,
                     })
@@ -151,16 +149,6 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                     return
                 }
 
-                const financeRequests = targets.map((clientId) =>
-                    convex.query(financeSummaryApi.get, {
-                        workspaceId: user?.agencyId as string,
-                        clientId,
-                        invoiceLimit: 200,
-                        costLimit: 200,
-                        revenueLimit: 36,
-                    }) as Promise<FinanceSummaryResponse>
-                )
-
                 // Fetch metrics from Convex - use clientIds array for multi-client query
                 const metricsPromise = convex.query(adsMetricsApi.listMetricsWithSummary, {
                     workspaceId: user?.agencyId as string,
@@ -168,19 +156,17 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                     limit: 250,
                 }) as Promise<{ metrics: MetricRecord[] }>
 
-                const [financeResponses, metricsData] = await Promise.all([Promise.all(financeRequests), metricsPromise])
+                const metricsData = await metricsPromise
 
                 const groupedMetrics = groupMetricsByClient(metricsData?.metrics ?? [])
 
-                const summaries = targets.map((clientId, index) => {
-                    const financeData = financeResponses[index] ?? null
+                const summaries = targets.map((clientId) => {
                     const metricsForClient = groupedMetrics.get(clientId) ?? []
                     const clientName = clients.find((client) => client.id === clientId)?.name ?? 'Workspace'
 
                     return buildClientComparisonSummary({
                         clientId,
                         clientName,
-                        finance: financeData,
                         metrics: metricsForClient,
                         periodDays: comparisonPeriodDays,
                     })
@@ -277,15 +263,15 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
         }
         const totalRevenue = comparisonSummaries.reduce((sum, summary) => sum + summary.totalRevenue, 0)
         const totalAdSpend = comparisonSummaries.reduce((sum, summary) => sum + summary.totalAdSpend, 0)
-        const totalOutstanding = comparisonSummaries.reduce((sum, summary) => sum + summary.outstanding, 0)
+        const totalConversions = comparisonSummaries.reduce((sum, summary) => sum + summary.totalConversions, 0)
         const currencySet = new Set(comparisonSummaries.map((summary) => summary.currency))
-        const singleCurrency = currencySet.size === 1 ? comparisonSummaries[0]!.currency : null
+        const singleCurrency = currencySet.size === 1 ? (comparisonSummaries[0]?.currency ?? null) : null
         const avgRoas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : totalRevenue > 0 ? Number.POSITIVE_INFINITY : null
 
         return {
             totalRevenue,
             totalAdSpend,
-            totalOutstanding,
+            totalConversions,
             avgRoas,
             selectionCount: comparisonSummaries.length,
             currency: singleCurrency,

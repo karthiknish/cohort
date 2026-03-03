@@ -1,72 +1,6 @@
 // Settings page TypeScript types and interfaces
 
-export interface PlanSummary {
-  id: string
-  name: string
-  description: string
-  priceId: string
-  unitAmount: number | null
-  currency: string | null
-  interval: string | null
-  badge?: string
-  features: string[]
-  productName: string | null
-}
-
-export interface SubscriptionSummary {
-  id: string
-  status: string
-  cancelAtPeriodEnd: boolean
-  currentPeriodEnd: string | null
-  currentPeriodStart: string | null
-  price: {
-    id: string
-    currency: string | null
-    unitAmount: number | null
-    interval: string | null
-    nickname: string | null
-  } | null
-  plan: {
-    id: string
-    name: string
-  } | null
-  isManagedByApp: boolean
-}
-
-export interface InvoiceSummary {
-  id: string
-  number: string | null
-  status: string | null
-  amountPaid: number
-  total: number
-  currency: string | null
-  hostedInvoiceUrl: string | null
-  invoicePdf: string | null
-  createdAt: string | null
-}
-
-export interface UpcomingInvoiceSummary {
-  amountDue: number
-  currency: string | null
-  nextPaymentAttempt: string | null
-  dueDate: string | null
-  status: string | null
-}
-
-export interface BillingStatusResponse {
-  plans: PlanSummary[]
-  subscription: SubscriptionSummary | null
-  invoices: InvoiceSummary[]
-  upcomingInvoice: UpcomingInvoiceSummary | null
-}
-
 export interface NotificationPreferencesResponse {
-  whatsappTasks: boolean
-  whatsappCollaboration: boolean
-  slackTasks: boolean
-  slackCollaboration: boolean
-  teamsTasks: boolean
-  teamsCollaboration: boolean
   emailAdAlerts: boolean
   emailPerformanceDigest: boolean
   emailTaskActivity: boolean
@@ -108,11 +42,15 @@ export interface ProfileCardProps {
 export interface NotificationPreferencesCardProps {
   notificationsLoading: boolean
   notificationError: string | null
-  whatsappTasksEnabled: boolean
-  whatsappCollaborationEnabled: boolean
+  emailAdAlertsEnabled: boolean
+  emailPerformanceDigestEnabled: boolean
+  emailTaskActivityEnabled: boolean
+  emailCollaborationEnabled: boolean
   savingPreferences: boolean
-  profilePhone: string
-  handlePreferenceToggle: (type: 'tasks' | 'collaboration', checked: boolean) => Promise<void>
+  handlePreferenceToggle: (
+    type: 'emailAdAlerts' | 'emailPerformanceDigest' | 'emailTaskActivity' | 'emailCollaboration',
+    checked: boolean
+  ) => Promise<void>
 }
 
 export interface RegionalPreferencesCardProps {
@@ -122,42 +60,6 @@ export interface RegionalPreferencesCardProps {
   setSavingCurrency: (value: boolean) => void
   updateCurrency: (value: string) => Promise<void>
   toast: (options: { title: string; description?: string; variant?: 'default' | 'destructive' }) => void
-}
-
-// Billing tab props
-export interface ClientBillingCardProps {
-  selectedClient: {
-    name: string
-    lastInvoiceStatus?: string | null
-    lastInvoiceAmount?: number | null
-    lastInvoiceCurrency?: string | null
-    lastInvoiceNumber?: string | null
-    lastInvoiceUrl?: string | null
-    lastInvoiceIssuedAt?: string | null
-    billingEmail?: string | null
-  } | null
-}
-
-export interface SubscriptionOverviewCardProps {
-  loading: boolean
-  subscription: SubscriptionSummary | null
-  upcomingInvoice: UpcomingInvoiceSummary | null
-  actionState: string | null
-  refreshBilling: () => Promise<void>
-  handleBillingPortal: () => Promise<void>
-}
-
-export interface PlanSelectionSectionProps {
-  loading: boolean
-  plans: PlanSummary[]
-  currentPlanId: string | null
-  actionState: string | null
-  handleCheckout: (planId: string) => Promise<void>
-}
-
-export interface InvoiceHistorySectionProps {
-  loading: boolean
-  invoices: InvoiceSummary[]
 }
 
 // Account tab props

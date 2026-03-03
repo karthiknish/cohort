@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import {
   BarChart3,
   CheckSquare,
-  CreditCard,
   FileText,
   MessageSquare,
   Home,
@@ -43,7 +42,6 @@ const navigationItems = [
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations' },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
-  { name: 'Finance', href: '/dashboard/finance', icon: CreditCard, description: 'Invoices and costs' },
   { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals' },
   { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },
@@ -52,7 +50,7 @@ const navigationItems = [
 const quickActions = [
   { name: 'Create proposal', action: '/dashboard/proposals', icon: Plus, description: 'Generate new proposal' },
   { name: 'Add task', action: '/dashboard/tasks?new=true', icon: Plus, description: 'Create a new task' },
-  { name: 'Log expense', action: '/dashboard/finance?tab=costs', icon: Plus, description: 'Record a new expense' },
+  { name: 'Open projects', action: '/dashboard/projects', icon: Plus, description: 'Jump to active projects' },
 ]
 
 export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
@@ -85,6 +83,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
       <button
         id="tour-command-menu"
         onClick={() => setOpen(true)}
+        type="button"
         className="hidden sm:inline-flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
         <Search className="h-4 w-4 shrink-0" />

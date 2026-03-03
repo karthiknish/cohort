@@ -19,8 +19,6 @@ import {
   Zap,
   FolderKanban,
   CheckSquare,
-  FileText,
-  Receipt,
   Bot,
 } from 'lucide-react'
 
@@ -61,10 +59,6 @@ interface UsageStats {
   projectsThisWeek: number
   totalTasks: number
   tasksCompletedThisWeek: number
-  totalInvoices: number
-  invoicesThisWeek: number
-  totalExpenses: number
-  expensesThisWeek: number
   totalClients: number
   activeClientsWeek: number
   agentConversations: number
@@ -542,9 +536,7 @@ export default function AdminPage() {
                     {usageStats?.featureUsage?.slice(0, 5).map((feature) => {
                       const icon = feature.feature === 'Projects' ? FolderKanban :
                         feature.feature === 'Tasks' ? CheckSquare :
-                          feature.feature === 'Invoices' ? FileText :
-                            feature.feature === 'Expenses' ? Receipt :
-                              feature.feature === 'Agent Mode' ? Bot : Activity
+                          feature.feature === 'Agent Mode' ? Bot : Activity
                       const Icon = icon
                       const maxCount = Math.max(...(usageStats?.featureUsage?.map(f => f.count) ?? [1]), 1)
                       const percentage = maxCount > 0 ? (feature.count / maxCount) * 100 : 0

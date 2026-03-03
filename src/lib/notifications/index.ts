@@ -236,8 +236,6 @@ export type { ToastT } from 'sonner'
 
 export {
   sendTransactionalEmail,
-  notifyInvoicePaidEmail,
-  notifyInvoiceSentEmail,
   notifyProjectCreatedEmail,
   notifyTaskAssignedEmail,
   notifyMentionEmail,
@@ -246,7 +244,6 @@ export {
   notifyWorkspaceInviteEmail,
   notifyPerformanceDigestEmail,
   notifyTaskActivityEmail,
-  notifyInvoicePaymentFailedEmail,
   checkBrevoHealth,
 } from './brevo'
 

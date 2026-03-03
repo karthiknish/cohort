@@ -41,7 +41,6 @@ export type ClientComparisonSummary = {
   totalConversions: number
   roas: number
   cpa: number | null
-  outstanding: number
   currency: string
   periodDays: number
 }

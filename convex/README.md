@@ -18,5 +18,5 @@ Add these to `.env.local`:
 ## Migration approach
 
 - Start with **new tables** in [schema.ts](schema.ts).
-- Migrate one feature slice at a time (e.g. Finance → Expense Categories), keeping the rest on Firebase until the slice is complete.
+- Migrate one feature slice at a time (e.g. Clients -> Projects), keeping the rest on Firebase until the slice is complete.
 - Once a slice is migrated, remove the old Firestore reads/writes and delete its rules/indexes.

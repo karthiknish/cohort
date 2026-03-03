@@ -36,7 +36,6 @@ import type * as apiIdempotency from "../apiIdempotency.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as authActions from "../authActions.js";
-import type * as billing from "../billing.js";
 import type * as clients from "../clients.js";
 import type * as collaborationMessages from "../collaborationMessages.js";
 import type * as collaborationTyping from "../collaborationTyping.js";
@@ -47,16 +46,6 @@ import type * as debug from "../debug.js";
 import type * as directMessages from "../directMessages.js";
 import type * as errors from "../errors.js";
 import type * as files from "../files.js";
-import type * as financeCosts from "../financeCosts.js";
-import type * as financeExpenseCategories from "../financeExpenseCategories.js";
-import type * as financeExpenseReport from "../financeExpenseReport.js";
-import type * as financeExpenses from "../financeExpenses.js";
-import type * as financeInvoices from "../financeInvoices.js";
-import type * as financeInvoicesActions from "../financeInvoicesActions.js";
-import type * as financePurchaseOrders from "../financePurchaseOrders.js";
-import type * as financeRevenue from "../financeRevenue.js";
-import type * as financeSummary from "../financeSummary.js";
-import type * as financeVendors from "../financeVendors.js";
 import type * as functions from "../functions.js";
 import type * as gamma from "../gamma.js";
 import type * as health from "../health.js";
@@ -77,7 +66,6 @@ import type * as proposalVersions from "../proposalVersions.js";
 import type * as proposals from "../proposals.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as rateLimitApi from "../rateLimitApi.js";
-import type * as recurringInvoices from "../recurringInvoices.js";
 import type * as schedulerAlertPreferences from "../schedulerAlertPreferences.js";
 import type * as schedulerEvents from "../schedulerEvents.js";
 import type * as serverCache from "../serverCache.js";
@@ -85,7 +73,6 @@ import type * as settings from "../settings.js";
 import type * as taskComments from "../taskComments.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
-import type * as webhooks from "../webhooks.js";
 
 import type {
   ApiFromModules,
@@ -122,7 +109,6 @@ declare const fullApi: ApiFromModules<{
   auditLogs: typeof auditLogs;
   auth: typeof auth;
   authActions: typeof authActions;
-  billing: typeof billing;
   clients: typeof clients;
   collaborationMessages: typeof collaborationMessages;
   collaborationTyping: typeof collaborationTyping;
@@ -133,16 +119,6 @@ declare const fullApi: ApiFromModules<{
   directMessages: typeof directMessages;
   errors: typeof errors;
   files: typeof files;
-  financeCosts: typeof financeCosts;
-  financeExpenseCategories: typeof financeExpenseCategories;
-  financeExpenseReport: typeof financeExpenseReport;
-  financeExpenses: typeof financeExpenses;
-  financeInvoices: typeof financeInvoices;
-  financeInvoicesActions: typeof financeInvoicesActions;
-  financePurchaseOrders: typeof financePurchaseOrders;
-  financeRevenue: typeof financeRevenue;
-  financeSummary: typeof financeSummary;
-  financeVendors: typeof financeVendors;
   functions: typeof functions;
   gamma: typeof gamma;
   health: typeof health;
@@ -163,7 +139,6 @@ declare const fullApi: ApiFromModules<{
   proposals: typeof proposals;
   rateLimit: typeof rateLimit;
   rateLimitApi: typeof rateLimitApi;
-  recurringInvoices: typeof recurringInvoices;
   schedulerAlertPreferences: typeof schedulerAlertPreferences;
   schedulerEvents: typeof schedulerEvents;
   serverCache: typeof serverCache;
@@ -171,7 +146,6 @@ declare const fullApi: ApiFromModules<{
   taskComments: typeof taskComments;
   tasks: typeof tasks;
   users: typeof users;
-  webhooks: typeof webhooks;
 }>;
 
 /**

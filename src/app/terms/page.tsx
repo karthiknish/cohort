@@ -7,7 +7,6 @@ import {
   User,
   Key,
   LayoutDashboard,
-  CreditCard,
   Copyright,
   LogOut,
   TriangleAlert,
@@ -52,10 +51,10 @@ const sections = [
       'Cohorts provides tools for analytics, client management, proposals, task tracking, and financial monitoring. You agree to use these tools in compliance with applicable laws and ethical standards.',
   },
   {
-    title: 'Subscriptions and Billing',
-    icon: CreditCard,
+    title: 'Plans and Access',
+    icon: FileText,
     description:
-      'Paid plans are billed on a subscription basis. Fees are non-refundable except as required by law. You are responsible for providing accurate billing information and keeping it current.',
+      'Access tiers and feature availability may change over time. We may update plan limits, availability, and packaging with reasonable notice.',
   },
   {
     title: 'Intellectual Property',

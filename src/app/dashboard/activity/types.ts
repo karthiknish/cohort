@@ -3,7 +3,6 @@ export type ActivityType =
   | 'task_activity'
   | 'message_posted'
   | 'client_added'
-  | 'invoice_sent'
   | 'proposal_created'
 
 export type StatusFilter = 'all' | 'read' | 'unread' | 'pinned'
@@ -41,6 +40,5 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   task_activity: 'Task Activity',
   message_posted: 'New Message',
   client_added: 'New Client',
-  invoice_sent: 'Invoice',
   proposal_created: 'Proposal',
 }

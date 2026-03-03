@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/auth-context'
 import {
   BarChart3,
   CheckSquare,
-  CreditCard,
   FileText,
   MessageSquare,
   Settings,
@@ -68,7 +67,6 @@ const allNavigation: NavItem[] = [
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations', roles: ['admin', 'team'] },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
-  { name: 'Finance', href: '/dashboard/finance', icon: CreditCard, description: 'Invoices & costs', roles: ['admin', 'team'] },
   { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] },
   { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },

@@ -68,7 +68,7 @@ export function DataExportCard() {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4">
-          This export includes your profile information, clients, projects, tasks, proposals, invoices, messages, and activity history. The download will be in machine-readable JSON format.
+          This export includes your profile information, clients, projects, tasks, proposals, messages, and activity history. The download will be in machine-readable JSON format.
         </p>
         {exportError && (
           <p className="text-sm text-destructive mb-4">{exportError}</p>

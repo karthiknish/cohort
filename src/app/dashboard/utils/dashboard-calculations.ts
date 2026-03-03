@@ -1,26 +1,21 @@
 import { useMemo } from 'react'
 import {
-    TriangleAlert,
     BarChart3,
     Clock3,
     DollarSign,
+    MousePointer,
     ListChecks,
     Megaphone,
     TrendingUp,
-    Shield,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import type { FinanceSummaryResponse } from '@/types/finance'
 import type { MetricRecord, SummaryStat } from '@/types/dashboard'
 import {
-    sumOutstanding,
-    formatNextDueLabel,
     selectTopStatsByRole,
     type TaskSummary,
 } from '../components'
 
 export interface BuildStatsOptions {
-    financeSummary: FinanceSummaryResponse | null
     metrics: MetricRecord[]
     taskSummary: TaskSummary
     userRole?: string | null
@@ -33,34 +28,20 @@ export interface StatsResult {
 }
 
 export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
-    const { financeSummary, metrics, taskSummary, userRole } = options
+    const { metrics, taskSummary, userRole } = options
 
-    const revenueRecords = Array.isArray(financeSummary?.revenue) ? financeSummary.revenue : []
-    const costs = Array.isArray(financeSummary?.costs) ? financeSummary.costs : []
-    const payments = financeSummary?.payments
     const metricsArray = Array.isArray(metrics) ? metrics : []
 
-    const totalRevenue = revenueRecords.reduce((sum, record) => sum + (record.revenue || 0), 0)
-    const totalOperatingExpenses = revenueRecords.reduce((sum, record) => sum + (record.operatingExpenses || 0), 0)
-    const totalCompanyCosts = costs.reduce((sum, cost) => sum + (cost.amount || 0), 0)
+    const totalRevenue = metricsArray.reduce((sum, record) => sum + (record.revenue || 0), 0)
     const totalAdSpend = metricsArray.reduce((sum, record) => sum + (record.spend || 0), 0)
+    const totalClicks = metricsArray.reduce((sum, record) => sum + (record.clicks || 0), 0)
+    const totalImpressions = metricsArray.reduce((sum, record) => sum + (record.impressions || 0), 0)
     const providerCount = metricsArray.length > 0 ? new Set(metricsArray.map((record) => record.providerId)).size : 0
-    const combinedExpenses = totalOperatingExpenses + totalCompanyCosts + totalAdSpend
-    const netMargin = totalRevenue - combinedExpenses
+    const netMargin = totalRevenue - totalAdSpend
     const roas = totalAdSpend > 0 && totalRevenue > 0 ? totalRevenue / totalAdSpend : null
+    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null
     const totalConversions = metricsArray.reduce((sum, record) => sum + (record.conversions || 0), 0)
-    const totalOutstanding = sumOutstanding(financeSummary?.payments?.totals ?? [])
-    const overdueInvoices = payments?.overdueCount ?? 0
-    const openInvoices = payments?.openCount ?? 0
-    const nextDueLabel = formatNextDueLabel(payments?.nextDueAt)
-
-    // Detect currency from records
-    const currencies = new Set([
-        ...revenueRecords.map((r) => r.currency).filter(Boolean),
-        ...costs.map((c) => c.currency).filter(Boolean),
-        ...(Array.isArray(payments?.totals) ? payments.totals : []).map((entry) => entry.currency).filter(Boolean),
-    ])
-    const displayCurrency = currencies.size === 1 ? (Array.from(currencies)[0] as string) : 'USD'
+    const displayCurrency = 'USD'
 
     const stats: SummaryStat[] = [
         {
@@ -68,10 +49,8 @@ export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
             label: 'Total Revenue',
             value: formatCurrency(totalRevenue, displayCurrency),
             helper:
-                revenueRecords.length > 0
-                    ? revenueRecords.length === 1
-                        ? 'Based on the latest billing period'
-                        : `Based on ${revenueRecords.length} billing periods`
+                metricsArray.length > 0
+                    ? `${metricsArray.length} synced metric ${metricsArray.length === 1 ? 'record' : 'records'}`
                     : 'Add revenue records to track income',
             icon: DollarSign,
             emphasis: totalRevenue > 0 ? 'positive' : 'neutral',
@@ -81,7 +60,7 @@ export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
             id: 'net-margin',
             label: 'Net Margin',
             value: formatCurrency(netMargin, displayCurrency),
-            helper: 'Money left after marketing and operating costs',
+            helper: 'Revenue minus ad spend for the selected window',
             icon: TrendingUp,
             emphasis: netMargin > 0 ? 'positive' : netMargin < 0 ? 'negative' : 'neutral',
             urgency: netMargin < 0 ? 'high' : netMargin === 0 ? 'medium' : 'low',
@@ -105,31 +84,13 @@ export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
             urgency: providerCount === 0 ? 'medium' : 'low',
         },
         {
-            id: 'outstanding',
-            label: 'Outstanding',
-            value: formatCurrency(totalOutstanding, displayCurrency),
-            helper: totalOutstanding > 0 ? `${openInvoices} open invoice${openInvoices === 1 ? '' : 's'}` : 'No outstanding balances',
-            icon: Shield,
-            emphasis: totalOutstanding > 0 ? 'negative' : 'neutral',
-            urgency: overdueInvoices > 0 ? 'high' : totalOutstanding > 0 ? 'medium' : 'low',
-        },
-        {
-            id: 'overdue-invoices',
-            label: 'Overdue invoices',
-            value: overdueInvoices.toString(),
-            helper: overdueInvoices > 0 ? 'Follow up on late payments' : 'All invoices on track',
-            icon: TriangleAlert,
-            emphasis: overdueInvoices > 0 ? 'negative' : 'neutral',
-            urgency: overdueInvoices > 0 ? 'high' : 'low',
-        },
-        {
-            id: 'next-due',
-            label: 'Next due',
-            value: nextDueLabel ?? 'None scheduled',
-            helper: openInvoices > 0 ? `${openInvoices} open invoice${openInvoices === 1 ? '' : 's'}` : 'No invoices currently open',
-            icon: Clock3,
-            emphasis: nextDueLabel?.includes('overdue') ? 'negative' : 'neutral',
-            urgency: nextDueLabel?.includes('overdue') ? 'high' : openInvoices > 0 ? 'medium' : 'low',
+            id: 'ctr',
+            label: 'CTR',
+            value: ctr === null ? '—' : `${ctr.toFixed(2)}%`,
+            helper: totalImpressions > 0 ? `${totalClicks.toLocaleString('en-US')} clicks from ads` : 'Need impression data',
+            icon: MousePointer,
+            emphasis: ctr && ctr >= 1 ? 'positive' : ctr && ctr > 0 ? 'neutral' : 'negative',
+            urgency: ctr === null ? 'medium' : ctr < 0.6 ? 'high' : ctr < 1 ? 'medium' : 'low',
         },
         {
             id: 'open-tasks',
@@ -178,55 +139,32 @@ export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
     }
 }
 
-export function useDashboardStats(options: BuildStatsOptions): StatsResult {
-    return useMemo(() => buildDashboardStats(options), [
-        options.financeSummary,
-        options.metrics,
-        options.taskSummary,
-        options.userRole,
-    ])
+export function useDashboardStats({ metrics, taskSummary, userRole }: BuildStatsOptions): StatsResult {
+    return useMemo(
+        () =>
+            buildDashboardStats({
+                metrics,
+                taskSummary,
+                userRole,
+            }),
+        [metrics, taskSummary, userRole]
+    )
 }
 
-export function buildChartData(
-    metrics: MetricRecord[],
-    financeSummary: FinanceSummaryResponse | null
-): Array<{ date: string; revenue: number; spend: number }> {
+export function buildChartData(metrics: MetricRecord[]): Array<{ date: string; revenue: number; spend: number }> {
     const dailyMap = new Map<string, { revenue: number; spend: number }>()
 
     if (Array.isArray(metrics)) {
         metrics.forEach((m) => {
             if (!m || typeof m.date !== 'string') return
-            const date = m.date.split('T')[0]!
+            const date = m.date.split('T')[0]
+            if (!date) return
             const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
             dailyMap.set(date, {
                 ...current,
                 spend: current.spend + (Number(m.spend) || 0),
+                revenue: current.revenue + (Number(m.revenue) || 0),
             })
-        })
-    }
-
-    const revenueRecords = Array.isArray(financeSummary?.revenue)
-        ? financeSummary!.revenue
-        : []
-
-    if (Array.isArray(revenueRecords)) {
-        revenueRecords.forEach((r) => {
-            if (!r) return
-            let date = ''
-            if (typeof r.period === 'string' && r.period.length === 7) {
-                // YYYY-MM -> YYYY-MM-01
-                date = `${r.period}-01`
-            } else if (r.createdAt) {
-                date = typeof r.createdAt === 'string' ? r.createdAt.split('T')[0]! : ''
-            }
-
-            if (date) {
-                const current = dailyMap.get(date) ?? { revenue: 0, spend: 0 }
-                dailyMap.set(date, {
-                    ...current,
-                    revenue: current.revenue + (Number(r.revenue) || 0),
-                })
-            }
         })
     }
 

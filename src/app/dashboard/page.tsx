@@ -48,7 +48,6 @@ import { ComparisonSummaryTile } from '@/components/dashboard/comparison/compari
 import { ComparisonInsights } from '@/components/dashboard/comparison/comparison-insights'
 import { AdInsightsWidget } from '@/components/dashboard/ad-insights-widget'
 import { ClientProposalsCard } from './components/client-proposals-card'
-import { ClientInvoicesCard } from './components/client-invoices-card'
 import { AttentionSummaryCard } from '@/components/dashboard/attention-summary-card'
 import { WorkspaceTrendsCard } from '@/components/dashboard/workspace-trends-card'
 import { AdvancedMetricsPreviewCards } from '@/components/dashboard/advanced-metrics-preview-cards'
@@ -154,9 +153,6 @@ export default function DashboardPage() {
   // Dashboard data hook
   const dashboardOptions = useMemo(() => ({ selectedClientId: selectedClientId ?? null }), [selectedClientId])
   const {
-    financeSummary,
-    financeLoading,
-    financeError,
     metrics,
     metricsLoading,
     metricsError,
@@ -200,14 +196,13 @@ export default function DashboardPage() {
   })
 
   // Stats calculations
-  const { primaryStats, secondaryStats, orderedStats } = useDashboardStats({
-    financeSummary,
+  const { primaryStats, orderedStats } = useDashboardStats({
     metrics,
     taskSummary,
     userRole: user?.role,
   })
 
-  const statsLoading = financeLoading || metricsLoading || tasksLoading
+  const statsLoading = metricsLoading || tasksLoading
 
   const advancedMetrics = useMemo(() => {
     const totals = metrics.reduce(
@@ -230,29 +225,30 @@ export default function DashboardPage() {
 
   const errorStates = useMemo(
     () => [
-      financeError && { id: 'finance', title: 'Finance data unavailable', message: financeError },
       metricsError && { id: 'metrics', title: 'Ad metrics unavailable', message: metricsError },
       tasksError && { id: 'tasks', title: 'Tasks unavailable', message: tasksError },
     ].filter((entry): entry is { id: string; title: string; message: string } => Boolean(entry)),
-    [financeError, metricsError, tasksError],
+    [metricsError, tasksError],
   )
 
-  const chartData = useMemo(() => buildChartData(metrics, financeSummary), [metrics, financeSummary])
+  const chartData = useMemo(() => buildChartData(metrics), [metrics])
 
   // Calculate provider summaries for ad insights widget
   const providerSummaries = useMemo(() => {
     if (metrics.length === 0) return undefined
-    
+
     const summaries: Record<string, { spend: number; impressions: number; clicks: number; conversions: number; revenue: number }> = {}
     metrics.forEach((m) => {
-      if (!summaries[m.providerId]) {
-        summaries[m.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
-      }
-      summaries[m.providerId]!.spend += m.spend
-      summaries[m.providerId]!.impressions += m.impressions
-      summaries[m.providerId]!.clicks += m.clicks
-      summaries[m.providerId]!.conversions += m.conversions
-      summaries[m.providerId]!.revenue += m.revenue ?? 0
+      const aggregate =
+        summaries[m.providerId] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+
+      aggregate.spend += m.spend
+      aggregate.impressions += m.impressions
+      aggregate.clicks += m.clicks
+      aggregate.conversions += m.conversions
+      aggregate.revenue += m.revenue ?? 0
+
+      summaries[m.providerId] = aggregate
     })
     return Object.keys(summaries).length > 0 ? summaries : undefined
   }, [metrics])
@@ -264,7 +260,7 @@ export default function DashboardPage() {
     return (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
   }, [user?.createdAt])
 
-  const showOnboarding = !statsLoading && isNewUser && !selectedClientId && metrics.length === 0 && !financeSummary
+  const showOnboarding = !statsLoading && isNewUser && !selectedClientId && metrics.length === 0
 
   const resolvedTasks = useMemo(() => {
     if (taskItems.length > 0) return taskItems
@@ -366,11 +362,9 @@ export default function DashboardPage() {
         <FadeIn>
           <AttentionSummaryCard
             taskSummary={taskSummary}
-            financeSummary={financeSummary}
             proposals={proposals}
             integrationSummary={integrationSummary}
             loading={{
-              finance: financeLoading,
               proposals: proposalsLoading,
               integrations: integrationsLoading,
             }}
@@ -431,10 +425,10 @@ export default function DashboardPage() {
                             tooltip="Total ad spend across all selected workspaces"
                           />
                           <ComparisonSummaryTile
-                            label="Outstanding"
-                            value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalOutstanding, comparisonAggregate.currency) : '—'}
-                            helper={comparisonAggregate.mixedCurrencies ? 'Totals hidden (mixed currencies)' : 'Open invoices + retainers'}
-                            tooltip="Total unpaid invoices and retainers"
+                            label="Conversions"
+                            value={comparisonAggregate.totalConversions.toLocaleString('en-US')}
+                            helper="Combined conversions across selected workspaces"
+                            tooltip="Total conversion events during the selected period"
                           />
                           <ComparisonSummaryTile
                             label="Weighted ROAS"
@@ -500,12 +494,6 @@ export default function DashboardPage() {
                     </Card>
 
                     <ClientProposalsCard proposals={proposals} loading={proposalsLoading} />
-
-                    <ClientInvoicesCard
-                      financeSummary={financeSummary}
-                      loading={financeLoading}
-                      error={financeError}
-                    />
                   </div>
 
                   {/* Client-focused: recent updates in-context */}

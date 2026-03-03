@@ -1,10 +1,6 @@
-import { mutation, query } from './_generated/server'
+import { query } from './_generated/server'
 import { v } from 'convex/values'
 import {
-  authenticatedMutation,
-  workspaceMutation,
-  workspaceQuery,
-  workspaceQueryActive,
   zAuthenticatedMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
@@ -15,7 +11,7 @@ import {
 } from './functions'
 import { z } from 'zod/v4'
 import { Errors } from './errors'
- 
+
 const clientZ = z.object({
   legacyId: z.string(),
   name: z.string(),
@@ -26,20 +22,10 @@ const clientZ = z.object({
       role: z.string(),
     })
   ),
-  billingEmail: z.string().nullable(),
-  stripeCustomerId: z.string().nullable(),
-  lastInvoiceStatus: z.string().nullable(),
-  lastInvoiceAmount: z.number().nullable(),
-  lastInvoiceCurrency: z.string().nullable(),
-  lastInvoiceIssuedAtMs: z.number().nullable(),
-  lastInvoiceNumber: z.string().nullable(),
-  lastInvoiceUrl: z.string().nullable(),
-  lastInvoicePaidAtMs: z.number().nullable(),
   createdAtMs: z.number(),
   updatedAtMs: z.number(),
   deletedAtMs: z.number().nullable(),
 })
- 
 
 function slugify(value: string): string {
   const base = value
@@ -58,12 +44,10 @@ function slugify(value: string): string {
 
 /**
  * Get client by legacyId (no auth - server-side use).
- * Used by finance-sync.
  */
 export const getByLegacyIdServer = query({
   args: { workspaceId: v.string(), legacyId: v.string() },
   handler: async (ctx: any, args: any) => {
-    // No auth required - called from server-side code
     const row = await ctx.db
       .query('clients')
       .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -76,97 +60,10 @@ export const getByLegacyIdServer = query({
       name: row.name,
       accountManager: row.accountManager,
       teamMembers: row.teamMembers,
-      billingEmail: row.billingEmail ?? null,
-      stripeCustomerId: row.stripeCustomerId ?? null,
-      lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-      lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-      lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-      lastInvoiceIssuedAtMs: row.lastInvoiceIssuedAtMs ?? null,
-      lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-      lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-      lastInvoicePaidAtMs: row.lastInvoicePaidAtMs ?? null,
       createdAtMs: row.createdAtMs,
       updatedAtMs: row.updatedAtMs,
       deletedAtMs: row.deletedAtMs ?? null,
     }
-  },
-})
-
-/**
- * Update client invoice fields (no auth - server-side use).
- * Used by finance-sync to update last invoice info.
- */
-export const updateInvoiceFieldsServer = mutation({
-  args: {
-    workspaceId: v.string(),
-    legacyId: v.string(),
-    name: v.optional(v.string()),
-    lastInvoiceStatus: v.union(v.string(), v.null()),
-    lastInvoiceAmount: v.union(v.number(), v.null()),
-    lastInvoiceCurrency: v.union(v.string(), v.null()),
-    lastInvoiceIssuedAtMs: v.union(v.number(), v.null()),
-    lastInvoiceNumber: v.union(v.string(), v.null()),
-    lastInvoiceUrl: v.union(v.string(), v.null()),
-    lastInvoicePaidAtMs: v.union(v.number(), v.null()),
-    createIfMissing: v.optional(v.boolean()),
-  },
-  handler: async (ctx: any, args: any) => {
-    // No auth required - called from server-side code
-    const client = await ctx.db
-      .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
-      .unique()
-
-    const timestamp = Date.now()
-
-    if (!client) {
-      if (args.createIfMissing && args.name) {
-        // Create minimal client record
-        await ctx.db.insert('clients', {
-          workspaceId: args.workspaceId,
-          legacyId: args.legacyId,
-          name: args.name,
-          nameLower: args.name.toLowerCase(),
-          accountManager: '',
-          teamMembers: [],
-          billingEmail: null,
-          stripeCustomerId: null,
-          lastInvoiceStatus: args.lastInvoiceStatus,
-          lastInvoiceAmount: args.lastInvoiceAmount,
-          lastInvoiceCurrency: args.lastInvoiceCurrency,
-          lastInvoiceIssuedAtMs: args.lastInvoiceIssuedAtMs,
-          lastInvoiceNumber: args.lastInvoiceNumber,
-          lastInvoiceUrl: args.lastInvoiceUrl,
-          lastInvoicePaidAtMs: args.lastInvoicePaidAtMs,
-          createdBy: null,
-          createdAtMs: timestamp,
-          updatedAtMs: timestamp,
-          deletedAtMs: null,
-        })
-      return { ok: true, created: true }
-    }
-    throw Errors.resource.notFound('Client', args.legacyId)
-  }
-
-  const updates: Record<string, unknown> = {
-      lastInvoiceStatus: args.lastInvoiceStatus,
-      lastInvoiceAmount: args.lastInvoiceAmount,
-      lastInvoiceCurrency: args.lastInvoiceCurrency,
-      lastInvoiceIssuedAtMs: args.lastInvoiceIssuedAtMs,
-      lastInvoiceNumber: args.lastInvoiceNumber,
-      lastInvoiceUrl: args.lastInvoiceUrl,
-      lastInvoicePaidAtMs: args.lastInvoicePaidAtMs,
-      updatedAtMs: timestamp,
-    }
-
-    if (args.name && (!client.name || client.name.trim().length === 0)) {
-      updates.name = args.name
-      updates.nameLower = args.name.toLowerCase()
-    }
-
-    await ctx.db.patch(client._id, updates)
-
-    return { ok: true, created: false }
   },
 })
 
@@ -188,12 +85,8 @@ export const list = zWorkspacePaginatedQueryActive({
     let q: any
 
     if (fetchAll) {
-      // Admin fetching all clients across workspaces
-      q = ctx.db
-        .query('clients')
-        .order('asc')
+      q = ctx.db.query('clients').order('asc')
     } else {
-      // Standard workspace-scoped query
       q = ctx.db
         .query('clients')
         .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
@@ -212,15 +105,6 @@ export const list = zWorkspacePaginatedQueryActive({
         name: row.name,
         accountManager: row.accountManager,
         teamMembers: row.teamMembers,
-        billingEmail: row.billingEmail ?? null,
-        stripeCustomerId: row.stripeCustomerId ?? null,
-        lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-        lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-        lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-        lastInvoiceIssuedAtMs: row.lastInvoiceIssuedAtMs ?? null,
-        lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-        lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-        lastInvoicePaidAtMs: row.lastInvoicePaidAtMs ?? null,
         createdAtMs: row.createdAtMs,
         updatedAtMs: row.updatedAtMs,
         deletedAtMs: row.deletedAtMs ?? null,
@@ -260,15 +144,6 @@ export const getByLegacyId = zWorkspaceQuery({
       name: row.name,
       accountManager: row.accountManager,
       teamMembers: row.teamMembers,
-      billingEmail: row.billingEmail ?? null,
-      stripeCustomerId: row.stripeCustomerId ?? null,
-      lastInvoiceStatus: row.lastInvoiceStatus ?? null,
-      lastInvoiceAmount: row.lastInvoiceAmount ?? null,
-      lastInvoiceCurrency: row.lastInvoiceCurrency ?? null,
-      lastInvoiceIssuedAtMs: row.lastInvoiceIssuedAtMs ?? null,
-      lastInvoiceNumber: row.lastInvoiceNumber ?? null,
-      lastInvoiceUrl: row.lastInvoiceUrl ?? null,
-      lastInvoicePaidAtMs: row.lastInvoicePaidAtMs ?? null,
       createdAtMs: row.createdAtMs,
       updatedAtMs: row.updatedAtMs,
       deletedAtMs: row.deletedAtMs ?? null,
@@ -287,7 +162,6 @@ export const create = zWorkspaceMutation({
         role: z.string(),
       })
     ),
-    billingEmail: z.string().nullable(),
     createdBy: z.string().nullable(),
   },
   returns: z.object({ legacyId: z.string() }),
@@ -323,15 +197,6 @@ export const create = zWorkspaceMutation({
       nameLower: args.name.toLowerCase(),
       accountManager: args.accountManager,
       teamMembers: args.teamMembers,
-      billingEmail: args.billingEmail,
-      stripeCustomerId: null,
-      lastInvoiceStatus: null,
-      lastInvoiceAmount: null,
-      lastInvoiceCurrency: null,
-      lastInvoiceIssuedAtMs: null,
-      lastInvoiceNumber: null,
-      lastInvoiceUrl: null,
-      lastInvoicePaidAtMs: null,
       createdBy: args.createdBy,
       createdAtMs: ctx.now,
       updatedAtMs: ctx.now,
@@ -406,48 +271,6 @@ export const softDelete = zWorkspaceMutation({
   },
 })
 
-export const updateInvoiceFields = zWorkspaceMutation({
-  args: {
-    workspaceId: z.string(),
-    legacyId: z.string(),
-    billingEmail: z.string().nullable(),
-    stripeCustomerId: z.string().nullable(),
-    lastInvoiceStatus: z.string().nullable(),
-    lastInvoiceAmount: z.number().nullable(),
-    lastInvoiceCurrency: z.string().nullable(),
-    lastInvoiceIssuedAtMs: z.number().nullable(),
-    lastInvoiceNumber: z.string().nullable(),
-    lastInvoiceUrl: z.string().nullable(),
-    lastInvoicePaidAtMs: z.number().nullable().optional(),
-  },
-  returns: z.string(),
-  handler: async (ctx: any, args: any) => {
-    const client = await ctx.db
-      .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
-      .unique()
-
-    if (!client) {
-      throw Errors.resource.notFound('Client')
-    }
-
-    await ctx.db.patch(client._id, {
-      billingEmail: args.billingEmail,
-      stripeCustomerId: args.stripeCustomerId,
-      lastInvoiceStatus: args.lastInvoiceStatus,
-      lastInvoiceAmount: args.lastInvoiceAmount,
-      lastInvoiceCurrency: args.lastInvoiceCurrency,
-      lastInvoiceIssuedAtMs: args.lastInvoiceIssuedAtMs,
-      lastInvoiceNumber: args.lastInvoiceNumber,
-      lastInvoiceUrl: args.lastInvoiceUrl,
-      lastInvoicePaidAtMs: args.lastInvoicePaidAtMs ?? client.lastInvoicePaidAtMs,
-      updatedAtMs: ctx.now,
-    })
-
-    return client.legacyId
-  },
-})
-
 export const upsert = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
@@ -460,15 +283,6 @@ export const upsert = zWorkspaceMutation({
         role: z.string(),
       })
     ),
-    billingEmail: z.string().nullable(),
-    stripeCustomerId: z.string().nullable(),
-    lastInvoiceStatus: z.string().nullable(),
-    lastInvoiceAmount: z.number().nullable(),
-    lastInvoiceCurrency: z.string().nullable(),
-    lastInvoiceIssuedAtMs: z.number().nullable(),
-    lastInvoiceNumber: z.string().nullable(),
-    lastInvoiceUrl: z.string().nullable(),
-    lastInvoicePaidAtMs: z.number().nullable(),
     createdBy: z.string().nullable(),
     createdAtMs: z.number(),
     updatedAtMs: z.number(),
@@ -488,15 +302,6 @@ export const upsert = zWorkspaceMutation({
       nameLower: args.name.toLowerCase(),
       accountManager: args.accountManager,
       teamMembers: args.teamMembers,
-      billingEmail: args.billingEmail,
-      stripeCustomerId: args.stripeCustomerId,
-      lastInvoiceStatus: args.lastInvoiceStatus,
-      lastInvoiceAmount: args.lastInvoiceAmount,
-      lastInvoiceCurrency: args.lastInvoiceCurrency,
-      lastInvoiceIssuedAtMs: args.lastInvoiceIssuedAtMs,
-      lastInvoiceNumber: args.lastInvoiceNumber,
-      lastInvoiceUrl: args.lastInvoiceUrl,
-      lastInvoicePaidAtMs: args.lastInvoicePaidAtMs,
       createdBy: args.createdBy,
       createdAtMs: args.createdAtMs,
       updatedAtMs: args.updatedAtMs,
@@ -527,15 +332,6 @@ export const bulkUpsert = zAuthenticatedMutation({
             role: z.string(),
           })
         ),
-        billingEmail: z.string().nullable(),
-        stripeCustomerId: z.string().nullable(),
-        lastInvoiceStatus: z.string().nullable(),
-        lastInvoiceAmount: z.number().nullable(),
-        lastInvoiceCurrency: z.string().nullable(),
-        lastInvoiceIssuedAtMs: z.number().nullable(),
-        lastInvoiceNumber: z.string().nullable(),
-        lastInvoiceUrl: z.string().nullable(),
-        lastInvoicePaidAtMs: z.number().nullable(),
         createdBy: z.string().nullable(),
         createdAtMs: z.number(),
         updatedAtMs: z.number(),
@@ -562,15 +358,6 @@ export const bulkUpsert = zAuthenticatedMutation({
         nameLower: client.name.toLowerCase(),
         accountManager: client.accountManager,
         teamMembers: client.teamMembers,
-        billingEmail: client.billingEmail,
-        stripeCustomerId: client.stripeCustomerId,
-        lastInvoiceStatus: client.lastInvoiceStatus,
-        lastInvoiceAmount: client.lastInvoiceAmount,
-        lastInvoiceCurrency: client.lastInvoiceCurrency,
-        lastInvoiceIssuedAtMs: client.lastInvoiceIssuedAtMs,
-        lastInvoiceNumber: client.lastInvoiceNumber,
-        lastInvoiceUrl: client.lastInvoiceUrl,
-        lastInvoicePaidAtMs: client.lastInvoicePaidAtMs,
         createdBy: client.createdBy,
         createdAtMs: client.createdAtMs,
         updatedAtMs: client.updatedAtMs,

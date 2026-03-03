@@ -534,7 +534,7 @@ export const softDelete = zWorkspaceMutation({
 export const updateSharedTo = zWorkspaceMutation({
   args: {
     legacyId: z.string(),
-    sharedTo: z.array(z.union([z.literal('slack'), z.literal('teams'), z.literal('whatsapp')])),
+    sharedTo: z.array(z.literal('email')),
   },
   handler: async (ctx: any, args: any) => {
     const row = await ctx.db

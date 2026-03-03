@@ -2,7 +2,6 @@ import {
   Briefcase,
   CircleCheck,
   MessageSquare,
-  Receipt,
   User,
   FileText,
 } from 'lucide-react'
@@ -16,7 +15,6 @@ export const ACTIVITY_ICONS: Record<
   task_activity: CircleCheck,
   message_posted: MessageSquare,
   client_added: User,
-  invoice_sent: Receipt,
   proposal_created: FileText,
 }
 
@@ -29,8 +27,6 @@ export const ACTIVITY_COLORS: Record<ActivityType, string> = {
     'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   client_added:
     'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-  invoice_sent:
-    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   proposal_created:
     'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
 }
