@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
     return { total, pending, active }
   }, [users])
 
-  const handleRoleChange = async (record: AdminUserRecord, nextRole: AdminUserRole) => {
+  const handleRoleChange = (record: AdminUserRecord, nextRole: AdminUserRole) => {
     if (record.role === nextRole) {
       return
     }
@@ -137,23 +137,25 @@ export default function AdminUsersPage() {
     }
 
     setSavingId(record.id)
-    try {
-      await updateUserRoleStatus({ legacyId: record.id, role: nextRole })
 
-      setUsersOverride((prev) => {
-        const base = prev ?? users
-        return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord))
+    void updateUserRoleStatus({ legacyId: record.id, role: nextRole })
+      .then(() => {
+        setUsersOverride((prev) => {
+          const base = prev ?? users
+          return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, role: nextRole } : userRecord))
+        })
+        toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` })
       })
-      toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` })
-    } catch (err: unknown) {
-      const message = asErrorMessage(err)
-      toast({ title: 'Admin error', description: message, variant: 'destructive' })
-    } finally {
-      setSavingId(null)
-    }
+      .catch((err: unknown) => {
+        const message = asErrorMessage(err)
+        toast({ title: 'Admin error', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setSavingId(null)
+      })
   }
 
-  const handleApprovalToggle = async (record: AdminUserRecord, approved: boolean) => {
+  const handleApprovalToggle = (record: AdminUserRecord, approved: boolean) => {
     if (record.role === 'admin' && !approved) {
       toast({ title: 'Cannot disable admin', description: 'Admin accounts must remain active.', variant: 'destructive' })
       return
@@ -165,54 +167,58 @@ export default function AdminUsersPage() {
     }
 
     setSavingId(record.id)
-    try {
-      await updateUserRoleStatus({ legacyId: record.id, status: nextStatus })
 
-      setUsersOverride((prev) => {
-        const base = prev ?? users
-        return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord))
+    void updateUserRoleStatus({ legacyId: record.id, status: nextStatus })
+      .then(() => {
+        setUsersOverride((prev) => {
+          const base = prev ?? users
+          return base.map((userRecord) => (userRecord.id === record.id ? { ...userRecord, status: nextStatus } : userRecord))
+        })
+        toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
+        setRevokeOpen(false)
       })
-      toast({ title: approved ? 'Account approved' : 'Approval revoked', description: `${record.name} status set to ${nextStatus}.` })
-      setRevokeOpen(false)
-    } catch (err: unknown) {
-      logError(err, 'AdminUsers:handleApprovalToggle')
-      const message = asErrorMessage(err)
-      toast({ title: 'Admin error', description: message, variant: 'destructive' })
-    } finally {
-      setSavingId(null)
-    }
+      .catch((err: unknown) => {
+        logError(err, 'AdminUsers:handleApprovalToggle')
+        const message = asErrorMessage(err)
+        toast({ title: 'Admin error', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setSavingId(null)
+      })
   }
 
-  const handleInviteUser = async () => {
+  const handleInviteUser = () => {
     if (!inviteEmail) return
     
     setInviteSending(true)
-    try {
-      await createInvitation({
-        email: inviteEmail,
-        role: inviteRole,
-        invitedBy: user!.id,
-        invitedByName: user?.name ?? null,
-      })
 
-      const emailSent = true
-      
-      toast({
-        title: 'Invitation created',
-        description: emailSent 
-          ? `Invitation sent to ${inviteEmail} as ${inviteRole}.`
-          : `Invitation created for ${inviteEmail}. Email notification could not be sent.`,
+    void createInvitation({
+      email: inviteEmail,
+      role: inviteRole,
+      invitedBy: user!.id,
+      invitedByName: user?.name ?? null,
+    })
+      .then(() => {
+        const emailSent = true
+
+        toast({
+          title: 'Invitation created',
+          description: emailSent
+            ? `Invitation sent to ${inviteEmail} as ${inviteRole}.`
+            : `Invitation created for ${inviteEmail}. Email notification could not be sent.`,
+        })
+        setInviteOpen(false)
+        setInviteEmail('')
+        setInviteRole('team')
       })
-      setInviteOpen(false)
-      setInviteEmail('')
-      setInviteRole('team')
-    } catch (err: unknown) {
-      logError(err, 'AdminUsers:handleInviteUser')
-      const message = asErrorMessage(err)
-      toast({ title: 'Invitation error', description: message, variant: 'destructive' })
-    } finally {
-      setInviteSending(false)
-    }
+      .catch((err: unknown) => {
+        logError(err, 'AdminUsers:handleInviteUser')
+        const message = asErrorMessage(err)
+        toast({ title: 'Invitation error', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setInviteSending(false)
+      })
   }
 
   const handleRefresh = () => {
@@ -495,16 +501,18 @@ export default function AdminUsersPage() {
                 <Button
                   type="button"
                   variant="outline"
-                   onClick={async () => {
+                   onClick={() => {
                      if (loadingMore) return
                      setLoadingMore(true)
-                      try {
-                        await loadMore(50)
-                      } catch (err) {
-                        logError(err, 'AdminUsers:loadMore')
-                      } finally {
-                        setLoadingMore(false)
-                      }
+
+                      void Promise.resolve()
+                        .then(() => loadMore(50))
+                        .catch((err: unknown) => {
+                          logError(err, 'AdminUsers:loadMore')
+                        })
+                        .finally(() => {
+                          setLoadingMore(false)
+                        })
                    }}
 
                   disabled={loadingMore}

@@ -91,7 +91,11 @@ export function FeatureFormDialog({
 
   // Reset form when dialog opens/closes or feature changes
   useEffect(() => {
-    if (open) {
+    if (!open) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
       if (feature) {
         setTitle(feature.title)
         setDescription(feature.description)
@@ -109,6 +113,10 @@ export function FeatureFormDialog({
       }
       setNewRefUrl('')
       setNewRefLabel('')
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
     }
   }, [open, feature, defaultStatus])
 
@@ -150,15 +158,14 @@ export function FeatureFormDialog({
     return publicUrl.url
   }, [generateUploadUrl, getPublicUrl])
 
-  const handleGenerateAI = useCallback(async (field: 'title' | 'description') => {
+  const handleGenerateAI = useCallback((field: 'title' | 'description') => {
     if (field === 'title') {
       setIsGeneratingTitle(true)
     } else {
       setIsGeneratingDescription(true)
     }
 
-    try {
-      const data = await generateFeatureAi({
+    void generateFeatureAi({
         field,
         context: {
           currentTitle: title,
@@ -167,33 +174,35 @@ export function FeatureFormDialog({
           priority,
         },
       })
-      
-      if (field === 'title' && data.title) {
-        setTitle(data.title)
-        toast({ title: 'Title generated', description: 'AI has suggested a title for your feature.' })
-      } else if (field === 'description' && data.description) {
-        setDescription(data.description)
-        toast({ title: 'Description generated', description: 'AI has suggested a description for your feature.' })
-      }
-    } catch (error) {
-      console.error('AI generation failed:', error)
-      toast({
-        title: 'Generation failed',
-        description: 'Unable to generate content. Please try again.',
-        variant: 'destructive',
+
+      .then((data) => {
+        if (field === 'title' && data.title) {
+          setTitle(data.title)
+          toast({ title: 'Title generated', description: 'AI has suggested a title for your feature.' })
+        } else if (field === 'description' && data.description) {
+          setDescription(data.description)
+          toast({ title: 'Description generated', description: 'AI has suggested a description for your feature.' })
+        }
       })
-    } finally {
-      setIsGeneratingTitle(false)
-      setIsGeneratingDescription(false)
-    }
-  }, [title, description, status, priority, toast])
+      .catch((error) => {
+        console.error('AI generation failed:', error)
+        toast({
+          title: 'Generation failed',
+          description: 'Unable to generate content. Please try again.',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setIsGeneratingTitle(false)
+        setIsGeneratingDescription(false)
+      })
+  }, [title, description, status, priority, toast, generateFeatureAi])
 
   const handleAddReference = useCallback(() => {
-    if (!newRefUrl.trim()) return
+    const trimmedUrl = newRefUrl.trim()
+    if (!trimmedUrl) return
 
-    try {
-      new URL(newRefUrl.trim())
-    } catch {
+    if (!URL.canParse(trimmedUrl)) {
       toast({
         title: 'Invalid URL',
         description: 'Please enter a valid URL',
@@ -202,9 +211,10 @@ export function FeatureFormDialog({
       return
     }
 
-    const label = newRefLabel.trim() || new URL(newRefUrl.trim()).hostname
+    const parsedUrl = new URL(trimmedUrl)
+    const label = newRefLabel.trim() || parsedUrl.hostname
 
-    setReferences((prev) => [...prev, { url: newRefUrl.trim(), label }])
+    setReferences((prev) => [...prev, { url: trimmedUrl, label }])
     setNewRefUrl('')
     setNewRefLabel('')
   }, [newRefUrl, newRefLabel, toast])
@@ -214,7 +224,7 @@ export function FeatureFormDialog({
   }, [])
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault()
 
       if (!title.trim()) {
@@ -228,8 +238,7 @@ export function FeatureFormDialog({
 
       setIsSubmitting(true)
 
-      try {
-        await onSubmit({
+      void onSubmit({
           title: title.trim(),
           description: description.trim(),
           status,
@@ -237,17 +246,21 @@ export function FeatureFormDialog({
           imageUrl,
           references,
         })
-        onOpenChange(false)
-      } catch (error) {
-        console.error('Failed to save feature:', error)
-        toast({
-          title: 'Save failed',
-          description: 'Unable to save the feature. Please try again.',
-          variant: 'destructive',
+
+        .then(() => {
+          onOpenChange(false)
         })
-      } finally {
-        setIsSubmitting(false)
-      }
+        .catch((error) => {
+          console.error('Failed to save feature:', error)
+          toast({
+            title: 'Save failed',
+            description: 'Unable to save the feature. Please try again.',
+            variant: 'destructive',
+          })
+        })
+        .finally(() => {
+          setIsSubmitting(false)
+        })
     },
     [title, description, status, priority, imageUrl, references, onSubmit, onOpenChange, toast]
   )

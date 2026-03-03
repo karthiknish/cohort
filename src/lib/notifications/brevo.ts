@@ -35,7 +35,12 @@ let _convexClient: ConvexHttpClient | null = null
 function getConvexClient(): ConvexHttpClient | null {
   if (_convexClient) return _convexClient
   const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  const deployKey = process.env.CONVEX_DEPLOY_KEY ?? process.env.CONVEX_ADMIN_KEY ?? process.env.CONVEX_ADMIN_TOKEN
+  const deployKey =
+    process.env.CONVEX_DEPLOY_KEY ??
+    process.env.CONVEX_DEV_DEPLOY_KEY ??
+    process.env.CONVEX_PROD_DEPLOY_KEY ??
+    process.env.CONVEX_ADMIN_KEY ??
+    process.env.CONVEX_ADMIN_TOKEN
   if (!url || !deployKey) return null
   _convexClient = new ConvexHttpClient(url)
   ;(_convexClient as any).setAdminAuth(deployKey, {

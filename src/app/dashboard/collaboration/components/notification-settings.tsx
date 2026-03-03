@@ -92,23 +92,25 @@ export function NotificationSettings({
 
   const handleSave = useCallback(async () => {
     setIsSaving(true)
-    try {
-      await onSave(preferences)
-      toast({
-        title: 'Notification settings saved',
-        description: 'Your preferences have been updated.',
+    await onSave(preferences)
+      .then(() => {
+        toast({
+          title: 'Notification settings saved',
+          description: 'Your preferences have been updated.',
+        })
+        setOpen(false)
       })
-      setOpen(false)
-    } catch (error) {
-      console.error('Failed to save notification settings:', error)
-      toast({
-        title: 'Failed to save settings',
-        description: 'An error occurred while saving your preferences.',
-        variant: 'destructive',
+      .catch((error) => {
+        console.error('Failed to save notification settings:', error)
+        toast({
+          title: 'Failed to save settings',
+          description: 'An error occurred while saving your preferences.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setIsSaving(false)
-    }
+      .finally(() => {
+        setIsSaving(false)
+      })
   }, [preferences, onSave, toast])
 
   const handleAddKeyword = useCallback(() => {

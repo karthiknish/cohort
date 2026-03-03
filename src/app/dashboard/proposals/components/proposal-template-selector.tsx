@@ -104,68 +104,85 @@ export function ProposalTemplateSelector({
       return
     }
 
-    try {
-      setSaving(true)
-      if (!workspaceId) {
-        throw new Error('Workspace context missing')
-      }
+    setSaving(true)
 
-      await createTemplate({
-        workspaceId,
-        name: templateName.trim(),
-        description: templateDescription.trim() || null,
-        formData: currentFormData,
-        industry: templateIndustry.trim() || null,
-        tags: [],
-        isDefault,
-        createdBy: user?.id ?? null,
-      })
-
-      setSaveDialogOpen(false)
-      setTemplateName('')
-      setTemplateDescription('')
-      setTemplateIndustry('')
-      setIsDefault(false)
-
-      toast({
-        title: 'Template saved',
-        description: `"${templateName.trim()}" has been saved.`,
-      })
-    } catch (error) {
-      console.error('Failed to save template:', error)
+    if (!workspaceId) {
       toast({
         title: 'Error',
-        description: 'Failed to save template',
+        description: 'Workspace context missing',
         variant: 'destructive',
       })
-    } finally {
       setSaving(false)
+      return
     }
-  }, [currentFormData, isDefault, templateDescription, templateIndustry, templateName, toast])
+
+    await createTemplate({
+      workspaceId,
+      name: templateName.trim(),
+      description: templateDescription.trim() || null,
+      formData: currentFormData,
+      industry: templateIndustry.trim() || null,
+      tags: [],
+      isDefault,
+      createdBy: user?.id ?? null,
+    })
+      .then(() => {
+        setSaveDialogOpen(false)
+        setTemplateName('')
+        setTemplateDescription('')
+        setTemplateIndustry('')
+        setIsDefault(false)
+
+        toast({
+          title: 'Template saved',
+          description: `"${templateName.trim()}" has been saved.`,
+        })
+      })
+      .catch((error) => {
+        console.error('Failed to save template:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to save template',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setSaving(false)
+      })
+  }, [createTemplate, currentFormData, isDefault, templateDescription, templateIndustry, templateName, toast, user?.id, workspaceId])
 
   const handleDeleteTemplate = useCallback(async (templateId: string, templateName: string) => {
-    try {
-      setDeleting(templateId)
-      if (!workspaceId) {
-        throw new Error('Workspace context missing')
-      }
+    setDeleting(templateId)
 
-      await deleteTemplate({ workspaceId, legacyId: templateId })
-      toast({
-        title: 'Template deleted',
-        description: `"${templateName}" has been deleted.`,
-      })
-    } catch (error) {
-      console.error('Failed to delete template:', error)
+    if (!workspaceId) {
       toast({
         title: 'Error',
-        description: 'Failed to delete template',
+        description: 'Workspace context missing',
         variant: 'destructive',
       })
-    } finally {
       setDeleting(null)
+      return
     }
-  }, [toast])
+
+    await deleteTemplate({ workspaceId, legacyId: templateId })
+      .then(() => {
+        toast({
+          title: 'Template deleted',
+          description: `"${templateName}" has been deleted.`,
+        })
+      })
+      .catch((error) => {
+        console.error('Failed to delete template:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to delete template',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setDeleting(null)
+      })
+  }, [deleteTemplate, toast, workspaceId])
 
 
   return (

@@ -13,6 +13,8 @@ function getConvexDeploymentUrl(): string | null {
 function getConvexDeployKey(): string | null {
   return (
     process.env.CONVEX_DEPLOY_KEY ??
+    process.env.CONVEX_DEV_DEPLOY_KEY ??
+    process.env.CONVEX_PROD_DEPLOY_KEY ??
     process.env.CONVEX_ADMIN_KEY ??
     process.env.CONVEX_ADMIN_TOKEN ??
     null

@@ -127,50 +127,51 @@ export function CreateChannelDialog({
 
     setIsCreating(true)
 
-    try {
-      // Determine channel name based on type
-      let finalChannelName = channelName.trim()
-      if (channelType === 'client' && selectedClient) {
-        finalChannelName = selectedClient.name
-      } else if (channelType === 'project' && selectedProject) {
-        finalChannelName = selectedProject.name
-      }
-
-      const newChannel = {
-        type: channelType,
-        name: finalChannelName,
-        description: description.trim() || undefined,
-        clientId: channelType === 'client' ? selectedClientId : null,
-        projectId: channelType === 'project' ? selectedProjectId : null,
-        memberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
-      }
-
-      onCreate?.(newChannel)
-
-      toast({
-        title: 'Channel created',
-        description: `"${finalChannelName}" has been created successfully.`,
-      })
-
-      // Reset form
-      setChannelType('team')
-      setChannelName('')
-      setDescription('')
-      setSelectedClientId('')
-      setSelectedProjectId('')
-      setSelectedMemberIds([])
-      setIsPrivate(false)
-      setOpen(false)
-    } catch (error) {
-      console.error('Failed to create channel:', error)
-      toast({
-        title: 'Failed to create channel',
-        description: 'An error occurred while creating the channel.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsCreating(false)
+    // Determine channel name based on type
+    let finalChannelName = channelName.trim()
+    if (channelType === 'client' && selectedClient) {
+      finalChannelName = selectedClient.name
+    } else if (channelType === 'project' && selectedProject) {
+      finalChannelName = selectedProject.name
     }
+
+    const newChannel = {
+      type: channelType,
+      name: finalChannelName,
+      description: description.trim() || undefined,
+      clientId: channelType === 'client' ? selectedClientId : null,
+      projectId: channelType === 'project' ? selectedProjectId : null,
+      memberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
+    }
+
+    await Promise.resolve(onCreate?.(newChannel))
+      .then(() => {
+        toast({
+          title: 'Channel created',
+          description: `"${finalChannelName}" has been created successfully.`,
+        })
+
+        // Reset form
+        setChannelType('team')
+        setChannelName('')
+        setDescription('')
+        setSelectedClientId('')
+        setSelectedProjectId('')
+        setSelectedMemberIds([])
+        setIsPrivate(false)
+        setOpen(false)
+      })
+      .catch((error) => {
+        console.error('Failed to create channel:', error)
+        toast({
+          title: 'Failed to create channel',
+          description: 'An error occurred while creating the channel.',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setIsCreating(false)
+      })
   }, [
     workspaceId,
     userId,
@@ -180,10 +181,10 @@ export function CreateChannelDialog({
     selectedClientId,
     selectedProjectId,
     selectedMemberIds,
-    clients,
-    projects,
     onCreate,
     toast,
+    selectedClient,
+    selectedProject,
   ])
 
   const handleMemberToggle = useCallback((memberId: string) => {

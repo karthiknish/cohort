@@ -35,13 +35,13 @@ export function ShareMessageButton({ message, onShare, sharedTo = [] }: ShareMes
     setIsSharing(true)
     setShareError(null)
 
-    try {
-      await onShare('email')
-    } catch (error) {
-      setShareError(error instanceof Error ? error.message : 'Failed to share')
-    } finally {
-      setIsSharing(false)
-    }
+    await onShare('email')
+      .catch((error) => {
+        setShareError(error instanceof Error ? error.message : 'Failed to share')
+      })
+      .finally(() => {
+        setIsSharing(false)
+      })
   }
 
   const isSharedToEmail = sharedTo.includes('email')

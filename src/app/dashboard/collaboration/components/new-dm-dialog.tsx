@@ -59,16 +59,14 @@ export function NewDMDialog({
 
   const handleUserClick = async (user: { id: string; name?: string; role?: string | null }) => {
     setIsCreating(true)
-    try {
-      await onUserSelect({
-        id: user.id,
-        name: user.name ?? 'Unknown User',
-        role: user.role,
-      })
-    } finally {
+    await onUserSelect({
+      id: user.id,
+      name: user.name ?? 'Unknown User',
+      role: user.role,
+    }).finally(() => {
       setIsCreating(false)
       setSearchQuery('')
-    }
+    })
   }
 
   const getInitials = (name: string | null | undefined): string => {

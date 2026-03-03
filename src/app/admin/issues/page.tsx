@@ -73,37 +73,41 @@ export default function AdminIssuesPage() {
 
   const loading = reports === undefined
 
-  const handleStatusUpdate = async (id: string, newStatus: string) => {
+  const handleStatusUpdate = (id: string, newStatus: string) => {
     setUpdatingId(id)
-    try {
-      await updateReport({ legacyId: id, status: newStatus })
-      toast({ title: 'Status updated', description: `Report marked as ${newStatus}` })
-    } catch (error) {
-      console.error('Error updating status:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update report status',
-        variant: 'destructive',
+
+    void updateReport({ legacyId: id, status: newStatus })
+      .then(() => {
+        toast({ title: 'Status updated', description: `Report marked as ${newStatus}` })
       })
-    } finally {
-      setUpdatingId(null)
-    }
+      .catch((error) => {
+        console.error('Error updating status:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to update report status',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setUpdatingId(null)
+      })
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Are you sure you want to delete this report?')) return
 
-    try {
-      await removeReport({ legacyId: id })
-      toast({ title: 'Report deleted', description: 'The report has been removed.' })
-    } catch (error) {
-      console.error('Error deleting report:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to delete report',
-        variant: 'destructive',
+    void removeReport({ legacyId: id })
+      .then(() => {
+        toast({ title: 'Report deleted', description: 'The report has been removed.' })
       })
-    }
+      .catch((error) => {
+        console.error('Error deleting report:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to delete report',
+          variant: 'destructive',
+        })
+      })
   }
 
   const filteredReports = (reports ?? []).filter((r) => {

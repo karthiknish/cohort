@@ -134,26 +134,27 @@ export default function AdminTeamPage() {
     }
   }, [users])
 
-  const handleRoleChange = async (userId: string, role: AdminUserRecord['role']) => {
+  const handleRoleChange = (userId: string, role: AdminUserRecord['role']) => {
     setSavingId(userId)
     setError(null)
 
-    try {
-      await updateUserRoleStatus({ legacyId: userId, role })
-
-      setUsersOverride((prev) => {
-        const base = prev ?? users
-        return base.map((record) => (record.id === userId ? { ...record, role } : record))
+    void updateUserRoleStatus({ legacyId: userId, role })
+      .then(() => {
+        setUsersOverride((prev) => {
+          const base = prev ?? users
+          return base.map((record) => (record.id === userId ? { ...record, role } : record))
+        })
+        toast({ title: 'Role updated', description: `Member is now a ${role}.` })
       })
-      toast({ title: 'Role updated', description: `Member is now a ${role}.` })
-    } catch (err: unknown) {
-      logError(err, 'AdminTeamPage:handleRoleChange')
-      const message = asErrorMessage(err)
-      setError(message)
-      toast({ title: 'Role update failed', description: message, variant: 'destructive' })
-    } finally {
-      setSavingId(null)
-    }
+      .catch((err: unknown) => {
+        logError(err, 'AdminTeamPage:handleRoleChange')
+        const message = asErrorMessage(err)
+        setError(message)
+        toast({ title: 'Role update failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setSavingId(null)
+      })
   }
 
   const handleAdminToggle = (record: AdminUserRecord, makeAdmin: boolean) => {
@@ -169,63 +170,66 @@ export default function AdminTeamPage() {
     void handleRoleChange(record.id, fallbackRole)
   }
 
-  const handleStatusAction = async (userRecord: AdminUserRecord) => {
+  const handleStatusAction = (userRecord: AdminUserRecord) => {
     setSavingId(userRecord.id)
     setError(null)
 
     const nextStatus = deriveNextStatus(userRecord.status)
 
-    try {
-      await updateUserRoleStatus({ legacyId: userRecord.id, status: nextStatus })
-
-      setUsersOverride((prev) => {
-        const base = prev ?? users
-        return base.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record))
+    void updateUserRoleStatus({ legacyId: userRecord.id, status: nextStatus })
+      .then(() => {
+        setUsersOverride((prev) => {
+          const base = prev ?? users
+          return base.map((record) => (record.id === userRecord.id ? { ...record, status: nextStatus } : record))
+        })
+        toast({
+          title: 'Status updated',
+          description: `Member is now ${nextStatus.replace('_', ' ')}.`,
+        })
       })
-      toast({
-        title: 'Status updated',
-        description: `Member is now ${nextStatus.replace('_', ' ')}.`,
+      .catch((err: unknown) => {
+        logError(err, 'AdminTeamPage:handleStatusAction')
+        const message = asErrorMessage(err)
+        setError(message)
+        toast({ title: 'Status update failed', description: message, variant: 'destructive' })
       })
-    } catch (err: unknown) {
-      logError(err, 'AdminTeamPage:handleStatusAction')
-      const message = asErrorMessage(err)
-      setError(message)
-      toast({ title: 'Status update failed', description: message, variant: 'destructive' })
-    } finally {
-      setSavingId(null)
-    }
+      .finally(() => {
+        setSavingId(null)
+      })
   }
 
-  const handleInviteUser = async () => {
+  const handleInviteUser = () => {
     if (!inviteEmail) return
     
     setInviteSending(true)
-    try {
-      await createInvitation({
-        email: inviteEmail,
-        role: inviteRole,
-        invitedBy: user!.id,
-        invitedByName: user?.name ?? null,
-      })
 
-      const emailSent = true
-      
-      toast({
-        title: 'Invitation sent!',
-        description: emailSent 
-          ? `${inviteEmail} will receive an invite to join as ${inviteRole}.`
-          : `Invitation created for ${inviteEmail}, but email delivery failed.`,
+    void createInvitation({
+      email: inviteEmail,
+      role: inviteRole,
+      invitedBy: user!.id,
+      invitedByName: user?.name ?? null,
+    })
+      .then(() => {
+        const emailSent = true
+
+        toast({
+          title: 'Invitation sent!',
+          description: emailSent
+            ? `${inviteEmail} will receive an invite to join as ${inviteRole}.`
+            : `Invitation created for ${inviteEmail}, but email delivery failed.`,
+        })
+        setInviteOpen(false)
+        setInviteEmail('')
+        setInviteRole('team')
       })
-      setInviteOpen(false)
-      setInviteEmail('')
-      setInviteRole('team')
-    } catch (err: unknown) {
-      logError(err, 'AdminTeamPage:handleInviteUser')
-      const message = asErrorMessage(err)
-      toast({ title: 'Invitation failed', description: message, variant: 'destructive' })
-    } finally {
-      setInviteSending(false)
-    }
+      .catch((err: unknown) => {
+        logError(err, 'AdminTeamPage:handleInviteUser')
+        const message = asErrorMessage(err)
+        toast({ title: 'Invitation failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setInviteSending(false)
+      })
   }
 
   const handleRefresh = () => {
@@ -491,14 +495,18 @@ export default function AdminTeamPage() {
                 <Button
                   type="button"
                   variant="outline"
-                   onClick={async () => {
+                   onClick={() => {
                      if (loadingMore) return
                      setLoadingMore(true)
-                     try {
-                       await loadMore(50)
-                     } finally {
-                       setLoadingMore(false)
-                     }
+
+                     void Promise.resolve()
+                       .then(() => loadMore(50))
+                       .catch((err: unknown) => {
+                         logError(err, 'AdminTeamPage:loadMore')
+                       })
+                       .finally(() => {
+                         setLoadingMore(false)
+                       })
                    }}
 
                   disabled={loadingMore}

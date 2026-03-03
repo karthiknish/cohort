@@ -78,57 +78,57 @@ export function MessageForwardDialog({
 
     setIsForwarding(true)
 
-    try {
-      // Generate a unique ID for the forwarded message
-      const newMessageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    // Generate a unique ID for the forwarded message
+    const newMessageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-      // Prepare the forwarded content
-      const forwardedContent = forwardMessage.trim()
-        ? `${forwardMessage.trim()}\n\n---\n\n*Forwarded message from ${message.senderName}:*\n\n${message.content}`
-        : `*Forwarded message from ${message.senderName}:*\n\n${message.content}`
+    // Prepare the forwarded content
+    const forwardedContent = forwardMessage.trim()
+      ? `${forwardMessage.trim()}\n\n---\n\n*Forwarded message from ${message.senderName}:*\n\n${message.content}`
+      : `*Forwarded message from ${message.senderName}:*\n\n${message.content}`
 
-      // Prepare attachments if included
-      const attachments = includeAttachments && message.attachments ? message.attachments : undefined
+    // Prepare attachments if included
+    const attachments = includeAttachments && message.attachments ? message.attachments : undefined
 
-      // Create the forwarded message
-      await createMessage({
-        workspaceId: String(workspaceId),
-        legacyId: newMessageId,
-        channelType: selectedChannel.type,
-        clientId: selectedChannel.type === 'client' ? selectedChannel.id : null,
-        projectId: selectedChannel.type === 'project' ? selectedChannel.id : null,
-        senderId: String(userId),
-        senderName: 'You', // Would be populated from user context
-        senderRole: null,
-        content: forwardedContent,
-        format: 'markdown',
-        attachments,
-        mentions: [],
-        isThreadRoot: true,
+    await createMessage({
+      workspaceId: String(workspaceId),
+      legacyId: newMessageId,
+      channelType: selectedChannel.type,
+      clientId: selectedChannel.type === 'client' ? selectedChannel.id : null,
+      projectId: selectedChannel.type === 'project' ? selectedChannel.id : null,
+      senderId: String(userId),
+      senderName: 'You', // Would be populated from user context
+      senderRole: null,
+      content: forwardedContent,
+      format: 'markdown',
+      attachments,
+      mentions: [],
+      isThreadRoot: true,
+    })
+      .then(() => {
+        toast({
+          title: 'Message forwarded',
+          description: `Message has been forwarded to ${selectedChannel.name}.`,
+        })
+
+        onForward?.()
+        onOpenChange(false)
+
+        // Reset form
+        setSelectedChannelId('')
+        setForwardMessage('')
+        setIncludeAttachments(true)
       })
-
-      toast({
-        title: 'Message forwarded',
-        description: `Message has been forwarded to ${selectedChannel.name}.`,
+      .catch((error) => {
+        logError(error, 'MessageForwardDialog:handleForward')
+        toast({
+          title: 'Failed to forward message',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
-
-      onForward?.()
-      onOpenChange(false)
-
-      // Reset form
-      setSelectedChannelId('')
-      setForwardMessage('')
-      setIncludeAttachments(true)
-    } catch (error) {
-      logError(error, 'MessageForwardDialog:handleForward')
-      toast({
-        title: 'Failed to forward message',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+      .finally(() => {
+        setIsForwarding(false)
       })
-    } finally {
-      setIsForwarding(false)
-    }
   }, [
     message,
     workspaceId,

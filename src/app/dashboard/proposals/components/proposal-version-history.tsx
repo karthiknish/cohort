@@ -131,40 +131,48 @@ export function ProposalVersionHistory({
       return
     }
 
-    try {
-      setSaving(true)
-      if (!workspaceId) {
-        throw new Error('Workspace context missing')
-      }
+    setSaving(true)
 
-      const res = await createSnapshot({
-        workspaceId,
-        proposalLegacyId: proposalId,
-        changeDescription: 'Manual save point',
-        createdBy: user?.id ?? '',
-        createdByName: user?.email ?? null,
-      })
-
-      const created = res?.version
-      if (!created) {
-        throw new Error('Failed to create version')
-      }
-
-      toast({
-        title: 'Version saved',
-        description: `Version ${created.versionNumber} has been saved.`,
-      })
-    } catch (error) {
-      console.error('Failed to save version:', error)
+    if (!workspaceId) {
       toast({
         title: 'Failed to save version',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: 'Workspace context missing',
         variant: 'destructive',
       })
-    } finally {
       setSaving(false)
+      return
     }
-  }, [proposalId, toast])
+
+    await createSnapshot({
+      workspaceId,
+      proposalLegacyId: proposalId,
+      changeDescription: 'Manual save point',
+      createdBy: user?.id ?? '',
+      createdByName: user?.email ?? null,
+    })
+      .then((res) => {
+        const created = res?.version
+        if (!created) {
+          throw new Error('Failed to create version')
+        }
+
+        toast({
+          title: 'Version saved',
+          description: `Version ${created.versionNumber} has been saved.`,
+        })
+      })
+      .catch((error) => {
+        console.error('Failed to save version:', error)
+        toast({
+          title: 'Failed to save version',
+          description: error instanceof Error ? error.message : 'An error occurred',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setSaving(false)
+      })
+  }, [createSnapshot, proposalId, toast, user?.email, user?.id, workspaceId])
 
   const handleRestoreVersion = useCallback(async () => {
     if (!proposalId || !restoreConfirmVersion) return
@@ -178,38 +186,46 @@ export function ProposalVersionHistory({
       return
     }
 
-    try {
-      setRestoring(true)
-      if (!workspaceId) {
-        throw new Error('Workspace context missing')
-      }
+    setRestoring(true)
 
-      const result = await restoreToVersion({
-        workspaceId,
-        proposalLegacyId: proposalId,
-        versionLegacyId: restoreConfirmVersion.id,
-        createdBy: user?.id ?? '',
-        createdByName: user?.email ?? null,
-      })
-
-      onVersionRestored(restoreConfirmVersion.formData)
-
-      toast({
-        title: 'Version restored',
-        description: `Restored to version ${result.restoredFromVersion}. Your previous state was saved as version ${result.newVersion - 1}.`,
-      })
-
-      setRestoreConfirmVersion(null)
-    } catch (error) {
-      console.error('Failed to restore version:', error)
+    if (!workspaceId) {
       toast({
         title: 'Failed to restore version',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        description: 'Workspace context missing',
         variant: 'destructive',
       })
-    } finally {
       setRestoring(false)
+      return
     }
+
+    await restoreToVersion({
+      workspaceId,
+      proposalLegacyId: proposalId,
+      versionLegacyId: restoreConfirmVersion.id,
+      createdBy: user?.id ?? '',
+      createdByName: user?.email ?? null,
+    })
+      .then((result) => {
+        onVersionRestored(restoreConfirmVersion.formData)
+
+        toast({
+          title: 'Version restored',
+          description: `Restored to version ${result.restoredFromVersion}. Your previous state was saved as version ${result.newVersion - 1}.`,
+        })
+
+        setRestoreConfirmVersion(null)
+      })
+      .catch((error) => {
+        console.error('Failed to restore version:', error)
+        toast({
+          title: 'Failed to restore version',
+          description: error instanceof Error ? error.message : 'An error occurred',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setRestoring(false)
+      })
   }, [proposalId, restoreConfirmVersion, onVersionRestored, toast, restoreToVersion, user?.email, user?.id, workspaceId])
 
   const versionSummary = useMemo(() => {

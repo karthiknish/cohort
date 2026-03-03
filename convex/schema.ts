@@ -248,6 +248,7 @@ export default defineSchema({
     role: v.union(v.string(), v.null()),
     status: v.union(v.string(), v.null()),
     agencyId: v.union(v.string(), v.null()),
+    stripeCustomerId: v.optional(v.union(v.string(), v.null())),
 
     phoneNumber: v.optional(v.union(v.string(), v.null())),
     photoUrl: v.optional(v.union(v.string(), v.null())),
@@ -503,6 +504,15 @@ export default defineSchema({
     name: v.string(),
     nameLower: v.string(),
     accountManager: v.string(),
+    billingEmail: v.optional(v.union(v.string(), v.null())),
+    stripeCustomerId: v.optional(v.union(v.string(), v.null())),
+    lastInvoiceAmount: v.optional(v.union(v.number(), v.null())),
+    lastInvoiceCurrency: v.optional(v.union(v.string(), v.null())),
+    lastInvoiceIssuedAtMs: v.optional(v.union(v.number(), v.null())),
+    lastInvoiceNumber: v.optional(v.union(v.string(), v.null())),
+    lastInvoicePaidAtMs: v.optional(v.union(v.number(), v.null())),
+    lastInvoiceStatus: v.optional(v.union(v.string(), v.null())),
+    lastInvoiceUrl: v.optional(v.union(v.string(), v.null())),
     teamMembers: v.array(
       v.object({
         name: v.string(),

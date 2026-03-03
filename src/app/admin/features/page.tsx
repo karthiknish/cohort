@@ -90,60 +90,62 @@ export default function AdminFeaturesPage() {
     setDeleteConfirmOpen(true)
   }, [])
 
-  const confirmDelete = useCallback(async () => {
+  const confirmDelete = useCallback(() => {
     if (!featureToDelete) return
 
     setIsDeleting(true)
 
-    try {
-      await deleteFeature({ id: featureToDelete.id as any })
-      toast({
-        title: 'Feature deleted',
-        description: 'The feature has been removed from the board.',
+    void deleteFeature({ id: featureToDelete.id as any })
+      .then(() => {
+        toast({
+          title: 'Feature deleted',
+          description: 'The feature has been removed from the board.',
+        })
       })
-    } catch (error) {
-      logError(error, 'AdminFeaturesPage:confirmDelete')
-      console.error('Failed to delete feature:', error)
-      toast({
-        title: 'Delete failed',
-        description: 'Unable to delete the feature. Please try again.',
-        variant: 'destructive',
+      .catch((error) => {
+        logError(error, 'AdminFeaturesPage:confirmDelete')
+        console.error('Failed to delete feature:', error)
+        toast({
+          title: 'Delete failed',
+          description: 'Unable to delete the feature. Please try again.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setIsDeleting(false)
-      setDeleteConfirmOpen(false)
-      setFeatureToDelete(null)
-    }
-  }, [featureToDelete, toast])
+      .finally(() => {
+        setIsDeleting(false)
+        setDeleteConfirmOpen(false)
+        setFeatureToDelete(null)
+      })
+  }, [featureToDelete, toast, deleteFeature])
 
   const handleMoveFeature = useCallback(
-    async (featureId: string, newStatus: FeatureStatus) => {
+    (featureId: string, newStatus: FeatureStatus) => {
       const feature = features.find((f) => f.id === featureId)
       if (!feature || feature.status === newStatus) return
 
-      try {
-        await updateFeature({ id: featureId as any, status: newStatus as any })
-
-        toast({
-          title: 'Status updated',
-          description: `Feature moved to ${newStatus.replace('_', ' ')}.`,
+      void updateFeature({ id: featureId as any, status: newStatus as any })
+        .then(() => {
+          toast({
+            title: 'Status updated',
+            description: `Feature moved to ${newStatus.replace('_', ' ')}.`,
+          })
         })
-      } catch (error) {
-        logError(error, 'AdminFeaturesPage:handleMoveFeature')
-        console.error('Failed to move feature:', error)
-        // Convex is source of truth; UI will settle automatically.
-        toast({
-          title: 'Move failed',
-          description: 'Unable to update the feature status.',
-          variant: 'destructive',
+        .catch((error) => {
+          logError(error, 'AdminFeaturesPage:handleMoveFeature')
+          console.error('Failed to move feature:', error)
+          // Convex is source of truth; UI will settle automatically.
+          toast({
+            title: 'Move failed',
+            description: 'Unable to update the feature status.',
+            variant: 'destructive',
+          })
         })
-      }
     },
-    [features, toast]
+    [features, toast, updateFeature]
   )
 
   const handleSubmitFeature = useCallback(
-    async (data: {
+    (data: {
       title: string
       description: string
       status: FeatureStatus
@@ -151,10 +153,9 @@ export default function AdminFeaturesPage() {
       imageUrl: string | null
       references: FeatureReference[]
     }) => {
-      try {
-        if (editingFeature) {
-          // Update existing feature
-          await updateFeature({
+
+      const operation = editingFeature
+        ? updateFeature({
             id: editingFeature.id as any,
             title: data.title,
             description: data.description,
@@ -163,14 +164,7 @@ export default function AdminFeaturesPage() {
             imageUrl: data.imageUrl,
             references: data.references,
           })
-
-          toast({
-            title: 'Feature updated',
-            description: 'Your changes have been saved.',
-          })
-        } else {
-          // Create new feature
-          await createFeature({
+        : createFeature({
             title: data.title,
             description: data.description,
             status: data.status as any,
@@ -179,20 +173,24 @@ export default function AdminFeaturesPage() {
             references: data.references,
           })
 
+      return operation
+        .then(() => {
           toast({
-            title: 'Feature added',
-            description: 'The new feature has been added to the board.',
+            title: editingFeature ? 'Feature updated' : 'Feature added',
+            description: editingFeature
+              ? 'Your changes have been saved.'
+              : 'The new feature has been added to the board.',
           })
-        }
-      } catch (error) {
-        logError(error, 'AdminFeaturesPage:handleSubmitFeature')
-        console.error('Failed to save feature:', error)
-        toast({
-          title: 'Save failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
         })
-      }
+        .catch((error) => {
+          logError(error, 'AdminFeaturesPage:handleSubmitFeature')
+          console.error('Failed to save feature:', error)
+          toast({
+            title: 'Save failed',
+            description: asErrorMessage(error),
+            variant: 'destructive',
+          })
+        })
     },
     [editingFeature, toast, createFeature, updateFeature]
   )

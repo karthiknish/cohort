@@ -80,19 +80,21 @@ export function CrossChannelSearch({
     if (!query.trim() || isSearching) return
 
     setIsSearching(true)
-    try {
-      const searchResults = await onSearch({
-        query: query.trim(),
-        channelType: selectedChannelType === 'all' ? undefined : selectedChannelType,
-        hasAttachment: hasAttachment || undefined,
-        hasLink: hasLink || undefined,
+    await onSearch({
+      query: query.trim(),
+      channelType: selectedChannelType === 'all' ? undefined : selectedChannelType,
+      hasAttachment: hasAttachment || undefined,
+      hasLink: hasLink || undefined,
+    })
+      .then((searchResults) => {
+        setResults(searchResults)
       })
-      setResults(searchResults)
-    } catch (error) {
-      console.error('Search failed:', error)
-    } finally {
-      setIsSearching(false)
-    }
+      .catch((error) => {
+        console.error('Search failed:', error)
+      })
+      .finally(() => {
+        setIsSearching(false)
+      })
   }, [query, selectedChannelType, hasAttachment, hasLink, isSearching, onSearch])
 
   const handleKeyDown = useCallback(
