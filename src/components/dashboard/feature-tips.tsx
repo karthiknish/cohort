@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { X, Lightbulb, ChevronRight, ChevronLeft } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -26,17 +26,26 @@ interface FeatureTipsProps {
 export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [dismissed, setDismissed] = useState(false)
-  const [isClient, setIsClient] = useState(false)
 
-  useEffect(() => {
-    setIsClient(true)
-    const stored = localStorage.getItem(`tips_dismissed_${storageKey}`)
-    if (stored === 'true') {
-      setDismissed(true)
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
+
+  const isStoredDismissed = useMemo(() => {
+    if (!isHydrated) {
+      return false
     }
-  }, [storageKey])
 
-  if (!isClient || dismissed || tips.length === 0) {
+    try {
+      return localStorage.getItem(`tips_dismissed_${storageKey}`) === 'true'
+    } catch {
+      return false
+    }
+  }, [isHydrated, storageKey])
+
+  if (!isHydrated || dismissed || isStoredDismissed || tips.length === 0) {
     return null
   }
 

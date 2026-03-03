@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import { DollarSign, RefreshCw, Save } from 'lucide-react'
 
@@ -93,25 +93,15 @@ export function BudgetControlSection({
   const modeOptions = useMemo(() => getBudgetModeOptions(providerId), [providerId])
   const initialMode = useMemo(() => parseBudgetMode(providerId, budgetType) ?? modeOptions[0]?.value ?? null, [budgetType, modeOptions, providerId])
 
-  const [amount, setAmount] = useState<string>('')
+  const [amount, setAmount] = useState<string>(() =>
+    typeof budget === 'number' && Number.isFinite(budget) ? String(budget) : ''
+  )
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const updateCampaign = useAction(adsCampaignsApi.updateCampaign)
 
-  const [mode, setMode] = useState<BudgetUiMode | null>(initialMode)
+  const [mode, setMode] = useState<BudgetUiMode | null>(() => initialMode)
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    setMode(initialMode)
-  }, [initialMode])
-
-  useEffect(() => {
-    // Only fill input automatically when empty (avoid clobbering user edits)
-    if (amount.trim().length > 0) return
-    if (typeof budget === 'number' && Number.isFinite(budget)) {
-      setAmount(String(budget))
-    }
-  }, [budget])
 
   const currentBudgetLabel = useMemo(() => {
     if (typeof budget !== 'number' || !Number.isFinite(budget)) return 'Not set'

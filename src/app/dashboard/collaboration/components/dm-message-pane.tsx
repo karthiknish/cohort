@@ -125,21 +125,21 @@ export function DMMessagePane({
     if (!onShareToPlatform) return
     
     setSharingTo(`${message.legacyId}-${platform}`)
-    try {
-      await onShareToPlatform(message, platform)
+    await onShareToPlatform(message, platform)
+      .then(() => {
       toast({
         title: 'Message shared',
         description: `Sent to ${PLATFORM_CONFIG[platform].label}`,
       })
-    } catch (error) {
+      })
+      .catch(() => {
       toast({
         title: 'Share failed',
         description: `Could not send to ${PLATFORM_CONFIG[platform].label}`,
         variant: 'destructive',
       })
-    } finally {
-      setSharingTo(null)
-    }
+      })
+    setSharingTo(null)
   }
 
   const renderMessageExtras = (message: UnifiedMessage) => {

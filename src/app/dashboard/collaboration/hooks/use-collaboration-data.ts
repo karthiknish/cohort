@@ -121,6 +121,8 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     pendingAttachments,
     handleAddAttachments,
     handleRemoveAttachment,
+    clearPendingAttachments: clearAttachments,
+    uploadPendingAttachments: uploadAttachments,
     uploading,
 
     typingParticipants: messages.typingParticipants,

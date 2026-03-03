@@ -225,18 +225,21 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
 }
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(true)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') {
+      return true
+    }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
     try {
       const stored = localStorage.getItem('cohorts.sidebar.collapsed')
-      if (stored === 'true') setCollapsed(true)
-      if (stored === 'false') setCollapsed(false)
+      if (stored === 'true') return true
+      if (stored === 'false') return false
     } catch {
       // ignore storage failures
     }
-  }, [])
+
+    return true
+  })
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {

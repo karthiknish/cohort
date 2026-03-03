@@ -118,26 +118,28 @@ export function DashboardExport({
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       setIsExporting(true)
-      try {
-        await onExport?.(format, {
-          includeHeaders,
-          includeMetadata,
+      await Promise.resolve(onExport?.(format, {
+        includeHeaders,
+        includeMetadata,
+      }))
+        .then(() => {
+          toast({
+            title: 'Export successful',
+            description: `Your data has been exported as ${format.toUpperCase()}.`,
+          })
+          setOpen(false)
         })
-        toast({
-          title: 'Export successful',
-          description: `Your data has been exported as ${format.toUpperCase()}.`,
+        .catch((error) => {
+          console.error('Export failed:', error)
+          toast({
+            title: 'Export failed',
+            description: 'An error occurred while exporting your data.',
+            variant: 'destructive',
+          })
         })
-        setOpen(false)
-      } catch (error) {
-        console.error('Export failed:', error)
-        toast({
-          title: 'Export failed',
-          description: 'An error occurred while exporting your data.',
-          variant: 'destructive',
+        .finally(() => {
+          setIsExporting(false)
         })
-      } finally {
-        setIsExporting(false)
-      }
     },
     [onExport, includeHeaders, includeMetadata, toast]
   )
@@ -276,58 +278,62 @@ export function QuickExportButton({
 
   const handleExport = useCallback(async () => {
     setIsExporting(true)
-    try {
-      let content: string
-      let mimeType: string
-      let extension: string
+    await Promise.resolve()
+      .then(() => {
+        let content: string
+        let mimeType: string
+        let extension: string
 
-      switch (format) {
-        case 'csv':
-          const headers = Object.keys(data[0] as Record<string, unknown>)
-          const rows = data.map((row) =>
-            headers.map((h) => {
-              const value = (row as Record<string, unknown>)[h]
-              return escapeCsvValue(value)
-            })
-          )
-          content = [headers.join(','), ...rows].join('\n')
-          mimeType = 'text/csv;charset=utf-8;'
-          extension = 'csv'
-          break
+        switch (format) {
+          case 'csv': {
+            const headers = Object.keys(data[0] as Record<string, unknown>)
+            const rows = data.map((row) =>
+              headers.map((h) => {
+                const value = (row as Record<string, unknown>)[h]
+                return escapeCsvValue(value)
+              })
+            )
+            content = [headers.join(','), ...rows].join('\n')
+            mimeType = 'text/csv;charset=utf-8;'
+            extension = 'csv'
+            break
+          }
 
-        case 'json':
-          content = JSON.stringify(data, null, 2)
-          mimeType = 'application/json;charset=utf-8;'
-          extension = 'json'
-          break
+          case 'json':
+            content = JSON.stringify(data, null, 2)
+            mimeType = 'application/json;charset=utf-8;'
+            extension = 'json'
+            break
 
-        default:
-          throw new Error(`Unsupported format: ${format}`)
-      }
+          default:
+            throw new Error(`Unsupported format: ${format}`)
+        }
 
-      const blob = new Blob([content], { type: mimeType })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${filename || 'export'}.${extension}`
-      link.click()
-      URL.revokeObjectURL(url)
+        const blob = new Blob([content], { type: mimeType })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${filename || 'export'}.${extension}`
+        link.click()
+        URL.revokeObjectURL(url)
 
-      toast({
-        title: 'Export complete',
-        description: `Your data has been exported as ${extension.toUpperCase()}.`,
+        toast({
+          title: 'Export complete',
+          description: `Your data has been exported as ${extension.toUpperCase()}.`,
+        })
+        onComplete?.()
       })
-      onComplete?.()
-    } catch (error) {
-      console.error('Export failed:', error)
-      toast({
-        title: 'Export failed',
-        description: 'An error occurred while exporting your data.',
-        variant: 'destructive',
+      .catch((error) => {
+        console.error('Export failed:', error)
+        toast({
+          title: 'Export failed',
+          description: 'An error occurred while exporting your data.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setIsExporting(false)
-    }
+      .finally(() => {
+        setIsExporting(false)
+      })
   }, [data, filename, format, toast, onComplete])
 
   return (
@@ -382,22 +388,25 @@ export function ScheduledExportDialog({
 
   const handleSchedule = useCallback(() => {
     setIsScheduling(true)
-    try {
-      onSchedule?.({ format, frequency, recipients })
-      toast({
-        title: 'Scheduled export created',
-        description: `You'll receive ${format.toUpperCase()} exports ${frequency}.`,
+    Promise.resolve()
+      .then(() => {
+        onSchedule?.({ format, frequency, recipients })
+        toast({
+          title: 'Scheduled export created',
+          description: `You'll receive ${format.toUpperCase()} exports ${frequency}.`,
+        })
+        setOpen(false)
       })
-      setOpen(false)
-    } catch (error) {
-      console.error('Failed to schedule export:', error)
-      toast({
-        title: 'Failed to schedule',
-        variant: 'destructive',
+      .catch((error) => {
+        console.error('Failed to schedule export:', error)
+        toast({
+          title: 'Failed to schedule',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setIsScheduling(false)
-    }
+      .finally(() => {
+        setIsScheduling(false)
+      })
   }, [format, frequency, recipients, onSchedule, toast])
 
   return (

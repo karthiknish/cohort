@@ -190,63 +190,67 @@ export default function ProjectsPage() {
       setError(null)
     }
 
-    try {
-      if (!projectsRealtime) {
-        return
-      }
-
-      const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
-
-      const mapped: ProjectRecord[] = rows.map((row: any) => ({
-        id: String(row.legacyId),
-        name: String(row.name ?? ''),
-        description: typeof row.description === 'string' ? row.description : null,
-        status: row.status as ProjectStatus,
-        clientId: typeof row.clientId === 'string' ? row.clientId : null,
-        clientName: typeof row.clientName === 'string' ? row.clientName : null,
-        startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
-        endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
-        tags: Array.isArray(row.tags) ? row.tags : [],
-        ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
-        createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-        updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-        taskCount: 0,
-        openTaskCount: 0,
-        recentActivityAt: null,
-        deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-      }))
-
-      setProjects(mapped)
-      setError(null)
-      setRetryCount(0)
-    } catch (fetchError: unknown) {
-      // Ignore abort errors
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        return
-      }
-
-      logError(fetchError, 'ProjectsPage:loadProjects')
-      const message = asErrorMessage(fetchError)
-
-      // Retry on network errors
-      if (retryAttempt < RETRY_CONFIG.maxRetries && isNetworkError(fetchError)) {
-        const delay = calculateBackoffDelay(retryAttempt)
-        console.warn(`[Projects] Network error, retrying in ${delay}ms (attempt ${retryAttempt + 1}/${RETRY_CONFIG.maxRetries})`)
-        setRetryCount(retryAttempt + 1)
-        await sleep(delay)
-        return loadProjects(retryAttempt + 1)
-      }
-
-      setProjects([])
-      setError(message)
-      toast({
-        title: 'Failed to load projects',
-        description: `${message}. Please check your connection and try again.`,
-        variant: 'destructive',
-      })
-    } finally {
+    if (!projectsRealtime) {
       setLoading(false)
+      return
     }
+
+    await Promise.resolve()
+      .then(async () => {
+        const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
+
+        const mapped: ProjectRecord[] = rows.map((row: any) => ({
+          id: String(row.legacyId),
+          name: String(row.name ?? ''),
+          description: typeof row.description === 'string' ? row.description : null,
+          status: row.status as ProjectStatus,
+          clientId: typeof row.clientId === 'string' ? row.clientId : null,
+          clientName: typeof row.clientName === 'string' ? row.clientName : null,
+          startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+          endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+          tags: Array.isArray(row.tags) ? row.tags : [],
+          ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+          createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+          updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+          taskCount: 0,
+          openTaskCount: 0,
+          recentActivityAt: null,
+          deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+        }))
+
+        setProjects(mapped)
+        setError(null)
+        setRetryCount(0)
+      })
+      .catch(async (fetchError: unknown) => {
+        // Ignore abort errors
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          return
+        }
+
+        logError(fetchError, 'ProjectsPage:loadProjects')
+        const message = asErrorMessage(fetchError)
+
+        // Retry on network errors
+        if (retryAttempt < RETRY_CONFIG.maxRetries && isNetworkError(fetchError)) {
+          const delay = calculateBackoffDelay(retryAttempt)
+          console.warn(`[Projects] Network error, retrying in ${delay}ms (attempt ${retryAttempt + 1}/${RETRY_CONFIG.maxRetries})`)
+          setRetryCount(retryAttempt + 1)
+          await sleep(delay)
+          return loadProjects(retryAttempt + 1)
+        }
+
+        setProjects([])
+        setError(message)
+        toast({
+          title: 'Failed to load projects',
+          description: `${message}. Please check your connection and try again.`,
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [debouncedQuery, isPreviewMode, selectedClientId, statusFilter, user?.id, workspaceId, toast, projectsRealtime])
 
   const loadMilestones = useCallback(async (_projectIds: string[]) => {
@@ -277,34 +281,37 @@ export default function ProjectsPage() {
       return
     }
 
-    try {
-      const mapped: Record<string, MilestoneRecord[]> = {}
+    Promise.resolve()
+      .then(() => {
+        const mapped: Record<string, MilestoneRecord[]> = {}
 
-      for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
-        const list = Array.isArray(rows) ? rows : []
-        mapped[projectId] = list.map((row: any) => ({
-          id: String(row.legacyId),
-          projectId: String(row.projectId),
-          title: String(row.title ?? ''),
-          description: typeof row.description === 'string' ? row.description : null,
-          status: row.status,
-          startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
-          endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
-          ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
-          order: typeof row.order === 'number' ? row.order : null,
-          createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-          updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-        }))
-      }
+        for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
+          const list = Array.isArray(rows) ? rows : []
+          mapped[projectId] = list.map((row: any) => ({
+            id: String(row.legacyId),
+            projectId: String(row.projectId),
+            title: String(row.title ?? ''),
+            description: typeof row.description === 'string' ? row.description : null,
+            status: row.status,
+            startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+            endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+            ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+            order: typeof row.order === 'number' ? row.order : null,
+            createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+            updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+          }))
+        }
 
-      setMilestonesByProject(mapped)
-    } catch (err) {
-      logError(err, 'ProjectsPage:milestonesEffect')
-      setMilestonesError(asErrorMessage(err))
-      setMilestonesByProject({})
-    } finally {
-      setMilestonesLoading(false)
-    }
+        setMilestonesByProject(mapped)
+      })
+      .catch((err) => {
+        logError(err, 'ProjectsPage:milestonesEffect')
+        setMilestonesError(asErrorMessage(err))
+        setMilestonesByProject({})
+      })
+      .finally(() => {
+        setMilestonesLoading(false)
+      })
   }, [isPreviewMode, viewMode, milestonesRealtime])
 
   // Keyboard shortcuts
@@ -360,28 +367,37 @@ export default function ProjectsPage() {
     if (!user?.id) return
 
     setDeleting(true)
-    try {
-      if (!workspaceId) throw new Error('Missing workspace')
-      await softDeleteProject({
-        workspaceId,
-        legacyId: projectToDelete.id,
-        deletedAtMs: Date.now(),
-      })
 
-      setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
-      emitDashboardRefresh({ reason: 'project-mutated', clientId: projectToDelete.clientId ?? null })
-      toast({
-        title: 'Project deleted',
-        description: `"${projectToDelete.name}" has been permanently removed.`,
-      })
-    } catch (error) {
-      logError(error, 'ProjectsPage:handleDeleteProject')
-      toast({ title: 'Deletion failed', description: asErrorMessage(error), variant: 'destructive' })
-    } finally {
+    if (!workspaceId) {
+      toast({ title: 'Deletion failed', description: 'Missing workspace', variant: 'destructive' })
       setDeleting(false)
       setDeleteDialogOpen(false)
       setProjectToDelete(null)
+      return
     }
+
+    await softDeleteProject({
+      workspaceId,
+      legacyId: projectToDelete.id,
+      deletedAtMs: Date.now(),
+    })
+      .then(() => {
+        setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id))
+        emitDashboardRefresh({ reason: 'project-mutated', clientId: projectToDelete.clientId ?? null })
+        toast({
+          title: 'Project deleted',
+          description: `"${projectToDelete.name}" has been permanently removed.`,
+        })
+      })
+      .catch((error) => {
+        logError(error, 'ProjectsPage:handleDeleteProject')
+        toast({ title: 'Deletion failed', description: asErrorMessage(error), variant: 'destructive' })
+      })
+      .finally(() => {
+        setDeleting(false)
+        setDeleteDialogOpen(false)
+        setProjectToDelete(null)
+      })
   }, [projectToDelete, isPreviewMode, user?.id, workspaceId, softDeleteProject, toast])
 
   const updateStatusMutation = useTanstackMutation({

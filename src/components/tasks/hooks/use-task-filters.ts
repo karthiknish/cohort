@@ -4,6 +4,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TaskRecord, TaskStatus, TASK_STATUSES } from '@/types/tasks'
 import { SortField, SortDirection, PRIORITY_ORDER } from '../task-types'
 
+const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode'
+
+function getInitialTaskViewMode(): 'list' | 'grid' | 'board' {
+  if (typeof window === 'undefined') {
+    return 'list'
+  }
+
+  const persisted = window.localStorage.getItem(TASK_VIEW_MODE_STORAGE_KEY)
+  if (persisted === 'list' || persisted === 'grid' || persisted === 'board') {
+    return persisted
+  }
+
+  return 'list'
+}
+
 export type UseTaskFiltersOptions = {
   tasks: TaskRecord[]
   userName: string | undefined
@@ -66,7 +81,7 @@ export function useTaskFilters({
   const [activeTabInternal, setActiveTabInternal] = useState('all-tasks')
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'board'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'board'>(() => getInitialTaskViewMode())
 
   const activeTab = controlledActiveTab ?? activeTabInternal
   const setActiveTab = controlledSetActiveTab ?? setActiveTabInternal
@@ -227,6 +242,11 @@ export function useTaskFilters({
       setSelectedAssignee('all')
     }
   }, [assigneeOptions, selectedAssignee])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(TASK_VIEW_MODE_STORAGE_KEY, viewMode)
+  }, [viewMode])
 
   return {
     selectedStatus,

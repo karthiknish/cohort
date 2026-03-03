@@ -10,13 +10,10 @@ type LazyImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
 
 export function LazyImage({ src, alt = '', className, rootMargin = '200px', onLoad, onError, ...rest }: LazyImageProps) {
   const [isVisible, setIsVisible] = useState(false)
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [loadedSrc, setLoadedSrc] = useState<string | undefined>(undefined)
   const imgRef = useRef<HTMLImageElement | null>(null)
 
-  useEffect(() => {
-    setIsVisible(false)
-    setIsLoaded(false)
-  }, [src])
+  const isLoaded = Boolean(src) && loadedSrc === src
 
   useEffect(() => {
     const node = imgRef.current
@@ -49,7 +46,9 @@ export function LazyImage({ src, alt = '', className, rootMargin = '200px', onLo
       loading="lazy"
       decoding="async"
       onLoad={(event) => {
-        setIsLoaded(true)
+        if (typeof src === 'string') {
+          setLoadedSrc(src)
+        }
         onLoad?.(event)
       }}
       onError={(event) => {

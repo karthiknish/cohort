@@ -214,52 +214,62 @@ export default function CampaignInsightsPage() {
     const end = campaignStop && campaignStop <= now ? campaignStop : now
     // Always use campaign start if available
     const start = campaignStart ?? new Date(new Date(end).setDate(end.getDate() - 30))
-    setDateRange(clampDateRange({ start, end }))
+
+    const frameId = requestAnimationFrame(() => {
+      setDateRange(clampDateRange({ start, end }))
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
   }, [campaign?.startTime, campaign?.stopTime, dateRangeTouched])
 
   const loadCampaign = useCallback(async () => {
     setCampaignLoading(true)
     setCampaignError(null)
 
-    try {
-      // Use preview data when in preview mode
-      if (isPreviewMode) {
-        const previewCampaigns = getPreviewCampaigns(providerId)
-        const match = previewCampaigns.find((c) => c.id === campaignId) ?? previewCampaigns[0] ?? null
+    // Use preview data when in preview mode
+    if (isPreviewMode) {
+      const previewCampaigns = getPreviewCampaigns(providerId)
+      const match = previewCampaigns.find((c) => c.id === campaignId) ?? previewCampaigns[0] ?? null
+
+      if (!match) {
+        setCampaignError('Campaign not found')
+        setCampaignLoading(false)
+        return
+      }
+
+      setCampaign(match as Campaign)
+      setCampaignLoading(false)
+      return
+    }
+
+    if (!workspaceId) {
+      setCampaignLoading(false)
+      return
+    }
+
+    await listCampaigns({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: selectedClientId ?? null,
+    })
+      .then((campaigns) => {
+        const match = (Array.isArray(campaigns) ? campaigns : []).find((c: any) => c.id === campaignId) ?? null
 
         if (!match) {
           throw new Error('Campaign not found')
         }
 
-        setCampaign(match as Campaign)
-        setCampaignLoading(false)
-        return
-      }
-
-      if (!workspaceId) {
-        setCampaignLoading(false)
-        return
-      }
-
-      const campaigns = await listCampaigns({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: selectedClientId ?? null,
+        setCampaign(match)
       })
-
-      const match = (Array.isArray(campaigns) ? campaigns : []).find((c: any) => c.id === campaignId) ?? null
-
-      if (!match) {
-        throw new Error('Campaign not found')
-      }
-
-      setCampaign(match)
-    } catch (err) {
-      logError(err, 'CampaignInsights:loadCampaign')
-      setCampaignError(asErrorMessage(err))
-    } finally {
-      setCampaignLoading(false)
-    }
+      .catch((err) => {
+        logError(err, 'CampaignInsights:loadCampaign')
+        setCampaignError(asErrorMessage(err))
+      })
+      .finally(() => {
+        setCampaignLoading(false)
+      })
   }, [campaignId, isPreviewMode, listCampaigns, providerId, selectedClientId, workspaceId])
 
   const loadInsights = useCallback(async () => {
@@ -273,53 +283,67 @@ export default function CampaignInsightsPage() {
     setInsightsLoading(true)
     setInsightsError(null)
 
-    try {
-      const startDate = toIsoDateOnly(dateRange.start)
-      const endDate = toIsoDateOnly(dateRange.end)
+    const startDate = toIsoDateOnly(dateRange.start)
+    const endDate = toIsoDateOnly(dateRange.end)
 
-      // Use preview data when in preview mode
-      if (isPreviewMode) {
-        const previewInsights = getPreviewCampaignInsights(providerId, campaignId, startDate, endDate)
-        setInsights(previewInsights as CampaignInsightsResponse)
-        setInsightsLoading(false)
-        return
-      }
-
-      if (!workspaceId) {
-        setInsightsLoading(false)
-        return
-      }
-
-      const data = (await getCampaignInsights({
-        workspaceId,
-        providerId: providerId as any,
-        campaignId,
-        clientId: selectedClientId ?? null,
-        startDate,
-        endDate,
-      })) as CampaignInsightsResponse
-
-      setInsights(data)
-
-      // Update campaign currency if we have it and it's missing or defaulting to USD
-      if (data.currency && (!campaign?.currency || campaign.currency === 'USD')) {
-        setCampaign((prev) => (prev ? { ...prev, currency: data.currency } : null))
-      }
-    } catch (err) {
-      logError(err, 'CampaignInsights:loadInsights')
-      setInsightsError(asErrorMessage(err))
-      setInsights(null)
-    } finally {
+    // Use preview data when in preview mode
+    if (isPreviewMode) {
+      const previewInsights = getPreviewCampaignInsights(providerId, campaignId, startDate, endDate)
+      setInsights(previewInsights as CampaignInsightsResponse)
       setInsightsLoading(false)
+      return
     }
+
+    if (!workspaceId) {
+      setInsightsLoading(false)
+      return
+    }
+
+    await getCampaignInsights({
+      workspaceId,
+      providerId: providerId as any,
+      campaignId,
+      clientId: selectedClientId ?? null,
+      startDate,
+      endDate,
+    })
+      .then((rawData) => {
+        const data = rawData as CampaignInsightsResponse
+        setInsights(data)
+
+        // Update campaign currency if we have it and it's missing or defaulting to USD
+        if (data.currency && (!campaign?.currency || campaign.currency === 'USD')) {
+          setCampaign((prev) => (prev ? { ...prev, currency: data.currency } : null))
+        }
+      })
+      .catch((err) => {
+        logError(err, 'CampaignInsights:loadInsights')
+        setInsightsError(asErrorMessage(err))
+        setInsights(null)
+      })
+      .finally(() => {
+        setInsightsLoading(false)
+      })
   }, [campaign?.currency, campaignId, dateRange.end, dateRange.start, getCampaignInsights, isPreviewMode, providerId, selectedClientId, workspaceId])
 
   useEffect(() => {
-    void loadCampaign()
+    const frameId = requestAnimationFrame(() => {
+      void loadCampaign()
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
   }, [loadCampaign])
 
   useEffect(() => {
-    void loadInsights()
+    const frameId = requestAnimationFrame(() => {
+      void loadInsights()
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
   }, [loadInsights])
 
   const chartMetrics = useMemo(() => {
@@ -470,6 +494,7 @@ export default function CampaignInsightsPage() {
 
       {/* 3. Budget Control */}
       <BudgetControlSection
+        key={`budget-${providerId}-${campaignId}-${campaign?.budgetType ?? 'none'}-${campaign?.budget ?? 'none'}`}
         providerId={providerId}
         campaignId={campaignId}
         clientId={selectedClientId}

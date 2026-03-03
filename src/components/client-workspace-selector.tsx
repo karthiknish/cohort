@@ -114,39 +114,41 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
     setSaving(true)
     setErrorMessage(null)
 
-    try {
-      await createClient({
-        name,
-        accountManager,
-        teamMembers,
+    await createClient({
+      name,
+      accountManager,
+      teamMembers,
+    })
+      .then(() => {
+        handleSheetChange(false)
       })
-      handleSheetChange(false)
-    } catch (createError: unknown) {
-      const message =
-        createError instanceof Error && createError.message
-          ? createError.message
-          : 'Unable to create client'
-      setErrorMessage(message)
-    } finally {
-      setSaving(false)
-    }
+      .catch((createError: unknown) => {
+        const message =
+          createError instanceof Error && createError.message
+            ? createError.message
+            : 'Unable to create client'
+        setErrorMessage(message)
+      })
+      .finally(() => {
+        setSaving(false)
+      })
   }
 
   const handleRemoveClient = async (clientId: string) => {
     setRemovingId(clientId)
     setErrorMessage(null)
 
-    try {
-      await removeClient(clientId)
-    } catch (removeError: unknown) {
-      const message =
-        removeError instanceof Error && removeError.message
-          ? removeError.message
-          : 'Unable to remove client'
-      setErrorMessage(message)
-    } finally {
-      setRemovingId(null)
-    }
+    await removeClient(clientId)
+      .catch((removeError: unknown) => {
+        const message =
+          removeError instanceof Error && removeError.message
+            ? removeError.message
+            : 'Unable to remove client'
+        setErrorMessage(message)
+      })
+      .finally(() => {
+        setRemovingId(null)
+      })
   }
 
   const handleValueChange = useCallback((value: string) => {

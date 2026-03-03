@@ -130,14 +130,8 @@ const gettingStartedSteps = [
 ]
 
 export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
-  const [activeTab, setActiveTab] = useState(showWelcome ? 'welcome' : 'navigation')
+  const defaultTab = showWelcome ? 'welcome' : 'navigation'
   const { startTour } = useOnboardingTour()
-
-  useEffect(() => {
-    if (showWelcome) {
-      setActiveTab('welcome')
-    }
-  }, [showWelcome])
 
   const keyboardShortcuts = getKeyboardShortcuts()
 
@@ -156,7 +150,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+        <Tabs key={defaultTab} defaultValue={defaultTab} className="flex-1">
           <div className="px-6">
             <TabsList className="grid w-full grid-cols-3">
               {showWelcome && <TabsTrigger value="welcome">Get Started</TabsTrigger>}

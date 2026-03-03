@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { useAudioAnalyzer } from '@/hooks/use-audio-analyzer'
 
 interface VoiceWaveformProps {
@@ -12,21 +12,19 @@ interface VoiceWaveformProps {
 
 export function VoiceWaveform({ isActive, barCount = 12, className }: VoiceWaveformProps) {
   const { frequencies } = useAudioAnalyzer(isActive)
-  const [bars, setBars] = useState<number[]>(new Array(barCount).fill(8))
 
-  useEffect(() => {
-    if (isActive) {
-      const newBars = frequencies.map((freq) => {
-        const baseHeight = 8
-        const amplifiedFreq = Math.pow(freq, 0.8)
-        const dynamicHeight = amplifiedFreq * 40
-        const jitter = Math.random() * 4
-        return Math.max(baseHeight, dynamicHeight + jitter)
-      })
-      setBars(newBars)
-    } else {
-      setBars(new Array(barCount).fill(8))
+  const bars = useMemo(() => {
+    if (!isActive) {
+      return new Array(barCount).fill(8)
     }
+
+    return frequencies.map((freq) => {
+      const baseHeight = 8
+      const amplifiedFreq = Math.pow(freq, 0.8)
+      const dynamicHeight = amplifiedFreq * 40
+      const jitter = Math.random() * 4
+      return Math.max(baseHeight, dynamicHeight + jitter)
+    })
   }, [frequencies, isActive, barCount])
 
   return (

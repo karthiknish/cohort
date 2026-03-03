@@ -85,6 +85,8 @@ export interface UseCollaborationDataReturn {
   pendingAttachments: PendingAttachment[]
   handleAddAttachments: (files: FileList | File[]) => void
   handleRemoveAttachment: (attachmentId: string) => void
+  clearPendingAttachments: () => void
+  uploadPendingAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>
   uploading: boolean
 
   // Typing

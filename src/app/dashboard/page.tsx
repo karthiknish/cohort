@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState, Suspense } from 'react'
+import { useEffect, useMemo, useState, Suspense, useCallback } from 'react'
 import {
   ArrowUpRight,
   Shield,
@@ -98,10 +98,27 @@ export default function DashboardPage() {
   const { clients, selectedClient, selectedClientId } = useClientContext()
   const { user } = useAuth()
 
-  const [comparisonClientIds, setComparisonClientIds] = useState<string[]>(() => (selectedClientId ? [selectedClientId] : []))
+  const [rawComparisonClientIds, setRawComparisonClientIds] = useState<string[]>(() => (selectedClientId ? [selectedClientId] : []))
   const [comparisonPeriodDays, setComparisonPeriodDays] = useState(30)
 
   const canCompareAcrossClients = user?.role === 'admin'
+
+  const comparisonClientIds = useMemo(() => {
+    const validSelectedIds = rawComparisonClientIds.filter((id) => clients.some((client) => client.id === id))
+
+    if (canCompareAcrossClients) {
+      if (validSelectedIds.length > 0) {
+        return validSelectedIds
+      }
+      return selectedClientId ? [selectedClientId] : []
+    }
+
+    return selectedClientId ? [selectedClientId] : []
+  }, [canCompareAcrossClients, clients, rawComparisonClientIds, selectedClientId])
+
+  const handleComparisonClientChange = useCallback((nextClientIds: string[]) => {
+    setRawComparisonClientIds(nextClientIds)
+  }, [])
 
   useRenderLog('DashboardPage', {
     selectedClientId,
@@ -121,34 +138,6 @@ export default function DashboardPage() {
       })
     }
   })
-
-  // Consolidate comparison client ID synchronization to prevent infinite re-renders
-  useEffect(() => {
-    setComparisonClientIds((current) => {
-      // 1. Filter out IDs that no longer exist in the clients list
-      const validCurrentIds = current.filter(id => clients.some(c => c.id === id))
-      
-      // 2. Determine intended selection based on role and selectedClientId
-      let targetIds: string[]
-      if (canCompareAcrossClients) {
-        // Admin/Team can have multiple or empty, but if empty and we have a selection, use it
-        targetIds = validCurrentIds.length > 0 ? validCurrentIds : (selectedClientId ? [selectedClientId] : [])
-      } else {
-        // Clients are restricted to exactly one selection (the active one)
-        targetIds = selectedClientId ? [selectedClientId] : []
-      }
-
-      // 3. Only update state if the selection has actually changed (deep equality check for simple arrays)
-      if (
-        targetIds.length !== current.length ||
-        !targetIds.every((id, index) => id === current[index])
-      ) {
-        return targetIds
-      }
-      
-      return current
-    })
-  }, [clients, selectedClientId, canCompareAcrossClients])
 
   // Dashboard data hook
   const dashboardOptions = useMemo(() => ({ selectedClientId: selectedClientId ?? null }), [selectedClientId])
@@ -394,7 +383,7 @@ export default function DashboardPage() {
                   <DashboardFilterBar
                     clients={clients}
                     selectedClientIds={comparisonClientIds}
-                    onClientChange={setComparisonClientIds}
+                    onClientChange={handleComparisonClientChange}
                     periodDays={comparisonPeriodDays}
                     onPeriodChange={setComparisonPeriodDays}
                     canCompare={Boolean(canCompareAcrossClients)}

@@ -238,128 +238,130 @@ export default function HomePage() {
     setIsSubmitting(true)
     setEmailError(null)
 
-    try {
-      if (mode === "signup") {
-        // Validate email
-        if (!validateEmail(signUpData.email)) {
-          setEmailError("Please enter a valid email address")
-          setIsSubmitting(false)
-          return
-        }
+    await Promise.resolve()
+      .then(async () => {
+        if (mode === "signup") {
+          // Validate email
+          if (!validateEmail(signUpData.email)) {
+            setEmailError("Please enter a valid email address")
+            return
+          }
 
-        // Validate password strength
-        if (passwordStrength.score < 2) {
-          toast({
-            title: "Password needs work",
-            description: "Create a stronger password with at least 8 characters, including letters and numbers.",
-            variant: "destructive",
+          // Validate password strength
+          if (passwordStrength.score < 2) {
+            toast({
+              title: "Password needs work",
+              description: "Create a stronger password with at least 8 characters, including letters and numbers.",
+              variant: "destructive",
+            })
+            return
+          }
+
+          if (signUpData.password !== signUpData.confirmPassword) {
+            toast({
+              title: "Passwords don't match",
+              description: "Please make sure both passwords are identical.",
+              variant: "destructive",
+            })
+            return
+          }
+
+          await authClient.signUp.email({
+            email: signUpData.email,
+            password: signUpData.password,
+            name: signUpData.displayName.trim() || signUpData.email,
           })
-          setIsSubmitting(false)
-          return
-        }
 
-        if (signUpData.password !== signUpData.confirmPassword) {
+          await Promise.all([
+            authClient.getSession().catch(() => null),
+            bootstrapAndSyncSession(),
+          ])
+
           toast({
-            title: "Passwords don't match",
-            description: "Please make sure both passwords are identical.",
-            variant: "destructive",
+            title: "Welcome to Cohorts!",
+            description: "Your account has been created. Taking you to your dashboard...",
           })
-          setIsSubmitting(false)
-          return
+        } else {
+          // Validate email
+          if (!validateEmail(signInData.email)) {
+            setEmailError("Please enter a valid email address")
+            return
+          }
+
+          await authClient.signIn.email({
+            email: signInData.email,
+            password: signInData.password,
+          })
+
+          await Promise.all([
+            authClient.getSession().catch(() => null),
+            bootstrapAndSyncSession(),
+          ])
+
+          // Handle remember me
+          if (rememberMe && typeof window !== "undefined") {
+            window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
+          } else if (typeof window !== "undefined") {
+            window.localStorage.removeItem(REMEMBER_ME_KEY)
+          }
+
+          toast({
+            title: "Welcome back!",
+            description: "Signed in successfully. Loading your workspace...",
+          })
         }
 
-        await authClient.signUp.email({
-          email: signUpData.email,
-          password: signUpData.password,
-          name: signUpData.displayName.trim() || signUpData.email,
-        })
-
-        await Promise.all([
-          authClient.getSession().catch(() => null),
-          bootstrapAndSyncSession(),
-        ])
-
-        toast({
-          title: "Welcome to Cohorts!",
-          description: "Your account has been created. Taking you to your dashboard...",
-        })
-      } else {
-        // Validate email
-        if (!validateEmail(signInData.email)) {
-          setEmailError("Please enter a valid email address")
-          setIsSubmitting(false)
-          return
+        const redirect = searchParams.get("redirect")
+        // Restore last visited tab if no explicit redirect
+        let destination = redirect || "/dashboard"
+        if (!redirect && typeof window !== 'undefined') {
+          const lastTab = window.localStorage.getItem('cohorts_last_tab')
+          if (lastTab && lastTab.startsWith('/dashboard')) {
+            destination = lastTab
+          }
         }
-
-        await authClient.signIn.email({
-          email: signInData.email,
-          password: signInData.password,
-        })
-
-        await Promise.all([
-          authClient.getSession().catch(() => null),
-          bootstrapAndSyncSession(),
-        ])
-
-        // Handle remember me
-        if (rememberMe && typeof window !== "undefined") {
-          window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
-        } else if (typeof window !== "undefined") {
-          window.localStorage.removeItem(REMEMBER_ME_KEY)
-        }
-
-        toast({
-          title: "Welcome back!",
-          description: "Signed in successfully. Loading your workspace...",
-        })
-      }
-
-      const redirect = searchParams.get("redirect")
-      // Restore last visited tab if no explicit redirect
-      let destination = redirect || "/dashboard"
-      if (!redirect && typeof window !== 'undefined') {
-        const lastTab = window.localStorage.getItem('cohorts_last_tab')
-        if (lastTab && lastTab.startsWith('/dashboard')) {
-          destination = lastTab
-        }
-      }
-      router.push(destination)
-    } catch (error) {
-      const errorMessage = getFriendlyAuthErrorMessage(error)
-      toast({
-        title: mode === "signin" ? "Sign in failed" : "Sign up failed",
-        description: errorMessage,
-        variant: "destructive",
+        router.push(destination)
       })
-    } finally {
-      setIsSubmitting(false)
-    }
+      .catch((error) => {
+        const errorMessage = getFriendlyAuthErrorMessage(error)
+        toast({
+          title: mode === "signin" ? "Sign in failed" : "Sign up failed",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      })
+      .finally(() => {
+        setIsSubmitting(false)
+      })
   }
 
   const handleGoogleSignIn = async () => {
-    try {
-      setIsSubmitting(true)
-      await authClient.signIn.social({
-        provider: "google",
-      })
-      await authClient.getSession().catch(() => null)
+    setIsSubmitting(true)
 
-      // Social sign-in may redirect; in case it returns without redirect,
-      // ensure bootstrap+session cookies are ready.
-      await Promise.all([
-        authClient.getSession().catch(() => null),
-        bootstrapAndSyncSession(),
-      ])
-    } catch (error) {
-      const errorMessage = getFriendlyAuthErrorMessage(error)
-      toast({
-        title: "Google sign-in failed",
-        description: errorMessage,
-        variant: "destructive",
+    await authClient.signIn.social({
+      provider: "google",
+    })
+      .then(async () => {
+        await authClient.getSession().catch(() => null)
+
+        // Social sign-in may redirect; in case it returns without redirect,
+        // ensure bootstrap+session cookies are ready.
+        await Promise.all([
+          authClient.getSession().catch(() => null),
+          bootstrapAndSyncSession(),
+        ])
       })
-    } finally {
-      setIsSubmitting(false)
-    }
+      .catch((error) => {
+        const errorMessage = getFriendlyAuthErrorMessage(error)
+        toast({
+          title: "Google sign-in failed",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      })
+      .finally(() => {
+        setIsSubmitting(false)
+      })
   }
 
   const handleSignInChange = (event: React.ChangeEvent<HTMLInputElement>) => {

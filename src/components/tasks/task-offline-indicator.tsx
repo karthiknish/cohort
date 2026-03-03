@@ -1,100 +1,55 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Wifi, WifiOff, Cloud, CloudOff, Loader2 } from 'lucide-react'
+import { useSyncExternalStore } from 'react'
+import { WifiOff, Cloud, CloudOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-type SyncStatus = 'online' | 'offline' | 'syncing' | 'error'
+function subscribeOnlineStatus(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
+  window.addEventListener('online', onStoreChange)
+  window.addEventListener('offline', onStoreChange)
+
+  return () => {
+    window.removeEventListener('online', onStoreChange)
+    window.removeEventListener('offline', onStoreChange)
+  }
+}
+
+function getOnlineSnapshot() {
+  if (typeof navigator === 'undefined') {
+    return true
+  }
+
+  return navigator.onLine
+}
+
+function useOnlineStatus() {
+  return useSyncExternalStore(subscribeOnlineStatus, getOnlineSnapshot, () => true)
+}
 
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true)
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('online')
-  const [showStatus, setShowStatus] = useState(false)
+  const isOnline = useOnlineStatus()
 
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true)
-      setSyncStatus('syncing')
-      setShowStatus(true)
-      // Simulate sync completion
-      setTimeout(() => {
-        setSyncStatus('online')
-        setTimeout(() => setShowStatus(false), 2000)
-      }, 1500)
-    }
-
-    const handleOffline = () => {
-      setIsOnline(false)
-      setSyncStatus('offline')
-      setShowStatus(true)
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    // Initial check
-    setIsOnline(navigator.onLine)
-    if (!navigator.onLine) {
-      setSyncStatus('offline')
-    }
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
-  if (!showStatus && isOnline) return null
+  if (isOnline) return null
 
   return (
     <div className={cn(
       'fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-all',
-      syncStatus === 'online' && 'bg-emerald-500 text-white',
-      syncStatus === 'offline' && 'bg-gray-500 text-white',
-      syncStatus === 'syncing' && 'bg-blue-500 text-white',
-      syncStatus === 'error' && 'bg-red-500 text-white'
+      'bg-gray-500 text-white'
     )}>
-      {syncStatus === 'online' && (
-        <>
-          <Wifi className="h-4 w-4" />
-          <span className="text-sm font-medium">Back online • Changes synced</span>
-        </>
-      )}
-      {syncStatus === 'offline' && (
-        <>
-          <WifiOff className="h-4 w-4" />
-          <span className="text-sm font-medium">You're offline • Changes will sync when reconnected</span>
-        </>
-      )}
-      {syncStatus === 'syncing' && (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm font-medium">Syncing changes...</span>
-        </>
-      )}
+      <WifiOff className="h-4 w-4" />
+      <span className="text-sm font-medium">You're offline • Changes will sync when reconnected</span>
     </div>
   )
 }
 
 // Compact sync status badge for header
 export function SyncStatusBadge({ showLabel = false }: { showLabel?: boolean }) {
-  const [isOnline, setIsOnline] = useState(true)
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    setIsOnline(navigator.onLine)
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
+  const isOnline = useOnlineStatus()
 
   return (
     <Badge

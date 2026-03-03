@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCw, Clock } from 'lucide-react'
+import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -37,66 +37,46 @@ export function AutoRefreshControls({
   className,
   defaultInterval = 'off',
 }: AutoRefreshProps) {
-  const [interval, setInterval] = useState<RefreshInterval>(defaultInterval)
-  const [nextRefresh, setNextRefresh] = useState<Date | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const [interval, setRefreshInterval] = useState<RefreshInterval>(defaultInterval)
+  const timeoutRef = useRef<ReturnType<typeof globalThis.setInterval> | undefined>(undefined)
+
+  const selectedIntervalMs = INTERVAL_OPTIONS.find((opt) => opt.value === interval)?.ms ?? null
 
   const clearAutoRefresh = useCallback(() => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
+      clearInterval(timeoutRef.current)
       timeoutRef.current = undefined
     }
-    setNextRefresh(null)
   }, [])
 
-  const scheduleNextRefresh = useCallback(() => {
-    const option = INTERVAL_OPTIONS.find((opt) => opt.value === interval)
-    if (!option || !option.ms) {
-      setNextRefresh(null)
+  const startAutoRefresh = useCallback((intervalMs: number | null) => {
+    clearAutoRefresh()
+
+    if (!intervalMs) {
       return
     }
 
-    const next = new Date(Date.now() + option.ms)
-    setNextRefresh(next)
-
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = setInterval(() => {
       onRefresh()
-      scheduleNextRefresh()
-    }, option.ms)
-  }, [interval, onRefresh])
+    }, intervalMs)
+  }, [clearAutoRefresh, onRefresh])
 
   // Handle interval change
   const handleIntervalChange = useCallback((newInterval: RefreshInterval) => {
-    clearAutoRefresh()
-    setInterval(newInterval)
-
-    if (newInterval !== 'off') {
-      scheduleNextRefresh()
-    }
-  }, [clearAutoRefresh, scheduleNextRefresh])
+    setRefreshInterval(newInterval)
+  }, [])
 
   // Set up auto-refresh on mount or when interval changes
   useEffect(() => {
-    if (interval !== 'off') {
-      scheduleNextRefresh()
-    }
-
+    startAutoRefresh(selectedIntervalMs)
     return () => clearAutoRefresh()
-  }, [interval, scheduleNextRefresh, clearAutoRefresh])
+  }, [clearAutoRefresh, selectedIntervalMs, startAutoRefresh])
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(() => {
-    clearAutoRefresh()
     onRefresh()
-    if (interval !== 'off') {
-      scheduleNextRefresh()
-    }
-  }, [clearAutoRefresh, onRefresh, interval, scheduleNextRefresh])
-
-  // Calculate time remaining
-  const timeRemaining = nextRefresh
-    ? Math.max(0, Math.ceil((nextRefresh.getTime() - Date.now()) / 1000))
-    : null
+    startAutoRefresh(selectedIntervalMs)
+  }, [onRefresh, selectedIntervalMs, startAutoRefresh])
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
@@ -112,15 +92,6 @@ export function AutoRefreshControls({
           ))}
         </SelectContent>
       </Select>
-
-      {timeRemaining !== null && interval !== 'off' && (
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span className={cn('tabular-nums', timeRemaining < 10 && 'text-orange-500')}>
-            {timeRemaining}s
-          </span>
-        </div>
-      )}
 
       <Button
         variant="outline"

@@ -88,23 +88,25 @@ export function PollCard({
     if (!onVote || !userId || selectedOptions.length === 0) return
 
     setIsVoting(true)
-    try {
-      await onVote(poll.id, selectedOptions)
-      toast({
-        title: 'Vote recorded',
-        description: 'Your response has been saved.',
+    await onVote(poll.id, selectedOptions)
+      .then(() => {
+        toast({
+          title: 'Vote recorded',
+          description: 'Your response has been saved.',
+        })
+        setShowResults(true)
       })
-      setShowResults(true)
-    } catch (error) {
-      console.error('Failed to vote:', error)
-      toast({
-        title: 'Failed to record vote',
-        description: 'An error occurred while saving your vote.',
-        variant: 'destructive',
+      .catch((error) => {
+        console.error('Failed to vote:', error)
+        toast({
+          title: 'Failed to record vote',
+          description: 'An error occurred while saving your vote.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setIsVoting(false)
-    }
+      .finally(() => {
+        setIsVoting(false)
+      })
   }, [onVote, poll.id, selectedOptions, userId, toast])
 
   const handleToggleOption = useCallback((optionId: string) => {
@@ -367,42 +369,43 @@ export function CreatePollDialog({
     }
 
     setIsCreating(true)
-    try {
-      const newPoll: Omit<MessagePoll, 'id' | 'createdAt'> = {
-        question: trimmedQuestion,
-        options: validOptions.map((opt) => ({ ...opt, voters: [] })),
-        multipleChoice,
-        anonymous,
-        createdBy: userId,
-        createdByName: 'You', // Would be populated from user context
-        endTime: null,
-      }
-
-      await onCreate?.(newPoll)
-
-      toast({
-        title: 'Poll created',
-        description: 'Your poll has been posted to the channel.',
-      })
-
-      // Reset form
-      setQuestion('')
-      setOptions([
-        { id: '1', text: '' },
-        { id: '2', text: '' },
-      ])
-      setMultipleChoice(false)
-      setAnonymous(false)
-      setOpen(false)
-    } catch (error) {
-      console.error('Failed to create poll:', error)
-      toast({
-        title: 'Failed to create poll',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsCreating(false)
+    const newPoll: Omit<MessagePoll, 'id' | 'createdAt'> = {
+      question: trimmedQuestion,
+      options: validOptions.map((opt) => ({ ...opt, voters: [] })),
+      multipleChoice,
+      anonymous,
+      createdBy: userId,
+      createdByName: 'You', // Would be populated from user context
+      endTime: null,
     }
+
+    await Promise.resolve(onCreate?.(newPoll))
+      .then(() => {
+        toast({
+          title: 'Poll created',
+          description: 'Your poll has been posted to the channel.',
+        })
+
+        // Reset form
+        setQuestion('')
+        setOptions([
+          { id: '1', text: '' },
+          { id: '2', text: '' },
+        ])
+        setMultipleChoice(false)
+        setAnonymous(false)
+        setOpen(false)
+      })
+      .catch((error) => {
+        console.error('Failed to create poll:', error)
+        toast({
+          title: 'Failed to create poll',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setIsCreating(false)
+      })
   }, [question, options, multipleChoice, anonymous, workspaceId, userId, onCreate, toast])
 
   const defaultTrigger = (

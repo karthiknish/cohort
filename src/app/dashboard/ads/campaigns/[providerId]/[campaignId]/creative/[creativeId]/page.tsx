@@ -69,36 +69,39 @@ export default function CreativeDetailPage() {
 
   const fetchCreative = useCallback(async () => {
     setLoading(true)
-    try {
-      if (!workspaceId) {
-        return
-      }
 
-      const creatives = await listCreatives({
-        workspaceId,
-        providerId: params.providerId as any,
-        clientId: selectedClientId ?? null,
-        campaignId: params.campaignId,
-        includeMedia: params.providerId === 'facebook',
-      })
-
-      const match = (Array.isArray(creatives) ? creatives : []).find((c: any) => c.creativeId === params.creativeId)
-
-      if (!match) {
-        throw new Error('Creative not found')
-      }
-
-      setCreative(match)
-    } catch (error) {
-      logError(error, 'CreativeDetailPage:fetchCreative')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
-    } finally {
+    if (!workspaceId) {
       setLoading(false)
+      return
     }
+
+    await listCreatives({
+      workspaceId,
+      providerId: params.providerId as any,
+      clientId: selectedClientId ?? null,
+      campaignId: params.campaignId,
+      includeMedia: params.providerId === 'facebook',
+    })
+      .then((creatives) => {
+        const match = (Array.isArray(creatives) ? creatives : []).find((c: any) => c.creativeId === params.creativeId)
+
+        if (!match) {
+          throw new Error('Creative not found')
+        }
+
+        setCreative(match)
+      })
+      .catch((error) => {
+        logError(error, 'CreativeDetailPage:fetchCreative')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [listCreatives, params.providerId, params.campaignId, params.creativeId, selectedClientId, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
@@ -110,40 +113,58 @@ export default function CreativeDetailPage() {
     setMetricsLoading(true)
     setMetricsError(null)
 
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
 
-      const response = await listAdMetrics({
-        workspaceId,
-        providerId: params.providerId as any,
-        clientId: selectedClientId ?? null,
-        campaignId: params.campaignId,
-        adGroupId: creative?.adGroupId,
-        days,
-        level: params.providerId === 'linkedin' ? 'creative' : 'ad',
-      })
-
-      const allMetrics = Array.isArray((response as any)?.metrics) ? ((response as any).metrics as NormalizedAdMetric[]) : []
-      const filtered = allMetrics.filter((m) => m.adId === params.creativeId)
-      setCreativeMetrics(filtered)
-    } catch (error) {
-      logError(error, 'CreativeDetailPage:fetchMetrics')
+    if (!workspaceId) {
       setCreativeMetrics(null)
-      setMetricsError(asErrorMessage(error))
-    } finally {
+      setMetricsError('Sign in required')
       setMetricsLoading(false)
+      return
     }
+
+    await listAdMetrics({
+      workspaceId,
+      providerId: params.providerId as any,
+      clientId: selectedClientId ?? null,
+      campaignId: params.campaignId,
+      adGroupId: creative?.adGroupId,
+      days,
+      level: params.providerId === 'linkedin' ? 'creative' : 'ad',
+    })
+      .then((response) => {
+        const allMetrics = Array.isArray((response as any)?.metrics) ? ((response as any).metrics as NormalizedAdMetric[]) : []
+        const filtered = allMetrics.filter((m) => m.adId === params.creativeId)
+        setCreativeMetrics(filtered)
+      })
+      .catch((error) => {
+        logError(error, 'CreativeDetailPage:fetchMetrics')
+        setCreativeMetrics(null)
+        setMetricsError(asErrorMessage(error))
+      })
+      .finally(() => {
+        setMetricsLoading(false)
+      })
   }, [listAdMetrics, params.providerId, params.campaignId, params.creativeId, days, selectedClientId, creative?.adGroupId, workspaceId])
 
   useEffect(() => {
-    void fetchCreative()
+    const frameId = requestAnimationFrame(() => {
+      void fetchCreative()
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
   }, [fetchCreative])
 
   useEffect(() => {
     if (!creative) return
-    void fetchMetrics()
+
+    const frameId = requestAnimationFrame(() => {
+      void fetchMetrics()
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
   }, [creative, fetchMetrics])
 
   const handleCopy = async (text: string, field: string) => {
@@ -210,50 +231,52 @@ export default function CreativeDetailPage() {
     const setLoading = kind === 'headlines' ? setGeneratingHeadlines : setGeneratingDescriptions
     setLoading(true)
 
-    try {
-      const result = await generateCopyAction({
-        providerId: params.providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
-        clientId: selectedClientId ?? undefined,
-        campaignId: params.campaignId,
-        creativeId: params.creativeId,
-        campaignName,
-        creativeName: creative.name,
-        landingPageUrl: editedLandingPage || creative.landingPageUrl,
-        callToAction: editedCta || creative.callToAction,
-        creativeType: creative.type,
-        pageName: creative.pageName,
-        existingHeadlines: (editedHeadlines.length ? editedHeadlines : (creative.headlines ?? [])).filter(Boolean),
-        existingCaptions: (editedDescriptions.length ? editedDescriptions : (creative.descriptions ?? [])).filter(Boolean),
-        kind: kind === 'headlines' ? 'headlines' : 'captions',
-        count: 5,
-      })
+    await generateCopyAction({
+      providerId: params.providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
+      clientId: selectedClientId ?? undefined,
+      campaignId: params.campaignId,
+      creativeId: params.creativeId,
+      campaignName,
+      creativeName: creative.name,
+      landingPageUrl: editedLandingPage || creative.landingPageUrl,
+      callToAction: editedCta || creative.callToAction,
+      creativeType: creative.type,
+      pageName: creative.pageName,
+      existingHeadlines: (editedHeadlines.length ? editedHeadlines : (creative.headlines ?? [])).filter(Boolean),
+      existingCaptions: (editedDescriptions.length ? editedDescriptions : (creative.descriptions ?? [])).filter(Boolean),
+      kind: kind === 'headlines' ? 'headlines' : 'captions',
+      count: 5,
+    })
+      .then((result) => {
+        const headlines = result.headlines
+        const captions = result.captions
 
-      const headlines = result.headlines
-      const captions = result.captions
-
-      if (kind === 'headlines') {
-        if (headlines.length === 0) {
-          toast({ title: 'No new headlines', description: 'Try again with different inputs.' })
+        if (kind === 'headlines') {
+          if (headlines.length === 0) {
+            toast({ title: 'No new headlines', description: 'Try again with different inputs.' })
+            return
+          }
+          setEditedHeadlines((prev) => {
+            const base = prev.length ? prev : []
+            const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
+            const additions = headlines.filter((h: string) => {
+              const key = h.trim().toLowerCase()
+              if (!key) return false
+              if (existing.has(key)) return false
+              existing.add(key)
+              return true
+            })
+            return [...base, ...additions]
+          })
+          toast({ title: 'Generated headlines', description: `Added ${headlines.length} new variant(s).` })
           return
         }
-        setEditedHeadlines((prev) => {
-          const base = prev.length ? prev : []
-          const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
-          const additions = headlines.filter((h: string) => {
-            const key = h.trim().toLowerCase()
-            if (!key) return false
-            if (existing.has(key)) return false
-            existing.add(key)
-            return true
-          })
-          return [...base, ...additions]
-        })
-        toast({ title: 'Generated headlines', description: `Added ${headlines.length} new variant(s).` })
-      } else {
+
         if (captions.length === 0) {
           toast({ title: 'No new captions', description: 'Try again with different inputs.' })
           return
         }
+
         setEditedDescriptions((prev) => {
           const base = prev.length ? prev : []
           const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
@@ -267,50 +290,52 @@ export default function CreativeDetailPage() {
           return [...base, ...additions]
         })
         toast({ title: 'Generated captions', description: `Added ${captions.length} new variant(s).` })
-      }
-    } catch (error) {
-      logError(error, 'CreativeDetailPage:generateCopy')
-      toast({
-        title: 'AI generation error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
-    }
+      .catch((error) => {
+        logError(error, 'CreativeDetailPage:generateCopy')
+        toast({
+          title: 'AI generation error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
 
   const handleSave = async () => {
     setIsSaving(true)
-    try {
-      // Simulate save - in a real implementation, this would call an API
-      await new Promise(resolve => setTimeout(resolve, 1000))
 
-      if (creative) {
-        setCreative({
-          ...creative,
-          headlines: editedHeadlines.filter(h => h.trim()),
-          descriptions: editedDescriptions.filter(d => d.trim()),
-          callToAction: editedCta,
-          landingPageUrl: editedLandingPage,
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+      .then(() => {
+        if (creative) {
+          setCreative({
+            ...creative,
+            headlines: editedHeadlines.filter(h => h.trim()),
+            descriptions: editedDescriptions.filter(d => d.trim()),
+            callToAction: editedCta,
+            landingPageUrl: editedLandingPage,
+          })
+        }
+
+        toast({
+          title: 'Changes saved',
+          description: 'Your creative has been updated successfully.',
         })
-      }
-
-      toast({
-        title: 'Changes saved',
-        description: 'Your creative has been updated successfully.',
+        setIsEditing(false)
       })
-      setIsEditing(false)
-    } catch (error) {
-      logError(error, 'CreativeDetailPage:handleSave')
-      toast({
-        title: 'Error',
-        description: 'Failed to save changes. Please try again.',
-        variant: 'destructive',
+      .catch((error) => {
+        logError(error, 'CreativeDetailPage:handleSave')
+        toast({
+          title: 'Error',
+          description: 'Failed to save changes. Please try again.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setIsSaving(false)
-    }
+      .finally(() => {
+        setIsSaving(false)
+      })
   }
 
   const addHeadline = () => {

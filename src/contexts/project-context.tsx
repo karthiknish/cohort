@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 
 import { useClientContext } from '@/contexts/client-context'
@@ -24,22 +24,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
-  const [isFromUrl, setIsFromUrl] = useState(false)
+  const [manualProjectId, setManualProjectId] = useState<string | null>(null)
 
-  // Auto-populate project from URL params
-  useEffect(() => {
-    const urlProjectId = searchParams.get('projectId')
-
-    if (urlProjectId && selectedClient?.id) {
-      setSelectedProjectId(urlProjectId)
-      setIsFromUrl(true)
-    } else {
-      // Clear project context if not in URL
-      setSelectedProjectId(null)
-      setIsFromUrl(false)
-    }
-  }, [searchParams, selectedClient?.id])
+  const urlProjectId = selectedClient?.id ? searchParams.get('projectId') : null
+  const selectedProjectId = urlProjectId ?? manualProjectId
+  const isFromUrl = urlProjectId !== null
 
   // Get project details (this would typically fetch from API)
   // For now, we'll create a minimal project object from URL params
@@ -71,8 +60,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [selectedProjectId, selectedClient, searchParams, user?.id])
 
   const selectProject = useCallback((projectId: string | null) => {
-    setSelectedProjectId(projectId)
-    setIsFromUrl(false)
+    setManualProjectId(projectId)
 
     // Update URL if not already set by URL
     if (projectId && !searchParams.get('projectId')) {
@@ -83,8 +71,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [searchParams, router, pathname])
 
   const clearProject = useCallback(() => {
-    setSelectedProjectId(null)
-    setIsFromUrl(false)
+    setManualProjectId(null)
 
     // Remove projectId from URL
     const newParams = new URLSearchParams(searchParams.toString())

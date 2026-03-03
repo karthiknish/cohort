@@ -117,10 +117,7 @@ export function MentionDropdown({
     return items
   }, [searchQuery, clients, projects, teams, users, activeCategory])
 
-  // Reset selection when items change
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [filteredItems.length, searchQuery])
+  const clampedSelectedIndex = Math.min(selectedIndex, Math.max(filteredItems.length - 1, 0))
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
@@ -138,7 +135,7 @@ export function MentionDropdown({
           break
         case 'Enter':
           e.preventDefault()
-          const selectedItem = filteredItems[selectedIndex]
+          const selectedItem = filteredItems[clampedSelectedIndex]
           if (selectedItem) {
             onSelect(selectedItem)
           }
@@ -157,7 +154,7 @@ export function MentionDropdown({
           break
       }
     },
-    [isOpen, filteredItems, selectedIndex, onSelect, onClose, activeCategory]
+    [activeCategory, clampedSelectedIndex, filteredItems, isOpen, onClose, onSelect]
   )
 
   useEffect(() => {
@@ -236,7 +233,7 @@ export function MentionDropdown({
                   onClick={() => onSelect(item)}
                   className={cn(
                     'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
-                    index === selectedIndex ? 'bg-primary/10' : 'hover:bg-muted'
+                    index === clampedSelectedIndex ? 'bg-primary/10' : 'hover:bg-muted'
                   )}
                 >
                   <div className={cn('flex h-7 w-7 items-center justify-center rounded-md border', getTypeColor(item.type))}>

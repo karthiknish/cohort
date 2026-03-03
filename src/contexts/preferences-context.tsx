@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -36,12 +36,8 @@ interface PreferencesProviderProps {
 
 export function PreferencesProvider({ children }: PreferencesProviderProps) {
   const { user } = useAuth()
-  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [initialized, setInitialized] = useState(false)
-
-  void initialized
+  const [optimisticPreferences, setOptimisticPreferences] = useState<Partial<UserPreferences> | null>(null)
 
   const regional = useQuery(settingsApi.getMyRegionalPreferences) as
     | { currency?: string | null; timezone?: string | null; locale?: string | null }
@@ -50,35 +46,30 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
 
   const updateRegional = useMutation(settingsApi.updateMyRegionalPreferences)
 
-  // Sync preferences from Convex
-  useEffect(() => {
-    if (!user) {
-      setPreferences(DEFAULT_PREFERENCES)
-      setInitialized(false)
-      setLoading(false)
-      setError(null)
-      return
+  const loading = Boolean(user && regional === undefined)
+
+  const basePreferences = useMemo<UserPreferences>(() => {
+    if (!user || regional === undefined || regional === null) {
+      return DEFAULT_PREFERENCES
     }
 
-    if (regional === undefined) {
-      setLoading(true)
-      return
-    }
-
-    setLoading(false)
-    setInitialized(true)
-
-    if (regional === null) {
-      setPreferences(DEFAULT_PREFERENCES)
-      return
-    }
-
-    setPreferences({
+    return {
       currency: (regional.currency as CurrencyCode) ?? DEFAULT_CURRENCY,
       timezone: regional.timezone ?? null,
       locale: regional.locale ?? null,
-    })
+    }
   }, [regional, user])
+
+  const preferences = useMemo<UserPreferences>(() => {
+    if (!user || !optimisticPreferences) {
+      return basePreferences
+    }
+
+    return {
+      ...basePreferences,
+      ...optimisticPreferences,
+    }
+  }, [basePreferences, optimisticPreferences, user])
 
   const fetchPreferences = useCallback(async () => {
     // Backwards-compat shim: keep signature used by callers.
@@ -97,24 +88,35 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       try {
         setError(null)
 
+        const optimisticUpdate: Partial<UserPreferences> = {}
+        if (updates.currency !== undefined) {
+          optimisticUpdate.currency = updates.currency
+        }
+        if (updates.timezone !== undefined) {
+          optimisticUpdate.timezone = updates.timezone
+        }
+        if (updates.locale !== undefined) {
+          optimisticUpdate.locale = updates.locale
+        }
+
+        setOptimisticPreferences((current) => ({
+          ...(current ?? {}),
+          ...optimisticUpdate,
+        }))
+
         await updateRegional({
           currency: updates.currency,
           timezone: updates.timezone,
           locale: updates.locale,
         })
-
-        setPreferences({
-          currency: updates.currency ?? preferences.currency,
-          timezone: updates.timezone ?? preferences.timezone,
-          locale: updates.locale ?? preferences.locale,
-        })
       } catch (err) {
         console.error('Failed to update preferences:', err)
+        setOptimisticPreferences(null)
         setError(err instanceof Error ? err.message : 'Failed to update preferences')
         throw err
       }
     },
-    [updateRegional, user, preferences]
+    [updateRegional, user]
   )
 
   const updateCurrency = useCallback(

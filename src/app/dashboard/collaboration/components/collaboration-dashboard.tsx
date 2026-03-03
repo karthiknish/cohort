@@ -162,6 +162,8 @@ export function CollaborationDashboard() {
             pendingAttachments={collab.pendingAttachments}
             onAddAttachments={collab.handleAddAttachments}
             onRemoveAttachment={collab.handleRemoveAttachment}
+            clearPendingAttachments={collab.clearPendingAttachments}
+            uploadPendingAttachments={collab.uploadPendingAttachments}
             uploading={collab.uploading}
             typingParticipants={collab.typingParticipants}
             onComposerFocus={collab.handleComposerFocus}

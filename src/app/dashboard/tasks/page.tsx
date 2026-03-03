@@ -31,7 +31,6 @@ import type { UpdateTaskPayload } from '@/components/tasks/hooks/use-tasks'
 // Import task components and hooks
 import {
   formatDate,
-  ProjectFilter,
   useTasks,
   useTaskForm,
   useTaskFilters,
@@ -90,25 +89,19 @@ export default function TasksPage() {
     syncToUrl: true,
   })
 
-  // Project filter state
-  const [projectFilter, setProjectFilter] = useState<ProjectFilter>(() => ({
+  const projectFilter = useMemo(() => ({
     id: searchParams.get('projectId'),
     name: searchParams.get('projectName'),
-  }))
+  }), [searchParams])
 
-  // Sync project filter with URL
+  // Sync navigation context from URL project filters.
   useEffect(() => {
-    const id = searchParams.get('projectId')
-    const name = searchParams.get('projectName')
-    setProjectFilter((prev) => (prev.id === id && prev.name === name ? prev : { id, name }))
-
-    if (isFeatureEnabled('BIDIRECTIONAL_NAV') && id && name) {
-      setProjectContext(id, name)
+    if (isFeatureEnabled('BIDIRECTIONAL_NAV') && projectFilter.id && projectFilter.name) {
+      setProjectContext(projectFilter.id, projectFilter.name)
     }
-  }, [searchParams, setProjectContext])
+  }, [projectFilter.id, projectFilter.name, setProjectContext])
 
   const clearProjectFilter = useCallback(() => {
-    setProjectFilter({ id: null, name: null })
     const params = new URLSearchParams(searchParams.toString())
     params.delete('projectId')
     params.delete('projectName')
@@ -158,29 +151,17 @@ export default function TasksPage() {
     setActiveTab: (next) => taskTabs.setValue(next as 'all-tasks' | 'my-tasks'),
   })
 
+  const [rawSelectedTaskIds, setRawSelectedTaskIds] = useState<Set<string>>(new Set())
+  const [bulkState, setBulkState] = useState<{ active: boolean; label: string; progress: number }>({
+    active: false,
+    label: '',
+    progress: 0,
+  })
+
   // Sync debounced search
   useEffect(() => {
     filters.setSearchQuery(debouncedQuery)
   }, [debouncedQuery, filters])
-
-  useEffect(() => {
-    setSelectedTaskIds((current) => {
-      const visibleIds = new Set(filters.sortedTasks.map((task) => task.id))
-      const next = new Set<string>()
-      current.forEach((id) => {
-        if (visibleIds.has(id)) {
-          next.add(id)
-        }
-      })
-      return next
-    })
-  }, [filters.sortedTasks])
-
-  useEffect(() => {
-    if (filters.viewMode === 'board') {
-      setSelectedTaskIds(new Set())
-    }
-  }, [filters.viewMode])
 
   // Form management hook
   const form = useTaskForm({
@@ -189,13 +170,6 @@ export default function TasksPage() {
     userId: user?.id,
     onCreateTask: handleCreateTask,
     onUpdateTask: handleUpdateTask,
-  })
-
-  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
-  const [bulkState, setBulkState] = useState<{ active: boolean; label: string; progress: number }>({
-    active: false,
-    label: '',
-    progress: 0,
   })
 
   // Update form when client changes
@@ -263,6 +237,21 @@ export default function TasksPage() {
 
   const visibleTasks = filters.sortedTasks
 
+  const selectedTaskIds = useMemo(() => {
+    if (filters.viewMode === 'board') return new Set<string>()
+
+    if (rawSelectedTaskIds.size === 0) return rawSelectedTaskIds
+
+    const visibleIds = new Set(visibleTasks.map((task) => task.id))
+    const next = new Set<string>()
+    rawSelectedTaskIds.forEach((id) => {
+      if (visibleIds.has(id)) {
+        next.add(id)
+      }
+    })
+    return next
+  }, [filters.viewMode, rawSelectedTaskIds, visibleTasks])
+
   const selectedTasks = useMemo(() => {
     if (selectedTaskIds.size === 0) return []
     const selectedMap = new Set(selectedTaskIds)
@@ -272,7 +261,7 @@ export default function TasksPage() {
   const hasSelection = selectedTasks.length > 0
 
   const handleToggleTaskSelection = useCallback((taskId: string, checked: boolean) => {
-    setSelectedTaskIds((current) => {
+    setRawSelectedTaskIds((current) => {
       const next = new Set(current)
       if (checked) {
         next.add(taskId)
@@ -284,16 +273,16 @@ export default function TasksPage() {
   }, [])
 
   const handleSelectAllVisible = useCallback(() => {
-    setSelectedTaskIds(new Set(visibleTasks.map((task) => task.id)))
+    setRawSelectedTaskIds(new Set(visibleTasks.map((task) => task.id)))
   }, [visibleTasks])
 
   const handleClearSelection = useCallback(() => {
-    setSelectedTaskIds(new Set())
+    setRawSelectedTaskIds(new Set())
   }, [])
 
   const handleSelectHighPriority = useCallback(() => {
     const filtered = visibleTasks.filter((task) => task.priority === 'high' || task.priority === 'urgent')
-    setSelectedTaskIds(new Set(filtered.map((task) => task.id)))
+    setRawSelectedTaskIds(new Set(filtered.map((task) => task.id)))
   }, [visibleTasks])
 
   const handleSelectDueSoon = useCallback(() => {
@@ -305,7 +294,7 @@ export default function TasksPage() {
       if (Number.isNaN(ts)) return false
       return ts >= now && ts <= cutoff
     })
-    setSelectedTaskIds(new Set(filtered.map((task) => task.id)))
+    setRawSelectedTaskIds(new Set(filtered.map((task) => task.id)))
   }, [visibleTasks])
 
 
@@ -316,7 +305,7 @@ export default function TasksPage() {
       setBulkState({ active: true, label: 'Updating status', progress: 0 })
       await handleBulkUpdate(ids, { status })
       setBulkState({ active: false, label: '', progress: 0 })
-      setSelectedTaskIds(new Set())
+      setRawSelectedTaskIds(new Set())
     },
     [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
@@ -329,7 +318,7 @@ export default function TasksPage() {
       setBulkState({ active: true, label: 'Updating assignees', progress: 0 })
       await handleBulkUpdate(ids, { assignedTo: normalized })
       setBulkState({ active: false, label: '', progress: 0 })
-      setSelectedTaskIds(new Set())
+      setRawSelectedTaskIds(new Set())
     },
     [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
@@ -342,7 +331,7 @@ export default function TasksPage() {
       setBulkState({ active: true, label: 'Updating due dates', progress: 0 })
       await handleBulkUpdate(ids, { dueDate: normalized ?? undefined })
       setBulkState({ active: false, label: '', progress: 0 })
-      setSelectedTaskIds(new Set())
+      setRawSelectedTaskIds(new Set())
     },
     [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
@@ -353,7 +342,7 @@ export default function TasksPage() {
     setBulkState({ active: true, label: 'Deleting tasks', progress: 0 })
     await handleBulkDelete(ids)
     setBulkState({ active: false, label: '', progress: 0 })
-    setSelectedTaskIds(new Set())
+    setRawSelectedTaskIds(new Set())
   }, [handleBulkDelete, hasSelection, selectedTaskIds])
 
 

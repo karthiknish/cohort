@@ -167,9 +167,14 @@ export function TaskKanban({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2.5 font-bold text-foreground tracking-tight">
-          <Columns3 className="h-5 w-5 text-primary" />
-          <span>Workflow Board</span>
+        <div>
+          <div className="flex items-center gap-2.5 font-bold text-foreground tracking-tight">
+            <Columns3 className="h-5 w-5 text-primary" />
+            <span>Workflow Board</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Drag tasks between columns to update status.
+          </p>
         </div>
         <div className="text-sm font-medium text-muted-foreground bg-muted/40 px-3 py-1 rounded-full">
           {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}

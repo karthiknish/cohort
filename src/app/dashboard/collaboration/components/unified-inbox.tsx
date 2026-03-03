@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import type { CollaborationAttachment } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import type { ChannelSummary, PendingAttachment, TypingParticipant, ThreadMessagesState, ThreadCursorsState, ThreadLoadingState, ThreadErrorsState, ReactionPendingState, SendMessageOptions } from '../hooks/types'
@@ -65,8 +66,10 @@ interface UnifiedInboxProps {
   sending: boolean
   isSendDisabled: boolean
   pendingAttachments: PendingAttachment[]
-  onAddAttachments: (files: FileList) => void
+  onAddAttachments: (files: FileList | File[]) => void
   onRemoveAttachment: (attachmentId: string) => void
+  clearPendingAttachments: () => void
+  uploadPendingAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>
   uploading: boolean
   typingParticipants: TypingParticipant[]
   onComposerFocus: () => void
@@ -93,7 +96,7 @@ interface UnifiedInboxProps {
   dmIsLoadingMore: boolean
   dmHasMoreMessages: boolean
   dmLoadMoreMessages: () => void
-  dmSendMessage: (content: string) => Promise<void>
+  dmSendMessage: (content: string, attachments?: CollaborationAttachment[]) => Promise<void>
   dmIsSending: boolean
   dmToggleReaction: (messageLegacyId: string, emoji: string) => Promise<void>
   dmDeleteMessage?: (messageLegacyId: string) => Promise<void>
@@ -139,6 +142,8 @@ export function UnifiedInbox({
   pendingAttachments,
   onAddAttachments,
   onRemoveAttachment,
+  clearPendingAttachments,
+  uploadPendingAttachments,
   uploading,
   typingParticipants,
   onComposerFocus,
@@ -176,6 +181,55 @@ export function UnifiedInbox({
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
+  const [dmMessageInputByConversation, setDmMessageInputByConversation] = useState<Record<string, string>>({})
+
+  const activeDmLegacyId = selectedDM?.legacyId ?? null
+  const dmMessageInput = activeDmLegacyId ? (dmMessageInputByConversation[activeDmLegacyId] ?? '') : ''
+
+  const setActiveDmMessageInput = useCallback(
+    (value: string) => {
+      if (!activeDmLegacyId) {
+        return
+      }
+
+      setDmMessageInputByConversation((current) => ({
+        ...current,
+        [activeDmLegacyId]: value,
+      }))
+    },
+    [activeDmLegacyId]
+  )
+
+  const handleSendDirectMessage = useCallback(
+    async (content: string) => {
+      const trimmed = content.trim()
+      const hasPendingAttachments = pendingAttachments.length > 0
+
+      if (!trimmed && !hasPendingAttachments) {
+        return
+      }
+
+      let uploadedAttachments: CollaborationAttachment[] = []
+      if (hasPendingAttachments) {
+        uploadedAttachments = await uploadPendingAttachments(pendingAttachments)
+
+        // If attachment-only send fails to upload, do not send an empty message.
+        if (!trimmed && uploadedAttachments.length === 0) {
+          return
+        }
+      }
+
+      await dmSendMessage(trimmed, uploadedAttachments.length > 0 ? uploadedAttachments : undefined)
+      if (activeDmLegacyId) {
+        setDmMessageInputByConversation((current) => ({
+          ...current,
+          [activeDmLegacyId]: '',
+        }))
+      }
+      clearPendingAttachments()
+    },
+    [activeDmLegacyId, clearPendingAttachments, dmSendMessage, pendingAttachments, uploadPendingAttachments]
+  )
 
   const unifiedItems = useMemo((): UnifiedItem[] => {
     const items: UnifiedItem[] = []
@@ -410,7 +464,11 @@ export function UnifiedInbox({
           messageInput={messageInput}
           onMessageInputChange={onMessageInputChange}
           onSendMessage={async (content: string) => { await onSendMessage() }}
-          isSending={sending}
+          isSending={sending || uploading}
+          pendingAttachments={pendingAttachments}
+          uploadingAttachments={uploading}
+          onAddAttachments={onAddAttachments}
+          onRemoveAttachment={onRemoveAttachment}
           onToggleReaction={async (messageId: string, emoji: string) => onToggleReaction(selectedChannel.id, messageId, emoji)}
           reactionPendingByMessage={reactionPendingByMessage}
           onDeleteMessage={async (messageId: string) => onDeleteMessage(selectedChannel.id, messageId)}
@@ -452,10 +510,14 @@ export function UnifiedInbox({
           isLoadingMore={dmIsLoadingMore}
           hasMore={dmHasMoreMessages}
           onLoadMore={dmLoadMoreMessages}
-          messageInput={messageInput}
-          onMessageInputChange={onMessageInputChange}
-          onSendMessage={dmSendMessage}
-          isSending={dmIsSending}
+          messageInput={dmMessageInput}
+          onMessageInputChange={setActiveDmMessageInput}
+          onSendMessage={handleSendDirectMessage}
+          isSending={dmIsSending || uploading}
+          pendingAttachments={pendingAttachments}
+          uploadingAttachments={uploading}
+          onAddAttachments={onAddAttachments}
+          onRemoveAttachment={onRemoveAttachment}
           onToggleReaction={dmToggleReaction}
           onDeleteMessage={dmDeleteMessage}
           onEditMessage={dmEditMessage}

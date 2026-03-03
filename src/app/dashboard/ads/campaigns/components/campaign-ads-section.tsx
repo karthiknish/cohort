@@ -139,72 +139,77 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     }
 
     setLoading(true)
-    try {
-      if (!workspaceId) {
-        setLoading(false)
-        return
-      }
 
-      const creatives = (await listCreatives({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: clientId ?? null,
-        campaignId,
-      })) as CampaignAd[]
-
-      setAds(Array.isArray(creatives) ? creatives : [])
-      setSummary(null)
-      setHasLoaded(true)
-    } catch (error) {
-      logError(error, 'CampaignAdsSection:fetchAds')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
-    } finally {
+    if (!workspaceId) {
       setLoading(false)
+      return
     }
+
+    await listCreatives({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: clientId ?? null,
+      campaignId,
+    })
+      .then((creatives) => {
+        const mapped = creatives as CampaignAd[]
+        setAds(Array.isArray(mapped) ? mapped : [])
+        setSummary(null)
+        setHasLoaded(true)
+      })
+      .catch((error) => {
+        logError(error, 'CampaignAdsSection:fetchAds')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [canLoad, campaignId, clientId, listCreatives, providerId, workspaceId])
  
   const fetchMetrics = useCallback(async () => {
 
     if (!canLoad) return
     setMetricsLoading(true)
-    try {
-      if (!workspaceId) {
-        setMetricsLoading(false)
-        return
-      }
 
-      const data = await listAdMetrics({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: clientId ?? null,
-        campaignId,
-        days: '30',
-      })
-
-      const metrics = Array.isArray((data as any)?.metrics) ? ((data as any).metrics as any[]) : []
-
-      const aggregated: Record<string, any> = {}
-      metrics.forEach((m: any) => {
-        if (!aggregated[m.adId]) {
-          aggregated[m.adId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
-        }
-        aggregated[m.adId].spend += m.spend
-        aggregated[m.adId].impressions += m.impressions
-        aggregated[m.adId].clicks += m.clicks
-        aggregated[m.adId].conversions += m.conversions
-        aggregated[m.adId].revenue += m.revenue
-      })
-      setAdMetrics(aggregated)
-    } catch (error) {
-      logError(error, 'CampaignAdsSection:fetchMetrics')
-      console.error('[CampaignAdsSection] metrics error:', error)
-    } finally {
+    if (!workspaceId) {
       setMetricsLoading(false)
+      return
     }
+
+    await listAdMetrics({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: clientId ?? null,
+      campaignId,
+      days: '30',
+    })
+      .then((data) => {
+        const metrics = Array.isArray((data as any)?.metrics) ? ((data as any).metrics as any[]) : []
+
+        const aggregated: Record<string, any> = {}
+        metrics.forEach((m: any) => {
+          if (!aggregated[m.adId]) {
+            aggregated[m.adId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+          }
+          aggregated[m.adId].spend += m.spend
+          aggregated[m.adId].impressions += m.impressions
+          aggregated[m.adId].clicks += m.clicks
+          aggregated[m.adId].conversions += m.conversions
+          aggregated[m.adId].revenue += m.revenue
+        })
+        setAdMetrics(aggregated)
+      })
+      .catch((error) => {
+        logError(error, 'CampaignAdsSection:fetchMetrics')
+        console.error('[CampaignAdsSection] metrics error:', error)
+      })
+      .finally(() => {
+        setMetricsLoading(false)
+      })
   }, [canLoad, campaignId, clientId, listAdMetrics, providerId, workspaceId])
  
   useEffect(() => {
@@ -325,6 +330,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
           </div>
           <div className="flex items-center gap-2">
             <CreateCreativeDialog
+              key={`creative-${campaignId}-${firstAdSetId ?? 'none'}`}
               workspaceId={workspaceId}
               providerId={providerId}
               campaignId={campaignId}

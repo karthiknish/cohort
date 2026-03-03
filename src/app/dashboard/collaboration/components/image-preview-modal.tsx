@@ -33,37 +33,39 @@ export function ImagePreviewModal({
   isOpen,
   onClose,
 }: ImagePreviewModalProps) {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex)
+  const [indexOffset, setIndexOffset] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [isDragging, setIsDragging] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 
-  const currentImage = images[currentIndex]
+  const normalizedIndex =
+    images.length > 0
+      ? ((initialIndex + indexOffset) % images.length + images.length) % images.length
+      : 0
+
+  const currentImage = images[normalizedIndex]
   const hasMultipleImages = images.length > 1
 
-  useEffect(() => {
-    setCurrentIndex(initialIndex)
-  }, [initialIndex])
-
-  useEffect(() => {
-    if (!isOpen) {
-      setZoom(1)
-      setPosition({ x: 0, y: 0 })
-    }
-  }, [isOpen])
+  const handleClose = useCallback(() => {
+    setIndexOffset(0)
+    setZoom(1)
+    setPosition({ x: 0, y: 0 })
+    setIsDragging(false)
+    onClose()
+  }, [onClose])
 
   const handlePrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+    setIndexOffset((prev) => prev - 1)
     setZoom(1)
     setPosition({ x: 0, y: 0 })
-  }, [images.length])
+  }, [])
 
   const handleNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+    setIndexOffset((prev) => prev + 1)
     setZoom(1)
     setPosition({ x: 0, y: 0 })
-  }, [images.length])
+  }, [])
 
   const handleZoomIn = useCallback(() => {
     setZoom((prev) => Math.min(prev + 0.5, 4))
@@ -111,7 +113,7 @@ export function ImagePreviewModal({
 
       switch (e.key) {
         case "Escape":
-          onClose()
+          handleClose()
           break
         case "ArrowLeft":
           handlePrevious()
@@ -131,19 +133,19 @@ export function ImagePreviewModal({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose, handlePrevious, handleNext, handleZoomIn, handleZoomOut])
+  }, [handleClose, handleNext, handlePrevious, handleZoomIn, handleZoomOut, isOpen])
 
   if (!isOpen || !currentImage) {
     return null
   }
 
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[1200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" />
         <DialogPrimitive.Content
           className="fixed inset-0 z-[1200] flex items-center justify-center outline-none"
-          onPointerDownOutside={onClose}
+          onPointerDownOutside={handleClose}
         >
           <DialogPrimitive.Title className="sr-only">
             Image Preview: {currentImage.name}
@@ -159,7 +161,7 @@ export function ImagePreviewModal({
           )}
           {hasMultipleImages && (
             <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/80">
-              {currentIndex + 1} / {images.length}
+              {normalizedIndex + 1} / {images.length}
             </span>
           )}
         </div>
@@ -229,7 +231,7 @@ export function ImagePreviewModal({
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
             onClick={(e) => {
               e.stopPropagation()
-              onClose()
+              handleClose()
             }}
           >
             <X className="h-5 w-5" />
@@ -306,13 +308,13 @@ export function ImagePreviewModal({
               key={`${image.url}-${index}`}
               className={cn(
                 "h-14 w-14 overflow-hidden rounded-md border-2 transition-all",
-                index === currentIndex
+                index === normalizedIndex
                   ? "border-white opacity-100"
                   : "border-transparent opacity-50 hover:opacity-80"
               )}
               onClick={(e) => {
                 e.stopPropagation()
-                setCurrentIndex(index)
+                setIndexOffset(index - initialIndex)
                 setZoom(1)
                 setPosition({ x: 0, y: 0 })
               }}

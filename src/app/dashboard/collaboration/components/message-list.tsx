@@ -171,7 +171,14 @@ export function MessageList({
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const prevMessagesLengthRef = useRef(0)
+  const prependSnapshotRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null)
+  const loadingOlderRef = useRef(false)
+  const previousEdgeRef = useRef<{ firstId: string | null; lastId: string | null }>({
+    firstId: null,
+    lastId: null,
+  })
+  const shouldStickToBottomRef = useRef(true)
+  const hasAutoScrolledInitiallyRef = useRef(false)
   const [localReactionPending, setLocalReactionPending] = useState<string | null>(null)
 
   const sortedMessages = useMemo(() => 
@@ -184,31 +191,88 @@ export function MessageList({
     [sortedMessages]
   )
 
-  useEffect(() => {
-    if (sortedMessages.length > prevMessagesLengthRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  const requestLoadOlder = useCallback(() => {
+    const container = scrollRef.current
+    if (!container || !hasMore || isLoading || loadingOlderRef.current) {
+      return
     }
-    prevMessagesLengthRef.current = sortedMessages.length
-  }, [sortedMessages.length])
+
+    prependSnapshotRef.current = {
+      scrollTop: container.scrollTop,
+      scrollHeight: container.scrollHeight,
+    }
+    loadingOlderRef.current = true
+    onLoadMore()
+  }, [hasMore, isLoading, onLoadMore])
+
+  useEffect(() => {
+    // Release load-more guard if a load cycle ends without message changes.
+    if (!isLoading && loadingOlderRef.current && prependSnapshotRef.current) {
+      loadingOlderRef.current = false
+      prependSnapshotRef.current = null
+    }
+  }, [isLoading])
+
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const firstId = sortedMessages[0]?.id ?? null
+    const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null
+    const lastId = lastMessage ? lastMessage.id : null
+    const previousFirst = previousEdgeRef.current.firstId
+    const previousLast = previousEdgeRef.current.lastId
+
+    if (prependSnapshotRef.current) {
+      const snapshot = prependSnapshotRef.current
+      const delta = container.scrollHeight - snapshot.scrollHeight
+      container.scrollTop = snapshot.scrollTop + delta
+      prependSnapshotRef.current = null
+      loadingOlderRef.current = false
+    } else if (!hasAutoScrolledInitiallyRef.current && sortedMessages.length > 0) {
+      container.scrollTop = container.scrollHeight
+      shouldStickToBottomRef.current = true
+      hasAutoScrolledInitiallyRef.current = true
+    } else {
+      const conversationSwitched =
+        previousFirst !== null &&
+        previousLast !== null &&
+        firstId !== null &&
+        lastId !== null &&
+        previousFirst !== firstId &&
+        previousLast !== lastId
+
+      const appendedAtBottom =
+        previousLast !== null &&
+        previousFirst === firstId &&
+        previousLast !== lastId
+
+      if ((conversationSwitched || appendedAtBottom) && shouldStickToBottomRef.current) {
+        container.scrollTop = container.scrollHeight
+      }
+    }
+
+    previousEdgeRef.current = { firstId, lastId }
+  }, [sortedMessages])
 
   const handleScroll = useCallback(() => {
     const container = scrollRef.current
     if (!container) return
+
+    const distanceFromBottom = container.scrollHeight - (container.scrollTop + container.clientHeight)
+    shouldStickToBottomRef.current = distanceFromBottom < 80
     
-    if (container.scrollTop < 50 && hasMore && !isLoading) {
-      onLoadMore()
+    if (container.scrollTop < 64) {
+      requestLoadOlder()
     }
-  }, [hasMore, isLoading, onLoadMore])
+  }, [requestLoadOlder])
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     const key = `${messageId}-${emoji}`
     if (localReactionPending) return
     setLocalReactionPending(key)
-    try {
-      await onToggleReaction(messageId, emoji)
-    } finally {
-      setLocalReactionPending(null)
-    }
+    await onToggleReaction(messageId, emoji).catch(() => undefined)
+    setLocalReactionPending(null)
   }, [localReactionPending, onToggleReaction])
 
   const isChannel = variant === 'channel'
@@ -254,7 +318,7 @@ export function MessageList({
       <div className={cn('p-4', isChannel && 'space-y-4')}>
         {hasMore && (
           <div className="flex justify-center pb-4">
-            <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={isLoading}>
+            <Button variant="ghost" size="sm" onClick={requestLoadOlder} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin mr-2" />

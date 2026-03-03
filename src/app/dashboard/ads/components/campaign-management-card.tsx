@@ -208,58 +208,71 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     if (!isConnected) return
 
     setLoading(true)
-    try {
-      if (!workspaceId) {
-        return
-      }
-
-      const result = await listCampaigns({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: selectedClientId ?? null,
-      })
-
-      setCampaigns(Array.isArray(result) ? (result as Campaign[]) : [])
-    } catch (error) {
-      logError(error, 'CampaignManagementCard:fetchCampaigns')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
-    } finally {
+    if (!workspaceId) {
       setLoading(false)
+      return
     }
+
+    await listCampaigns({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: selectedClientId ?? null,
+    })
+      .then((result) => {
+        setCampaigns(Array.isArray(result) ? (result as Campaign[]) : [])
+      })
+      .catch((error) => {
+        logError(error, 'CampaignManagementCard:fetchCampaigns')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [isConnected, listCampaigns, providerId, selectedClientId, workspaceId])
 
   const fetchGroups = useCallback(async () => {
     if (!isConnected || providerId !== 'linkedin') return
     setGroupsLoading(true)
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
 
-      const result = await listCampaignGroups({
-        workspaceId,
-        providerId: 'linkedin',
-        clientId: selectedClientId ?? null,
-      })
-
-      setGroups(Array.isArray(result) ? (result as CampaignGroup[]) : [])
-    } catch (error) {
-      logError(error, 'CampaignManagementCard:fetchGroups')
-      console.error('Fetch groups error:', error)
-    } finally {
+    if (!workspaceId) {
       setGroupsLoading(false)
+      return
     }
+
+    await listCampaignGroups({
+      workspaceId,
+      providerId: 'linkedin',
+      clientId: selectedClientId ?? null,
+    })
+      .then((result) => {
+        setGroups(Array.isArray(result) ? (result as CampaignGroup[]) : [])
+      })
+      .catch((error) => {
+        logError(error, 'CampaignManagementCard:fetchGroups')
+        console.error('Fetch groups error:', error)
+      })
+      .finally(() => {
+        setGroupsLoading(false)
+      })
   }, [isConnected, listCampaignGroups, providerId, selectedClientId, workspaceId])
 
   // Auto-load campaigns on mount when connected
   useEffect(() => {
-    if (isConnected) {
+    if (!isConnected) return
+
+    const frameId = requestAnimationFrame(() => {
       void fetchCampaigns()
-      if (providerId === 'linkedin') void fetchGroups()
+      if (providerId === 'linkedin') {
+        void fetchGroups()
+      }
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
     }
   }, [fetchCampaigns, fetchGroups, isConnected, providerId])
 
@@ -276,70 +289,86 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
     setActionLoading(campaignId)
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
 
-      await updateCampaign({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: selectedClientId ?? null,
-        campaignId,
-        action,
-      })
-
-      toast({
-        title: 'Success',
-        description: `Campaign ${action}d successfully`,
-      })
-
-      fetchCampaigns()
-      onRefresh?.()
-    } catch (error) {
-      logError(error, 'CampaignManagementCard:handleAction')
+    if (!workspaceId) {
       toast({
         title: 'Error',
-        description: asErrorMessage(error),
+        description: 'Sign in required',
         variant: 'destructive',
       })
-    } finally {
       setActionLoading(null)
+      return
     }
+
+    await updateCampaign({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: selectedClientId ?? null,
+      campaignId,
+      action,
+    })
+      .then(() => {
+        toast({
+          title: 'Success',
+          description: `Campaign ${action}d successfully`,
+        })
+
+        void fetchCampaigns()
+        onRefresh?.()
+      })
+      .catch((error) => {
+        logError(error, 'CampaignManagementCard:handleAction')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setActionLoading(null)
+      })
   }, [fetchCampaigns, onRefresh, providerId, selectedClientId, updateCampaign, workspaceId])
 
   const handleGroupAction = useCallback(async (groupId: string, action: 'enable' | 'pause') => {
     setActionLoading(groupId)
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
 
-      await updateCampaignGroup({
-        workspaceId,
-        providerId: 'linkedin',
-        clientId: selectedClientId ?? null,
-        campaignGroupId: groupId,
-        action,
-      })
-
-      toast({
-        title: 'Success',
-        description: `Campaign Group ${action}d successfully`,
-      })
-
-      fetchGroups()
-      onRefresh?.()
-    } catch (error) {
-      logError(error, 'CampaignManagementCard:handleGroupAction')
+    if (!workspaceId) {
       toast({
         title: 'Error',
-        description: asErrorMessage(error),
+        description: 'Sign in required',
         variant: 'destructive',
       })
-    } finally {
       setActionLoading(null)
+      return
     }
+
+    await updateCampaignGroup({
+      workspaceId,
+      providerId: 'linkedin',
+      clientId: selectedClientId ?? null,
+      campaignGroupId: groupId,
+      action,
+    })
+      .then(() => {
+        toast({
+          title: 'Success',
+          description: `Campaign Group ${action}d successfully`,
+        })
+
+        void fetchGroups()
+        onRefresh?.()
+      })
+      .catch((error) => {
+        logError(error, 'CampaignManagementCard:handleGroupAction')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setActionLoading(null)
+      })
   }, [fetchGroups, onRefresh, selectedClientId, updateCampaignGroup, workspaceId])
 
   const handleBudgetUpdate = useCallback(async () => {
@@ -348,15 +377,21 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     if (!targetId || !newBudget) return
 
     setActionLoading(targetId)
-    try {
-      const parsedBudget = parseFloat(newBudget)
 
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
+    const parsedBudget = parseFloat(newBudget)
 
-      if (isGroup) {
-        await updateCampaignGroup({
+    if (!workspaceId) {
+      toast({
+        title: 'Error',
+        description: 'Sign in required',
+        variant: 'destructive',
+      })
+      setActionLoading(null)
+      return
+    }
+
+    const updatePromise = isGroup
+      ? updateCampaignGroup({
           workspaceId,
           providerId: 'linkedin',
           clientId: selectedClientId ?? null,
@@ -364,8 +399,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           action: 'updateBudget',
           budget: parsedBudget,
         })
-      } else {
-        await updateCampaign({
+      : updateCampaign({
           workspaceId,
           providerId: providerId as any,
           clientId: selectedClientId ?? null,
@@ -373,71 +407,84 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           action: 'updateBudget',
           budget: parsedBudget,
         })
-      }
 
+    await updatePromise
+      .then(() => {
+        toast({
+          title: 'Success',
+          description: 'Budget updated successfully',
+        })
 
-      toast({
-        title: 'Success',
-        description: 'Budget updated successfully',
+        setBudgetDialogOpen(false)
+        setSelectedCampaign(null)
+        setSelectedGroup(null)
+        setNewBudget('')
+        if (isGroup) {
+          void fetchGroups()
+        } else {
+          void fetchCampaigns()
+        }
+        onRefresh?.()
       })
-
-      setBudgetDialogOpen(false)
-      setSelectedCampaign(null)
-      setSelectedGroup(null)
-      setNewBudget('')
-      if (isGroup) fetchGroups()
-      else fetchCampaigns()
-      onRefresh?.()
-    } catch (error) {
-      logError(error, 'CampaignManagementCard:handleBudgetUpdate')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+      .catch((error) => {
+        logError(error, 'CampaignManagementCard:handleBudgetUpdate')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setActionLoading(null)
-    }
+      .finally(() => {
+        setActionLoading(null)
+      })
   }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId, updateCampaign, updateCampaignGroup])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
 
     setActionLoading(selectedCampaign.id)
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
 
-      await updateCampaign({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: selectedClientId ?? null,
-        campaignId: selectedCampaign.id,
-        action: 'updateBidding',
-        biddingType: newBidding.type,
-        biddingValue: parseFloat(newBidding.value || '0'),
-      })
-
-      toast({
-        title: 'Success',
-        description: 'Bidding strategy updated successfully',
-      })
-
-      setBiddingDialogOpen(false)
-      setSelectedCampaign(null)
-      fetchCampaigns()
-      onRefresh?.()
-    } catch (error) {
-      logError(error, 'CampaignManagementCard:handleBiddingUpdate')
+    if (!workspaceId) {
       toast({
         title: 'Error',
-        description: asErrorMessage(error),
+        description: 'Sign in required',
         variant: 'destructive',
       })
-    } finally {
       setActionLoading(null)
+      return
     }
+
+    await updateCampaign({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: selectedClientId ?? null,
+      campaignId: selectedCampaign.id,
+      action: 'updateBidding',
+      biddingType: newBidding.type,
+      biddingValue: parseFloat(newBidding.value || '0'),
+    })
+      .then(() => {
+        toast({
+          title: 'Success',
+          description: 'Bidding strategy updated successfully',
+        })
+
+        setBiddingDialogOpen(false)
+        setSelectedCampaign(null)
+        void fetchCampaigns()
+        onRefresh?.()
+      })
+      .catch((error) => {
+        logError(error, 'CampaignManagementCard:handleBiddingUpdate')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setActionLoading(null)
+      })
   }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId, updateCampaign])
 
   // Campaign columns

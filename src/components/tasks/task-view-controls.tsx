@@ -67,15 +67,16 @@ export function TaskViewControls({
           <TooltipTrigger asChild>
             <Button
               variant={viewMode === 'board' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="h-8 w-8"
+              size="sm"
+              className="h-8 gap-1.5 px-2"
               onClick={() => onViewModeChange('board')}
               aria-label="Kanban view"
             >
               <Columns3 className="h-4 w-4" />
+              <span className="hidden lg:inline">Kanban</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Kanban view</TooltipContent>
+          <TooltipContent>Kanban view (drag and drop)</TooltipContent>
         </Tooltip>
       </div>
     </div>

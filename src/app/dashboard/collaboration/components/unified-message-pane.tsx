@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import { useRef, useState, useCallback, type ChangeEvent, type ClipboardEvent } from 'react'
 import { 
   Send, MoreVertical, Archive, BellOff, Bell, ArchiveRestore, 
   Share2, Mail, LoaderCircle, Hash, RefreshCw
@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { RichComposer } from './rich-composer'
+import { PendingAttachmentsList } from './message-composer'
 import { 
   MessageList, 
   collaborationToUnifiedMessage, 
@@ -40,6 +41,7 @@ import { DeletedMessageInfo } from './message-item-parts'
 
 import type { CollaborationMessage, CollaborationAttachment } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
+import type { PendingAttachment } from '../hooks/types'
 
 const PLATFORM_CONFIG: Record<'email', { label: string; color: string }> = {
   email: { label: 'Email', color: 'bg-blue-500' },
@@ -81,6 +83,10 @@ export interface UnifiedMessagePaneProps {
   onMessageInputChange: (value: string) => void
   onSendMessage: (content: string) => Promise<void>
   isSending: boolean
+  pendingAttachments?: PendingAttachment[]
+  uploadingAttachments?: boolean
+  onAddAttachments?: (files: FileList | File[]) => void
+  onRemoveAttachment?: (attachmentId: string) => void
   onToggleReaction: (messageId: string, emoji: string) => Promise<void>
   reactionPendingByMessage?: Record<string, string | null>
   onReply?: (message: UnifiedMessage) => void
@@ -110,6 +116,10 @@ export function UnifiedMessagePane({
   onMessageInputChange,
   onSendMessage,
   isSending,
+  pendingAttachments = [],
+  uploadingAttachments = false,
+  onAddAttachments,
+  onRemoveAttachment,
   onToggleReaction,
   reactionPendingByMessage = {},
   onReply,
@@ -127,7 +137,10 @@ export function UnifiedMessagePane({
   const [sharingTo, setSharingTo] = useState<string | null>(null)
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
+
+  const hasPendingAttachments = pendingAttachments.length > 0
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     await onToggleReaction(messageId, emoji)
@@ -140,39 +153,81 @@ export function UnifiedMessagePane({
   const handleDelete = useCallback(async (messageId: string) => {
     if (!onDeleteMessage) return
     setDeletingMessageId(messageId)
-    try {
-      await onDeleteMessage(messageId)
-    } finally {
-      setDeletingMessageId(null)
-    }
+    await onDeleteMessage(messageId).catch(() => undefined)
+    setDeletingMessageId(null)
   }, [onDeleteMessage])
 
   const handleShare = async (message: UnifiedMessage, platform: 'email') => {
     if (!onShareToPlatform) return
     
     setSharingTo(`${message.id}-${platform}`)
-    try {
-      await onShareToPlatform(message, platform)
+    await onShareToPlatform(message, platform)
+      .then(() => {
       toast({
         title: 'Message shared',
         description: `Sent to ${PLATFORM_CONFIG[platform]?.label ?? platform}`,
       })
-    } catch (error) {
+      })
+      .catch(() => {
       toast({
         title: 'Share failed',
         description: `Could not send to ${PLATFORM_CONFIG[platform]?.label ?? platform}`,
         variant: 'destructive',
       })
-    } finally {
-      setSharingTo(null)
-    }
+      })
+    setSharingTo(null)
   }
 
   const handleSend = async () => {
     const content = messageInput.trim()
-    if (!content || isSending) return
+    if ((!content && !hasPendingAttachments) || isSending || uploadingAttachments) return
     await onSendMessage(content)
   }
+
+  const handleAttachmentInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      if (!onAddAttachments) return
+      const files = event.target.files
+      if (files && files.length > 0) {
+        onAddAttachments(files)
+      }
+      event.target.value = ''
+    },
+    [onAddAttachments]
+  )
+
+  const handleComposerDragOver = useCallback(
+    (event: React.DragEvent<HTMLTextAreaElement>) => {
+      if (!onAddAttachments) return
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'copy'
+    },
+    [onAddAttachments]
+  )
+
+  const handleComposerDrop = useCallback(
+    (event: React.DragEvent<HTMLTextAreaElement>) => {
+      if (!onAddAttachments) return
+      event.preventDefault()
+      const files = event.dataTransfer.files
+      if (files && files.length > 0) {
+        onAddAttachments(files)
+      }
+    },
+    [onAddAttachments]
+  )
+
+  const handleComposerPaste = useCallback(
+    (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!onAddAttachments) return
+      const files = event.clipboardData?.files
+      if (files && files.length > 0) {
+        event.preventDefault()
+        onAddAttachments(files)
+      }
+    },
+    [onAddAttachments]
+  )
 
   const renderMessageExtras = (message: UnifiedMessage) => {
     if (!message.sharedTo || message.sharedTo.length === 0) return null
@@ -333,7 +388,7 @@ export function UnifiedMessagePane({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {header.onArchive && (
-                    <DropdownMenuItem onClick={() => header.onArchive!(!header.isArchived)}>
+                    <DropdownMenuItem onClick={() => header.onArchive?.(!header.isArchived)}>
                       {header.isArchived ? (
                         <>
                           <ArchiveRestore className="h-4 w-4 mr-2" />
@@ -348,7 +403,7 @@ export function UnifiedMessagePane({
                     </DropdownMenuItem>
                   )}
                   {header.onMute && (
-                    <DropdownMenuItem onClick={() => header.onMute!(!header.isMuted)}>
+                    <DropdownMenuItem onClick={() => header.onMute?.(!header.isMuted)}>
                       {header.isMuted ? (
                         <>
                           <Bell className="h-4 w-4 mr-2" />
@@ -402,22 +457,44 @@ export function UnifiedMessagePane({
 
       {/* Composer */}
       <div className="p-4 border-t border-muted/40 shrink-0">
+        <PendingAttachmentsList
+          attachments={pendingAttachments}
+          uploading={uploadingAttachments}
+          disabled={isSending}
+          onRemove={(attachmentId) => onRemoveAttachment?.(attachmentId)}
+        />
         <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
           <RichComposer
             value={messageInput}
             onChange={onMessageInputChange}
             onSend={handleSend}
-            disabled={isSending}
+            disabled={isSending || uploadingAttachments}
             placeholder={placeholder}
             participants={participants}
+            onDrop={handleComposerDrop}
+            onDragOver={handleComposerDragOver}
+            onPaste={handleComposerPaste}
+            onAttachClick={onAddAttachments ? () => fileInputRef.current?.click() : undefined}
+            hasAttachments={hasPendingAttachments}
           />
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleAttachmentInputChange}
+        />
         <div className="flex items-center justify-between mt-2">
           {typingIndicator && (
             <span className="text-xs text-muted-foreground italic">{typingIndicator}</span>
           )}
           <div className="flex-1" />
-          <Button onClick={handleSend} disabled={!messageInput.trim() || isSending} size="sm">
+          <Button
+            onClick={handleSend}
+            disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments}
+            size="sm"
+          >
             {isSending ? (
               <LoaderCircle className="h-4 w-4 animate-spin" />
             ) : (

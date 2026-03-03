@@ -137,14 +137,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Listen to Better Auth session changes
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged(async (authUser) => {
-      try {
-        await applyUser(authUser)
-      } catch (error) {
-        console.error('[AuthContext] Error in onAuthStateChanged:', error)
-        setAuthError(createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Auth state change failed'))
-      } finally {
-        setLoading(false)
-      }
+      await applyUser(authUser)
+        .catch((error) => {
+          console.error('[AuthContext] Error in onAuthStateChanged:', error)
+          setAuthError(createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Auth state change failed'))
+        })
+        .finally(() => {
+          setLoading(false)
+        })
     })
 
     return unsubscribe
@@ -169,74 +169,88 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setAuthError(null)
     setIsSyncing(true)
     lastAppliedUserKeyRef.current = null
-    try {
-      await applyUser(currentUser)
-    } finally {
+    await applyUser(currentUser).finally(() => {
       setIsSyncing(false)
-    }
+    })
   }, [applyUser])
 
-  const signIn = useCallback(async (email: string, password: string): Promise<AuthUser> => {
+  const signIn = useCallback((email: string, password: string): Promise<AuthUser> => {
     setLoading(true)
     setAuthError(null)
-    try {
-      const authUser = await authService.signIn(email, password)
-      await applyUser(authUser)
-      return authUser
-    } catch (error) {
-      console.error('[AuthContext] Sign in error:', error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
+
+    return authService
+      .signIn(email, password)
+      .then(async (authUser) => {
+        await applyUser(authUser)
+        return authUser
+      })
+      .catch((error) => {
+        console.error('[AuthContext] Sign in error:', error)
+        throw error
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [applyUser])
 
-  const signUp = useCallback(async (data: SignUpData): Promise<AuthUser> => {
+  const signUp = useCallback((data: SignUpData): Promise<AuthUser> => {
     setLoading(true)
     setAuthError(null)
-    try {
-      const authUser = await authService.signUp(data)
-      await applyUser(authUser)
-      return authUser
-    } catch (error) {
-      console.error('[AuthContext] Sign up error:', error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
+
+    return authService
+      .signUp(data)
+      .then(async (authUser) => {
+        await applyUser(authUser)
+        return authUser
+      })
+      .catch((error) => {
+        console.error('[AuthContext] Sign up error:', error)
+        throw error
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [applyUser])
 
-  const signInWithGoogle = useCallback(async (): Promise<AuthUser> => {
+  const signInWithGoogle = useCallback((): Promise<AuthUser> => {
     setLoading(true)
     setAuthError(null)
-    try {
-      const authUser = await authService.signInWithGoogle()
-      await applyUser(authUser)
-      return authUser
-    } catch (error) {
-      console.error('[AuthContext] Google sign in error:', error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
+
+    return authService
+      .signInWithGoogle()
+      .then(async (authUser) => {
+        await applyUser(authUser)
+        return authUser
+      })
+      .catch((error) => {
+        console.error('[AuthContext] Google sign in error:', error)
+        throw error
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [applyUser])
 
-  const signOut = useCallback(async (): Promise<void> => {
+  const signOut = useCallback((): Promise<void> => {
     setLoading(true)
     setAuthError(null)
-    try {
-      await authService.signOut()
-      await applyUser(null, true)
-      setBetterAuthUserId(null)
-    } catch (error) {
-      console.error('[AuthContext] Sign out error:', error)
-      setUser(null)
-      currentUserRef.current = null
-      lastAppliedUserKeyRef.current = null
-      setBetterAuthUserId(null)
-    } finally {
-      setLoading(false)
-    }
+
+    return authService
+      .signOut()
+      .then(async () => {
+        await applyUser(null, true)
+        setBetterAuthUserId(null)
+      })
+      .catch((error) => {
+        console.error('[AuthContext] Sign out error:', error)
+        setUser(null)
+        currentUserRef.current = null
+        lastAppliedUserKeyRef.current = null
+        setBetterAuthUserId(null)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [applyUser])
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
@@ -272,19 +286,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.changePassword()
   }, [])
 
-  const deleteAccount = useCallback(async (): Promise<void> => {
+  const deleteAccount = useCallback((): Promise<void> => {
     setLoading(true)
     setAuthError(null)
-    try {
-      await authService.deleteAccount()
-      await applyUser(null, true)
-      setBetterAuthUserId(null)
-    } catch (error) {
-      console.error('[AuthContext] Delete account error:', error)
-      throw error
-    } finally {
-      setLoading(false)
-    }
+
+    return authService
+      .deleteAccount()
+      .then(async () => {
+        await applyUser(null, true)
+        setBetterAuthUserId(null)
+      })
+      .catch((error) => {
+        console.error('[AuthContext] Delete account error:', error)
+        throw error
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [applyUser])
 
   const connectGoogleAdsAccount = useCallback(async () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useCallback, useState, useMemo } from 'react'
 import {
   BarChart3,
   CircleCheck,
@@ -88,7 +88,6 @@ export function ProposalAnalyticsCard() {
   const workspaceId = user?.agencyId ?? null
 
   const [timeRange, setTimeRange] = useState<TimeRange>('30d')
-  const [refreshing, setRefreshing] = useState(false)
 
   const dateRange = useMemo(() => getDateRange(timeRange), [timeRange])
   const startDateMs = useMemo(() => {
@@ -123,12 +122,7 @@ export function ProposalAnalyticsCard() {
 
   const loading = summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined
 
-  useEffect(() => {
-    if (!loading) setRefreshing(false)
-  }, [loading])
-
   const handleRefresh = useCallback(() => {
-    setRefreshing(true)
     toast({ title: 'Refreshing…', description: 'Analytics will update automatically.' })
   }, [toast])
 
@@ -185,9 +179,9 @@ export function ProposalAnalyticsCard() {
             variant="outline"
             size="icon"
             onClick={handleRefresh}
-            disabled={refreshing}
+            disabled={loading}
           >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>

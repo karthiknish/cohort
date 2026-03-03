@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useRef, useState, useEffect, forwardRef } from 'react'
+import React, { useCallback, useMemo, useRef, useState, forwardRef } from 'react'
 import { X, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -61,12 +61,11 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     const inputRef = useRef<HTMLInputElement>(null)
     const [mentionState, setMentionState] = useState<MentionState>(DEFAULT_MENTION_STATE)
     const [highlightedIndex, setHighlightedIndex] = useState(0)
-    const [selectedMentions, setSelectedMentions] = useState<MentionableUser[]>([])
 
-    useEffect(() => {
+    const selectedMentions = useMemo(() => {
       const mentionRegex = /@\[([^\]]+)\]/g
       const mentions: MentionableUser[] = []
-      let match
+      let match: RegExpExecArray | null
 
       while ((match = mentionRegex.exec(value)) !== null) {
         const name = match[1]
@@ -76,10 +75,8 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         }
       }
 
-      if (JSON.stringify(mentions) !== JSON.stringify(selectedMentions)) {
-        setSelectedMentions(mentions)
-      }
-    }, [value, users, selectedMentions])
+      return mentions
+    }, [value, users])
 
     const mentionResults = useMemo(() => {
       if (!mentionState.active) {

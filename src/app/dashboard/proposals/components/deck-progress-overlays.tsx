@@ -75,22 +75,36 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
 
   // Track when overlay should be shown (starts when isSubmitting, stays until isPresentationReady)
   useEffect(() => {
-    if (isSubmitting) {
+    if (!isSubmitting) return
+
+    const frameId = requestAnimationFrame(() => {
       setShouldShowOverlay(true)
       setShowCompletionState(false)
+      setStageIndex(0)
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
     }
   }, [isSubmitting])
 
   // When presentation is ready, show completion state and then dismiss after delay
   useEffect(() => {
-    if (isPresentationReady && shouldShowOverlay) {
+    if (!isPresentationReady || !shouldShowOverlay) return
+
+    const frameId = requestAnimationFrame(() => {
       setShowCompletionState(true)
-      const dismissTimer = setTimeout(() => {
-        setShouldShowOverlay(false)
-        setShowCompletionState(false)
-        setStageIndex(0)
-      }, 1500) // Show success state for 1.5 seconds before dismissing
-      return () => clearTimeout(dismissTimer)
+    })
+
+    const dismissTimer = setTimeout(() => {
+      setShouldShowOverlay(false)
+      setShowCompletionState(false)
+      setStageIndex(0)
+    }, 1500) // Show success state for 1.5 seconds before dismissing
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      clearTimeout(dismissTimer)
     }
   }, [isPresentationReady, shouldShowOverlay])
 

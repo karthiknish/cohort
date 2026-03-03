@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAction } from 'convex/react'
 import { Plus, Loader2, Upload, AlertCircle } from 'lucide-react'
 
@@ -92,11 +92,6 @@ export function CreateCreativeDialog({
   const [instagramActorId, setInstagramActorId] = useState('')
   const [status, setStatus] = useState<'ACTIVE' | 'PAUSED'>('PAUSED')
 
-  // Sync selected ad set ID when prop changes
-  useEffect(() => {
-    setSelectedAdSetId(propAdSetId)
-  }, [propAdSetId])
-
   const resetForm = () => {
     setName('')
     setObjectType('IMAGE')
@@ -128,48 +123,56 @@ export function CreateCreativeDialog({
     }
 
     setUploadingImage(true)
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
 
-      // Convert file to bytes
-      const arrayBuffer = await file.arrayBuffer()
-      const fileData = new Uint8Array(arrayBuffer)
-
-      const result = await uploadMedia({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: clientId ?? null,
-        fileName: file.name,
-        fileData: Array.from(fileData),
-      })
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to upload media')
-      }
-
-      // Extract creative spec which contains the image_hash
-      if (result.creativeSpec) {
-        const spec = JSON.parse(result.creativeSpec as string) as { image_hash?: string; video_id?: string }
-        if (spec.image_hash) {
-          setImageHash(spec.image_hash)
-          toast({
-            title: 'Image uploaded',
-            description: 'Your image has been uploaded successfully.',
-          })
-        }
-      }
-    } catch (error) {
-      logError(error, 'CreateCreativeDialog:handleImageUpload')
+    if (!workspaceId) {
       toast({
         title: 'Upload failed',
-        description: asErrorMessage(error),
+        description: 'Sign in required',
         variant: 'destructive',
       })
-    } finally {
       setUploadingImage(false)
+      return
     }
+
+    // Convert file to bytes
+    const arrayBuffer = await file.arrayBuffer()
+    const fileData = new Uint8Array(arrayBuffer)
+
+    await uploadMedia({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: clientId ?? null,
+      fileName: file.name,
+      fileData: Array.from(fileData),
+    })
+      .then((result) => {
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to upload media')
+        }
+
+        // Extract creative spec which contains the image_hash
+        if (result.creativeSpec) {
+          const spec = JSON.parse(result.creativeSpec as string) as { image_hash?: string; video_id?: string }
+          if (spec.image_hash) {
+            setImageHash(spec.image_hash)
+            toast({
+              title: 'Image uploaded',
+              description: 'Your image has been uploaded successfully.',
+            })
+          }
+        }
+      })
+      .catch((error) => {
+        logError(error, 'CreateCreativeDialog:handleImageUpload')
+        toast({
+          title: 'Upload failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setUploadingImage(false)
+      })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -212,46 +215,48 @@ export function CreateCreativeDialog({
     }
 
     setLoading(true)
-    try {
-      const result = await createCreative({
-        workspaceId,
-        providerId: providerId as any,
-        clientId: clientId ?? null,
-        campaignId,
-        adSetId: selectedAdSetId,
-        name: name.trim(),
-        objectType,
-        title: title.trim() || undefined,
-        body: body.trim() || undefined,
-        description: description.trim() || undefined,
-        callToActionType: callToActionType || undefined,
-        linkUrl: linkUrl.trim() || undefined,
-        imageUrl: imageUrl.trim() || undefined,
-        imageHash: imageHash || undefined,
-        videoId: videoId || undefined,
-        pageId: pageId || undefined,
-        instagramActorId: instagramActorId || undefined,
-        status,
-      })
 
-      toast({
-        title: 'Creative created',
-        description: `Your ad creative "${name}" has been created successfully.`,
-      })
+    await createCreative({
+      workspaceId,
+      providerId: providerId as any,
+      clientId: clientId ?? null,
+      campaignId,
+      adSetId: selectedAdSetId,
+      name: name.trim(),
+      objectType,
+      title: title.trim() || undefined,
+      body: body.trim() || undefined,
+      description: description.trim() || undefined,
+      callToActionType: callToActionType || undefined,
+      linkUrl: linkUrl.trim() || undefined,
+      imageUrl: imageUrl.trim() || undefined,
+      imageHash: imageHash || undefined,
+      videoId: videoId || undefined,
+      pageId: pageId || undefined,
+      instagramActorId: instagramActorId || undefined,
+      status,
+    })
+      .then(() => {
+        toast({
+          title: 'Creative created',
+          description: `Your ad creative "${name}" has been created successfully.`,
+        })
 
-      setOpen(false)
-      resetForm()
-      onSuccess?.()
-    } catch (error) {
-      logError(error, 'CreateCreativeDialog:handleSubmit')
-      toast({
-        title: 'Creation failed',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+        setOpen(false)
+        resetForm()
+        onSuccess?.()
       })
-    } finally {
-      setLoading(false)
-    }
+      .catch((error) => {
+        logError(error, 'CreateCreativeDialog:handleSubmit')
+        toast({
+          title: 'Creation failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   const isMeta = providerId === 'facebook'

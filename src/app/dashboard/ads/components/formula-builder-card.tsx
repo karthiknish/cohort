@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
     Plus,
     Trash2,
@@ -95,40 +95,35 @@ export function FormulaBuilderCard({
     const [formulaName, setFormulaName] = useState('')
     const [formulaExpression, setFormulaExpression] = useState('')
     const [outputMetric, setOutputMetric] = useState('')
-    const [validation, setValidation] = useState<FormulaValidationResult | null>(null)
-    const [previewResult, setPreviewResult] = useState<number | null>(null)
 
     // Load formulas on mount
     useEffect(() => {
         void loadFormulas()
     }, [loadFormulas])
 
-    // Validate formula as user types
-    useEffect(() => {
+    const validation = useMemo<FormulaValidationResult | null>(() => {
         if (!formulaExpression.trim()) {
-            setValidation(null)
-            setPreviewResult(null)
-            return
+            return null
         }
 
-        const result = validateFormula(formulaExpression)
-        setValidation(result)
+        return validateFormula(formulaExpression)
+    }, [formulaExpression, validateFormula])
 
-        // Calculate preview if valid and we have metrics
-        if (result.valid && metricTotals) {
-            const inputs: Record<string, number> = {
-                spend: metricTotals.spend,
-                impressions: metricTotals.impressions,
-                clicks: metricTotals.clicks,
-                conversions: metricTotals.conversions,
-                revenue: metricTotals.revenue,
-            }
-            const preview = executeFormula(formulaExpression, inputs)
-            setPreviewResult(preview)
-        } else {
-            setPreviewResult(null)
+    const previewResult = useMemo<number | null>(() => {
+        if (!validation?.valid || !metricTotals) {
+            return null
         }
-    }, [formulaExpression, validateFormula, executeFormula, metricTotals])
+
+        const inputs: Record<string, number> = {
+            spend: metricTotals.spend,
+            impressions: metricTotals.impressions,
+            clicks: metricTotals.clicks,
+            conversions: metricTotals.conversions,
+            revenue: metricTotals.revenue,
+        }
+
+        return executeFormula(formulaExpression, inputs)
+    }, [validation, metricTotals, executeFormula, formulaExpression])
 
     const handleSave = async () => {
         if (!validation?.valid || !formulaName.trim() || !outputMetric.trim()) return
@@ -144,8 +139,6 @@ export function FormulaBuilderCard({
         setFormulaName('')
         setFormulaExpression('')
         setOutputMetric('')
-        setValidation(null)
-        setPreviewResult(null)
         setDialogOpen(false)
     }
 

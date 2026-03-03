@@ -145,7 +145,13 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     }
 
     if (mountedRef.current && typeof window !== 'undefined') {
-      loadNavigationState()
+      const frameId = window.requestAnimationFrame(() => {
+        loadNavigationState()
+      })
+
+      return () => {
+        window.cancelAnimationFrame(frameId)
+      }
     }
   }, [selectedClientId, loadNavigationState])
 
@@ -161,7 +167,13 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     }
 
     if (isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
-      loadNavigationState()
+      const frameId = window.requestAnimationFrame(() => {
+        loadNavigationState()
+      })
+
+      return () => {
+        window.cancelAnimationFrame(frameId)
+      }
     }
   }, [loadNavigationState])
 
@@ -175,11 +187,17 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const urlProjectName = searchParams.get('projectName')
 
     if (urlProjectId || urlProjectName) {
-      setNavigationState((prev) => ({
-        ...prev,
-        projectId: urlProjectId,
-        projectName: urlProjectName,
-      }))
+      const frameId = requestAnimationFrame(() => {
+        setNavigationState((prev) => ({
+          ...prev,
+          projectId: urlProjectId,
+          projectName: urlProjectName,
+        }))
+      })
+
+      return () => {
+        cancelAnimationFrame(frameId)
+      }
     }
   }, [searchParams])
 

@@ -29,26 +29,20 @@ export function ProfileCard({
 
   const user = profile
 
-  const [profileName, setProfileName] = useState(user?.name ?? '')
-  const [profilePhone, setProfilePhone] = useState(user?.phoneNumber ?? '')
+  const [profileNameDraft, setProfileNameDraft] = useState<string | null>(null)
+  const [profilePhoneDraft, setProfilePhoneDraft] = useState<string | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [savingProfile, setSavingProfile] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.photoUrl ?? null)
+  const [avatarPreviewOverride, setAvatarPreviewOverride] = useState<string | null | undefined>(undefined)
   const [avatarError, setAvatarError] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
 
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
   const tempAvatarUrlRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    setProfileName(user?.name ?? '')
-    setProfilePhone(user?.phoneNumber ?? '')
-    setProfileError(null)
-  }, [user?.name, user?.phoneNumber])
-
-  useEffect(() => {
-    setAvatarPreview(user?.photoUrl ?? null)
-  }, [user?.photoUrl])
+  const profileName = profileNameDraft ?? (user?.name ?? '')
+  const profilePhone = profilePhoneDraft ?? (user?.phoneNumber ?? '')
+  const avatarPreview = avatarPreviewOverride === undefined ? (user?.photoUrl ?? null) : avatarPreviewOverride
 
   useEffect(() => {
     return () => {
@@ -96,21 +90,23 @@ export function ProfileCard({
       setSavingProfile(true)
       setProfileError(null)
 
-      try {
-        await updateMyProfile({
-          name: nextName,
-          phoneNumber: nextPhone.length ? nextPhone : null,
+      await updateMyProfile({
+        name: nextName,
+        phoneNumber: nextPhone.length ? nextPhone : null,
+      })
+        .then(() => {
+          setProfileNameDraft(nextName)
+          setProfilePhoneDraft(nextPhone)
+          toast({ title: 'Profile updated', description: 'Your changes were saved.' })
         })
-        setProfileName(nextName)
-        setProfilePhone(nextPhone)
-        toast({ title: 'Profile updated', description: 'Your changes were saved.' })
-      } catch (submitError) {
-        const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
-        setProfileError(message)
-        toast({ title: 'Profile update failed', description: message, variant: 'destructive' })
-      } finally {
-        setSavingProfile(false)
-      }
+        .catch((submitError) => {
+          const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
+          setProfileError(message)
+          toast({ title: 'Profile update failed', description: message, variant: 'destructive' })
+        })
+        .finally(() => {
+          setSavingProfile(false)
+        })
     },
     [profileName, profilePhone, toast, updateMyProfile, user],
   )
@@ -182,26 +178,28 @@ export function ProfileCard({
 
       const objectUrl = URL.createObjectURL(file)
       tempAvatarUrlRef.current = objectUrl
-      setAvatarPreview(objectUrl)
+      setAvatarPreviewOverride(objectUrl)
 
-      try {
-        const photoUrl = await uploadAvatarImage(file)
-        await updateMyProfile({ photoUrl })
-        setAvatarPreview(photoUrl)
-        toast({ title: 'Photo uploaded', description: 'Your profile photo has been updated.' })
-      } catch (uploadError) {
-        console.error('[settings/profile] avatar upload failed', uploadError)
-        setAvatarError('Failed to upload image. Try again.')
-        setAvatarPreview(previousUrl ?? null)
-        toast({ title: 'Upload failed', description: 'Unable to update your profile photo right now.', variant: 'destructive' })
-      } finally {
-        setAvatarUploading(false)
-        if (tempAvatarUrlRef.current) {
-          URL.revokeObjectURL(tempAvatarUrlRef.current)
-          tempAvatarUrlRef.current = null
-        }
-        event.target.value = ''
-      }
+      await uploadAvatarImage(file)
+        .then(async (photoUrl) => {
+          await updateMyProfile({ photoUrl })
+          setAvatarPreviewOverride(photoUrl)
+          toast({ title: 'Photo uploaded', description: 'Your profile photo has been updated.' })
+        })
+        .catch((uploadError) => {
+          console.error('[settings/profile] avatar upload failed', uploadError)
+          setAvatarError('Failed to upload image. Try again.')
+          setAvatarPreviewOverride(previousUrl ?? null)
+          toast({ title: 'Upload failed', description: 'Unable to update your profile photo right now.', variant: 'destructive' })
+        })
+        .finally(() => {
+          setAvatarUploading(false)
+          if (tempAvatarUrlRef.current) {
+            URL.revokeObjectURL(tempAvatarUrlRef.current)
+            tempAvatarUrlRef.current = null
+          }
+          event.target.value = ''
+        })
     },
     [avatarPreview, toast, updateMyProfile, user, uploadAvatarImage],
   )
@@ -220,17 +218,19 @@ export function ProfileCard({
       tempAvatarUrlRef.current = null
     }
 
-    try {
-      await updateMyProfile({ photoUrl: null })
-      setAvatarPreview(null)
-      toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
-    } catch (removeError) {
-      console.error('[settings/profile] avatar remove failed', removeError)
-      setAvatarError('Failed to remove profile photo. Try again.')
-      toast({ title: 'Remove failed', description: 'Unable to remove your photo right now.', variant: 'destructive' })
-    } finally {
-      setAvatarUploading(false)
-    }
+    await updateMyProfile({ photoUrl: null })
+      .then(() => {
+        setAvatarPreviewOverride(null)
+        toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
+      })
+      .catch((removeError) => {
+        console.error('[settings/profile] avatar remove failed', removeError)
+        setAvatarError('Failed to remove profile photo. Try again.')
+        toast({ title: 'Remove failed', description: 'Unable to remove your photo right now.', variant: 'destructive' })
+      })
+      .finally(() => {
+        setAvatarUploading(false)
+      })
   }, [toast, updateMyProfile, user])
 
   return (
@@ -300,7 +300,7 @@ export function ProfileCard({
                 id="profile-name"
                 value={profileName}
                 onChange={(event) => {
-                  setProfileName(event.target.value)
+                  setProfileNameDraft(event.target.value)
                   setProfileError(null)
                 }}
                 placeholder="e.g. Jordan Michaels"
@@ -313,7 +313,7 @@ export function ProfileCard({
                 id="profile-phone"
                 value={profilePhone}
                 onChange={(event) => {
-                  setProfilePhone(event.target.value)
+                  setProfilePhoneDraft(event.target.value)
                   setProfileError(null)
                 }}
                 placeholder="Add a contact number"

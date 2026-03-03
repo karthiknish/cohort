@@ -85,25 +85,27 @@ function PinnedMessageItem({ message, workspaceId, userId, onClick }: PinnedMess
       if (!workspaceId || isUnpinning) return
 
       setIsUnpinning(true)
-      try {
-        await unpinMessage({
-          workspaceId: String(workspaceId),
-          legacyId: message.id,
+      await unpinMessage({
+        workspaceId: String(workspaceId),
+        legacyId: message.id,
+      })
+        .then(() => {
+          toast({
+            title: 'Message unpinned',
+            description: 'The message has been removed from pinned messages.',
+          })
         })
-        toast({
-          title: 'Message unpinned',
-          description: 'The message has been removed from pinned messages.',
+        .catch((error) => {
+          logError(error, 'PinnedMessageItem:handleUnpin')
+          toast({
+            title: 'Failed to unpin message',
+            description: asErrorMessage(error),
+            variant: 'destructive',
+          })
         })
-      } catch (error) {
-        logError(error, 'PinnedMessageItem:handleUnpin')
-        toast({
-          title: 'Failed to unpin message',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        .finally(() => {
+          setIsUnpinning(false)
         })
-      } finally {
-        setIsUnpinning(false)
-      }
     },
     [workspaceId, message.id, unpinMessage, isUnpinning, toast]
   )
@@ -210,39 +212,41 @@ export function PinMessageButton({
       if (!workspaceId || isLoading) return
 
       setIsLoading(true)
-      try {
-        if (isPinned) {
-          await unpinMessageMutation({
+      const mutation = isPinned
+        ? unpinMessageMutation({
             workspaceId: String(workspaceId),
             legacyId: message.id,
+          }).then(() => {
+            toast({
+              title: 'Message unpinned',
+              description: 'The message has been removed from pinned messages.',
+            })
+            onPinChange?.(message.id, false)
           })
-          toast({
-            title: 'Message unpinned',
-            description: 'The message has been removed from pinned messages.',
-          })
-          onPinChange?.(message.id, false)
-        } else {
-          await pinMessageMutation({
+        : pinMessageMutation({
             workspaceId: String(workspaceId),
             legacyId: message.id,
             userId: String(userId),
+          }).then(() => {
+            toast({
+              title: 'Message pinned',
+              description: 'The message has been pinned to the channel.',
+            })
+            onPinChange?.(message.id, true)
           })
+
+      await mutation
+        .catch((error) => {
+          logError(error, 'PinMessageButton:handleTogglePin')
           toast({
-            title: 'Message pinned',
-            description: 'The message has been pinned to the channel.',
+            title: 'Failed to update pin',
+            description: asErrorMessage(error),
+            variant: 'destructive',
           })
-          onPinChange?.(message.id, true)
-        }
-      } catch (error) {
-        logError(error, 'PinMessageButton:handleTogglePin')
-        toast({
-          title: 'Failed to update pin',
-          description: asErrorMessage(error),
-          variant: 'destructive',
         })
-      } finally {
-        setIsLoading(false)
-      }
+        .finally(() => {
+          setIsLoading(false)
+        })
     },
     [workspaceId, userId, message.id, isPinned, pinMessageMutation, unpinMessageMutation, isLoading, toast, onPinChange]
   )
