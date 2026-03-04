@@ -18,11 +18,11 @@ export function VoiceWaveform({ isActive, barCount = 12, className }: VoiceWavef
       return new Array(barCount).fill(8)
     }
 
-    return frequencies.map((freq) => {
+    return frequencies.map((freq, index) => {
       const baseHeight = 8
       const amplifiedFreq = Math.pow(freq, 0.8)
       const dynamicHeight = amplifiedFreq * 40
-      const jitter = Math.random() * 4
+      const jitter = (index % 5) * 0.75
       return Math.max(baseHeight, dynamicHeight + jitter)
     })
   }, [frequencies, isActive, barCount])

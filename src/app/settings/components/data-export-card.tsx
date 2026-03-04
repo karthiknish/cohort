@@ -18,7 +18,7 @@ export function DataExportCard() {
 
   const exportUserData = useAction(authActionsApi.exportUserData)
 
-  const handleExportData = useCallback(async () => {
+  const handleExportData = useCallback(() => {
     if (!user) {
       setExportError('You must be signed in to export your data.')
       return
@@ -27,32 +27,33 @@ export function DataExportCard() {
     setExportingData(true)
     setExportError(null)
 
-    try {
-      const exportData = await exportUserData()
+    void exportUserData()
+      .then((exportData) => {
+        const filename = `cohort-data-export-${new Date().toISOString().split('T')[0]}.json`
 
-      const filename = `cohort-data-export-${new Date().toISOString().split('T')[0]}.json`
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
-      toast({
-        title: 'Data exported successfully',
-        description: 'Your personal data has been downloaded as a JSON file.',
+        toast({
+          title: 'Data exported successfully',
+          description: 'Your personal data has been downloaded as a JSON file.',
+        })
       })
-    } catch (exportErr) {
-      const message = exportErr instanceof Error ? exportErr.message : 'Failed to export data'
-      setExportError(message)
-      toast({ title: 'Export failed', description: message, variant: 'destructive' })
-    } finally {
-      setExportingData(false)
-    }
+      .catch((exportErr) => {
+        const message = exportErr instanceof Error ? exportErr.message : 'Failed to export data'
+        setExportError(message)
+        toast({ title: 'Export failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setExportingData(false)
+      })
   }, [toast, user, exportUserData])
 
   return (

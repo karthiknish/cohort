@@ -54,7 +54,7 @@ export function ImageUploader({
   )
 
   const processFile = useCallback(
-    async (file: File) => {
+    (file: File) => {
       const validationError = validateFile(file)
       if (validationError) {
         setError(validationError)
@@ -68,19 +68,21 @@ export function ImageUploader({
       const objectUrl = URL.createObjectURL(file)
       setPreviewUrl(objectUrl)
 
-      try {
-        const uploadedUrl = await onUpload(file)
-        URL.revokeObjectURL(objectUrl)
-        setPreviewUrl(uploadedUrl)
-        onChange(uploadedUrl)
-      } catch (err) {
-        console.error('Image upload failed:', err)
-        setError('Upload failed. Please try again.')
-        URL.revokeObjectURL(objectUrl)
-        setPreviewUrl(value ?? null)
-      } finally {
-        setIsUploading(false)
-      }
+      void onUpload(file)
+        .then((uploadedUrl) => {
+          URL.revokeObjectURL(objectUrl)
+          setPreviewUrl(uploadedUrl)
+          onChange(uploadedUrl)
+        })
+        .catch((err) => {
+          console.error('Image upload failed:', err)
+          setError('Upload failed. Please try again.')
+          URL.revokeObjectURL(objectUrl)
+          setPreviewUrl(value ?? null)
+        })
+        .finally(() => {
+          setIsUploading(false)
+        })
     },
     [onUpload, onChange, validateFile, value]
   )

@@ -30,6 +30,8 @@ interface CollapsedThreadViewProps {
   className?: string
 }
 
+const EMPTY_EXPANDED_THREADS = new Set<string>()
+
 /**
  * Collapsible thread view for conversation threads
  * Shows thread summaries that can be expanded to show full conversation
@@ -38,7 +40,7 @@ export function CollapsedThreadView({
   threads,
   onThreadClick,
   onExpand,
-  expandedThreads = new Set(),
+  expandedThreads = EMPTY_EXPANDED_THREADS,
   renderExpandedThread,
   className,
 }: CollapsedThreadViewProps) {

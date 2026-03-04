@@ -43,13 +43,13 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
 
   const createProblemReport = useMutation(problemReportsApi.create)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
 
     setSubmitting(true)
-    try {
-      await createProblemReport({
+
+    void createProblemReport({
         legacyId: `pr_${Date.now()}_${user.id ?? 'anon'}`,
         userId: user.id ?? null,
         userEmail: user.email ?? null,
@@ -63,25 +63,28 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
         updatedAtMs: Date.now(),
       })
 
-      toast({
-        title: 'Report submitted',
-        description: "Thank you for your feedback. We'll look into it as soon as possible.",
+      .then(() => {
+        toast({
+          title: 'Report submitted',
+          description: "Thank you for your feedback. We'll look into it as soon as possible.",
+        })
+
+        onOpenChange(false)
+        setTitle('')
+        setDescription('')
+        setSeverity('medium')
       })
-      
-      onOpenChange(false)
-      setTitle('')
-      setDescription('')
-      setSeverity('medium')
-    } catch (error) {
-      console.error('Error submitting problem report:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to submit the report. Please try again.',
-        variant: 'destructive',
+      .catch((error) => {
+        console.error('Error submitting problem report:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to submit the report. Please try again.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setSubmitting(false)
-    }
+      .finally(() => {
+        setSubmitting(false)
+      })
   }
 
   return (

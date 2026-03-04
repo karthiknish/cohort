@@ -1,4 +1,5 @@
 'use client'
+'use no memo'
 
 import * as React from 'react'
 import {
@@ -13,9 +14,9 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
+  useReactTable as createReactTable,
 } from '@tanstack/react-table'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useVirtualizer as createVirtualizer } from '@tanstack/react-virtual'
 
 import {
   Table,
@@ -94,6 +95,8 @@ export function DataTable<TData, TValue>({
   rowHeight = 48,
   overscan = 6,
 }: DataTableProps<TData, TValue>) {
+  'use no memo'
+
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(initialColumnFilters)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(initialColumnVisibility)
@@ -121,7 +124,7 @@ export function DataTable<TData, TValue>({
   }, [searchKey, effectiveSearchValue])
 
   // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = createReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
@@ -176,7 +179,7 @@ export function DataTable<TData, TValue>({
 
   const shouldVirtualize = enableVirtualization && !manualPagination
   const virtualParentRef = React.useRef<HTMLDivElement | null>(null)
-  const virtualizer = useVirtualizer({
+  const virtualizer = createVirtualizer({
     count: shouldVirtualize ? rows.length : 0,
     getScrollElement: () => virtualParentRef.current,
     estimateSize: () => rowHeight,

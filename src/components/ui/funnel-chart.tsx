@@ -36,14 +36,14 @@ export function FunnelChart({
   // Calculate totals and percentages
   const funnelData = useMemo(() => {
     const total = steps[0]?.count || 1
-    let previousCount = total
 
     return steps.map((step, index) => {
+      const previousCount = index > 0 ? (steps[index - 1]?.count ?? total) : total
       const percentage = total > 0 ? (step.count / total) * 100 : 0
       const dropOff = index > 0 ? previousCount - step.count : 0
       const dropOffPercent = previousCount > 0 ? (dropOff / previousCount) * 100 : 0
 
-      const result = {
+      return {
         ...step,
         percentage,
         dropOff,
@@ -51,11 +51,8 @@ export function FunnelChart({
         width: percentage,
         previousCount,
       }
-
-      previousCount = step.count
-      return result
     })
-  }, [steps, showPrevious])
+  }, [steps])
 
   const defaultColor = 'hsl(var(--primary))'
 

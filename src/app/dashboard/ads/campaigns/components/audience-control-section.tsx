@@ -65,6 +65,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const [selectedTargetingId, setSelectedTargetingId] = useState<string>('all')
 
   const canLoad = !isPreviewMode
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
   // Collect unknown location names for batch geocoding
   const unknownLocationNames = useMemo(() => {
@@ -92,7 +93,6 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       return
     }
 
-    const workspaceId = user?.agencyId ? String(user.agencyId) : null
     if (!workspaceId) {
       toast({
         title: 'Error',
@@ -104,47 +104,60 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
 
     setLoading(true)
-    try {
-      const data = await getTargeting({
+
+    void getTargeting({
         workspaceId,
         providerId: providerId as any,
         clientId: clientId ?? null,
         campaignId,
       })
 
-       const nextTargetingRaw = (data as any)?.targeting
-       const nextTargeting = Array.isArray(nextTargetingRaw) ? nextTargetingRaw : []
-       setTargeting(nextTargeting)
-      setInsights(((data as any)?.insights ?? null) as Insights | null)
-      setHasLoaded(true)
+      .then((data) => {
+        const nextTargetingRaw = (data as any)?.targeting
+        const nextTargeting = Array.isArray(nextTargetingRaw) ? nextTargetingRaw : []
+        setTargeting(nextTargeting)
+        setInsights(((data as any)?.insights ?? null) as Insights | null)
+        setHasLoaded(true)
 
-      if (nextTargeting.length <= 1) {
-        setSelectedTargetingId('all')
-      } else if (selectedTargetingId === 'all') {
-        const firstId = typeof nextTargeting[0]?.entityId === 'string' ? nextTargeting[0].entityId : null
-        if (firstId) setSelectedTargetingId(firstId)
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load audience targeting'
-
-      // Suppress toasts for non-actionable errors
-      if (message.includes('Unknown Meta API error') || message.includes('INTERNAL_ERROR')) {
-        // Silent failure - don't show toast for unknown errors
-        console.warn('Meta API error (suppressed):', message)
-      } else {
-        toast({
-          title: 'Error',
-          description: message,
-          variant: 'destructive',
+        setSelectedTargetingId((current) => {
+          if (nextTargeting.length <= 1) {
+            return 'all'
+          }
+          if (current === 'all') {
+            const firstId = typeof nextTargeting[0]?.entityId === 'string' ? nextTargeting[0].entityId : null
+            return firstId ?? current
+          }
+          return current
         })
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [campaignId, canLoad, clientId, getTargeting, providerId, selectedTargetingId, user?.agencyId])
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Failed to load audience targeting'
+
+        // Suppress toasts for non-actionable errors
+        if (message.includes('Unknown Meta API error') || message.includes('INTERNAL_ERROR')) {
+          // Silent failure - don't show toast for unknown errors
+          console.warn('Meta API error (suppressed):', message)
+        } else {
+          toast({
+            title: 'Error',
+            description: message,
+            variant: 'destructive',
+          })
+        }
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [campaignId, canLoad, clientId, getTargeting, providerId, workspaceId])
 
   useEffect(() => {
-    void fetchTargeting()
+    const frame = requestAnimationFrame(() => {
+      void fetchTargeting()
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [fetchTargeting])
 
   const toggleSection = (section: string) => {

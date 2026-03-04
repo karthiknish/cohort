@@ -118,7 +118,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     }
   }, [handleAddTag])
 
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
+  const handleSubmit = useCallback((event: React.FormEvent) => {
     event.preventDefault()
 
     if (!user?.id || !workspaceId) {
@@ -133,22 +133,21 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
 
     setLoading(true)
 
-    try {
-      const selectedClientData = clients.find((c) => c.id === clientId)
+    const selectedClientData = clients.find((c) => c.id === clientId)
 
-      const payload: CreateProjectPayload = {
-        name: name.trim(),
-        description: description.trim() || undefined,
-        status,
-        clientId: (clientId && clientId !== 'none') ? clientId : undefined,
-        clientName: selectedClientData?.name || undefined,
-        startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
-        endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
-        tags,
-      }
+    const payload: CreateProjectPayload = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      status,
+      clientId: (clientId && clientId !== 'none') ? clientId : undefined,
+      clientName: selectedClientData?.name || undefined,
+      startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
+      endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
+      tags,
+    }
 
-      const legacyId = uuidv4()
-      await createProject({
+    const legacyId = uuidv4()
+    void createProject({
         workspaceId,
         legacyId,
         name: payload.name,
@@ -162,41 +161,44 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         ownerId: null,
       })
 
-      const nowMs = Date.now()
-      const createdProject: ProjectRecord = {
-        id: legacyId,
-        name: payload.name,
-        description: payload.description ?? null,
-        status: payload.status,
-        clientId: payload.clientId ?? null,
-        clientName: payload.clientName ?? null,
-        startDate: payload.startDate ? new Date(payload.startDate).toISOString() : null,
-        endDate: payload.endDate ? new Date(payload.endDate).toISOString() : null,
-        tags: payload.tags,
-        ownerId: null,
-        createdAt: new Date(nowMs).toISOString(),
-        updatedAt: new Date(nowMs).toISOString(),
-        taskCount: 0,
-        openTaskCount: 0,
-        recentActivityAt: null,
-        deletedAt: null,
-      }
+      .then(() => {
+        const nowMs = Date.now()
+        const createdProject: ProjectRecord = {
+          id: legacyId,
+          name: payload.name,
+          description: payload.description ?? null,
+          status: payload.status,
+          clientId: payload.clientId ?? null,
+          clientName: payload.clientName ?? null,
+          startDate: payload.startDate ? new Date(payload.startDate).toISOString() : null,
+          endDate: payload.endDate ? new Date(payload.endDate).toISOString() : null,
+          tags: payload.tags,
+          ownerId: null,
+          createdAt: new Date(nowMs).toISOString(),
+          updatedAt: new Date(nowMs).toISOString(),
+          taskCount: 0,
+          openTaskCount: 0,
+          recentActivityAt: null,
+          deletedAt: null,
+        }
 
-      toast({
-        title: 'Project created!',
-        description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
+        toast({
+          title: 'Project created!',
+          description: `"${createdProject.name}" is ready. Start adding tasks and collaborating.`,
+        })
+
+        onProjectCreated?.(createdProject)
+        emitDashboardRefresh({ reason: 'project-mutated', clientId: createdProject.clientId ?? null })
+        setOpen(false)
+        resetForm()
       })
-
-      onProjectCreated?.(createdProject)
-      emitDashboardRefresh({ reason: 'project-mutated', clientId: createdProject.clientId ?? null })
-      setOpen(false)
-      resetForm()
-    } catch (error) {
-      logError(error, 'CreateProjectDialog:handleSubmit')
-      toast({ title: 'Creation failed', description: asErrorMessage(error), variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
+      .catch((error) => {
+        logError(error, 'CreateProjectDialog:handleSubmit')
+        toast({ title: 'Creation failed', description: asErrorMessage(error), variant: 'destructive' })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [user?.id, workspaceId, name, description, status, clientId, clients, startDate, endDate, tags, toast, onProjectCreated, resetForm, createProject])
 
   const formatStatusLabel = (value: ProjectStatus): string => {

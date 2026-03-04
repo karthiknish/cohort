@@ -100,26 +100,27 @@ export function NotificationsDropdown() {
   const ackNotifications = useMutation(notificationsApi.ack)
 
   const updateNotificationStatus = useCallback(
-    async (ids: string[], action: AckAction, options: AckOptions = {}) => {
+    (ids: string[], action: AckAction, options: AckOptions = {}) => {
       if (!workspaceId || ids.length === 0) {
-        return
+        return Promise.resolve()
       }
 
-      try {
-        setAckInFlight(true)
-        await ackNotifications({ workspaceId, ids, action })
+      setAckInFlight(true)
 
-        await notificationsInfiniteQuery.refetch()
-
-        if (!options.silent) {
-          toast({ title: action === 'dismiss' ? 'Dismissed' : 'Marked as read' })
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Notification update failed'
-        toast({ title: 'Update failed', description: message, variant: 'destructive' })
-      } finally {
-        setAckInFlight(false)
-      }
+      return ackNotifications({ workspaceId, ids, action })
+        .then(() => notificationsInfiniteQuery.refetch())
+        .then(() => {
+          if (!options.silent) {
+            toast({ title: action === 'dismiss' ? 'Dismissed' : 'Marked as read' })
+          }
+        })
+        .catch((error) => {
+          const message = error instanceof Error ? error.message : 'Notification update failed'
+          toast({ title: 'Update failed', description: message, variant: 'destructive' })
+        })
+        .finally(() => {
+          setAckInFlight(false)
+        })
     },
     [ackNotifications, notificationsInfiniteQuery, toast, workspaceId]
   )
@@ -144,7 +145,13 @@ export function NotificationsDropdown() {
       return
     }
 
-    void updateNotificationStatus(unreadIds, 'read', { silent: true })
+    const frame = requestAnimationFrame(() => {
+      void updateNotificationStatus(unreadIds, 'read', { silent: true })
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [ackInFlight, notifications, open, updateNotificationStatus])
 
   const handleRefresh = useCallback(() => {

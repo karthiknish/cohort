@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X, CircleAlert } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
@@ -69,7 +69,6 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [hasChanges, setHasChanges] = useState(false)
 
   // Form state
   const [name, setName] = useState('')
@@ -86,7 +85,9 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
 
   // Initialize form when project changes
   useEffect(() => {
-    if (project && open) {
+    if (!project || !open) return
+
+    const frame = requestAnimationFrame(() => {
       setName(project.name)
       setDescription(project.description ?? '')
       setStatus(project.status)
@@ -97,15 +98,17 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       setTagInput('')
       setError(null)
       setValidationErrors({})
-      setHasChanges(false)
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
     }
   }, [project, open])
 
-  // Track changes
-  useEffect(() => {
-    if (!project) return
+  const hasChanges = useMemo(() => {
+    if (!project) return false
 
-    const changed =
+    return (
       name !== project.name ||
       description !== (project.description ?? '') ||
       status !== project.status ||
@@ -113,8 +116,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       (startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '') ||
       (endDate ? format(endDate, 'yyyy-MM-dd') : '') !== (project.endDate?.split('T')[0] ?? '') ||
       JSON.stringify(tags) !== JSON.stringify(project.tags ?? [])
-
-    setHasChanges(changed)
+    )
   }, [project, name, description, status, clientId, startDate, endDate, tags])
 
   const validate = useCallback((): boolean => {
@@ -159,7 +161,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     }
   }, [handleAddTag])
 
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
+  const handleSubmit = useCallback((event: React.FormEvent) => {
     event.preventDefault()
 
     if (!user?.id || !workspaceId || !project) {
@@ -179,35 +181,34 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     setLoading(true)
     setError(null)
 
-    try {
-      const selectedClientData = clients.find((c) => c.id === clientId)
+    const selectedClientData = clients.find((c) => c.id === clientId)
 
-      const payload: UpdateProjectPayload = {}
+    const payload: UpdateProjectPayload = {}
 
-      if (name.trim() !== project.name) {
-        payload.name = name.trim()
-      }
-      if (description.trim() !== (project.description ?? '')) {
-        payload.description = description.trim() || null
-      }
-      if (status !== project.status) {
-        payload.status = status
-      }
-      if (clientId !== (project.clientId ?? 'none')) {
-        payload.clientId = (clientId && clientId !== 'none') ? clientId : null
-        payload.clientName = selectedClientData?.name || null
-      }
-      if ((startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '')) {
-        payload.startDate = startDate ? format(startDate, 'yyyy-MM-dd') : null
-      }
-      if ((endDate ? format(endDate, 'yyyy-MM-dd') : '') !== (project.endDate?.split('T')[0] ?? '')) {
-        payload.endDate = endDate ? format(endDate, 'yyyy-MM-dd') : null
-      }
-      if (JSON.stringify(tags) !== JSON.stringify(project.tags ?? [])) {
-        payload.tags = tags
-      }
+    if (name.trim() !== project.name) {
+      payload.name = name.trim()
+    }
+    if (description.trim() !== (project.description ?? '')) {
+      payload.description = description.trim() || null
+    }
+    if (status !== project.status) {
+      payload.status = status
+    }
+    if (clientId !== (project.clientId ?? 'none')) {
+      payload.clientId = (clientId && clientId !== 'none') ? clientId : null
+      payload.clientName = selectedClientData?.name || null
+    }
+    if ((startDate ? format(startDate, 'yyyy-MM-dd') : '') !== (project.startDate?.split('T')[0] ?? '')) {
+      payload.startDate = startDate ? format(startDate, 'yyyy-MM-dd') : null
+    }
+    if ((endDate ? format(endDate, 'yyyy-MM-dd') : '') !== (project.endDate?.split('T')[0] ?? '')) {
+      payload.endDate = endDate ? format(endDate, 'yyyy-MM-dd') : null
+    }
+    if (JSON.stringify(tags) !== JSON.stringify(project.tags ?? [])) {
+      payload.tags = tags
+    }
 
-      await updateProject({
+    void updateProject({
         workspaceId,
         legacyId: project.id,
         ...('name' in payload ? { name: payload.name } : {}),
@@ -221,34 +222,37 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
         updatedAtMs: Date.now(),
       })
 
-      const updatedProject: ProjectRecord = {
-        ...project,
-        ...('name' in payload ? { name: payload.name ?? project.name } : {}),
-        ...('description' in payload ? { description: payload.description ?? null } : {}),
-        ...('status' in payload ? { status: (payload.status ?? project.status) as ProjectStatus } : {}),
-        ...('clientId' in payload ? { clientId: payload.clientId ?? null } : {}),
-        ...('clientName' in payload ? { clientName: payload.clientName ?? null } : {}),
-        ...('startDate' in payload ? { startDate: payload.startDate ?? null } : {}),
-        ...('endDate' in payload ? { endDate: payload.endDate ?? null } : {}),
-        ...('tags' in payload ? { tags: payload.tags ?? [] } : {}),
-        updatedAt: new Date().toISOString(),
-      }
+      .then(() => {
+        const updatedProject: ProjectRecord = {
+          ...project,
+          ...('name' in payload ? { name: payload.name ?? project.name } : {}),
+          ...('description' in payload ? { description: payload.description ?? null } : {}),
+          ...('status' in payload ? { status: (payload.status ?? project.status) as ProjectStatus } : {}),
+          ...('clientId' in payload ? { clientId: payload.clientId ?? null } : {}),
+          ...('clientName' in payload ? { clientName: payload.clientName ?? null } : {}),
+          ...('startDate' in payload ? { startDate: payload.startDate ?? null } : {}),
+          ...('endDate' in payload ? { endDate: payload.endDate ?? null } : {}),
+          ...('tags' in payload ? { tags: payload.tags ?? [] } : {}),
+          updatedAt: new Date().toISOString(),
+        }
 
-      toast({
-        title: 'Project updated!',
-        description: `"${updatedProject.name}" has been saved.`,
+        toast({
+          title: 'Project updated!',
+          description: `"${updatedProject.name}" has been saved.`,
+        })
+
+        onProjectUpdated?.(updatedProject)
+        emitDashboardRefresh({ reason: 'project-mutated', clientId: updatedProject.clientId ?? null })
+        onOpenChange(false)
       })
-
-      onProjectUpdated?.(updatedProject)
-      emitDashboardRefresh({ reason: 'project-mutated', clientId: updatedProject.clientId ?? null })
-      onOpenChange(false)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update project'
-      setError(message)
-      toast({ title: 'Update failed', description: message, variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'Failed to update project'
+        setError(message)
+        toast({ title: 'Update failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [user?.id, workspaceId, project, name, description, status, clientId, clients, startDate, endDate, tags, hasChanges, validate, toast, onProjectUpdated, onOpenChange, updateProject])
 
   const formatStatusLabel = (value: ProjectStatus): string => {

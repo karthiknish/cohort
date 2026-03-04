@@ -113,43 +113,49 @@ export function TaskCommentsPanel(props: {
       return
     }
 
-    if (!convexRows) {
-      setLoading(true)
-      return
+    const frame = requestAnimationFrame(() => {
+      if (!convexRows) {
+        setLoading(true)
+        return
+      }
+
+      const next = convexRows
+        .map((row) => {
+          const createdAt = typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null
+          const updatedAt = typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null
+          const deletedAt = typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null
+          const isDeleted = Boolean(row?.deleted || deletedAt)
+
+          return {
+            id: String(row?.legacyId ?? ''),
+            taskId,
+            content: typeof row?.content === 'string' ? row.content : '',
+            format: row?.format === 'plaintext' ? 'plaintext' : 'markdown',
+            authorId: typeof row?.authorId === 'string' ? row.authorId : null,
+            authorName:
+              typeof row?.authorName === 'string' && row.authorName.trim().length > 0 ? row.authorName : 'Teammate',
+            authorRole: typeof row?.authorRole === 'string' ? row.authorRole : null,
+            createdAt,
+            updatedAt,
+            isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
+            isDeleted,
+            deletedAt,
+            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
+            attachments: Array.isArray(row?.attachments) ? row.attachments : undefined,
+            mentions: Array.isArray(row?.mentions) ? row.mentions : undefined,
+            parentCommentId: typeof row?.parentCommentId === 'string' ? row.parentCommentId : null,
+            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
+          } as TaskComment
+        })
+        .filter((comment) => comment.id && !comment.isDeleted)
+
+      setComments(next)
+      setLoading(false)
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
     }
-
-    const next = convexRows
-      .map((row) => {
-        const createdAt = typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null
-        const updatedAt = typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null
-        const deletedAt = typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null
-        const isDeleted = Boolean(row?.deleted || deletedAt)
-
-        return {
-          id: String(row?.legacyId ?? ''),
-          taskId,
-          content: typeof row?.content === 'string' ? row.content : '',
-          format: row?.format === 'plaintext' ? 'plaintext' : 'markdown',
-          authorId: typeof row?.authorId === 'string' ? row.authorId : null,
-          authorName:
-            typeof row?.authorName === 'string' && row.authorName.trim().length > 0 ? row.authorName : 'Teammate',
-          authorRole: typeof row?.authorRole === 'string' ? row.authorRole : null,
-          createdAt,
-          updatedAt,
-          isEdited: Boolean(updatedAt && (!createdAt || createdAt !== updatedAt) && !isDeleted),
-          isDeleted,
-          deletedAt,
-          deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
-          attachments: Array.isArray(row?.attachments) ? row.attachments : undefined,
-          mentions: Array.isArray(row?.mentions) ? row.mentions : undefined,
-          parentCommentId: typeof row?.parentCommentId === 'string' ? row.parentCommentId : null,
-          threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
-        } as TaskComment
-      })
-      .filter((comment) => comment.id && !comment.isDeleted)
-
-    setComments(next)
-    setLoading(false)
   }, [convexEnabled, convexRows, taskId])
 
   useEffect(() => {
@@ -157,7 +163,13 @@ export function TaskCommentsPanel(props: {
       return
     }
 
-    void refresh()
+    const frame = requestAnimationFrame(() => {
+      void refresh()
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [convexEnabled, refresh])
 
   const handleAddAttachments = useCallback((files: FileList | null) => {
@@ -170,7 +182,7 @@ export function TaskCommentsPanel(props: {
     setPendingAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
   }, [])
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(() => {
     const content = composerValue.trim()
     if (!content) return
     if (!userId || !workspaceId) {
@@ -178,70 +190,85 @@ export function TaskCommentsPanel(props: {
     }
 
     setSending(true)
-    try {
-      setUploading(true)
-      const uploadedAttachments: NonNullable<TaskComment['attachments']> = []
+    setUploading(true)
 
-      if (pendingAttachments.length > 0) {
-        const uploads = await Promise.all(
-          pendingAttachments.map((attachment) =>
-            uploadTaskCommentAttachment({
-              userId,
-              taskId,
-              file: attachment.file,
-              generateUploadUrl,
-              getPublicUrl,
-            })
+    void Promise.resolve()
+      .then(async () => {
+        const uploadedAttachments: NonNullable<TaskComment['attachments']> = []
+
+        if (pendingAttachments.length > 0) {
+          const uploads = await Promise.all(
+            pendingAttachments.map((attachment) =>
+              uploadTaskCommentAttachment({
+                userId,
+                taskId,
+                file: attachment.file,
+                generateUploadUrl,
+                getPublicUrl,
+              })
+            )
           )
-        )
-        uploadedAttachments.push(...uploads)
-      }
+          uploadedAttachments.push(...uploads)
+        }
 
-      const extracted = extractMentionsFromContent(content)
-      const mentionMetadata = extracted.map((mention) => {
-        const participant = sortedParticipants.find(
-          (member) => member.name.trim().toLowerCase() === mention.name.trim().toLowerCase()
-        )
-        return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
+        const extracted = extractMentionsFromContent(content)
+        const mentionMetadata = extracted.map((mention) => {
+          const participant = sortedParticipants.find(
+            (member) => member.name.trim().toLowerCase() === mention.name.trim().toLowerCase()
+          )
+          return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
+        })
+
+        const legacyId = `task-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`
+
+        return createComment({
+          workspaceId: String(workspaceId),
+          taskLegacyId: String(taskId),
+          legacyId,
+          content,
+          format: 'markdown',
+          authorId: userId,
+          authorName: userName,
+          authorRole: userRole,
+          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+          mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
+          parentCommentId: replyTo?.id ?? undefined,
+          threadRootId: replyTo?.threadRootId ?? replyTo?.id ?? undefined,
+        })
       })
-
-      if (!workspaceId) {
-        throw new Error('Workspace not available')
-      }
-
-      const legacyId = `task-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`
-
-      const res = await createComment({
-        workspaceId: String(workspaceId),
-        taskLegacyId: String(taskId),
-        legacyId,
-        content,
-        format: 'markdown',
-        authorId: userId,
-        authorName: userName,
-        authorRole: userRole,
-        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-        mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
-        parentCommentId: replyTo?.id ?? undefined,
-        threadRootId: replyTo?.threadRootId ?? replyTo?.id ?? undefined,
+      .then(() => {
+        // Convex query will update `comments` automatically.
+        setComposerValue('')
+        setReplyTo(null)
+        setPendingAttachments([])
       })
-
-      // Convex query will update `comments` automatically.
-      setComposerValue('')
-      setReplyTo(null)
-      setPendingAttachments([])
-    } catch (error) {
-      logError(error, 'TaskCommentsPanel:handleSend')
-      toast({
-        title: 'Failed to post comment',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+      .catch((error) => {
+        logError(error, 'TaskCommentsPanel:handleSend')
+        toast({
+          title: 'Failed to post comment',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setUploading(false)
-      setSending(false)
-    }
-  }, [composerValue, pendingAttachments, replyTo, sortedParticipants, taskId, toast, userId])
+      .finally(() => {
+        setUploading(false)
+        setSending(false)
+      })
+  }, [
+    composerValue,
+    createComment,
+    generateUploadUrl,
+    getPublicUrl,
+    pendingAttachments,
+    replyTo,
+    sortedParticipants,
+    taskId,
+    toast,
+    userId,
+    userName,
+    userRole,
+    workspaceId,
+  ])
 
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()

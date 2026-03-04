@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
     return emailRegex.test(email)
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setEmailError(null)
 
@@ -43,18 +43,20 @@ export default function ForgotPasswordPage() {
     setSuccess(false)
     setError(null)
 
-    try {
-      await resetPassword(email)
-      setSuccess(true)
-      toast({
-        title: 'Check your inbox',
-        description: 'If an account exists for this email, we sent password reset instructions.',
+    void resetPassword(email)
+      .then(() => {
+        setSuccess(true)
+        toast({
+          title: 'Check your inbox',
+          description: 'If an account exists for this email, we sent password reset instructions.',
+        })
       })
-    } catch (err: unknown) {
-      setError(getFriendlyAuthErrorMessage(err))
-    } finally {
-      setSubmitting(false)
-    }
+      .catch((err: unknown) => {
+        setError(getFriendlyAuthErrorMessage(err))
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
   }
 
   return (

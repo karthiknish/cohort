@@ -1,10 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Printer, Download } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
 import { formatStatusLabel, formatDate, formatPriorityLabel } from './task-types'
+import { cn } from '@/lib/utils'
 import './tasks-print.css'
 
 type TaskPrintViewProps = {
@@ -34,14 +35,16 @@ export function TaskPrintView({ tasks, title = 'Tasks', summary, onClose }: Task
     return groups
   }, [tasks])
 
-  const calculatedSummary = summary || useMemo(() => {
+  const derivedSummary = useMemo(() => {
     return {
       total: tasks.length,
       completed: tasksByStatus.completed.length,
       inProgress: tasksByStatus['in-progress'].length,
       todo: tasksByStatus.todo.length,
     }
-  }, [tasks.length, tasksByStatus])
+  }, [tasks, tasksByStatus])
+
+  const calculatedSummary = summary ?? derivedSummary
 
   const handlePrint = () => {
     window.print()
@@ -228,7 +231,3 @@ export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?
   )
 }
 
-// Print styles helper function
-function cn(...classes: (string | boolean | undefined | null)[]) {
-  return classes.filter(Boolean).join(' ')
-}

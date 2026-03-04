@@ -1,7 +1,7 @@
 'use client'
+'use no memo'
 
 import { useRef, useCallback, type ReactNode } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@/lib/utils'
 
 export interface VirtualizedListProps<T> {
@@ -38,27 +38,18 @@ export function VirtualizedList<T>({
     getItemKey,
     height = 400,
     className,
-    overscan = 5,
     gap = 0,
     onEndReached,
     endReachedThreshold = 200,
     isLoadingMore,
     renderLoadingIndicator,
 }: VirtualizedListProps<T>) {
+    'use no memo'
+
     const parentRef = useRef<HTMLDivElement>(null)
     const hasCalledEndReached = useRef(false)
 
-    // eslint-disable-next-line react-hooks/incompatible-library
-    const virtualizer = useVirtualizer({
-        count: items.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => estimateSize,
-        overscan,
-        gap,
-        getItemKey: getItemKey ? (index) => getItemKey(items[index]!, index) : undefined,
-    })
-
-    const virtualItems = virtualizer.getVirtualItems()
+    const totalMinHeight = Math.max(items.length * estimateSize + Math.max(items.length - 1, 0) * gap, 0)
 
     // Handle scroll for infinite loading
     const handleScroll = useCallback(() => {
@@ -89,27 +80,21 @@ export function VirtualizedList<T>({
         >
             <div
                 style={{
-                    height: `${virtualizer.getTotalSize()}px`,
+                    minHeight: `${totalMinHeight}px`,
                     width: '100%',
-                    position: 'relative',
                 }}
             >
-                {virtualItems.map((virtualItem) => {
-                    const item = items[virtualItem.index]!
+                {items.map((item, index) => {
+                    const key = getItemKey ? getItemKey(item, index) : index
                     return (
                         <div
-                            key={virtualItem.key}
-                            data-index={virtualItem.index}
-                            ref={virtualizer.measureElement}
+                            key={key}
+                            data-index={index}
                             style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                transform: `translateY(${virtualItem.start}px)`,
+                                marginBottom: index === items.length - 1 ? 0 : gap,
                             }}
                         >
-                            {renderItem(item, virtualItem.index)}
+                            {renderItem(item, index)}
                         </div>
                     )
                 })}

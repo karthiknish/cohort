@@ -70,14 +70,20 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false)
 
   useEffect(() => {
-    if (!open) {
+    if (open) return
+
+    const frame = requestAnimationFrame(() => {
       setDeleteConfirm('')
       setDeleteAccountError(null)
       setDeleteAccountLoading(false)
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
     }
   }, [open])
 
-  const handleAccountDeletion = useCallback(async () => {
+  const handleAccountDeletion = useCallback(() => {
     if (!user) {
       setDeleteAccountError('You must be signed in to delete your account.')
       return
@@ -91,26 +97,28 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
     setDeleteAccountLoading(true)
     setDeleteAccountError(null)
 
-    try {
-      // Clear all localStorage data before deleting account
-      const keysToRemove = Object.keys(localStorage).filter(
-        (key) =>
-          key.startsWith('cohorts_') ||
-          key.startsWith('tips_dismissed')
-      )
-      keysToRemove.forEach((key) => localStorage.removeItem(key))
+    // Clear all localStorage data before deleting account
+    const keysToRemove = Object.keys(localStorage).filter(
+      (key) =>
+        key.startsWith('cohorts_') ||
+        key.startsWith('tips_dismissed')
+    )
+    keysToRemove.forEach((key) => localStorage.removeItem(key))
 
-      await deleteAccount()
-      toast({ title: 'Account deleted', description: 'Your account and associated data have been removed.' })
-      onOpenChange(false)
-      router.push('/')
-    } catch (accountError) {
-      const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
-      setDeleteAccountError(message)
-      toast({ title: 'Account deletion failed', description: message, variant: 'destructive' })
-    } finally {
-      setDeleteAccountLoading(false)
-    }
+    void deleteAccount()
+      .then(() => {
+        toast({ title: 'Account deleted', description: 'Your account and associated data have been removed.' })
+        onOpenChange(false)
+        router.push('/')
+      })
+      .catch((accountError) => {
+        const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
+        setDeleteAccountError(message)
+        toast({ title: 'Account deletion failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setDeleteAccountLoading(false)
+      })
   }, [deleteAccount, deleteConfirm, onOpenChange, router, toast, user])
 
   return (

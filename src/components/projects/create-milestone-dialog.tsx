@@ -71,13 +71,19 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
   const [description, setDescription] = useState('')
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+
+    const frame = requestAnimationFrame(() => {
       setProjectId(defaultProjectId ?? '')
       setTitle('')
       setStatus('planned')
       setStartDate(undefined)
       setEndDate(undefined)
       setDescription('')
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
     }
   }, [open, defaultProjectId])
 
@@ -85,7 +91,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
     return [...projects].sort((a, b) => a.name.localeCompare(b.name))
   }, [projects])
 
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
+  const handleSubmit = useCallback((event: React.FormEvent) => {
     event.preventDefault()
     if (!user?.id) {
       toast({ title: 'Sign in required', description: 'Please sign in to create milestones.', variant: 'destructive' })
@@ -101,11 +107,15 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
     }
 
     setLoading(true)
-    try {
-      if (!user?.agencyId) throw new Error('Missing workspace')
 
-      const legacyId = uuidv4()
-      await createMilestone({
+    if (!user?.agencyId) {
+      toast({ title: 'Could not create', description: 'Missing workspace', variant: 'destructive' })
+      setLoading(false)
+      return
+    }
+
+    const legacyId = uuidv4()
+    void createMilestone({
         workspaceId: user.agencyId,
         legacyId,
         projectId,
@@ -116,30 +126,33 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
         endDateMs: endDate ? endDate.getTime() : undefined,
       })
 
-      const milestone: MilestoneRecord = {
-        id: legacyId,
-        projectId,
-        title: title.trim(),
-        description: description.trim() || null,
-        status,
-        startDate: startDate ? startDate.toISOString() : null,
-        endDate: endDate ? endDate.toISOString() : null,
-        ownerId: user.id,
-        order: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+      .then(() => {
+        const milestone: MilestoneRecord = {
+          id: legacyId,
+          projectId,
+          title: title.trim(),
+          description: description.trim() || null,
+          status,
+          startDate: startDate ? startDate.toISOString() : null,
+          endDate: endDate ? endDate.toISOString() : null,
+          ownerId: user.id,
+          order: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
 
-      onCreated?.(milestone)
-      toast({ title: 'Milestone created', description: `“${milestone.title}” added to the timeline.` })
-      setOpen(false)
-    } catch (error) {
-      logError(error, 'CreateMilestoneDialog:handleSubmit')
-      toast({ title: 'Could not create', description: asErrorMessage(error), variant: 'destructive' })
-    } finally {
-      setLoading(false)
-    }
-  }, [projectId, title, status, startDate, endDate, description, user?.id, user?.agencyId, toast, onCreated, createMilestone])
+        onCreated?.(milestone)
+        toast({ title: 'Milestone created', description: `“${milestone.title}” added to the timeline.` })
+        setOpen(false)
+      })
+      .catch((error) => {
+        logError(error, 'CreateMilestoneDialog:handleSubmit')
+        toast({ title: 'Could not create', description: asErrorMessage(error), variant: 'destructive' })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [projectId, title, status, startDate, endDate, description, user, toast, onCreated, createMilestone])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

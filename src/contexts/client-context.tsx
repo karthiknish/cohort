@@ -94,7 +94,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   // Ref to track selectedClientId without triggering effect re-runs
   const selectedClientIdRef = useRef(selectedClientId)
-  selectedClientIdRef.current = selectedClientId
+
+  useEffect(() => {
+    selectedClientIdRef.current = selectedClientId
+  }, [selectedClientId])
 
   // Single effect for preview mode setup and teardown
   useEffect(() => {
@@ -136,50 +139,56 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   // Single effect for data loading, error handling, and client selection
   useEffect(() => {
-    // Handle preview mode
-    if (previewEnabled) {
+    const frame = requestAnimationFrame(() => {
+      // Handle preview mode
+      if (previewEnabled) {
+        setLoading(false)
+        setError(null)
+        return
+      }
+
+      // Wait for auth
+      if (authLoading || isSyncing) {
+        return
+      }
+
+      // No workspace
+      if (!workspaceId) {
+        setSelectedClientId(null)
+        setLoading(false)
+        setError(null)
+        return
+      }
+
+      // Loading state
+      if (convexClients === undefined) {
+        setLoading(true)
+        return
+      }
+
       setLoading(false)
+
+      const rows = extractRows(convexClients)
+
+      if (rows.length === 0) {
+        setError('No clients found for this workspace')
+        return
+      }
+
       setError(null)
-      return
-    }
 
-    // Wait for auth
-    if (authLoading || isSyncing) {
-      return
-    }
+      // Sync selected client - use ref to avoid infinite loop
+      const clients = mapClients(rows)
+      const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
+      const targetId = stored && clients.some((c) => c.id === stored) ? stored : clients[0]?.id ?? null
 
-    // No workspace
-    if (!workspaceId) {
-      setSelectedClientId(null)
-      setLoading(false)
-      setError(null)
-      return
-    }
+      if (targetId !== selectedClientIdRef.current) {
+        setSelectedClientId(targetId)
+      }
+    })
 
-    // Loading state
-    if (convexClients === undefined) {
-      setLoading(true)
-      return
-    }
-
-    setLoading(false)
-
-    const rows = extractRows(convexClients)
-
-    if (rows.length === 0) {
-      setError('No clients found for this workspace')
-      return
-    }
-
-    setError(null)
-
-    // Sync selected client - use ref to avoid infinite loop
-    const clients = mapClients(rows)
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
-    const targetId = stored && clients.some((c) => c.id === stored) ? stored : clients[0]?.id ?? null
-
-    if (targetId !== selectedClientIdRef.current) {
-      setSelectedClientId(targetId)
+    return () => {
+      cancelAnimationFrame(frame)
     }
   }, [previewEnabled, authLoading, isSyncing, workspaceId, convexClients, storageKey, retryKey])
 
@@ -227,7 +236,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [previewEnabled, workspaceId, convexClients])
 
   const clientsRef = useRef(resolvedClients)
-  clientsRef.current = resolvedClients
+
+  useEffect(() => {
+    clientsRef.current = resolvedClients
+  }, [resolvedClients])
 
   const refreshClients = useCallback(async () => {
     return clientsRef.current

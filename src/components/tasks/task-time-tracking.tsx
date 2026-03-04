@@ -45,20 +45,11 @@ export function TaskTimeTracking({
   const [open, setOpen] = useState(false)
   const [trackingNote, setTrackingNote] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [startTime, setStartTime] = useState<Date | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Timer for active tracking
   useEffect(() => {
-    if (isRunning && !startTime) {
-      setStartTime(new Date())
-    } else if (!isRunning && startTime) {
-      setStartTime(null)
-      setElapsedSeconds(0)
-    }
-  }, [isRunning, startTime])
+    let frame: number | null = null
 
-  useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
         setElapsedSeconds((prev) => prev + 1)
@@ -68,10 +59,17 @@ export function TaskTimeTracking({
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
+      frame = requestAnimationFrame(() => {
+        setElapsedSeconds(0)
+      })
     }
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
+      }
+      if (frame !== null) {
+        cancelAnimationFrame(frame)
       }
     }
   }, [isRunning])
@@ -87,6 +85,7 @@ export function TaskTimeTracking({
   }
 
   const handleStart = useCallback(() => {
+    setElapsedSeconds(0)
     onStartTracking?.(trackingNote || undefined)
     setTrackingNote('')
   }, [onStartTracking, trackingNote])
@@ -182,7 +181,18 @@ export function TaskTimeTracking({
                     <span className="font-medium">
                       {entry.duration
                         ? `${Math.floor(entry.duration / 60)}h ${entry.duration % 60}m`
-                        : formatTime(Math.floor((new Date(entry.endTime || Date.now()).getTime() - new Date(entry.startTime).getTime()) / 1000))
+                        : isRunning && !entry.endTime
+                        ? formatTime(elapsedSeconds)
+                        : formatTime(
+                            Math.max(
+                              0,
+                              Math.floor(
+                                (new Date(entry.endTime ?? entry.startTime).getTime() -
+                                  new Date(entry.startTime).getTime()) /
+                                  1000
+                              )
+                            )
+                          )
                       }
                     </span>
                     <span className="text-muted-foreground truncate">

@@ -54,45 +54,57 @@ export default function SettingsPage() {
   const [profilePhone, setProfilePhone] = useState('')
 
   useEffect(() => {
-    setProfilePhone('')
+    const frame = requestAnimationFrame(() => {
+      setProfilePhone('')
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [user?.legacyId])
 
   useEffect(() => {
-    if (!user) {
-      setNotificationsLoading(false)
-      setEmailAdAlertsEnabled(true)
-      setEmailPerformanceDigestEnabled(true)
-      setEmailTaskActivityEnabled(true)
-      setEmailCollaborationEnabled(false)
+    const frame = requestAnimationFrame(() => {
+      if (!user) {
+        setNotificationsLoading(false)
+        setEmailAdAlertsEnabled(true)
+        setEmailPerformanceDigestEnabled(true)
+        setEmailTaskActivityEnabled(true)
+        setEmailCollaborationEnabled(false)
+        setNotificationError(null)
+        return
+      }
+
+      if (notificationPrefs === undefined) {
+        setNotificationsLoading(true)
+        return
+      }
+
+      if (notificationPrefs === null) {
+        setNotificationsLoading(false)
+        setNotificationError('Unable to load notification preferences')
+        return
+      }
+
+      setEmailAdAlertsEnabled(Boolean(notificationPrefs.emailAdAlerts))
+      setEmailPerformanceDigestEnabled(Boolean(notificationPrefs.emailPerformanceDigest))
+      setEmailTaskActivityEnabled(Boolean(notificationPrefs.emailTaskActivity))
+      setEmailCollaborationEnabled(Boolean(notificationPrefs.emailCollaboration))
       setNotificationError(null)
-      return
-    }
-
-    if (notificationPrefs === undefined) {
-      setNotificationsLoading(true)
-      return
-    }
-
-    if (notificationPrefs === null) {
       setNotificationsLoading(false)
-      setNotificationError('Unable to load notification preferences')
-      return
-    }
 
-    setEmailAdAlertsEnabled(Boolean(notificationPrefs.emailAdAlerts))
-    setEmailPerformanceDigestEnabled(Boolean(notificationPrefs.emailPerformanceDigest))
-    setEmailTaskActivityEnabled(Boolean(notificationPrefs.emailTaskActivity))
-    setEmailCollaborationEnabled(Boolean(notificationPrefs.emailCollaboration))
-    setNotificationError(null)
-    setNotificationsLoading(false)
+      if (!profilePhone.trim() && notificationPrefs.phoneNumber) {
+        setProfilePhone(notificationPrefs.phoneNumber)
+      }
+    })
 
-    if (!profilePhone.trim() && notificationPrefs.phoneNumber) {
-      setProfilePhone(notificationPrefs.phoneNumber)
+    return () => {
+      cancelAnimationFrame(frame)
     }
   }, [notificationPrefs, profilePhone, user])
 
   const saveNotificationPreferences = useCallback(
-    async (
+    (
       input: {
         emailAdAlerts?: boolean
         emailPerformanceDigest?: boolean
@@ -101,63 +113,66 @@ export default function SettingsPage() {
       },
       options: { silent?: boolean } = {}
     ): Promise<NotificationPreferencesResponse | null> => {
-      if (!user) return null
+      if (!user) return Promise.resolve(null)
 
       if (isMountedRef.current) {
         setSavingPreferences(true)
         setNotificationError(null)
       }
 
-      try {
-        const trimmedPhone = profilePhone.trim()
-        const updated = (await updateNotificationPrefs({
+      const trimmedPhone = profilePhone.trim()
+      return Promise.resolve(
+        updateNotificationPrefs({
           emailAdAlerts: input.emailAdAlerts,
           emailPerformanceDigest: input.emailPerformanceDigest,
           emailTaskActivity: input.emailTaskActivity,
           emailCollaboration: input.emailCollaboration ?? emailCollaborationEnabled,
           phoneNumber: trimmedPhone.length ? trimmedPhone : null,
-        })) as unknown
+        })
+      )
+        .then((updated) => {
+          const payload = updated && typeof updated === 'object' ? (updated as Record<string, unknown>) : {}
 
-        const payload = updated && typeof updated === 'object' ? (updated as Record<string, unknown>) : {}
-
-        const preferences: NotificationPreferencesResponse = {
-          emailAdAlerts: Boolean(payload.emailAdAlerts),
-          emailPerformanceDigest: Boolean(payload.emailPerformanceDigest),
-          emailTaskActivity: Boolean(payload.emailTaskActivity),
-          emailCollaboration: Boolean(payload.emailCollaboration),
-          phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
-        }
-
-        if (isMountedRef.current) {
-          setEmailAdAlertsEnabled(preferences.emailAdAlerts)
-          setEmailPerformanceDigestEnabled(preferences.emailPerformanceDigest)
-          setEmailTaskActivityEnabled(preferences.emailTaskActivity)
-          setEmailCollaborationEnabled(preferences.emailCollaboration)
-          if (preferences.phoneNumber && preferences.phoneNumber !== profilePhone) {
-            setProfilePhone(preferences.phoneNumber)
+          const preferences: NotificationPreferencesResponse = {
+            emailAdAlerts: Boolean(payload.emailAdAlerts),
+            emailPerformanceDigest: Boolean(payload.emailPerformanceDigest),
+            emailTaskActivity: Boolean(payload.emailTaskActivity),
+            emailCollaboration: Boolean(payload.emailCollaboration),
+            phoneNumber: typeof payload.phoneNumber === 'string' ? payload.phoneNumber : null,
           }
-        }
 
-        if (!options.silent) {
-          toast({ title: 'Notification preferences updated', description: 'Email alerts have been updated.' })
-        }
+          if (isMountedRef.current) {
+            setEmailAdAlertsEnabled(preferences.emailAdAlerts)
+            setEmailPerformanceDigestEnabled(preferences.emailPerformanceDigest)
+            setEmailTaskActivityEnabled(preferences.emailTaskActivity)
+            setEmailCollaborationEnabled(preferences.emailCollaboration)
+            if (preferences.phoneNumber && preferences.phoneNumber !== profilePhone) {
+              setProfilePhone(preferences.phoneNumber)
+            }
+          }
 
-        return preferences
-      } catch (saveError) {
-        const message = saveError instanceof Error ? saveError.message : 'Failed to update notification preferences'
-        console.error('[settings/notifications] update failed', saveError)
-        if (isMountedRef.current) {
-          setNotificationError(message)
-        }
-        if (!options.silent) {
-          toast({ title: 'Notification update failed', description: message, variant: 'destructive' })
-        }
-        return null
-      } finally {
-        if (isMountedRef.current) {
-          setSavingPreferences(false)
-        }
-      }
+          if (!options.silent) {
+            toast({ title: 'Notification preferences updated', description: 'Email alerts have been updated.' })
+          }
+
+          return preferences
+        })
+        .catch((saveError) => {
+          const message = saveError instanceof Error ? saveError.message : 'Failed to update notification preferences'
+          console.error('[settings/notifications] update failed', saveError)
+          if (isMountedRef.current) {
+            setNotificationError(message)
+          }
+          if (!options.silent) {
+            toast({ title: 'Notification update failed', description: message, variant: 'destructive' })
+          }
+          return null
+        })
+        .finally(() => {
+          if (isMountedRef.current) {
+            setSavingPreferences(false)
+          }
+        })
     },
     [emailCollaborationEnabled, profilePhone, toast, updateNotificationPrefs, user]
   )

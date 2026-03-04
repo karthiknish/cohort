@@ -34,23 +34,25 @@ export function RegionalPreferencesCard() {
           </div>
           <CurrencySelect
             value={preferences.currency}
-            onValueChange={async (value: CurrencyCode) => {
-              try {
-                setSavingCurrency(true)
-                await updateCurrency(value)
-                toast({
-                  title: 'Currency updated',
-                  description: `Your default currency has been changed to ${value}.`,
+            onValueChange={(value: CurrencyCode) => {
+              setSavingCurrency(true)
+              void updateCurrency(value)
+                .then(() => {
+                  toast({
+                    title: 'Currency updated',
+                    description: `Your default currency has been changed to ${value}.`,
+                  })
                 })
-              } catch {
-                toast({
-                  title: 'Error',
-                  description: 'Failed to update currency preference.',
-                  variant: 'destructive',
+                .catch(() => {
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to update currency preference.',
+                    variant: 'destructive',
+                  })
                 })
-              } finally {
-                setSavingCurrency(false)
-              }
+                .finally(() => {
+                  setSavingCurrency(false)
+                })
             }}
             disabled={preferencesLoading || savingCurrency}
             className="w-[160px]"

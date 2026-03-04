@@ -73,9 +73,6 @@ import {
   SortDirection,
   ViewMode,
   RETRY_CONFIG,
-  sleep,
-  calculateBackoffDelay,
-  isNetworkError,
   formatStatusLabel,
   useDebouncedValue,
   ProjectFilters,
@@ -147,7 +144,7 @@ export default function ProjectsPage() {
         }
   ) as Record<string, Array<any>> | undefined
 
-  const loadProjects = useCallback(async (retryAttempt = 0) => {
+  const loadProjects = useCallback(async () => {
     // Use preview data when in preview mode
     if (isPreviewMode) {
       let previewProjects = getPreviewProjects(selectedClientId)
@@ -169,6 +166,7 @@ export default function ProjectsPage() {
       setProjects(previewProjects)
       setLoading(false)
       setError(null)
+      setRetryCount(0)
       return
     }
 
@@ -176,6 +174,7 @@ export default function ProjectsPage() {
       setProjects([])
       setLoading(false)
       setError(null)
+      setRetryCount(0)
       return
     }
 
@@ -186,72 +185,39 @@ export default function ProjectsPage() {
     abortControllerRef.current = new AbortController()
 
     setLoading(true)
-    if (retryAttempt === 0) {
-      setError(null)
-    }
+    setError(null)
 
     if (!projectsRealtime) {
       setLoading(false)
       return
     }
 
-    await Promise.resolve()
-      .then(async () => {
-        const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
+    const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
 
-        const mapped: ProjectRecord[] = rows.map((row: any) => ({
-          id: String(row.legacyId),
-          name: String(row.name ?? ''),
-          description: typeof row.description === 'string' ? row.description : null,
-          status: row.status as ProjectStatus,
-          clientId: typeof row.clientId === 'string' ? row.clientId : null,
-          clientName: typeof row.clientName === 'string' ? row.clientName : null,
-          startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
-          endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
-          tags: Array.isArray(row.tags) ? row.tags : [],
-          ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
-          createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-          updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-          taskCount: 0,
-          openTaskCount: 0,
-          recentActivityAt: null,
-          deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-        }))
+    const mapped: ProjectRecord[] = rows.map((row: any) => ({
+      id: String(row.legacyId),
+      name: String(row.name ?? ''),
+      description: typeof row.description === 'string' ? row.description : null,
+      status: row.status as ProjectStatus,
+      clientId: typeof row.clientId === 'string' ? row.clientId : null,
+      clientName: typeof row.clientName === 'string' ? row.clientName : null,
+      startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+      endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+      updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+      taskCount: 0,
+      openTaskCount: 0,
+      recentActivityAt: null,
+      deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+    }))
 
-        setProjects(mapped)
-        setError(null)
-        setRetryCount(0)
-      })
-      .catch(async (fetchError: unknown) => {
-        // Ignore abort errors
-        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          return
-        }
-
-        logError(fetchError, 'ProjectsPage:loadProjects')
-        const message = asErrorMessage(fetchError)
-
-        // Retry on network errors
-        if (retryAttempt < RETRY_CONFIG.maxRetries && isNetworkError(fetchError)) {
-          const delay = calculateBackoffDelay(retryAttempt)
-          console.warn(`[Projects] Network error, retrying in ${delay}ms (attempt ${retryAttempt + 1}/${RETRY_CONFIG.maxRetries})`)
-          setRetryCount(retryAttempt + 1)
-          await sleep(delay)
-          return loadProjects(retryAttempt + 1)
-        }
-
-        setProjects([])
-        setError(message)
-        toast({
-          title: 'Failed to load projects',
-          description: `${message}. Please check your connection and try again.`,
-          variant: 'destructive',
-        })
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [debouncedQuery, isPreviewMode, selectedClientId, statusFilter, user?.id, workspaceId, toast, projectsRealtime])
+    setProjects(mapped)
+    setError(null)
+    setRetryCount(0)
+    setLoading(false)
+  }, [debouncedQuery, isPreviewMode, selectedClientId, statusFilter, user?.id, workspaceId, projectsRealtime])
 
   const loadMilestones = useCallback(async (_projectIds: string[]) => {
     // Milestones are realtime via Convex; this function is effectively a no-op.
@@ -268,50 +234,63 @@ export default function ProjectsPage() {
   }, [])
 
   useEffect(() => {
-    void loadProjects()
+    const frame = requestAnimationFrame(() => {
+      void loadProjects()
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [loadProjects])
 
   useEffect(() => {
     if (isPreviewMode || viewMode !== 'gantt') return
 
-    setMilestonesLoading(true)
-    setMilestonesError(null)
+    const frame = requestAnimationFrame(() => {
+      setMilestonesLoading(true)
+      setMilestonesError(null)
 
-    if (!milestonesRealtime) {
-      return
-    }
-
-    Promise.resolve()
-      .then(() => {
-        const mapped: Record<string, MilestoneRecord[]> = {}
-
-        for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
-          const list = Array.isArray(rows) ? rows : []
-          mapped[projectId] = list.map((row: any) => ({
-            id: String(row.legacyId),
-            projectId: String(row.projectId),
-            title: String(row.title ?? ''),
-            description: typeof row.description === 'string' ? row.description : null,
-            status: row.status,
-            startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
-            endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
-            ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
-            order: typeof row.order === 'number' ? row.order : null,
-            createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-            updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-          }))
-        }
-
-        setMilestonesByProject(mapped)
-      })
-      .catch((err) => {
-        logError(err, 'ProjectsPage:milestonesEffect')
-        setMilestonesError(asErrorMessage(err))
-        setMilestonesByProject({})
-      })
-      .finally(() => {
+      if (!milestonesRealtime) {
         setMilestonesLoading(false)
-      })
+        return
+      }
+
+      Promise.resolve()
+        .then(() => {
+          const mapped: Record<string, MilestoneRecord[]> = {}
+
+          for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
+            const list = Array.isArray(rows) ? rows : []
+            mapped[projectId] = list.map((row: any) => ({
+              id: String(row.legacyId),
+              projectId: String(row.projectId),
+              title: String(row.title ?? ''),
+              description: typeof row.description === 'string' ? row.description : null,
+              status: row.status,
+              startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
+              endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
+              ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+              order: typeof row.order === 'number' ? row.order : null,
+              createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+              updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+            }))
+          }
+
+          setMilestonesByProject(mapped)
+        })
+        .catch((err) => {
+          logError(err, 'ProjectsPage:milestonesEffect')
+          setMilestonesError(asErrorMessage(err))
+          setMilestonesByProject({})
+        })
+        .finally(() => {
+          setMilestonesLoading(false)
+        })
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [isPreviewMode, viewMode, milestonesRealtime])
 
   // Keyboard shortcuts

@@ -53,12 +53,12 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
     )
 
     for (const [name, file] of mediaEntries) {
-      try {
-        const blob = await file.async('blob')
-        mediaFiles[name] = URL.createObjectURL(blob)
-      } catch {
-        // Skip failed media extraction
+      const blob = await file.async('blob').catch(() => null)
+      if (!blob) {
+        continue
       }
+
+      mediaFiles[name] = URL.createObjectURL(blob)
     }
 
     // Extract slide relationships to find images per slide
@@ -75,24 +75,25 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       const relsFile = zip.files[relsPath]
 
       if (relsFile) {
-        try {
-          const relsContent = await relsFile.async('text')
+        const relsContent = await relsFile.async('text').catch(() => null)
+        if (relsContent) {
           // Find image references in relationships
           const imageMatch = relsContent.match(/Target="\.\.\/media\/(image\d+\.[^"]+)"/)
           if (imageMatch) {
             const mediaPath = `ppt/media/${imageMatch[1]}`
             imageUrl = mediaFiles[mediaPath] || null
           }
-        } catch {
-          // Skip failed relationship extraction
         }
       }
 
       // Extract text content from slide XML
-      try {
-        const slideFileEntry = zip.files[slideFile]
-        if (!slideFileEntry) continue
-        const slideContent = await slideFileEntry.async('text')
+      const slideFileEntry = zip.files[slideFile]
+      if (!slideFileEntry) {
+        continue
+      }
+
+      const slideContent = await slideFileEntry.async('text').catch(() => null)
+      if (slideContent) {
         // Extract text from <a:t> tags (PowerPoint text elements)
         const textMatches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
         if (textMatches) {
@@ -101,8 +102,6 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
             .filter((text: string) => text.trim())
             .join(' ')
         }
-      } catch {
-        // Skip failed text extraction
       }
 
       // If no specific image found, try to use first available media as fallback
@@ -147,34 +146,41 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
   useEffect(() => {
     let cancelled = false
 
-    async function loadPresentation() {
+    function loadPresentation() {
       setIsLoading(true)
       setError(null)
 
-      try {
-        const arrayBuffer = await fetchPresentation(url)
-        if (cancelled) return
+      void fetchPresentation(url)
+        .then((arrayBuffer) => {
+          if (cancelled) {
+            return null
+          }
+          return extractSlides(arrayBuffer)
+        })
+        .then((extractedSlides) => {
+          if (cancelled || !extractedSlides) {
+            return
+          }
 
-        const extractedSlides = await extractSlides(arrayBuffer)
-        if (cancelled) return
+          if (extractedSlides.length === 0) {
+            throw new Error('No slides found in presentation')
+          }
 
-        if (extractedSlides.length === 0) {
-          throw new Error('No slides found in presentation')
-        }
-
-        setSlides(extractedSlides)
-        setCurrentSlide(0)
-      } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load presentation')
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
+          setSlides(extractedSlides)
+          setCurrentSlide(0)
+        })
+        .catch((err) => {
+          if (cancelled) return
+          setError(err instanceof Error ? err.message : 'Failed to load presentation')
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsLoading(false)
+          }
+        })
     }
 
-    void loadPresentation()
+    loadPresentation()
 
     return () => {
       cancelled = true

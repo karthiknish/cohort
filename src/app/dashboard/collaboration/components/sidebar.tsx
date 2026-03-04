@@ -19,11 +19,18 @@ interface CollaborationSidebarProps {
   sharedFiles: CollaborationAttachment[]
 }
 
-export function CollaborationSidebar({ channel, channelParticipants, sharedFiles }: CollaborationSidebarProps) {
-  const collapseId = useId()
-  const [open, setOpen] = useState(true)
+type CollaborationSidebarContentProps = {
+  channel: Channel | null
+  channelParticipants: ClientTeamMember[]
+  sharedFiles: CollaborationAttachment[]
+}
 
-  const Content = () => (
+function CollaborationSidebarContent({
+  channel,
+  channelParticipants,
+  sharedFiles,
+}: CollaborationSidebarContentProps) {
+  return (
     <div className="flex w-full flex-col gap-8 p-6 text-sm text-muted-foreground bg-muted/5 h-full overflow-y-auto">
       <div className="space-y-4">
         <div className="flex items-center gap-2 pb-2.5 border-b border-muted/20">
@@ -91,6 +98,11 @@ export function CollaborationSidebar({ channel, channelParticipants, sharedFiles
       </div>
     </div>
   )
+}
+
+export function CollaborationSidebar({ channel, channelParticipants, sharedFiles }: CollaborationSidebarProps) {
+  const collapseId = useId()
+  const [open, setOpen] = useState(true)
 
   return (
     <div className="border-t border-muted/40 lg:relative lg:h-[640px] lg:w-64 lg:border-t-0">
@@ -116,11 +128,19 @@ export function CollaborationSidebar({ channel, channelParticipants, sharedFiles
         aria-hidden={!open}
       >
         <div className="overflow-hidden">
-          <Content />
+          <CollaborationSidebarContent
+            channel={channel}
+            channelParticipants={channelParticipants}
+            sharedFiles={sharedFiles}
+          />
         </div>
       </div>
       <div className="hidden h-full lg:flex lg:flex-col lg:border-l lg:border-muted/40">
-        <Content />
+        <CollaborationSidebarContent
+          channel={channel}
+          channelParticipants={channelParticipants}
+          sharedFiles={sharedFiles}
+        />
       </div>
     </div>
   )

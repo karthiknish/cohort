@@ -15,14 +15,20 @@ import {
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 
+const CURRENT_YEAR = new Date().getFullYear()
+const DEFAULT_FROM_YEAR = CURRENT_YEAR - 10
+const DEFAULT_TO_YEAR = CURRENT_YEAR + 10
+const RTL_NEXT_ICON_CLASS = "rtl:**:[.rdp-button\\_next>svg]:rotate-180"
+const RTL_PREVIOUS_ICON_CLASS = "rtl:**:[.rdp-button\\_previous>svg]:rotate-180"
+
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
   captionLayout = "dropdown",
   buttonVariant = "ghost",
-  fromYear = new Date().getFullYear() - 10,
-  toYear = new Date().getFullYear() + 10,
+  fromYear,
+  toYear,
   formatters,
   components,
   ...props
@@ -30,14 +36,16 @@ function Calendar({
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
+  const resolvedFromYear = fromYear ?? DEFAULT_FROM_YEAR
+  const resolvedToYear = toYear ?? DEFAULT_TO_YEAR
 
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
-        String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
-        String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+          RTL_NEXT_ICON_CLASS,
+          RTL_PREVIOUS_ICON_CLASS,
         className
       )}
       captionLayout={captionLayout}
@@ -176,8 +184,8 @@ function Calendar({
         },
         ...components,
       }}
-      fromYear={fromYear}
-      toYear={toYear}
+        fromYear={resolvedFromYear}
+        toYear={resolvedToYear}
       {...props}
     />
   )

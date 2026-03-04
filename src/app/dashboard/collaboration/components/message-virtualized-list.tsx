@@ -1,8 +1,9 @@
 'use client'
+'use no memo'
 
-import { useRef, useCallback, useState, useMemo } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { memo, useRef, useCallback, useState, useMemo } from 'react'
 import type { CollaborationMessage } from '@/types/collaboration'
+import { cn } from '@/lib/utils'
 
 interface VirtualizedMessageListProps {
   messages: CollaborationMessage[]
@@ -29,15 +30,12 @@ export function VirtualizedMessageList({
   hasMore = false,
   isLoadingMore = false,
 }: VirtualizedMessageListProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  'use no memo'
 
-  // Create virtualizer instance
-  const virtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize,
-    overscan,
-  })
+  const containerRef = useRef<HTMLDivElement>(null)
+  const estimatedRowHeight = estimateSize()
+  const rowSpacing = Math.max(overscan - 1, 0)
+  const totalMinHeight = Math.max(messages.length * estimatedRowHeight + Math.max(messages.length - 1, 0) * rowSpacing, 0)
 
   // Handle scroll to bottom for loading more
   const handleScroll = useCallback(
@@ -53,8 +51,6 @@ export function VirtualizedMessageList({
     [hasMore, isLoadingMore, loadMore]
   )
 
-  const virtualItems = virtualizer.getVirtualItems()
-
   return (
     <div
       ref={containerRef}
@@ -64,29 +60,22 @@ export function VirtualizedMessageList({
     >
       <div
         style={{
-          height: `${virtualizer.getTotalSize()}px`,
+          minHeight: `${totalMinHeight}px`,
           width: '100%',
-          position: 'relative',
         }}
       >
-        {virtualItems.map((virtualItem) => {
-          const message = messages[virtualItem.index]
+        {messages.map((message, index) => {
           if (!message) return null
 
           return (
             <div
-              key={virtualItem.key}
-              data-index={virtualItem.index}
-              ref={virtualizer.measureElement}
+              key={message.id}
+              data-index={index}
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${virtualItem.start}px)`,
+                marginBottom: index === messages.length - 1 ? 0 : rowSpacing,
               }}
             >
-              {renderItem(message, virtualItem.index)}
+              {renderItem(message, index)}
             </div>
           )
         })}
@@ -104,8 +93,6 @@ export function VirtualizedMessageList({
     </div>
   )
 }
-
-import { cn } from '@/lib/utils'
 
 /**
  * Simple virtualized list for smaller message sets
@@ -174,7 +161,6 @@ export function ChunkedMessageList({
  * Memoized message item for use in virtualized lists
  * Prevents unnecessary re-renders of message components
  */
-import { memo } from 'react'
 
 export interface MemoizedMessageItemProps {
   message: CollaborationMessage

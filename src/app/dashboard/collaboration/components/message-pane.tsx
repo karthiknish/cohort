@@ -1,8 +1,8 @@
 'use client'
+'use no memo'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -140,6 +140,8 @@ export function CollaborationMessagePane({
   onClearThreadReplies,
   reactionPendingByMessage,
 }: CollaborationMessagePaneProps) {
+  'use no memo'
+
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null)
@@ -182,15 +184,6 @@ export function CollaborationMessagePane({
     })
   }, [isSearchActive, messageGroups])
 
-  const messageListRef = useRef<HTMLDivElement | null>(null)
-  const virtualizer = useVirtualizer({
-    count: isSearchActive ? 0 : flattenedMessages.length,
-    getScrollElement: () => messageListRef.current,
-    estimateSize: (index) => (flattenedMessages[index]?.type === 'separator' ? 44 : 140),
-    overscan: 6,
-  })
-  const virtualItems = virtualizer.getVirtualItems()
-
   const typingIndicator = useMemo(() => {
     if (!typingParticipants || typingParticipants.length === 0) return ''
     if (typingParticipants.length === 1) {
@@ -209,15 +202,27 @@ export function CollaborationMessagePane({
     if (!editingMessageId) return
     const stillExists = channelMessages.some((message) => message.id === editingMessageId && !message.isDeleted)
     if (!stillExists) {
-      setEditingMessageId(null)
-      setEditingValue('')
+      const frame = requestAnimationFrame(() => {
+        setEditingMessageId(null)
+        setEditingValue('')
+      })
+
+      return () => {
+        cancelAnimationFrame(frame)
+      }
     }
   }, [channelMessages, editingMessageId])
 
   // Reset thread state when channel changes
   useEffect(() => {
-    setExpandedThreadIds({})
-    onClearThreadReplies()
+    const frame = requestAnimationFrame(() => {
+      setExpandedThreadIds({})
+      onClearThreadReplies()
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [channel?.id, onClearThreadReplies])
 
   // Scroll to bottom when channel changes and messages load
@@ -615,7 +620,7 @@ export function CollaborationMessagePane({
         isActive={isSearchActive}
       />
 
-      <div className="flex-1 overflow-y-auto" ref={messageListRef}>
+      <div className="flex-1 overflow-y-auto">
         <div className="space-y-4 p-4">
           {isLoading && (
             <div className="flex justify-center py-6 text-muted-foreground">
@@ -650,23 +655,14 @@ export function CollaborationMessagePane({
           )}
 
           {!isSearchActive && (
-            <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
-              {virtualItems.map((virtualItem) => {
-                const item = flattenedMessages[virtualItem.index]
+              <div className="space-y-1">
+                {flattenedMessages.map((item) => {
                 if (!item) return null
 
                 return (
                   <div
                     key={item.id}
-                    ref={virtualizer.measureElement}
-                    data-index={virtualItem.index}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
+                      data-index={item.id}
                   >
                     {item.type === 'separator' ? (
                       <DateSeparator label={item.label} />

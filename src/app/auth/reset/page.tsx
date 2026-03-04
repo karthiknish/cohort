@@ -117,10 +117,21 @@ function ResetPasswordContent() {
   )
 
   useEffect(() => {
+    const frames: number[] = []
+    const enqueue = (fn: () => void) => {
+      const frame = requestAnimationFrame(fn)
+      frames.push(frame)
+    }
+
     if (!oobCode) {
-      setVerificationError('Missing reset token. Please request a new password reset email.')
-      setStatus('error')
-      return
+      enqueue(() => {
+        setVerificationError('Missing reset token. Please request a new password reset email.')
+        setStatus('error')
+      })
+
+      return () => {
+        frames.forEach((frame) => cancelAnimationFrame(frame))
+      }
     }
 
     let active = true
@@ -128,21 +139,26 @@ function ResetPasswordContent() {
     verifyPasswordResetCode(oobCode)
       .then((verifiedEmail) => {
         if (!active) return
-        setEmail(verifiedEmail)
-        setStatus('ready')
+        enqueue(() => {
+          setEmail(verifiedEmail)
+          setStatus('ready')
+        })
       })
       .catch((error: unknown) => {
         if (!active) return
-        setVerificationError(getFriendlyAuthErrorMessage(error))
-        setStatus('error')
+        enqueue(() => {
+          setVerificationError(getFriendlyAuthErrorMessage(error))
+          setStatus('error')
+        })
       })
 
     return () => {
       active = false
+      frames.forEach((frame) => cancelAnimationFrame(frame))
     }
   }, [oobCode, verifyPasswordResetCode])
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (!oobCode || submitting) {
@@ -163,18 +179,20 @@ function ResetPasswordContent() {
     setSubmitting(true)
     setFormError(null)
 
-    try {
-      await confirmPasswordReset(oobCode, newPassword)
-      setStatus('success')
-      toast({
-        title: 'Password updated',
-        description: 'You can now sign in with your new password.',
+    void confirmPasswordReset(oobCode, newPassword)
+      .then(() => {
+        setStatus('success')
+        toast({
+          title: 'Password updated',
+          description: 'You can now sign in with your new password.',
+        })
       })
-    } catch (error: unknown) {
-      setFormError(getFriendlyAuthErrorMessage(error))
-    } finally {
-      setSubmitting(false)
-    }
+      .catch((error: unknown) => {
+        setFormError(getFriendlyAuthErrorMessage(error))
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
   }
 
   const handleReturnToSignIn = () => {

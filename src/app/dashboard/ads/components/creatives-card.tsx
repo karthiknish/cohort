@@ -119,29 +119,32 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
     if (!isConnected) return
 
     setLoading(true)
-    try {
-      if (!workspaceId) {
-        return
-      }
+    if (!workspaceId) {
+      setLoading(false)
+      return
+    }
 
-      const creativesList = await listCreatives({
+    void listCreatives({
         workspaceId,
         providerId: providerId as any,
         clientId: null,
       })
 
-      setCreatives(Array.isArray(creativesList) ? (creativesList as Creative[]) : [])
-      setSummary(null)
-    } catch (error) {
-      logError(error, 'CreativesCard:fetchCreatives')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+      .then((creativesList) => {
+        setCreatives(Array.isArray(creativesList) ? (creativesList as Creative[]) : [])
+        setSummary(null)
       })
-    } finally {
-      setLoading(false)
-    }
+      .catch((error) => {
+        logError(error, 'CreativesCard:fetchCreatives')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }, [isConnected, listCreatives, providerId, workspaceId])
 
   const getTypeIcon = (type: string) => {

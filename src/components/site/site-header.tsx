@@ -14,15 +14,16 @@ export function SiteHeader() {
   const { user, loading, signOut } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     setSigningOut(true)
-    try {
-      await signOut()
-    } catch (error) {
-      console.error('Sign out failed', error)
-    } finally {
-      setSigningOut(false)
-    }
+
+    void signOut()
+      .catch((error) => {
+        console.error('Sign out failed', error)
+      })
+      .finally(() => {
+        setSigningOut(false)
+      })
   }
 
   return (

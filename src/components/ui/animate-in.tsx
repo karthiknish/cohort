@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { motion, type HTMLMotionProps } from 'framer-motion'
+import { motion, type HTMLMotionProps, useReducedMotion } from 'framer-motion'
 
 const tagMap = {
   div: motion.div,
@@ -36,7 +36,17 @@ export function FadeIn({
   y = 16,
   ...props
 }: FadeInProps) {
+  const prefersReducedMotion = useReducedMotion()
   const Tag = (as ? tagMap[as] : motion.div) as typeof motion.div
+
+  if (prefersReducedMotion) {
+    return (
+      <Tag initial={false} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} {...props}>
+        {children}
+      </Tag>
+    )
+  }
+
   return (
     <Tag
       initial={{ opacity: 0, y }}
@@ -67,7 +77,22 @@ export function FadeInStagger({
   stagger = 0.08,
   ...props
 }: FadeInStaggerProps) {
+  const prefersReducedMotion = useReducedMotion()
   const Tag = (as ? tagMap[as] : motion.div) as typeof motion.div
+
+  if (prefersReducedMotion) {
+    return (
+      <Tag
+        initial={false}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        {...props}
+      >
+        {children}
+      </Tag>
+    )
+  }
+
   return (
     <Tag
       initial="hidden"
@@ -105,7 +130,22 @@ export function FadeInItem({
   viewport,
   ...props
 }: FadeInItemProps) {
+  const prefersReducedMotion = useReducedMotion()
   const Tag = (as ? tagMap[as] : motion.div) as typeof motion.div
+
+  if (prefersReducedMotion) {
+    return (
+      <Tag
+        initial={false}
+        whileInView={{ opacity: 1 }}
+        viewport={viewport ?? { once: true, amount: 0.2 }}
+        {...props}
+      >
+        {children}
+      </Tag>
+    )
+  }
+
   return (
     <Tag
       initial={initial ?? 'hidden'}

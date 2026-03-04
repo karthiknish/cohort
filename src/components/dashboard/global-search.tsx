@@ -86,6 +86,12 @@ export function GlobalSearch({
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedType, setSelectedType] = useState<SearchResultType | 'all'>('all')
 
+  const resetSearchState = useCallback(() => {
+    setQuery('')
+    setResults([])
+    setSelectedType('all')
+  }, [])
+
   // Keyboard shortcut handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -94,51 +100,57 @@ export function GlobalSearch({
 
       if (keyCombo) {
         e.preventDefault()
-        setOpen((prev) => !prev)
+        setOpen((prev) => {
+          const next = !prev
+          if (!next) {
+            resetSearchState()
+          }
+          return next
+        })
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [resetSearchState])
 
-  // Reset state when dialog opens/closes
-  useEffect(() => {
-    if (!open) {
-      setQuery('')
-      setResults([])
-      setSelectedType('all')
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      resetSearchState()
     }
-  }, [open])
+  }, [resetSearchState])
 
   // Perform search
-  const performSearch = useCallback(async () => {
+  const performSearch = useCallback(() => {
     if (!query.trim() || isSearching) return
 
     setIsSearching(true)
 
-    try {
-      const searchPromises = Object.entries(searchFunctions).map(async ([type, fn]) => {
-        if (fn && (selectedType === 'all' || selectedType === type)) {
-          const typeResults = await fn(query.trim())
-          return typeResults.map((r) => ({ ...r, type: type as SearchResultType }))
-        }
-        return []
+    const searchPromises = Object.entries(searchFunctions).map(async ([type, fn]) => {
+      if (fn && (selectedType === 'all' || selectedType === type)) {
+        const typeResults = await fn(query.trim())
+        return typeResults.map((r) => ({ ...r, type: type as SearchResultType }))
+      }
+      return []
+    })
+
+    void Promise.all(searchPromises)
+      .then((allResults) => {
+        const flattened = allResults.flat()
+
+        // Sort by relevance if available
+        const sorted = flattened.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0))
+
+        setResults(sorted)
       })
-
-      const allResults = await Promise.all(searchPromises)
-      const flattened = allResults.flat()
-
-      // Sort by relevance if available
-      const sorted = flattened.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0))
-
-      setResults(sorted)
-    } catch (error) {
-      console.error('Search failed:', error)
-      setResults([])
-    } finally {
-      setIsSearching(false)
-    }
+      .catch((error) => {
+        console.error('Search failed:', error)
+        setResults([])
+      })
+      .finally(() => {
+        setIsSearching(false)
+      })
   }, [query, selectedType, searchFunctions, isSearching])
 
   // Debounced search
@@ -183,7 +195,7 @@ export function GlobalSearch({
   )
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger || defaultTrigger}
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0">
         {/* Search input */}

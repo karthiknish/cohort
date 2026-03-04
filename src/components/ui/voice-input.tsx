@@ -29,10 +29,14 @@ export function VoiceInputButton({
   showWaveform = false,
 }: VoiceInputButtonProps) {
   const onTranscriptRef = useRef(onTranscript)
-  onTranscriptRef.current = onTranscript
+  useEffect(() => {
+    onTranscriptRef.current = onTranscript
+  }, [onTranscript])
 
   const onInterimRef = useRef(onInterimTranscript)
-  onInterimRef.current = onInterimTranscript
+  useEffect(() => {
+    onInterimRef.current = onInterimTranscript
+  }, [onInterimTranscript])
 
   const handleResult = useCallback((transcript: string) => {
     onTranscriptRef.current(transcript)

@@ -324,7 +324,7 @@ export default function CampaignInsightsPage() {
       .finally(() => {
         setInsightsLoading(false)
       })
-  }, [campaign?.currency, campaignId, dateRange.end, dateRange.start, getCampaignInsights, isPreviewMode, providerId, selectedClientId, workspaceId])
+  }, [campaign, campaignId, dateRange, getCampaignInsights, isPreviewMode, providerId, selectedClientId, workspaceId])
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {

@@ -80,6 +80,7 @@ type Props = {
 export function AudienceTargetingCard({ providerId, providerName, isConnected }: Props) {
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
+  const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
   const getTargeting = useAction(adsTargetingApi.getTargeting)
 
@@ -92,7 +93,6 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
   const fetchTargeting = useCallback(async () => {
     if (!isConnected) return
 
-    const workspaceId = user?.agencyId ? String(user.agencyId) : null
     if (!workspaceId) {
       toast({
         title: 'Error',
@@ -103,41 +103,44 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
     }
 
     setLoading(true)
-    try {
-      const data = await getTargeting({
+
+    void getTargeting({
         workspaceId,
         providerId,
         clientId: selectedClientId ?? null,
       })
 
-      setTargeting((data as any)?.targeting ?? [])
-      setInsights((data as any)?.insights ?? null)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load audience targeting data'
-      
-      if (message.includes('not configured') || message.includes('missing token') || message.includes('expired')) {
-        toast({
-          title: 'Integration Issue',
-          description: 'Please connect or refresh your Meta ad account.',
-          variant: 'destructive',
-        })
-      } else if (message.includes('Meta API') || message.includes('Facebook')) {
-        toast({
-          title: 'Meta API Error',
-          description: 'Could not fetch targeting data. Please check your connection and try again.',
-          variant: 'destructive',
-        })
-      } else {
-        toast({
-          title: 'Error',
-          description: message,
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [getTargeting, isConnected, providerId, selectedClientId, user?.agencyId])
+      .then((data) => {
+        setTargeting((data as any)?.targeting ?? [])
+        setInsights((data as any)?.insights ?? null)
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Failed to load audience targeting data'
+
+        if (message.includes('not configured') || message.includes('missing token') || message.includes('expired')) {
+          toast({
+            title: 'Integration Issue',
+            description: 'Please connect or refresh your Meta ad account.',
+            variant: 'destructive',
+          })
+        } else if (message.includes('Meta API') || message.includes('Facebook')) {
+          toast({
+            title: 'Meta API Error',
+            description: 'Could not fetch targeting data. Please check your connection and try again.',
+            variant: 'destructive',
+          })
+        } else {
+          toast({
+            title: 'Error',
+            description: message,
+            variant: 'destructive',
+          })
+        }
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [getTargeting, isConnected, providerId, selectedClientId, workspaceId])
 
   const formatAgeRange = (range: string) => {
     return range.replace(/_/g, '-').replace('AGE', '').replace('RANGE', '').trim()

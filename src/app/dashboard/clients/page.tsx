@@ -121,24 +121,27 @@ function ClientsDashboardContent() {
     clientsData.adStatusLoading,
   ])
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     if (refreshing) return
     setRefreshing(true)
-    try {
-      await refreshClients()
-      toast({
-        title: 'Refreshed',
-        description: 'Client data has been updated.',
+
+    void refreshClients()
+      .then(() => {
+        toast({
+          title: 'Refreshed',
+          description: 'Client data has been updated.',
+        })
       })
-    } catch {
-      toast({
-        title: 'Refresh failed',
-        description: 'Unable to update client data. Please try again.',
-        variant: 'destructive',
+      .catch(() => {
+        toast({
+          title: 'Refresh failed',
+          description: 'Unable to update client data. Please try again.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setRefreshing(false)
-    }
+      .finally(() => {
+        setRefreshing(false)
+      })
   }
 
   const handleExport = () => {

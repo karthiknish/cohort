@@ -94,14 +94,14 @@ export function ProposalAnalyticsCard() {
     if (!dateRange?.startDate) return undefined
     const d = new Date(dateRange.startDate)
     return Number.isNaN(d.getTime()) ? undefined : d.getTime()
-  }, [dateRange?.startDate])
+  }, [dateRange])
   const endDateMs = useMemo(() => {
     if (!dateRange?.endDate) return undefined
     const d = new Date(dateRange.endDate)
     if (Number.isNaN(d.getTime())) return undefined
     d.setHours(23, 59, 59, 999)
     return d.getTime()
-  }, [dateRange?.endDate])
+  }, [dateRange])
 
   const summaryRes = useQuery(
     proposalAnalyticsApi.summarize,

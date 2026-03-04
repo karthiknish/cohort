@@ -247,7 +247,7 @@ export default function DashboardPage() {
     const created = new Date(user.createdAt)
     const now = new Date()
     return (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
-  }, [user?.createdAt])
+  }, [user])
 
   const showOnboarding = !statsLoading && isNewUser && !selectedClientId && metrics.length === 0
 
@@ -264,7 +264,7 @@ export default function DashboardPage() {
     const matches = resolvedTasks.filter((task) => task.clientName.toLowerCase().includes(needle))
     const scoped = matches.length > 0 ? matches : resolvedTasks
     return scoped.slice(0, 5)
-  }, [resolvedTasks, selectedClient?.name])
+  }, [resolvedTasks, selectedClient])
 
   return (
     <TooltipProvider>

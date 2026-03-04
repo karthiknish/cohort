@@ -1,7 +1,6 @@
 'use client'
+'use no memo'
 
-import { useMemo, useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { TriangleAlert, LoaderCircle, RefreshCw, ListTodo } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -50,19 +49,7 @@ export function TaskList({
   selectedTaskIds,
   onToggleTaskSelection,
 }: TaskListProps) {
-  const useVirtual = useMemo(
-    () => viewMode === 'list' && !loading && !initialLoading && !error && tasks.length > 50,
-    [error, initialLoading, loading, tasks.length, viewMode]
-  )
-  const parentRef = useRef<HTMLDivElement | null>(null)
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const rowVirtualizer = useVirtualizer({
-    count: useVirtual ? tasks.length : 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 128,
-    overscan: 12,
-  })
-  const virtualItems = useVirtual ? rowVirtualizer.getVirtualItems() : []
+  'use no memo'
 
   const renderSkeleton = (
     <div
@@ -142,54 +129,6 @@ export function TaskList({
       </Button>
     </div>
   )
-
-  if (useVirtual) {
-    return (
-      <div className="max-h-[520px]">
-        {initialLoading && renderSkeleton}
-        {!loading && error && renderError}
-
-        {!loading && !error && tasks.length > 0 && (
-          <div ref={parentRef} className="max-h-[520px] overflow-auto">
-            <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
-              {virtualItems.map((virtualRow) => {
-                const task = tasks[virtualRow.index]
-                if (!task) return null
-                const isLast = virtualRow.index === tasks.length - 1
-                return (
-                  <div
-                    key={task.id}
-                    data-index={virtualRow.index}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                    className={isLast ? undefined : 'border-b border-muted/30'}
-                  >
-                    <TaskRow
-                      task={task}
-                      isPendingUpdate={pendingStatusUpdates.has(task.id)}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onQuickStatusChange={onQuickStatusChange}
-                      selected={selectedTaskIds?.has(task.id)}
-                      onSelectToggle={onToggleTaskSelection}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {!loading && !error && tasks.length > 0 && hasMore && renderLoadMore}
-        {!loading && !error && tasks.length === 0 && renderEmpty}
-      </div>
-    )
-  }
 
   return (
     <ScrollArea className="max-h-[520px]">

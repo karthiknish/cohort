@@ -40,6 +40,8 @@ type DraggedTask = {
   sourceStatus: TaskStatus
 }
 
+const EMPTY_SELECTED_TASK_IDS = new Set<string>()
+
 export function TaskKanban({
   tasks,
   loading,
@@ -58,7 +60,7 @@ export function TaskKanban({
   onClone,
   onShare,
   searchQuery = '',
-  selectedTaskIds = new Set(),
+  selectedTaskIds = EMPTY_SELECTED_TASK_IDS,
   onToggleTaskSelection,
   bulkActive = false,
 }: TaskKanbanProps) {

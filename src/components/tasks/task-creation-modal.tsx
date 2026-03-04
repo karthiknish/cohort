@@ -77,7 +77,7 @@ export function TaskCreationModal({
     projectName: initialData?.projectName || taskDefaults.projectName || '',
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim()) return
 
@@ -89,27 +89,27 @@ export function TaskCreationModal({
     setIsLoading(true)
     setError(null)
 
-    try {
-        const payload = {
-          title: formData.title.trim(),
-          description: formData.description.trim() || undefined,
-          priority: formData.priority,
-          status: 'todo' as const,
-          dueDate: formData.dueDate || undefined,
-          assignedTo: formData.assignedTo,
-          clientId: selectedClientId || undefined,
-          client: selectedClient?.name || undefined,
-          projectId: formData.projectId || undefined,
-          projectName: formData.projectName || undefined,
-          tags: [] as string[],
-        }
+    const payload = {
+      title: formData.title.trim(),
+      description: formData.description.trim() || undefined,
+      priority: formData.priority,
+      status: 'todo' as const,
+      dueDate: formData.dueDate || undefined,
+      assignedTo: formData.assignedTo,
+      clientId: selectedClientId || undefined,
+      client: selectedClient?.name || undefined,
+      projectId: formData.projectId || undefined,
+      projectName: formData.projectName || undefined,
+      tags: [] as string[],
+    }
 
+    if (!user?.agencyId) {
+      setError('Workspace context missing')
+      setIsLoading(false)
+      return
+    }
 
-      if (!user?.agencyId) {
-        throw new Error('Workspace context missing')
-      }
-
-      const result = await createTask({
+    void createTask({
         workspaceId: user.agencyId,
         title: payload.title,
         description: payload.description ?? null,
@@ -122,59 +122,62 @@ export function TaskCreationModal({
         tags: payload.tags,
       })
 
-      if (!result?.legacyId) {
-        throw new Error('Failed to create task')
-      }
+      .then((result) => {
+        if (!result?.legacyId) {
+          throw new Error('Failed to create task')
+        }
 
-      const createdTask: TaskRecord = {
-        id: result.legacyId,
-        title: payload.title,
-        description: payload.description ?? null,
-        status: payload.status,
-        priority: payload.priority as TaskRecord['priority'],
-        assignedTo: payload.assignedTo,
-        clientId: payload.clientId ?? null,
-        client: payload.client ?? null,
-        projectId: payload.projectId ?? null,
-        projectName: payload.projectName ?? null,
-        dueDate: payload.dueDate ?? null,
-        tags: payload.tags,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        deletedAt: null,
-      }
+        const createdTask: TaskRecord = {
+          id: result.legacyId,
+          title: payload.title,
+          description: payload.description ?? null,
+          status: payload.status,
+          priority: payload.priority as TaskRecord['priority'],
+          assignedTo: payload.assignedTo,
+          clientId: payload.clientId ?? null,
+          client: payload.client ?? null,
+          projectId: payload.projectId ?? null,
+          projectName: payload.projectName ?? null,
+          dueDate: payload.dueDate ?? null,
+          tags: payload.tags,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+        }
 
-      toast({
-        title: 'Task created!',
-        description: `"${createdTask.title}" has been added and is ready to track.`,
+        toast({
+          title: 'Task created!',
+          description: `"${createdTask.title}" has been added and is ready to track.`,
+        })
+
+        onTaskCreated?.(createdTask)
+        emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
+        onClose()
+
+        // Reset form
+        setFormData({
+          title: '',
+          description: '',
+          priority: taskDefaults.priority || 'medium',
+          dueDate: taskDefaults.dueDate || '',
+          assignedTo: taskDefaults.assignedTo || [],
+          projectId: taskDefaults.projectId || '',
+          projectName: taskDefaults.projectName || '',
+        })
       })
-
-      onTaskCreated?.(createdTask)
-      emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
-      onClose()
-
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        priority: taskDefaults.priority || 'medium',
-        dueDate: taskDefaults.dueDate || '',
-        assignedTo: taskDefaults.assignedTo || [],
-        projectId: taskDefaults.projectId || '',
-        projectName: taskDefaults.projectName || '',
+      .catch((err) => {
+        console.error('Failed to create task:', err)
+        const message = err instanceof Error ? err.message : 'Unexpected error creating task'
+        setError(message)
+        toast({
+          title: 'Failed to create task',
+          description: message,
+          variant: 'destructive',
+        })
       })
-    } catch (err) {
-      console.error('Failed to create task:', err)
-      const message = err instanceof Error ? err.message : 'Unexpected error creating task'
-      setError(message)
-      toast({
-        title: 'Failed to create task',
-        description: message,
-        variant: 'destructive',
+      .finally(() => {
+        setIsLoading(false)
       })
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   const handleDateSelect = (date: Date | undefined) => {

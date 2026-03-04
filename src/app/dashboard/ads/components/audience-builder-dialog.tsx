@@ -140,7 +140,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
     }))
   }
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!formData.name) {
       toast({
         title: 'Missing information',
@@ -160,13 +160,18 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
     }
 
     setLoading(true)
-    try {
-      const workspaceId = user?.agencyId ? String(user.agencyId) : null
-      if (!workspaceId) {
-        throw new Error('Missing workspace id')
-      }
+    const workspaceId = user?.agencyId ? String(user.agencyId) : null
+    if (!workspaceId) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create audience.',
+        variant: 'destructive',
+      })
+      setLoading(false)
+      return
+    }
 
-      const result = await createAudience({
+    void createAudience({
         workspaceId,
         providerId: providerId as any,
         clientId: selectedClientId ?? null,
@@ -181,23 +186,26 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
           genders: formData.genders,
         },
       })
-      
-      toast({
-        title: 'Success',
-        description: result.message || `Audience "${formData.name}" created successfully.`,
+
+      .then((result) => {
+        toast({
+          title: 'Success',
+          description: result.message || `Audience "${formData.name}" created successfully.`,
+        })
+
+        onOpenChange(false)
+        resetForm()
       })
-      
-      onOpenChange(false)
-      resetForm()
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create audience.',
-        variant: 'destructive',
+      .catch(() => {
+        toast({
+          title: 'Error',
+          description: 'Failed to create audience.',
+          variant: 'destructive',
+        })
       })
-    } finally {
-      setLoading(false)
-    }
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   const resetForm = () => {

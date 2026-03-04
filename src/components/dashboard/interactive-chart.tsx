@@ -50,6 +50,17 @@ export interface ChartDataPoint {
   [key: string]: string | number | undefined
 }
 
+type RechartsTooltipPayloadItem = {
+  name?: string
+  value?: number
+  payload?: Record<string, string | number | undefined>
+}
+
+type RechartsTooltipProps = {
+  active?: boolean
+  payload?: RechartsTooltipPayloadItem[]
+}
+
 interface InteractiveChartProps {
   data: ChartDataPoint[]
   title?: string
@@ -67,6 +78,56 @@ interface InteractiveChartProps {
 }
 
 const COLORS = CHART_COLORS.primary
+const DEFAULT_VALUE_FORMATTER = (value: number) => value.toString()
+
+function ChartTooltipContent({
+  active,
+  payload,
+  xAxisKey,
+  dataKey,
+  valueFormatter,
+}: RechartsTooltipProps & {
+  xAxisKey: string
+  dataKey: string
+  valueFormatter: (value: number) => string
+}) {
+  if (!active || !payload?.length || !payload[0]?.payload) return null
+
+  const data = payload[0].payload
+  const labelValue = data[xAxisKey] ?? data.date
+  const numericValue = Number(data[dataKey] ?? 0)
+
+  return (
+    <div className="bg-background border rounded-lg px-3 py-2 shadow-sm">
+      <p className="text-sm font-medium">{String(labelValue ?? '')}</p>
+      <p className="text-lg font-bold">{valueFormatter(Number.isFinite(numericValue) ? numericValue : 0)}</p>
+      {typeof data.category === 'string' && data.category.length > 0 && (
+        <p className="text-xs text-muted-foreground">{data.category}</p>
+      )}
+    </div>
+  )
+}
+
+function PieTooltipContent({
+  active,
+  payload,
+  valueFormatter,
+}: RechartsTooltipProps & {
+  valueFormatter: (value: number) => string
+}) {
+  if (!active || !payload?.length) return null
+
+  const first = payload[0]
+  const name = first?.name ? String(first.name) : 'Unknown'
+  const value = Number(first?.value ?? 0)
+
+  return (
+    <div className="bg-background border rounded-lg px-3 py-2 shadow-sm">
+      <p className="font-medium">{name}</p>
+      <p className="text-lg font-bold">{valueFormatter(Number.isFinite(value) ? value : 0)}</p>
+    </div>
+  )
+}
 
 /**
  * Interactive chart component with multiple chart types and export
@@ -77,7 +138,7 @@ export function InteractiveChart({
   description,
   dataKey = 'value',
   xAxisKey = 'date',
-  valueFormatter = (v) => v.toString(),
+  valueFormatter = DEFAULT_VALUE_FORMATTER,
   className,
   height = 350,
   onExport,
@@ -183,21 +244,6 @@ export function InteractiveChart({
     [filteredData, xAxisKey, dataKey, title, timeRange, onExport, toast]
   )
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (!active || !payload?.length) return null
-
-    const data = payload[0].payload
-    return (
-      <div className="bg-background border rounded-lg px-3 py-2 shadow-sm">
-        <p className="text-sm font-medium">{data[xAxisKey] || data.date}</p>
-        <p className="text-lg font-bold">{valueFormatter(data[dataKey] as number)}</p>
-        {data.category && (
-          <p className="text-xs text-muted-foreground">{data.category}</p>
-        )}
-      </div>
-    )
-  }
-
   const renderChart = () => {
     if (filteredData.length === 0) {
       return (
@@ -234,7 +280,11 @@ export function InteractiveChart({
               strokeOpacity={0.5}
               tickFormatter={valueFormatter}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={
+                <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
+              }
+            />
             <Line
               type="monotone"
               dataKey={dataKey}
@@ -266,7 +316,11 @@ export function InteractiveChart({
               strokeOpacity={0.5}
               tickFormatter={valueFormatter}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={
+                <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
+              }
+            />
             <Bar dataKey={dataKey} fill={CHART_COLORS.primary[0]} radius={[4, 4, 0, 0]} />
           </BarChart>
         )
@@ -287,7 +341,11 @@ export function InteractiveChart({
               strokeOpacity={0.5}
               tickFormatter={valueFormatter}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={
+                <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
+              }
+            />
             <Area
               type="monotone"
               dataKey={dataKey}
@@ -317,18 +375,7 @@ export function InteractiveChart({
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip
-              content={(props: any) => {
-                if (!props.active || !props.payload) return null
-                const { name, value } = props.payload[0]
-                return (
-                  <div className="bg-background border rounded-lg px-3 py-2 shadow-sm">
-                    <p className="font-medium">{name}</p>
-                    <p className="text-lg font-bold">{valueFormatter(value as number)}</p>
-                  </div>
-                )
-              }}
-            />
+            <Tooltip content={<PieTooltipContent valueFormatter={valueFormatter} />} />
           </PieChart>
         )
 

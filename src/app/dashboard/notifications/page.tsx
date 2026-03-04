@@ -115,27 +115,29 @@ export default function NotificationsPage() {
   const nextCursor = notificationsInfiniteQuery.hasNextPage
 
   const updateNotificationStatus = useCallback(
-    async (ids: string[], action: AckAction) => {
+    (ids: string[], action: AckAction) => {
       if (!workspaceId || ids.length === 0) {
-        return
+        return Promise.resolve()
       }
 
-      try {
-        setAckInFlight(true)
-        await ackNotifications({ workspaceId, ids, action })
-        await notificationsInfiniteQuery.refetch()
+      setAckInFlight(true)
 
+      return ackNotifications({ workspaceId, ids, action })
+        .then(() => notificationsInfiniteQuery.refetch())
+        .then(() => {
           toast({
             title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
             description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
           })
-        } catch (error) {
+        })
+        .catch((error) => {
           logError(error, 'Notifications:updateStatus')
           const message = asErrorMessage(error)
           toast({ title: 'Notification error', description: message, variant: 'destructive' })
-        } finally {
-        setAckInFlight(false)
-      }
+        })
+        .finally(() => {
+          setAckInFlight(false)
+        })
     },
     [ackNotifications, notificationsInfiniteQuery, toast, workspaceId]
   )

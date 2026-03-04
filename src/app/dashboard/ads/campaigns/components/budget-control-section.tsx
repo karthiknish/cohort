@@ -108,7 +108,7 @@ export function BudgetControlSection({
     return formatMoney(budget, currencyCode)
   }, [budget, currencyCode])
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (!canEdit) return
 
     const parsed = Number.parseFloat(amount)
@@ -122,15 +122,14 @@ export function BudgetControlSection({
     }
 
     setSaving(true)
-    try {
-      const apiMode = toApiBudgetMode(providerId, mode)
+    const apiMode = toApiBudgetMode(providerId, mode)
 
-      if (!workspaceId) {
-        setSaving(false)
-        return
-      }
+    if (!workspaceId) {
+      setSaving(false)
+      return
+    }
 
-      await updateCampaign({
+    void updateCampaign({
         workspaceId,
         providerId: providerId as any,
         clientId: clientId ?? null,
@@ -140,30 +139,33 @@ export function BudgetControlSection({
         budgetMode: apiMode,
       })
 
-      toast({
-        title: 'Budget updated',
-        description: 'Changes will reflect after refresh.',
-      })
+      .then(() => {
+        toast({
+          title: 'Budget updated',
+          description: 'Changes will reflect after refresh.',
+        })
 
-      await onReloadCampaign?.()
-    } catch (error) {
-      logError(error, 'BudgetControlSection:handleSave')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+        return onReloadCampaign?.()
       })
-    } finally {
-      setSaving(false)
-    }
+      .catch((error) => {
+        logError(error, 'BudgetControlSection:handleSave')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setSaving(false)
+      })
   }, [amount, canEdit, campaignId, clientId, mode, onReloadCampaign, providerId, updateCampaign, workspaceId])
 
-  const handleRefresh = useCallback(async () => {
-    try {
-      await onReloadCampaign?.()
-    } catch (error) {
+  const handleRefresh = useCallback(() => {
+    if (!onReloadCampaign) return
+
+    void Promise.resolve(onReloadCampaign()).catch((error) => {
       logError(error, 'BudgetControlSection:handleRefresh')
-    }
+    })
   }, [onReloadCampaign])
 
   return (

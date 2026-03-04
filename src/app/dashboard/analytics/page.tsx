@@ -63,7 +63,13 @@ export default function AnalyticsPage() {
   const platformParam = searchParams.get('platform')
   useEffect(() => {
     if (platformParam && PLATFORM_OPTIONS.some((opt) => opt.value === platformParam)) {
-      setSelectedPlatform(platformParam)
+      const frame = requestAnimationFrame(() => {
+        setSelectedPlatform(platformParam)
+      })
+
+      return () => {
+        cancelAnimationFrame(frame)
+      }
     }
   }, [platformParam])
 
@@ -114,7 +120,13 @@ export default function AnalyticsPage() {
   }, [integrationStatuses, isPreviewMode])
 
   useEffect(() => {
-    void refreshGoogleAnalyticsStatus()
+    const frame = requestAnimationFrame(() => {
+      void refreshGoogleAnalyticsStatus()
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
   }, [refreshGoogleAnalyticsStatus])
 
   const {
@@ -156,46 +168,53 @@ export default function AnalyticsPage() {
     }
 
     setGaLoading(true)
-      try {
+    void Promise.resolve()
+      .then(async () => {
         window.location.href = '/api/integrations/google-analytics/oauth/start'
-      toast({
-        title: 'Google Analytics connected',
-        description: 'Account access granted. You can sync data now.',
+
+        toast({
+          title: 'Google Analytics connected',
+          description: 'Account access granted. You can sync data now.',
+        })
+        await refreshGoogleAnalyticsStatus()
       })
-      await refreshGoogleAnalyticsStatus()
-    } catch (error: unknown) {
-      logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
-      toast({ title: 'Connection failed', description: asErrorMessage(error), variant: 'destructive' })
-    } finally {
-      setGaLoading(false)
-    }
+      .catch((error: unknown) => {
+        logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
+        toast({ title: 'Connection failed', description: asErrorMessage(error), variant: 'destructive' })
+      })
+      .finally(() => {
+        setGaLoading(false)
+      })
   }, [isPreviewMode, refreshGoogleAnalyticsStatus, toast])
 
-  const handleSyncGoogleAnalytics = useCallback(async () => {
+  const handleSyncGoogleAnalytics = useCallback(() => {
     if (isPreviewMode) {
       toast({ title: 'Preview mode', description: 'Google Analytics sync is disabled in preview mode.' })
       return
     }
 
-    try {
-      const result = await googleAnalyticsSyncMutation.mutateAsync({
+    void googleAnalyticsSyncMutation.mutateAsync({
         periodDays,
         clientId: selectedClientId,
       })
+      .then((result) => {
+        const propertyName = result?.propertyName
+        const writtenDays = result?.written ?? 0
 
-      toast({
-        title: 'Google Analytics synced',
-        description: result?.propertyName
-          ? `Imported ${result?.written ?? 0} day(s) from ${result.propertyName}.`
-          : `Imported ${result?.written ?? 0} day(s).`,
+        toast({
+          title: 'Google Analytics synced',
+          description: propertyName
+            ? `Imported ${writtenDays} day(s) from ${propertyName}.`
+            : `Imported ${writtenDays} day(s).`,
+        })
+
+        return refreshGoogleAnalyticsStatus()
       })
-
-      await refreshGoogleAnalyticsStatus()
-      await mutateMetrics()
-    } catch (error: unknown) {
-      logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
-      toast({ title: 'Sync failed', description: asErrorMessage(error), variant: 'destructive' })
-    }
+      .then(() => mutateMetrics())
+      .catch((error: unknown) => {
+        logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
+        toast({ title: 'Sync failed', description: asErrorMessage(error), variant: 'destructive' })
+      })
   }, [isPreviewMode, googleAnalyticsSyncMutation, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])
 
   const initialMetricsLoading = metricsLoading && metrics.length === 0
