@@ -182,6 +182,80 @@ export default defineSchema({
     .index('by_workspace_provider_client', ['workspaceId', 'providerId', 'clientId'])
     .index('by_workspace_provider', ['workspaceId', 'providerId']),
 
+  meetingIntegrations: defineTable({
+    workspaceId: v.string(),
+    providerId: v.string(),
+    userId: v.string(),
+    userEmail: v.union(v.string(), v.null()),
+
+    accessToken: v.union(v.string(), v.null()),
+    refreshToken: v.union(v.string(), v.null()),
+    idToken: v.union(v.string(), v.null()),
+    scopes: v.array(v.string()),
+
+    accessTokenExpiresAtMs: v.union(v.number(), v.null()),
+    refreshTokenExpiresAtMs: v.union(v.number(), v.null()),
+
+    linkedAtMs: v.union(v.number(), v.null()),
+    lastUsedAtMs: v.union(v.number(), v.null()),
+
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_provider_user', ['workspaceId', 'providerId', 'userId'])
+    .index('by_workspace_provider', ['workspaceId', 'providerId']),
+
+  meetings: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    providerId: v.string(),
+    integrationUserId: v.union(v.string(), v.null()),
+    clientId: v.union(v.string(), v.null()),
+
+    title: v.string(),
+    description: v.union(v.string(), v.null()),
+    startTimeMs: v.number(),
+    endTimeMs: v.number(),
+    timezone: v.string(),
+
+    meetLink: v.union(v.string(), v.null()),
+    calendarEventId: v.union(v.string(), v.null()),
+    status: v.union(
+      v.literal('scheduled'),
+      v.literal('in_progress'),
+      v.literal('completed'),
+      v.literal('cancelled')
+    ),
+
+    attendeeEmails: v.array(v.string()),
+    createdBy: v.string(),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+
+    transcriptText: v.union(v.string(), v.null()),
+    transcriptUpdatedAtMs: v.union(v.number(), v.null()),
+    transcriptSource: v.union(v.string(), v.null()),
+
+    notesSummary: v.union(v.string(), v.null()),
+    notesUpdatedAtMs: v.union(v.number(), v.null()),
+    notesModel: v.union(v.string(), v.null()),
+  })
+    .index('by_workspace_startTimeMs', ['workspaceId', 'startTimeMs'])
+    .index('by_workspace_status_startTimeMs', ['workspaceId', 'status', 'startTimeMs'])
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_calendarEventId', ['workspaceId', 'calendarEventId'])
+    .index('by_workspace_client_startTimeMs', ['workspaceId', 'clientId', 'startTimeMs']),
+
+  meetingEvents: defineTable({
+    workspaceId: v.string(),
+    meetingLegacyId: v.string(),
+    eventType: v.string(),
+    payload: v.any(),
+    receivedAtMs: v.number(),
+  })
+    .index('by_workspace_meeting_receivedAtMs', ['workspaceId', 'meetingLegacyId', 'receivedAtMs'])
+    .index('by_workspace_receivedAtMs', ['workspaceId', 'receivedAtMs']),
+
   adSyncJobs: defineTable({
     workspaceId: v.string(),
     providerId: v.string(),

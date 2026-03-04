@@ -15,6 +15,7 @@ import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
+import { syncGoogleAnalyticsMetrics } from '@/services/integrations/google-analytics/sync'
 import { NormalizedMetric, SyncJob } from '@/types/integrations'
 import {
   IntegrationTokenError,
@@ -40,10 +41,12 @@ function getConvexClient(): ConvexHttpClient | null {
 
 const processSchema = z.object({
   userId: z.string().optional(),
+  workspaceId: z.string().optional(),
 })
 
 const processQuerySchema = z.object({
   userId: z.string().optional(),
+  workspaceId: z.string().optional(),
 })
 
 export const POST = createApiHandler(
@@ -58,7 +61,7 @@ export const POST = createApiHandler(
     let jobFailed = false
 
     try {
-      let targetUserId = body.userId || query.userId || null
+      let targetUserId = body.userId || query.userId || body.workspaceId || query.workspaceId || null
 
       if (!auth.isCron) {
         targetUserId = auth.uid ?? null
@@ -101,6 +104,8 @@ export const POST = createApiHandler(
       }
 
       let metrics: NormalizedMetric[] = []
+      let metricsCount = 0
+      let metricsPersistedInProvider = false
 
       switch (job.providerId) {
         case 'google': {
@@ -117,6 +122,23 @@ export const POST = createApiHandler(
             return { jobId: job.id, providerId: job.providerId, metricsCount: 0, skipped: true, reason: 'missing_account_id' }
           }
 
+          const developerToken = typeof integration.developerToken === 'string' && integration.developerToken.trim().length > 0
+            ? integration.developerToken.trim()
+            : (typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string' ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN.trim() : '')
+
+          if (developerToken.length === 0) {
+            const message = 'Google Ads developer token is missing. Set GOOGLE_ADS_DEVELOPER_TOKEN and reconnect Google Ads.'
+            await failSyncJob({ userId: targetUserId, jobId: job.id, message })
+            await updateIntegrationStatus({
+              userId: targetUserId,
+              providerId: job.providerId,
+              clientId,
+              status: 'error',
+              message,
+            })
+            return { jobId: job.id, providerId: job.providerId, metricsCount: 0, skipped: true, reason: 'missing_developer_token' }
+          }
+
           const loginCustomerId = typeof integration.loginCustomerId === 'string' && integration.loginCustomerId.length > 0
             ? integration.loginCustomerId
             : null
@@ -131,7 +153,7 @@ export const POST = createApiHandler(
 
           metrics = await fetchGoogleAdsMetrics({
             accessToken: googleAccessToken,
-            developerToken: integration.developerToken,
+            developerToken,
             customerId: accountId,
             loginCustomerId,
             managerCustomerId,
@@ -244,13 +266,28 @@ export const POST = createApiHandler(
 
           break
         }
+        case 'google-analytics': {
+          const result = await syncGoogleAnalyticsMetrics({
+            userId: targetUserId,
+            clientId,
+            days: job.timeframeDays,
+            requestId: req.headers.get('x-request-id'),
+          })
+
+          metricsPersistedInProvider = true
+          metricsCount = result.written
+          break
+        }
         default: {
           await failSyncJob({ userId: targetUserId, jobId: job.id, message: `Unsupported provider: ${job.providerId}` })
           throw new ValidationError(`Unsupported provider ${job.providerId}`)
         }
       }
 
-      await writeMetricsBatch({ userId: targetUserId, clientId, metrics })
+      if (!metricsPersistedInProvider) {
+        await writeMetricsBatch({ userId: targetUserId, clientId, metrics })
+        metricsCount = metrics.length
+      }
       // Parallelize independent status updates
       await Promise.all([
         completeSyncJob({ userId: targetUserId, jobId: job.id }),
@@ -292,7 +329,7 @@ export const POST = createApiHandler(
         })
       }
 
-      return { jobId: job.id, providerId: job.providerId, metricsCount: metrics.length }
+      return { jobId: job.id, providerId: job.providerId, metricsCount }
     } catch (error: unknown) {
       logger.error('[integrations/process] error', error, {
         requestId: req.headers.get('x-request-id'),

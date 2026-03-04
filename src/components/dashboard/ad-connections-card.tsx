@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useMemo, useState } from 'react'
-import { type LucideIcon, RefreshCw, Check, Clock, AlertTriangle, Loader2, Unlink } from 'lucide-react'
+import { RefreshCw, Check, Clock, AlertTriangle, Loader2, Unlink } from 'lucide-react'
 
 import {
   Card,
@@ -56,7 +56,7 @@ interface AdConnectionsCardProps {
   connectionErrors: Record<string, string>
   integrationStatuses?: Record<string, IntegrationStatusInfo>
   onConnect: (providerId: string, connect: () => Promise<void>) => Promise<void> | void
-  onDisconnect: (providerId: string) => Promise<void> | void
+  onDisconnect: (providerId: string, options?: { clearHistoricalData?: boolean }) => Promise<void> | void
   onOauthRedirect?: (providerId: string) => Promise<void> | void
   onRefresh: () => void
   refreshing: boolean
@@ -189,12 +189,12 @@ export function AdConnectionsCard({
   }, [])
 
   // Handle disconnect confirmation
-  const handleConfirmDisconnect = useCallback((): Promise<void> => {
+  const handleConfirmDisconnect = useCallback((options: { clearHistoricalData: boolean }): Promise<void> => {
     if (!selectedProvider) return Promise.resolve()
 
     setIsDisconnecting(true)
 
-    return Promise.resolve(onDisconnect(selectedProvider.id))
+    return Promise.resolve(onDisconnect(selectedProvider.id, options))
       .finally(() => {
         setIsDisconnecting(false)
         setDisconnectDialogOpen(false)

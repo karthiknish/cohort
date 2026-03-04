@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, Suspense, lazy } from 'react'
 
-import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
+import { extractErrorCode, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 
 function isAuthError(error: unknown): boolean {
@@ -25,6 +25,7 @@ import {
   WorkflowCard,
   SetupAlerts,
 } from './components'
+import { GoogleSetupDialog } from './components/google-setup-dialog'
 
 // Lazy imports for heavy components
 const CampaignManagementCard = lazy(() => import('./components/campaign-management-card').then(m => ({ default: m.CampaignManagementCard })))
@@ -60,7 +61,6 @@ export default function AdsPage() {
 
   // 1. Manage metrics, filters, and data loading
   const {
-    metrics,
     processedMetrics,
     providerSummaries,
     serverSideSummary,
@@ -100,11 +100,19 @@ export default function AdsPage() {
     integrationStatusMap,
     automationStatuses,
     metaSetupMessage,
+    googleSetupMessage,
     tiktokSetupMessage,
+    initializingGoogle,
     initializingMeta,
     initializingTikTok,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
+    googleAccountOptions,
+    selectedGoogleAccountId,
+    setSelectedGoogleAccountId,
+    loadingGoogleAccountOptions,
+    googleSetupDialogOpen,
+    setGoogleSetupDialogOpen,
     metaAccountOptions,
     selectedMetaAccountId,
     setSelectedMetaAccountId,
@@ -112,8 +120,10 @@ export default function AdsPage() {
     handleConnect,
     handleDisconnect,
     handleOauthRedirect,
+    initializeGoogleIntegration,
     initializeMetaIntegration,
     initializeTikTokIntegration,
+    reloadGoogleAccountOptions,
     reloadMetaAccountOptions,
     adPlatforms,
   } = useAdsConnections({
@@ -216,6 +226,19 @@ export default function AdsPage() {
               />
             </div>
           </FadeIn>
+
+          <GoogleSetupDialog
+            open={googleSetupDialogOpen}
+            onOpenChange={setGoogleSetupDialogOpen}
+            setupMessage={googleSetupMessage}
+            accountOptions={googleAccountOptions}
+            selectedAccountId={selectedGoogleAccountId}
+            onAccountSelectionChange={setSelectedGoogleAccountId}
+            loadingAccounts={loadingGoogleAccountOptions}
+            initializing={initializingGoogle}
+            onReloadAccounts={() => void reloadGoogleAccountOptions()}
+            onInitialize={() => void initializeGoogleIntegration(undefined, selectedGoogleAccountId || null)}
+          />
 
           {/* Campaign Management Cards for each connected provider */}
           {adPlatforms.filter((p) => connectedProviders[p.id]).length > 0 && (

@@ -150,7 +150,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
           return
         }
 
-        const charBeforeAt = lastAtIndex > 0 ? textBeforeCaret[lastAtIndex - 1] : ''
+        const charBeforeAt = lastAtIndex > 0 ? (textBeforeCaret[lastAtIndex - 1] ?? '') : ''
         const hasValidBoundary =
           lastAtIndex === 0 ||
           /\s/.test(charBeforeAt) ||

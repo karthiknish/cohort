@@ -168,7 +168,7 @@ function ClientsDashboardContent() {
     })
   }
 
-  const teamMembers = selectedClient?.teamMembers ?? []
+  const teamMembers = useMemo(() => selectedClient?.teamMembers ?? [], [selectedClient?.teamMembers])
   const filteredTeamMembers = useMemo(() => {
     if (!teamSearch.trim()) return teamMembers
     const query = teamSearch.toLowerCase()
@@ -221,7 +221,7 @@ function ClientsDashboardContent() {
               </div>
               <p className={DASHBOARD_THEME.layout.subtitle}>
                 Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
-                {clientAge && <span className="text-muted-foreground/40 font-normal"> · Partnered {clientAge}</span>}
+                {clientAge && <span className="text-muted-foreground/70 font-normal"> · Partnered {clientAge}</span>}
               </p>
             </div>
           </div>
@@ -322,7 +322,7 @@ function ClientsDashboardContent() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <ClientOnboardingChecklist clientName={selectedClient.name} items={onboardingItems} />
+            <ClientOnboardingChecklist items={onboardingItems} />
 
             {/* Client Details Card */}
             <ClientDetailsCard

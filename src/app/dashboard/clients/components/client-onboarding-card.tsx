@@ -20,19 +20,19 @@ export type ClientChecklistItem = {
   loading?: boolean
 }
 
-export function ClientOnboardingChecklist({ clientName, items }: { clientName: string; items: ClientChecklistItem[] }) {
+export function ClientOnboardingChecklist({ items }: { items: ClientChecklistItem[] }) {
   const total = items.length
   const completed = items.filter((item) => item.done).length
   const progress = total === 0 ? 0 : Math.round((completed / total) * 100)
 
   return (
-    <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+    <Card className="overflow-hidden border-muted/40 bg-card shadow-sm transition-all hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary" />
           <div>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Onboarding Objectives</CardTitle>
-            <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
               {completed === total && total > 0
                 ? "Workspace fully initialized"
                 : `${completed} of ${total} benchmarks secured`}
@@ -42,9 +42,9 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
             <span>{progress}% complete</span>
-            <span className="text-foreground/60">{completed}/{total}</span>
+            <span className="text-foreground/80">{completed}/{total}</span>
           </div>
           <Progress value={progress} className="h-1.5 bg-muted/10" />
         </div>
@@ -62,7 +62,7 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
               >
                 <div className={cn(
                   "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
-                  item.done ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground/30"
+                  item.done ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground/70"
                 )}>
                   <Icon
                     className={cn(
@@ -74,10 +74,10 @@ export function ClientOnboardingChecklist({ clientName, items }: { clientName: s
                 <div className="min-w-0 flex-1">
                   <p className={cn(
                     "text-xs font-bold tracking-tight transition-colors",
-                    item.done ? "text-primary" : "text-foreground/80"
+                    item.done ? "text-primary" : "text-foreground"
                   )}>{item.label}</p>
                   {item.helper ? (
-                    <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground/50">
+                    <p className="mt-0.5 text-[10px] font-medium leading-relaxed text-muted-foreground/80">
                       {item.helper}
                     </p>
                   ) : null}

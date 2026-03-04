@@ -39,12 +39,12 @@ interface AgentModePanelProps {
 }
 
 const QUICK_SUGGESTIONS = [
-  'Go to Analytics',
+  'Schedule a meeting',
+  'Start a quick meet',
+  'Open Ads Hub',
+  'Sync ad campaigns',
+  'Generate weekly report',
   'Show my Tasks',
-  'Open Projects',
-  'Open Proposals',
-  'View Ads Hub',
-  'Team Chat',
 ]
 
 // Skeleton component for loading states
@@ -280,15 +280,33 @@ export function AgentModePanel({
               <Sparkles className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold">Agent Mode</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-9 w-9 rounded-full"
-              aria-label="Close Agent Mode"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <AnimatePresence>
+                {connectionStatus !== 'connected' && (
+                  <ConnectionIndicator status={connectionStatus} />
+                )}
+              </AnimatePresence>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleHistory}
+                className={cn('h-9 w-9 rounded-full', showHistory && 'bg-muted')}
+                aria-label="Toggle chat history"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-9 w-9 rounded-full"
+                aria-label="Close Agent Mode"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Rate limit banner */}
@@ -425,7 +443,7 @@ export function AgentModePanel({
                   </div>
                   <p className="text-base font-medium">Where would you like to go?</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Type a command or type @ to pick a client, user, project, or team.
+                    Ask in plain language, or type @ to pick a client, user, project, or team.
                   </p>
                 </div>
 
@@ -450,7 +468,7 @@ export function AgentModePanel({
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
-                      placeholder="Type your request…"
+                      placeholder="Describe what you want to do..."
                       className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm"
                       disabled={isInputDisabled}
                     />
@@ -552,7 +570,7 @@ export function AgentModePanel({
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type @ to mention • Where would you like to go?"
+                  placeholder="Ask naturally, or use @ to mention context"
                   className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm"
                   disabled={isInputDisabled}
                 />

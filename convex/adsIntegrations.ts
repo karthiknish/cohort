@@ -39,6 +39,43 @@ function normalizeMetaAccountId(value: string | null | undefined): string | null
   return trimmed.startsWith('act_') ? trimmed : `act_${trimmed}`
 }
 
+function normalizeGoogleAdsAccountId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function normalizeGoogleAnalyticsPropertyId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return null
+  if (trimmed.startsWith('properties/')) {
+    const extracted = trimmed.split('/')[1]
+    return typeof extracted === 'string' && extracted.length > 0 ? extracted : null
+  }
+  return trimmed
+}
+
+function resolveGoogleAdsDeveloperToken(integrationDeveloperToken: string | null | undefined): string {
+  const fromIntegration = typeof integrationDeveloperToken === 'string' ? integrationDeveloperToken.trim() : ''
+  if (fromIntegration.length > 0) {
+    return fromIntegration
+  }
+
+  const fromEnv = typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string'
+    ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN.trim()
+    : ''
+
+  if (fromEnv.length > 0) {
+    return fromEnv
+  }
+
+  throw Errors.integration.notConfigured(
+    'Google Ads',
+    'Google Ads developer token is missing. Set GOOGLE_ADS_DEVELOPER_TOKEN before completing setup.'
+  )
+}
+
 const adIntegrationZ = z.object({
   providerId: z.string(),
   clientId: z.string().nullable(),
@@ -391,10 +428,95 @@ export const listMetaAdAccounts = action({
   }, 'adsIntegrations:listMetaAdAccounts', { maxRetries: 3 }),
 })
 
+export const listGoogleAdAccounts = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('google'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken('Google Ads')
+    }
+
+    const developerToken = resolveGoogleAdsDeveloperToken(integration.developerToken)
+    const { fetchGoogleAdAccounts } = await import('@/services/integrations/google-ads')
+    const accounts = await fetchGoogleAdAccounts({
+      accessToken: integration.accessToken,
+      developerToken,
+    })
+
+    return accounts
+      .map((account) => ({
+        id: account.id,
+        name: account.name,
+        currencyCode: account.currencyCode ?? null,
+        isManager: Boolean(account.manager),
+        loginCustomerId: account.loginCustomerId ?? null,
+        managerCustomerId: account.managerCustomerId ?? null,
+      }))
+      .sort((a, b) => Number(a.isManager) - Number(b.isManager) || a.name.localeCompare(b.name))
+  }, 'adsIntegrations:listGoogleAdAccounts', { maxRetries: 3 }),
+})
+
+export const listGoogleAnalyticsProperties = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('google-analytics'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken('Google Analytics')
+    }
+
+    const { fetchGoogleAnalyticsProperties } = await import('@/services/integrations/google-analytics/properties')
+    const properties = await fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken })
+
+    return properties.map((property) => ({
+      id: property.id,
+      name: property.name,
+      resourceName: property.resourceName,
+    }))
+  }, 'adsIntegrations:listGoogleAnalyticsProperties', { maxRetries: 3 }),
+})
+
 export const initializeAdAccount = action({
   args: {
     workspaceId: v.string(),
-    providerId: v.union(v.literal('google'), v.literal('linkedin'), v.literal('facebook'), v.literal('tiktok')),
+    providerId: v.union(
+      v.literal('google'),
+      v.literal('google-analytics'),
+      v.literal('linkedin'),
+      v.literal('facebook'),
+      v.literal('tiktok')
+    ),
     clientId: v.optional(v.union(v.string(), v.null())),
     accountId: v.optional(v.union(v.string(), v.null())),
   },
@@ -416,32 +538,46 @@ export const initializeAdAccount = action({
     const linkedAtMs = typeof integration.linkedAtMs === 'number' ? integration.linkedAtMs : nowMs()
 
     if (args.providerId === 'google') {
-      if (!integration.accessToken || !integration.developerToken) {
-        throw Errors.integration.missingToken('Google')
+      if (!integration.accessToken) {
+        throw Errors.integration.missingToken('Google Ads')
       }
+
+      const developerToken = resolveGoogleAdsDeveloperToken(integration.developerToken)
 
       const { fetchGoogleAdAccounts } = await import('@/services/integrations/google-ads')
 
       const accounts = await fetchGoogleAdAccounts({
         accessToken: integration.accessToken,
-        developerToken: integration.developerToken,
+        developerToken,
       })
 
       if (!accounts.length) {
-        throw Errors.integration.notConfigured('Google', 'No ad accounts available')
+        throw Errors.integration.notConfigured('Google Ads', 'No ad accounts available')
       }
 
-      const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]!
-      const accountId = primaryAccount.id
-      const loginCustomerId = primaryAccount.loginCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
-      const managerCustomerId = primaryAccount.managerCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
+      const selectedAccountId = normalizeGoogleAdsAccountId(args.accountId ?? null)
+      if (!selectedAccountId) {
+        throw Errors.validation.invalidInput('Please select a Google Ads account to finish setup')
+      }
+
+      const selectedAccount =
+        accounts.find((account) => normalizeGoogleAdsAccountId(account.id) === selectedAccountId) ?? null
+
+      if (!selectedAccount) {
+        throw Errors.validation.invalidInput('Selected Google Ads account is not available for this integration token')
+      }
+
+      const accountId = selectedAccount.id
+      const loginCustomerId = selectedAccount.loginCustomerId ?? (selectedAccount.manager ? selectedAccount.id : null)
+      const managerCustomerId = selectedAccount.managerCustomerId ?? (selectedAccount.manager ? selectedAccount.id : null)
 
       await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
         workspaceId: args.workspaceId,
         providerId: 'google',
         clientId,
         accountId,
-        accountName: primaryAccount.name,
+        accountName: selectedAccount.name,
+        developerToken,
         loginCustomerId: loginCustomerId ?? null,
         managerCustomerId: managerCustomerId ?? null,
         linkedAtMs,
@@ -457,10 +593,58 @@ export const initializeAdAccount = action({
 
       return {
         accountId,
-        accountName: primaryAccount.name,
+        accountName: selectedAccount.name,
         loginCustomerId,
         managerCustomerId,
         accounts,
+      }
+    }
+
+    if (args.providerId === 'google-analytics') {
+      if (!integration.accessToken) {
+        throw Errors.integration.missingToken('Google Analytics')
+      }
+
+      const { fetchGoogleAnalyticsProperties } = await import('@/services/integrations/google-analytics/properties')
+      const properties = await fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken })
+
+      if (!properties.length) {
+        throw Errors.integration.notConfigured('Google Analytics', 'No Google Analytics properties available')
+      }
+
+      const selectedPropertyId = normalizeGoogleAnalyticsPropertyId(args.accountId ?? null)
+      if (!selectedPropertyId) {
+        throw Errors.validation.invalidInput('Please select a Google Analytics property to finish setup')
+      }
+
+      const selectedProperty =
+        properties.find((property) => normalizeGoogleAnalyticsPropertyId(property.id) === selectedPropertyId) ?? null
+
+      if (!selectedProperty) {
+        throw Errors.validation.invalidInput('Selected Google Analytics property is not available for this integration token')
+      }
+
+      await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
+        workspaceId: args.workspaceId,
+        providerId: 'google-analytics',
+        clientId,
+        accountId: selectedProperty.id,
+        accountName: selectedProperty.name,
+        linkedAtMs,
+      })
+
+      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+        workspaceId: args.workspaceId,
+        providerId: 'google-analytics',
+        clientId,
+        jobType: 'initial-backfill',
+        timeframeDays: 90,
+      })
+
+      return {
+        accountId: selectedProperty.id,
+        accountName: selectedProperty.name,
+        properties,
       }
     }
 
@@ -1248,6 +1432,38 @@ export const deleteSyncJobs = mutation({
     }
 
     return { ok: true }
+  },
+})
+
+export const deleteProviderMetrics = mutation({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.string(),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+    const rows = await ctx.db
+      .query('adMetrics')
+      .withIndex('by_workspace_provider_date', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('providerId', args.providerId)
+      )
+      .collect()
+
+    let deleted = 0
+    for (const row of rows) {
+      if ((clientId === null ? row.clientId === null : row.clientId === clientId)) {
+        await ctx.db.delete(row._id)
+        deleted += 1
+      }
+    }
+
+    return { ok: true, deleted }
   },
 })
 

@@ -244,6 +244,9 @@ export {
   notifyWorkspaceInviteEmail,
   notifyPerformanceDigestEmail,
   notifyTaskActivityEmail,
+  notifyMeetingScheduledEmail,
+  notifyMeetingRescheduledEmail,
+  notifyMeetingCancelledEmail,
   checkBrevoHealth,
 } from './brevo'
 

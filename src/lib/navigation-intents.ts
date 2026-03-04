@@ -71,6 +71,16 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     aliases: ['ad hub', 'ads hub', 'ad integrations', 'paid media', 'ad platforms', 'campaign management', 'ad dashboard', 'advertising hub'],
     actions: ['connect ads', 'sync campaigns', 'check ad spend', 'view roas', 'manage campaigns'],
   },
+
+  // Meetings
+  {
+    route: '/dashboard/meetings',
+    name: 'Meetings',
+    description: 'Schedule meetings, manage Google Meet invites, and review AI meeting notes',
+    keywords: ['meetings', 'meeting', 'calendar', 'google meet', 'invite', 'invites', 'transcript', 'notes', 'call', 'calls'],
+    aliases: ['meeting scheduler', 'schedule call', 'meeting notes', 'meeting hub', 'google workspace meetings'],
+    actions: ['schedule meeting', 'start meeting', 'join call', 'review transcript', 'read meeting notes'],
+  },
   
   // Tasks
   {

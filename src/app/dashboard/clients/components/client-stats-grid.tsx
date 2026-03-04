@@ -27,10 +27,10 @@ export function ClientStatsGrid({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Projects Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-all hover:bg-muted/10">
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-all group-hover:bg-primary" />
         <CardHeader className="pb-2">
-          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Projects</CardTitle>
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projects</CardTitle>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
@@ -39,9 +39,9 @@ export function ClientStatsGrid({
             <>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black tracking-tight text-foreground">{stats?.activeProjects ?? 0}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">active</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">active</span>
               </div>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
                 {stats?.totalProjects ?? 0} TOTAL PROJECTS
               </p>
             </>
@@ -50,10 +50,10 @@ export function ClientStatsGrid({
       </Card>
 
       {/* Tasks Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-all hover:bg-muted/10">
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-all group-hover:bg-primary" />
         <CardHeader className="pb-2">
-          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Tasks</CardTitle>
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tasks</CardTitle>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
@@ -62,9 +62,9 @@ export function ClientStatsGrid({
             <>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black tracking-tight text-foreground">{stats?.openTasks ?? 0}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">open</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">open</span>
               </div>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
                 {stats?.completedTasks ?? 0} COMPLETED
               </p>
             </>
@@ -73,27 +73,27 @@ export function ClientStatsGrid({
       </Card>
 
       {/* Team Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-all hover:bg-muted/10">
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-all group-hover:bg-primary" />
         <CardHeader className="pb-2">
-          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Team</CardTitle>
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Team</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-foreground">{teamMembersCount}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">members</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">members</span>
           </div>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
             {managersCount} MANAGERS ASSIGNED
           </p>
         </CardContent>
       </Card>
 
       {/* Proposals Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-all hover:bg-muted/10">
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-all group-hover:bg-primary" />
         <CardHeader className="pb-2">
-          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Proposals</CardTitle>
+          <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Proposals</CardTitle>
         </CardHeader>
         <CardContent>
           {statsLoading ? (
@@ -102,9 +102,9 @@ export function ClientStatsGrid({
             <>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black tracking-tight text-foreground">{stats?.pendingProposals ?? 0}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/60">pending</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">pending</span>
               </div>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/40">
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
                 AWAITING CLIENT ACTION
               </p>
             </>

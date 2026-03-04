@@ -14,3 +14,6 @@ export { integrationAlertTemplate, type IntegrationAlertTemplateParams } from '.
 export { workspaceInviteTemplate, type WorkspaceInviteTemplateParams } from './workspace-invite'
 export { performanceDigestTemplate, type PerformanceDigestTemplateParams } from './performance-digest'
 export { taskActivityTemplate, type TaskActivityTemplateParams } from './task-activity'
+export { meetingScheduledTemplate, type MeetingScheduledTemplateParams } from './meeting-scheduled'
+export { meetingRescheduledTemplate, type MeetingRescheduledTemplateParams } from './meeting-rescheduled'
+export { meetingCancelledTemplate, type MeetingCancelledTemplateParams } from './meeting-cancelled'

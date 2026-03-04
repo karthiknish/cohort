@@ -29,7 +29,7 @@ export function ClientDetailsCard({
   createdAt,
 }: ClientDetailsCardProps) {
   return (
-    <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+    <Card className="overflow-hidden border-muted/40 bg-card shadow-sm transition-all hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary" />
@@ -42,7 +42,7 @@ export function ClientDetailsCard({
             <Calendar className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Team Footprint</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Team Footprint</p>
             <p className="mt-0.5 text-xs font-black text-foreground">
               {teamMembersCount} active collaborators
             </p>
@@ -54,7 +54,7 @@ export function ClientDetailsCard({
              <Calendar className="h-4 w-4" />
            </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Workspace Index</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Workspace Index</p>
             <p className="mt-0.5 text-xs font-black text-foreground">
               {clientIndex >= 0 ? `#${clientIndex + 1} of ${totalClients} Global` : '—'}
             </p>
@@ -67,7 +67,7 @@ export function ClientDetailsCard({
                <Calendar className="h-4 w-4" />
              </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Registration</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Registration</p>
               <p className="mt-0.5 text-xs font-black text-foreground">{formatDate(createdAt)}</p>
             </div>
           </div>

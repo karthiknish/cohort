@@ -13,6 +13,7 @@ import {
   Megaphone,
   Activity,
   Users,
+  Video,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -330,6 +331,14 @@ function generateBreadcrumbItems(
         label: 'Clients',
         href: '/dashboard/clients',
         icon: Users,
+      })
+      break
+
+    case 'meetings':
+      items.push({
+        label: 'Meetings',
+        href: '/dashboard/meetings',
+        icon: Video,
       })
       break
 

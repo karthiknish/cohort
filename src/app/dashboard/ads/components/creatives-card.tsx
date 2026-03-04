@@ -10,11 +10,11 @@ function CreativeImage({ src, alt, fallbackSrc }: { src?: string; alt?: string; 
   const [error, setError] = useState(false)
   const [useFallback, setUseFallback] = useState(false)
 
-  const currentSrc = useFallback ? fallbackSrc ?? src : src
-
   if (!src || error) {
     return <ImageOff className="h-8 w-8 text-muted-foreground" />
   }
+
+  const currentSrc = useFallback ? fallbackSrc ?? src : src
 
   return (
     <div className="relative h-full w-full">

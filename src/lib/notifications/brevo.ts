@@ -19,8 +19,19 @@ import {
   workspaceInviteTemplate,
   performanceDigestTemplate,
   taskActivityTemplate,
+  meetingScheduledTemplate,
+  meetingRescheduledTemplate,
+  meetingCancelledTemplate,
 } from './email-templates'
-import type { IntegrationAlertTemplateParams, WorkspaceInviteTemplateParams, PerformanceDigestTemplateParams, TaskActivityTemplateParams } from './email-templates'
+import type {
+  IntegrationAlertTemplateParams,
+  WorkspaceInviteTemplateParams,
+  PerformanceDigestTemplateParams,
+  TaskActivityTemplateParams,
+  MeetingScheduledTemplateParams,
+  MeetingRescheduledTemplateParams,
+  MeetingCancelledTemplateParams,
+} from './email-templates'
 
 // =============================================================================
 // CONFIGURATION
@@ -345,6 +356,57 @@ export async function notifyTaskActivityEmail(options: {
     subject,
     htmlContent,
     tags: ['task-activity'],
+  })
+}
+
+export async function notifyMeetingScheduledEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & MeetingScheduledTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  const subject = `📅 Meeting scheduled: ${params.meetingTitle}`
+  const htmlContent = meetingScheduledTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['meeting-scheduled'],
+  })
+}
+
+export async function notifyMeetingRescheduledEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & MeetingRescheduledTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  const subject = `🔄 Meeting rescheduled: ${params.meetingTitle}`
+  const htmlContent = meetingRescheduledTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['meeting-rescheduled'],
+  })
+}
+
+export async function notifyMeetingCancelledEmail(options: {
+  recipientEmail: string
+  recipientName?: string
+} & MeetingCancelledTemplateParams): Promise<BrevoEmailResult> {
+  const { recipientEmail, recipientName, ...params } = options
+
+  const subject = `❌ Meeting cancelled: ${params.meetingTitle}`
+  const htmlContent = meetingCancelledTemplate(params)
+
+  return sendTransactionalEmail({
+    to: [{ email: recipientEmail, name: recipientName }],
+    subject,
+    htmlContent,
+    tags: ['meeting-cancelled'],
   })
 }
 

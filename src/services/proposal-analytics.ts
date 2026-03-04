@@ -68,7 +68,7 @@ const queryConvex = cache(async (functionName: string, args: ConvexRequestArgs):
   }
 
   try {
-    return await client.query(functionName as ConvexQueryName, args as ConvexQueryArgs)
+    return await client.query(functionName as unknown as ConvexQueryName, args as ConvexQueryArgs)
   } catch (error) {
     logger.error(`Convex Query Error: ${functionName}`, error, {
       type: 'convex_error',
@@ -88,7 +88,7 @@ async function mutateConvex(functionName: string, args: ConvexRequestArgs): Prom
   }
 
   try {
-    return await client.mutation(functionName as ConvexMutationName, args as ConvexMutationArgs)
+    return await client.mutation(functionName as unknown as ConvexMutationName, args as ConvexMutationArgs)
   } catch (error) {
     logger.error(`Convex Mutation Error: ${functionName}`, error, {
       type: 'convex_error',

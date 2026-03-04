@@ -330,6 +330,52 @@ export class AuthService {
     throw new ServiceUnavailableError('Popup integrations require Better Auth OAuth setup')
   }
 
+  async startGoogleOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
+    if (redirect && !isValidRedirectUrl(redirect)) {
+      throw new ValidationError('Invalid redirect URL')
+    }
+
+    const params = new URLSearchParams()
+    if (redirect) params.set('redirect', redirect)
+    if (clientId) params.set('clientId', clientId)
+    const search = params.toString() ? `?${params.toString()}` : ''
+
+    const response = await fetch(`/api/integrations/google/oauth/url${search}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin',
+    })
+
+    const payload = (await response.json().catch(() => ({}))) as unknown
+
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      const record = payload as { success: boolean; data?: unknown; error?: unknown }
+      if (!record.success) {
+        const message = typeof record.error === 'string' ? record.error : 'Failed to start Google OAuth'
+        throw new BadRequestError(message)
+      }
+
+      const data = record.data as { url?: unknown } | undefined
+      if (typeof data?.url === 'string' && data.url.length > 0) {
+        return { url: data.url }
+      }
+
+      throw new ServiceUnavailableError('Google OAuth did not return a URL')
+    }
+
+    if (!response.ok) {
+      const record = payload as { error?: unknown }
+      const message = typeof record?.error === 'string' ? record.error : 'Failed to start Google OAuth'
+      throw new BadRequestError(message)
+    }
+
+    const legacy = payload as { url?: unknown }
+    if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
+    throw new ServiceUnavailableError('Google OAuth did not return a URL')
+  }
+
   async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new ValidationError('Invalid redirect URL')

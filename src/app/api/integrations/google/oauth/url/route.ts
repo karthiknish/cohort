@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import { createGoogleOAuthState, buildGoogleOAuthUrl } from '@/services/google-oauth'
+import {
+  createGoogleOAuthState,
+  buildGoogleOAuthUrl,
+  resolveGoogleAdsOAuthCredentials,
+  resolveGoogleAdsOAuthRedirectUri,
+} from '@/services/google-oauth'
 import { createApiHandler } from '@/lib/api-handler'
 import { ServiceUnavailableError, UnauthorizedError, BadRequestError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
@@ -19,12 +24,19 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('Authentication required')
     }
 
-    const googleClientId = process.env.GOOGLE_ADS_CLIENT_ID
-    const redirectUri = process.env.GOOGLE_ADS_OAUTH_REDIRECT_URI
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    const { clientId: googleClientId } = resolveGoogleAdsOAuthCredentials()
+    const redirectUri = resolveGoogleAdsOAuthRedirectUri(appUrl)
+    const developerToken = typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string'
+      ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN.trim()
+      : ''
 
     if (!googleClientId || !redirectUri) {
       throw new ServiceUnavailableError('Google Ads OAuth is not configured')
+    }
+
+    if (developerToken.length === 0) {
+      throw new ServiceUnavailableError('Google Ads integration is not configured (missing GOOGLE_ADS_DEVELOPER_TOKEN)')
     }
 
     const redirect = query.redirect ?? `${appUrl}/dashboard/integrations`

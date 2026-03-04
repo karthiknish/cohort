@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { completeGoogleOAuthFlow, validateGoogleOAuthState } from '@/services/google-oauth'
+import {
+  completeGoogleOAuthFlow,
+  resolveGoogleAdsOAuthRedirectUri,
+  validateGoogleOAuthState,
+} from '@/services/google-oauth'
 import { createApiHandler } from '@/lib/api-handler'
 import { isValidRedirectUrl } from '@/lib/utils'
 
@@ -39,9 +43,9 @@ export const GET = createApiHandler(
         return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=missing_code&provider=google`)
       }
 
-      const redirectUri = process.env.GOOGLE_ADS_OAUTH_REDIRECT_URI
+      const redirectUri = resolveGoogleAdsOAuthRedirectUri(appUrl)
       if (!redirectUri) {
-        console.error('[google.oauth.callback] GOOGLE_ADS_OAUTH_REDIRECT_URI not configured')
+        console.error('[google.oauth.callback] Google Ads OAuth redirect URI not configured')
         return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=config_error&provider=google`)
       }
 
@@ -51,12 +55,12 @@ export const GET = createApiHandler(
         context = validateGoogleOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[google.oauth.callback] State validation failed:', stateError)
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=invalid_state`)
+        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=invalid_state&provider=google`)
       }
 
       if (!context.state) {
         console.error('[google.oauth.callback] Invalid state - missing user ID')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=invalid_state`)
+        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=invalid_state&provider=google`)
       }
 
       // Complete the OAuth flow

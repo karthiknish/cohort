@@ -74,12 +74,27 @@ export const projectMilestonesApi = {
 export const adsIntegrationsApi = {
   getAdIntegration: (api as any).adsIntegrations.getAdIntegration,
   listStatuses: (api as any).adsIntegrations.listStatuses,
+  listGoogleAdAccounts: (api as any).adsIntegrations.listGoogleAdAccounts,
+  listGoogleAnalyticsProperties: (api as any).adsIntegrations.listGoogleAnalyticsProperties,
   listMetaAdAccounts: (api as any).adsIntegrations.listMetaAdAccounts,
   updateAutomationSettings: (api as any).adsIntegrations.updateAutomationSettings,
   requestManualSync: (api as any).adsIntegrations.requestManualSync,
   initializeAdAccount: (api as any).adsIntegrations.initializeAdAccount,
   deleteAdIntegration: (api as any).adsIntegrations.deleteAdIntegration,
   deleteSyncJobs: (api as any).adsIntegrations.deleteSyncJobs,
+  deleteProviderMetrics: (api as any).adsIntegrations.deleteProviderMetrics,
+}
+
+export const meetingIntegrationsApi = {
+  getGoogleWorkspaceStatus: (api as any).meetingIntegrations.getGoogleWorkspaceStatus,
+  deleteGoogleWorkspaceIntegration: (api as any).meetingIntegrations.deleteGoogleWorkspaceIntegration,
+}
+
+export const meetingsApi = {
+  list: (api as any).meetings.list,
+  getByLegacyId: (api as any).meetings.getByLegacyId,
+  create: (api as any).meetings.create,
+  updateStatus: (api as any).meetings.updateStatus,
 }
 
 export const adsMetricsApi = {

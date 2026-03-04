@@ -47,6 +47,19 @@ type MetaAdAccountOption = {
   isActive: boolean
 }
 
+type GoogleAdAccountOption = {
+  id: string
+  name: string
+  currencyCode: string | null
+  isManager: boolean
+  loginCustomerId: string | null
+  managerCustomerId: string | null
+}
+
+type DisconnectOptions = {
+  clearHistoricalData?: boolean
+}
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -74,12 +87,21 @@ export interface UseAdsConnectionsReturn {
   automationStatuses: IntegrationStatus[]
 
   // Setup messages
+  googleSetupMessage: string | null
   metaSetupMessage: string | null
   tiktokSetupMessage: string | null
+  initializingGoogle: boolean
   initializingMeta: boolean
   initializingTikTok: boolean
+  googleNeedsAccountSelection: boolean
   metaNeedsAccountSelection: boolean
   tiktokNeedsAccountSelection: boolean
+  googleAccountOptions: GoogleAdAccountOption[]
+  selectedGoogleAccountId: string
+  setSelectedGoogleAccountId: (accountId: string) => void
+  loadingGoogleAccountOptions: boolean
+  googleSetupDialogOpen: boolean
+  setGoogleSetupDialogOpen: (open: boolean) => void
   metaAccountOptions: MetaAdAccountOption[]
   selectedMetaAccountId: string
   setSelectedMetaAccountId: (accountId: string) => void
@@ -87,10 +109,12 @@ export interface UseAdsConnectionsReturn {
 
   // Actions
   handleConnect: (providerId: string, action: () => Promise<void>) => Promise<void>
-  handleDisconnect: (providerId: string) => Promise<void>
+  handleDisconnect: (providerId: string, options?: DisconnectOptions) => Promise<void>
   handleOauthRedirect: (providerId: string) => Promise<void>
+  initializeGoogleIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>
   initializeMetaIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>
   initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>
+  reloadGoogleAccountOptions: (clientIdOverride?: string | null) => Promise<GoogleAdAccountOption[]>
   reloadMetaAccountOptions: (clientIdOverride?: string | null) => Promise<MetaAdAccountOption[]>
 
   // Platform definitions
@@ -109,8 +133,8 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
   const {
     user,
-    connectGoogleAdsAccount,
     connectLinkedInAdsAccount,
+    startGoogleOauth,
     startMetaOauth,
     startTikTokOauth,
   } = useAuth()
@@ -165,15 +189,24 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatusResponse | null>(null)
 
   // Setup state
+  const [googleSetupMessage, setGoogleSetupMessage] = useState<string | null>(null)
   const [metaSetupMessage, setMetaSetupMessage] = useState<string | null>(null)
   const [tiktokSetupMessage, setTiktokSetupMessage] = useState<string | null>(null)
+  const [initializingGoogle, setInitializingGoogle] = useState(false)
   const [initializingMeta, setInitializingMeta] = useState(false)
   const [initializingTikTok, setInitializingTikTok] = useState(false)
+  const [googleAccountOptions, setGoogleAccountOptions] = useState<GoogleAdAccountOption[]>([])
+  const [selectedGoogleAccountId, setSelectedGoogleAccountId] = useState('')
+  const [loadingGoogleAccountOptions, setLoadingGoogleAccountOptions] = useState(false)
+  const [googleSetupDialogOpen, setGoogleSetupDialogOpen] = useState(false)
   const [metaAccountOptions, setMetaAccountOptions] = useState<MetaAdAccountOption[]>([])
   const [selectedMetaAccountId, setSelectedMetaAccountId] = useState('')
   const [loadingMetaAccountOptions, setLoadingMetaAccountOptions] = useState(false)
 
   useEffect(() => {
+    setGoogleAccountOptions([])
+    setSelectedGoogleAccountId('')
+    setGoogleSetupDialogOpen(false)
     setMetaAccountOptions([])
     setSelectedMetaAccountId('')
   }, [selectedClientId])
@@ -201,6 +234,9 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const metaStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.FACEBOOK)
   const metaNeedsAccountSelection = Boolean(metaStatus?.linkedAt && !metaStatus.accountId)
 
+  const googleStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.GOOGLE)
+  const googleNeedsAccountSelection = Boolean(googleStatus?.linkedAt && !googleStatus.accountId)
+
   const tiktokStatus = automationStatuses.find((s) => s.providerId === PROVIDER_IDS.TIKTOK)
   const tiktokNeedsAccountSelection = Boolean(tiktokStatus?.linkedAt && !tiktokStatus.accountId)
 
@@ -211,7 +247,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
        name: 'Google Ads',
        description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
        icon: SiGoogleads,
-       connect: () => connectGoogleAdsAccount(),
+       mode: 'oauth',
      },
     {
       id: PROVIDER_IDS.FACEBOOK,
@@ -237,9 +273,46 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   ]
 
   const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount)
+  const listGoogleAdAccounts = useAction(adsIntegrationsApi.listGoogleAdAccounts)
   const listMetaAdAccounts = useAction(adsIntegrationsApi.listMetaAdAccounts)
   const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration)
   const deleteSyncJobsMutation = useMutation(adsIntegrationsApi.deleteSyncJobs)
+  const deleteProviderMetricsMutation = useMutation(adsIntegrationsApi.deleteProviderMetrics)
+
+  const loadGoogleAdAccounts = useCallback(async (clientIdOverride?: string | null) => {
+    if (!workspaceId) {
+      throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
+    }
+
+    setLoadingGoogleAccountOptions(true)
+
+    try {
+      const payload = (await listGoogleAdAccounts({
+        workspaceId,
+        providerId: 'google',
+        clientId: clientIdOverride ?? selectedClientId ?? null,
+      })) as GoogleAdAccountOption[]
+
+      const options = Array.isArray(payload) ? payload : []
+      setGoogleAccountOptions(options)
+      setSelectedGoogleAccountId((currentValue) => {
+        if (currentValue && options.some((option) => option.id === currentValue)) {
+          return currentValue
+        }
+
+        const defaultOption = options.find((option) => !option.isManager) ?? options[0]
+        return defaultOption?.id ?? ''
+      })
+
+      return options
+    } catch (error) {
+      setGoogleAccountOptions([])
+      setSelectedGoogleAccountId('')
+      throw error
+    } finally {
+      setLoadingGoogleAccountOptions(false)
+    }
+  }, [listGoogleAdAccounts, selectedClientId, workspaceId])
 
   const loadMetaAdAccounts = useCallback(async (clientIdOverride?: string | null) => {
     if (!workspaceId) {
@@ -276,17 +349,47 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   }, [listMetaAdAccounts, selectedClientId, workspaceId])
 
   // Initialize integration helpers
-  const initializeGoogleIntegration = useCallback(async () => {
-    if (!workspaceId) {
-      throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
-    }
+  const initializeGoogleIntegration = useCallback(async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
+    setGoogleSetupMessage(null)
+    setInitializingGoogle(true)
 
-    return await initializeAdAccount({
-      workspaceId,
-      providerId: 'google',
-      clientId: selectedClientId ?? null,
-    })
-  }, [initializeAdAccount, selectedClientId, workspaceId])
+    try {
+      if (!workspaceId) {
+        throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
+      }
+
+      const accountId = (accountIdOverride ?? selectedGoogleAccountId).trim()
+      if (!accountId) {
+        throw new Error('Please select a Google Ads account to finish setup.')
+      }
+
+      const payload = (await initializeAdAccount({
+        workspaceId,
+        providerId: 'google',
+        clientId: clientIdOverride ?? selectedClientId ?? null,
+        accountId,
+      })) as { accountName?: string }
+
+      toast({
+        title: SUCCESS_MESSAGES.GOOGLE_CONNECTED,
+        description: payload?.accountName
+          ? `Syncing data from ${payload.accountName}.`
+          : 'Google Ads account linked successfully.',
+      })
+
+      setGoogleAccountOptions([])
+      setSelectedGoogleAccountId('')
+      setGoogleSetupDialogOpen(false)
+      triggerRefresh()
+    } catch (error: unknown) {
+      logError(error, 'useAdsConnections:initializeGoogleIntegration')
+      const message = asErrorMessage(error)
+      setGoogleSetupMessage(message)
+      toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: message })
+    } finally {
+      setInitializingGoogle(false)
+    }
+  }, [initializeAdAccount, selectedClientId, selectedGoogleAccountId, toast, triggerRefresh, workspaceId])
 
   const initializeLinkedInIntegration = useCallback(async () => {
     if (!workspaceId) {
@@ -451,14 +554,23 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           })
       } else if (providerId === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
-       } else if (providerId === PROVIDER_IDS.GOOGLE) {
-        void initializeGoogleIntegration().then(async () => {
-          toast({ title: SUCCESS_MESSAGES.GOOGLE_CONNECTED, description: 'Syncing your ad data.' })
-          triggerRefresh()
-        }).catch(err => {
-          logError(err, 'useAdsConnections:oauthSuccess:google')
-          toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: asErrorMessage(err) })
+      } else if (providerId === PROVIDER_IDS.GOOGLE) {
+        setGoogleSetupMessage(null)
+        setGoogleSetupDialogOpen(true)
+        toast({
+          title: SUCCESS_MESSAGES.GOOGLE_CONNECTED,
+          description: 'Google connected. Select an ads account to finish setup.',
         })
+        void loadGoogleAdAccounts(oauthClientId)
+          .then(() => {
+            triggerRefresh()
+          })
+          .catch((error) => {
+            logError(error, 'useAdsConnections:oauthSuccess:google')
+            const errorMessage = asErrorMessage(error)
+            setGoogleSetupMessage(errorMessage)
+            toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: errorMessage })
+          })
        } else if (providerId === PROVIDER_IDS.LINKEDIN) {
         void initializeLinkedInIntegration().then(async () => {
           toast({ title: SUCCESS_MESSAGES.LINKEDIN_CONNECTED, description: 'Syncing your ad data.' })
@@ -488,7 +600,33 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
       setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
     }
-  }, [initializeGoogleIntegration, initializeLinkedInIntegration, initializeTikTokIntegration, loadMetaAdAccounts, toast, triggerRefresh])
+  }, [initializeLinkedInIntegration, initializeTikTokIntegration, loadGoogleAdAccounts, loadMetaAdAccounts, toast, triggerRefresh])
+
+  useEffect(() => {
+    if (!googleNeedsAccountSelection) {
+      return
+    }
+
+    if (!googleSetupDialogOpen) {
+      setGoogleSetupDialogOpen(true)
+    }
+
+    if (loadingGoogleAccountOptions || googleAccountOptions.length > 0) {
+      return
+    }
+
+    void loadGoogleAdAccounts()
+      .catch((error) => {
+        logError(error, 'useAdsConnections:autoLoadGoogleAccounts')
+        setGoogleSetupMessage(asErrorMessage(error))
+      })
+  }, [
+    googleAccountOptions.length,
+    googleNeedsAccountSelection,
+    googleSetupDialogOpen,
+    loadGoogleAdAccounts,
+    loadingGoogleAccountOptions,
+  ])
 
   useEffect(() => {
     if (!metaNeedsAccountSelection) {
@@ -512,8 +650,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
       await action()
-      if (providerId === PROVIDER_IDS.GOOGLE) await initializeGoogleIntegration()
-      else if (providerId === PROVIDER_IDS.LINKEDIN) await initializeLinkedInIntegration()
+      if (providerId === PROVIDER_IDS.LINKEDIN) await initializeLinkedInIntegration()
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       triggerRefresh()
     } catch (error: unknown) {
@@ -529,10 +666,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [initializeGoogleIntegration, initializeLinkedInIntegration, triggerRefresh, toast])
+  }, [initializeLinkedInIntegration, triggerRefresh, toast])
 
   const handleOauthRedirect = useCallback(async (providerId: string) => {
     if (typeof window === 'undefined') return
+    if (providerId === PROVIDER_IDS.GOOGLE) setGoogleSetupMessage(null)
     if (providerId === PROVIDER_IDS.FACEBOOK) setMetaSetupMessage(null)
     if (providerId === PROVIDER_IDS.TIKTOK) setTiktokSetupMessage(null)
 
@@ -561,6 +699,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       }
       if (providerId === PROVIDER_IDS.TIKTOK) {
         const { url } = await startTikTokOauth(redirectTarget, selectedClientId ?? null)
+        window.location.href = url
+        return
+      }
+      if (providerId === PROVIDER_IDS.GOOGLE) {
+        const { url } = await startGoogleOauth(redirectTarget, selectedClientId ?? null)
         window.location.href = url
         return
       }
@@ -596,9 +739,9 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [startMetaOauth, startTikTokOauth, toast, selectedClientId])
+  }, [selectedClientId, startGoogleOauth, startMetaOauth, startTikTokOauth, toast])
 
-  const handleDisconnect = useCallback(async (providerId: string) => {
+  const handleDisconnect = useCallback(async (providerId: string, options?: DisconnectOptions) => {
     const providerName = formatProviderName(providerId)
 
     if (!workspaceId) {
@@ -609,11 +752,27 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
+      let deletedMetrics = 0
+
+      if (options?.clearHistoricalData) {
+        const result = (await deleteProviderMetricsMutation({
+          workspaceId,
+          providerId,
+          clientId: selectedClientId ?? null,
+        })) as { deleted?: number }
+        deletedMetrics = typeof result?.deleted === 'number' ? result.deleted : 0
+      }
+
       // Delete sync jobs first, then the integration
       await deleteSyncJobsMutation({ workspaceId, providerId, clientId: selectedClientId ?? null })
       await deleteAdIntegrationMutation({ workspaceId, providerId, clientId: selectedClientId ?? null })
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
-      toast({ title: TOAST_TITLES.DISCONNECTED, description: SUCCESS_MESSAGES.DISCONNECTED(providerName) })
+      toast({
+        title: TOAST_TITLES.DISCONNECTED,
+        description: options?.clearHistoricalData
+          ? `${SUCCESS_MESSAGES.DISCONNECTED(providerName)} Cleared ${deletedMetrics} historical metric row(s).`
+          : SUCCESS_MESSAGES.DISCONNECTED(providerName),
+      })
       triggerRefresh()
     } catch (error: unknown) {
       logError(error, 'useAdsConnections:handleDisconnect')
@@ -623,7 +782,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [deleteAdIntegrationMutation, deleteSyncJobsMutation, toast, triggerRefresh, selectedClientId, workspaceId])
+  }, [
+    deleteAdIntegrationMutation,
+    deleteProviderMetricsMutation,
+    deleteSyncJobsMutation,
+    toast,
+    triggerRefresh,
+    selectedClientId,
+    workspaceId,
+  ])
 
   return {
     // State
@@ -635,12 +802,21 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     automationStatuses,
 
     // Setup messages
+    googleSetupMessage,
     metaSetupMessage,
     tiktokSetupMessage,
+    initializingGoogle,
     initializingMeta,
     initializingTikTok,
+    googleNeedsAccountSelection,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
+    googleAccountOptions,
+    selectedGoogleAccountId,
+    setSelectedGoogleAccountId,
+    loadingGoogleAccountOptions,
+    googleSetupDialogOpen,
+    setGoogleSetupDialogOpen,
     metaAccountOptions,
     selectedMetaAccountId,
     setSelectedMetaAccountId,
@@ -650,8 +826,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     handleConnect,
     handleDisconnect,
     handleOauthRedirect,
+    initializeGoogleIntegration,
     initializeMetaIntegration,
     initializeTikTokIntegration,
+    reloadGoogleAccountOptions: loadGoogleAdAccounts,
     reloadMetaAccountOptions: loadMetaAdAccounts,
 
     // Platform definitions

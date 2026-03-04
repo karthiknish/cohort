@@ -72,6 +72,7 @@ export const PAGE_ICONS = {
   tasks: 'ListTodo',
   analytics: 'BarChart3',
   ads: 'Target',
+  meetings: 'Video',
   collaboration: 'MessageSquare',
   proposals: 'FileText',
   integrations: 'Plug',
@@ -100,6 +101,10 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
   ads: {
     title: 'Ad Platforms',
     description: 'Connect and manage advertising accounts.',
+  },
+  meetings: {
+    title: 'Meetings',
+    description: 'Schedule client calls, manage Meet invites, and review concise AI notes.',
   },
   collaboration: {
     title: 'Team collaboration',

@@ -44,6 +44,7 @@ interface AuthContextType {
   connectGoogleAnalyticsAccount: () => Promise<void>
   connectFacebookAdsAccount: () => Promise<void>
   connectLinkedInAdsAccount: () => Promise<void>
+  startGoogleOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   startMetaOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   startTikTokOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   disconnectProvider: (providerId: string, clientId?: string | null) => Promise<void>
@@ -321,6 +322,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await authService.connectLinkedInAdsAccount()
   }, [])
 
+  const startGoogleOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
+    return await authService.startGoogleOauth(redirect, clientId)
+  }, [])
+
   const startMetaOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
     return await authService.startMetaOauth(redirect, clientId)
   }, [])
@@ -380,6 +385,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       connectGoogleAnalyticsAccount,
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
+      startGoogleOauth,
       startMetaOauth,
       startTikTokOauth,
       disconnectProvider,
@@ -406,6 +412,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       connectGoogleAnalyticsAccount,
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
+      startGoogleOauth,
       startMetaOauth,
       startTikTokOauth,
       disconnectProvider,

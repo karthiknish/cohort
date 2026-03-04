@@ -11,6 +11,7 @@ import {
   Home,
   Briefcase,
   Megaphone,
+  Video,
   Users,
   Keyboard,
   ArrowRight,
@@ -68,6 +69,13 @@ const navigationGuide = [
     icon: Megaphone,
     description: 'Connect and manage your ad platform integrations (Google, Meta, LinkedIn, TikTok).',
     tips: ['Connect platforms to sync metrics automatically', 'Monitor sync status and refresh data'],
+  },
+  {
+    name: 'Meetings',
+    href: '/dashboard/meetings',
+    icon: Video,
+    description: 'Schedule Google Meet calls, invite attendees, and review transcript-driven notes.',
+    tips: ['Connect Google Workspace first', 'Client users can join and review notes in read-only mode'],
   },
   {
     name: 'Tasks',

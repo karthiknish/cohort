@@ -52,6 +52,8 @@ import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as httpActions from "../httpActions.js";
 import type * as inboxItems from "../inboxItems.js";
+import type * as meetingIntegrations from "../meetingIntegrations.js";
+import type * as meetings from "../meetings.js";
 import type * as messageAnalytics from "../messageAnalytics.js";
 import type * as notifications from "../notifications.js";
 import type * as onboardingStates from "../onboardingStates.js";
@@ -125,6 +127,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   httpActions: typeof httpActions;
   inboxItems: typeof inboxItems;
+  meetingIntegrations: typeof meetingIntegrations;
+  meetings: typeof meetings;
   messageAnalytics: typeof messageAnalytics;
   notifications: typeof notifications;
   onboardingStates: typeof onboardingStates;

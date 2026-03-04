@@ -34,6 +34,17 @@ export interface AgentConversationSummary {
   messageCount: number | null
 }
 
+type StoredAgentMessage = {
+  id: string
+  type: string
+  content: string
+  timestamp: string
+  route: string | null
+  action: string | null
+  operation: string | null
+  executeResult: Record<string, unknown> | null
+}
+
 export type ConnectionStatus = 'connected' | 'retrying' | 'disconnected'
 
 export interface UseAgentModeReturn {
@@ -403,7 +414,11 @@ export function useAgentMode(): UseAgentModeReturn {
         limit: 500,
       })
 
-      const nextMessages: AgentMessage[] = result.messages.map((msg: any) => {
+      const storedMessages = Array.isArray(result.messages)
+        ? (result.messages as StoredAgentMessage[])
+        : []
+
+      const nextMessages: AgentMessage[] = storedMessages.map((msg) => {
         const type: 'user' | 'agent' = msg.type === 'user' ? 'user' : 'agent'
         const action = typeof msg.action === 'string' ? msg.action : null
         const operation = typeof msg.operation === 'string' ? msg.operation : null

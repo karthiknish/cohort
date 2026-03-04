@@ -1,6 +1,5 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob } from '@/lib/ads-admin'
-import { fetchGoogleAdAccounts } from '@/services/integrations/google-ads'
+import { persistIntegrationTokens, enqueueSyncJob, getAdIntegration } from '@/lib/ads-admin'
 
 // =============================================================================
 // GOOGLE OAUTH CONFIGURATION
@@ -10,11 +9,112 @@ const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 
 // Required scope for Google Ads API access
-const GOOGLE_ADS_SCOPES = [
+export const GOOGLE_ADS_SCOPES = [
   'https://www.googleapis.com/auth/adwords',
   'openid',
   'email',
-]
+] as const
+
+export const GOOGLE_ANALYTICS_SCOPES = [
+  'https://www.googleapis.com/auth/analytics.readonly',
+  'openid',
+  'email',
+] as const
+
+function readEnvValue(key: string): string | null {
+  const value = process.env[key]
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : null
+}
+
+function firstEnvValue(keys: readonly string[]): string | null {
+  for (const key of keys) {
+    const value = readEnvValue(key)
+    if (value) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function normalizeAppUrl(appUrl?: string | null): string | null {
+  if (typeof appUrl !== 'string') {
+    return null
+  }
+
+  const normalized = appUrl.trim().replace(/\/+$/, '')
+  return normalized.length > 0 ? normalized : null
+}
+
+export function resolveGoogleAdsOAuthCredentials(): {
+  clientId: string | null
+  clientSecret: string | null
+} {
+  return {
+    clientId: firstEnvValue(['GOOGLE_ADS_CLIENT_ID', 'GOOGLE_CLIENT_ID']),
+    clientSecret: firstEnvValue(['GOOGLE_ADS_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET']),
+  }
+}
+
+export function resolveGoogleAnalyticsOAuthCredentials(): {
+  clientId: string | null
+  clientSecret: string | null
+} {
+  return {
+    clientId: firstEnvValue(['GOOGLE_ANALYTICS_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'GOOGLE_ADS_CLIENT_ID']),
+    clientSecret: firstEnvValue([
+      'GOOGLE_ANALYTICS_CLIENT_SECRET',
+      'GOOGLE_CLIENT_SECRET',
+      'GOOGLE_ADS_CLIENT_SECRET',
+    ]),
+  }
+}
+
+export function resolveGoogleAdsOAuthRedirectUri(appUrl?: string | null): string | null {
+  const explicit = firstEnvValue(['GOOGLE_ADS_OAUTH_REDIRECT_URI', 'GOOGLE_OAUTH_REDIRECT_URI'])
+  if (explicit) {
+    return explicit
+  }
+
+  const normalizedAppUrl = normalizeAppUrl(appUrl)
+  if (!normalizedAppUrl) {
+    return null
+  }
+
+  return `${normalizedAppUrl}/api/integrations/google/oauth/callback`
+}
+
+export function resolveGoogleAnalyticsOAuthRedirectUri(appUrl?: string | null): string | null {
+  // Keep GA callback distinct from Ads callback unless explicitly overridden.
+  const explicit = firstEnvValue(['GOOGLE_ANALYTICS_OAUTH_REDIRECT_URI'])
+  if (explicit) {
+    return explicit
+  }
+
+  const normalizedAppUrl = normalizeAppUrl(appUrl)
+  if (!normalizedAppUrl) {
+    return null
+  }
+
+  return `${normalizedAppUrl}/api/integrations/google-analytics/oauth/callback`
+}
+
+export function parseGoogleScopeList(scopeValue: string | undefined | null, fallback: string[] = []): string[] {
+  const scopes = typeof scopeValue === 'string'
+    ? scopeValue.split(' ').map((scope) => scope.trim()).filter(Boolean)
+    : []
+
+  if (scopes.length > 0) {
+    return scopes
+  }
+
+  return fallback
+}
 
 // =============================================================================
 // TYPES
@@ -173,6 +273,13 @@ export function buildGoogleOAuthUrl(options: BuildGoogleAuthUrlOptions): string 
   return `${GOOGLE_AUTH_ENDPOINT}?${params.toString()}`
 }
 
+export function buildGoogleAnalyticsOAuthUrl(options: BuildGoogleAuthUrlOptions): string {
+  return buildGoogleOAuthUrl({
+    ...options,
+    scopes: options.scopes ?? [...GOOGLE_ANALYTICS_SCOPES],
+  })
+}
+
 // =============================================================================
 // TOKEN EXCHANGE
 // =============================================================================
@@ -260,8 +367,7 @@ export async function completeGoogleOAuthFlow(options: {
   redirectUri: string
 }): Promise<void> {
   const { code, userId, clientId: integrationClientId, redirectUri } = options
-  const googleClientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const googleClientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
+  const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleAdsOAuthCredentials()
 
   if (!googleClientId || !googleClientSecret) {
     throw new GoogleOAuthError('Google OAuth credentials are not configured')
@@ -286,31 +392,20 @@ export async function completeGoogleOAuthFlow(options: {
     throw new GoogleOAuthError('No access token received from Google')
   }
 
-  // Best-effort: fetch account metadata so we can persist `accountName`.
-  // This should not block connecting if listing accounts fails (e.g. missing developer token).
-  let accountId: string | null = null
-  let accountName: string | null = null
-  let loginCustomerId: string | null = null
-  let managerCustomerId: string | null = null
-  try {
-    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? null
-    if (developerToken) {
-      const accounts = await fetchGoogleAdAccounts({
-        accessToken: tokenResponse.access_token,
-        developerToken,
-      })
-
-      const primaryAccount = accounts.find((account) => !account.manager) ?? accounts[0]
-      if (primaryAccount) {
-        accountId = primaryAccount.id
-        accountName = primaryAccount.name
-        loginCustomerId = primaryAccount.loginCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
-        managerCustomerId = primaryAccount.managerCustomerId ?? (primaryAccount.manager ? primaryAccount.id : null)
-      }
-    }
-  } catch (error) {
-    console.warn('[Google OAuth] Failed to resolve account name during OAuth completion:', error)
+  const developerToken = typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string'
+    ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN.trim()
+    : ''
+  if (developerToken.length === 0) {
+    throw new GoogleOAuthError(
+      'Google Ads developer token is not configured. Set GOOGLE_ADS_DEVELOPER_TOKEN before connecting Google Ads.'
+    )
   }
+
+  const existingIntegration = await getAdIntegration({
+    userId,
+    providerId: 'google',
+    clientId: integrationClientId ?? null,
+  })
 
   // Persist the tokens
   await persistIntegrationTokens({
@@ -318,12 +413,14 @@ export async function completeGoogleOAuthFlow(options: {
     providerId: 'google',
     clientId: integrationClientId ?? null,
     accessToken: tokenResponse.access_token,
+    idToken: tokenResponse.id_token ?? null,
     refreshToken: tokenResponse.refresh_token ?? null,
-    scopes: GOOGLE_ADS_SCOPES,
-    accountId,
-    accountName,
-    loginCustomerId,
-    managerCustomerId,
+    scopes: parseGoogleScopeList(tokenResponse.scope, [...GOOGLE_ADS_SCOPES]),
+    accountId: existingIntegration?.accountId ?? null,
+    accountName: existingIntegration?.accountName ?? null,
+    developerToken,
+    loginCustomerId: existingIntegration?.loginCustomerId ?? null,
+    managerCustomerId: existingIntegration?.managerCustomerId ?? null,
     accessTokenExpiresAt: tokenResponse.expires_in
       ? new Date(Date.now() + tokenResponse.expires_in * 1000)
       : null,
@@ -331,11 +428,77 @@ export async function completeGoogleOAuthFlow(options: {
 
   console.log(`[Google OAuth] Successfully persisted integration for user ${userId}`)
 
-  // Enqueue initial sync job
-  await enqueueSyncJob({
+  // Only auto-enqueue when reconnecting an already configured account.
+  if (existingIntegration?.accountId) {
+    await enqueueSyncJob({
+      userId,
+      providerId: 'google',
+      jobType: 'initial-backfill',
+      clientId: integrationClientId ?? null,
+    })
+  }
+}
+
+export async function completeGoogleAnalyticsOAuthFlow(options: {
+  code: string
+  userId: string
+  clientId?: string | null
+  redirectUri: string
+}): Promise<void> {
+  const { code, userId, clientId: integrationClientId, redirectUri } = options
+  const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleAnalyticsOAuthCredentials()
+
+  if (!googleClientId || !googleClientSecret) {
+    throw new GoogleOAuthError('Google Analytics OAuth credentials are not configured')
+  }
+
+  let tokenResponse: GoogleTokenResponse
+  try {
+    tokenResponse = await exchangeGoogleCodeForTokens({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      redirectUri,
+      code,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Token exchange failed'
+    console.error('[Google Analytics OAuth] Code exchange failed:', message)
+    throw new GoogleOAuthError(`Failed to exchange authorization code: ${message}`)
+  }
+
+  if (!tokenResponse.access_token) {
+    throw new GoogleOAuthError('No access token received from Google Analytics OAuth')
+  }
+
+  const existingIntegration = await getAdIntegration({
     userId,
-    providerId: 'google',
-    jobType: 'initial-backfill',
+    providerId: 'google-analytics',
     clientId: integrationClientId ?? null,
   })
+
+  await persistIntegrationTokens({
+    userId,
+    providerId: 'google-analytics',
+    clientId: integrationClientId ?? null,
+    accessToken: tokenResponse.access_token,
+    idToken: tokenResponse.id_token ?? null,
+    refreshToken: tokenResponse.refresh_token ?? null,
+    scopes: parseGoogleScopeList(tokenResponse.scope, [...GOOGLE_ANALYTICS_SCOPES]),
+    accountId: existingIntegration?.accountId ?? null,
+    accountName: existingIntegration?.accountName ?? null,
+    accessTokenExpiresAt: tokenResponse.expires_in
+      ? new Date(Date.now() + tokenResponse.expires_in * 1000)
+      : null,
+  })
+
+  console.log(`[Google Analytics OAuth] Successfully persisted integration for user ${userId}`)
+
+  if (existingIntegration?.accountId) {
+    await enqueueSyncJob({
+      userId,
+      providerId: 'google-analytics',
+      jobType: 'initial-backfill',
+      clientId: integrationClientId ?? null,
+    })
+  }
 }

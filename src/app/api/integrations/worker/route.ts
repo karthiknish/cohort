@@ -67,7 +67,7 @@ export const POST = createApiHandler(
       }
 
       // Count queued jobs for this workspace
-      const { count: queuedCount, hasMore } = await convex.query(
+      const { count: queuedCount } = await convex.query(
         api.adsIntegrations.countQueuedJobsForWorkspace,
         { workspaceId, limit: Math.min(3, maxJobs - processedJobs) }
       )
@@ -91,7 +91,7 @@ export const POST = createApiHandler(
               'Content-Type': 'application/json',
               'x-cron-key': cronSecret
             },
-            body: JSON.stringify({ workspaceId })
+            body: JSON.stringify({ userId: workspaceId, workspaceId })
           })
 
           const result = await processResponse.json().catch(() => ({ error: 'Invalid response' }))

@@ -35,13 +35,13 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
   }))
 
   return (
-    <Card className="overflow-hidden border-muted/30 bg-background shadow-sm transition-all hover:shadow-md">
+    <Card className="overflow-hidden border-muted/30 bg-card shadow-sm transition-all hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary" />
           <div>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Client pipeline</CardTitle>
-            <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">CRM overview stage transition tracking</CardDescription>
+            <CardDescription className="text-xs font-medium leading-tight text-muted-foreground">CRM overview stage transition tracking</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -51,8 +51,8 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
             <div key={stage.id} className="flex flex-col gap-4 rounded-2xl border border-muted/20 bg-muted/5 p-4 transition-all hover:bg-muted/[0.07]">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">{stage.label}</span>
-                  <Badge variant="outline" className="h-5 rounded-full border-muted/30 bg-background px-2 text-[10px] font-black text-primary shadow-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{stage.label}</span>
+                  <Badge variant="outline" className="h-5 rounded-full border-muted/30 bg-card px-2 text-[10px] font-black text-primary shadow-sm">
                     {items.length}
                   </Badge>
                 </div>
@@ -60,8 +60,8 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
               </div>
 
               {items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted/30 bg-background/50 py-10 px-4 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">Stage Empty</p>
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted/30 bg-card/50 py-10 px-4 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">Stage Empty</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -70,7 +70,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                       key={client.id}
                       href={`/dashboard/clients?clientId=${client.id}`}
                       className={cn(
-                        'group block rounded-xl border border-muted/30 bg-background p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.99]',
+                        'group block rounded-xl border border-muted/30 bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.99]',
                         client.id === selectedClientId && 'border-primary/50 bg-primary/[0.02] shadow-md ring-1 ring-primary/20'
                       )}
                     >
@@ -80,7 +80,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                             {client.name}
                           </span>
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
                               {client.accountManager ? client.accountManager : 'Unassigned'}
                             </span>
                           </div>
@@ -91,10 +91,10 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                       </div>
 
                       <div className="mt-4 flex items-center justify-between border-t border-muted/10 pt-3">
-                        <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50">
+                        <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
                           Team {Array.isArray(client.teamMembers) ? client.teamMembers.length : 0}
                         </span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/30">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
                           {client.createdAt ? new Date(client.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'NEW'}
                         </span>
                       </div>

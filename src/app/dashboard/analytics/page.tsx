@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery } from 'convex/react'
-import { RefreshCw, LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp } from 'lucide-react'
+import { useAction, useMutation, useQuery } from 'convex/react'
+import { LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp, Unlink } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { differenceInDays, startOfDay, endOfDay } from 'date-fns'
 
@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context'
 import { adsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getIconContainerClasses } from '@/lib/dashboard-theme'
+import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 
 // Extracted hooks and types
@@ -24,7 +24,6 @@ import {
   useAnalyticsData,
   useGoogleAnalyticsSync,
   PROVIDER_LABELS,
-  PERIOD_OPTIONS,
   PLATFORM_OPTIONS,
 } from './hooks'
 
@@ -34,9 +33,62 @@ import { AnalyticsMetricCards } from './components/analytics-metric-cards'
 import { AnalyticsCharts } from './components/analytics-charts'
 import { AnalyticsInsightsSection } from './components/analytics-insights-section'
 import { AnalyticsCreativesSection } from './components/analytics-creatives-section'
+import { GoogleAnalyticsSetupDialog } from './components/google-analytics-setup-dialog'
 import { AnalyticsDateRangePicker, type AnalyticsDateRange } from './components/analytics-date-range-picker'
 import { AnalyticsExportButton } from './components/analytics-export-button'
 import { AutoRefreshControls } from '@/components/ui/auto-refresh-controls'
+import { DisconnectDialog } from '../ads/components/connection-dialog'
+
+type GoogleAnalyticsPropertyOption = {
+  id: string
+  name: string
+  resourceName: string
+}
+
+type GoogleAnalyticsStatusRow = {
+  providerId: string
+  accountId: string | null
+  accountName: string | null
+  linkedAtMs: number | null
+  lastSyncStatus: string | null
+  lastSyncMessage: string | null
+  lastSyncedAtMs: number | null
+  lastSyncRequestedAtMs: number | null
+}
+
+function formatRelativeSyncTime(valueMs: number | null): string {
+  if (!valueMs) return 'Never'
+  const deltaMs = Date.now() - valueMs
+  const minutes = Math.floor(deltaMs / (60 * 1000))
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(valueMs).toLocaleDateString()
+}
+
+function mapOauthErrorToMessage(code: string | null, fallback: string | null): string {
+  if (fallback && fallback.trim().length > 0) {
+    return fallback
+  }
+
+  switch (code) {
+    case 'missing_code':
+      return 'Google did not return an authorization code. Please try connecting again.'
+    case 'invalid_state':
+      return 'The OAuth session expired or became invalid. Please retry the connection flow.'
+    case 'config_error':
+      return 'Google Analytics OAuth is not configured correctly. Please check environment variables.'
+    case 'oauth_failed':
+      return 'Google Analytics OAuth failed before setup could complete. Please try again.'
+    case 'google_analytics_error':
+      return 'Google returned an OAuth error. Please retry and grant all requested permissions.'
+    default:
+      return 'Unable to connect Google Analytics. Please try again.'
+  }
+}
 
 export default function AnalyticsPage() {
   const { selectedClientId } = useClientContext()
@@ -84,10 +136,28 @@ export default function AnalyticsPage() {
 
   const [gaConnected, setGaConnected] = useState(false)
   const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(null)
+  const [gaPropertyId, setGaPropertyId] = useState<string | null>(null)
+  const [gaLastSyncStatus, setGaLastSyncStatus] = useState<string | null>(null)
+  const [gaLastSyncMessage, setGaLastSyncMessage] = useState<string | null>(null)
+  const [gaLastSyncedAtMs, setGaLastSyncedAtMs] = useState<number | null>(null)
+  const [gaLastSyncRequestedAtMs, setGaLastSyncRequestedAtMs] = useState<number | null>(null)
   const [gaLoading, setGaLoading] = useState(false)
+  const [gaSetupDialogOpen, setGaSetupDialogOpen] = useState(false)
+  const [gaSetupMessage, setGaSetupMessage] = useState<string | null>(null)
+  const [gaProperties, setGaProperties] = useState<GoogleAnalyticsPropertyOption[]>([])
+  const [gaSelectedPropertyId, setGaSelectedPropertyId] = useState('')
+  const [gaLoadingProperties, setGaLoadingProperties] = useState(false)
+  const [gaInitializingProperty, setGaInitializingProperty] = useState(false)
+  const [gaDisconnectDialogOpen, setGaDisconnectDialogOpen] = useState(false)
+  const [gaDisconnecting, setGaDisconnecting] = useState(false)
 
   // TanStack Query mutation for Google Analytics sync
   const googleAnalyticsSyncMutation = useGoogleAnalyticsSync()
+  const listGoogleAnalyticsProperties = useAction(adsIntegrationsApi.listGoogleAnalyticsProperties)
+  const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount)
+  const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration)
+  const deleteSyncJobsMutation = useMutation(adsIntegrationsApi.deleteSyncJobs)
+  const deleteProviderMetricsMutation = useMutation(adsIntegrationsApi.deleteProviderMetrics)
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
@@ -99,24 +169,38 @@ export default function AnalyticsPage() {
           workspaceId,
           clientId: selectedClientId ?? null,
         }
-  ) as Array<any> | undefined
+  ) as GoogleAnalyticsStatusRow[] | undefined
 
   const refreshGoogleAnalyticsStatus = useCallback(async () => {
     if (isPreviewMode) {
       setGaConnected(false)
       setGaAccountLabel(null)
+      setGaPropertyId(null)
+      setGaLastSyncStatus(null)
+      setGaLastSyncMessage(null)
+      setGaLastSyncedAtMs(null)
+      setGaLastSyncRequestedAtMs(null)
       return
     }
 
     const rows = Array.isArray(integrationStatuses) ? integrationStatuses : []
-    const ga = rows.find((s: any) => s?.providerId === 'google-analytics')
+    const ga = rows.find((s) => s?.providerId === 'google-analytics')
 
     const linkedAtMs = typeof ga?.linkedAtMs === 'number' ? ga.linkedAtMs : null
     const accountName = typeof ga?.accountName === 'string' ? ga.accountName : null
     const accountId = typeof ga?.accountId === 'string' ? ga.accountId : null
+    const syncStatus = typeof ga?.lastSyncStatus === 'string' ? ga.lastSyncStatus : null
+    const syncMessage = typeof ga?.lastSyncMessage === 'string' ? ga.lastSyncMessage : null
+    const lastSyncedAtMs = typeof ga?.lastSyncedAtMs === 'number' ? ga.lastSyncedAtMs : null
+    const lastSyncRequestedAtMs = typeof ga?.lastSyncRequestedAtMs === 'number' ? ga.lastSyncRequestedAtMs : null
 
     setGaConnected(Boolean(linkedAtMs))
     setGaAccountLabel(accountName ?? accountId ?? null)
+    setGaPropertyId(accountId)
+    setGaLastSyncStatus(syncStatus)
+    setGaLastSyncMessage(syncMessage)
+    setGaLastSyncedAtMs(lastSyncedAtMs)
+    setGaLastSyncRequestedAtMs(lastSyncRequestedAtMs)
   }, [integrationStatuses, isPreviewMode])
 
   useEffect(() => {
@@ -128,6 +212,106 @@ export default function AnalyticsPage() {
       cancelAnimationFrame(frame)
     }
   }, [refreshGoogleAnalyticsStatus])
+
+  const gaNeedsPropertySelection = gaConnected && !gaPropertyId
+
+  const loadGoogleAnalyticsPropertyOptions = useCallback(async (clientIdOverride?: string | null) => {
+    if (!workspaceId) {
+      throw new Error('Workspace context is required')
+    }
+
+    setGaLoadingProperties(true)
+    try {
+      const payload = (await listGoogleAnalyticsProperties({
+        workspaceId,
+        providerId: 'google-analytics',
+        clientId: clientIdOverride ?? selectedClientId ?? null,
+      })) as GoogleAnalyticsPropertyOption[]
+
+      const options = Array.isArray(payload) ? payload : []
+      setGaProperties(options)
+      setGaSelectedPropertyId((current) => {
+        if (current && options.some((option) => option.id === current)) {
+          return current
+        }
+        return options[0]?.id ?? ''
+      })
+
+      return options
+    } catch (error) {
+      setGaProperties([])
+      setGaSelectedPropertyId('')
+      throw error
+    } finally {
+      setGaLoadingProperties(false)
+    }
+  }, [listGoogleAnalyticsProperties, selectedClientId, workspaceId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const url = new URL(window.location.href)
+    const oauthSuccess = url.searchParams.get('oauth_success') === 'true'
+    const oauthError = url.searchParams.get('oauth_error')
+    const provider = url.searchParams.get('provider')
+    const message = url.searchParams.get('message')
+
+    if (!oauthSuccess && !oauthError) return
+    if (provider !== 'google-analytics') return
+
+    url.searchParams.delete('oauth_success')
+    url.searchParams.delete('oauth_error')
+    url.searchParams.delete('provider')
+    url.searchParams.delete('message')
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+
+    setGaLoading(false)
+
+    if (oauthSuccess) {
+      setGaSetupMessage(null)
+      setGaSetupDialogOpen(true)
+      toast({
+        title: 'Google Analytics connected',
+        description: 'Select a property to finish setup.',
+      })
+      void loadGoogleAnalyticsPropertyOptions()
+        .catch((error) => {
+          const mappedMessage = asErrorMessage(error)
+          setGaSetupMessage(mappedMessage)
+          toast({ title: 'Property load failed', description: mappedMessage, variant: 'destructive' })
+        })
+    } else {
+      const mappedMessage = mapOauthErrorToMessage(oauthError, message)
+      toast({ title: 'Google Analytics connection failed', description: mappedMessage, variant: 'destructive' })
+    }
+  }, [loadGoogleAnalyticsPropertyOptions, toast])
+
+  useEffect(() => {
+    if (!gaNeedsPropertySelection || isPreviewMode) {
+      return
+    }
+
+    if (!gaSetupDialogOpen) {
+      setGaSetupDialogOpen(true)
+    }
+
+    if (gaLoadingProperties || gaProperties.length > 0) {
+      return
+    }
+
+    void loadGoogleAnalyticsPropertyOptions()
+      .catch((error) => {
+        const message = asErrorMessage(error)
+        setGaSetupMessage(message)
+      })
+  }, [
+    gaLoadingProperties,
+    gaNeedsPropertySelection,
+    gaProperties.length,
+    gaSetupDialogOpen,
+    isPreviewMode,
+    loadGoogleAnalyticsPropertyOptions,
+  ])
 
   const {
     metricsData,
@@ -167,29 +351,35 @@ export default function AnalyticsPage() {
       return
     }
 
+    setGaSetupMessage(null)
     setGaLoading(true)
-    void Promise.resolve()
-      .then(async () => {
-        window.location.href = '/api/integrations/google-analytics/oauth/start'
 
-        toast({
-          title: 'Google Analytics connected',
-          description: 'Account access granted. You can sync data now.',
-        })
-        await refreshGoogleAnalyticsStatus()
-      })
-      .catch((error: unknown) => {
-        logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
-        toast({ title: 'Connection failed', description: asErrorMessage(error), variant: 'destructive' })
-      })
-      .finally(() => {
-        setGaLoading(false)
-      })
-  }, [isPreviewMode, refreshGoogleAnalyticsStatus, toast])
+    const search = new URLSearchParams()
+    if (selectedClientId) {
+      search.set('clientId', selectedClientId)
+    }
+
+    const target = search.toString().length > 0
+      ? `/api/integrations/google-analytics/oauth/start?${search.toString()}`
+      : '/api/integrations/google-analytics/oauth/start'
+
+    window.location.href = target
+  }, [isPreviewMode, selectedClientId, toast])
 
   const handleSyncGoogleAnalytics = useCallback(() => {
     if (isPreviewMode) {
       toast({ title: 'Preview mode', description: 'Google Analytics sync is disabled in preview mode.' })
+      return
+    }
+
+    if (!gaConnected) {
+      toast({ title: 'Not connected', description: 'Connect Google Analytics before running a sync.', variant: 'destructive' })
+      return
+    }
+
+    if (gaNeedsPropertySelection) {
+      setGaSetupDialogOpen(true)
+      toast({ title: 'Property required', description: 'Select a Google Analytics property before syncing.', variant: 'destructive' })
       return
     }
 
@@ -215,7 +405,142 @@ export default function AnalyticsPage() {
         logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
         toast({ title: 'Sync failed', description: asErrorMessage(error), variant: 'destructive' })
       })
-  }, [isPreviewMode, googleAnalyticsSyncMutation, mutateMetrics, periodDays, refreshGoogleAnalyticsStatus, selectedClientId, toast])
+  }, [
+    gaConnected,
+    gaNeedsPropertySelection,
+    googleAnalyticsSyncMutation,
+    isPreviewMode,
+    mutateMetrics,
+    periodDays,
+    refreshGoogleAnalyticsStatus,
+    selectedClientId,
+    toast,
+  ])
+
+  const handleOpenGoogleAnalyticsSetup = useCallback(() => {
+    setGaSetupDialogOpen(true)
+    setGaSetupMessage(null)
+    void loadGoogleAnalyticsPropertyOptions()
+      .catch((error) => {
+        const message = asErrorMessage(error)
+        setGaSetupMessage(message)
+        toast({ title: 'Property load failed', description: message, variant: 'destructive' })
+      })
+  }, [loadGoogleAnalyticsPropertyOptions, toast])
+
+  const handleFinalizeGoogleAnalyticsSetup = useCallback(async () => {
+    if (isPreviewMode) {
+      return
+    }
+
+    if (!workspaceId) {
+      toast({ title: 'Setup failed', description: 'Workspace context is required.', variant: 'destructive' })
+      return
+    }
+
+    if (!gaSelectedPropertyId) {
+      setGaSetupMessage('Please select a Google Analytics property to continue.')
+      return
+    }
+
+    setGaInitializingProperty(true)
+    setGaSetupMessage(null)
+
+    try {
+      const payload = (await initializeAdAccount({
+        workspaceId,
+        providerId: 'google-analytics',
+        clientId: selectedClientId ?? null,
+        accountId: gaSelectedPropertyId,
+      })) as { accountName?: string }
+
+      toast({
+        title: 'Google Analytics setup complete',
+        description: payload?.accountName
+          ? `Using property ${payload.accountName}.`
+          : 'Property linked successfully.',
+      })
+
+      setGaSetupDialogOpen(false)
+      await refreshGoogleAnalyticsStatus()
+      await mutateMetrics()
+    } catch (error) {
+      const message = asErrorMessage(error)
+      setGaSetupMessage(message)
+      toast({ title: 'Setup failed', description: message, variant: 'destructive' })
+    } finally {
+      setGaInitializingProperty(false)
+    }
+  }, [
+    gaSelectedPropertyId,
+    initializeAdAccount,
+    isPreviewMode,
+    mutateMetrics,
+    refreshGoogleAnalyticsStatus,
+    selectedClientId,
+    toast,
+    workspaceId,
+  ])
+
+  const handleDisconnectGoogleAnalytics = useCallback(async (options: { clearHistoricalData: boolean }) => {
+    if (isPreviewMode) {
+      return
+    }
+
+    if (!workspaceId) {
+      toast({ title: 'Disconnect failed', description: 'Workspace context is required.', variant: 'destructive' })
+      return
+    }
+
+    try {
+      setGaDisconnecting(true)
+      let deletedMetrics = 0
+      if (options.clearHistoricalData) {
+        const result = (await deleteProviderMetricsMutation({
+          workspaceId,
+          providerId: 'google-analytics',
+          clientId: selectedClientId ?? null,
+        })) as { deleted?: number }
+        deletedMetrics = typeof result?.deleted === 'number' ? result.deleted : 0
+      }
+
+      await deleteSyncJobsMutation({
+        workspaceId,
+        providerId: 'google-analytics',
+        clientId: selectedClientId ?? null,
+      })
+      await deleteAdIntegrationMutation({
+        workspaceId,
+        providerId: 'google-analytics',
+        clientId: selectedClientId ?? null,
+      })
+
+      setGaSetupDialogOpen(false)
+      setGaProperties([])
+      setGaSelectedPropertyId('')
+      await refreshGoogleAnalyticsStatus()
+
+      toast({
+        title: 'Google Analytics disconnected',
+        description: options.clearHistoricalData
+          ? `Disconnected and removed ${deletedMetrics} historical metric row(s).`
+          : 'Disconnected. Historical metrics were kept.',
+      })
+    } catch (error) {
+      toast({ title: 'Disconnect failed', description: asErrorMessage(error), variant: 'destructive' })
+    } finally {
+      setGaDisconnecting(false)
+    }
+  }, [
+    deleteAdIntegrationMutation,
+    deleteProviderMetricsMutation,
+    deleteSyncJobsMutation,
+    isPreviewMode,
+    refreshGoogleAnalyticsStatus,
+    selectedClientId,
+    toast,
+    workspaceId,
+  ])
 
   const initialMetricsLoading = metricsLoading && metrics.length === 0
   const initialInsightsLoading = insightsLoading && insights.length === 0
@@ -293,6 +618,18 @@ export default function AnalyticsPage() {
   }, [filteredMetrics, selectedPlatform])
 
   const isGaSelectedWithoutData = selectedPlatform === 'google-analytics' && !hasGaData && !initialMetricsLoading
+
+  const gaStatusLabel = useMemo(() => {
+    if (!gaConnected) return 'Not connected'
+    if (gaNeedsPropertySelection) return 'Property setup required'
+    if (gaLastSyncStatus === 'error') return 'Last sync failed'
+    if (gaLastSyncStatus === 'pending') return 'Sync queued'
+    if (gaLastSyncStatus === 'success') return 'Synced'
+    return 'Connected'
+  }, [gaConnected, gaLastSyncStatus, gaNeedsPropertySelection])
+
+  const gaLastSyncedLabel = useMemo(() => formatRelativeSyncTime(gaLastSyncedAtMs), [gaLastSyncedAtMs])
+  const gaLastRequestedLabel = useMemo(() => formatRelativeSyncTime(gaLastSyncRequestedAtMs), [gaLastSyncRequestedAtMs])
 
   const platformBreakdown = useMemo(() => {
     return Object.entries(platformTotals).map(([providerId, summary]) => ({
@@ -390,9 +727,18 @@ export default function AnalyticsPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               {gaConnected ? (
-                <div className="inline-flex animate-in fade-in slide-in-from-right-2 duration-300 items-center gap-1.5 rounded-full bg-[#e6f4ea] px-3 py-1.5 text-xs font-medium text-[#137333]">
+                <div
+                  className={cn(
+                    'inline-flex animate-in fade-in slide-in-from-right-2 duration-300 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
+                    gaLastSyncStatus === 'error'
+                      ? 'bg-[#fce8e6] text-[#c5221f]'
+                      : gaNeedsPropertySelection
+                        ? 'bg-[#fff8e1] text-[#8d6e00]'
+                        : 'bg-[#e6f4ea] text-[#137333]'
+                  )}
+                >
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Connected{gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
+                  {gaStatusLabel}{gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fce8e6] px-3 py-1.5 text-xs font-medium text-[#c5221f]">
@@ -411,13 +757,37 @@ export default function AnalyticsPage() {
                   className="h-9 rounded-md border-[#dadce0] bg-white text-[#1a73e8] hover:bg-[#f8f9fa] hover:border-[#dadce0] text-sm font-medium transition-colors"
                 >
                   {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-                  {gaConnected ? 'Reconnect' : 'Link property'}
+                  {gaConnected ? 'Reconnect account' : 'Connect Google'}
                 </Button>
+                {gaConnected ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenGoogleAnalyticsSetup}
+                    disabled={gaLoadingProperties || gaInitializingProperty}
+                    className="h-9 rounded-md border-[#dadce0] bg-white text-[#5f6368] hover:bg-[#f8f9fa] hover:border-[#dadce0] text-sm font-medium transition-colors"
+                  >
+                    {gaNeedsPropertySelection ? 'Select property' : 'Change property'}
+                  </Button>
+                ) : null}
+                {gaConnected ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setGaDisconnectDialogOpen(true)}
+                    className="h-9 rounded-md border-[#dadce0] bg-white text-[#c5221f] hover:bg-[#fce8e6] hover:border-[#f5c6c4] text-sm font-medium transition-colors"
+                  >
+                    <Unlink className="mr-2 h-4 w-4" />
+                    Disconnect
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
                   onClick={() => void handleSyncGoogleAnalytics()}
-                  disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
+                  disabled={googleAnalyticsSyncMutation.isPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
                   className="h-9 rounded-md bg-[#1a73e8] hover:bg-[#1557b0] text-white text-sm font-medium shadow-none transition-colors"
                 >
                   {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
@@ -427,16 +797,49 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent className="bg-[#f8f9fa] py-3 px-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f0fe]">
-                <TrendingUp className="h-3 w-3 text-[#1a73e8]" />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f0fe]">
+                  <TrendingUp className="h-3 w-3 text-[#1a73e8]" />
+                </div>
+                <p className="text-xs text-[#5f6368]">
+                  Last successful sync: <span className="font-medium text-[#202124]">{gaLastSyncedLabel}</span>
+                  {' · '}
+                  Last sync request: <span className="font-medium text-[#202124]">{gaLastRequestedLabel}</span>
+                </p>
               </div>
-              <p className="text-xs text-[#5f6368]">
-                Syncing imports metrics from <span className="font-medium text-[#202124]">Google Analytics</span> for unified reporting
-              </p>
+              {gaNeedsPropertySelection ? (
+                <p className="text-xs text-[#8d6e00] pl-7">
+                  Property selection is required before sync can run.
+                </p>
+              ) : null}
+              {gaLastSyncStatus === 'error' && gaLastSyncMessage ? (
+                <p className="text-xs text-[#c5221f] pl-7">{gaLastSyncMessage}</p>
+              ) : null}
             </div>
           </CardContent>
         </Card>
+
+        <GoogleAnalyticsSetupDialog
+          open={gaSetupDialogOpen}
+          onOpenChange={setGaSetupDialogOpen}
+          setupMessage={gaSetupMessage}
+          properties={gaProperties}
+          selectedPropertyId={gaSelectedPropertyId}
+          onPropertySelectionChange={setGaSelectedPropertyId}
+          loadingProperties={gaLoadingProperties}
+          initializing={gaInitializingProperty}
+          onReloadProperties={() => void loadGoogleAnalyticsPropertyOptions()}
+          onInitialize={() => void handleFinalizeGoogleAnalyticsSetup()}
+        />
+
+        <DisconnectDialog
+          open={gaDisconnectDialogOpen}
+          onOpenChange={setGaDisconnectDialogOpen}
+          providerName="Google Analytics"
+          onConfirm={handleDisconnectGoogleAnalytics}
+          isDisconnecting={gaDisconnecting}
+        />
 
         {/* Error Alert */}
         {metricsError && (
@@ -475,16 +878,27 @@ export default function AnalyticsPage() {
                     Link Google Analytics
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => void handleSyncGoogleAnalytics()}
-                  disabled={googleAnalyticsSyncMutation.isPending || gaLoading}
-                  className="rounded-md bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-none"
-                >
-                  {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
-                  Sync data now
-                </Button>
+                {gaConnected && gaNeedsPropertySelection ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleOpenGoogleAnalyticsSetup}
+                    className="rounded-md bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-none"
+                  >
+                    Select property
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void handleSyncGoogleAnalytics()}
+                    disabled={googleAnalyticsSyncMutation.isPending || gaLoading || !gaConnected}
+                    className="rounded-md bg-[#1a73e8] hover:bg-[#1557b0] text-white shadow-none"
+                  >
+                    {googleAnalyticsSyncMutation.isPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                    Sync data now
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

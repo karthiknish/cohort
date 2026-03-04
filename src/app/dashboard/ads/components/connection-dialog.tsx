@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useState, useEffect } from 'react'
-import { Check, ChevronRight, ExternalLink, Loader2, X, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Check, ChevronRight, ExternalLink, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
 
 import {
   Dialog,
@@ -23,8 +23,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
-import { PROVIDER_INFO, PROVIDER_IDS, CONNECTION_STEPS, ERROR_GUIDANCE } from './constants'
+import { PROVIDER_INFO, CONNECTION_STEPS, ERROR_GUIDANCE } from './constants'
 
 // =============================================================================
 // TYPES
@@ -86,7 +87,7 @@ interface DisconnectDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   providerName: string
-  onConfirm: () => Promise<void>
+  onConfirm: (options: { clearHistoricalData: boolean }) => Promise<void>
   isDisconnecting: boolean
 }
 
@@ -376,10 +377,18 @@ export const DisconnectDialog = memo(function DisconnectDialog({
   onConfirm,
   isDisconnecting,
 }: DisconnectDialogProps) {
+  const [clearHistoricalData, setClearHistoricalData] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setClearHistoricalData(false)
+    }
+  }, [open])
+
   const handleConfirm = useCallback(async () => {
-    await onConfirm()
+    await onConfirm({ clearHistoricalData })
     onOpenChange(false)
-  }, [onConfirm, onOpenChange])
+  }, [clearHistoricalData, onConfirm, onOpenChange])
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -391,10 +400,23 @@ export const DisconnectDialog = memo(function DisconnectDialog({
             <ul className="ml-4 list-disc space-y-1 text-sm">
               <li>Stop all future data syncs from {providerName}</li>
               <li>Remove the connection to your {providerName} account</li>
-              <li>Keep your existing synced data in Cohorts</li>
+              <li>Keep your existing synced data in Cohorts by default</li>
             </ul>
             <p className="pt-2">You can reconnect at any time to resume syncing.</p>
           </AlertDialogDescription>
+          <div className="rounded-md border border-muted/60 p-3">
+            <label className="flex items-start gap-3 text-sm">
+              <Checkbox
+                checked={clearHistoricalData}
+                onCheckedChange={(checked) => setClearHistoricalData(Boolean(checked))}
+                disabled={isDisconnecting}
+                aria-label="Clear historical data"
+              />
+              <span>
+                Also remove historical {providerName} metrics from this workspace.
+              </span>
+            </label>
+          </div>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDisconnecting}>Cancel</AlertDialogCancel>

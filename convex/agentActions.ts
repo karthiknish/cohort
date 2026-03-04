@@ -5,7 +5,7 @@ import { api } from './_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 
-import { buildRoutesForPrompt } from '../src/lib/navigation-intents'
+import { buildRoutesForPrompt, parseNavigationIntent } from '../src/lib/navigation-intents'
 import { geminiAI } from '../src/services/gemini'
 import { mergeProposalForm } from '../src/lib/proposals'
 
@@ -43,6 +43,19 @@ type OperationInput = {
 }
 
 type OperationHandler = (ctx: unknown, input: OperationInput) => Promise<OperationResult>
+
+type DeterministicAgentIntent =
+  | {
+      action: 'navigate'
+      route: string
+      message: string
+    }
+  | {
+      action: 'execute'
+      operation: string
+      params: Record<string, unknown>
+      message?: string
+    }
 
 const OPERATION_ALIASES: Record<string, string> = {
   createtask: 'createTask',
@@ -191,6 +204,398 @@ function parseDateToMs(value: unknown): number | null {
   if (typeof value !== 'string') return null
   const parsed = Date.parse(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function normalizeIntentText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function includesAnyPhrase(input: string, phrases: string[]): boolean {
+  return phrases.some((phrase) => input.includes(phrase))
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function extractTrailingText(message: string, patterns: RegExp[]): string | null {
+  for (const pattern of patterns) {
+    const match = pattern.exec(message)
+    if (!match) continue
+    const extracted = asNonEmptyString(match[1])
+    if (!extracted) continue
+    return extracted.replace(/^[\s:,-]+/, '').replace(/[\s.]+$/, '')
+  }
+
+  return null
+}
+
+function extractEntityIdFromIntent(message: string, entity: 'task' | 'project' | 'client' | 'campaign' | 'creative' | 'proposal'): string | null {
+  const escapedEntity = escapeRegex(entity)
+  const patterns = [
+    new RegExp(`${escapedEntity}\\s+id\\s+([a-zA-Z0-9_-]+)`, 'i'),
+    new RegExp(`${escapedEntity}\\s+([a-zA-Z0-9_-]+)`, 'i'),
+    new RegExp(`\\b([a-zA-Z]+_[a-zA-Z0-9_-]+)\\b`, 'i'),
+  ]
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(message)
+    const value = asNonEmptyString(match?.[1])
+    if (value) return value
+  }
+
+  return null
+}
+
+function inferPriorityFromIntent(normalized: string): 'low' | 'medium' | 'high' | null {
+  if (includesAnyPhrase(normalized, ['high priority', 'urgent', 'asap'])) return 'high'
+  if (includesAnyPhrase(normalized, ['low priority', 'later'])) return 'low'
+  if (includesAnyPhrase(normalized, ['medium priority', 'normal priority'])) return 'medium'
+  return null
+}
+
+function inferProviderFromIntent(message: string): ProviderId | null {
+  const normalized = normalizeIntentText(message)
+  if (includesAnyPhrase(normalized, ['google ads', 'google campaign', 'google'])) return 'google'
+  if (includesAnyPhrase(normalized, ['meta ads', 'facebook ads', 'facebook', 'meta'])) return 'facebook'
+  if (includesAnyPhrase(normalized, ['tiktok ads', 'tiktok'])) return 'tiktok'
+  if (includesAnyPhrase(normalized, ['linkedin ads', 'linkedin'])) return 'linkedin'
+  return null
+}
+
+function inferProviderFiltersFromIntent(message: string): ProviderId[] {
+  const normalized = normalizeIntentText(message)
+  const providers: ProviderId[] = []
+
+  if (includesAnyPhrase(normalized, ['google ads', 'google campaign', 'google'])) providers.push('google')
+  if (includesAnyPhrase(normalized, ['meta ads', 'facebook ads', 'facebook', 'meta'])) providers.push('facebook')
+  if (includesAnyPhrase(normalized, ['tiktok ads', 'tiktok'])) providers.push('tiktok')
+  if (includesAnyPhrase(normalized, ['linkedin ads', 'linkedin'])) providers.push('linkedin')
+
+  return Array.from(new Set(providers))
+}
+
+function resolveDeterministicExecuteIntent(
+  message: string,
+  context?: AgentRequestContextType
+): DeterministicAgentIntent | null {
+  const normalized = normalizeIntentText(message)
+
+  if (includesAnyPhrase(normalized, ['daily report', 'weekly report', 'monthly report', 'performance report', 'generate report'])) {
+    const period: ReportPeriod = includesAnyPhrase(normalized, ['daily'])
+      ? 'daily'
+      : includesAnyPhrase(normalized, ['monthly'])
+        ? 'monthly'
+        : 'weekly'
+
+    const providerIds = inferProviderFiltersFromIntent(message)
+    const params: Record<string, unknown> = { period }
+    if (providerIds.length > 0) params.providerIds = providerIds
+    if (context?.activeClientId) params.clientId = context.activeClientId
+
+    return {
+      action: 'execute',
+      operation: 'generatePerformanceReport',
+      params,
+      message: `Generating your ${period} performance report...`,
+    }
+  }
+
+  if (
+    includesAnyPhrase(normalized, ['remind me to', 'create task', 'add task', 'new task']) &&
+    !includesAnyPhrase(normalized, ['update task', 'complete task', 'close task', 'mark task'])
+  ) {
+    const title =
+      extractTrailingText(message, [
+        /remind\s+me\s+to\s+(.+)$/i,
+        /(?:create|add)\s+(?:a\s+)?task(?:\s+(?:to|for))?\s+(.+)$/i,
+        /new\s+task\s+(.+)$/i,
+      ]) ?? 'Follow up task'
+
+    const priority = inferPriorityFromIntent(normalized)
+    const params: Record<string, unknown> = { title }
+    if (priority) params.priority = priority
+    if (context?.activeClientId) params.clientId = context.activeClientId
+
+    return {
+      action: 'execute',
+      operation: 'createTask',
+      params,
+      message: 'Creating that task now.',
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['complete task', 'mark task', 'close task', 'update task'])) {
+    const taskId = extractEntityIdFromIntent(message, 'task')
+    if (!taskId) return null
+
+    const params: Record<string, unknown> = { taskId }
+    if (includesAnyPhrase(normalized, ['complete', 'completed', 'done', 'close'])) {
+      params.status = 'done'
+    }
+    const priority = inferPriorityFromIntent(normalized)
+    if (priority) params.priority = priority
+
+    return {
+      action: 'execute',
+      operation: 'updateTask',
+      params,
+      message: 'Updating that task now.',
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['create project', 'add project', 'new project'])) {
+    const name =
+      extractTrailingText(message, [
+        /(?:create|add)\s+(?:a\s+)?project(?:\s+(?:called|named))?\s+(.+)$/i,
+        /new\s+project\s+(.+)$/i,
+      ]) ?? null
+
+    if (!name) return null
+
+    const params: Record<string, unknown> = { name }
+    if (context?.activeClientId) params.clientId = context.activeClientId
+
+    return {
+      action: 'execute',
+      operation: 'createProject',
+      params,
+      message: `Creating project ${name}.`,
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['update project', 'edit project'])) {
+    const projectId =
+      extractEntityIdFromIntent(message, 'project') ??
+      asNonEmptyString(context?.activeProjectId ?? null)
+    if (!projectId) return null
+
+    const params: Record<string, unknown> = { projectId }
+    const status = extractTrailingText(message, [/status\s+(?:to\s+)?([a-zA-Z_\-]+)/i])
+    if (status) params.status = status
+
+    return {
+      action: 'execute',
+      operation: 'updateProject',
+      params,
+      message: 'Updating that project now.',
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['create client', 'add client', 'new client'])) {
+    const name =
+      extractTrailingText(message, [
+        /(?:create|add)\s+(?:a\s+)?client(?:\s+(?:called|named))?\s+(.+)$/i,
+        /new\s+client\s+(.+)$/i,
+      ]) ?? null
+
+    if (!name) return null
+
+    return {
+      action: 'execute',
+      operation: 'createClient',
+      params: { name },
+      message: `Creating client ${name}.`,
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['add team member', 'add teammate'])) {
+    const clientId = extractEntityIdFromIntent(message, 'client')
+    const memberName = extractTrailingText(message, [
+      /add\s+team\s+member\s+(.+)\s+to\s+client/i,
+      /add\s+teammate\s+(.+)\s+to\s+client/i,
+    ])
+
+    if (!clientId || !memberName) return null
+
+    return {
+      action: 'execute',
+      operation: 'addClientTeamMember',
+      params: { clientId, name: memberName },
+      message: `Adding ${memberName} to that client.`,
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['create proposal draft', 'new proposal draft', 'draft proposal'])) {
+    const params: Record<string, unknown> = {}
+    if (context?.activeClientId) params.clientId = context.activeClientId
+
+    return {
+      action: 'execute',
+      operation: 'createProposalDraft',
+      params,
+      message: 'Creating a proposal draft now.',
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['generate proposal', 'generate this proposal', 'run proposal generation'])) {
+    const proposalId =
+      extractEntityIdFromIntent(message, 'proposal') ??
+      asNonEmptyString(context?.activeProposalId ?? null)
+    if (!proposalId) return null
+
+    return {
+      action: 'execute',
+      operation: 'generateProposalFromDraft',
+      params: { proposalId },
+      message: 'Starting proposal generation now.',
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['pause campaign', 'enable campaign', 'resume campaign', 'activate campaign'])) {
+    const providerId = inferProviderFromIntent(message)
+    const campaignId = extractEntityIdFromIntent(message, 'campaign')
+    if (!providerId || !campaignId) return null
+
+    const action = includesAnyPhrase(normalized, ['pause']) ? 'pause' : 'enable'
+    const params: Record<string, unknown> = { providerId, campaignId, action }
+    if (context?.activeClientId) params.clientId = context.activeClientId
+
+    return {
+      action: 'execute',
+      operation: 'updateAdsCampaignStatus',
+      params,
+      message: `Updating campaign ${campaignId} on ${providerId}.`,
+    }
+  }
+
+  if (includesAnyPhrase(normalized, ['pause creative', 'enable creative', 'resume creative', 'activate creative'])) {
+    const providerId = inferProviderFromIntent(message)
+    const creativeId = extractEntityIdFromIntent(message, 'creative')
+    if (!providerId || !creativeId) return null
+
+    const status = includesAnyPhrase(normalized, ['pause']) ? 'paused' : 'active'
+    const params: Record<string, unknown> = { providerId, creativeId, status }
+    if (context?.activeClientId) params.clientId = context.activeClientId
+
+    return {
+      action: 'execute',
+      operation: 'updateAdsCreativeStatus',
+      params,
+      message: `Updating creative ${creativeId} on ${providerId}.`,
+    }
+  }
+
+  return null
+}
+
+function resolveDeterministicNavigationIntent(message: string): { route: string; message: string } | null {
+  const normalized = normalizeIntentText(message)
+
+  const meetingIntent = includesAnyPhrase(normalized, [
+    'meeting',
+    'meet',
+    'google meet',
+    'call',
+    'calendar',
+    'invite',
+  ])
+  const meetingTask = includesAnyPhrase(normalized, [
+    'schedule',
+    'scedule',
+    'start',
+    'join',
+    'reschedule',
+    'cancel',
+    'book',
+    'set up',
+    'setup',
+    'quick meet',
+  ])
+
+  if (meetingIntent && meetingTask) {
+    return {
+      route: '/dashboard/meetings',
+      message: 'Opening Meetings so you can schedule or start the call.',
+    }
+  }
+
+  const adsIntent = includesAnyPhrase(normalized, [
+    'ads',
+    'ad campaign',
+    'campaign',
+    'ad spend',
+    'roas',
+    'creative',
+    'google ads',
+    'meta ads',
+    'facebook ads',
+    'tiktok ads',
+    'linkedin ads',
+  ])
+  const adsNavigation = includesAnyPhrase(normalized, [
+    'open',
+    'go to',
+    'take me',
+    'show',
+    'view',
+    'check',
+    'manage',
+    'sync',
+    'connect',
+    'setup',
+    'set up',
+    'configure',
+    'optimize',
+  ])
+
+  if (adsIntent && adsNavigation) {
+    return {
+      route: '/dashboard/ads',
+      message: 'Opening Ads Hub so you can manage campaigns and ad tasks.',
+    }
+  }
+
+  const parsedNavigationIntent = parseNavigationIntent(message)
+  const hasExplicitNavVerb = includesAnyPhrase(normalized, [
+    'go to',
+    'take me',
+    'open',
+    'show',
+    'view',
+    'navigate',
+    'check',
+    'bring me',
+  ])
+
+  if (parsedNavigationIntent && (parsedNavigationIntent.confidence >= 0.75 || hasExplicitNavVerb)) {
+    if (parsedNavigationIntent.route === '/dashboard/meetings') {
+      return {
+        route: '/dashboard/meetings',
+        message: 'Opening Meetings so you can handle scheduling and call actions.',
+      }
+    }
+
+    return {
+      route: parsedNavigationIntent.route,
+      message: `Opening ${parsedNavigationIntent.name} for you.`,
+    }
+  }
+
+  return null
+}
+
+function resolveDeterministicAgentIntent(
+  message: string,
+  context?: AgentRequestContextType
+): DeterministicAgentIntent | null {
+  const executeIntent = resolveDeterministicExecuteIntent(message, context)
+  if (executeIntent) return executeIntent
+
+  const navigationIntent = resolveDeterministicNavigationIntent(message)
+  if (navigationIntent) {
+    return {
+      action: 'navigate',
+      route: navigationIntent.route,
+      message: navigationIntent.message,
+    }
+  }
+
+  return null
 }
 
 function formatCurrency(value: number): string {
@@ -391,6 +796,8 @@ ${getOperationsDocumentation()}
 - "update this task/project/client/proposal" → EXECUTE the matching update operation
 - "generate weekly report" / "daily report" / "monthly report" → EXECUTE generatePerformanceReport
 - "create proposal draft" / "refine proposal" / "generate proposal" → EXECUTE proposal operations
+- "schedule a meeting", "start a meet", "join call" → navigate to Meetings
+- "open ads", "manage campaigns", "check ad spend" → navigate to Ads Hub
 - "check my numbers" or "see performance" → navigate to Analytics
 - "show tasks", "my to-do list" → navigate to Tasks
 
@@ -1256,48 +1663,81 @@ export const sendMessage = action({
         userMessage?: string
       } | null = null
 
-      const raw = await geminiAI.generateContent(prompt)
-      const parsed = parseGeminiResponse(raw)
+      const deterministicIntent = resolveDeterministicAgentIntent(args.message, args.context)
 
-      agentAction = parsed.action || 'chat'
-      agentRoute = parsed.route || null
-      agentOperation = parsed.operation ? normalizeOperationName(parsed.operation) : null
-      agentParams = parsed.params || null
+      if (deterministicIntent?.action === 'navigate') {
+        agentAction = 'navigate'
+        agentRoute = deterministicIntent.route
+        agentMessage = deterministicIntent.message
+      } else if (deterministicIntent?.action === 'execute') {
+        agentAction = 'execute'
+        agentOperation = normalizeOperationName(deterministicIntent.operation)
+        agentParams = deterministicIntent.params
 
-      if (agentAction === 'execute') {
-        const operation = agentOperation
-        const params = agentParams ?? {}
-
-        if (!operation) {
-          executeResult = {
-            success: false,
-            data: { error: 'Missing operation name' },
-            userMessage: 'I need an operation name to execute this action.',
-          }
-        } else {
         const result = await safeExecuteOperation(ctx, {
           workspaceId: args.workspaceId,
-            userId,
-            conversationId: convId,
-            operation,
-            params,
-            context: args.context,
+          userId,
+          conversationId: convId,
+          operation: agentOperation,
+          params: agentParams,
+          context: args.context,
         })
 
-          executeResult = {
-            success: result.success,
-            data: result.data,
-            retryable: result.retryable,
-            userMessage: result.userMessage,
-          }
+        executeResult = {
+          success: result.success,
+          data: result.data,
+          retryable: result.retryable,
+          userMessage: result.userMessage,
         }
 
         agentMessage =
-          (typeof parsed.message === 'string' && parsed.message.trim()) ||
-          executeResult?.userMessage ||
-          (executeResult?.success ? 'Action completed.' : 'I could not complete that action.')
+          deterministicIntent.message ||
+          executeResult.userMessage ||
+          (executeResult.success ? 'Action completed.' : 'I could not complete that action.')
       } else {
-        agentMessage = typeof parsed.message === 'string' ? parsed.message : agentMessage
+        const raw = await geminiAI.generateContent(prompt)
+        const parsed = parseGeminiResponse(raw)
+
+        agentAction = parsed.action || 'chat'
+        agentRoute = parsed.route || null
+        agentOperation = parsed.operation ? normalizeOperationName(parsed.operation) : null
+        agentParams = parsed.params || null
+
+        if (agentAction === 'execute') {
+          const operation = agentOperation
+          const params = agentParams ?? {}
+
+          if (!operation) {
+            executeResult = {
+              success: false,
+              data: { error: 'Missing operation name' },
+              userMessage: 'I need an operation name to execute this action.',
+            }
+          } else {
+            const result = await safeExecuteOperation(ctx, {
+              workspaceId: args.workspaceId,
+              userId,
+              conversationId: convId,
+              operation,
+              params,
+              context: args.context,
+            })
+
+            executeResult = {
+              success: result.success,
+              data: result.data,
+              retryable: result.retryable,
+              userMessage: result.userMessage,
+            }
+          }
+
+          agentMessage =
+            (typeof parsed.message === 'string' && parsed.message.trim()) ||
+            executeResult?.userMessage ||
+            (executeResult?.success ? 'Action completed.' : 'I could not complete that action.')
+        } else {
+          agentMessage = typeof parsed.message === 'string' ? parsed.message : agentMessage
+        }
       }
 
       const agentMessageLegacyId = crypto.randomUUID()
