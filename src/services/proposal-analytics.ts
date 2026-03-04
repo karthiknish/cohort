@@ -13,6 +13,11 @@ import type {
 } from '@/types/proposal-analytics'
 
 type WorkspaceScopedInput = ProposalAnalyticsInput & { workspaceId: string }
+type ConvexRequestArgs = Record<string, unknown> & { workspaceId?: string }
+type ConvexQueryName = Parameters<ConvexHttpClient['query']>[0]
+type ConvexQueryArgs = Parameters<ConvexHttpClient['query']>[1]
+type ConvexMutationName = Parameters<ConvexHttpClient['mutation']>[0]
+type ConvexMutationArgs = Parameters<ConvexHttpClient['mutation']>[1]
 
 type AnalyticsEventRow = {
   legacyId: string
@@ -37,9 +42,15 @@ async function getConvexToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null
   try {
     const result = await authClient.$fetch('/convex/token')
-    const payload =
-      result && typeof result === 'object' && 'data' in result ? (result as any).data : result
-    const token = payload && typeof payload === 'object' && 'token' in payload ? (payload as any).token : null
+    const payload: unknown =
+      result && typeof result === 'object' && 'data' in result
+        ? (result as { data?: unknown }).data
+        : result
+    const token =
+      payload && typeof payload === 'object' && 'token' in payload
+        ? (payload as { token?: unknown }).token
+        : null
+
     return typeof token === 'string' && token.trim().length > 0 ? token : null
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -49,7 +60,7 @@ async function getConvexToken(): Promise<string | null> {
   }
 }
 
-const queryConvex = cache(async (functionName: string, args: any) => {
+const queryConvex = cache(async (functionName: string, args: ConvexRequestArgs): Promise<unknown> => {
   const client = getConvexHttpClient()
   const token = await getConvexToken()
   if (token) {
@@ -57,7 +68,7 @@ const queryConvex = cache(async (functionName: string, args: any) => {
   }
 
   try {
-    return await client.query(functionName as any, args)
+    return await client.query(functionName as ConvexQueryName, args as ConvexQueryArgs)
   } catch (error) {
     logger.error(`Convex Query Error: ${functionName}`, error, {
       type: 'convex_error',
@@ -69,7 +80,7 @@ const queryConvex = cache(async (functionName: string, args: any) => {
   }
 })
 
-async function mutateConvex(functionName: string, args: any) {
+async function mutateConvex(functionName: string, args: ConvexRequestArgs): Promise<unknown> {
   const client = getConvexHttpClient()
   const token = await getConvexToken()
   if (token) {
@@ -77,7 +88,7 @@ async function mutateConvex(functionName: string, args: any) {
   }
 
   try {
-    return await client.mutation(functionName as any, args)
+    return await client.mutation(functionName as ConvexMutationName, args as ConvexMutationArgs)
   } catch (error) {
     logger.error(`Convex Mutation Error: ${functionName}`, error, {
       type: 'convex_error',
@@ -101,7 +112,7 @@ function parseDateOnlyToMs(dateOnly: string | undefined, endOfDay = false): numb
  * Track a proposal analytics event
  */
 export async function trackProposalEvent(input: WorkspaceScopedInput): Promise<{ id: string }> {
-  const res = (await mutateConvex('proposalAnalytics:addEvent' as any, {
+  const res = (await mutateConvex('proposalAnalytics:addEvent', {
     workspaceId: input.workspaceId,
     eventType: input.eventType,
     proposalId: input.proposalId,
@@ -292,7 +303,7 @@ export async function fetchProposalAnalyticsSummary(
   workspaceId: string,
   filters?: ProposalAnalyticsFilters,
 ): Promise<ProposalAnalyticsSummary> {
-  const res = (await queryConvex('proposalAnalytics:summarize' as any, {
+  const res = (await queryConvex('proposalAnalytics:summarize', {
     workspaceId,
     startDateMs: parseDateOnlyToMs(filters?.startDate),
     endDateMs: parseDateOnlyToMs(filters?.endDate, true),
@@ -310,7 +321,7 @@ export async function fetchProposalAnalyticsTimeSeries(
   workspaceId: string,
   filters?: ProposalAnalyticsFilters,
 ): Promise<ProposalAnalyticsTimeSeriesPoint[]> {
-  const res = (await queryConvex('proposalAnalytics:timeSeries' as any, {
+  const res = (await queryConvex('proposalAnalytics:timeSeries', {
     workspaceId,
     startDateMs: parseDateOnlyToMs(filters?.startDate),
     endDateMs: parseDateOnlyToMs(filters?.endDate, true),
@@ -328,7 +339,7 @@ export async function fetchProposalAnalyticsByClient(
   workspaceId: string,
   filters?: ProposalAnalyticsFilters,
 ): Promise<ProposalAnalyticsByClient[]> {
-  const res = (await queryConvex('proposalAnalytics:byClient' as any, {
+  const res = (await queryConvex('proposalAnalytics:byClient', {
     workspaceId,
     startDateMs: parseDateOnlyToMs(filters?.startDate),
     endDateMs: parseDateOnlyToMs(filters?.endDate, true),
@@ -345,7 +356,7 @@ export async function fetchProposalAnalyticsEvents(
   workspaceId: string,
   filters?: ProposalAnalyticsFilters & { limit?: number },
 ): Promise<ProposalAnalyticsEvent[]> {
-  const res = (await queryConvex('proposalAnalytics:listEvents' as any, {
+  const res = (await queryConvex('proposalAnalytics:listEvents', {
     workspaceId,
     startDateMs: parseDateOnlyToMs(filters?.startDate),
     endDateMs: parseDateOnlyToMs(filters?.endDate, true),
@@ -355,7 +366,7 @@ export async function fetchProposalAnalyticsEvents(
 
   return res.map((row) => ({
     id: row.legacyId,
-    eventType: row.eventType as any,
+    eventType: row.eventType as ProposalAnalyticsEvent['eventType'],
     proposalId: row.proposalId,
     userId: row.userId,
     clientId: row.clientId ?? null,

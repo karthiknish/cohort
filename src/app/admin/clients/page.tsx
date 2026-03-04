@@ -388,7 +388,6 @@ export default function AdminClientsPage() {
                 value={memberName}
                 onChange={(event) => setMemberName(event.target.value)}
                 disabled={addingMember}
-                autoFocus
               />
             </div>
             <div className="space-y-2">

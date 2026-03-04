@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAction, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { agentApi } from '@/lib/convex-api'
@@ -92,6 +92,38 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+function deriveActiveContextFromPath(pathname: string | null): {
+  activeProposalId?: string
+  activeProjectId?: string
+  activeClientId?: string
+} {
+  if (!pathname) return {}
+
+  const segments = pathname.split('/').filter(Boolean)
+
+  const fromSection = (section: string): string | undefined => {
+    const sectionIndex = segments.indexOf(section)
+    if (sectionIndex === -1) return undefined
+
+    const candidate = segments[sectionIndex + 1]
+    if (!candidate) return undefined
+
+    // Ignore utility routes.
+    if (['new', 'viewer', 'deck'].includes(candidate)) return undefined
+    return candidate
+  }
+
+  const activeProposalId = fromSection('proposals')
+  const activeProjectId = fromSection('projects')
+  const activeClientId = fromSection('clients')
+
+  return {
+    activeProposalId,
+    activeProjectId,
+    activeClientId,
+  }
+}
+
 /**
  * Validate user input before sending
  */
@@ -107,9 +139,11 @@ function validateInput(text: string): string | null {
 }
 
 export function useAgentMode(): UseAgentModeReturn {
+  const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const activeContext = useMemo(() => deriveActiveContextFromPath(pathname), [pathname])
 
   const sendMessage = useAction(agentApi.sendMessage)
   const listConversations = useAction(agentApi.listConversations)
@@ -261,7 +295,12 @@ export function useAgentMode(): UseAgentModeReturn {
         workspaceId,
         message: trimmedText,
         conversationId,
-        context: { previousMessages },
+        context: {
+          previousMessages,
+          activeProposalId: activeContext.activeProposalId ?? null,
+          activeProjectId: activeContext.activeProjectId ?? null,
+          activeClientId: activeContext.activeClientId ?? null,
+        },
       })
 
       setConnectionStatus('connected')
@@ -304,7 +343,19 @@ export function useAgentMode(): UseAgentModeReturn {
     } finally {
       setIsProcessing(false)
     }
-  }, [addMessage, clearError, conversationId, handleError, messages, router, sendMessage, workspaceId])
+  }, [
+    activeContext.activeClientId,
+    activeContext.activeProjectId,
+    activeContext.activeProposalId,
+    addMessage,
+    clearError,
+    conversationId,
+    handleError,
+    messages,
+    router,
+    sendMessage,
+    workspaceId,
+  ])
 
   const retryLastMessage = useCallback(() => {
     if (lastFailedMessage) {
@@ -352,13 +403,48 @@ export function useAgentMode(): UseAgentModeReturn {
         limit: 500,
       })
 
-      const nextMessages: AgentMessage[] = result.messages.map((msg: any) => ({
-        id: msg.id,
-        type: msg.type,
-        content: msg.content,
-        timestamp: new Date(msg.timestamp),
-        route: msg.route,
-      }))
+      const nextMessages: AgentMessage[] = result.messages.map((msg: any) => {
+        const type: 'user' | 'agent' = msg.type === 'user' ? 'user' : 'agent'
+        const action = typeof msg.action === 'string' ? msg.action : null
+        const operation = typeof msg.operation === 'string' ? msg.operation : null
+        const executeResult =
+          msg.executeResult && typeof msg.executeResult === 'object'
+            ? (msg.executeResult as Record<string, unknown>)
+            : null
+
+        const executionSuccess =
+          executeResult && typeof executeResult.success === 'boolean'
+            ? executeResult.success
+            : null
+
+        const normalizedAction: AgentMessageMetadata['action'] | undefined =
+          action === 'navigate' || action === 'execute' ? action : action ? 'response' : undefined
+
+        const status: AgentMessage['status'] =
+          normalizedAction === 'execute' && executionSuccess !== null
+            ? executionSuccess
+              ? 'success'
+              : 'error'
+            : 'info'
+
+        return {
+          id: msg.id,
+          type,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          route: msg.route,
+          status,
+          metadata:
+            normalizedAction || operation || executeResult
+              ? {
+                  action: normalizedAction,
+                  operation: operation ?? undefined,
+                  success: executionSuccess ?? undefined,
+                  data: executeResult ? ((executeResult.data as Record<string, unknown> | undefined) ?? undefined) : undefined,
+                }
+              : undefined,
+        }
+      })
 
       setMessages(nextMessages)
       setConversationId(targetConversationId)

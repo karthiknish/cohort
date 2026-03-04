@@ -21,10 +21,27 @@ function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   return expiresAtMs - Date.now() <= fiveMinutes
 }
 
-function asErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  return 'Unknown error'
+function sanitizeIdempotencyToken(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_')
+}
+
+function buildCreateCreativeIdempotencyKey(args: {
+  workspaceId: string
+  providerId: string
+  idempotencyKey?: string
+}): string | null {
+  if (typeof args.idempotencyKey !== 'string') return null
+
+  const trimmed = args.idempotencyKey.trim()
+  if (trimmed.length === 0) return null
+
+  const safeKey = sanitizeIdempotencyToken(trimmed).slice(0, 128)
+  if (safeKey.length === 0) return null
+
+  const safeWorkspaceId = sanitizeIdempotencyToken(args.workspaceId).slice(0, 64)
+  const safeProviderId = sanitizeIdempotencyToken(args.providerId).slice(0, 32)
+
+  return `adsCreative_${safeWorkspaceId}_${safeProviderId}_${safeKey}`
 }
 
 export type NormalizedCreative = {
@@ -397,27 +414,11 @@ export const updateCreativeStatus = action({
 // CREATE CREATIVE
 // =============================================================================
 
-export const createCreative = action({
+export const listMetaPageActors = action({
   args: {
     workspaceId: v.string(),
-    providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
+    providerId: v.literal('facebook'),
     clientId: v.optional(v.union(v.string(), v.null())),
-    campaignId: v.string(),
-    adSetId: v.optional(v.string()),
-    name: v.string(),
-    objectType: v.optional(v.string()),
-    title: v.optional(v.string()),
-    body: v.optional(v.string()),
-    description: v.optional(v.string()),
-    callToActionType: v.optional(v.string()),
-    linkUrl: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
-    imageHash: v.optional(v.string()),
-    videoId: v.optional(v.string()),
-    pageId: v.optional(v.string()),
-    instagramActorId: v.optional(v.string()),
-    assetFeedSpec: v.optional(v.string()),
-    status: v.optional(v.union(v.literal('ACTIVE'), v.literal('PAUSED'))),
   },
   handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
@@ -439,68 +440,252 @@ export const createCreative = action({
       throw Errors.integration.expired(args.providerId)
     }
 
-    if (args.providerId === 'facebook') {
-      const { createMetaAdCreative, createMetaAd } = await import('@/services/integrations/meta-ads')
+    const { fetchMetaPageActors } = await import('@/services/integrations/meta-ads')
 
-      const adAccountId = integration.accountId
-      if (!adAccountId) {
-        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured')
-      }
+    const pageActors = await fetchMetaPageActors({
+      accessToken: integration.accessToken,
+    })
 
-      // First create the ad creative
-      const creativeResult = await createMetaAdCreative({
-        accessToken: integration.accessToken,
-        adAccountId,
-        name: args.name,
-        objectType: (args.objectType as any) || 'IMAGE',
-        title: args.title,
-        body: args.body,
-        description: args.description,
-        callToActionType: args.callToActionType,
-        linkUrl: args.linkUrl,
-        imageUrl: args.imageUrl,
-        imageHash: args.imageHash,
-        videoId: args.videoId,
-        pageId: args.pageId,
-        instagramActorId: args.instagramActorId,
-        assetFeedSpec: args.assetFeedSpec,
+    return pageActors.map((actor) => ({
+      id: actor.id,
+      name: actor.name,
+      tasks: actor.tasks,
+      instagramBusinessAccountId: actor.instagramBusinessAccount?.id ?? null,
+      instagramBusinessAccountName: actor.instagramBusinessAccount?.name ?? null,
+      instagramUsername: actor.instagramBusinessAccount?.username ?? null,
+    }))
+  }, 'adsCreatives:listMetaPageActors', { maxRetries: 3 }),
+})
+
+export const createCreative = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    idempotencyKey: v.optional(v.string()),
+    campaignId: v.string(),
+    adSetId: v.optional(v.string()),
+    name: v.string(),
+    objectType: v.optional(v.string()),
+    title: v.optional(v.string()),
+    body: v.optional(v.string()),
+    description: v.optional(v.string()),
+    callToActionType: v.optional(v.string()),
+    linkUrl: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    imageHash: v.optional(v.string()),
+    videoId: v.optional(v.string()),
+    pageId: v.optional(v.string()),
+    instagramActorId: v.optional(v.string()),
+    assetFeedSpec: v.optional(v.string()),
+    status: v.optional(v.union(v.literal('ACTIVE'), v.literal('PAUSED'))),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    requireIdentity(identity)
+
+    const idempotencyKey = buildCreateCreativeIdempotencyKey({
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      idempotencyKey: args.idempotencyKey,
+    })
+    let idempotencyClaimed = false
+
+    if (idempotencyKey) {
+      const claimResult = await ctx.runMutation('apiIdempotency:checkAndClaim' as any, {
+        key: idempotencyKey,
+        requestId: `adsCreatives_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+        method: 'ACTION',
+        path: 'adsCreatives:createCreative',
       })
 
-      if (!creativeResult.success) {
-        throw new Error(creativeResult.error || 'Failed to create creative')
+      if (claimResult.type === 'completed') {
+        return claimResult.response as {
+          success: boolean
+          creativeId: string
+          adId?: string
+          status?: 'ACTIVE' | 'PAUSED'
+        }
       }
 
-      // Then create the ad (links creative to ad set)
-      if (args.adSetId) {
-        const adResult = await createMetaAd({
-          accessToken: integration.accessToken,
-          adAccountId,
-          adSetId: args.adSetId,
-          creativeId: creativeResult.creativeId,
-          name: args.name,
-          status: (args.status as any) || 'PAUSED',
+      if (claimResult.type === 'pending') {
+        throw Errors.base.conflict('Creative creation request already in progress. Please wait and retry.')
+      }
+
+      idempotencyClaimed = true
+    }
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken(args.providerId)
+    }
+
+    if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+      throw Errors.integration.expired(args.providerId)
+    }
+
+    const completeIdempotency = async (response: {
+      success: boolean
+      creativeId: string
+      adId?: string
+      status?: 'ACTIVE' | 'PAUSED'
+    }) => {
+      if (!idempotencyKey || !idempotencyClaimed) return
+
+      try {
+        await ctx.runMutation('apiIdempotency:complete' as any, {
+          key: idempotencyKey,
+          response,
+          httpStatus: 200,
         })
-
-        if (!adResult.success) {
-          throw new Error(adResult.error || 'Failed to create ad')
+      } catch (commitError) {
+        console.warn('[adsCreatives:createCreative] Failed to persist idempotency completion', commitError)
+        try {
+          await ctx.runMutation('apiIdempotency:release' as any, { key: idempotencyKey })
+        } catch (releaseAfterCommitError) {
+          console.warn('[adsCreatives:createCreative] Failed to release idempotency key after commit failure', releaseAfterCommitError)
         }
-
-        return {
-          success: true,
-          creativeId: creativeResult.creativeId,
-          adId: adResult.adId,
-          status: args.status || 'PAUSED',
-        }
-      }
-
-      return {
-        success: true,
-        creativeId: creativeResult.creativeId,
-        status: args.status || 'PAUSED',
       }
     }
 
-    throw new Error(`Create creative not yet implemented for ${args.providerId}`)
+    let createdMetaCreativeId: string | null = null
+    let createdMetaAdId: string | null = null
+
+    try {
+      if (args.providerId === 'facebook') {
+        const { createMetaAdCreative, createMetaAd, fetchMetaPageActors } = await import('@/services/integrations/meta-ads')
+
+        const adAccountId = integration.accountId
+        if (!adAccountId) {
+          throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured')
+        }
+
+        if (!args.pageId || args.pageId.trim().length === 0) {
+          throw Errors.validation.invalidInput('A Facebook Page is required to create a Meta creative')
+        }
+
+        const pageActors = await fetchMetaPageActors({ accessToken: integration.accessToken })
+        const selectedPage = pageActors.find((actor) => actor.id === args.pageId)
+
+        if (!selectedPage) {
+          throw Errors.validation.invalidInput('Selected Facebook Page is not accessible with the current integration token')
+        }
+
+        if (args.instagramActorId) {
+          const instagramAllowed = pageActors.some((actor) => actor.instagramBusinessAccount?.id === args.instagramActorId)
+          if (!instagramAllowed) {
+            throw Errors.validation.invalidInput('Selected Instagram account is not accessible with the current integration token')
+          }
+        }
+
+        const resolvedInstagramActorId = args.instagramActorId ?? selectedPage.instagramBusinessAccount?.id
+
+        // Step 1: create creative. If later ad creation fails, this is explicitly cleaned up.
+        const creativeResult = await createMetaAdCreative({
+          accessToken: integration.accessToken,
+          adAccountId,
+          name: args.name,
+          objectType: (args.objectType as any) || 'IMAGE',
+          title: args.title,
+          body: args.body,
+          description: args.description,
+          callToActionType: args.callToActionType,
+          linkUrl: args.linkUrl,
+          imageUrl: args.imageUrl,
+          imageHash: args.imageHash,
+          videoId: args.videoId,
+          pageId: selectedPage.id,
+          instagramActorId: resolvedInstagramActorId,
+          assetFeedSpec: args.assetFeedSpec,
+        })
+
+        if (!creativeResult.success) {
+          throw new Error(creativeResult.error || 'Failed to create creative')
+        }
+
+        createdMetaCreativeId = creativeResult.creativeId
+
+        // Step 2: create ad if adSetId is provided.
+        if (args.adSetId) {
+          const adResult = await createMetaAd({
+            accessToken: integration.accessToken,
+            adAccountId,
+            adSetId: args.adSetId,
+            creativeId: creativeResult.creativeId,
+            name: args.name,
+            status: (args.status as any) || 'PAUSED',
+          })
+
+          if (!adResult.success) {
+            throw new Error(adResult.error || 'Failed to create ad')
+          }
+
+          createdMetaAdId = adResult.adId
+
+          const response = {
+            success: true,
+            creativeId: creativeResult.creativeId,
+            adId: adResult.adId,
+            status: args.status || 'PAUSED',
+          }
+
+          await completeIdempotency(response)
+
+          return response
+        }
+
+        const response = {
+          success: true,
+          creativeId: creativeResult.creativeId,
+          status: args.status || 'PAUSED',
+        }
+
+        await completeIdempotency(response)
+
+        return response
+      }
+
+      throw new Error(`Create creative not yet implemented for ${args.providerId}`)
+    } catch (error) {
+      if (args.providerId === 'facebook' && createdMetaCreativeId && !createdMetaAdId && args.adSetId) {
+        try {
+          const { deleteMetaAdCreative } = await import('@/services/integrations/meta-ads')
+          const cleanupResult = await deleteMetaAdCreative({
+            accessToken: integration.accessToken,
+            creativeId: createdMetaCreativeId,
+          })
+
+          if (!cleanupResult.success) {
+            console.warn('[adsCreatives:createCreative] Failed to cleanup partially created Meta creative', {
+              creativeId: createdMetaCreativeId,
+              error: cleanupResult.error,
+            })
+          }
+        } catch (cleanupError) {
+          console.warn('[adsCreatives:createCreative] Cleanup threw after partial failure', {
+            creativeId: createdMetaCreativeId,
+            error: cleanupError,
+          })
+        }
+      }
+
+      if (idempotencyKey && idempotencyClaimed) {
+        try {
+          await ctx.runMutation('apiIdempotency:release' as any, { key: idempotencyKey })
+        } catch (releaseError) {
+          console.warn('[adsCreatives:createCreative] Failed to release idempotency key', releaseError)
+        }
+      }
+
+      throw error
+    }
   }, 'adsCreatives:createCreative', { maxRetries: 3 }),
 })
 
@@ -515,6 +700,7 @@ export const updateCreative = action({
     clientId: v.optional(v.union(v.string(), v.null())),
     creativeId: v.string(),
     name: v.optional(v.string()),
+    title: v.optional(v.string()),
     body: v.optional(v.string()),
     description: v.optional(v.string()),
     callToActionType: v.optional(v.string()),
@@ -547,6 +733,7 @@ export const updateCreative = action({
         accessToken: integration.accessToken,
         creativeId: args.creativeId,
         name: args.name,
+        title: args.title,
         body: args.body,
         description: args.description,
         callToActionType: args.callToActionType,

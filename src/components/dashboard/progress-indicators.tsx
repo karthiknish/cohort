@@ -293,8 +293,8 @@ function OperationItem({
           {/* Steps */}
           {operation.steps && operation.steps.length > 0 && (
             <div className="space-y-1">
-              {operation.steps.map((step, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs">
+              {operation.steps.map((step) => (
+                <div key={`${step.name}-${step.timestamp ?? step.status}`} className="flex items-center gap-2 text-xs">
                   <StepIndicator status={step.status} />
                   <span
                     className={cn(

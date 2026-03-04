@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import JSZip from 'jszip'
 import {
@@ -258,13 +259,18 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
 
   const viewerContent = (
     <>
+      <h3 className="sr-only">{title}</h3>
+
       {/* Slide display */}
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border bg-black">
         {currentSlideData?.imageUrl ? (
-          <img
+          <Image
             src={currentSlideData.imageUrl}
-            alt={`Slide ${currentSlide + 1}`}
-            className="h-full w-full object-contain"
+            alt={`${title} slide ${currentSlide + 1}`}
+            fill
+            unoptimized
+            sizes={isFullscreen ? '100vw' : '(max-width: 1280px) 100vw, 1280px'}
+            className="object-contain"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 p-8">
@@ -322,7 +328,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
         <div className="flex gap-2 overflow-x-auto py-2">
           {slides.map((slide, index) => (
             <button
-              key={index}
+              key={slide.index}
               onClick={() => goToSlide(index)}
               aria-label={index === currentSlide ? `Currently viewing slide ${index + 1}` : `Go to slide ${index + 1}`}
               aria-current={index === currentSlide ? 'true' : undefined}
@@ -335,11 +341,16 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
             >
               <div className="w-20 h-12 bg-muted flex items-center justify-center text-xs text-muted-foreground">
                 {slide.imageUrl ? (
-                  <img
-                    src={slide.imageUrl}
-                    alt={`Thumbnail ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative h-full w-full">
+                    <Image
+                      src={slide.imageUrl}
+                      alt={`${title} thumbnail ${index + 1}`}
+                      fill
+                      unoptimized
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  </div>
                 ) : (
                   <span>{index + 1}</span>
                 )}

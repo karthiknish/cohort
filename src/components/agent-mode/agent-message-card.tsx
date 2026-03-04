@@ -9,7 +9,7 @@ import {
     Navigation,
     Zap,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -60,15 +60,17 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
     // User messages - simple bubble
     if (type === 'user') {
         return (
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-end"
-            >
-                <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-white">
-                    {content}
-                </div>
-            </motion.div>
+            <LazyMotion features={domAnimation}>
+                <m.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex justify-end"
+                >
+                    <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-white">
+                        {content}
+                    </div>
+                </m.div>
+            </LazyMotion>
         )
     }
 
@@ -81,12 +83,13 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
     // Enhanced task completion card
     if (hasTaskStatus && action) {
         return (
-            <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.25 }}
-                className="flex justify-start"
-            >
+      <LazyMotion features={domAnimation}>
+        <m.div
+          initial={{ opacity: 0, y: 10, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className="flex justify-start"
+        >
                 <div
                     className={cn(
                         'max-w-[90%] overflow-hidden rounded-xl border shadow-sm',
@@ -153,20 +156,23 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
                         )}
                     </div>
                 </div>
-            </motion.div>
+        </m.div>
+      </LazyMotion>
         )
     }
 
     // Regular agent message - bubble style
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-start"
-        >
-            <div className="max-w-[85%] rounded-2xl bg-secondary px-4 py-2.5 text-sm text-white">
-                {content}
-            </div>
-        </motion.div>
+            <LazyMotion features={domAnimation}>
+                <m.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex justify-start"
+                >
+                    <div className="max-w-[85%] rounded-2xl bg-secondary px-4 py-2.5 text-sm text-white">
+                        {content}
+                    </div>
+                </m.div>
+            </LazyMotion>
     )
 }

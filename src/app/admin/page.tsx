@@ -466,8 +466,16 @@ export default function AdminPage() {
               <CardContent>
                 {usageLoading ? (
                   <div className="flex items-end gap-1 h-32">
-                    {[65, 45, 80, 35, 70, 55, 90].map((height, i) => (
-                      <Skeleton key={i} className="flex-1 h-full" style={{ height: `${height}%` }} />
+                    {[
+                      { id: 'daily-skeleton-mon', height: 65 },
+                      { id: 'daily-skeleton-tue', height: 45 },
+                      { id: 'daily-skeleton-wed', height: 80 },
+                      { id: 'daily-skeleton-thu', height: 35 },
+                      { id: 'daily-skeleton-fri', height: 70 },
+                      { id: 'daily-skeleton-sat', height: 55 },
+                      { id: 'daily-skeleton-sun', height: 90 },
+                    ].map((day) => (
+                      <Skeleton key={day.id} className="flex-1 h-full" style={{ height: `${day.height}%` }} />
                     ))}
                   </div>
                 ) : (
@@ -523,8 +531,14 @@ export default function AdminPage() {
               <CardContent>
                 {usageLoading ? (
                   <div className="space-y-3">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="flex items-center gap-3">
+                    {[
+                      'feature-skeleton-1',
+                      'feature-skeleton-2',
+                      'feature-skeleton-3',
+                      'feature-skeleton-4',
+                      'feature-skeleton-5',
+                    ].map((slotKey) => (
+                      <div key={slotKey} className="flex items-center gap-3">
                         <Skeleton className="h-4 w-20" />
                         <Skeleton className="h-2 flex-1" />
                         <Skeleton className="h-4 w-10" />
@@ -660,8 +674,8 @@ export default function AdminPage() {
               <CardContent>
               {statsLoading ? (
                   <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex gap-3">
+                    {['activity-skeleton-1', 'activity-skeleton-2', 'activity-skeleton-3'].map((slotKey) => (
+                      <div key={slotKey} className="flex gap-3">
                         <Skeleton className="h-8 w-8 rounded-full" />
                         <div className="flex-1 space-y-1">
                           <Skeleton className="h-4 w-3/4" />

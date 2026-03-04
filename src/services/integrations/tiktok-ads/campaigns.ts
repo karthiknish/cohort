@@ -368,7 +368,11 @@ export async function fetchTikTokCreatives(options: {
         status?: string
         ad_format?: string
         image_ids?: string[]
+        image_url?: string
+        image_urls?: string[]
         video_id?: string
+        video_url?: string
+        thumbnail_url?: string
         landing_page_url?: string
         call_to_action?: string
         ad_text?: string
@@ -401,9 +405,9 @@ export async function fetchTikTokCreatives(options: {
     status: (item.status ?? 'DISABLE') as 'ENABLE' | 'DISABLE' | 'DELETE',
     format: item.ad_format ?? item.image_mode,
     videoId: item.video_id,
-    imageUrl: (item as any).image_url || ((item as any).image_urls?.[0]),
-    videoUrl: (item as any).video_url,
-    thumbnailUrl: (item as any).thumbnail_url,
+    imageUrl: item.image_url || item.image_urls?.[0],
+    videoUrl: item.video_url,
+    thumbnailUrl: item.thumbnail_url,
     title: item.ad_text,
     description: item.ad_text,
     callToAction: item.call_to_action,

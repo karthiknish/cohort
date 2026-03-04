@@ -154,8 +154,8 @@ export function TeamMembersCard({
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {filteredTeamMembers.map((member, index) => (
-              <TeamMemberCard key={`${member.name}-${index}`} member={member} />
+            {filteredTeamMembers.map((member) => (
+              <TeamMemberCard key={`${member.name}-${member.role}`} member={member} />
             ))}
           </div>
         )}

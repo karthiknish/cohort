@@ -92,25 +92,21 @@ function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayPro
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
-  // Initialize to false to avoid hydration mismatch, then check in useEffect
-  const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(false)
-
-  // Check for session cookie on mount (client-side only)
-  useEffect(() => {
-    if (hasValidSessionCookie()) {
-      setIsAwaitingAuthRestore(true)
-    }
-  }, [])
+  const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {
     if (!isAwaitingAuthRestore) return
-    if (!loading) {
+
+    const shouldClear = !loading || !hasValidSessionCookie()
+    if (!shouldClear) return
+
+    const frameId = requestAnimationFrame(() => {
       setIsAwaitingAuthRestore(false)
-      return
-    }
-    if (!hasValidSessionCookie()) {
-      setIsAwaitingAuthRestore(false)
+    })
+
+    return () => {
+      cancelAnimationFrame(frameId)
     }
   }, [isAwaitingAuthRestore, loading])
 
@@ -130,12 +126,11 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }, [user, isAwaitingAuthRestore])
 
   // Handle blocked user with retry mechanism
-  const handleBlockedSignOut = useCallback(async () => {
-    try {
-      await signOut()
-    } finally {
-      router.push('/')
-    }
+  const handleBlockedSignOut = useCallback(() => {
+    void signOut()
+      .finally(() => {
+        router.push('/')
+      })
   }, [signOut, router])
 
   if (loading || isAwaitingAuthRestore) {

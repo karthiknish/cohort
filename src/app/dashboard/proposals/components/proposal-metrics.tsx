@@ -131,8 +131,8 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
   if (isLoading && proposalCount === 0) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="animate-pulse border-muted">
+        {['proposal-metric-skeleton-1', 'proposal-metric-skeleton-2', 'proposal-metric-skeleton-3', 'proposal-metric-skeleton-4'].map((slotKey) => (
+          <Card key={slotKey} className="animate-pulse border-muted">
             <CardContent className="p-6">
               <div className="h-4 w-24 bg-muted rounded mb-2" />
               <div className="h-8 w-16 bg-muted rounded" />

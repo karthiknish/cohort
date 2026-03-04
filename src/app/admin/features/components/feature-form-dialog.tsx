@@ -74,7 +74,7 @@ export function FeatureFormDialog({
   // Form state
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [status, setStatus] = useState<FeatureStatus>(defaultStatus)
+  const [status, setStatus] = useState<FeatureStatus>('backlog')
   const [priority, setPriority] = useState<FeaturePriority>('medium')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [references, setReferences] = useState<FeatureReference[]>([])
@@ -394,9 +394,9 @@ export function FeatureFormDialog({
             {/* Existing References */}
             {references.length > 0 && (
               <div className="space-y-2">
-                {references.map((ref, index) => (
+                  {references.map((ref, index) => (
                   <div
-                    key={index}
+                      key={`${ref.url}-${ref.label}`}
                     className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2"
                   >
                     <a

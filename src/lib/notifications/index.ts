@@ -449,28 +449,31 @@ export function notifySyncFailed(providerName: string, error?: string): string |
  * Hook that provides notification functions with stable references
  */
 export function useNotifications() {
-  return {
-    success: React.useCallback(notifySuccess, []),
-    error: React.useCallback(notifyError, []),
-    warning: React.useCallback(notifyWarning, []),
-    info: React.useCallback(notifyInfo, []),
-    loading: React.useCallback(notifyLoading, []),
-    promise: React.useCallback(notifyPromise, []),
-    apiCall: React.useCallback(notifyApiCall, []),
-    withUndo: React.useCallback(notifyWithUndo, []),
-    confirmation: React.useCallback(notifyConfirmation, []),
-    copy: React.useCallback(notifyCopy, []),
-    networkError: React.useCallback(notifyNetworkError, []),
-    validationError: React.useCallback(notifyValidationError, []),
-    completed: React.useCallback(notifyCompleted, []),
-    failed: React.useCallback(notifyFailed, []),
-    resourceCreated: React.useCallback(notifyResourceCreated, []),
-    resourceUpdated: React.useCallback(notifyResourceUpdated, []),
-    resourceDeleted: React.useCallback(notifyResourceDeleted, []),
-    syncStarted: React.useCallback(notifySyncStarted, []),
-    syncCompleted: React.useCallback(notifySyncCompleted, []),
-    syncFailed: React.useCallback(notifySyncFailed, []),
-    dismiss: React.useCallback(dismissToast, []),
-    dismissAll: React.useCallback(dismissAllToasts, []),
-  }
+  return React.useMemo(
+    () => ({
+      success: notifySuccess,
+      error: notifyError,
+      warning: notifyWarning,
+      info: notifyInfo,
+      loading: notifyLoading,
+      promise: notifyPromise,
+      apiCall: notifyApiCall,
+      withUndo: notifyWithUndo,
+      confirmation: notifyConfirmation,
+      copy: notifyCopy,
+      networkError: notifyNetworkError,
+      validationError: notifyValidationError,
+      completed: notifyCompleted,
+      failed: notifyFailed,
+      resourceCreated: notifyResourceCreated,
+      resourceUpdated: notifyResourceUpdated,
+      resourceDeleted: notifyResourceDeleted,
+      syncStarted: notifySyncStarted,
+      syncCompleted: notifySyncCompleted,
+      syncFailed: notifySyncFailed,
+      dismiss: dismissToast,
+      dismissAll: dismissAllToasts,
+    }),
+    []
+  )
 }

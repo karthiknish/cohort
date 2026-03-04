@@ -30,15 +30,15 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
   }
 
   if (error) {
-    const handleRetry = async () => {
+      const handleRetry = () => {
       if (refreshing) return
       setRefreshing(true)
-      try {
+
         retryClients()
-        await refreshClients()
-      } finally {
-        setRefreshing(false)
-      }
+        void Promise.resolve(refreshClients())
+          .finally(() => {
+            setRefreshing(false)
+          })
     }
 
     return (

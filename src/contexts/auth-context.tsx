@@ -337,18 +337,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const getIdToken = useCallback(async () => {
     if (typeof window === 'undefined') return null
-    try {
-      const result = await authClient.$fetch('/convex/token')
-      const payload =
-        result && typeof result === 'object' && 'data' in result ? (result as any).data : result
-      const token = payload && typeof payload === 'object' && 'token' in payload ? (payload as any).token : null
-      return typeof token === 'string' && token.trim().length > 0 ? token : null
-    } catch (error) {
+
+    const result = await authClient.$fetch('/convex/token').catch((error) => {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[AuthContext] Failed to fetch Convex token', error)
       }
       return null
+    })
+
+    if (!result) {
+      return null
     }
+
+    let payload: unknown = result
+    if (typeof result === 'object' && result !== null && 'data' in result) {
+      payload = (result as { data?: unknown }).data
+    }
+
+    if (typeof payload !== 'object' || payload === null || !('token' in payload)) {
+      return null
+    }
+
+    const token = (payload as { token?: unknown }).token
+    if (typeof token !== 'string') {
+      return null
+    }
+
+    return token.trim().length > 0 ? token : null
   }, [])
 
   const value = React.useMemo<AuthContextType>(

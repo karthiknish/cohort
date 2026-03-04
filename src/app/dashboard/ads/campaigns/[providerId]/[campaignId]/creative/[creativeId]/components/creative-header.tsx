@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
 import {
   fadeInDownVariants,
   transitions,
@@ -66,14 +66,15 @@ export function CreativeHeader(props: {
   } = props
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={fadeInDownVariants}
-      transition={transitions.slow}
-      className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-6 px-1 border-b bg-background/80 backdrop-blur-md mb-8"
-    >
-      <div className="flex items-center gap-5">
+    <LazyMotion features={domAnimation}>
+      <m.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeInDownVariants}
+        transition={transitions.slow}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-6 px-1 border-b bg-background/80 backdrop-blur-md mb-8"
+      >
+        <div className="flex items-center gap-5">
         <Link href={backUrl} className="group">
           <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-300">
             <ArrowLeft className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -98,9 +99,9 @@ export function CreativeHeader(props: {
             </span>
           </h1>
         </div>
-      </div>
+        </div>
 
-      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
         {isEditing ? (
           <div className="flex items-center gap-3 p-1 rounded-2xl bg-muted/30 border border-muted-foreground/10">
             <Button variant="ghost" size="sm" onClick={onCancelEditing} disabled={isSaving} className="h-8 px-4 text-xs font-semibold rounded-xl hover:bg-rose-500/10 hover:text-rose-500">
@@ -183,7 +184,8 @@ export function CreativeHeader(props: {
             </DropdownMenu>
           </div>
         )}
-      </div>
-    </motion.div>
+        </div>
+      </m.div>
+    </LazyMotion>
   )
 }

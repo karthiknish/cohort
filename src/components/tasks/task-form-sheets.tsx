@@ -74,7 +74,6 @@ export function CreateTaskSheet({
               <Label htmlFor="task-title">Title</Label>
               <Input
                 id="task-title"
-                autoFocus
                 value={formState.title}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, title: event.target.value }))
@@ -278,7 +277,6 @@ export function EditTaskSheet({
               <Label htmlFor="edit-task-title">Title</Label>
               <Input
                 id="edit-task-title"
-                autoFocus
                 value={formState.title}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, title: event.target.value }))

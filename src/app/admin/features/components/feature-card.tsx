@@ -124,9 +124,9 @@ export function FeatureCard({
       {/* Reference Links Preview */}
       {feature.references.length > 0 && (
         <div className="flex flex-wrap gap-1 pl-4 pt-1 border-t border-border/50">
-          {feature.references.slice(0, 2).map((ref, index) => (
+          {feature.references.slice(0, 2).map((ref) => (
             <a
-              key={index}
+              key={`${ref.url}-${ref.label}`}
               href={ref.url}
               target="_blank"
               rel="noopener noreferrer"

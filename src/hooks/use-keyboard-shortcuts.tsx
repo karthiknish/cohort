@@ -206,11 +206,14 @@ export function formatKeyCombo(combo: string): string {
 export function KeyboardShortcutBadge({ combo, className }: { combo: string; className?: string }) {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
   const parts = combo.split('+')
+  const tokenCounts = new Map<string, number>()
   
   return (
     <kbd className={`inline-flex items-center gap-0.5 ${className || ''}`}>
-      {parts.map((part, i) => {
+      {parts.map((part) => {
         const p = part.toLowerCase().trim()
+        const occurrence = (tokenCounts.get(p) ?? 0) + 1
+        tokenCounts.set(p, occurrence)
         let display = p.toUpperCase()
         
         if (p === 'mod') display = isMac ? '⌘' : 'Ctrl'
@@ -221,7 +224,7 @@ export function KeyboardShortcutBadge({ combo, className }: { combo: string; cla
         
         return (
           <span
-            key={i}
+            key={`${p}-${occurrence}`}
             className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-muted-foreground/30 bg-muted px-1 text-[10px] font-medium text-muted-foreground"
           >
             {display}

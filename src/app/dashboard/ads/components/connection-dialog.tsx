@@ -225,8 +225,8 @@ export const ConnectionDialog = memo(function ConnectionDialog({
               <div>
                 <h4 className="mb-2 text-sm font-medium">What you&apos;ll get</h4>
                 <ul className="space-y-1.5">
-                  {providerInfo.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    {providerInfo.benefits.map((benefit) => (
+                      <li key={benefit} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
                       {benefit}
                     </li>
@@ -237,8 +237,8 @@ export const ConnectionDialog = memo(function ConnectionDialog({
               <div>
                 <h4 className="mb-2 text-sm font-medium">Requirements</h4>
                 <ul className="space-y-1.5">
-                  {providerInfo.requirements.map((req, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    {providerInfo.requirements.map((req) => (
+                      <li key={req} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/60" />
                       {req}
                     </li>

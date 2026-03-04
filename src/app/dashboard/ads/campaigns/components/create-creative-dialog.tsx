@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import { Plus, Loader2, Upload, AlertCircle } from 'lucide-react'
 
@@ -27,7 +27,6 @@ import {
 import { toast } from '@/components/ui/use-toast'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCreativesApi } from '@/lib/convex-api'
-import { filesApi } from '@/lib/convex-api'
 
 type Props = {
   workspaceId: string | null
@@ -37,6 +36,15 @@ type Props = {
   adSetId?: string
   availableAdSets?: Array<{ id: string; name: string }>
   onSuccess?: () => void
+}
+
+type MetaPageActorOption = {
+  id: string
+  name: string
+  tasks: string[]
+  instagramBusinessAccountId: string | null
+  instagramBusinessAccountName: string | null
+  instagramUsername: string | null
 }
 
 const CTA_OPTIONS = [
@@ -59,6 +67,13 @@ const CTA_OPTIONS = [
   { value: 'UPDATE_APP', label: 'Update App' },
 ]
 
+function generateCreativeIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `creative_${crypto.randomUUID()}`
+  }
+  return `creative_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+}
+
 export function CreateCreativeDialog({
   workspaceId,
   providerId,
@@ -68,14 +83,18 @@ export function CreateCreativeDialog({
   availableAdSets,
   onSuccess,
 }: Props) {
+  const isMeta = providerId === 'facebook'
+
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [loadingPageActors, setLoadingPageActors] = useState(false)
+  const [metaPageActors, setMetaPageActors] = useState<MetaPageActorOption[]>([])
   const [selectedAdSetId, setSelectedAdSetId] = useState<string | undefined>(propAdSetId)
 
+  const listMetaPageActors = useAction(adsCreativesApi.listMetaPageActors)
   const createCreative = useAction(adsCreativesApi.createCreative)
   const uploadMedia = useAction(adsCreativesApi.uploadMedia)
-  const generateUploadUrl = useAction(filesApi.generateUploadUrl)
 
   // Form state
   const [name, setName] = useState('')
@@ -91,6 +110,7 @@ export function CreateCreativeDialog({
   const [pageId, setPageId] = useState('')
   const [instagramActorId, setInstagramActorId] = useState('')
   const [status, setStatus] = useState<'ACTIVE' | 'PAUSED'>('PAUSED')
+  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<string | null>(null)
 
   const resetForm = () => {
     setName('')
@@ -107,7 +127,115 @@ export function CreateCreativeDialog({
     setInstagramActorId('')
     setStatus('PAUSED')
     setSelectedAdSetId(propAdSetId)
+    setSubmitIdempotencyKey(null)
   }
+
+  useEffect(() => {
+    setSubmitIdempotencyKey(null)
+  }, [
+    name,
+    objectType,
+    title,
+    body,
+    description,
+    callToActionType,
+    linkUrl,
+    imageUrl,
+    imageHash,
+    videoId,
+    pageId,
+    instagramActorId,
+    status,
+    selectedAdSetId,
+  ])
+
+  const selectedPage = useMemo(
+    () => metaPageActors.find((actor) => actor.id === pageId) ?? null,
+    [metaPageActors, pageId]
+  )
+
+  const instagramActorOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const options: Array<{ id: string; label: string }> = []
+
+    for (const actor of metaPageActors) {
+      const instagramId = actor.instagramBusinessAccountId
+      if (!instagramId || seen.has(instagramId)) continue
+      seen.add(instagramId)
+
+      const accountLabel = actor.instagramBusinessAccountName || actor.instagramUsername || instagramId
+      options.push({
+        id: instagramId,
+        label: accountLabel,
+      })
+    }
+
+    return options
+  }, [metaPageActors])
+
+  const handleSelectPage = (nextPageId: string) => {
+    setPageId(nextPageId)
+    const actor = metaPageActors.find((row) => row.id === nextPageId)
+    setInstagramActorId(actor?.instagramBusinessAccountId ?? '')
+  }
+
+  useEffect(() => {
+    if (!open || !isMeta || !workspaceId) return
+
+    let cancelled = false
+    setLoadingPageActors(true)
+
+    void listMetaPageActors({
+      workspaceId,
+      providerId: 'facebook',
+      clientId: clientId ?? null,
+    })
+      .then((actors) => {
+        if (cancelled) return
+
+        const normalizedActors = Array.isArray(actors)
+          ? (actors as MetaPageActorOption[])
+          : []
+
+        setMetaPageActors(normalizedActors)
+        setPageId((currentPageId) => {
+          const nextPageId =
+            currentPageId && normalizedActors.some((actor) => actor.id === currentPageId)
+              ? currentPageId
+              : (normalizedActors[0]?.id ?? '')
+
+          if (!nextPageId) {
+            setInstagramActorId('')
+            return ''
+          }
+
+          const pageActor = normalizedActors.find((actor) => actor.id === nextPageId)
+          setInstagramActorId(pageActor?.instagramBusinessAccountId ?? '')
+          return nextPageId
+        })
+      })
+      .catch((error) => {
+        if (cancelled) return
+        logError(error, 'CreateCreativeDialog:loadMetaPageActors')
+        setMetaPageActors([])
+        setPageId('')
+        setInstagramActorId('')
+        toast({
+          title: 'Failed to load Meta pages',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingPageActors(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, isMeta, workspaceId, clientId, listMetaPageActors])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -214,12 +342,36 @@ export function CreateCreativeDialog({
       return
     }
 
+    if (!pageId) {
+      toast({
+        title: 'Facebook Page required',
+        description: 'Select a Facebook Page before creating a Meta creative.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!metaPageActors.some((actor) => actor.id === pageId)) {
+      toast({
+        title: 'Invalid Facebook Page',
+        description: 'The selected page is no longer available. Reload the page list and try again.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const effectiveIdempotencyKey = submitIdempotencyKey ?? generateCreativeIdempotencyKey()
+    if (!submitIdempotencyKey) {
+      setSubmitIdempotencyKey(effectiveIdempotencyKey)
+    }
+
     setLoading(true)
 
     await createCreative({
       workspaceId,
       providerId: providerId as any,
       clientId: clientId ?? null,
+      idempotencyKey: effectiveIdempotencyKey,
       campaignId,
       adSetId: selectedAdSetId,
       name: name.trim(),
@@ -232,7 +384,7 @@ export function CreateCreativeDialog({
       imageUrl: imageUrl.trim() || undefined,
       imageHash: imageHash || undefined,
       videoId: videoId || undefined,
-      pageId: pageId || undefined,
+      pageId,
       instagramActorId: instagramActorId || undefined,
       status,
     })
@@ -258,8 +410,6 @@ export function CreateCreativeDialog({
         setLoading(false)
       })
   }
-
-  const isMeta = providerId === 'facebook'
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -466,28 +616,55 @@ export function CreateCreativeDialog({
             </div>
           )}
 
-          {/* Page ID (for Facebook Page posts) */}
+          {/* Page selector */}
           <div className="space-y-2">
-            <Label htmlFor="pageId">Facebook Page ID (optional)</Label>
-            <Input
-              id="pageId"
-              placeholder="Your Facebook Page ID"
-              value={pageId}
-              onChange={(e) => setPageId(e.target.value)}
-              disabled={loading}
-            />
+            <Label htmlFor="pageId">Facebook Page *</Label>
+            <Select
+              value={pageId || undefined}
+              onValueChange={handleSelectPage}
+              disabled={loading || loadingPageActors}
+            >
+              <SelectTrigger id="pageId">
+                <SelectValue placeholder={loadingPageActors ? 'Loading pages...' : 'Select a Facebook Page'} />
+              </SelectTrigger>
+              <SelectContent>
+                {metaPageActors.map((actor) => (
+                  <SelectItem key={actor.id} value={actor.id}>
+                    {actor.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!loadingPageActors && metaPageActors.length === 0 ? (
+              <p className="text-xs text-amber-600">No Facebook Pages found for this integration token.</p>
+            ) : null}
           </div>
 
-          {/* Instagram Actor ID */}
+          {/* Instagram selector */}
           <div className="space-y-2">
-            <Label htmlFor="instagramActorId">Instagram Account ID (optional)</Label>
-            <Input
-              id="instagramActorId"
-              placeholder="Your Instagram business account ID"
-              value={instagramActorId}
-              onChange={(e) => setInstagramActorId(e.target.value)}
-              disabled={loading}
-            />
+            <Label htmlFor="instagramActorId">Instagram Business Account</Label>
+            <Select
+              value={instagramActorId || '__none__'}
+              onValueChange={(value) => setInstagramActorId(value === '__none__' ? '' : value)}
+              disabled={loading || loadingPageActors || instagramActorOptions.length === 0}
+            >
+              <SelectTrigger id="instagramActorId">
+                <SelectValue placeholder="No linked Instagram account" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No Instagram account</SelectItem>
+                {instagramActorOptions.map((actor) => (
+                  <SelectItem key={actor.id} value={actor.id}>
+                    {actor.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedPage?.instagramBusinessAccountId ? (
+              <p className="text-xs text-muted-foreground">Linked Instagram account for selected page is preselected.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Selected page has no linked Instagram business account.</p>
+            )}
           </div>
 
           {/* Initial Status */}

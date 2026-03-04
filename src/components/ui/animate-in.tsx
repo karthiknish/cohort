@@ -1,16 +1,16 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { motion, type HTMLMotionProps, useReducedMotion } from 'framer-motion'
+import { LazyMotion, domAnimation, m, type HTMLMotionProps, useReducedMotion } from 'framer-motion'
 
 const tagMap = {
-  div: motion.div,
-  section: motion.section,
-  article: motion.article,
-  ul: motion.ul,
-  li: motion.li,
-  main: motion.main,
-  form: motion.form,
+  div: m.div,
+  section: m.section,
+  article: m.article,
+  ul: m.ul,
+  li: m.li,
+  main: m.main,
+  form: m.form,
 } as const
 
 type MotionElement = keyof typeof tagMap
@@ -37,26 +37,30 @@ export function FadeIn({
   ...props
 }: FadeInProps) {
   const prefersReducedMotion = useReducedMotion()
-  const Tag = (as ? tagMap[as] : motion.div) as typeof motion.div
+  const Tag = (as ? tagMap[as] : m.div) as typeof m.div
 
   if (prefersReducedMotion) {
     return (
-      <Tag initial={false} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} {...props}>
-        {children}
-      </Tag>
+      <LazyMotion features={domAnimation}>
+        <Tag initial={false} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} {...props}>
+          {children}
+        </Tag>
+      </LazyMotion>
     )
   }
 
   return (
-    <Tag
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ delay, duration, ease: easeOutBezier }}
-      {...props}
-    >
-      {children}
-    </Tag>
+    <LazyMotion features={domAnimation}>
+      <Tag
+        initial={{ opacity: 0, y }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ delay, duration, ease: easeOutBezier }}
+        {...props}
+      >
+        {children}
+      </Tag>
+    </LazyMotion>
   )
 }
 
@@ -78,34 +82,38 @@ export function FadeInStagger({
   ...props
 }: FadeInStaggerProps) {
   const prefersReducedMotion = useReducedMotion()
-  const Tag = (as ? tagMap[as] : motion.div) as typeof motion.div
+  const Tag = (as ? tagMap[as] : m.div) as typeof m.div
 
   if (prefersReducedMotion) {
     return (
-      <Tag
-        initial={false}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, amount: 0.2 }}
-        {...props}
-      >
-        {children}
-      </Tag>
+      <LazyMotion features={domAnimation}>
+        <Tag
+          initial={false}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.2 }}
+          {...props}
+        >
+          {children}
+        </Tag>
+      </LazyMotion>
     )
   }
 
   return (
-    <Tag
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.2 }}
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: stagger, delayChildren: delay, duration } },
-      }}
-      {...props}
-    >
-      {children}
-    </Tag>
+    <LazyMotion features={domAnimation}>
+      <Tag
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: stagger, delayChildren: delay, duration } },
+        }}
+        {...props}
+      >
+        {children}
+      </Tag>
+    </LazyMotion>
   )
 }
 
@@ -131,33 +139,37 @@ export function FadeInItem({
   ...props
 }: FadeInItemProps) {
   const prefersReducedMotion = useReducedMotion()
-  const Tag = (as ? tagMap[as] : motion.div) as typeof motion.div
+  const Tag = (as ? tagMap[as] : m.div) as typeof m.div
 
   if (prefersReducedMotion) {
     return (
-      <Tag
-        initial={false}
-        whileInView={{ opacity: 1 }}
-        viewport={viewport ?? { once: true, amount: 0.2 }}
-        {...props}
-      >
-        {children}
-      </Tag>
+      <LazyMotion features={domAnimation}>
+        <Tag
+          initial={false}
+          whileInView={{ opacity: 1 }}
+          viewport={viewport ?? { once: true, amount: 0.2 }}
+          {...props}
+        >
+          {children}
+        </Tag>
+      </LazyMotion>
     )
   }
 
   return (
-    <Tag
-      initial={initial ?? 'hidden'}
-      whileInView={whileInView ?? 'visible'}
-      viewport={viewport ?? { once: true, amount: 0.2 }}
-      variants={{
-        hidden: { opacity: 0, y },
-        visible: { opacity: 1, y: 0, transition: { duration, ease: easeOutBezier } },
-      }}
-      {...props}
-    >
-      {children}
-    </Tag>
+    <LazyMotion features={domAnimation}>
+      <Tag
+        initial={initial ?? 'hidden'}
+        whileInView={whileInView ?? 'visible'}
+        viewport={viewport ?? { once: true, amount: 0.2 }}
+        variants={{
+          hidden: { opacity: 0, y },
+          visible: { opacity: 1, y: 0, transition: { duration, ease: easeOutBezier } },
+        }}
+        {...props}
+      >
+        {children}
+      </Tag>
+    </LazyMotion>
   )
 }

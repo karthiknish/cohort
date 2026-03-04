@@ -30,16 +30,15 @@ export function usePullToRefresh(
   const startYRef = useRef<number>(0)
   const pullingRef = useRef<boolean>(false)
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = useCallback(() => {
     if (state.isRefreshing) return
     
     setState(prev => ({ ...prev, isRefreshing: true, isPulling: false }))
-    
-    try {
-      await options.onRefresh()
-    } finally {
-      setState(prev => ({ ...prev, isRefreshing: false, pullDistance: 0, progress: 0 }))
-    }
+
+    void Promise.resolve(options.onRefresh())
+      .finally(() => {
+        setState(prev => ({ ...prev, isRefreshing: false, pullDistance: 0, progress: 0 }))
+      })
   }, [options, state.isRefreshing])
 
   useEffect(() => {

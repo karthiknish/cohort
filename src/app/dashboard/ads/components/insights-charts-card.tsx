@@ -240,8 +240,8 @@ function FunnelChart({
             }}
           />
           <Bar dataKey="value" name="Volume" radius={[0, 4, 4, 0]}>
-            {funnelData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
+              {funnelData.map((entry) => (
+                <Cell key={`funnel-${entry.name}`} fill={entry.fill} />
             ))}
           </Bar>
         </BarChart>
@@ -283,9 +283,9 @@ function BenchmarkChart({
           <Tooltip formatter={(v: number) => `${v}th percentile`} />
           <Legend />
           <Bar dataKey="percentile" name="Your Performance" fill={metricColors.efficiency} radius={[4, 4, 0, 0]}>
-            {chartData.map((entry, index) => (
+              {chartData.map((entry) => (
               <Cell
-                key={`cell-${index}`}
+                  key={`benchmark-${entry.metric}`}
                 fill={entry.percentile > 75 ? CHART_COLORS.metrics.revenue : entry.percentile > 50 ? CHART_COLORS.metrics.roas : entry.percentile > 25 ? CHART_COLORS.metrics.ctr : CHART_COLORS.metrics.spend}
               />
             ))}

@@ -113,8 +113,8 @@ export function AlgorithmicInsightsSection({
         <CardContent>
           {loading ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex gap-4">
+                {[1, 2, 3].map((skeletonId) => (
+                  <div key={`insight-skeleton-${skeletonId}`} className="flex gap-4">
                   <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
                   <div className="w-full space-y-2">
                     <Skeleton className="h-4 w-1/4" />
@@ -135,8 +135,8 @@ export function AlgorithmicInsightsSection({
             </div>
           ) : (
             <div className="space-y-6">
-              {insights.map((insight, idx) => (
-                <div key={idx} className="group relative flex gap-4 transition-all">
+                {insights.map((insight) => (
+                  <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 transition-all">
                   <div className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                     insight.level === 'success' ? "bg-emerald-500/10 text-emerald-600" :

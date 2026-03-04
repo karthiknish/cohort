@@ -76,9 +76,9 @@ export function ActivityDetailsModal({
             <div>
               <h4 className="text-sm font-medium mb-2">Changes</h4>
               <div className="space-y-2">
-                {activity.metadata.changes.map((change, idx) => (
+                {activity.metadata.changes.map((change) => (
                   <div
-                    key={idx}
+                    key={`${change.field}-${change.oldValue}-${change.newValue}`}
                     className="flex items-center gap-2 text-sm rounded-lg bg-muted/50 p-2"
                   >
                     <span className="text-muted-foreground">{change.field}:</span>

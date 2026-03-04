@@ -1,36 +1,42 @@
 'use client'
 
+import NextImage from 'next/image'
 import { useCallback, useState } from 'react'
 import { useAction } from 'convex/react'
-import { RefreshCw, Image, Video, FileText, ExternalLink, BarChart2, CheckSquare, Square, ImageOff } from 'lucide-react'
+import { RefreshCw, Image as ImageIcon, Video, FileText, ExternalLink, BarChart2, CheckSquare, Square, ImageOff } from 'lucide-react'
 
 // Component to handle image loading with fallback
 function CreativeImage({ src, alt, fallbackSrc }: { src?: string; alt?: string; fallbackSrc?: string }) {
   const [error, setError] = useState(false)
-  const [currentSrc, setCurrentSrc] = useState(src)
+  const [useFallback, setUseFallback] = useState(false)
+
+  const currentSrc = useFallback ? fallbackSrc ?? src : src
 
   if (!src || error) {
     return <ImageOff className="h-8 w-8 text-muted-foreground" />
   }
 
   return (
-    <img
-      src={currentSrc}
-      alt={alt || ''}
-      className="w-full h-full object-cover"
-      loading="lazy"
-      decoding="async"
-      style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
-      onError={() => {
-        if (fallbackSrc && currentSrc !== fallbackSrc) {
-          // Try fallback URL first
-          setCurrentSrc(fallbackSrc)
-        } else {
-          // Show error state
-          setError(true)
-        }
-      }}
-    />
+    <div className="relative h-full w-full">
+      <NextImage
+        src={currentSrc}
+        alt={alt || ''}
+        fill
+        unoptimized
+        sizes="(max-width: 768px) 100vw, 320px"
+        className="object-cover"
+        style={{ imageRendering: 'crisp-edges' }}
+        onError={() => {
+          if (fallbackSrc && !useFallback) {
+            // Try fallback URL first.
+            setUseFallback(true)
+          } else {
+            // Show error state.
+            setError(true)
+          }
+        }}
+      />
+    </div>
   )
 }
 
@@ -150,7 +156,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
   const getTypeIcon = (type: string) => {
     const t = type.toLowerCase()
     if (t.includes('video')) return <Video className="h-4 w-4" />
-    if (t.includes('image') || t.includes('display')) return <Image className="h-4 w-4" />
+    if (t.includes('image') || t.includes('display')) return <ImageIcon className="h-4 w-4" />
     if (t.includes('lead')) return <span className="text-xs font-medium">LG</span>
     return <FileText className="h-4 w-4" />
   }
@@ -287,8 +293,8 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                               </TooltipTrigger>
                               <TooltipContent>
                                 <div className="max-w-[300px]">
-                                  {creative.headlines.map((h, i) => (
-                                    <p key={i} className="text-xs mb-1">{h}</p>
+                                    {creative.headlines.map((h) => (
+                                      <p key={`${creative.creativeId}-${h}`} className="text-xs mb-1">{h}</p>
                                   ))}
                                 </div>
                               </TooltipContent>
@@ -349,6 +355,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
                   <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border">
                     {c.imageUrl ? (
                       <CreativeImage
+                          key={`${c.creativeId}-${c.imageUrl ?? ''}-${c.thumbnailUrl ?? ''}`}
                         src={c.imageUrl}
                         alt=""
                         fallbackSrc={c.thumbnailUrl}

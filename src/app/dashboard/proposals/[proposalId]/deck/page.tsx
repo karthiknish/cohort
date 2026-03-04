@@ -187,8 +187,8 @@ export default function ProposalDeckPage() {
                           </CardHeader>
                           <CardContent className="p-4 pt-2">
                             <ul className="space-y-2">
-                              {slide.points.map((point, i) => (
-                                <li key={i} className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
+                              {slide.points.map((point) => (
+                                <li key={`${slide.id}-${point}`} className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
                                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary/40" />
                                   {point}
                                 </li>
@@ -217,7 +217,7 @@ export default function ProposalDeckPage() {
                 <div className="aspect-[16/9] w-full overflow-hidden rounded-lg border bg-muted">
                   <iframe
                     src={pdfViewerUrl}
-                    title={proposal.clientName ? `${proposal.clientName} Presentation` : 'Presentation'}
+                    title="Proposal presentation preview"
                     className="h-full w-full"
                   />
                 </div>

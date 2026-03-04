@@ -62,6 +62,8 @@ interface AdConnectionsCardProps {
   refreshing: boolean
 }
 
+const EMPTY_INTEGRATION_STATUSES: Record<string, IntegrationStatusInfo> = {}
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -107,7 +109,7 @@ export function AdConnectionsCard({
   connectedProviders,
   connectingProvider,
   connectionErrors,
-  integrationStatuses = {},
+  integrationStatuses = EMPTY_INTEGRATION_STATUSES,
   onConnect,
   onDisconnect,
   onOauthRedirect,
@@ -141,29 +143,38 @@ export function AdConnectionsCard({
   }, [])
 
   // Handle connection from dialog
-  const handleDialogConnect = useCallback(async () => {
-    if (!selectedProvider) return
+  const handleDialogConnect = useCallback((): Promise<void> => {
+    if (!selectedProvider) return Promise.resolve()
 
     setConnectionStep('redirecting')
 
-    try {
-      if (selectedProvider.mode === 'oauth') {
-        // For OAuth redirect flow, we just need to start the redirect
-        await onOauthRedirect?.(selectedProvider.id)
-        // The page will redirect, so we don't need to update state
-      } else if (selectedProvider.connect) {
-        // For popup flow, show progress through steps
-        setConnectionStep('authenticating')
-        await onConnect(selectedProvider.id, selectedProvider.connect)
-        setConnectionStep('fetching')
-        // Small delay to show the fetching step before completion
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        setConnectionStep('complete')
-      }
-    } catch {
-      // Error will be shown in the dialog via connectionErrors prop
-      setConnectionStep('error')
+    if (selectedProvider.mode === 'oauth') {
+      // For OAuth redirect flow, we just need to start the redirect.
+      return Promise.resolve(onOauthRedirect?.(selectedProvider.id))
+        .catch(() => {
+          // Error will be shown in the dialog via connectionErrors prop.
+          setConnectionStep('error')
+        })
     }
+
+    if (!selectedProvider.connect) {
+      return Promise.resolve()
+    }
+
+    // For popup flow, show progress through steps.
+    setConnectionStep('authenticating')
+    return Promise.resolve(onConnect(selectedProvider.id, selectedProvider.connect))
+      .then(() => {
+        setConnectionStep('fetching')
+        return new Promise<void>((resolve) => setTimeout(resolve, 500))
+      })
+      .then(() => {
+        setConnectionStep('complete')
+      })
+      .catch(() => {
+        // Error will be shown in the dialog via connectionErrors prop.
+        setConnectionStep('error')
+      })
   }, [selectedProvider, onConnect, onOauthRedirect])
 
   // Handle retry
@@ -178,17 +189,17 @@ export function AdConnectionsCard({
   }, [])
 
   // Handle disconnect confirmation
-  const handleConfirmDisconnect = useCallback(async () => {
-    if (!selectedProvider) return
+  const handleConfirmDisconnect = useCallback((): Promise<void> => {
+    if (!selectedProvider) return Promise.resolve()
 
     setIsDisconnecting(true)
-    try {
-      await onDisconnect(selectedProvider.id)
-    } finally {
-      setIsDisconnecting(false)
-      setDisconnectDialogOpen(false)
-      setSelectedProvider(null)
-    }
+
+    return Promise.resolve(onDisconnect(selectedProvider.id))
+      .finally(() => {
+        setIsDisconnecting(false)
+        setDisconnectDialogOpen(false)
+        setSelectedProvider(null)
+      })
   }, [selectedProvider, onDisconnect])
 
   // Handle quick reconnect (no dialog)

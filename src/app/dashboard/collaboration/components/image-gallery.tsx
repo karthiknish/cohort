@@ -93,9 +93,9 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
     return (
       <>
         <div className={cn("grid grid-cols-2 gap-2 max-w-xl", className)}>
-          {images.map((image, index) => (
+            {images.map((image, index) => (
             <figure
-              key={`${image.url}-${index}`}
+                key={image.url}
               className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
               onClick={() => handleImageClick(index)}
             >
@@ -147,9 +147,9 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
               </div>
             </div>
           </figure>
-          {images.slice(1, 3).map((image, index) => (
+            {images.slice(1, 3).map((image, index) => (
             <figure
-              key={`${image.url}-${index}`}
+                key={image.url}
               className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
               onClick={() => handleImageClick(index + 1)}
             >
@@ -186,9 +186,9 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
   return (
     <>
       <div className={cn("grid grid-cols-2 gap-2 max-w-xl", className)}>
-        {displayImages.map((image, index) => (
+          {displayImages.map((image, index) => (
           <figure
-            key={`${image.url}-${index}`}
+              key={image.url}
             className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
             onClick={() => handleImageClick(index)}
           >

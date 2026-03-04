@@ -12,7 +12,7 @@ import { ProposalFormData } from "@/lib/proposals"
 import type { ProposalPresentationDeck } from "@/types/proposals"
 import { cn } from "@/lib/utils"
 
-import { motion } from "framer-motion"
+import { LazyMotion, domAnimation, m } from "framer-motion"
 import {
   fadeInUpVariants,
   slideInLeftVariants,
@@ -20,8 +20,6 @@ import {
   subtlePulseVariants,
   blobVariants,
   blobVariantsSlow,
-  progressVariants,
-  shimmerVariants,
   transitions,
 } from '@/lib/dashboard-animations'
 
@@ -72,9 +70,10 @@ Timeline: ${summary.timelines.startTime}
   }
 
   return (
-    <div className="space-y-8">
+    <LazyMotion features={domAnimation}>
+      <div className="space-y-8">
       {/* Premium Hero Section with Mesh Gradient */}
-      <motion.div
+      <m.div
         initial="hidden"
         animate="visible"
         variants={fadeInUpVariants}
@@ -82,12 +81,12 @@ Timeline: ${summary.timelines.startTime}
       >
         {/* Animated Mesh Gradient Blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-          <motion.div
+          <m.div
             animate="animate"
             variants={blobVariants}
             className="absolute -top-[20%] -right-[10%] h-[300px] w-[300px] rounded-full bg-primary/10 blur-[100px]"
           />
-          <motion.div
+          <m.div
             animate="animate"
             variants={blobVariantsSlow}
             className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px]"
@@ -97,7 +96,7 @@ Timeline: ${summary.timelines.startTime}
         
         <div className="relative flex flex-col md:flex-row items-center gap-10">
           <div className="relative shrink-0">
-            <motion.div
+            <m.div
               initial="initial"
               animate="animate"
               variants={subtlePulseVariants}
@@ -141,10 +140,10 @@ Timeline: ${summary.timelines.startTime}
             </div>
           </div>
         </div>
-      </motion.div>
+      </m.div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <motion.div
+        <m.div
           initial="hidden"
           animate="visible"
           variants={slideInLeftVariants}
@@ -167,7 +166,7 @@ Timeline: ${summary.timelines.startTime}
             <CardContent className="space-y-6 pt-6 flex-1">
               <div className="grid gap-5">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Target Client</label>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Target Client</p>
                   <div className="flex items-center gap-2.5">
                     <div className="p-2 rounded-xl bg-muted text-foreground ring-1 ring-muted-foreground/10">
                       <Layout className="h-3.5 w-3.5" />
@@ -180,7 +179,7 @@ Timeline: ${summary.timelines.startTime}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Value Proposition</label>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Value Proposition</p>
                   <div className="flex flex-wrap gap-1.5">
                     {summary.goals.objectives.length ? summary.goals.objectives.map(objective => (
                       <Badge key={objective} variant="secondary" className="text-[10px] font-semibold bg-primary/5 text-primary border-primary/10 px-2 py-0.5">
@@ -191,7 +190,7 @@ Timeline: ${summary.timelines.startTime}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Project Scope</label>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Project Scope</p>
                   <div className="p-3 rounded-xl bg-muted/30 border border-muted/50">
                     <p className="text-xs font-medium leading-relaxed text-muted-foreground">
                       {summary.scope.services.join(", ") || "No services selected"}
@@ -200,7 +199,7 @@ Timeline: ${summary.timelines.startTime}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Proposed Timeline</label>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Proposed Timeline</p>
                   <p className="text-xs font-bold text-foreground flex items-center gap-2">
                     <RefreshCw className="h-3 w-3 text-primary" />
                     {summary.timelines.startTime || "Not scheduled"}
@@ -209,9 +208,9 @@ Timeline: ${summary.timelines.startTime}
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
 
-        <motion.div
+        <m.div
           initial="hidden"
           animate="visible"
           variants={slideInRightVariants}
@@ -268,7 +267,7 @@ Timeline: ${summary.timelines.startTime}
                     </div>
 
                     <div className="flex flex-col gap-4">
-                      <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</label>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</p>
                       <div className="space-y-3">
                         {(presentationDeck.storageUrl || presentationDeck.pptxUrl) && (
                           <Button variant="outline" className="w-full justify-start h-14 rounded-2xl border-muted/60 hover:bg-primary/[0.03] hover:border-primary/30 group transition-all" asChild>
@@ -338,7 +337,7 @@ Timeline: ${summary.timelines.startTime}
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center h-full">
                   <div className="relative mb-6">
-                    <motion.div 
+                    <m.div 
                       animate={{ 
                         scale: [1, 1.2, 1],
                         opacity: [0.2, 0.5, 0.2]
@@ -354,24 +353,25 @@ Timeline: ${summary.timelines.startTime}
                   <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed">
                     Our AI engine is currently structuring your presentation slides. It usually takes less than 60 seconds.
                   </p>
-                  <motion.div 
+                  <m.div 
                     initial={{ width: 0 }}
                     animate={{ width: "100%" }}
                     transition={{ duration: 60, ease: "linear" }}
                     className="h-1 bg-primary/30 rounded-full mt-8 max-w-[200px] w-full relative overflow-hidden"
                   >
-                    <motion.div 
+                    <m.div 
                       animate={{ x: ["-100%", "100%"] }}
                       transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                       className="absolute inset-0 bg-primary w-1/3"
                     />
-                  </motion.div>
+                  </m.div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
       </div>
-    </div>
+      </div>
+    </LazyMotion>
   )
 }

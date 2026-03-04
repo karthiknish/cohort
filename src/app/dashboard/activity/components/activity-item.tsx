@@ -141,9 +141,9 @@ export function ActivityItem({
             {/* Reactions */}
             {activity.reactions && activity.reactions.length > 0 && (
               <div className="flex items-center gap-1 mt-1">
-                {activity.reactions.map((reaction, idx) => (
+                {activity.reactions.map((reaction) => (
                   <button
-                    key={idx}
+                    key={`${reaction.emoji}-${reaction.count}`}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()

@@ -13,19 +13,24 @@ export function highlightText(text: string, terms?: string[]) {
   const regex = new RegExp(`(${pattern})`, 'gi')
 
   const segments = text.split(regex)
-  return segments.map((segment, index) => {
+  let cursor = 0
+
+  return segments.map((segment) => {
+    const keyBase = cursor
+    cursor += segment.length
+
     if (segment === '') return null
     if (regex.test(segment)) {
       // Reset regex.lastIndex side-effect from test
       regex.lastIndex = 0
       return (
-        <mark key={`highlight-${index}`} className="rounded-sm bg-primary/20 px-0.5 py-[1px] text-primary">
+        <mark key={`highlight-${keyBase}`} className="rounded-sm bg-primary/20 px-0.5 py-[1px] text-primary">
           {segment}
         </mark>
       )
     }
     regex.lastIndex = 0
-    return <Fragment key={`text-${index}`}>{segment}</Fragment>
+    return <Fragment key={`text-${keyBase}`}>{segment}</Fragment>
   })
 }
 

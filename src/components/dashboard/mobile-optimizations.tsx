@@ -189,9 +189,9 @@ export function MobileQuickActions({ actions, className }: MobileQuickActionsPro
         className
       )}>
         <div className="grid grid-cols-4 gap-1 p-2">
-          {actions.slice(0, 4).map((action, idx) => (
+            {actions.slice(0, 4).map((action) => (
             <button
-              key={idx}
+                key={action.label}
               type="button"
               onClick={action.onClick}
               className="flex flex-col items-center gap-1 rounded-lg p-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 active:bg-muted"
@@ -248,9 +248,9 @@ function MobileActionSheet({ actions }: MobileActionSheetProps) {
           <SheetTitle>More Actions</SheetTitle>
         </SheetHeader>
         <div className="space-y-1">
-          {actions.map((action, idx) => (
+            {actions.map((action) => (
             <button
-              key={idx}
+                key={action.label}
               type="button"
               onClick={() => {
                 action.onClick()

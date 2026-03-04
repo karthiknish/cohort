@@ -24,6 +24,8 @@ function generateId(prefix: string) {
 const proposalZ = z.object({
   legacyId: z.string(),
   ownerId: z.string().nullable(),
+  agentConversationId: z.string().nullable().optional(),
+  lastAgentInteractionAtMs: z.number().nullable().optional(),
   status: z.string(),
   stepProgress: z.number(),
   formData: z.any(),
@@ -55,6 +57,8 @@ export const getByLegacyId = zWorkspaceQuery({
     return {
       legacyId: row.legacyId,
       ownerId: row.ownerId,
+      agentConversationId: row.agentConversationId ?? null,
+      lastAgentInteractionAtMs: row.lastAgentInteractionAtMs ?? null,
       status: row.status,
       stepProgress: row.stepProgress,
       formData: row.formData,
@@ -116,6 +120,8 @@ export const list = zWorkspaceQuery({
     return rows.map((row) => ({
       legacyId: row.legacyId,
       ownerId: row.ownerId,
+      agentConversationId: row.agentConversationId ?? null,
+      lastAgentInteractionAtMs: row.lastAgentInteractionAtMs ?? null,
       status: row.status,
       stepProgress: row.stepProgress,
       formData: row.formData,
@@ -157,6 +163,8 @@ export const create = zWorkspaceMutation({
     formData: z.any(),
     clientId: z.string().nullable(),
     clientName: z.string().nullable(),
+    agentConversationId: z.string().nullable().optional(),
+    lastAgentInteractionAtMs: z.number().nullable().optional(),
   },
   returns: z.object({ legacyId: z.string() }),
   handler: async (ctx, args) => {
@@ -186,6 +194,8 @@ export const create = zWorkspaceMutation({
       pptUrl: null,
       clientId: args.clientId,
       clientName: args.clientName,
+      agentConversationId: args.agentConversationId ?? null,
+      lastAgentInteractionAtMs: args.lastAgentInteractionAtMs ?? null,
       presentationDeck: null,
       createdAtMs: timestamp,
       updatedAtMs: timestamp,
@@ -212,6 +222,8 @@ export const update = zWorkspaceMutation({
     pdfStorageId: z.string().nullable().optional(),
     pptStorageId: z.string().nullable().optional(),
     presentationDeck: z.any().nullable().optional(),
+    agentConversationId: z.string().nullable().optional(),
+    lastAgentInteractionAtMs: z.number().nullable().optional(),
     updatedAtMs: z.number(),
     lastAutosaveAtMs: z.number(),
   },
@@ -243,6 +255,9 @@ export const update = zWorkspaceMutation({
     if (args.pdfStorageId !== undefined) patch.pdfStorageId = args.pdfStorageId
     if (args.pptStorageId !== undefined) patch.pptStorageId = args.pptStorageId
     if (args.presentationDeck !== undefined) patch.presentationDeck = args.presentationDeck
+    if (args.agentConversationId !== undefined) patch.agentConversationId = args.agentConversationId
+    if (args.lastAgentInteractionAtMs !== undefined)
+      patch.lastAgentInteractionAtMs = args.lastAgentInteractionAtMs
 
     await ctx.db.patch(existing._id, patch)
     return { ok: true }
@@ -285,6 +300,8 @@ export const bulkUpsert = zAdminMutation({
         pptStorageId: z.string().nullable().optional(),
         clientId: z.string().nullable(),
         clientName: z.string().nullable(),
+        agentConversationId: z.string().nullable().optional(),
+        lastAgentInteractionAtMs: z.number().nullable().optional(),
         presentationDeck: z.any().nullable(),
         createdAtMs: z.number(),
         updatedAtMs: z.number(),
@@ -317,6 +334,8 @@ export const bulkUpsert = zAdminMutation({
         pptStorageId: proposal.pptStorageId ?? null,
         clientId: proposal.clientId,
         clientName: proposal.clientName,
+        agentConversationId: proposal.agentConversationId ?? null,
+        lastAgentInteractionAtMs: proposal.lastAgentInteractionAtMs ?? null,
         presentationDeck: proposal.presentationDeck,
         createdAtMs: proposal.createdAtMs,
         updatedAtMs: proposal.updatedAtMs,

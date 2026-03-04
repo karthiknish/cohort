@@ -261,13 +261,13 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
                         <div>
                           <p className="text-xs text-muted-foreground mb-1 font-medium">Demographics</p>
                           <div className="flex flex-wrap gap-1">
-                            {t.demographics.ageRanges.map((age, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
+                              {t.demographics.ageRanges.map((age) => (
+                                <Badge key={`${t.entityId}-age-${age}`} variant="secondary" className="text-xs">
                                 {formatAgeRange(age)}
                               </Badge>
                             ))}
-                            {t.demographics.genders.map((gender, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs capitalize">
+                              {t.demographics.genders.map((gender) => (
+                                <Badge key={`${t.entityId}-gender-${gender}`} variant="secondary" className="text-xs capitalize">
                                 {gender.toLowerCase()}
                               </Badge>
                             ))}
@@ -280,8 +280,8 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
                         <div>
                           <p className="text-xs text-muted-foreground mb-1 font-medium">Locations</p>
                           <div className="flex flex-wrap gap-1">
-                            {t.locations.included.slice(0, 5).map((loc, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
+                              {t.locations.included.slice(0, 5).map((loc) => (
+                                <Badge key={`${t.entityId}-loc-${loc.name}`} variant="outline" className="text-xs">
                                 {loc.name}
                               </Badge>
                             ))}
@@ -299,8 +299,8 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
                         <div>
                           <p className="text-xs text-muted-foreground mb-1 font-medium">Audiences</p>
                           <div className="flex flex-wrap gap-1">
-                            {t.audiences.included.slice(0, 5).map((aud, i) => (
-                              <Badge key={i} className="text-xs">
+                              {t.audiences.included.slice(0, 5).map((aud) => (
+                                <Badge key={`${t.entityId}-aud-${aud.id ?? aud.name}`} className="text-xs">
                                 {aud.name}
                               </Badge>
                             ))}
@@ -318,13 +318,13 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
                         <div>
                           <p className="text-xs text-muted-foreground mb-1 font-medium">Professional</p>
                           <div className="flex flex-wrap gap-1">
-                            {t.professional.industries.slice(0, 3).map((ind, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
+                              {t.professional.industries.slice(0, 3).map((ind) => (
+                                <Badge key={`${t.entityId}-industry-${ind.id ?? ind.name}`} variant="outline" className="text-xs">
                                 {ind.name}
                               </Badge>
                             ))}
-                            {t.professional.jobTitles.slice(0, 3).map((job, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
+                              {t.professional.jobTitles.slice(0, 3).map((job) => (
+                                <Badge key={`${t.entityId}-job-${job.id ?? job.name}`} variant="outline" className="text-xs">
                                 {job.name}
                               </Badge>
                             ))}

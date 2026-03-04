@@ -139,7 +139,6 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
               setDeleteAccountError(null)
             }}
             placeholder="Type DELETE to confirm"
-            autoFocus
           />
           {deleteAccountError ? <p className="text-sm text-destructive">{deleteAccountError}</p> : null}
         </div>

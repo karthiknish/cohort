@@ -281,7 +281,6 @@ export function SubtaskCreator({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="h-8 text-sm"
-        autoFocus
       />
       <Button type="submit" size="sm" className="h-8">
         Add

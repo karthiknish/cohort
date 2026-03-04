@@ -53,6 +53,8 @@ interface GlobalSearchProps {
   shortcut?: string
 }
 
+const EMPTY_SEARCH_FUNCTIONS: NonNullable<GlobalSearchProps['searchFunctions']> = {}
+
 const SEARCH_TYPE_ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }>> = {
   tasks: FileText,
   projects: FolderOpen,
@@ -76,7 +78,7 @@ const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
  */
 export function GlobalSearch({
   trigger,
-  searchFunctions = {},
+  searchFunctions = EMPTY_SEARCH_FUNCTIONS,
   onResultClick,
   shortcut = 'Cmd+K',
 }: GlobalSearchProps) {
@@ -206,7 +208,6 @@ export function GlobalSearch({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search across all items..."
             className="flex-1"
-            autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 e.preventDefault()

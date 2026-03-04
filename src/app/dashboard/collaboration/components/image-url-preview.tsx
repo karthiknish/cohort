@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { CircleAlert, LoaderCircle, ZoomIn } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -18,15 +18,18 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
   const [hasError, setHasError] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
 
-  const fileName = (() => {
-    try {
-      const parsed = new URL(url)
-      const pathParts = parsed.pathname.split("/")
-      return pathParts[pathParts.length - 1] || "Image"
-    } catch {
-      return "Image"
+  const fileName = useMemo(() => {
+    const pathWithMaybeHash = url.split("?")[0] ?? ""
+    const pathOnly = pathWithMaybeHash.split("#")[0] ?? ""
+    const segments = pathOnly.split("/").filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+
+    if (typeof lastSegment === 'string' && lastSegment.length > 0) {
+      return lastSegment
     }
-  })()
+
+    return "Image"
+  }, [url])
 
   if (hasError) {
     return (

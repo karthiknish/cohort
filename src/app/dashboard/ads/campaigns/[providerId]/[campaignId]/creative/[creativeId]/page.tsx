@@ -44,6 +44,7 @@ export default function CreativeDetailPage() {
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
   const listCreatives = useAction(adsCreativesApi.listCreatives)
+  const updateCreative = useAction(adsCreativesApi.updateCreative)
   const listAdMetrics = useAction(adsAdMetricsApi.listAdMetrics)
   const generateCopyAction = useAction(creativesCopyApi.generateCopy)
 
@@ -167,38 +168,50 @@ export default function CreativeDetailPage() {
     }
   }, [creative, fetchMetrics])
 
-  const handleCopy = async (text: string, field: string) => {
-    try {
-      if (typeof window !== 'undefined' && navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text)
-      } else {
-        // Fallback to execCommand for non-secure contexts or older browsers
-        const textArea = document.createElement("textarea")
-        textArea.value = text
-        textArea.style.position = "fixed"
-        textArea.style.left = "-999999px"
-        textArea.style.top = "-999999px"
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        document.execCommand('copy')
-        textArea.remove()
-      }
+  const handleCopy = (text: string, field: string) => {
+    const canUseClipboardApi =
+      typeof window !== 'undefined' &&
+      typeof navigator !== 'undefined' &&
+      typeof navigator.clipboard !== 'undefined' &&
+      window.isSecureContext
 
-      setCopiedField(field)
-      toast({
-        title: "Copied to clipboard",
-        description: "Text has been copied successfully.",
+    const copyPromise = canUseClipboardApi
+      ? navigator.clipboard.writeText(text)
+      : Promise.resolve().then(() => {
+          // Fallback to execCommand for non-secure contexts or older browsers
+          const textArea = document.createElement("textarea")
+          textArea.value = text
+          textArea.style.position = "fixed"
+          textArea.style.left = "-999999px"
+          textArea.style.top = "-999999px"
+          document.body.appendChild(textArea)
+          textArea.focus()
+          textArea.select()
+          const copied = document.execCommand('copy')
+          textArea.remove()
+
+          if (!copied) {
+            throw new Error('Copy command failed')
+          }
+        })
+
+    void copyPromise
+      .then(() => {
+        setCopiedField(field)
+        toast({
+          title: "Copied to clipboard",
+          description: "Text has been copied successfully.",
+        })
+        setTimeout(() => setCopiedField(null), 2000)
       })
-      setTimeout(() => setCopiedField(null), 2000)
-    } catch (err) {
-      console.error('Failed to copy text: ', err)
-      toast({
-        title: "Copy failed",
-        description: "Please try selecting and copying manually.",
-        variant: "destructive",
+      .catch((err) => {
+        console.error('Failed to copy text: ', err)
+        toast({
+          title: "Copy failed",
+          description: "Please try selecting and copying manually.",
+          variant: "destructive",
+        })
       })
-    }
   }
 
   const startEditing = () => {
@@ -305,19 +318,53 @@ export default function CreativeDetailPage() {
   }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
 
   const handleSave = async () => {
+    if (!workspaceId) {
+      toast({
+        title: 'Sign in required',
+        description: 'You need to be signed in to save creative updates.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!creative) {
+      toast({
+        title: 'Creative unavailable',
+        description: 'Creative details are not loaded yet.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsSaving(true)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const normalizedHeadlines = editedHeadlines.map((headline) => headline.trim()).filter(Boolean)
+    const normalizedDescriptions = editedDescriptions.map((description) => description.trim()).filter(Boolean)
+    const normalizedCta = editedCta.trim()
+    const normalizedLandingPage = editedLandingPage.trim()
+
+    await updateCreative({
+      workspaceId,
+      providerId: params.providerId as any,
+      clientId: selectedClientId ?? null,
+      creativeId: params.creativeId,
+      title: normalizedHeadlines[0],
+      body: normalizedDescriptions[0],
+      callToActionType: normalizedCta || undefined,
+      linkUrl: normalizedLandingPage || undefined,
+    })
       .then(() => {
         if (creative) {
           setCreative({
             ...creative,
-            headlines: editedHeadlines.filter(h => h.trim()),
-            descriptions: editedDescriptions.filter(d => d.trim()),
-            callToAction: editedCta,
-            landingPageUrl: editedLandingPage,
+            headlines: normalizedHeadlines,
+            descriptions: normalizedDescriptions,
+            callToAction: normalizedCta,
+            landingPageUrl: normalizedLandingPage,
           })
         }
+
+        void fetchCreative()
 
         toast({
           title: 'Changes saved',
@@ -329,7 +376,7 @@ export default function CreativeDetailPage() {
         logError(error, 'CreativeDetailPage:handleSave')
         toast({
           title: 'Error',
-          description: 'Failed to save changes. Please try again.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })

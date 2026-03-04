@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 // Test script to verify proposal validation fixes
-require('dotenv').config({ path: '.env.local' });
 
 // Mock the validation functions
 const validateProposalStep = (stepId, form) => {

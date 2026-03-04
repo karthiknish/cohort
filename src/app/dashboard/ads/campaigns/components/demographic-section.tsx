@@ -54,18 +54,18 @@ export function DemographicSection({
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
         <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border bg-muted/20">
-          {aggregatedData.demographics.ageRanges.map((age, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
+            {aggregatedData.demographics.ageRanges.map((age) => (
+              <Badge key={`age-${age}`} variant="secondary" className="text-xs">
               {formatAgeRange(age)}
             </Badge>
           ))}
-          {aggregatedData.demographics.genders.map((gender, index) => (
-            <Badge key={index} variant="outline" className="text-xs capitalize">
+            {aggregatedData.demographics.genders.map((gender) => (
+              <Badge key={`gender-${gender}`} variant="outline" className="text-xs capitalize">
               {gender.toLowerCase()}
             </Badge>
           ))}
-          {aggregatedData.demographics.languages.map((lang, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
+            {aggregatedData.demographics.languages.map((lang) => (
+              <Badge key={`lang-${lang}`} variant="outline" className="text-xs">
               {lang}
             </Badge>
           ))}

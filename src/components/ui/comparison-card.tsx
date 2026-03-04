@@ -52,8 +52,8 @@ export function ComparisonCard({ title, description, metrics, isLoading, classNa
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-16 w-full" />
+            {Array.from({ length: 4 }, (_, slot) => `comparison-skeleton-${slot + 1}`).map((slotKey) => (
+              <Skeleton key={slotKey} className="h-16 w-full" />
             ))}
           </div>
         </CardContent>
@@ -85,12 +85,13 @@ export function ComparisonCard({ title, description, metrics, isLoading, classNa
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {metrics.map((metric, index) => {
+          {metrics.map((metric) => {
             const change = calculateChange(metric.current, metric.previous)
             const ChangeIcon = change.type === 'up' ? TrendingUp : change.type === 'down' ? TrendingDown : Minus
+            const metricKey = `${metric.label}-${metric.current}-${metric.previous}`
 
             return (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-muted/10 last:border-0">
+              <div key={metricKey} className="flex items-center justify-between py-2 border-b border-muted/10 last:border-0">
                 <div className="flex items-center gap-3 flex-1">
                   <span className="text-sm font-medium text-foreground">{metric.label}</span>
                   <div className="flex flex-col items-end gap-1 text-right text-sm">
@@ -176,8 +177,8 @@ export function SideBySideComparison({
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-14 w-full" />
+            {Array.from({ length: 5 }, (_, slot) => `side-by-side-skeleton-${slot + 1}`).map((slotKey) => (
+              <Skeleton key={slotKey} className="h-14 w-full" />
             ))}
           </div>
         </CardContent>
@@ -216,7 +217,7 @@ export function SideBySideComparison({
           {/* Data rows */}
           {processedMetrics.map((metric, index) => (
             <div
-              key={index}
+              key={`${metric.label}-${metric.leftValue}-${metric.rightValue}`}
               className={cn(
                 'grid grid-cols-12 gap-2 px-3 py-3 rounded-lg transition-colors hover:bg-muted/30',
                 index % 2 === 0 && 'bg-muted/20'

@@ -54,15 +54,24 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
   const parts = text.split(regex)
 
-  return parts.map((part, i) =>
-    regex.test(part) ? (
-      <mark key={i} className="bg-yellow-200/70 dark:bg-yellow-500/30 rounded px-0.5 text-foreground">
-        {part}
-      </mark>
-    ) : (
-      part
-    )
-  )
+  let cursor = 0
+
+  return parts.map((part) => {
+    const key = `highlight-${cursor}`
+    const isMatch = part !== '' && regex.test(part)
+    regex.lastIndex = 0
+    cursor += part.length
+
+    if (isMatch) {
+      return (
+        <mark key={key} className="bg-yellow-200/70 dark:bg-yellow-500/30 rounded px-0.5 text-foreground">
+          {part}
+        </mark>
+      )
+    }
+
+    return part
+  })
 }
 
 function TaskCardComponent({

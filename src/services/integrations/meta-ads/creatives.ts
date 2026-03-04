@@ -6,7 +6,7 @@ import {
   appendMetaAuthParams,
   META_API_BASE,
 } from './client'
-import { metaAdsClient } from '@/services/integrations/shared/base-client'
+import { metaAdsClient } from '../shared/base-client'
 
 // =============================================================================
 // TYPES FOR CREATE/UPDATE OPERATIONS
@@ -37,6 +37,24 @@ export interface CreateAdCreativeOptions {
   maxRetries?: number
 }
 
+export interface MetaPageActor {
+  id: string
+  name: string
+  tasks: string[]
+  instagramBusinessAccount?: {
+    id: string
+    name?: string
+    username?: string
+  }
+}
+
+export interface FetchMetaPageActorsOptions {
+  accessToken: string
+  appSecret?: string | null
+  limit?: number
+  maxRetries?: number
+}
+
 export interface CreateAdOptions {
   accessToken: string
   adAccountId: string
@@ -47,10 +65,17 @@ export interface CreateAdOptions {
   maxRetries?: number
 }
 
+export interface DeleteAdCreativeOptions {
+  accessToken: string
+  creativeId: string
+  maxRetries?: number
+}
+
 export interface UpdateAdCreativeOptions {
   accessToken: string
   creativeId: string
   name?: string
+  title?: string
   body?: string
   description?: string
   callToActionType?: string
@@ -64,6 +89,78 @@ export interface UploadMediaOptions {
   fileName: string
   fileData: Uint8Array
   maxRetries?: number
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, unknown>
+}
+
+// =============================================================================
+// FETCH PAGE / INSTAGRAM ACTORS
+// =============================================================================
+
+export async function fetchMetaPageActors(options: FetchMetaPageActorsOptions): Promise<MetaPageActor[]> {
+  const {
+    accessToken,
+    appSecret = process.env.META_APP_SECRET,
+    limit = 100,
+    maxRetries,
+  } = options
+
+  const params = new URLSearchParams({
+    fields: 'id,name,tasks,instagram_business_account{id,name,username}',
+    limit: String(limit),
+  })
+
+  await appendMetaAuthParams({ params, accessToken, appSecret })
+
+  const { payload } = await metaAdsClient.executeRequest<{
+    data?: Array<{
+      id?: unknown
+      name?: unknown
+      tasks?: unknown
+      instagram_business_account?: {
+        id?: unknown
+        name?: unknown
+        username?: unknown
+      } | null
+    }>
+  }>({
+    url: `${META_API_BASE}/me/accounts?${params.toString()}`,
+    operation: 'fetchMetaPageActors',
+    maxRetries,
+  })
+
+  const rows = Array.isArray(payload?.data) ? payload.data : []
+
+  return rows
+    .map((row): MetaPageActor | null => {
+      const id = typeof row?.id === 'string' ? row.id : null
+      if (!id) return null
+
+      const name = typeof row?.name === 'string' && row.name.length > 0 ? row.name : `Page ${id}`
+      const tasks = Array.isArray(row?.tasks)
+        ? row.tasks.filter((task): task is string => typeof task === 'string')
+        : []
+
+      const instagram = row?.instagram_business_account
+      const instagramId = typeof instagram?.id === 'string' ? instagram.id : null
+
+      return {
+        id,
+        name,
+        tasks,
+        instagramBusinessAccount: instagramId
+          ? {
+              id: instagramId,
+              name: typeof instagram?.name === 'string' ? instagram.name : undefined,
+              username: typeof instagram?.username === 'string' ? instagram.username : undefined,
+            }
+          : undefined,
+      }
+    })
+    .filter((row): row is MetaPageActor => Boolean(row))
 }
 
 // =============================================================================
@@ -92,7 +189,7 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
     instagramActorId,
     assetFeedSpec,
     destinationSpec,
-    maxRetries = 3,
+    maxRetries,
   } = options
 
   const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
@@ -153,28 +250,29 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
   }
 
   try {
-    const response = await fetch(`${url}?${params.toString()}`, {
+    const { payload } = await metaAdsClient.executeRequest<{
+      id?: string
+      error?: { message?: string; type?: string }
+    }>({
+      url: `${url}?${params.toString()}`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bodyData),
+      operation: 'createMetaAdCreative',
+      maxRetries,
     })
 
-    const payload = await response.json() as {
-      id?: string
-      error?: { message?: string; type?: string }
-    }
-
-    if (payload?.error) {
+    if (payload?.error || !payload?.id) {
       return {
         success: false,
         creativeId: '',
-        error: payload.error.message || 'Failed to create creative',
+        error: payload?.error?.message || 'Failed to create creative',
       }
     }
 
     return {
       success: true,
-      creativeId: payload?.id ?? '',
+      creativeId: payload.id,
     }
   } catch (error) {
     return {
@@ -201,7 +299,7 @@ export async function createMetaAd(options: CreateAdOptions): Promise<{
     creativeId,
     name = `Ad - ${new Date().toISOString()}`,
     status = 'PAUSED',
-    maxRetries = 3,
+    maxRetries,
   } = options
 
   const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
@@ -220,33 +318,80 @@ export async function createMetaAd(options: CreateAdOptions): Promise<{
   }
 
   try {
-    const response = await fetch(`${url}?${params.toString()}`, {
+    const { payload } = await metaAdsClient.executeRequest<{
+      id?: string
+      error?: { message?: string; type?: string }
+    }>({
+      url: `${url}?${params.toString()}`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bodyData),
+      operation: 'createMetaAd',
+      maxRetries,
     })
 
-    const payload = await response.json() as {
-      id?: string
-      error?: { message?: string; type?: string }
-    }
-
-    if (payload?.error) {
+    if (payload?.error || !payload?.id) {
       return {
         success: false,
         adId: '',
-        error: payload.error.message || 'Failed to create ad',
+        error: payload?.error?.message || 'Failed to create ad',
       }
     }
 
     return {
       success: true,
-      adId: payload?.id ?? '',
+      adId: payload.id,
     }
   } catch (error) {
     return {
       success: false,
       adId: '',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+// =============================================================================
+// DELETE AD CREATIVE (COMPENSATION)
+// =============================================================================
+
+export async function deleteMetaAdCreative(options: DeleteAdCreativeOptions): Promise<{
+  success: boolean
+  error?: string
+}> {
+  const {
+    accessToken,
+    creativeId,
+    maxRetries,
+  } = options
+
+  const params = new URLSearchParams()
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+  const url = `${META_API_BASE}/${creativeId}`
+
+  try {
+    const { payload } = await metaAdsClient.executeRequest<{
+      success?: boolean
+      error?: { message?: string; type?: string }
+    }>({
+      url: `${url}?${params.toString()}`,
+      method: 'DELETE',
+      operation: 'deleteMetaAdCreative',
+      maxRetries,
+    })
+
+    if (payload?.error) {
+      return {
+        success: false,
+        error: payload.error.message || 'Failed to delete creative',
+      }
+    }
+
+    return { success: payload?.success ?? true }
+  } catch (error) {
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     }
   }
@@ -264,11 +409,12 @@ export async function updateMetaAdCreative(options: UpdateAdCreativeOptions): Pr
     accessToken,
     creativeId,
     name,
+    title,
     body,
     description,
     callToActionType,
     linkUrl,
-    maxRetries = 3,
+    maxRetries,
   } = options
 
   const params = new URLSearchParams()
@@ -276,27 +422,122 @@ export async function updateMetaAdCreative(options: UpdateAdCreativeOptions): Pr
 
   const url = `${META_API_BASE}/${creativeId}`
 
-  const updateData: Record<string, unknown> = {
-    access_token: accessToken,
-  }
+  const updateData: Record<string, unknown> = { access_token: accessToken }
 
   if (name !== undefined) updateData.name = name
-  if (body !== undefined) updateData.body = body
-  if (description !== undefined) updateData.description = description
-  if (callToActionType !== undefined) updateData.call_to_action_type = callToActionType
-  if (linkUrl !== undefined) updateData.link_url = linkUrl
+
+  const hasStoryUpdates =
+    title !== undefined ||
+    body !== undefined ||
+    description !== undefined ||
+    callToActionType !== undefined ||
+    linkUrl !== undefined
+
+  if (hasStoryUpdates) {
+    let existingStorySpec: Record<string, unknown> = {}
+
+    try {
+      const readParams = new URLSearchParams({ fields: 'object_story_spec' })
+      await appendMetaAuthParams({ params: readParams, accessToken, appSecret: process.env.META_APP_SECRET })
+
+      const { payload: readPayload } = await metaAdsClient.executeRequest<{
+        object_story_spec?: Record<string, unknown>
+      }>({
+        url: `${META_API_BASE}/${creativeId}?${readParams.toString()}`,
+        operation: 'readMetaCreativeForUpdate',
+        maxRetries,
+      })
+
+      const maybeStorySpec = asRecord(readPayload?.object_story_spec)
+      if (maybeStorySpec) {
+        existingStorySpec = { ...maybeStorySpec }
+      }
+    } catch {
+      existingStorySpec = {}
+    }
+
+    const hasVideoData = Boolean(asRecord(existingStorySpec.video_data))
+    const hasLinkData = Boolean(asRecord(existingStorySpec.link_data))
+    const useVideoData = hasVideoData && !hasLinkData
+
+    if (useVideoData) {
+      const videoData = { ...(asRecord(existingStorySpec.video_data) ?? {}) }
+
+      if (title !== undefined) videoData.title = title
+      if (body !== undefined) videoData.message = body
+      if (description !== undefined) videoData.description = description
+
+      if (callToActionType !== undefined || linkUrl !== undefined) {
+        const existingCta = asRecord(videoData.call_to_action) ?? {}
+        const existingValue = asRecord(existingCta.value) ?? {}
+
+        const ctaType =
+          callToActionType ?? (typeof existingCta.type === 'string' ? existingCta.type : undefined)
+
+        if (linkUrl !== undefined) {
+          existingValue.link = linkUrl
+        }
+
+        if (ctaType) {
+          videoData.call_to_action = {
+            type: ctaType,
+            value: existingValue,
+          }
+        }
+      }
+
+      existingStorySpec.video_data = videoData
+    } else {
+      const linkData = { ...(asRecord(existingStorySpec.link_data) ?? {}) }
+
+      if (title !== undefined) linkData.name = title
+      if (body !== undefined) linkData.message = body
+      if (description !== undefined) linkData.description = description
+      if (linkUrl !== undefined) linkData.link = linkUrl
+
+      if (callToActionType !== undefined || linkUrl !== undefined) {
+        const existingCta = asRecord(linkData.call_to_action) ?? {}
+        const existingValue = asRecord(existingCta.value) ?? {}
+
+        const ctaType =
+          callToActionType ?? (typeof existingCta.type === 'string' ? existingCta.type : undefined)
+
+        if (linkUrl !== undefined) {
+          existingValue.link = linkUrl
+        }
+
+        if (ctaType) {
+          linkData.call_to_action = {
+            type: ctaType,
+            value: existingValue,
+          }
+        }
+      }
+
+      existingStorySpec.link_data = linkData
+    }
+
+    if (Object.keys(existingStorySpec).length > 0) {
+      updateData.object_story_spec = existingStorySpec
+    }
+  }
+
+  if (Object.keys(updateData).length === 1) {
+    return { success: true }
+  }
 
   try {
-    const response = await fetch(`${url}?${params.toString()}`, {
+    const { payload } = await metaAdsClient.executeRequest<{
+      success?: boolean
+      error?: { message?: string; type?: string }
+    }>({
+      url: `${url}?${params.toString()}`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData),
+      operation: 'updateMetaAdCreative',
+      maxRetries,
     })
-
-    const payload = await response.json() as {
-      success?: boolean
-      error?: { message?: string; type?: string }
-    }
 
     if (payload?.error) {
       return {
@@ -328,7 +569,6 @@ export async function uploadMediaToMeta(options: UploadMediaOptions): Promise<{
     adAccountId,
     fileName,
     fileData,
-    maxRetries = 3,
   } = options
 
   const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`

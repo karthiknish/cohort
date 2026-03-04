@@ -94,8 +94,8 @@ export function AudienceDisplaySection({
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2">
             <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border bg-muted/20">
-              {aggregatedData.keywords.map((keyword, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
+                {aggregatedData.keywords.map((keyword) => (
+                  <Badge key={`${keyword.text}-${keyword.matchType ?? 'default'}`} variant="secondary" className="text-xs">
                   {keyword.text}
                   {keyword.matchType && (
                     <span className="ml-1 opacity-60">({keyword.matchType})</span>
@@ -129,8 +129,8 @@ export function AudienceDisplaySection({
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-2">
             <div className="flex flex-wrap gap-1.5 p-3 rounded-lg border bg-muted/20">
-              {aggregatedData.devices.map((device, index) => (
-                <Badge key={index} variant="outline" className="text-xs capitalize">
+                {aggregatedData.devices.map((device) => (
+                  <Badge key={device} variant="outline" className="text-xs capitalize">
                   {device.toLowerCase()}
                 </Badge>
               ))}
@@ -168,9 +168,9 @@ export function AudienceDisplaySection({
                     <span className="text-xs font-semibold uppercase tracking-wider">Facebook</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pl-6">
-                    {aggregatedData.metaPlacements.facebook.map((placement, index) => (
+                      {aggregatedData.metaPlacements.facebook.map((placement) => (
                       <Badge
-                        key={index}
+                          key={`facebook-${placement}`}
                         variant="outline"
                         className="text-[10px] capitalize bg-background/50 py-0.5 px-2"
                       >
@@ -188,9 +188,9 @@ export function AudienceDisplaySection({
                     <span className="text-xs font-semibold uppercase tracking-wider">Instagram</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pl-6">
-                    {aggregatedData.metaPlacements.instagram.map((placement, index) => (
+                      {aggregatedData.metaPlacements.instagram.map((placement) => (
                       <Badge
-                        key={index}
+                          key={`instagram-${placement}`}
                         variant="outline"
                         className="text-[10px] capitalize bg-background/50 py-0.5 px-2"
                       >
@@ -208,9 +208,9 @@ export function AudienceDisplaySection({
                     <span className="text-xs font-semibold uppercase tracking-wider">Messenger</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pl-6">
-                    {aggregatedData.metaPlacements.messenger.map((placement, index) => (
+                      {aggregatedData.metaPlacements.messenger.map((placement) => (
                       <Badge
-                        key={index}
+                          key={`messenger-${placement}`}
                         variant="outline"
                         className="text-[10px] capitalize bg-background/50 py-0.5 px-2"
                       >
@@ -228,9 +228,9 @@ export function AudienceDisplaySection({
                     <span className="text-xs font-semibold uppercase tracking-wider">Audience Network</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pl-6">
-                    {aggregatedData.metaPlacements.audienceNetwork.map((placement, index) => (
+                      {aggregatedData.metaPlacements.audienceNetwork.map((placement) => (
                       <Badge
-                        key={index}
+                          key={`audience-network-${placement}`}
                         variant="outline"
                         className="text-[10px] capitalize bg-background/50 py-0.5 px-2"
                       >
@@ -260,8 +260,8 @@ export function AudienceDisplaySection({
                             placement.toLowerCase()
                           )
                       )
-                      .map((placement, index) => (
-                        <Badge key={index} variant="secondary" className="text-[10px] capitalize">
+                        .map((placement) => (
+                          <Badge key={`placement-${placement}`} variant="secondary" className="text-[10px] capitalize">
                           {placement.replace(/_/g, ' ')}
                         </Badge>
                       ))}

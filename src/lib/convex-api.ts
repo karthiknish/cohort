@@ -74,6 +74,7 @@ export const projectMilestonesApi = {
 export const adsIntegrationsApi = {
   getAdIntegration: (api as any).adsIntegrations.getAdIntegration,
   listStatuses: (api as any).adsIntegrations.listStatuses,
+  listMetaAdAccounts: (api as any).adsIntegrations.listMetaAdAccounts,
   updateAutomationSettings: (api as any).adsIntegrations.updateAutomationSettings,
   requestManualSync: (api as any).adsIntegrations.requestManualSync,
   initializeAdAccount: (api as any).adsIntegrations.initializeAdAccount,
@@ -103,6 +104,7 @@ export const adsCampaignInsightsApi = {
 export const adsCreativesApi = {
   listCreatives: (api as any).adsCreatives.listCreatives,
   updateCreativeStatus: (api as any).adsCreatives.updateCreativeStatus,
+  listMetaPageActors: (api as any).adsCreatives.listMetaPageActors,
   createCreative: (api as any).adsCreatives.createCreative,
   updateCreative: (api as any).adsCreatives.updateCreative,
   uploadMedia: (api as any).adsCreatives.uploadMedia,

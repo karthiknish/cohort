@@ -182,9 +182,9 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
           </div>
 
           <div className="grid grid-cols-5 gap-2 w-full mt-4">
-            {generationFlow.map((_, index) => (
+            {generationFlow.map((flowStage, index) => (
               <div 
-                key={index}
+                key={flowStage.label}
                 className={cn(
                   "h-1 rounded-full transition-all duration-500",
                   index <= stageIndex ? "bg-primary" : "bg-muted/40",

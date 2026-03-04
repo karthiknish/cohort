@@ -95,9 +95,13 @@ type ImageProps = ComponentPropsWithoutRef<'img'>
 // Create markdown components factory (light theme only)
 function highlightChildren(children: ReactNode, terms?: string[]) {
   if (!hasHighlightTerms(terms)) return children
-  return Children.map(children as ReactNode, (child, index) => {
+  let textOffset = 0
+
+  return Children.map(children as ReactNode, (child) => {
     if (typeof child === "string") {
-      return <Fragment key={index}>{highlightText(child, terms)}</Fragment>
+      const key = `fragment-${textOffset}`
+      textOffset += child.length
+      return <Fragment key={key}>{highlightText(child, terms)}</Fragment>
     }
     return child
   })

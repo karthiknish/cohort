@@ -31,6 +31,12 @@ export function ContextualEmptyState({
   tips,
   className,
 }: ContextualEmptyStateProps) {
+  const tipItems = (tips ?? []).map((tip, tipIndex) => ({
+    id: `tip-${tipIndex + 1}-${tip.slice(0, 16)}`,
+    order: tipIndex + 1,
+    tip,
+  }))
+
   return (
     <Card className={cn('border-dashed', className)}>
       <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
@@ -58,19 +64,19 @@ export function ContextualEmptyState({
           )}
         </div>
         
-        {tips && tips.length > 0 && (
+        {tipItems.length > 0 && (
           <div className="mt-8 w-full max-w-md">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
               <Sparkles className="h-3 w-3" />
               <span>Quick tips</span>
             </div>
             <ul className="space-y-2 text-left">
-              {tips.map((tip, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+              {tipItems.map((tipItem) => (
+                <li key={tipItem.id} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                    {index + 1}
+                    {tipItem.order}
                   </span>
-                  {tip}
+                  {tipItem.tip}
                 </li>
               ))}
             </ul>

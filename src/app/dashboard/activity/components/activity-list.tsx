@@ -202,12 +202,12 @@ export function ActivityList({
         <div className="p-4 sm:p-6">
           {loading && sortedActivities.length === 0 ? (
             <div className="space-y-8">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-4">
+              {[1, 2, 3].map((groupSlot) => (
+                <div key={`activity-group-skeleton-${groupSlot}`} className="space-y-4">
                   <Skeleton className="h-6 w-32" />
                   <div className="space-y-4 pl-4 border-l-2 border-muted">
-                    {[1, 2].map((j) => (
-                      <div key={j} className="flex gap-4">
+                    {[1, 2].map((itemSlot) => (
+                      <div key={`activity-item-skeleton-${groupSlot}-${itemSlot}`} className="flex gap-4">
                         <Skeleton className="h-10 w-10 rounded-full" />
                         <div className="space-y-2 flex-1">
                           <Skeleton className="h-4 w-3/4" />
@@ -305,7 +305,7 @@ export function ActivityList({
 
           {!hasMore && sortedActivities.length > 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              You've reached the end of the activity log
+              You&apos;ve reached the end of the activity log
             </div>
           )}
         </div>

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
-import { Search } from 'lucide-react'
 import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 
 import { useAuth } from '@/contexts/auth-context'
@@ -17,12 +16,12 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
 
 import { formatProviderName } from '../components/utils'
-  import {
-    ERROR_MESSAGES,
-    SUCCESS_MESSAGES,
-    TOAST_TITLES,
-    PROVIDER_IDS,
-  } from '../components/constants'
+import {
+  ERROR_MESSAGES,
+  SUCCESS_MESSAGES,
+  TOAST_TITLES,
+  PROVIDER_IDS,
+} from '../components/constants'
 
 
 type ConvexIntegrationStatusRow = {
@@ -38,6 +37,14 @@ type ConvexIntegrationStatusRow = {
   autoSyncEnabled: boolean | null
   syncFrequencyMinutes: number | null
   scheduledTimeframeDays: number | null
+}
+
+type MetaAdAccountOption = {
+  id: string
+  name: string
+  currency: string | null
+  accountStatus: number | null
+  isActive: boolean
 }
 
 // =============================================================================
@@ -73,13 +80,18 @@ export interface UseAdsConnectionsReturn {
   initializingTikTok: boolean
   metaNeedsAccountSelection: boolean
   tiktokNeedsAccountSelection: boolean
+  metaAccountOptions: MetaAdAccountOption[]
+  selectedMetaAccountId: string
+  setSelectedMetaAccountId: (accountId: string) => void
+  loadingMetaAccountOptions: boolean
 
   // Actions
   handleConnect: (providerId: string, action: () => Promise<void>) => Promise<void>
   handleDisconnect: (providerId: string) => Promise<void>
   handleOauthRedirect: (providerId: string) => Promise<void>
-  initializeMetaIntegration: (clientIdOverride?: string | null) => Promise<void>
+  initializeMetaIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>
   initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>
+  reloadMetaAccountOptions: (clientIdOverride?: string | null) => Promise<MetaAdAccountOption[]>
 
   // Platform definitions
   adPlatforms: AdPlatform[]
@@ -157,6 +169,14 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [tiktokSetupMessage, setTiktokSetupMessage] = useState<string | null>(null)
   const [initializingMeta, setInitializingMeta] = useState(false)
   const [initializingTikTok, setInitializingTikTok] = useState(false)
+  const [metaAccountOptions, setMetaAccountOptions] = useState<MetaAdAccountOption[]>([])
+  const [selectedMetaAccountId, setSelectedMetaAccountId] = useState('')
+  const [loadingMetaAccountOptions, setLoadingMetaAccountOptions] = useState(false)
+
+  useEffect(() => {
+    setMetaAccountOptions([])
+    setSelectedMetaAccountId('')
+  }, [selectedClientId])
 
   // Trigger refresh
   const triggerRefresh = useCallback(() => {
@@ -217,8 +237,43 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   ]
 
   const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount)
+  const listMetaAdAccounts = useAction(adsIntegrationsApi.listMetaAdAccounts)
   const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration)
   const deleteSyncJobsMutation = useMutation(adsIntegrationsApi.deleteSyncJobs)
+
+  const loadMetaAdAccounts = useCallback(async (clientIdOverride?: string | null) => {
+    if (!workspaceId) {
+      throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
+    }
+
+    setLoadingMetaAccountOptions(true)
+
+    try {
+      const payload = (await listMetaAdAccounts({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientIdOverride ?? selectedClientId ?? null,
+      })) as MetaAdAccountOption[]
+
+      const options = Array.isArray(payload) ? payload : []
+      setMetaAccountOptions(options)
+      setSelectedMetaAccountId((currentValue) => {
+        if (currentValue && options.some((option) => option.id === currentValue)) {
+          return currentValue
+        }
+
+        const defaultOption = options.find((option) => option.isActive) ?? options[0]
+        return defaultOption?.id ?? ''
+      })
+      return options
+    } catch (error) {
+      setMetaAccountOptions([])
+      setSelectedMetaAccountId('')
+      throw error
+    } finally {
+      setLoadingMetaAccountOptions(false)
+    }
+  }, [listMetaAdAccounts, selectedClientId, workspaceId])
 
   // Initialize integration helpers
   const initializeGoogleIntegration = useCallback(async () => {
@@ -245,7 +300,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     })
   }, [initializeAdAccount, selectedClientId, workspaceId])
 
-  const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null) => {
+  const initializeMetaIntegration = useCallback(async (clientIdOverride?: string | null, accountIdOverride?: string | null) => {
     setMetaSetupMessage(null)
     setInitializingMeta(true)
 
@@ -254,18 +309,35 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         throw new Error(ERROR_MESSAGES.SIGN_IN_REQUIRED)
       }
 
+      let accountId = (accountIdOverride ?? selectedMetaAccountId).trim()
+
+      if (!accountId) {
+        const availableAccounts = await loadMetaAdAccounts(clientIdOverride)
+        const defaultAccount = availableAccounts.find((option) => option.isActive) ?? availableAccounts[0]
+
+        if (!defaultAccount) {
+          throw new Error('No Meta ad accounts are available for this integration token.')
+        }
+
+        accountId = defaultAccount.id
+        setSelectedMetaAccountId(defaultAccount.id)
+      }
+
       const payload = (await initializeAdAccount({
         workspaceId,
         providerId: 'facebook',
         clientId: clientIdOverride ?? selectedClientId ?? null,
+        accountId,
       })) as { accountName?: string }
 
       toast({
         title: SUCCESS_MESSAGES.META_CONNECTED,
         description: payload?.accountName
           ? `Syncing data from ${payload.accountName}.`
-          : 'Default ad account linked successfully.',
+          : 'Meta ad account linked successfully.',
       })
+      setMetaAccountOptions([])
+      setSelectedMetaAccountId('')
       triggerRefresh()
 
     } catch (error: unknown) {
@@ -276,7 +348,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setInitializingMeta(false)
     }
-  }, [initializeAdAccount, toast, selectedClientId, triggerRefresh, workspaceId])
+  }, [initializeAdAccount, loadMetaAdAccounts, selectedClientId, selectedMetaAccountId, toast, triggerRefresh, workspaceId])
 
   const initializeTikTokIntegration = useCallback(async (clientIdOverride?: string | null) => {
     setTiktokSetupMessage(null)
@@ -362,7 +434,21 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     if (oauthSuccess) {
       console.log(`[useAdsConnections] Detected OAuth success for ${providerId}`)
       if (providerId === PROVIDER_IDS.FACEBOOK) {
-        void initializeMetaIntegration(oauthClientId)
+        setMetaSetupMessage(null)
+        toast({
+          title: SUCCESS_MESSAGES.META_CONNECTED,
+          description: 'Meta connected. Select an ad account to finish setup.',
+        })
+        void loadMetaAdAccounts(oauthClientId)
+          .then(() => {
+            triggerRefresh()
+          })
+          .catch((error) => {
+            logError(error, 'useAdsConnections:oauthSuccess:facebook')
+            const message = asErrorMessage(error)
+            setMetaSetupMessage(message)
+            toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
+          })
       } else if (providerId === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
        } else if (providerId === PROVIDER_IDS.GOOGLE) {
@@ -402,7 +488,23 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
       setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
     }
-  }, [initializeMetaIntegration, initializeTikTokIntegration, triggerRefresh, toast, initializeGoogleIntegration, initializeLinkedInIntegration])
+  }, [initializeGoogleIntegration, initializeLinkedInIntegration, initializeTikTokIntegration, loadMetaAdAccounts, toast, triggerRefresh])
+
+  useEffect(() => {
+    if (!metaNeedsAccountSelection) {
+      return
+    }
+
+    if (loadingMetaAccountOptions || metaAccountOptions.length > 0) {
+      return
+    }
+
+    void loadMetaAdAccounts()
+      .catch((error) => {
+        logError(error, 'useAdsConnections:autoLoadMetaAccounts')
+        setMetaSetupMessage(asErrorMessage(error))
+      })
+  }, [loadMetaAdAccounts, loadingMetaAccountOptions, metaAccountOptions.length, metaNeedsAccountSelection])
 
   // Handlers
   const handleConnect = useCallback(async (providerId: string, action: () => Promise<void>) => {
@@ -539,6 +641,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     initializingTikTok,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
+    metaAccountOptions,
+    selectedMetaAccountId,
+    setSelectedMetaAccountId,
+    loadingMetaAccountOptions,
 
     // Actions
     handleConnect,
@@ -546,6 +652,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     handleOauthRedirect,
     initializeMetaIntegration,
     initializeTikTokIntegration,
+    reloadMetaAccountOptions: loadMetaAdAccounts,
 
     // Platform definitions
     adPlatforms,

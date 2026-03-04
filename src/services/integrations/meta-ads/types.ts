@@ -233,6 +233,10 @@ export type MetaAdData = {
   adset_id?: string
   campaign_id?: string
   leadgen_form_id?: string
+  creative?: {
+    id?: string
+    name?: string
+  }
   adcreatives?: {
     data?: MetaAdCreative[]
   }

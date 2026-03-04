@@ -349,7 +349,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                     <p className="text-xs text-muted-foreground italic py-1">No segments added yet</p>
                   ) : (
                     formData.segments.map((s, i) => (
-                      <Badge key={i} variant="secondary" className="gap-1 rounded-lg">
+                      <Badge key={s} variant="secondary" className="gap-1 rounded-lg">
                         {s}
                         <button
                           type="button"

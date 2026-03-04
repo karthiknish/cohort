@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { AnimatePresence, MotionConfig, motion } from 'framer-motion'
+import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 
 interface MotionProviderProps {
@@ -21,19 +21,21 @@ export function MotionProvider({ children }: MotionProviderProps) {
 
   return (
     <MotionConfig reducedMotion="user">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={pathname}
-          variants={pageVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={transition}
-          className="h-full"
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <LazyMotion features={domAnimation}>
+        <AnimatePresence mode="wait" initial={false}>
+          <m.div
+            key={pathname}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={transition}
+            className="h-full"
+          >
+            {children}
+          </m.div>
+        </AnimatePresence>
+      </LazyMotion>
     </MotionConfig>
   )
 }

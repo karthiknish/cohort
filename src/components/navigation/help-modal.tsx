@@ -367,20 +367,29 @@ export function useHelpModal() {
         : null
 
       let hasSeenWelcomeRemote = Boolean(onboardingState?.welcomeSeen || onboardingState?.welcomeSeenAtMs)
+      const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted)
+      const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null
+
+      const persistWelcomeSeen = async (): Promise<boolean> => {
+        return upsertOnboarding({
+          userId: uid,
+          onboardingTourCompleted,
+          onboardingTourCompletedAtMs,
+          welcomeSeen: true,
+          welcomeSeenAtMs: Date.now(),
+        })
+          .then(() => true)
+          .catch((error) => {
+            console.warn('Failed to persist onboarding state', error)
+            return false
+          })
+      }
 
       // Backfill remote state if the user already saw the welcome (local-only legacy)
       if (hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
-        try {
-          await upsertOnboarding({
-            userId: uid,
-            onboardingTourCompleted: Boolean(onboardingState?.onboardingTourCompleted),
-            onboardingTourCompletedAtMs: onboardingState?.onboardingTourCompletedAtMs ?? null,
-            welcomeSeen: true,
-            welcomeSeenAtMs: Date.now(),
-          })
+        const persisted = await persistWelcomeSeen()
+        if (persisted) {
           hasSeenWelcomeRemote = true
-        } catch (error) {
-          console.warn('Failed to persist onboarding state', error)
         }
       }
 
@@ -397,17 +406,7 @@ export function useHelpModal() {
       }
 
       if (!cancelled && !shouldShowWelcome && hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
-        try {
-          await upsertOnboarding({
-            userId: uid,
-            onboardingTourCompleted: Boolean(onboardingState?.onboardingTourCompleted),
-            onboardingTourCompletedAtMs: onboardingState?.onboardingTourCompletedAtMs ?? null,
-            welcomeSeen: true,
-            welcomeSeenAtMs: Date.now(),
-          })
-        } catch (error) {
-          console.warn('Failed to persist onboarding state', error)
-        }
+        await persistWelcomeSeen()
       }
     }
 
@@ -429,17 +428,18 @@ export function useHelpModal() {
 
     if (!userId) return
 
-    try {
-      await upsertOnboarding({
-        userId,
-        onboardingTourCompleted: Boolean(onboardingState?.onboardingTourCompleted),
-        onboardingTourCompletedAtMs: onboardingState?.onboardingTourCompletedAtMs ?? null,
-        welcomeSeen: true,
-        welcomeSeenAtMs: Date.now(),
-      })
-    } catch (error) {
+    const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted)
+    const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null
+
+    await upsertOnboarding({
+      userId,
+      onboardingTourCompleted,
+      onboardingTourCompletedAtMs,
+      welcomeSeen: true,
+      welcomeSeenAtMs: Date.now(),
+    }).catch((error) => {
       console.warn('Failed to persist onboarding completion', error)
-    }
+    })
   }
 
   const onOpenChange = (nextOpen: boolean) => {

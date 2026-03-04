@@ -582,6 +582,8 @@ export default defineSchema({
     workspaceId: v.string(),
     legacyId: v.string(),
     ownerId: v.union(v.string(), v.null()),
+    agentConversationId: v.optional(v.union(v.string(), v.null())),
+    lastAgentInteractionAtMs: v.optional(v.union(v.number(), v.null())),
     status: v.string(),
     stepProgress: v.number(),
     formData: v.record(v.string(), v.any()),
@@ -601,7 +603,8 @@ export default defineSchema({
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_status_updatedAtMs_legacyId', ['workspaceId', 'status', 'updatedAtMs', 'legacyId'])
-    .index('by_workspace_clientId_updatedAtMs_legacyId', ['workspaceId', 'clientId', 'updatedAtMs', 'legacyId']),
+    .index('by_workspace_clientId_updatedAtMs_legacyId', ['workspaceId', 'clientId', 'updatedAtMs', 'legacyId'])
+    .index('by_workspace_agentConversationId', ['workspaceId', 'agentConversationId']),
 
   // Proposal versions (migrated from Firestore `users/{uid}/proposals/{proposalId}/versions`).
   proposalVersions: defineTable({

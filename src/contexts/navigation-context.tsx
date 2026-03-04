@@ -116,22 +116,27 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       return
     }
 
+    const projectId = state.projectId ?? ''
+    const projectName = state.projectName ?? ''
+    const lastViewedTask = state.lastViewedTask ?? ''
+    const lastViewedChannel = state.lastViewedChannel ?? ''
+
     try {
       localStorage.setItem(
         getClientStorageKey(STORAGE_KEYS.PROJECT_ID, selectedClientId),
-        state.projectId || ''
+        projectId
       )
       localStorage.setItem(
         getClientStorageKey(STORAGE_KEYS.PROJECT_NAME, selectedClientId),
-        state.projectName || ''
+        projectName
       )
       localStorage.setItem(
         getClientStorageKey(STORAGE_KEYS.LAST_VIEWED_TASK, selectedClientId),
-        state.lastViewedTask || ''
+        lastViewedTask
       )
       localStorage.setItem(
         getClientStorageKey(STORAGE_KEYS.LAST_VIEWED_CHANNEL, selectedClientId),
-        state.lastViewedChannel || ''
+        lastViewedChannel
       )
     } catch (error) {
       console.warn('[NavigationProvider] Failed to save navigation state:', error)

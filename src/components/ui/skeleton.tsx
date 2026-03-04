@@ -23,12 +23,12 @@ export function Skeleton({ className, variant = 'shimmer', ...props }: SkeletonP
 export function SkeletonText({ className, lines = 3, ...props }: SkeletonProps & { lines?: number }) {
   return (
     <div className={cn('space-y-2', className)} {...props}>
-      {Array.from({ length: lines }).map((_, i) => (
+      {Array.from({ length: lines }, (_, line) => `text-line-${line + 1}`).map((lineKey, lineIndex) => (
         <Skeleton
-          key={i}
+          key={lineKey}
           className={cn(
             'h-4',
-            i === lines - 1 ? 'w-3/4' : 'w-full'
+            lineIndex === lines - 1 ? 'w-3/4' : 'w-full'
           )}
         />
       ))}
@@ -103,8 +103,8 @@ export function SkeletonList({
 }: SkeletonListProps) {
   return (
     <div className={cn('space-y-4', className)} {...props}>
-      {Array.from({ length: items }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3">
+      {Array.from({ length: items }, (_, item) => `list-item-${item + 1}`).map((itemKey) => (
+        <div key={itemKey} className="flex items-center gap-3">
           {showAvatar && <Skeleton className="h-10 w-10 shrink-0 rounded-full" />}
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4" />
@@ -150,10 +150,12 @@ export function SkeletonStats({
   className,
   ...props
 }: SkeletonStatsProps) {
+  const cardSlots = Array.from({ length: cards }, (_, slot) => `stats-card-${slot + 1}`)
+
   return (
     <div className={cn('grid gap-4 md:grid-cols-2 lg:grid-cols-4', className)} {...props}>
-      {Array.from({ length: cards }).map((_, i) => (
-        <SkeletonDashboardCard key={i} />
+      {cardSlots.map((slotKey) => (
+        <SkeletonDashboardCard key={slotKey} />
       ))}
     </div>
   )
@@ -165,6 +167,10 @@ export function SkeletonStats({
 
 // Static heights for skeleton bars to avoid hydration mismatch
 const SKELETON_CHART_HEIGHTS = [45, 70, 30, 85, 55, 40, 75, 60, 35, 80, 50, 65]
+const SKELETON_CHART_BARS = SKELETON_CHART_HEIGHTS.map((height, slot) => ({
+  id: `chart-bar-${slot + 1}`,
+  height,
+}))
 
 export function SkeletonChart({ className, ...props }: SkeletonProps) {
   return (
@@ -174,11 +180,11 @@ export function SkeletonChart({ className, ...props }: SkeletonProps) {
         <Skeleton className="h-8 w-24" />
       </div>
       <div className="h-64 flex items-end justify-between gap-2">
-        {SKELETON_CHART_HEIGHTS.map((height, i) => (
+        {SKELETON_CHART_BARS.map((bar) => (
           <Skeleton
-            key={i}
+            key={bar.id}
             className="flex-1"
-            style={{ height: `${height}%` }}
+            style={{ height: `${bar.height}%` }}
           />
         ))}
       </div>

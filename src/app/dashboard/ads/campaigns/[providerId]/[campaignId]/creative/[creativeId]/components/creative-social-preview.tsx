@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import NextImage from 'next/image'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import {
   fadeInUpVariants,
   slideInLeftVariants,
@@ -109,12 +110,15 @@ export function CreativeSocialPreview(props: {
       return (
         <div className={cn("relative bg-black flex items-center justify-center overflow-hidden group", mediaAspectClass)}>
           {creative.imageUrl && !imageLoadFailed ? (
-            <img
+            <NextImage
               src={creative.imageUrl}
               alt={displayName}
-              className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 640px"
+              className="object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
               onError={() => setImageLoadFailed(true)}
-              style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+              style={{ imageRendering: 'crisp-edges' }}
             />
           ) : (
             <div className="text-muted-foreground flex flex-col items-center">
@@ -123,14 +127,14 @@ export function CreativeSocialPreview(props: {
             </div>
           )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <motion.div
+          <m.div
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             variants={scaleVariants}
             className="h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl cursor-pointer"
           >
               <Video className="h-6 w-6 text-white" />
-            </motion.div>
+            </m.div>
           </div>
           <div className="absolute bottom-4 left-4 flex gap-2">
             <div className="rounded-md bg-black/60 backdrop-blur-md text-white px-2 py-0.5 text-[8px] font-black tracking-widest uppercase border border-white/10">
@@ -150,14 +154,15 @@ export function CreativeSocialPreview(props: {
               <p className="text-[10px] uppercase font-bold tracking-tighter">Asset Unavailable</p>
             </div>
           ) : (
-            <img
+            <NextImage
               src={creative.imageUrl}
               alt={displayName}
-              className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-              loading="lazy"
-              decoding="async"
+              fill
+              unoptimized
+              sizes="(max-width: 768px) 100vw, 640px"
+              className="object-cover transition-transform duration-1000 group-hover:scale-110"
               onError={() => setImageLoadFailed(true)}
-              style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+              style={{ imageRendering: 'crisp-edges' }}
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -176,7 +181,7 @@ export function CreativeSocialPreview(props: {
   const renderPlatformMock = () => {
     return (
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div
           key={activePlatform}
           initial="hidden"
           animate="visible"
@@ -192,12 +197,15 @@ export function CreativeSocialPreview(props: {
                   <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px] overflow-hidden shrink-0">
                     <div className="h-full w-full rounded-full bg-background flex items-center justify-center text-[10px] font-black overflow-hidden border border-background">
                       {creative.pageProfileImageUrl && !profileImageError ? (
-                        <img
+                        <NextImage
                           src={creative.pageProfileImageUrl}
                           alt=""
-                          className="w-full h-full object-cover"
+                          width={36}
+                          height={36}
+                          unoptimized
+                          className="h-full w-full object-cover"
                           onError={() => setProfileImageError(true)}
-                          style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+                          style={{ imageRendering: 'crisp-edges' }}
                         />
                       ) : (
                         (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -246,12 +254,15 @@ export function CreativeSocialPreview(props: {
               <div className="p-4 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-[#0077b5] flex items-center justify-center text-white font-black text-lg overflow-hidden shrink-0">
                   {creative.pageProfileImageUrl && !profileImageError ? (
-                    <img
+                    <NextImage
                       src={creative.pageProfileImageUrl}
                       alt=""
-                      className="w-full h-full object-cover"
+                      width={40}
+                      height={40}
+                      unoptimized
+                      className="h-full w-full object-cover"
                       onError={() => setProfileImageError(true)}
-                      style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+                      style={{ imageRendering: 'crisp-edges' }}
                     />
                   ) : (
                     (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -297,12 +308,15 @@ export function CreativeSocialPreview(props: {
               <div className="p-4 flex items-center gap-3 bg-background z-10">
                 <div className="h-10 w-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white font-black text-lg shadow-inner overflow-hidden shrink-0 border border-black/5">
                   {creative.pageProfileImageUrl && !profileImageError ? (
-                    <img
+                    <NextImage
                       src={creative.pageProfileImageUrl}
                       alt=""
-                      className="w-full h-full object-cover"
+                      width={40}
+                      height={40}
+                      unoptimized
+                      className="h-full w-full object-cover"
                       onError={() => setProfileImageError(true)}
-                      style={{ imageRendering: 'crisp-edges' } as React.CSSProperties}
+                      style={{ imageRendering: 'crisp-edges' }}
                     />
                   ) : (
                     (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -356,7 +370,7 @@ export function CreativeSocialPreview(props: {
               </div>
             </div>
           )}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
     )
   }
@@ -372,7 +386,8 @@ export function CreativeSocialPreview(props: {
   const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0]!)
 
   return (
-    <div className="lg:col-span-5 self-start space-y-6">
+    <LazyMotion features={domAnimation}>
+      <div className="lg:col-span-5 self-start space-y-6">
       <div className="space-y-4">
         {/* Header with Platform & Aspect Ratio controls */}
         <div className="flex items-center justify-between px-1">
@@ -446,7 +461,7 @@ export function CreativeSocialPreview(props: {
       </div>
 
       {performanceSummary && efficiencyScore !== null ? (
-        <motion.div
+        <m.div
           initial="hidden"
           animate="visible"
           variants={fadeInUpVariants}
@@ -484,7 +499,7 @@ export function CreativeSocialPreview(props: {
 
               <div className="space-y-3">
                 <div className="h-3 w-full rounded-full bg-primary/5 border border-primary/5 p-0.5 overflow-hidden">
-                  <motion.div
+                  <m.div
                     initial={{ width: 0 }}
                     animate={{ width: `${efficiencyScore}%` }}
                     transition={{ duration: 1.5, ease: easings.easeOut }}
@@ -502,8 +517,9 @@ export function CreativeSocialPreview(props: {
               </p>
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
       ) : null}
-    </div>
+      </div>
+    </LazyMotion>
   )
 }

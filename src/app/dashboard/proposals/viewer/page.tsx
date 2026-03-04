@@ -28,16 +28,16 @@ export default function ProposalDeckViewerPage() {
 
   const fileName = useMemo(() => {
     if (!src) return null
-    try {
-      const url = new URL(src)
-      const pathname = url.pathname
-      const lastSegment = pathname.split('/').pop()
-      if (lastSegment && lastSegment.includes('.')) {
-        return decodeURIComponent(lastSegment)
-      }
-    } catch {
-      // Use default
+
+    const pathWithMaybeHash = src.split('?')[0] ?? ''
+    const pathOnly = pathWithMaybeHash.split('#')[0] ?? ''
+    const segments = pathOnly.split('/').filter(Boolean)
+    const lastSegment = segments[segments.length - 1]
+
+    if (typeof lastSegment === 'string' && lastSegment.includes('.')) {
+      return lastSegment
     }
+
     return 'presentation.pptx'
   }, [src])
 
@@ -82,7 +82,7 @@ export default function ProposalDeckViewerPage() {
               <div className="aspect-[16/9] w-full overflow-hidden rounded-lg border">
                 <iframe
                   src={src}
-                  title={fileName ?? 'PDF'}
+                  title="Proposal PDF preview"
                   className="h-full w-full"
                   frameBorder="0"
                 />

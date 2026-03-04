@@ -2,7 +2,6 @@ import type { ProposalDraft, ProposalStatus } from '@/types/proposals'
 import { mergeProposalForm } from '@/lib/proposals'
 import { resolveProposalDeck } from '@/types/proposals'
 import { ConvexReactClient } from 'convex/react'
-import { api as convexApi } from '@/lib/convex-api'
 import { logger } from '@/lib/logger'
 import { cache } from 'react'
 
@@ -10,6 +9,9 @@ type ConvexAuthArgs = {
   workspaceId: string
   convexToken: string
 }
+
+type ConvexFunctionArgs = Record<string, unknown>
+type ConvexLogContext = Record<string, unknown>
 
 interface ConvexProposalRow {
   legacyId: string
@@ -52,9 +54,14 @@ function createAuthedConvexClient(token: string): ConvexReactClient {
 /**
  * Executes a Convex mutation with error handling and logging.
  */
-async function executeMutation(convex: ConvexReactClient, name: string, args: any, context: any = {}): Promise<any> {
+async function executeMutation<T>(
+  convex: ConvexReactClient,
+  name: string,
+  args: ConvexFunctionArgs,
+  context: ConvexLogContext = {}
+): Promise<T> {
   try {
-    return await convex.mutation(name as any, args)
+    return (await convex.mutation(name as never, args as never)) as T
   } catch (error) {
     logger.error(`Convex Mutation Error: ${name}`, error, {
       type: 'convex_error',
@@ -69,9 +76,14 @@ async function executeMutation(convex: ConvexReactClient, name: string, args: an
 /**
  * Executes a Convex query with error handling and logging.
  */
-async function executeQuery(convex: ConvexReactClient, name: string, args: any, context: any = {}): Promise<any> {
+async function executeQuery<T>(
+  convex: ConvexReactClient,
+  name: string,
+  args: ConvexFunctionArgs,
+  context: ConvexLogContext = {}
+): Promise<T> {
   try {
-    return await convex.query(name as any, args)
+    return (await convex.query(name as never, args as never)) as T
   } catch (error) {
     logger.error(`Convex Query Error: ${name}`, error, {
       type: 'convex_error',
@@ -121,12 +133,12 @@ async function listProposalsInternal(
 ) {
   const convex = createAuthedConvexClient(params.convexToken)
 
-  const rows = (await executeQuery(convex, 'proposals:list', {
+  const rows = await executeQuery<ConvexProposalRow[]>(convex, 'proposals:list', {
     workspaceId: params.workspaceId,
     limit: typeof params.pageSize === 'number' && Number.isFinite(params.pageSize) ? params.pageSize : 100,
     status: params.status,
     clientId: params.clientId,
-  }, { workspaceId: params.workspaceId })) as ConvexProposalRow[]
+  }, { workspaceId: params.workspaceId })
 
   return rows.map(mapConvexProposalToDraft)
 }
@@ -136,10 +148,10 @@ export const listProposals = cache(listProposalsInternal)
 async function getProposalByIdInternal(id: string, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
-  const row = (await executeQuery(convex, 'proposals:getByLegacyId', {
+  const row = await executeQuery<ConvexProposalRow | null>(convex, 'proposals:getByLegacyId', {
     workspaceId: auth.workspaceId,
     legacyId: id,
-  }, { workspaceId: auth.workspaceId, legacyId: id })) as ConvexProposalRow | null
+  }, { workspaceId: auth.workspaceId, legacyId: id })
 
   if (!row) {
     throw new Error('Proposal not found')
@@ -153,7 +165,7 @@ export const getProposalById = cache(getProposalByIdInternal)
 export async function createProposalDraft(body: Partial<ProposalDraft> & { ownerId?: string | null } = {}, auth: ConvexAuthArgs) {
   const convex = createAuthedConvexClient(auth.convexToken)
 
-  const res = (await executeMutation(convex, 'proposals:create', {
+  const res = await executeMutation<ConvexCreateResponse>(convex, 'proposals:create', {
     workspaceId: auth.workspaceId,
     ownerId: body.ownerId ?? null,
     status: (body.status ?? 'draft') as string,
@@ -161,7 +173,7 @@ export async function createProposalDraft(body: Partial<ProposalDraft> & { owner
     formData: body.formData ?? mergeProposalForm(null),
     clientId: body.clientId ?? null,
     clientName: body.clientName ?? null,
-  }, { workspaceId: auth.workspaceId })) as ConvexCreateResponse
+  }, { workspaceId: auth.workspaceId })
 
   return String(res.legacyId)
 }

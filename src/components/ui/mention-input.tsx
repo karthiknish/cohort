@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useRef, useState, forwardRef } from 'react'
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState, forwardRef } from 'react'
 import { X, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -58,25 +58,36 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     },
     ref
   ) {
+    const inputId = useId()
+    const containerRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const [mentionState, setMentionState] = useState<MentionState>(DEFAULT_MENTION_STATE)
     const [highlightedIndex, setHighlightedIndex] = useState(0)
 
-    const selectedMentions = useMemo(() => {
+    const effectiveAllowMultiple = allowMultiple && !singleSelect
+    const mentionLimit = Math.max(1, singleSelect ? 1 : maxMentions)
+
+    const resolveMentionsFromValue = useCallback((nextValue: string) => {
       const mentionRegex = /@\[([^\]]+)\]/g
       const mentions: MentionableUser[] = []
+      const seenIds = new Set<string>()
       let match: RegExpExecArray | null
 
-      while ((match = mentionRegex.exec(value)) !== null) {
+      while ((match = mentionRegex.exec(nextValue)) !== null) {
         const name = match[1]
         const user = users.find((u) => u.name === name)
-        if (user) {
+        if (user && !seenIds.has(user.id)) {
+          seenIds.add(user.id)
           mentions.push(user)
         }
       }
 
       return mentions
-    }, [value, users])
+    }, [users])
+
+    const selectedMentions = useMemo(() => {
+      return resolveMentionsFromValue(value)
+    }, [value, resolveMentionsFromValue])
 
     const mentionResults = useMemo(() => {
       if (!mentionState.active) {
@@ -90,22 +101,43 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
           user.email?.toLowerCase().includes(normalizedQuery)
       )
 
-      if (allowMultiple) {
+      if (effectiveAllowMultiple) {
+        if (selectedMentions.length >= mentionLimit) {
+          return []
+        }
+
         const selectedIds = new Set(selectedMentions.map((m) => m.id))
         return filtered.filter((user) => !selectedIds.has(user.id)).slice(0, MAX_MENTION_RESULTS)
       }
 
       return filtered.slice(0, MAX_MENTION_RESULTS)
-    }, [mentionState, users, selectedMentions, allowMultiple])
+    }, [mentionState, users, selectedMentions, effectiveAllowMultiple, mentionLimit])
 
     const resetMentionState = useCallback(() => {
       setMentionState(DEFAULT_MENTION_STATE)
       setHighlightedIndex(0)
     }, [])
 
+    useEffect(() => {
+      if (disabled) {
+        resetMentionState()
+      }
+    }, [disabled, resetMentionState])
+
+    useEffect(() => {
+      if (mentionResults.length === 0) {
+        setHighlightedIndex(0)
+        return
+      }
+
+      if (highlightedIndex >= mentionResults.length) {
+        setHighlightedIndex(0)
+      }
+    }, [highlightedIndex, mentionResults.length])
+
     const detectMentionTrigger = useCallback(
       (currentValue: string, caretPosition: number) => {
-        if (caretPosition === 0) {
+        if (caretPosition < 0) {
           resetMentionState()
           return
         }
@@ -118,8 +150,19 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
           return
         }
 
+        const charBeforeAt = lastAtIndex > 0 ? textBeforeCaret[lastAtIndex - 1] : ''
+        const hasValidBoundary =
+          lastAtIndex === 0 ||
+          /\s/.test(charBeforeAt) ||
+          ['(', '[', '{', '"', "'", '`'].includes(charBeforeAt)
+
+        if (!hasValidBoundary) {
+          resetMentionState()
+          return
+        }
+
         const textAfterAt = textBeforeCaret.slice(lastAtIndex + 1)
-        if (textAfterAt.includes(' ')) {
+        if (/\s|@|\[|\]/.test(textAfterAt)) {
           resetMentionState()
           return
         }
@@ -140,90 +183,131 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     const insertMention = useCallback(
       (user: MentionableUser) => {
         const input = inputRef.current
-        if (!input) return
+        if (!input || disabled) return
 
         const currentValue = value
-        const selectionStart = input.selectionStart || 0
+        const selectionStart = input.selectionStart ?? currentValue.length
+        const mentionStartIndex =
+          mentionState.startIndex >= 0
+            ? mentionState.startIndex
+            : currentValue.slice(0, selectionStart).lastIndexOf('@')
 
-        const textBeforeCaret = currentValue.slice(0, selectionStart)
-        const lastAtIndex = textBeforeCaret.lastIndexOf('@')
-
-        if (lastAtIndex === -1) return
+        if (mentionStartIndex === -1) {
+          resetMentionState()
+          return
+        }
 
         const mentionText = `@[${user.name}]`
-        const newMentions = [...selectedMentions, user]
+        const alreadySelected = selectedMentions.some((mention) => mention.id === user.id)
 
-        const beforeMention = currentValue.slice(0, lastAtIndex).trim()
-        const afterMention = currentValue.slice(selectionStart).trim()
-
-        if (allowMultiple) {
-          const newValue = beforeMention + (beforeMention ? ' ' : '') + mentionText + ' ' + afterMention
-          onChange(newValue.trim() + ' ', newMentions)
-        } else {
-          const newValue =
-            currentValue.slice(0, lastAtIndex) + mentionText + currentValue.slice(selectionStart)
-          onChange(newValue, newMentions)
+        if (effectiveAllowMultiple && !alreadySelected && selectedMentions.length >= mentionLimit) {
+          resetMentionState()
+          return
         }
+
+        if (!effectiveAllowMultiple) {
+          const newValue = `${mentionText} `
+          onChange(newValue, [user])
+          resetMentionState()
+
+          requestAnimationFrame(() => {
+            input.focus()
+            input.setSelectionRange(newValue.length, newValue.length)
+          })
+          return
+        }
+
+        const beforeMention = currentValue.slice(0, mentionStartIndex)
+        const afterMention = currentValue.slice(selectionStart)
+        const needsLeadingSpace = beforeMention.length > 0 && !/\s$/.test(beforeMention)
+        const needsTrailingSpace =
+          afterMention.length === 0 || !/^[\s,.!?;:)\]}]/.test(afterMention)
+        const insertion = `${needsLeadingSpace ? ' ' : ''}${mentionText}${needsTrailingSpace ? ' ' : ''}`
+
+        const newValue = `${beforeMention}${insertion}${afterMention}`.replace(/[ \t]{2,}/g, ' ')
+        const newMentions = resolveMentionsFromValue(newValue)
+        const nextCaretPosition = beforeMention.length + insertion.length
+
+        onChange(newValue, newMentions)
 
         resetMentionState()
 
         requestAnimationFrame(() => {
           input.focus()
+          input.setSelectionRange(nextCaretPosition, nextCaretPosition)
         })
       },
-      [value, selectedMentions, allowMultiple, onChange, resetMentionState]
+      [
+        value,
+        disabled,
+        mentionState.startIndex,
+        selectedMentions,
+        effectiveAllowMultiple,
+        mentionLimit,
+        onChange,
+        resetMentionState,
+        resolveMentionsFromValue,
+      ]
     )
 
     const removeMention = useCallback(
       (userToRemove: MentionableUser) => {
-        const mentionPattern = new RegExp(`@\\[${userToRemove.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]\\s*`)
-        const newValue = value.replace(mentionPattern, '').trim()
-        const newMentions = selectedMentions.filter((m) => m.id !== userToRemove.id)
+        if (disabled) return
+
+        const escapedName = userToRemove.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const mentionPattern = new RegExp(`@\\[${escapedName}\\]\\s*`, 'g')
+        const newValue = value.replace(mentionPattern, '').replace(/[ \t]{2,}/g, ' ').trim()
+        const newMentions = resolveMentionsFromValue(newValue)
         onChange(newValue, newMentions)
       },
-      [value, selectedMentions, onChange]
+      [disabled, value, resolveMentionsFromValue, onChange]
     )
 
     const handleInputChange = useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = event.target.value
         const caretPosition = event.target.selectionStart || newValue.length
+        const newMentions = resolveMentionsFromValue(newValue)
 
-        onChange(newValue, selectedMentions)
+        onChange(newValue, newMentions)
         detectMentionTrigger(newValue, caretPosition)
       },
-      [onChange, selectedMentions, detectMentionTrigger]
+      [onChange, resolveMentionsFromValue, detectMentionTrigger]
     )
 
-    const handleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (!mentionState.active || mentionResults.length === 0) {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-          }
+    const handleInputSelect = useCallback(
+      (event: React.SyntheticEvent<HTMLInputElement>) => {
+        const caretPosition = event.currentTarget.selectionStart ?? event.currentTarget.value.length
+        detectMentionTrigger(event.currentTarget.value, caretPosition)
+      },
+      [detectMentionTrigger]
+    )
+
+    const handleInputBlur = useCallback(() => {
+      requestAnimationFrame(() => {
+        const activeElement = document.activeElement
+        if (!containerRef.current || !activeElement) {
+          resetMentionState()
           return
         }
 
-        if (event.key === 'ArrowDown') {
-          event.preventDefault()
-          setHighlightedIndex((current) => (current + 1) % mentionResults.length)
-        } else if (event.key === 'ArrowUp') {
-          event.preventDefault()
-          setHighlightedIndex(
-            (current) => (current - 1 + mentionResults.length) % mentionResults.length
-          )
-        } else if (event.key === 'Enter' || event.key === 'Tab') {
-          event.preventDefault()
-          const user = mentionResults[highlightedIndex]
-          if (user) {
-            insertMention(user)
-          }
-        } else if (event.key === 'Escape') {
+        if (!containerRef.current.contains(activeElement)) {
           resetMentionState()
         }
-      },
-      [mentionState, mentionResults, highlightedIndex, insertMention, resetMentionState]
-    )
+      })
+    }, [resetMentionState])
+
+    const handleInputFocus = useCallback(() => {
+      const input = inputRef.current
+      if (!input) return
+
+      const caretPosition = input.selectionStart ?? value.length
+      detectMentionTrigger(value, caretPosition)
+    }, [value, detectMentionTrigger])
+
+    const handleDropdownMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault()
+    }, [])
 
     const handleUserSelect = useCallback(
       (user: MentionableUser) => {
@@ -232,37 +316,76 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       [insertMention]
     )
 
-    const showDropdown = mentionState.active && mentionResults.length > 0
+    const handleKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!mentionState.active) {
+          return
+        }
+
+        if (event.key === 'ArrowDown' && mentionResults.length > 0) {
+          event.preventDefault()
+          setHighlightedIndex((current) => (current + 1) % mentionResults.length)
+        } else if (event.key === 'ArrowUp' && mentionResults.length > 0) {
+          event.preventDefault()
+          setHighlightedIndex(
+            (current) => (current - 1 + mentionResults.length) % mentionResults.length
+          )
+        } else if (event.key === 'Enter' || event.key === 'Tab') {
+          event.preventDefault()
+
+          if (mentionResults.length > 0) {
+            const user = mentionResults[highlightedIndex]
+            if (user) {
+              insertMention(user)
+            }
+          } else {
+            resetMentionState()
+          }
+        } else if (event.key === 'Escape') {
+          event.preventDefault()
+          resetMentionState()
+        }
+      },
+      [mentionState, mentionResults, highlightedIndex, insertMention, resetMentionState]
+    )
+
+    const hasReachedMentionLimit =
+      effectiveAllowMultiple && selectedMentions.length >= mentionLimit
+
+    const showDropdown = mentionState.active && !disabled
 
     return (
       <div className={cn('space-y-2', className)}>
-        {label && <label className="text-sm font-medium">{label}</label>}
+        {label && (
+          <label htmlFor={inputId} className="text-sm font-medium">
+            {label}
+          </label>
+        )}
 
         {selectedMentions.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {selectedMentions.map((mention) => (
               <div
                 key={mention.id}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 text-primary text-sm"
+                className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-sm text-primary"
               >
                 <User className="h-3 w-3" />
                 <span>{mention.name}</span>
-                {!singleSelect && (
-                  <button
-                    type="button"
-                    onClick={() => removeMention(mention)}
-                    className="hover:text-destructive transition-colors"
-                    disabled={disabled}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => removeMention(mention)}
+                  className="rounded-full p-0.5 text-primary/80 transition-colors hover:text-destructive"
+                  disabled={disabled}
+                  aria-label={`Remove ${mention.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </div>
             ))}
           </div>
         )}
 
-        <div className="relative">
+        <div ref={containerRef} className="relative">
           <Input
             ref={(node) => {
               inputRef.current = node
@@ -272,61 +395,97 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
                 ref.current = node
               }
             }}
+            id={inputId}
             type="text"
             value={value}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onSelect={handleInputSelect}
+            onClick={handleInputSelect}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             placeholder={placeholder}
             disabled={disabled}
+            autoComplete="off"
+            aria-autocomplete="list"
+            aria-expanded={showDropdown}
+            aria-controls={showDropdown ? `${inputId}-mentions` : undefined}
             className={cn('h-11 rounded-lg', inputClassName)}
           />
 
           {showDropdown && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-md border border-muted/60 bg-popover shadow-lg">
-              <p className="px-3 py-1.5 text-xs font-medium uppercase text-muted-foreground border-b">
-                Select user
+            <div
+              id={`${inputId}-mentions`}
+              role="listbox"
+              onMouseDown={handleDropdownMouseDown}
+              className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-muted/60 bg-popover shadow-lg"
+            >
+              <p className="border-b px-3 py-1.5 text-xs font-medium uppercase text-muted-foreground">
+                {hasReachedMentionLimit
+                  ? `Mention limit reached (${mentionLimit})`
+                  : mentionResults.length > 0
+                    ? 'Select user'
+                    : 'No matches'}
               </p>
               <div className="max-h-52 overflow-y-auto">
-                {mentionResults.map((user, index) => (
-                  <button
-                    key={user.id}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleUserSelect(user)}
-                    className={cn(
-                      'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors',
-                      index === highlightedIndex
-                        ? 'bg-primary/10 text-primary'
-                        : 'hover:bg-muted'
+                {mentionResults.length > 0
+                  ? mentionResults.map((user, index) => (
+                      <button
+                        key={user.id}
+                        id={`${inputId}-option-${user.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={index === highlightedIndex}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        onClick={() => handleUserSelect(user)}
+                        className={cn(
+                          'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors',
+                          index === highlightedIndex
+                            ? 'bg-primary/10 text-primary'
+                            : 'hover:bg-muted'
+                        )}
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              alt={user.name}
+                              className="h-7 w-7 rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{user.name}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {user.role || user.email || 'Team member'}
+                          </p>
+                        </div>
+                      </button>
+                    ))
+                  : (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">
+                        {hasReachedMentionLimit
+                          ? 'Remove a mention to add another user.'
+                          : mentionState.query.length > 0
+                            ? `No users found for "${mentionState.query}".`
+                            : 'Start typing to search users.'}
+                      </p>
                     )}
-                  >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                      {user.avatar ? (
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="h-7 w-7 rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{user.name}</p>
-                      {user.role && (
-                        <p className="text-xs text-muted-foreground">{user.role}</p>
-                      )}
-                    </div>
-                  </button>
-                ))}
               </div>
+              {mentionResults.length > 0 && (
+                <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">
+                  Use Up/Down to navigate, Enter to select, Esc to close.
+                </p>
+              )}
             </div>
           )}
         </div>
 
-        {selectedMentions.length >= maxMentions && (
+        {hasReachedMentionLimit && (
           <p className="text-xs text-muted-foreground">
-            Maximum {maxMentions} mentions allowed
+            Maximum {mentionLimit} mentions allowed
           </p>
         )}
       </div>

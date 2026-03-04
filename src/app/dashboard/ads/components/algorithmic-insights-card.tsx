@@ -288,8 +288,8 @@ export function AlgorithmicInsightsCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
-          {displayedInsights.map((insight, idx) => (
-            <InsightItem key={idx} insight={insight} compact />
+            {displayedInsights.map((insight) => (
+              <InsightItem key={`${insight.type}-${insight.title}`} insight={insight} compact />
           ))}
           {hasMoreInsights && onViewAll && (
             <Button variant="ghost" size="sm" className="w-full" onClick={onViewAll}>
@@ -365,8 +365,8 @@ export function AlgorithmicInsightsCard({
                 </p>
               </div>
             ) : (
-              displayedInsights.map((insight, idx) => (
-                <InsightItem key={idx} insight={insight} />
+                displayedInsights.map((insight) => (
+                  <InsightItem key={`${insight.type}-${insight.title}`} insight={insight} />
               ))
             )}
           </div>

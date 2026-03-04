@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
+import NextImage from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   RefreshCw,
-  Image,
+  Image as ImageIcon,
   Video,
   FileText,
   Filter,
@@ -95,7 +96,7 @@ type ViewMode = 'grid' | 'list'
 function getCreativeTypeIcon(type: string, className?: string) {
   const lowerType = type.toLowerCase()
   if (lowerType.includes('video')) return <Video className={className || "h-4 w-4"} />
-  if (lowerType.includes('image') || lowerType.includes('photo') || lowerType.includes('sponsored_status_update')) return <Image className={className || "h-4 w-4"} />
+  if (lowerType.includes('image') || lowerType.includes('photo') || lowerType.includes('sponsored_status_update')) return <ImageIcon className={className || "h-4 w-4"} />
   if (lowerType.includes('text') || lowerType.includes('search')) return <FileText className={className || "h-4 w-4"} />
   if (lowerType.includes('app') || lowerType.includes('call') || lowerType.includes('sponsored_inmails')) return <Smartphone className={className || "h-4 w-4"} />
   if (lowerType.includes('hotel')) return <MapPin className={className || "h-4 w-4"} />
@@ -213,9 +214,14 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [canLoad, campaignId, clientId, listAdMetrics, providerId, workspaceId])
  
   useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      void fetchAds()
+      void fetchMetrics()
+    })
 
-    void fetchAds()
-    void fetchMetrics()
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
   }, [fetchAds, fetchMetrics])
 
   const uniqueTypes = useMemo(() => {
@@ -263,19 +269,24 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     router.push(`/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`)
   }
 
-  const toggleAdStatus = async (ad: CampaignAd, newStatus: string) => {
+  const toggleAdStatus = (ad: CampaignAd, newStatus: string) => {
     // Optimistic update
     const previousAds = [...ads]
     setAds(currentAds =>
       currentAds.map(a => a.creativeId === ad.creativeId ? { ...a, status: newStatus } : a)
     )
 
-    try {
-      if (!workspaceId) {
-        throw new Error('Sign in required')
-      }
+    if (!workspaceId) {
+      setAds(previousAds)
+      toast({
+        title: 'Error',
+        description: 'Sign in required',
+        variant: 'destructive',
+      })
+      return
+    }
 
-      await updateCreativeStatus({
+    void updateCreativeStatus({
         workspaceId,
         providerId: providerId as any,
         clientId: clientId ?? null,
@@ -284,20 +295,22 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         status: newStatus as any,
       })
 
-      toast({
-        title: 'Status Updated',
-        description: `Ad is now ${newStatus.toLowerCase()}`,
+      .then(() => {
+        toast({
+          title: 'Status Updated',
+          description: `Ad is now ${newStatus.toLowerCase()}`,
+        })
       })
-    } catch (error) {
-      // Revert on error
-      setAds(previousAds)
-      logError(error, 'CampaignAdsSection:toggleAdStatus')
-      toast({
-        title: 'Error',
-        description: asErrorMessage(error),
-        variant: 'destructive',
+      .catch((error) => {
+        // Revert on error
+        setAds(previousAds)
+        logError(error, 'CampaignAdsSection:toggleAdStatus')
+        toast({
+          title: 'Error',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
-    }
   }
 
   const summaryStats = useMemo(() => {
@@ -373,8 +386,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
             </div>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                  {['skeleton-a', 'skeleton-b', 'skeleton-c', 'skeleton-d'].map((skeletonId) => (
+                    <Skeleton key={skeletonId} className="aspect-square rounded-lg" />
                 ))}
               </div>
             ) : (
@@ -471,12 +484,13 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                       {/* Thumbnail */}
                       <div className="aspect-square bg-muted relative overflow-hidden">
                         {ad.imageUrl ? (
-                          <img
+                          <NextImage
                             src={ad.imageUrl}
                             alt={ad.name || 'Creative preview'}
-                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                            loading="lazy"
-                            decoding="async"
+                            fill
+                            unoptimized
+                            sizes="(max-width: 1024px) 50vw, 240px"
+                            className="object-cover transition-transform group-hover:scale-105"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = 'none'
@@ -588,14 +602,15 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                           onClick={() => handleCreativeClick(ad)}
                         >
                           <TableCell>
-                            <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
+                            <div className="relative h-14 w-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
                               {ad.imageUrl ? (
-                                <img
+                                <NextImage
                                   src={ad.imageUrl}
                                   alt=""
-                                  className="h-full w-full object-cover"
-                                  loading="lazy"
-                                  decoding="async"
+                                  fill
+                                  unoptimized
+                                  sizes="56px"
+                                  className="object-cover"
                                 />
                               ) : ad.videoUrl ? (
                                 <Play className="h-5 w-5 text-muted-foreground" />

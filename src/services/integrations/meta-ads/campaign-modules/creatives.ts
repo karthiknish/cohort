@@ -9,7 +9,7 @@ import {
 } from '../client'
 import { optimizeMetaImageUrl, isSignedMetaThumbnail } from '../utils'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { MetaCreative, MetaAdsListResponse, MetaAdData } from '../types'
+import { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } from '../types'
 
 // =============================================================================
 // FETCH CREATIVES
@@ -164,7 +164,8 @@ export async function fetchMetaCreatives(options: {
 
       // Check if this is a lead generation ad (look for form ID in story spec)
       const storySpecCtaValue = storySpec?.link_data?.call_to_action?.value || storySpec?.video_data?.call_to_action?.value
-      const leadgenFormId = storySpecCtaValue?.leadgen_form_id || (ad as any).leadgen_form_id || (creative as any)?.leadgen_form_id
+      const creativeLeadgenFormId = (creative as (MetaAdCreative & { leadgen_form_id?: string }) | undefined)?.leadgen_form_id
+      const leadgenFormId = storySpecCtaValue?.leadgen_form_id || ad.leadgen_form_id || creativeLeadgenFormId
       const isLeadGenAd = !!leadgenFormId
 
       // For lead gen ads without traditional creatives, provide minimal info
@@ -175,7 +176,7 @@ export async function fetchMetaCreatives(options: {
           campaignId: ad.campaign_id ?? '',
           adName: ad.name,
           status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-          creativeId: (ad as any).creative?.id,
+          creativeId: ad.creative?.id,
           creativeName: undefined,
           type: 'lead_generation',
           callToAction: 'Sign Up',
@@ -195,7 +196,6 @@ export async function fetchMetaCreatives(options: {
       const assetFeedSpec = creative?.asset_feed_spec
       // Get image from asset feed - used by lead gen and dynamic creative ads
       const assetFeedImageUrl = assetFeedSpec?.images?.[0]?.url
-      const assetFeedVideoThumbnail = assetFeedSpec?.videos?.[0]?.thumbnail_url
 
       // Determine if this is an Instagram-focused creative (has Instagram actor or platform customization)
       const isInstagramCreative = !!(storySpec?.instagram_actor_id || creative?.platform_customizations?.instagram)
@@ -223,7 +223,7 @@ export async function fetchMetaCreatives(options: {
 
       // Use the best available image source, optimized for Meta CDN quality
       // For Instagram creatives, prefer Instagram-specific images, otherwise fall back to general images
-      let rawImageUrl = creativeFullPicture
+      const rawImageUrl = creativeFullPicture
         || nativeImageUrl
         || assetFeedImageUrl
         || (isInstagramCreative ? instagramCustomImageUrl : null)
@@ -233,13 +233,7 @@ export async function fetchMetaCreatives(options: {
         || (!isThumbnailSigned ? creativeThumbnailUrl : null)
         || creativeThumbnailUrl // Last resort: signed thumbnail even if it might fail
         
-      let imageUrl = rawImageUrl ? optimizeMetaImageUrl(rawImageUrl) : undefined
-      
-      // If the only available image is a signed thumbnail, keep the original unoptimized
-      // version as a fallback since the optimized one might fail
-      const fallbackImageUrl = (isThumbnailSigned && creativeThumbnailUrl === rawImageUrl)
-        ? creativeThumbnailUrl 
-        : undefined
+      const imageUrl = rawImageUrl ? optimizeMetaImageUrl(rawImageUrl) : undefined
 
       // Extract call to action with both type and name (name is the button text)
       const cta = storySpec?.link_data?.call_to_action ?? storySpec?.video_data?.call_to_action
@@ -259,8 +253,8 @@ export async function fetchMetaCreatives(options: {
         campaignId: ad.campaign_id ?? '',
         adName: ad.name,
         status: (ad.effective_status ?? ad.status ?? 'PAUSED') as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
-        creativeId: creative?.id || (ad as any).creative?.id,
-        creativeName: creative?.name || (ad as any).creative?.name,
+        creativeId: creative?.id || ad.creative?.id,
+        creativeName: creative?.name || ad.creative?.name,
         type: adType,
         thumbnailUrl: optimizeMetaImageUrl(creativeThumbnailUrl) || imageUrl,
         imageUrl,

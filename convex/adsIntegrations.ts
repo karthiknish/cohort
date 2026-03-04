@@ -32,6 +32,13 @@ function hasOwn(obj: object, key: string) {
   return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
+function normalizeMetaAccountId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return null
+  return trimmed.startsWith('act_') ? trimmed : `act_${trimmed}`
+}
+
 const adIntegrationZ = z.object({
   providerId: z.string(),
   clientId: z.string().nullable(),
@@ -347,11 +354,49 @@ export const requestManualSync = mutation({
   },
 })
 
+export const listMetaAdAccounts = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('facebook'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => withErrorHandling(async () => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
+
+    const clientId = normalizeClientId(args.clientId ?? null)
+
+    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+    })
+
+    if (!integration.accessToken) {
+      throw Errors.integration.missingToken('Meta')
+    }
+
+    const { fetchMetaAdAccounts } = await import('@/services/integrations/meta-ads')
+    const accounts = await fetchMetaAdAccounts({ accessToken: integration.accessToken })
+
+    return accounts.map((account) => ({
+      id: account.id,
+      name: account.name,
+      currency: account.currency ?? null,
+      accountStatus: account.account_status ?? null,
+      isActive: account.account_status === 1,
+    }))
+  }, 'adsIntegrations:listMetaAdAccounts', { maxRetries: 3 }),
+})
+
 export const initializeAdAccount = action({
   args: {
     workspaceId: v.string(),
     providerId: v.union(v.literal('google'), v.literal('linkedin'), v.literal('facebook'), v.literal('tiktok')),
     clientId: v.optional(v.union(v.string(), v.null())),
+    accountId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
@@ -469,14 +514,28 @@ export const initializeAdAccount = action({
         throw Errors.integration.notConfigured('Meta', 'No ad accounts available')
       }
 
-      const preferredAccount = accounts.find((account) => account.account_status === 1) ?? accounts[0]!
+      const selectedAccountId = normalizeMetaAccountId(args.accountId ?? null)
+      if (!selectedAccountId) {
+        throw Errors.validation.invalidInput('Please select a Meta ad account to finish setup')
+      }
+
+      const selectedAccount =
+        accounts.find((account) => normalizeMetaAccountId(account.id) === selectedAccountId) ?? null
+
+      if (!selectedAccount) {
+        throw Errors.validation.invalidInput('Selected Meta ad account is not available for this integration token')
+      }
+
+      if (selectedAccount.account_status !== 1) {
+        throw Errors.validation.invalidInput('Selected Meta ad account is not active')
+      }
 
       await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
         workspaceId: args.workspaceId,
         providerId: 'facebook',
         clientId,
-        accountId: preferredAccount.id,
-        accountName: preferredAccount.name,
+        accountId: selectedAccount.id,
+        accountName: selectedAccount.name,
         linkedAtMs,
       })
 
@@ -489,8 +548,8 @@ export const initializeAdAccount = action({
       })
 
       return {
-        accountId: preferredAccount.id,
-        accountName: preferredAccount.name,
+        accountId: selectedAccount.id,
+        accountName: selectedAccount.name,
         accounts,
       }
     }

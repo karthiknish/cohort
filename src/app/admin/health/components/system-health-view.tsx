@@ -165,13 +165,13 @@ export function SystemHealthView() {
                     <Skeleton className="h-9 w-32" />
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
-                    {[1, 2, 3].map(i => (
-                        <Skeleton key={i} className="h-24 w-full rounded-xl" />
+                    {['health-summary-1', 'health-summary-2', 'health-summary-3'].map((slotKey) => (
+                        <Skeleton key={slotKey} className="h-24 w-full rounded-xl" />
                     ))}
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {[1, 2, 3, 4, 5].map(i => (
-                        <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                    {['health-card-1', 'health-card-2', 'health-card-3', 'health-card-4', 'health-card-5'].map((slotKey) => (
+                        <Skeleton key={slotKey} className="h-32 w-full rounded-xl" />
                     ))}
                 </div>
             </div>

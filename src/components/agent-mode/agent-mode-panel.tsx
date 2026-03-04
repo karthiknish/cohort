@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -65,7 +65,7 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
   if (status === 'connected') return null
   
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
@@ -86,14 +86,14 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
           <span>Offline</span>
         </>
       )}
-    </motion.div>
+    </m.div>
   )
 }
 
 // Rate limit banner
 function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismiss?: () => void }) {
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
@@ -108,7 +108,7 @@ function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismis
           Dismiss
         </Button>
       )}
-    </motion.div>
+    </m.div>
   )
 }
 
@@ -261,18 +261,19 @@ export function AgentModePanel({
   const isInputDisabled = isProcessing || (typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0)
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: 0 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[9999] flex flex-col bg-background h-screen"
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-          onScroll={(e) => e.stopPropagation()}
-        >
+    <LazyMotion features={domAnimation}>
+      <AnimatePresence>
+        {isOpen && (
+          <m.div
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] flex flex-col bg-background h-screen"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onScroll={(e) => e.stopPropagation()}
+          >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
@@ -500,12 +501,12 @@ export function AgentModePanel({
                   ))}
 
                   {isProcessing && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                    <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
                       <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-foreground">Thinking...</span>
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
                 </div>
               </div>
@@ -576,8 +577,9 @@ export function AgentModePanel({
               </div>
             </>
           )}
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </LazyMotion>
   )
 }

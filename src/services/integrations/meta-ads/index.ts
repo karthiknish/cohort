@@ -75,12 +75,17 @@ export {
 export {
   createMetaAdCreative,
   createMetaAd,
+  deleteMetaAdCreative,
   updateMetaAdCreative,
+  fetchMetaPageActors,
   uploadMediaToMeta,
 } from './creatives'
 export type {
   CreateAdCreativeOptions,
   CreateAdOptions,
+  DeleteAdCreativeOptions,
+  FetchMetaPageActorsOptions,
+  MetaPageActor,
   UpdateAdCreativeOptions,
   UploadMediaOptions,
 } from './creatives'

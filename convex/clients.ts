@@ -47,10 +47,10 @@ function slugify(value: string): string {
  */
 export const getByLegacyIdServer = query({
   args: { workspaceId: v.string(), legacyId: v.string() },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const row = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Client', args.legacyId)
@@ -78,29 +78,25 @@ export const list = zWorkspacePaginatedQueryActive({
       legacyId: z.string(),
     }).nullable(),
   }),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const isAdmin = ctx.user?.role === 'admin'
     const fetchAll = isAdmin && args.includeAllWorkspaces === true
 
-    let q: any
+    const baseQuery = fetchAll
+      ? ctx.db.query('clients').order('asc')
+      : ctx.db
+          .query('clients')
+          .withIndex('by_workspace_nameLower_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+          .order('asc')
 
-    if (fetchAll) {
-      q = ctx.db.query('clients').order('asc')
-    } else {
-      q = ctx.db
-        .query('clients')
-        .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
-        .order('asc')
-    }
-
-    q = applyManualPagination(q, args.cursor, 'nameLower', 'asc')
+    const q = applyManualPagination(baseQuery, args.cursor, 'nameLower', 'asc')
 
     const limit = args.limit ?? 50
     const rows = await q.take(limit + 1)
     const result = getPaginatedResponse(rows, limit, 'nameLower')
 
     return {
-      items: result.items.map((row: any) => ({
+      items: result.items.map((row) => ({
         legacyId: row.legacyId,
         name: row.name,
         accountManager: row.accountManager,
@@ -118,10 +114,10 @@ export const list = zWorkspacePaginatedQueryActive({
 export const countActive = zWorkspaceQueryActive({
   args: { workspaceId: z.string() },
   returns: z.number(),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const rows = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_deletedAtMs', (q: any) => q.eq('workspaceId', args.workspaceId).eq('deletedAtMs', null))
+      .withIndex('by_workspace_deletedAtMs', (q) => q.eq('workspaceId', args.workspaceId).eq('deletedAtMs', null))
       .collect()
 
     return rows.length
@@ -131,10 +127,10 @@ export const countActive = zWorkspaceQueryActive({
 export const getByLegacyId = zWorkspaceQuery({
   args: { workspaceId: z.string(), legacyId: z.string() },
   returns: clientZ,
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const row = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Client', args.legacyId)
@@ -165,7 +161,7 @@ export const create = zWorkspaceMutation({
     createdBy: z.string().nullable(),
   },
   returns: z.object({ legacyId: z.string() }),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const baseId = slugify(args.name)
     let candidateId = baseId
     let attempt = 1
@@ -174,7 +170,7 @@ export const create = zWorkspaceMutation({
     while (attempt <= 20) {
       const existing = await ctx.db
         .query('clients')
-        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', candidateId))
+        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', candidateId))
         .unique()
 
       if (!existing) {
@@ -216,10 +212,10 @@ export const addTeamMember = zWorkspaceMutation({
     role: z.string().optional(),
   },
   returns: z.string(),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const client = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!client || client.deletedAtMs !== null) {
@@ -229,7 +225,7 @@ export const addTeamMember = zWorkspaceMutation({
     const normalizedName = args.name.trim()
     const normalizedRole = (args.role ?? '').trim() || 'Contributor'
 
-    const exists = client.teamMembers.some((member: any) => member.name.toLowerCase() === normalizedName.toLowerCase())
+    const exists = client.teamMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())
     if (exists) {
       throw Errors.resource.alreadyExists('Team member')
     }
@@ -250,10 +246,10 @@ export const softDelete = zWorkspaceMutation({
     deletedAtMs: z.number().optional(),
   },
   returns: z.string(),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const client = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!client) {
@@ -289,10 +285,10 @@ export const upsert = zWorkspaceMutation({
     deletedAtMs: z.number().nullable(),
   },
   returns: z.string(),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     const payload = {
@@ -340,13 +336,13 @@ export const bulkUpsert = zAuthenticatedMutation({
     ),
   },
   returns: z.object({ upserted: z.number() }),
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     let upserted = 0
 
     for (const client of args.clients) {
       const existing = await ctx.db
         .query('clients')
-        .withIndex('by_workspace_legacyId', (q: any) =>
+        .withIndex('by_workspace_legacyId', (q) =>
           q.eq('workspaceId', client.workspaceId).eq('legacyId', client.legacyId)
         )
         .unique()

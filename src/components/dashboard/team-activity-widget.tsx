@@ -62,9 +62,19 @@ export function TeamActivityWidget({
     const totalTasks = data.members.reduce((sum, m) => sum + (m.tasksCompleted || 0), 0)
     const totalHours = data.members.reduce((sum, m) => sum + (m.hoursLogged || 0), 0)
 
-    const topPerformer = data.members.reduce((best, member) =>
-      (member.tasksCompleted || 0) > (best?.tasksCompleted || 0) ? member : best
-    , undefined as TeamMember | undefined)
+      const topPerformer = data.members.reduce<TeamMember | undefined>((best, member) => {
+        const memberTasks = typeof member.tasksCompleted === 'number' ? member.tasksCompleted : 0
+        if (!best) {
+          return member
+        }
+
+        const bestTasks = typeof best.tasksCompleted === 'number' ? best.tasksCompleted : 0
+        if (memberTasks > bestTasks) {
+          return member
+        }
+
+        return best
+      }, undefined)
 
     return {
       onlineCount,

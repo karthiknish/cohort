@@ -46,8 +46,8 @@ export function AnalyticsInsightsSection({
                 <CardContent className="pt-6">
                     {initialInsightsLoading ? (
                         <div className="grid gap-4 sm:grid-cols-2">
-                            {Array.from({ length: 2 }).map((_, idx) => (
-                                <Skeleton key={idx} className="h-32 w-full rounded-xl" />
+                            {['algo-skeleton-1', 'algo-skeleton-2'].map((slotKey) => (
+                                <Skeleton key={slotKey} className="h-32 w-full rounded-xl" />
                             ))}
                         </div>
                     ) : algorithmic.length === 0 ? (
@@ -55,9 +55,9 @@ export function AnalyticsInsightsSection({
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2">
                             {algorithmic.flatMap((group) =>
-                                group.suggestions.map((suggestion, idx) => (
+                                group.suggestions.map((suggestion) => (
                                     <div
-                                        key={`${group.providerId}-${idx}`}
+                                        key={`${group.providerId}-${suggestion.level}-${suggestion.title}`}
                                         className={cn(
                                             "relative overflow-hidden rounded-xl border p-4 shadow-sm transition-all hover:shadow-md",
                                             suggestion.level === 'success' && "border-emerald-500/30 bg-emerald-500/5",
@@ -138,8 +138,8 @@ export function AnalyticsInsightsSection({
                     )}
                     {initialInsightsLoading ? (
                         <div className="space-y-4">
-                            {Array.from({ length: 3 }).map((_, idx) => (
-                                <div key={idx} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
+                            {['insight-skeleton-1', 'insight-skeleton-2', 'insight-skeleton-3'].map((slotKey) => (
+                                <div key={slotKey} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
                                     <Skeleton className="h-3 w-24 rounded-full" />
                                     <Skeleton className="mt-4 h-16 w-full rounded-lg" />
                                 </div>

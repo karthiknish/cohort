@@ -305,7 +305,7 @@ export function ImagePreviewModal({
         <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-2 bg-gradient-to-t from-black/60 to-transparent p-4">
           {images.map((image, index) => (
             <button
-              key={`${image.url}-${index}`}
+              key={`${image.url}-${image.name}`}
               className={cn(
                 "h-14 w-14 overflow-hidden rounded-md border-2 transition-all",
                 index === normalizedIndex
@@ -314,7 +314,7 @@ export function ImagePreviewModal({
               )}
               onClick={(e) => {
                 e.stopPropagation()
-                setIndexOffset(index - initialIndex)
+                setIndexOffset(() => index - initialIndex)
                 setZoom(1)
                 setPosition({ x: 0, y: 0 })
               }}

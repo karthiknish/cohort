@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Building2, FolderKanban, Users, User, Loader2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -28,6 +28,11 @@ interface MentionDropdownProps {
   users?: Array<{ id: string; name: string; email?: string; role?: string }>
   isLoading?: boolean
 }
+
+const EMPTY_CLIENTS: NonNullable<MentionDropdownProps['clients']> = []
+const EMPTY_PROJECTS: NonNullable<MentionDropdownProps['projects']> = []
+const EMPTY_TEAMS: NonNullable<MentionDropdownProps['teams']> = []
+const EMPTY_USERS: NonNullable<MentionDropdownProps['users']> = []
 
 const MENTION_CATEGORIES = [
   { type: 'client' as MentionType, label: 'Clients', icon: Building2 },
@@ -67,10 +72,10 @@ export function MentionDropdown({
   onClose,
   onSelect,
   searchQuery,
-  clients = [],
-  projects = [],
-  teams = [],
-  users = [],
+  clients = EMPTY_CLIENTS,
+  projects = EMPTY_PROJECTS,
+  teams = EMPTY_TEAMS,
+  users = EMPTY_USERS,
   isLoading = false,
 }: MentionDropdownProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -178,15 +183,16 @@ export function MentionDropdown({
   if (!isOpen) return null
 
   return (
-    <AnimatePresence>
-      <motion.div
-        ref={dropdownRef}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 8 }}
-        transition={{ duration: 0.15 }}
-        className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border bg-background shadow-lg"
-      >
+    <LazyMotion features={domAnimation}>
+      <AnimatePresence>
+        <m.div
+          ref={dropdownRef}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.15 }}
+          className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border bg-background shadow-lg"
+        >
         {/* Category tabs */}
         <div className="flex items-center gap-1 border-b bg-muted/30 px-2 py-1.5">
           <button
@@ -259,8 +265,9 @@ export function MentionDropdown({
             <kbd className="ml-1.5 rounded bg-muted px-1 py-0.5 text-[9px]">Esc</kbd> Close
           </p>
         </div>
-      </motion.div>
-    </AnimatePresence>
+        </m.div>
+      </AnimatePresence>
+    </LazyMotion>
   )
 }
 

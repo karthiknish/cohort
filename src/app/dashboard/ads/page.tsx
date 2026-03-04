@@ -105,11 +105,16 @@ export default function AdsPage() {
     initializingTikTok,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
+    metaAccountOptions,
+    selectedMetaAccountId,
+    setSelectedMetaAccountId,
+    loadingMetaAccountOptions,
     handleConnect,
     handleDisconnect,
     handleOauthRedirect,
     initializeMetaIntegration,
     initializeTikTokIntegration,
+    reloadMetaAccountOptions,
     adPlatforms,
   } = useAdsConnections({
     onRefresh: triggerMetricsRefresh,
@@ -182,7 +187,12 @@ export default function AdsPage() {
               metaSetupMessage={metaSetupMessage}
               metaNeedsAccountSelection={metaNeedsAccountSelection}
               initializingMeta={initializingMeta}
-              onInitializeMeta={() => void initializeMetaIntegration()}
+              onInitializeMeta={() => void initializeMetaIntegration(undefined, selectedMetaAccountId || null)}
+              metaAccountOptions={metaAccountOptions}
+              selectedMetaAccountId={selectedMetaAccountId}
+              onMetaAccountSelectionChange={setSelectedMetaAccountId}
+              loadingMetaAccountOptions={loadingMetaAccountOptions}
+              onReloadMetaAccountOptions={() => void reloadMetaAccountOptions()}
               tiktokSetupMessage={tiktokSetupMessage}
               tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
               initializingTikTok={initializingTikTok}
