@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { format } from 'date-fns'
 import { CalendarPlus, CalendarDays, X } from 'lucide-react'
@@ -58,7 +58,7 @@ export default function MeetingsPage() {
   const [cancellingMeetingId, setCancellingMeetingId] = useState<string | null>(null)
   const [activeInSiteMeeting, setActiveInSiteMeeting] = useState<MeetingRecord | null>(null)
   const [activeInSiteUrl, setActiveInSiteUrl] = useState<string | null>(null)
-  const [oauthHandled, setOauthHandled] = useState(false)
+  const oauthHandledRef = useRef(false)
 
   const meetings = useQuery(
     meetingsApi.list,
@@ -110,7 +110,7 @@ export default function MeetingsPage() {
   const updateMeetingStatus = useMutation(meetingsApi.updateStatus)
 
   useEffect(() => {
-    if (oauthHandled || typeof window === 'undefined') return
+    if (oauthHandledRef.current || typeof window === 'undefined') return
 
     const searchParams = new URLSearchParams(window.location.search)
     const oauthSuccess = searchParams.get('oauth_success') === 'true'
@@ -119,7 +119,7 @@ export default function MeetingsPage() {
     const message = searchParams.get('message')
 
     if (!oauthSuccess && !oauthError) {
-      setOauthHandled(true)
+      oauthHandledRef.current = true
       return
     }
 
@@ -145,8 +145,8 @@ export default function MeetingsPage() {
     newUrl.searchParams.delete('message')
     window.history.replaceState({}, '', newUrl.toString())
 
-    setOauthHandled(true)
-  }, [oauthHandled, toast])
+    oauthHandledRef.current = true
+  }, [toast])
 
   const upcomingMeetings = useMemo(() => meetings ?? [], [meetings])
 
@@ -258,7 +258,7 @@ export default function MeetingsPage() {
     setAttendeeInput('')
   }
 
-  const handleConnectGoogleWorkspace = async () => {
+  const handleConnectGoogleWorkspace = () => {
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -270,37 +270,51 @@ export default function MeetingsPage() {
 
     if (typeof window === 'undefined') return
 
-    try {
-      const redirect = `${window.location.pathname}${window.location.search}`
-      const response = await fetch(
-        `/api/integrations/google-workspace/oauth/url?redirect=${encodeURIComponent(redirect)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+    const redirect = `${window.location.pathname}${window.location.search}`
+
+    void fetch(
+      `/api/integrations/google-workspace/oauth/url?redirect=${encodeURIComponent(redirect)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          success?: boolean
+          data?: { url?: string }
+          url?: string
+          error?: string
         }
-      )
 
-      const payload = (await response.json().catch(() => ({}))) as {
-        success?: boolean
-        data?: { url?: string }
-        url?: string
-        error?: string
-      }
+        let oauthUrl: string | undefined
+        if (payload.data && typeof payload.data.url === 'string') {
+          oauthUrl = payload.data.url
+        } else if (typeof payload.url === 'string') {
+          oauthUrl = payload.url
+        }
 
-      const url = payload.data?.url ?? payload.url
+        if (!response.ok || !oauthUrl) {
+          toast({
+            variant: 'destructive',
+            title: 'Unable to connect Google Workspace',
+            description:
+              typeof payload.error === 'string'
+                ? payload.error
+                : 'Failed to start Google Workspace OAuth flow',
+          })
+          return
+        }
 
-      if (!response.ok || !url) {
-        throw new Error(payload.error || 'Failed to start Google Workspace OAuth flow')
-      }
-
-      window.location.href = url
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Unable to connect Google Workspace',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        window.location.href = oauthUrl
       })
-    }
+      .catch((error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Unable to connect Google Workspace',
+          description: error instanceof Error ? error.message : 'Unknown error',
+        })
+      })
   }
 
   const handleDisconnectGoogleWorkspace = async () => {
@@ -345,7 +359,7 @@ export default function MeetingsPage() {
     setActiveInSiteUrl(url)
   }
 
-  const handleStartQuickMeet = async () => {
+  const handleStartQuickMeet = () => {
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -356,72 +370,84 @@ export default function MeetingsPage() {
     }
 
     setQuickStarting(true)
+    const quickMeetClientId = selectedClientId === undefined ? null : selectedClientId
 
-    try {
-      const response = await fetch('/api/meetings/quick', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: 'Quick Meet',
-          durationMinutes: 30,
-          attendeeEmails,
-          timezone,
-          clientId: selectedClientId ?? null,
-        }),
-      })
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        success?: boolean
-        error?: string
-        data?: {
+    void fetch('/api/meetings/quick', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: 'Quick Meet',
+        durationMinutes: 30,
+        attendeeEmails,
+        timezone,
+        clientId: quickMeetClientId,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          success?: boolean
+          error?: string
+          data?: {
+            meeting?: MeetingRecord
+            inSiteEmbedUrl?: string | null
+          }
           meeting?: MeetingRecord
           inSiteEmbedUrl?: string | null
         }
-        meeting?: MeetingRecord
-        inSiteEmbedUrl?: string | null
-      }
 
-      if (!response.ok || payload.success === false) {
-        throw new Error(payload.error || 'Unable to start quick meet')
-      }
+        if (!response.ok || payload.success === false) {
+          toast({
+            variant: 'destructive',
+            title: 'Quick meet failed',
+            description: payload.error || 'Unable to start quick meet',
+          })
+          return
+        }
 
-      const meeting = payload.data?.meeting ?? payload.meeting
-      const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl
-      const quickMeetUrl = meeting?.meetLink ?? null
+        const meeting = payload.data?.meeting ?? payload.meeting
+        const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl
+        const quickMeetUrl = meeting?.meetLink ?? null
 
-      if (!meeting) {
-        throw new Error('Quick meet was created without a meeting record')
-      }
+        if (!meeting) {
+          toast({
+            variant: 'destructive',
+            title: 'Quick meet failed',
+            description: 'Quick meet was created without a meeting record',
+          })
+          return
+        }
 
-      if (inSiteEmbedUrl) {
-        setActiveInSiteMeeting(meeting)
-        setActiveInSiteUrl(inSiteEmbedUrl)
-      } else {
-        setActiveInSiteMeeting(null)
-        setActiveInSiteUrl(null)
-      }
+        if (inSiteEmbedUrl) {
+          setActiveInSiteMeeting(meeting)
+          setActiveInSiteUrl(inSiteEmbedUrl)
+        } else {
+          setActiveInSiteMeeting(null)
+          setActiveInSiteUrl(null)
+        }
 
-      if (quickMeetUrl && typeof window !== 'undefined') {
-        window.open(quickMeetUrl, '_blank', 'noopener,noreferrer')
-      }
+        if (quickMeetUrl && typeof window !== 'undefined') {
+          window.open(quickMeetUrl, '_blank', 'noopener,noreferrer')
+        }
 
-      toast({
-        title: 'Quick meet started',
-        description: quickMeetUrl
-          ? 'Google Meet opened in a new tab and invites were sent.'
-          : 'Quick meeting created successfully.',
+        toast({
+          title: 'Quick meet started',
+          description: quickMeetUrl
+            ? 'Google Meet opened in a new tab and invites were sent.'
+            : 'Quick meeting created successfully.',
+        })
       })
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Quick meet failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+      .catch((error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Quick meet failed',
+          description: error instanceof Error ? error.message : 'Unknown error',
+        })
       })
-    } finally {
-      setQuickStarting(false)
-    }
+      .finally(() => {
+        setQuickStarting(false)
+      })
   }
 
   const handleRescheduleMeeting = (meeting: MeetingRecord) => {
@@ -436,7 +462,7 @@ export default function MeetingsPage() {
     setAttendeeEmails(meeting.attendeeEmails)
   }
 
-  const handleCancelMeeting = async (meeting: MeetingRecord) => {
+  const handleCancelMeeting = (meeting: MeetingRecord) => {
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -455,46 +481,52 @@ export default function MeetingsPage() {
 
     setCancellingMeetingId(meeting.legacyId)
 
-    try {
-      const response = await fetch('/api/meetings/cancel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          legacyId: meeting.legacyId,
-        }),
+    void fetch('/api/meetings/cancel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        legacyId: meeting.legacyId,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          success?: boolean
+          error?: string
+        }
+
+        if (!response.ok || payload.success === false) {
+          toast({
+            variant: 'destructive',
+            title: 'Cancel failed',
+            description: payload.error || 'Unable to cancel meeting',
+          })
+          return
+        }
+
+        if (editingMeetingId === meeting.legacyId) {
+          resetScheduleForm()
+        }
+
+        toast({
+          title: 'Meeting cancelled',
+          description: 'Attendees received a cancellation email.',
+        })
       })
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        success?: boolean
-        error?: string
-      }
-
-      if (!response.ok || payload.success === false) {
-        throw new Error(payload.error || 'Unable to cancel meeting')
-      }
-
-      if (editingMeetingId === meeting.legacyId) {
-        resetScheduleForm()
-      }
-
-      toast({
-        title: 'Meeting cancelled',
-        description: 'Attendees received a cancellation email.',
+      .catch((error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Cancel failed',
+          description: error instanceof Error ? error.message : 'Unknown error',
+        })
       })
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Cancel failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+      .finally(() => {
+        setCancellingMeetingId(null)
       })
-    } finally {
-      setCancellingMeetingId(null)
-    }
   }
 
-  const handleScheduleMeeting = async (event: FormEvent<HTMLFormElement>) => {
+  const handleScheduleMeeting = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (!canSchedule) {
@@ -552,65 +584,75 @@ export default function MeetingsPage() {
 
     setScheduling(true)
 
-    try {
-      const isEditing = Boolean(editingMeeting)
-      const endpoint = isEditing ? '/api/meetings/reschedule' : '/api/meetings/schedule'
+    const isEditing = Boolean(editingMeeting)
+    const endpoint = isEditing ? '/api/meetings/reschedule' : '/api/meetings/schedule'
+    const legacyId = editingMeeting ? editingMeeting.legacyId : undefined
+    const trimmedDescription = description.trim()
+    const payloadDescription = trimmedDescription.length > 0 ? trimmedDescription : null
+    const schedulingClientId = selectedClientId === undefined ? null : selectedClientId
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          legacyId: editingMeeting?.legacyId,
-          title,
-          description: description.trim().length > 0 ? description.trim() : null,
-          startTimeMs,
-          endTimeMs,
-          timezone,
-          attendeeEmails,
-          clientId: selectedClientId ?? null,
-        }),
-      })
-
-      const payload = (await response.json().catch(() => ({}))) as {
-        success?: boolean
-        error?: string
-        data?: {
-          meeting?: { meetLink?: string | null }
+    void fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        legacyId,
+        title,
+        description: payloadDescription,
+        startTimeMs,
+        endTimeMs,
+        timezone,
+        attendeeEmails,
+        clientId: schedulingClientId,
+      }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as {
+          success?: boolean
+          error?: string
+          data?: {
+            meeting?: { meetLink?: string | null }
+          }
         }
-      }
 
-      if (!response.ok || payload.success === false) {
-        throw new Error(payload.error || 'Unable to schedule meeting')
-      }
+        if (!response.ok || payload.success === false) {
+          toast({
+            variant: 'destructive',
+            title: isEditing ? 'Reschedule failed' : 'Schedule failed',
+            description: payload.error || 'Unable to schedule meeting',
+          })
+          return
+        }
 
-      const meetLink = payload.data?.meeting?.meetLink
+        const meetLink = payload.data?.meeting?.meetLink
 
-      if (isEditing) {
-        toast({
-          title: 'Meeting rescheduled',
-          description: 'Updated details were saved and attendees were notified.',
-        })
-      } else {
-        toast({
-          title: 'Meeting scheduled',
-          description: meetLink
-            ? 'Invites were sent and your Google Meet link is ready.'
-            : 'Meeting saved successfully.',
-        })
-      }
+        if (isEditing) {
+          toast({
+            title: 'Meeting rescheduled',
+            description: 'Updated details were saved and attendees were notified.',
+          })
+        } else {
+          toast({
+            title: 'Meeting scheduled',
+            description: meetLink
+              ? 'Invites were sent and your Google Meet link is ready.'
+              : 'Meeting saved successfully.',
+          })
+        }
 
-      resetScheduleForm()
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: editingMeeting ? 'Reschedule failed' : 'Schedule failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        resetScheduleForm()
       })
-    } finally {
-      setScheduling(false)
-    }
+      .catch((error) => {
+        toast({
+          variant: 'destructive',
+          title: isEditing ? 'Reschedule failed' : 'Schedule failed',
+          description: error instanceof Error ? error.message : 'Unknown error',
+        })
+      })
+      .finally(() => {
+        setScheduling(false)
+      })
   }
 
   const handleMarkCompleted = async (legacyId: string) => {

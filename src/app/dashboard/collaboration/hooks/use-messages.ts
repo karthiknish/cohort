@@ -44,7 +44,7 @@ export function useSendMessage({
 }: UseSendMessageOptions) {
   const { toast } = useToast()
 
-  const createMessage = useMutation((collaborationApi as any).createMessage)
+  const createMessage = useMutation(collaborationApi.createMessage)
 
   const [sendingMessage, setSendingMessage] = useState(false)
   const sendingMessageRef = useRef(false)
@@ -199,7 +199,7 @@ export function useFetchMessages({
 }: UseFetchMessagesOptions) {
   const { toast } = useToast()
 
-  const listChannel = useMutation((collaborationApi as any).listChannel)
+  const listChannel = useMutation(collaborationApi.listChannel)
 
   const [fetchingMessages, setFetchingMessages] = useState(false)
   const [channelCursors, setChannelCursors] = useState<Record<string, string | null>>({})
@@ -225,40 +225,59 @@ export function useFetchMessages({
 
         // Convex expects channelType/clientId/projectId; REST used channelId only.
         const fetchLimit = MESSAGE_PAGE_SIZE + 1
-        const rows = (await listChannel({
+        const listResult = await listChannel({
           workspaceId: String(workspaceId),
           channelType: channel.type,
           clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
           projectId: channel.type === 'project' ? (channel.projectId ?? null) : null,
           limit: fetchLimit,
-        })) as any[]
+        })
+
+        const rowsRaw = Array.isArray(listResult)
+          ? listResult
+          : Array.isArray((listResult as { items?: unknown } | null | undefined)?.items)
+            ? ((listResult as { items: unknown[] }).items)
+            : []
+
+        const rows = rowsRaw.filter(
+          (row): row is Record<string, unknown> =>
+            typeof row === 'object' && row !== null
+        )
 
         const mapped: CollaborationMessage[] = rows
-          .map((row) => ({
-            id: String(row?.legacyId ?? ''),
-            channelType: typeof row?.channelType === 'string' ? row.channelType : channel.type,
-            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
-            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
-            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
-            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
-            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
-            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
-            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
-            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
-            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
-            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
-            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
-            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
-            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
-            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
-            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
-            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
-            threadLastReplyAt:
-              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
-          }))
+          .map((row) => {
+            const rowChannelType = row.channelType
+            const normalizedChannelType =
+              rowChannelType === 'client' || rowChannelType === 'team' || rowChannelType === 'project'
+                ? rowChannelType
+                : channel.type
+
+            return {
+              id: String(row.legacyId ?? ''),
+              channelType: normalizedChannelType,
+              clientId: typeof row.clientId === 'string' ? row.clientId : null,
+              projectId: typeof row.projectId === 'string' ? row.projectId : null,
+              senderId: typeof row.senderId === 'string' ? row.senderId : null,
+              senderName: typeof row.senderName === 'string' ? row.senderName : 'Unknown teammate',
+              senderRole: typeof row.senderRole === 'string' ? row.senderRole : null,
+              content: Boolean(row.deleted || row.deletedAtMs) ? '' : String(row.content ?? ''),
+              createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
+              updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
+              isEdited: Boolean(row.updatedAtMs && row.createdAtMs && row.updatedAtMs !== row.createdAtMs),
+              deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
+              deletedBy: typeof row.deletedBy === 'string' ? row.deletedBy : null,
+              isDeleted: Boolean(row.deleted || row.deletedAtMs),
+              attachments: Array.isArray(row.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
+              format: (row.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+              mentions: Array.isArray(row.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
+              reactions: Array.isArray(row.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+              parentMessageId: typeof row.parentMessageId === 'string' ? row.parentMessageId : null,
+              threadRootId: typeof row.threadRootId === 'string' ? row.threadRootId : null,
+              threadReplyCount: typeof row.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+              threadLastReplyAt:
+                typeof row.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
+            }
+          })
           // Convex listChannel is desc; UI expects asc(old->new)
           .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 

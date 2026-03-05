@@ -550,11 +550,12 @@ export function MultiMetricChart({
             if (!active || !payload?.length) return null
             return (
               <div className="bg-background border rounded-lg px-2 py-1 shadow-sm">
-                {payload.map((entry: any, index: number) => {
+                {payload.map((entry, index: number) => {
+                  const typedEntry = entry as { name?: string; value?: number | string }
                   const metric = metrics[index]
                   return (
-                    <p key={entry.name} style={{ color: metric?.color }}>
-                      {metric?.label}: {entry.value}
+                    <p key={typedEntry.name} style={{ color: metric?.color }}>
+                      {metric?.label}: {typedEntry.value}
                     </p>
                   )
                 })}

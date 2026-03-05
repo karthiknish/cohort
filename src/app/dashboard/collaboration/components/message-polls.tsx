@@ -217,7 +217,7 @@ export function PollCard({
                 )}
 
                 {/* Winner indicator */}
-                {showOptionResults && index === 0 && voteCount > 0 && voteCount > sortedOptions[1]?.voters.length! && (
+                {showOptionResults && index === 0 && voteCount > 0 && voteCount > (sortedOptions[1]?.voters.length ?? 0) && (
                   <Check className="h-4 w-4 text-primary" />
                 )}
 

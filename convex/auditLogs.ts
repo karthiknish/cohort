@@ -79,7 +79,7 @@ export const listRecent = zAuthenticatedQuery({
     actorEmail: z.string().nullable(),
     targetId: z.string().nullable(),
     workspaceId: z.string().nullable(),
-    metadata: z.any().optional(),
+    metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
     ip: z.string().nullable(),
     userAgent: z.string().nullable(),
     requestId: z.string().nullable(),

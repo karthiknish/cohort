@@ -38,31 +38,68 @@ export function wrappedResponseZ<T extends z.ZodTypeAny>(schema: T) {
  */
 const SOFT_DELETE_TABLES = ['tasks', 'taskComments', 'collaborationMessages', 'clients', 'projects']
 
+type FilterExpressionBuilder = {
+  field: (name: string) => unknown
+  eq: (left: unknown, right: unknown) => unknown
+  lt: (left: unknown, right: unknown) => unknown
+  gt: (left: unknown, right: unknown) => unknown
+  and: (...conditions: unknown[]) => unknown
+  or: (...conditions: unknown[]) => unknown
+}
+
+type ProxyableQuery = {
+  filter: (predicate: (q: FilterExpressionBuilder) => unknown) => ProxyableQuery
+  [key: string]: unknown
+}
+
+type PaginationCursor = {
+  fieldValue: number | string
+  legacyId: string
+}
+
+type JsonScalar = string | number | boolean | null
+type JsonLayer1 = JsonScalar | JsonScalar[] | Record<string, JsonScalar>
+type JsonLayer2 = JsonLayer1 | JsonLayer1[] | Record<string, JsonLayer1>
+type JsonLayer3 = JsonLayer2 | JsonLayer2[] | Record<string, JsonLayer2>
+type JsonRecord = Record<string, JsonLayer3>
+type JsonArray = JsonLayer3[]
+
+type IdempotencyResponse =
+  | JsonScalar
+  | JsonArray
+  | JsonRecord
+  | undefined
+
 /**
  * Helper to automatically append a deletedAtMs filter to queries.
  * Treats both `null` and `undefined` (missing field) as "active" (not deleted).
  */
 function wrapDatabaseActive(db: QueryCtx['db']): QueryCtx['db'] {
-  const proxyQuery = (q: any): any => {
+  const proxyQuery = (q: ProxyableQuery): ProxyableQuery => {
     return new Proxy(q, {
       get(target, prop, receiver) {
         if (['collect', 'first', 'unique', 'paginate', 'take'].includes(prop as string)) {
-          return (...args: any[]) => {
+          return (...args: unknown[]) => {
             // Filter: deletedAtMs is null OR deletedAtMs is undefined (missing)
-            return target.filter((q: any) =>
+            const filtered = target.filter((q) =>
               q.or(
                 q.eq(q.field('deletedAtMs'), null),
                 q.eq(q.field('deletedAtMs'), undefined)
               )
-            )[prop](...args)
+            ) as Record<string, unknown>
+            const method = filtered[prop as keyof typeof filtered]
+            if (typeof method !== 'function') {
+              return method
+            }
+            return (method as (...methodArgs: unknown[]) => unknown)(...args)
           }
         }
         const value = Reflect.get(target, prop, receiver)
         if (typeof value === 'function') {
-          return (...args: any[]) => {
-            const result = value.apply(target, args)
+          return (...args: unknown[]) => {
+            const result = (value as (...fnArgs: unknown[]) => unknown).apply(target, args)
             if (result && typeof result === 'object' && 'filter' in result && 'collect' in result) {
-              return proxyQuery(result)
+              return proxyQuery(result as ProxyableQuery)
             }
             return result
           }
@@ -76,9 +113,9 @@ function wrapDatabaseActive(db: QueryCtx['db']): QueryCtx['db'] {
     get(target, prop, receiver) {
       if (prop === 'query') {
         return (table: string) => {
-          const q = target.query(table as any)
+          const q = target.query(table as Parameters<QueryCtx['db']['query']>[0])
           if (SOFT_DELETE_TABLES.includes(table)) {
-            return proxyQuery(q)
+            return proxyQuery(q as unknown as ProxyableQuery) as unknown as typeof q
           }
           return q
         }
@@ -102,7 +139,7 @@ export type AuthenticatedMutationCtx = MutationCtx & {
   legacyId: string
   agencyId: string
   now: number
-  cachedResponse?: any
+  cachedResponse?: IdempotencyResponse
 }
 
 export type AuthenticatedActionCtx = ActionCtx & {
@@ -110,7 +147,7 @@ export type AuthenticatedActionCtx = ActionCtx & {
   legacyId: string
   agencyId: string
   now: number
-  cachedResponse?: any
+  cachedResponse?: IdempotencyResponse
 }
 
 function assertUserIsActive(user: Doc<'users'>) {
@@ -160,7 +197,7 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
 async function checkIdempotency(
   ctx: MutationCtx,
   key: string | undefined
-): Promise<{ cachedResponse?: any; commitIdempotency?: (response: any) => Promise<void> }> {
+): Promise<{ cachedResponse?: IdempotencyResponse; commitIdempotency?: (response: IdempotencyResponse) => Promise<void> }> {
   if (!key) return {}
 
   const existing = await ctx.db
@@ -191,7 +228,7 @@ async function checkIdempotency(
   })
 
   return {
-    commitIdempotency: async (response: any) => {
+    commitIdempotency: async (response: IdempotencyResponse) => {
       await ctx.db.patch(id, {
         status: 'completed',
         response,
@@ -222,16 +259,20 @@ export const PaginationValidators = {
  * Helper to apply standardized manual pagination to a Convex query.
  * Support both descending (default) and ascending orders, and custom field names.
  */
-export function applyManualPagination(
-  q: any,
-  cursor: { fieldValue: number | string; legacyId: string } | null | undefined,
+export function applyManualPagination<TQuery>(
+  q: TQuery,
+  cursor: PaginationCursor | null | undefined,
   fieldName: string = 'createdAtMs',
   order: 'asc' | 'desc' = 'desc',
-) {
+): TQuery {
   if (!cursor) return q
 
+  const query = q as unknown as {
+    filter: (predicate: (row: FilterExpressionBuilder) => unknown) => TQuery
+  }
+
   if (order === 'desc') {
-    return q.filter((row: any) =>
+    return query.filter((row) =>
       row.or(
         row.lt(row.field(fieldName), cursor.fieldValue),
         row.and(
@@ -241,7 +282,7 @@ export function applyManualPagination(
       ),
     )
   } else {
-    return q.filter((row: any) =>
+    return query.filter((row) =>
       row.or(
         row.gt(row.field(fieldName), cursor.fieldValue),
         row.and(
@@ -256,20 +297,25 @@ export function applyManualPagination(
 /**
  * Helper to wrap a result set in a standardized paginated response.
  */
-export function getPaginatedResponse<T extends Record<string, any>>(
+export function getPaginatedResponse<T extends { legacyId: string }, K extends keyof T>(
   items: T[],
   limit: number,
-  fieldName: string = 'createdAtMs',
+  fieldName: K,
 ) {
   const hasMore = items.length > limit
   const results = hasMore ? items.slice(0, limit) : items
   const lastItem = results[results.length - 1]
+  const rawFieldValue = lastItem ? lastItem[fieldName] : null
+  const fieldValue =
+    typeof rawFieldValue === 'number' || typeof rawFieldValue === 'string'
+      ? rawFieldValue
+      : (0 as Extract<T[K], string | number>)
 
   return {
     items: results,
     nextCursor:
       hasMore && lastItem
-        ? { fieldValue: lastItem[fieldName], legacyId: lastItem.legacyId }
+        ? { fieldValue: fieldValue as Extract<T[K], string | number>, legacyId: lastItem.legacyId }
         : null,
   }
 }
@@ -333,8 +379,8 @@ export const authenticatedMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -359,7 +405,7 @@ export const authenticatedAction = customAction(action, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
       args: {},
-      returnValue: async (result: any) => {
+      returnValue: async (result: unknown) => {
         return { ok: true, data: result }
       },
     }
@@ -367,7 +413,7 @@ export const authenticatedAction = customAction(action, {
 })
 
 export const adminQuery = customQuery(query, {
-  args: {} as any, // Functions define their own args - base args extended
+  args: {} as Record<string, never>, // Functions define their own args - base args extended
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
@@ -385,8 +431,8 @@ export const adminPaginatedQuery = customQuery(query, {
       cursor: v.union(v.string(), v.null()),
       id: v.optional(v.number()),
     }),
-  } as any,
-  input: async (ctx, args: any) => {
+  },
+  input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
       throw Errors.auth.adminRequired()
@@ -408,8 +454,8 @@ export const adminMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -426,7 +472,7 @@ export const adminAction = customAction(action, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
       args: {},
-      returnValue: async (result: any) => {
+      returnValue: async (result: unknown) => {
         return { ok: true, data: result }
       },
     }
@@ -444,8 +490,8 @@ export const workspaceMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -493,8 +539,8 @@ export const zAuthenticatedMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -512,8 +558,8 @@ export const zWorkspaceMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -527,7 +573,7 @@ export const zAuthenticatedAction = zCustomAction(action, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
       args: {},
-      returnValue: async (result: any) => {
+      returnValue: async (result: unknown) => {
         return { ok: true, data: result }
       },
     }
@@ -544,7 +590,7 @@ export const zWorkspaceAction = zCustomAction(action, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
       args,
-      returnValue: async (result: any) => {
+      returnValue: async (result: unknown) => {
         return { ok: true, data: result }
       },
     }
@@ -595,8 +641,8 @@ export const zAdminMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -613,7 +659,7 @@ export const zAdminAction = zCustomAction(action, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now() },
       args: {},
-      returnValue: async (result: any) => {
+      returnValue: async (result: unknown) => {
         return { ok: true, data: result }
       },
     }
@@ -682,8 +728,8 @@ export const rateLimitedAuthenticatedMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -707,8 +753,8 @@ export const rateLimitedWorkspaceMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -732,8 +778,8 @@ export const rateLimitedAdminMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -756,8 +802,8 @@ export const zRateLimitedAuthenticatedMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }
@@ -780,8 +826,8 @@ export const zRateLimitedWorkspaceMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: any) => {
-        if (commitIdempotency) await commitIdempotency(result)
+      returnValue: async (result: unknown) => {
+        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
         return { ok: true, data: result }
       },
     }

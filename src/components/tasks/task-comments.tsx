@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
-import { api, filesApi } from '@/lib/convex-api'
+import { filesApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { isConvexRealtimeEnabled } from '@/lib/convex-realtime'
+import { api as generatedApi } from '../../../convex/_generated/api'
 
 
 import type { ClientTeamMember } from '@/types/clients'
@@ -64,7 +65,7 @@ export function TaskCommentsPanel(props: {
 
   const convexEnabled = isConvexRealtimeEnabled() && Boolean(workspaceId)
   const convexRows = useQuery(
-    (api as any).taskComments.listForTask,
+    generatedApi.taskComments.listForTask,
     convexEnabled
       ? {
           workspaceId: String(workspaceId),
@@ -72,9 +73,9 @@ export function TaskCommentsPanel(props: {
           limit: 200,
         }
       : 'skip'
-  ) as Array<any> | undefined
+  ) as Array<Record<string, unknown>> | undefined
 
-  const createComment = useMutation((api as any).taskComments.create)
+  const createComment = useMutation(generatedApi.taskComments.create)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
   const getPublicUrl = useMutation(filesApi.getPublicUrl)
 
@@ -394,7 +395,7 @@ export function TaskCommentsPanel(props: {
 
         {pendingAttachments.length > 0 ? (
           <PendingAttachmentsList
-            attachments={pendingAttachments as any}
+            attachments={pendingAttachments}
             uploading={uploading}
             onRemove={handleRemovePendingAttachment}
           />

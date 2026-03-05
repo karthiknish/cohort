@@ -136,7 +136,7 @@ export function ProfileCard({
       throw new Error('Upload did not return storageId')
     }
 
-    const publicUrl = await convex.query((filesApi as any).getPublicUrl, { storageId: json.storageId })
+    const publicUrl = await convex.query(filesApi.getPublicUrl, { storageId: json.storageId })
 
     if (!publicUrl?.url) {
       throw new Error('Unable to resolve uploaded file URL')

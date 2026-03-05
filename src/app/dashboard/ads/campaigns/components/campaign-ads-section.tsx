@@ -92,6 +92,24 @@ type Props = {
 }
 
 type ViewMode = 'grid' | 'list'
+type SupportedProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
+
+type AggregatedMetric = {
+  spend: number
+  impressions: number
+  clicks: number
+  conversions: number
+  revenue: number
+}
+
+type AdMetricRow = {
+  adId?: string
+  spend?: number
+  impressions?: number
+  clicks?: number
+  conversions?: number
+  revenue?: number
+}
 
 function getCreativeTypeIcon(type: string, className?: string) {
   const lowerType = type.toLowerCase()
@@ -128,7 +146,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hasLoaded, setHasLoaded] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [adMetrics, setAdMetrics] = useState<Record<string, any>>({})
+  const [adMetrics, setAdMetrics] = useState<Record<string, AggregatedMetric>>({})
   const [metricsLoading, setMetricsLoading] = useState(false)
 
   const canLoad = !isPreviewMode
@@ -148,7 +166,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     await listCreatives({
       workspaceId,
-      providerId: providerId as any,
+      providerId: providerId as SupportedProviderId,
       clientId: clientId ?? null,
       campaignId,
     })
@@ -183,24 +201,26 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     await listAdMetrics({
       workspaceId,
-      providerId: providerId as any,
+      providerId: providerId as SupportedProviderId,
       clientId: clientId ?? null,
       campaignId,
       days: '30',
     })
       .then((data) => {
-        const metrics = Array.isArray((data as any)?.metrics) ? ((data as any).metrics as any[]) : []
+        const metrics = Array.isArray((data as { metrics?: AdMetricRow[] } | null | undefined)?.metrics)
+          ? (data as { metrics?: AdMetricRow[] }).metrics ?? []
+          : []
 
-        const aggregated: Record<string, any> = {}
-        metrics.forEach((m: any) => {
-          if (!aggregated[m.adId]) {
-            aggregated[m.adId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
-          }
-          aggregated[m.adId].spend += m.spend
-          aggregated[m.adId].impressions += m.impressions
-          aggregated[m.adId].clicks += m.clicks
-          aggregated[m.adId].conversions += m.conversions
-          aggregated[m.adId].revenue += m.revenue
+        const aggregated: Record<string, AggregatedMetric> = {}
+        metrics.forEach((m) => {
+          if (!m.adId) return
+          const current = aggregated[m.adId] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+          current.spend += m.spend ?? 0
+          current.impressions += m.impressions ?? 0
+          current.clicks += m.clicks ?? 0
+          current.conversions += m.conversions ?? 0
+          current.revenue += m.revenue ?? 0
+          aggregated[m.adId] = current
         })
         setAdMetrics(aggregated)
       })
@@ -288,11 +308,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     void updateCreativeStatus({
         workspaceId,
-        providerId: providerId as any,
+        providerId: providerId as SupportedProviderId,
         clientId: clientId ?? null,
         creativeId: ad.creativeId,
         adGroupId: ad.adGroupId,
-        status: newStatus as any,
+        status: newStatus as 'ACTIVE' | 'PAUSED' | 'ENABLED' | 'DISABLED' | 'ENABLE' | 'DISABLE',
       })
 
       .then(() => {
@@ -408,7 +428,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
               <FileText className="h-6 w-6 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium">No Creatives Found</p>
-            <p className="text-xs text-muted-foreground mt-1">This campaign doesn&apos;t have any ad creatives yet</p>
+            <p className="text-xs text-muted-foreground mt-1">This campaign doesn&apos;t have ad creatives yet</p>
           </div>
         ) : (
           <>
@@ -564,11 +584,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                           <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1 pt-1.5 border-t border-muted">
                             <div className="flex flex-col">
                               <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Spend</span>
-                              <span className="text-[11px] font-mono font-bold leading-none">${adMetrics[ad.creativeId].spend.toFixed(2)}</span>
+                              <span className="text-[11px] font-mono font-bold leading-none">${adMetrics[ad.creativeId]?.spend.toFixed(2) ?? '0.00'}</span>
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Conv.</span>
-                              <span className="text-[11px] font-mono font-bold leading-none">{adMetrics[ad.creativeId].conversions}</span>
+                              <span className="text-[11px] font-mono font-bold leading-none">{adMetrics[ad.creativeId]?.conversions ?? 0}</span>
                             </div>
                           </div>
                         )}
@@ -653,13 +673,13 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">
-                            {adMetrics[ad.creativeId] ? `$${adMetrics[ad.creativeId].spend.toFixed(2)}` : '—'}
+                            {adMetrics[ad.creativeId]?.spend !== undefined ? `$${adMetrics[ad.creativeId]?.spend.toFixed(2)}` : '—'}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">
-                            {adMetrics[ad.creativeId] ? adMetrics[ad.creativeId].clicks.toLocaleString() : '—'}
+                            {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs">
-                            {adMetrics[ad.creativeId] ? adMetrics[ad.creativeId].conversions.toLocaleString() : '—'}
+                            {adMetrics[ad.creativeId]?.conversions !== undefined ? adMetrics[ad.creativeId]?.conversions.toLocaleString() : '—'}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             <p className="text-sm text-muted-foreground truncate max-w-[200px]">

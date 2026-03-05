@@ -210,7 +210,10 @@ export async function scheduleSyncsForAllUsers(options: {
     ? Math.max(1, Math.floor(maxUsers))
     : 1000
 
-  const workspaceIds = await listAllWorkspacesWithIntegrations(convex, limit)
+  const workspaceIdsResult: unknown = await listAllWorkspacesWithIntegrations(convex, limit)
+  const workspaceIds = Array.isArray(workspaceIdsResult)
+    ? workspaceIdsResult.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+    : []
 
   const scheduled: Array<{ userId: string; providerIds: string[] }> = []
   const skipped: Array<{ userId: string; providerIds: string[] }> = []

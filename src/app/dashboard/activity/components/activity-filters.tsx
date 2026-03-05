@@ -293,7 +293,7 @@ export function ActivityFilters({
           )}
           {searchQuery && (
             <Badge variant="secondary" className="gap-1">
-              Search: "{searchQuery}"
+              Search: &ldquo;{searchQuery}&rdquo;
               <button
                 type="button"
                 onClick={() => onSearchChange('')}

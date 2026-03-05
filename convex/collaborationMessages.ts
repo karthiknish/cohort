@@ -1,5 +1,5 @@
 import { z } from 'zod/v4'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import { internal } from './_generated/api'
 import { Errors } from './errors'
 import {
@@ -10,24 +10,47 @@ import {
   zWorkspacePaginatedQueryActive,
   applyManualPagination,
   getPaginatedResponse,
+  type AuthenticatedMutationCtx,
+  type AuthenticatedQueryCtx,
 } from './functions'
 
+type CollaborationCtx = AuthenticatedQueryCtx | AuthenticatedMutationCtx
+type CollaborationMutationCtx = AuthenticatedMutationCtx
+type CollaborationMessageRow = Doc<'collaborationMessages'>
+type ReadCheckpointRow = Doc<'collaborationReadCheckpoints'>
+
+type ChannelQueryArgs = {
+  workspaceId: string
+  channelType: string
+  clientId?: string | null
+  projectId?: string | null
+}
+
+type TakeQuery<TItem> = {
+  take: (limit: number) => Promise<TItem[]>
+}
+
+type ScoredMessage = {
+  row: CollaborationMessageRow
+  score: number
+  highlights: string[]
+}
+
 async function hydrateAttachments(
-  ctx: any,
-  attachments: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null,
+  ctx: Pick<CollaborationCtx, 'storage'>,
+  attachments: CollaborationMessageRow['attachments'],
 ) {
   if (!Array.isArray(attachments) || attachments.length === 0) return attachments
 
   const next = await Promise.all(
     attachments.map(async (attachment) => {
-      if (!attachment || typeof attachment !== 'object') return attachment
-      const storageId = (attachment as any).storageId
+      const storageId = attachment.storageId
       if (typeof storageId !== 'string' || storageId.length === 0) return attachment
 
       const url = await ctx.storage.getUrl(storageId as Id<'_storage'>)
       return {
-        ...(attachment as any),
-        url: url ?? (attachment as any).url,
+        ...attachment,
+        url: url ?? attachment.url,
       }
     }),
   )
@@ -35,12 +58,14 @@ async function hydrateAttachments(
   return next
 }
 
-async function hydrateMessageRow(ctx: any, row: any) {
-  if (!row || typeof row !== 'object') return row
-  const attachments = Array.isArray((row as any).attachments) ? ((row as any).attachments as any[]) : null
-  const hydrated = await hydrateAttachments(ctx, attachments as any)
+async function hydrateMessageRow(
+  ctx: Pick<CollaborationCtx, 'storage'>,
+  row: CollaborationMessageRow,
+): Promise<CollaborationMessageRow> {
+  const attachments = Array.isArray(row.attachments) ? row.attachments : null
+  const hydrated = await hydrateAttachments(ctx, attachments)
   if (hydrated === attachments) return row
-  return { ...(row as any), attachments: hydrated }
+  return { ...row, attachments: hydrated }
 }
 
 function clampLimit(value: number, min: number, max: number) {
@@ -138,51 +163,52 @@ type NormalizedChannelScope = {
   projectId: string | null
 }
 
-function buildListChannelQuery(ctx: any, args: any) {
-  let q: any
-
+function buildListChannelQuery(ctx: CollaborationCtx, args: ChannelQueryArgs) {
   if (args.channelType === 'client') {
-    q = ctx.db
+    return ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_channel_client_createdAtMs_legacyId', (q: any) =>
+      .withIndex('by_workspace_channel_client_createdAtMs_legacyId', (q) =>
         q
           .eq('workspaceId', args.workspaceId)
           .eq('channelType', args.channelType)
           .eq('clientId', args.clientId ?? null),
       )
-  } else if (args.channelType === 'project') {
-    q = ctx.db
+      .order('desc')
+  }
+
+  if (args.channelType === 'project') {
+    return ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_channel_project_createdAtMs_legacyId', (q: any) =>
+      .withIndex('by_workspace_channel_project_createdAtMs_legacyId', (q) =>
         q
           .eq('workspaceId', args.workspaceId)
           .eq('channelType', args.channelType)
           .eq('projectId', args.projectId ?? null),
       )
-  } else {
-    q = ctx.db
-      .query('collaborationMessages')
-      .withIndex('by_workspace_channel_createdAtMs_legacyId', (q: any) =>
-        q.eq('workspaceId', args.workspaceId).eq('channelType', args.channelType),
-      )
+      .order('desc')
   }
 
-  return q.order('desc')
-}
-
-function buildChannelTypeQuery(ctx: any, workspaceId: string, channelType: string) {
   return ctx.db
     .query('collaborationMessages')
-    .withIndex('by_workspace_channel_createdAtMs_legacyId', (q: any) =>
+    .withIndex('by_workspace_channel_createdAtMs_legacyId', (q) =>
+      q.eq('workspaceId', args.workspaceId).eq('channelType', args.channelType),
+    )
+    .order('desc')
+}
+
+function buildChannelTypeQuery(ctx: CollaborationCtx, workspaceId: string, channelType: string) {
+  return ctx.db
+    .query('collaborationMessages')
+    .withIndex('by_workspace_channel_createdAtMs_legacyId', (q) =>
       q.eq('workspaceId', workspaceId).eq('channelType', channelType),
     )
     .order('desc')
 }
 
-function buildThreadQuery(ctx: any, workspaceId: string, threadRootId: string, order: 'asc' | 'desc' = 'desc') {
+function buildThreadQuery(ctx: CollaborationCtx, workspaceId: string, threadRootId: string, order: 'asc' | 'desc' = 'desc') {
   return ctx.db
     .query('collaborationMessages')
-    .withIndex('by_workspace_threadRoot_createdAtMs_legacyId', (q: any) =>
+    .withIndex('by_workspace_threadRoot_createdAtMs_legacyId', (q) =>
       q.eq('workspaceId', workspaceId).eq('threadRootId', threadRootId),
     )
     .order(order)
@@ -230,7 +256,7 @@ function comparePosition(
 }
 
 function readPositionFromRow(
-  row: any,
+  row: CollaborationMessageRow | null,
 ): { createdAtMs: number; legacyId: string } | null {
   const createdAtMs = typeof row?.createdAtMs === 'number' ? row.createdAtMs : null
   const legacyId = typeof row?.legacyId === 'string' ? row.legacyId : null
@@ -239,7 +265,7 @@ function readPositionFromRow(
 }
 
 function isAfterCheckpoint(
-  row: any,
+  row: CollaborationMessageRow | null,
   checkpoint: ReadCheckpointPosition | null,
 ) {
   if (!checkpoint) return true
@@ -285,7 +311,7 @@ function resolveChannelKeyFromScope(scope: NormalizedChannelScope): string | nul
 }
 
 async function getReadCheckpoint(
-  ctx: any,
+  ctx: CollaborationCtx,
   args: {
     workspaceId: string
     userId: string
@@ -296,9 +322,9 @@ async function getReadCheckpoint(
     threadRootId: string | null
   },
 ): Promise<ReadCheckpointPosition | null> {
-  const row = await ctx.db
+  const row = (await ctx.db
     .query('collaborationReadCheckpoints')
-    .withIndex('by_workspace_user_scope_channel_client_project_thread', (q: any) =>
+    .withIndex('by_workspace_user_scope_channel_client_project_thread', (q) =>
       q
         .eq('workspaceId', args.workspaceId)
         .eq('userId', args.userId)
@@ -308,7 +334,7 @@ async function getReadCheckpoint(
         .eq('projectId', args.projectId)
         .eq('threadRootId', args.threadRootId),
     )
-    .unique()
+      .unique()) as ReadCheckpointRow | null
 
   if (!row) return null
 
@@ -323,7 +349,7 @@ async function getReadCheckpoint(
 }
 
 async function upsertReadCheckpoint(
-  ctx: any,
+  ctx: CollaborationMutationCtx,
   args: {
     workspaceId: string
     userId: string
@@ -337,9 +363,9 @@ async function upsertReadCheckpoint(
     updatedAtMs: number
   },
 ) {
-  const existing = await ctx.db
+  const existing = (await ctx.db
     .query('collaborationReadCheckpoints')
-    .withIndex('by_workspace_user_scope_channel_client_project_thread', (q: any) =>
+    .withIndex('by_workspace_user_scope_channel_client_project_thread', (q) =>
       q
         .eq('workspaceId', args.workspaceId)
         .eq('userId', args.userId)
@@ -349,7 +375,7 @@ async function upsertReadCheckpoint(
         .eq('projectId', args.projectId)
         .eq('threadRootId', args.threadRootId),
     )
-    .unique()
+      .unique()) as ReadCheckpointRow | null
 
   const nextPosition = {
     createdAtMs: args.lastReadCreatedAtMs,
@@ -392,8 +418,8 @@ async function upsertReadCheckpoint(
 }
 
 async function scanChannelRows(
-  queryBuilder: () => any,
-  visitor: (row: any) => Promise<boolean | void> | boolean | void,
+  queryBuilder: () => TakeQuery<CollaborationMessageRow>,
+  visitor: (row: CollaborationMessageRow) => Promise<boolean | void> | boolean | void,
   options?: { batchSize?: number; maxRows?: number },
 ) {
   const batchSize = clampLimit(options?.batchSize ?? CHANNEL_SCAN_BATCH_SIZE, 20, CHANNEL_SCAN_BATCH_SIZE)
@@ -438,7 +464,7 @@ async function scanChannelRows(
   return { scanned, truncated, stoppedEarly }
 }
 
-function resolveChannelKey(row: any): string | null {
+function resolveChannelKey(row: CollaborationMessageRow): string | null {
   if (row?.channelType === 'team') {
     return 'team-agency'
   }
@@ -454,13 +480,13 @@ function resolveChannelKey(row: any): string | null {
   return null
 }
 
-async function fetchChannelRows(ctx: any, args: any) {
+async function fetchChannelRows(ctx: CollaborationCtx, args: ChannelQueryArgs & { limit: number }) {
   const q = buildListChannelQuery(ctx, args)
   const rows = await q.take(args.limit)
-  return await Promise.all(rows.map((row: any) => hydrateMessageRow(ctx, row)))
+  return await Promise.all(rows.map((row) => hydrateMessageRow(ctx, row)))
 }
 
-function requireActorUserId(ctx: any, providedUserId?: string | null) {
+function requireActorUserId(ctx: CollaborationCtx, providedUserId?: string | null) {
   const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
   if (!currentUserId) {
     throw Errors.auth.unauthorized()
@@ -473,7 +499,7 @@ function requireActorUserId(ctx: any, providedUserId?: string | null) {
   return currentUserId
 }
 
-function canManageMessage(ctx: any, row: any) {
+function canManageMessage(ctx: CollaborationCtx, row: CollaborationMessageRow) {
   const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
   if (!currentUserId) return false
 
@@ -488,12 +514,13 @@ export const listChannel = zWorkspacePaginatedQueryActive({
     clientId: z.string().optional().nullable(),
     projectId: z.string().optional().nullable(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
+    const limit = clampLimit(typeof args.limit === 'number' ? args.limit : 50, 1, 500)
     let q = buildListChannelQuery(ctx, args)
     q = applyManualPagination(q, args.cursor)
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
-    const items = await Promise.all(result.items.map((row: any) => hydrateMessageRow(ctx, row)))
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
+    const items = await Promise.all(result.items.map((row) => hydrateMessageRow(ctx, row)))
     return {
       items,
       nextCursor: result.nextCursor,
@@ -505,14 +532,15 @@ export const listThreadReplies = zWorkspacePaginatedQuery({
   args: {
     threadRootId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
-    let q: any = buildThreadQuery(ctx, args.workspaceId, args.threadRootId, 'asc')
+  handler: async (ctx, args) => {
+    const limit = clampLimit(typeof args.limit === 'number' ? args.limit : 50, 1, 500)
+    let q = buildThreadQuery(ctx, args.workspaceId, args.threadRootId, 'asc')
 
     q = applyManualPagination(q, args.cursor, 'asc')
 
-    const rows = await q.take(args.limit + 1)
-    const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
-    const items = await Promise.all(result.items.map((row: any) => hydrateMessageRow(ctx, row)))
+    const rows = await q.take(limit + 1)
+    const result = getPaginatedResponse(rows, limit, 'createdAtMs')
+    const items = await Promise.all(result.items.map((row) => hydrateMessageRow(ctx, row)))
 
     return {
       items,
@@ -523,10 +551,10 @@ export const listThreadReplies = zWorkspacePaginatedQuery({
 
 export const getByLegacyId = zWorkspaceQuery({
   args: { legacyId: z.string() },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     return row ? await hydrateMessageRow(ctx, row) : null
@@ -546,7 +574,7 @@ export const searchChannel = zWorkspaceQueryActive({
     endMs: z.number().nullable().optional(),
     limit: z.number(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 20, 400)
 
     // Reuse the same indexes + ordering as listChannel.
@@ -556,7 +584,7 @@ export const searchChannel = zWorkspaceQueryActive({
       clientId: args.clientId ?? null,
       projectId: args.projectId ?? null,
       limit,
-    })) as any[]
+    })) as CollaborationMessageRow[]
 
     const startMs = typeof args.startMs === 'number' && Number.isFinite(args.startMs) ? args.startMs : null
     const endMs = typeof args.endMs === 'number' && Number.isFinite(args.endMs) ? args.endMs : null
@@ -577,7 +605,7 @@ export const searchChannel = zWorkspaceQueryActive({
     const mentionTerm = mentionTermRaw ? normalizeTerm(mentionTermRaw.replace(/^@/, '')) : null
 
     const scored = filteredByDate
-      .map((row) => {
+      .map((row): ScoredMessage | null => {
         // deleted filter is handled by workspaceQueryActive implicitly if we use fetchChannelRows correctly
         // but here rows are already fetched and hydrated.
 
@@ -589,7 +617,7 @@ export const searchChannel = zWorkspaceQueryActive({
         const mentions = Array.isArray(row?.mentions) ? row.mentions : []
         if (mentionTerm) {
           const mentionNames = mentions
-            .map((m: any) => (typeof m?.name === 'string' ? normalizeTerm(m.name) : ''))
+            .map((m) => (typeof m?.name === 'string' ? normalizeTerm(m.name) : ''))
             .filter(Boolean)
           const hasMention = mentionNames.some((name: string) => name.includes(mentionTerm))
           if (!hasMention) return null
@@ -598,7 +626,7 @@ export const searchChannel = zWorkspaceQueryActive({
         const attachments = Array.isArray(row?.attachments) ? row.attachments : []
         if (attachmentTerm) {
           const attachmentNames = attachments
-            .map((a: any) => (typeof a?.name === 'string' ? normalizeTerm(a.name) : ''))
+            .map((a) => (typeof a?.name === 'string' ? normalizeTerm(a.name) : ''))
             .filter(Boolean)
           const hasAttachment = attachmentNames.some((name: string) => name.includes(attachmentTerm))
           if (!hasAttachment) return null
@@ -610,8 +638,8 @@ export const searchChannel = zWorkspaceQueryActive({
         const haystacks: string[] = []
         if (typeof row?.content === 'string' && row.content) haystacks.push(row.content)
         if (senderName) haystacks.push(senderName)
-        if (attachments.length) haystacks.push(...attachments.map((a: any) => String(a?.name ?? '')))
-        if (mentions.length) haystacks.push(...mentions.map((m: any) => String(m?.name ?? '')))
+        if (attachments.length) haystacks.push(...attachments.map((a) => String(a?.name ?? '')))
+        if (mentions.length) haystacks.push(...mentions.map((m) => String(m?.name ?? '')))
 
         if (searchTerms.length === 0) {
           totalScore = 1
@@ -637,7 +665,7 @@ export const searchChannel = zWorkspaceQueryActive({
           highlights: Array.from(highlightSet),
         }
       })
-      .filter(Boolean) as Array<{ row: any; score: number; highlights: string[] }>
+      .filter((item): item is ScoredMessage => item !== null)
 
     scored.sort((a, b) => b.score - a.score)
     const top = scored.slice(0, limit)
@@ -667,7 +695,7 @@ export const create = zWorkspaceMutation({
     threadRootId: z.string().nullable().optional(),
     isThreadRoot: z.boolean().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.senderId)
     const normalizedScope = normalizeChannelScope({
       channelType: args.channelType,
@@ -689,7 +717,7 @@ export const create = zWorkspaceMutation({
         : args.senderName
     const senderRole = typeof ctx?.user?.role === 'string' ? ctx.user.role : (args.senderRole ?? null)
 
-    const hydratedAttachments = await hydrateAttachments(ctx, (args.attachments ?? null) as any)
+    const hydratedAttachments = await hydrateAttachments(ctx, args.attachments ?? null)
 
     await ctx.db.insert('collaborationMessages', {
       workspaceId: args.workspaceId,
@@ -726,7 +754,7 @@ export const create = zWorkspaceMutation({
     if (args.isThreadRoot === false && typeof normalizedThreadRootId === 'string' && normalizedThreadRootId) {
       const root = await ctx.db
         .query('collaborationMessages')
-        .withIndex('by_workspace_legacyId', (q: any) =>
+        .withIndex('by_workspace_legacyId', (q) =>
           q.eq('workspaceId', args.workspaceId).eq('legacyId', normalizedThreadRootId),
         )
         .unique()
@@ -838,10 +866,10 @@ export const updateMessage = zWorkspaceMutation({
     format: z.union([z.literal('markdown'), z.literal('plaintext')]).optional(),
     mentions: z.array(mentionZ).optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -863,12 +891,12 @@ export const updateMessage = zWorkspaceMutation({
 
 export const softDelete = zWorkspaceMutation({
   args: { legacyId: z.string(), deletedBy: z.string() },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.deletedBy)
 
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -893,10 +921,10 @@ export const updateSharedTo = zWorkspaceMutation({
     legacyId: z.string(),
     sharedTo: z.array(z.literal('email')),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -916,12 +944,12 @@ export const updateSharedTo = zWorkspaceMutation({
 
 export const toggleReaction = zWorkspaceMutation({
   args: { legacyId: z.string(), emoji: z.string(), userId: z.string() },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
 
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -933,13 +961,16 @@ export const toggleReaction = zWorkspaceMutation({
 
     for (const entry of reactions) {
       if (!entry || typeof entry !== 'object') continue
-      const emoji = (entry as any).emoji
-      const userIds: string[] = Array.isArray((entry as any).userIds)
-        ? (entry as any).userIds.filter((v: any): v is string => typeof v === 'string')
+      const emoji = typeof entry.emoji === 'string' ? entry.emoji : null
+      if (!emoji) continue
+
+      const userIds: string[] = Array.isArray(entry.userIds)
+        ? entry.userIds.filter((v): v is string => typeof v === 'string')
         : []
+      const fallbackCount = typeof entry.count === 'number' ? entry.count : userIds.length
 
       if (emoji !== args.emoji) {
-        updated.push({ emoji, count: Array.isArray((entry as any).userIds) ? userIds.length : (entry as any).count ?? userIds.length, userIds })
+        updated.push({ emoji, count: userIds.length > 0 ? userIds.length : fallbackCount, userIds })
         continue
       }
 
@@ -976,12 +1007,12 @@ export const markAsRead = zWorkspaceMutation({
     legacyId: z.string(),
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
 
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -1014,14 +1045,14 @@ export const markMultipleAsRead = zWorkspaceMutation({
     legacyIds: z.array(z.string()),
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
     let marked = 0
 
     for (const legacyId of args.legacyIds) {
       const row = await ctx.db
         .query('collaborationMessages')
-        .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
+        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId))
         .unique()
 
       if (!row || row.senderId === currentUserId) continue
@@ -1050,7 +1081,7 @@ export const markChannelAsRead = zWorkspaceMutation({
     userId: z.string(),
     beforeMs: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
     const scope = normalizeChannelScope({
       channelType: args.channelType,
@@ -1080,7 +1111,7 @@ export const markChannelAsRead = zWorkspaceMutation({
           clientId: scope.clientId,
           projectId: scope.projectId,
         }),
-      async (message: any) => {
+      async (message) => {
         if (message.senderId === currentUserId) return
         if (message.deleted) return
 
@@ -1147,7 +1178,7 @@ export const getUnreadCount = zWorkspaceQuery({
     projectId: z.string().nullable().optional(),
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
     const scope = normalizeChannelScope({
       channelType: args.channelType,
@@ -1175,7 +1206,7 @@ export const getUnreadCount = zWorkspaceQuery({
           clientId: scope.clientId,
           projectId: scope.projectId,
         }),
-      (message: any) => {
+      (message) => {
         if (message.senderId === currentUserId) return
         if (message.deleted) return
 
@@ -1205,7 +1236,7 @@ export const markThreadAsRead = zWorkspaceMutation({
     userId: z.string(),
     beforeMs: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
     const scope = normalizeChannelScope({
       channelType: args.channelType,
@@ -1239,7 +1270,7 @@ export const markThreadAsRead = zWorkspaceMutation({
 
     const scanResult = await scanChannelRows(
       () => buildThreadQuery(ctx, args.workspaceId, args.threadRootId, 'desc'),
-      async (message: any) => {
+      async (message) => {
         if (message.senderId === currentUserId) return
         if (message.deleted) return
 
@@ -1306,7 +1337,7 @@ export const getThreadUnreadCounts = zWorkspaceQuery({
     threadRootIds: z.array(z.string()),
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
     const scope = normalizeChannelScope({
       channelType: args.channelType,
@@ -1348,7 +1379,7 @@ export const getThreadUnreadCounts = zWorkspaceQuery({
 
       const scanResult = await scanChannelRows(
         () => buildThreadQuery(ctx, args.workspaceId, threadRootId, 'desc'),
-        (message: any) => {
+        (message) => {
           if (message.senderId === currentUserId) return
           if (message.deleted) return
 
@@ -1383,12 +1414,12 @@ export const getUnreadCountsByChannel = zWorkspaceQuery({
   args: {
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
 
     const checkpointRows = await ctx.db
       .query('collaborationReadCheckpoints')
-      .withIndex('by_workspace_user_scope_updatedAtMs', (q: any) =>
+      .withIndex('by_workspace_user_scope_updatedAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('userId', currentUserId).eq('scopeType', 'channel'),
       )
       .order('desc')
@@ -1431,7 +1462,7 @@ export const getUnreadCountsByChannel = zWorkspaceQuery({
     for (const channelType of ['team', 'client', 'project']) {
       const scanResult = await scanChannelRows(
         () => buildChannelTypeQuery(ctx, args.workspaceId, channelType),
-        (message: any) => {
+        (message) => {
           if (message.senderId === currentUserId) return
           if (message.deleted) return
 
@@ -1505,21 +1536,21 @@ export const bulkUpsert = zWorkspaceMutation({
       })
     ),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     let upserted = 0
 
     for (const message of args.messages) {
       const existing = await ctx.db
         .query('collaborationMessages')
-        .withIndex('by_workspace_legacyId', (q: any) =>
-          q.eq('workspaceId', message.workspaceId).eq('legacyId', message.legacyId)
+        .withIndex('by_workspace_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('legacyId', message.legacyId)
         )
         .unique()
 
-      const hydratedAttachments = await hydrateAttachments(ctx, (message.attachments ?? null) as any)
+      const hydratedAttachments = await hydrateAttachments(ctx, message.attachments ?? null)
 
       const payload = {
-        workspaceId: message.workspaceId,
+        workspaceId: args.workspaceId,
         legacyId: message.legacyId,
         channelType: message.channelType,
         clientId: message.clientId,
@@ -1568,12 +1599,12 @@ export const markAsDelivered = zWorkspaceMutation({
     legacyId: z.string(),
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
 
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -1606,12 +1637,12 @@ export const pinMessage = zWorkspaceMutation({
     legacyId: z.string(),
     userId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx, args.userId)
 
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -1637,12 +1668,12 @@ export const unpinMessage = zWorkspaceMutation({
   args: {
     legacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = requireActorUserId(ctx)
 
     const row = await ctx.db
       .query('collaborationMessages')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Message')
@@ -1676,46 +1707,24 @@ export const listPinnedMessages = zWorkspaceQuery({
     clientId: z.string().nullable().optional(),
     projectId: z.string().nullable().optional(),
   },
-  handler: async (ctx: any, args: any) => {
-    let q: any
-
-    if (args.channelType === 'client') {
-      q = ctx.db
-        .query('collaborationMessages')
-        .withIndex('by_workspace_channel_client_createdAtMs_legacyId', (q: any) =>
-          q
-            .eq('workspaceId', args.workspaceId)
-            .eq('channelType', args.channelType)
-            .eq('clientId', args.clientId ?? null)
-        )
-    } else if (args.channelType === 'project') {
-      q = ctx.db
-        .query('collaborationMessages')
-        .withIndex('by_workspace_channel_project_createdAtMs_legacyId', (q: any) =>
-          q
-            .eq('workspaceId', args.workspaceId)
-            .eq('channelType', args.channelType)
-            .eq('projectId', args.projectId ?? null)
-        )
-    } else {
-      q = ctx.db
-        .query('collaborationMessages')
-        .withIndex('by_workspace_channel_createdAtMs_legacyId', (q: any) =>
-          q.eq('workspaceId', args.workspaceId).eq('channelType', args.channelType)
-        )
-    }
-
+  handler: async (ctx, args) => {
+    const q = buildListChannelQuery(ctx, {
+      workspaceId: args.workspaceId,
+      channelType: args.channelType,
+      clientId: args.clientId ?? null,
+      projectId: args.projectId ?? null,
+    })
     const allMessages = await q.take(200)
 
     // Filter for pinned messages and sort by pinnedAt
     const pinnedMessages = allMessages
-      .filter((m: any) => m.isPinned && !m.deleted)
-      .sort((a: any, b: any) => {
+      .filter((m) => m.isPinned && !m.deleted)
+      .sort((a, b) => {
         const aPinnedAt = a.pinnedAtMs ?? 0
         const bPinnedAt = b.pinnedAtMs ?? 0
         return bPinnedAt - aPinnedAt // Most recently pinned first
       })
 
-    return await Promise.all(pinnedMessages.map((row: any) => hydrateMessageRow(ctx, row)))
+    return await Promise.all(pinnedMessages.map((row) => hydrateMessageRow(ctx, row)))
   },
 })

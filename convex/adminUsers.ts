@@ -24,7 +24,7 @@ export const listUsers = adminPaginatedQuery({
     continueCursor: v.union(v.string(), v.null()),
     isDone: v.boolean(),
   }),
-  handler: async (ctx, args: any) => {
+  handler: async (ctx, args) => {
     const { numItems, cursor } = args
     const adminWorkspaceId = (ctx.user.agencyId ?? ctx.user.legacyId) as string
     const includeAllWorkspaces = args.includeAllWorkspaces === true
@@ -35,14 +35,14 @@ export const listUsers = adminPaginatedQuery({
     const result = targetWorkspaceId
       ? await ctx.db
           .query('users')
-          .withIndex('by_agencyId', (q: any) => q.eq('agencyId', targetWorkspaceId))
+          .withIndex('by_agencyId', (q) => q.eq('agencyId', targetWorkspaceId))
           .order('desc')
           .paginate({ numItems, cursor })
       : await ctx.db.query('users').order('desc').paginate({ numItems, cursor })
 
     // Transform to match validator
     return {
-      page: result.page.map((user: any) => ({
+      page: result.page.map((user) => ({
         _id: user._id,
         legacyId: user.legacyId,
         email: user.email ?? null,
@@ -70,9 +70,9 @@ export const getUserCounts = adminQuery({
   handler: async (ctx) => {
     const all = await ctx.db.query('users').collect()
     const total = all.length
-    const activeTotal = all.filter((row: any) => row.status === 'active').length
-    const suspendedTotal = all.filter((row: any) => row.status === 'suspended').length
-    const disabledTotal = all.filter((row: any) => row.status === 'disabled').length
+    const activeTotal = all.filter((row) => row.status === 'active').length
+    const suspendedTotal = all.filter((row) => row.status === 'suspended').length
+    const disabledTotal = all.filter((row) => row.status === 'disabled').length
 
     return { total, activeTotal, suspendedTotal, disabledTotal }
   },
@@ -106,7 +106,7 @@ export const updateUserRoleStatus = adminMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
       .unique()
 
     if (!existing) {

@@ -81,6 +81,8 @@ export function ActivityList({
       observer.observe(node)
       return () => observer.disconnect()
     }
+
+    return undefined
   }, [hasMore, loading, onLoadMore])
 
   // Filter activities

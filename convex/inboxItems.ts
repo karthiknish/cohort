@@ -13,18 +13,18 @@ export const listInboxItems = zWorkspacePaginatedQueryActive({
     onlyUnread: z.boolean().optional(),
     onlyPinned: z.boolean().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     
-    let q = ctx.db
+    const q = ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_user_updatedAtMs', (q: any) =>
+      .withIndex('by_workspace_user_updatedAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('userId', currentUserId)
       )
 
     const rows = await q.order('desc').collect()
 
-    let filtered = rows.filter((item: any) => {
+    const filtered = rows.filter((item) => {
       if (args.sourceType && item.sourceType !== args.sourceType) return false
       if (!args.includeArchived && item.archived) return false
       if (args.onlyUnread && item.isRead) return false
@@ -32,13 +32,17 @@ export const listInboxItems = zWorkspacePaginatedQueryActive({
       return true
     })
 
-    const limit = args.limit ?? 50
-    const offset = args.cursor ? parseInt(args.cursor, 10) : 0
+    const limit = typeof args.limit === 'number' ? args.limit : 50
+    const rawOffset = args.cursor?.fieldValue
+    const parsedOffset = typeof rawOffset === 'number' ? rawOffset : Number.parseInt(String(rawOffset ?? '0'), 10)
+    const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? Math.trunc(parsedOffset) : 0
     const items = filtered.slice(offset, offset + limit + 1)
     const hasMore = items.length > limit
+    const visibleItems = items.slice(0, limit)
+    const lastVisibleItem = visibleItems[visibleItems.length - 1]
 
     return {
-      items: items.slice(0, limit).map((item: any) => ({
+      items: visibleItems.map((item) => ({
         _id: item._id,
         legacyId: item.legacyId,
         sourceType: item.sourceType,
@@ -67,19 +71,21 @@ export const listInboxItems = zWorkspacePaginatedQueryActive({
         createdAtMs: item.createdAtMs,
         updatedAtMs: item.updatedAtMs,
       })),
-      nextCursor: hasMore ? String(offset + limit) : null,
+      nextCursor: hasMore && lastVisibleItem
+        ? { fieldValue: offset + limit, legacyId: lastVisibleItem.legacyId }
+        : null,
     }
   },
 })
 
 export const getUnreadCounts = zWorkspaceQueryActive({
   args: {},
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const items = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_user_unread', (q: any) =>
+      .withIndex('by_workspace_user_unread', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('userId', currentUserId).eq('isRead', false)
       )
       .collect()
@@ -91,8 +97,9 @@ export const getUnreadCounts = zWorkspaceQueryActive({
     }
 
     for (const item of items) {
-      if (counts[item.sourceType] !== undefined) {
-        counts[item.sourceType] += item.unreadCount
+      if (item.sourceType in counts) {
+        const key = item.sourceType as keyof typeof counts
+        counts[key] = (counts[key] ?? 0) + item.unreadCount
       }
     }
 
@@ -107,10 +114,10 @@ export const markInboxItemRead = zWorkspaceMutation({
   args: {
     inboxItemLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const item = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.inboxItemLegacyId)
       )
       .first()
@@ -134,10 +141,10 @@ export const setInboxItemArchived = zWorkspaceMutation({
     inboxItemLegacyId: z.string(),
     archived: z.boolean(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const item = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.inboxItemLegacyId)
       )
       .first()
@@ -160,10 +167,10 @@ export const setInboxItemPinned = zWorkspaceMutation({
     inboxItemLegacyId: z.string(),
     pinned: z.boolean(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const item = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.inboxItemLegacyId)
       )
       .first()
@@ -186,10 +193,10 @@ export const setInboxItemMuted = zWorkspaceMutation({
     inboxItemLegacyId: z.string(),
     muted: z.boolean(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const item = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.inboxItemLegacyId)
       )
       .first()
@@ -213,10 +220,10 @@ export const assignInboxItem = zWorkspaceMutation({
     assignedToId: z.string(),
     assignedToName: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const item = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.inboxItemLegacyId)
       )
       .first()
@@ -239,10 +246,10 @@ export const setInboxItemPriority = zWorkspaceMutation({
     inboxItemLegacyId: z.string(),
     priority: z.enum(['low', 'normal', 'high', 'urgent']),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const item = await ctx.db
       .query('inboxItems')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.inboxItemLegacyId)
       )
       .first()

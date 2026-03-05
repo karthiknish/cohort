@@ -65,6 +65,54 @@ function normalizeEmails(values: string[]): string[] {
   )
 }
 
+type JsonScalar = string | number | boolean | null
+type JsonLayer1 = JsonScalar | JsonScalar[] | Record<string, JsonScalar>
+type JsonLayer2 = JsonLayer1 | JsonLayer1[] | Record<string, JsonLayer1>
+
+function isJsonScalar(value: unknown): value is JsonScalar {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function toJsonLayer1(value: unknown): JsonLayer1 | null {
+  if (isJsonScalar(value)) return value
+
+  if (Array.isArray(value)) {
+    return value.every(isJsonScalar) ? value : null
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.every(([, entry]) => isJsonScalar(entry))) {
+      return Object.fromEntries(entries) as Record<string, JsonScalar>
+    }
+  }
+
+  return null
+}
+
+function normalizeEventPayload(value: unknown): JsonLayer2 {
+  const asLayer1 = toJsonLayer1(value)
+  if (asLayer1 !== null) return asLayer1
+
+  if (Array.isArray(value)) {
+    const mapped = value.map((entry) => toJsonLayer1(entry))
+    if (mapped.every((entry): entry is JsonLayer1 => entry !== null)) {
+      return mapped
+    }
+    return null
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    const mappedEntries = entries.map(([key, entry]) => [key, toJsonLayer1(entry)] as const)
+    if (mappedEntries.every(([, entry]) => entry !== null)) {
+      return Object.fromEntries(mappedEntries) as Record<string, JsonLayer1>
+    }
+  }
+
+  return null
+}
+
 function mapMeeting(row: Doc<'meetings'>): z.infer<typeof meetingZ> {
   return {
     legacyId: row.legacyId,
@@ -325,7 +373,7 @@ export const attachTranscript = zWorkspaceMutation({
     source: z.string().optional(),
     status: meetingStatusZ.optional(),
     eventType: z.string().optional(),
-    rawPayload: z.any().optional(),
+    rawPayload: z.unknown().optional(),
   },
   returns: z.string(),
   handler: async (ctx, args) => {
@@ -354,7 +402,7 @@ export const attachTranscript = zWorkspaceMutation({
       workspaceId: args.workspaceId,
       meetingLegacyId: meeting.legacyId,
       eventType: args.eventType ?? 'transcript.received',
-      payload: args.rawPayload ?? {},
+      payload: normalizeEventPayload(args.rawPayload),
       receivedAtMs: ctx.now,
     })
 
@@ -370,7 +418,7 @@ export const attachTranscriptByCalendarEventId = zWorkspaceMutation({
     source: z.string().optional(),
     status: meetingStatusZ.optional(),
     eventType: z.string().optional(),
-    rawPayload: z.any().optional(),
+    rawPayload: z.unknown().optional(),
   },
   returns: z.string(),
   handler: async (ctx, args) => {
@@ -401,7 +449,7 @@ export const attachTranscriptByCalendarEventId = zWorkspaceMutation({
       workspaceId: args.workspaceId,
       meetingLegacyId: meeting.legacyId,
       eventType: args.eventType ?? 'transcript.received',
-      payload: args.rawPayload ?? {},
+      payload: normalizeEventPayload(args.rawPayload),
       receivedAtMs: ctx.now,
     })
 

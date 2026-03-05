@@ -18,7 +18,7 @@ interface UseAttachmentsOptions {
 export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
   const { toast } = useToast()
 
-  const generateUploadUrl = useMutation((collaborationApi as any).generateUploadUrl)
+  const generateUploadUrl = useMutation(collaborationApi.generateUploadUrl)
 
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
   const [uploading, setUploading] = useState(false)

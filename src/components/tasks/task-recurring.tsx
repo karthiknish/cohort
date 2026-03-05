@@ -150,7 +150,7 @@ export function getNextOccurrence(
   const end = endDate ? new Date(endDate) : null
 
   // Find next occurrence after today
-  let next = new Date(baseDate)
+  const next = new Date(baseDate)
   while (next <= now) {
     switch (rule) {
       case 'daily':

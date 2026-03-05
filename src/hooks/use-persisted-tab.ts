@@ -102,7 +102,7 @@ export function usePersistedTab<TValue extends string>(
     } catch {
       // ignore storage errors
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint_disable-next-line react-hooks/exhaustive-deps
   }, [hasMounted, param, searchParams, storageKey])
 
   // Handle allowed values changes in a separate effect with proper guards
@@ -166,7 +166,7 @@ export function usePersistedTab<TValue extends string>(
       }, 0)
     },
     // Minimal deps - use refs for values that change frequently
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint_disable-next-line react-hooks/exhaustive-deps
     [param, pathname, router, searchParams, storageKey, syncToUrl],
   )
 

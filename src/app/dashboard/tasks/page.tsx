@@ -179,7 +179,7 @@ export default function TasksPage() {
       clientId: selectedClient?.id ?? null,
       clientName: selectedClient?.name ?? '',
     }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint_disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient?.id, selectedClient?.name])
 
   // Auto-open create sheet when action=create is in URL
@@ -193,7 +193,7 @@ export default function TasksPage() {
       const next = params.toString()
       router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint_disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Keyboard shortcuts

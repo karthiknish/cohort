@@ -106,7 +106,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
             Share Task
           </DialogTitle>
           <DialogDescription>
-            Share "{task.title}" with others via link or email
+            Share &ldquo;{task.title}&rdquo; with others via link or email
           </DialogDescription>
         </DialogHeader>
 

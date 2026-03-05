@@ -41,13 +41,10 @@ export function useTaskKeyboardNavigation({
     }
   }, [tasks, selectedTaskId])
 
-  const getSelectedTask = useCallback((): TaskRecord | null => {
-    const index = selectedIndexRef.current
-    if (index >= 0 && index < tasks.length) {
-      return tasks[index] || null
-    }
-    return null
-  }, [tasks])
+  const getSelectedTaskById = useCallback((): TaskRecord | null => {
+    if (!selectedTaskId) return null
+    return tasks.find((task) => task.id === selectedTaskId) ?? null
+  }, [selectedTaskId, tasks])
 
   const selectNext = useCallback(() => {
     const newIndex = Math.min(selectedIndexRef.current + 1, tasks.length - 1)
@@ -84,28 +81,28 @@ export function useTaskKeyboardNavigation({
   }, [tasks, onTaskSelect])
 
   const editSelected = useCallback(() => {
-    const task = getSelectedTask()
+    const task = getSelectedTaskById()
     if (task && onTaskEdit) {
       onTaskEdit(task)
     }
-  }, [getSelectedTask, onTaskEdit])
+  }, [getSelectedTaskById, onTaskEdit])
 
   const deleteSelected = useCallback(() => {
-    const task = getSelectedTask()
+    const task = getSelectedTaskById()
     if (task && onTaskDelete) {
       onTaskDelete(task)
     }
-  }, [getSelectedTask, onTaskDelete])
+  }, [getSelectedTaskById, onTaskDelete])
 
   const cycleStatus = useCallback(() => {
-    const task = getSelectedTask()
+    const task = getSelectedTaskById()
     if (task && onStatusChange) {
       const statuses: string[] = ['todo', 'in-progress', 'review', 'completed']
       const currentIndex = statuses.indexOf(task.status ?? 'todo')
       const nextStatus = statuses[(currentIndex + 1) % statuses.length] ?? 'todo'
       onStatusChange(task, nextStatus)
     }
-  }, [getSelectedTask, onStatusChange])
+  }, [getSelectedTaskById, onStatusChange])
 
   // Keyboard shortcuts definition
   const shortcuts: ShortcutAction[] = [
@@ -115,11 +112,11 @@ export function useTaskKeyboardNavigation({
     { key: 'ArrowUp', description: 'Move up', action: selectPrevious },
     { key: 'Home', description: 'First task', action: selectFirst },
     { key: 'End', description: 'Last task', action: selectLast },
-    { key: 'Enter', description: 'Edit task', action: editSelected, condition: () => !!getSelectedTask() },
-    { key: 'e', description: 'Edit task', action: editSelected, condition: () => !!getSelectedTask() },
-    { key: 'Backspace', description: 'Delete task', action: deleteSelected, condition: () => !!getSelectedTask() },
-    { key: 'Delete', description: 'Delete task', action: deleteSelected, condition: () => !!getSelectedTask() },
-    { key: 's', description: 'Cycle status', action: cycleStatus, condition: () => !!getSelectedTask() },
+    { key: 'Enter', description: 'Edit task', action: editSelected, condition: () => !!selectedTaskId },
+    { key: 'e', description: 'Edit task', action: editSelected, condition: () => !!selectedTaskId },
+    { key: 'Backspace', description: 'Delete task', action: deleteSelected, condition: () => !!selectedTaskId },
+    { key: 'Delete', description: 'Delete task', action: deleteSelected, condition: () => !!selectedTaskId },
+    { key: 's', description: 'Cycle status', action: cycleStatus, condition: () => !!selectedTaskId },
     { key: 'n', description: 'New task', action: () => onQuickAdd?.(), condition: () => !!onQuickAdd },
     { key: 'c', description: 'Focus search', action: () => {
       const el = document.getElementById('task-search')
@@ -163,8 +160,8 @@ export function useTaskKeyboardNavigation({
   }, [enabled, shortcuts, selectNext, selectPrevious, selectFirst, selectLast, editSelected, deleteSelected, cycleStatus, onQuickAdd])
 
   return {
-    selectedTask: getSelectedTask(),
-    shortcuts: shortcuts.map(s => ({ key: s.key, description: s.description })),
+    selectedTask: getSelectedTaskById(),
+    shortcuts: KEYBOARD_SHORTCUTS,
   }
 }
 

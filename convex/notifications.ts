@@ -15,6 +15,35 @@ const RESOURCE_TO_URL: Record<string, string> = {
   proposal: '/dashboard/proposals',
 }
 
+const metadataScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
+const metadataLayer1Validator = v.union(
+  metadataScalarValidator,
+  v.array(metadataScalarValidator),
+  v.record(v.string(), metadataScalarValidator),
+)
+const metadataLayer2Validator = v.union(
+  metadataLayer1Validator,
+  v.array(metadataLayer1Validator),
+  v.record(v.string(), metadataLayer1Validator),
+)
+const metadataValidator = v.record(v.string(), metadataLayer2Validator)
+type NotificationMetadata = Record<string, string | number | boolean | null>
+
+function normalizeNotificationMetadata(value: unknown): NotificationMetadata | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+
+  const record = value as Record<string, unknown>
+  const normalized: NotificationMetadata = {}
+
+  for (const [key, entry] of Object.entries(record)) {
+    if (typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean' || entry === null) {
+      normalized[key] = entry
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined
+}
+
 function toNotificationKind(input: string): WorkspaceNotificationKind {
   const allowed: WorkspaceNotificationKind[] = [
     'task.created',
@@ -77,21 +106,22 @@ function buildCollaborationNavigationUrl(args: {
   return query ? `/dashboard/collaboration?${query}` : '/dashboard/collaboration'
 }
 
-function buildNotificationNavigationUrl(row: any): string {
-  const resourceType = typeof row?.resourceType === 'string' ? row.resourceType : ''
+function buildNotificationNavigationUrl(row: unknown): string {
+  const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
+  const resourceType = typeof record?.resourceType === 'string' ? record.resourceType : ''
   if (resourceType !== 'collaboration') {
     return RESOURCE_TO_URL[resourceType] ?? '/dashboard'
   }
 
-  const metadata = row?.metadata && typeof row.metadata === 'object'
-    ? (row.metadata as Record<string, unknown>)
+  const metadata = record?.metadata && typeof record.metadata === 'object'
+    ? (record.metadata as Record<string, unknown>)
     : undefined
 
   const channelType = readMetadataString(metadata, 'channelType')
   const channelId = readMetadataString(metadata, 'channelId')
   const clientId = readMetadataString(metadata, 'clientId')
   const projectId = readMetadataString(metadata, 'projectId')
-  const messageId = readMetadataString(metadata, 'messageId') ?? (typeof row?.resourceId === 'string' ? row.resourceId : null)
+  const messageId = readMetadataString(metadata, 'messageId') ?? (typeof record?.resourceId === 'string' ? record.resourceId : null)
   const threadId = readMetadataString(metadata, 'threadRootId') ?? readMetadataString(metadata, 'parentMessageId')
 
   return buildCollaborationNavigationUrl({
@@ -104,36 +134,52 @@ function buildNotificationNavigationUrl(row: any): string {
   })
 }
 
-function mapNotification(row: any, userId: string): WorkspaceNotification {
-  const recipientRoles = Array.isArray(row.recipientRoles) ? row.recipientRoles : []
+function mapNotification(row: unknown, userId: string): WorkspaceNotification {
+  const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
+  const recipientRoles = Array.isArray(record?.recipientRoles) ? record.recipientRoles : []
   const roles = recipientRoles.filter((value: unknown): value is WorkspaceNotificationRole => value === 'admin' || value === 'team' || value === 'client')
-  const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : undefined
+  const metadata =
+    record?.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
+      ? (record.metadata as Record<string, unknown>)
+      : undefined
+  const recipientClientIds = Array.isArray(record?.recipientClientIds)
+    ? record.recipientClientIds.filter((value): value is string => typeof value === 'string')
+    : undefined
+  const recipientUserIds = Array.isArray(record?.recipientUserIds)
+    ? record.recipientUserIds.filter((value): value is string => typeof value === 'string')
+    : undefined
+  const readBy = Array.isArray(record?.readBy)
+    ? record.readBy.filter((value): value is string => typeof value === 'string')
+    : []
+  const acknowledgedBy = Array.isArray(record?.acknowledgedBy)
+    ? record.acknowledgedBy.filter((value): value is string => typeof value === 'string')
+    : []
 
   return {
-    id: typeof row.legacyId === 'string' ? row.legacyId : String(row._id),
-    kind: toNotificationKind(typeof row.kind === 'string' ? row.kind : 'task.created'),
-    title: typeof row.title === 'string' ? row.title : 'Notification',
-    body: typeof row.body === 'string' ? row.body : '',
+    id: typeof record?.legacyId === 'string' ? record.legacyId : String(record?._id ?? ''),
+    kind: toNotificationKind(typeof record?.kind === 'string' ? record.kind : 'task.created'),
+    title: typeof record?.title === 'string' ? record.title : 'Notification',
+    body: typeof record?.body === 'string' ? record.body : '',
     actor: {
-      id: typeof row.actorId === 'string' ? row.actorId : null,
-      name: typeof row.actorName === 'string' ? row.actorName : null,
+      id: typeof record?.actorId === 'string' ? record.actorId : null,
+      name: typeof record?.actorName === 'string' ? record.actorName : null,
     },
     resource: toResource(
-      typeof row.resourceType === 'string' ? row.resourceType : 'task',
-      typeof row.resourceId === 'string' ? row.resourceId : ''
+      typeof record?.resourceType === 'string' ? record.resourceType : 'task',
+      typeof record?.resourceId === 'string' ? record.resourceId : ''
     ),
     recipients: {
       roles,
-      clientIds: Array.isArray(row.recipientClientIds) ? row.recipientClientIds : undefined,
-      clientId: typeof row.recipientClientId === 'string' ? row.recipientClientId : null,
-      userIds: Array.isArray(row.recipientUserIds) ? row.recipientUserIds : undefined,
+      clientIds: recipientClientIds,
+      clientId: typeof record?.recipientClientId === 'string' ? record.recipientClientId : null,
+      userIds: recipientUserIds,
     },
     metadata,
     navigationUrl: buildNotificationNavigationUrl(row),
-    createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-    updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-    read: Array.isArray(row.readBy) ? row.readBy.includes(userId) : false,
-    acknowledged: Array.isArray(row.acknowledgedBy) ? row.acknowledgedBy.includes(userId) : false,
+    createdAt: typeof record?.createdAtMs === 'number' ? new Date(record.createdAtMs).toISOString() : null,
+    updatedAt: typeof record?.updatedAtMs === 'number' ? new Date(record.updatedAtMs).toISOString() : null,
+    read: readBy.includes(userId),
+    acknowledged: acknowledgedBy.includes(userId),
   }
 }
 
@@ -207,7 +253,7 @@ export const create = zWorkspaceMutation({
     recipientClientId: z.string().nullable(),
     recipientClientIds: z.array(z.string()).optional(),
     recipientUserIds: z.array(z.string()).optional(),
-    metadata: z.any().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
     createdAtMs: z.number(),
     updatedAtMs: z.number(),
   },
@@ -234,7 +280,7 @@ export const create = zWorkspaceMutation({
       recipientClientId: args.recipientClientId,
       recipientClientIds: args.recipientClientIds,
       recipientUserIds: args.recipientUserIds,
-      metadata: args.metadata,
+      metadata: normalizeNotificationMetadata(args.metadata),
       createdAtMs: args.createdAtMs,
       updatedAtMs: args.updatedAtMs,
       readBy: existing?.readBy ?? [],
@@ -338,7 +384,7 @@ export const createInternal = internalMutation({
     recipientClientId: v.union(v.string(), v.null()),
     recipientClientIds: v.optional(v.array(v.string())),
     recipientUserIds: v.optional(v.array(v.string())),
-    metadata: v.optional(v.any()),
+    metadata: v.optional(metadataValidator),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
   },
@@ -366,7 +412,7 @@ export const createInternal = internalMutation({
       recipientClientId: args.recipientClientId,
       recipientClientIds: args.recipientClientIds,
       recipientUserIds: args.recipientUserIds,
-      metadata: args.metadata,
+      metadata: normalizeNotificationMetadata(args.metadata),
       createdAtMs: args.createdAtMs,
       updatedAtMs: args.updatedAtMs,
       readBy: [],

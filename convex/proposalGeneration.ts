@@ -155,7 +155,8 @@ export const generateFromProposal = zWorkspaceAction({
       lastAutosaveAtMs: now,
     })
 
-    const rawThemeId = proposal.formData?.presentationTheme?.trim()
+    const rawThemeValue = proposal.formData?.presentationTheme
+    const rawThemeId = typeof rawThemeValue === 'string' ? rawThemeValue.trim() : ''
     let themeId: string | undefined
 
     if (rawThemeId) {

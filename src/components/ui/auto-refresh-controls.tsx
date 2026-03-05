@@ -23,7 +23,7 @@ const INTERVAL_OPTIONS: Array<{ value: RefreshInterval; label: string; ms: numbe
 ]
 
 interface AutoRefreshProps {
-  onRefresh: () => void | Promise<any>
+  onRefresh: () => void | Promise<unknown>
   disabled?: boolean
   isRefreshing?: boolean
   className?: string

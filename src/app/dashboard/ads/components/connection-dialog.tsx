@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useState, useEffect } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { Check, ChevronRight, ExternalLink, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
 
 import {
@@ -379,11 +379,15 @@ export const DisconnectDialog = memo(function DisconnectDialog({
 }: DisconnectDialogProps) {
   const [clearHistoricalData, setClearHistoricalData] = useState(false)
 
-  useEffect(() => {
-    if (open) {
-      setClearHistoricalData(false)
-    }
-  }, [open])
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        setClearHistoricalData(false)
+      }
+      onOpenChange(nextOpen)
+    },
+    [onOpenChange]
+  )
 
   const handleConfirm = useCallback(async () => {
     await onConfirm({ clearHistoricalData })
@@ -391,7 +395,7 @@ export const DisconnectDialog = memo(function DisconnectDialog({
   }, [clearHistoricalData, onConfirm, onOpenChange])
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect {providerName}?</AlertDialogTitle>
@@ -402,7 +406,7 @@ export const DisconnectDialog = memo(function DisconnectDialog({
               <li>Remove the connection to your {providerName} account</li>
               <li>Keep your existing synced data in Cohorts by default</li>
             </ul>
-            <p className="pt-2">You can reconnect at any time to resume syncing.</p>
+            <p className="pt-2">You can reconnect later to resume syncing.</p>
           </AlertDialogDescription>
           <div className="rounded-md border border-muted/60 p-3">
             <label className="flex items-start gap-3 text-sm">

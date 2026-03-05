@@ -2,18 +2,23 @@ import { authenticatedQuery, adminMutation, adminQuery } from './functions'
 import { query } from './_generated/server'
 import { v } from 'convex/values'
 
-function summarizeIdentity(identity: any) {
+function summarizeIdentity(identity: unknown) {
   if (!identity) return { present: false }
+
+  const record = identity && typeof identity === 'object' ? (identity as Record<string, unknown>) : null
 
   return {
     present: true,
-    issuer: typeof identity.issuer === 'string' ? identity.issuer : null,
-    subject: typeof identity.subject === 'string' ? identity.subject : null,
-    email: typeof identity.email === 'string' ? identity.email : null,
-    name: typeof identity.name === 'string' ? identity.name : null,
-    role: typeof identity.role === 'string' ? identity.role : null,
+    issuer: typeof record?.issuer === 'string' ? record.issuer : null,
+    subject: typeof record?.subject === 'string' ? record.subject : null,
+    email: typeof record?.email === 'string' ? record.email : null,
+    name: typeof record?.name === 'string' ? record.name : null,
+    role: typeof record?.role === 'string' ? record.role : null,
   }
 }
+
+const DEBUG_TABLES = ['tasks', 'taskComments', 'collaborationMessages', 'clients', 'projects'] as const
+type DebugTable = (typeof DEBUG_TABLES)[number]
 
 export const whoami = authenticatedQuery({
   args: {},
@@ -76,8 +81,9 @@ export const backfillDeletedAtMs = adminMutation({
     limitPerTable: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const defaultTables = ['tasks', 'taskComments', 'collaborationMessages', 'clients', 'projects']
-    const tables = (args.tables ?? defaultTables).filter((t) => defaultTables.includes(t))
+    const tables = (args.tables ?? [...DEBUG_TABLES]).filter((t): t is DebugTable =>
+      (DEBUG_TABLES as readonly string[]).includes(t),
+    )
     const limitPerTable = Math.min(Math.max(args.limitPerTable ?? 500, 1), 5000)
 
     const summary: Record<string, { scanned: number; patched: number; skipped: number; errors: number }> = {}
@@ -85,10 +91,20 @@ export const backfillDeletedAtMs = adminMutation({
     for (const table of tables) {
       summary[table] = { scanned: 0, patched: 0, skipped: 0, errors: 0 }
 
-      const rows = await ctx.db.query(table as any).take(limitPerTable)
+      const rows =
+        table === 'tasks'
+          ? await ctx.db.query('tasks').take(limitPerTable)
+          : table === 'taskComments'
+            ? await ctx.db.query('taskComments').take(limitPerTable)
+            : table === 'collaborationMessages'
+              ? await ctx.db.query('collaborationMessages').take(limitPerTable)
+              : table === 'clients'
+                ? await ctx.db.query('clients').take(limitPerTable)
+                : await ctx.db.query('projects').take(limitPerTable)
+
       summary[table].scanned = rows.length
 
-      for (const row of rows as any[]) {
+      for (const row of rows) {
         try {
           if (row.deletedAtMs !== undefined) {
             summary[table].skipped += 1
@@ -122,7 +138,7 @@ export const inspectClients = query({
 
     const rows = await ctx.db
       .query('clients')
-      .withIndex('by_workspace_nameLower_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_nameLower_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
       .take(limit)
 
     return {

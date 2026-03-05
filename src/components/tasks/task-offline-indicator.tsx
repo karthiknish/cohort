@@ -42,7 +42,7 @@ export function OfflineIndicator() {
       'bg-gray-500 text-white'
     )}>
       <WifiOff className="h-4 w-4" />
-      <span className="text-sm font-medium">You're offline • Changes will sync when reconnected</span>
+      <span className="text-sm font-medium">You are offline • Changes will sync when reconnected</span>
     </div>
   )
 }

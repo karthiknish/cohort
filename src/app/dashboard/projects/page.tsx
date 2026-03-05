@@ -30,7 +30,7 @@ import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
-import type { MilestoneRecord } from '@/types/milestones'
+import { MILESTONE_STATUSES, type MilestoneRecord } from '@/types/milestones'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog'
 import { Button } from '@/components/ui/button'
@@ -84,6 +84,14 @@ type ProjectResponse = {
   projects?: ProjectRecord[]
 }
 
+function isProjectStatus(value: unknown): value is ProjectStatus {
+  return typeof value === 'string' && PROJECT_STATUSES.includes(value as ProjectStatus)
+}
+
+function isMilestoneStatus(value: unknown): value is MilestoneRecord['status'] {
+  return typeof value === 'string' && MILESTONE_STATUSES.includes(value as MilestoneRecord['status'])
+}
+
 export default function ProjectsPage() {
   const { user } = useAuth()
 
@@ -132,7 +140,7 @@ export default function ProjectsPage() {
           status: statusFilter !== 'all' ? statusFilter : undefined,
           limit: 100,
         }
-  ) as Array<any> | undefined
+        ) as Array<unknown> | undefined
 
   const milestonesRealtime = useQuery(
     projectMilestonesApi.listByProjectIds,
@@ -142,7 +150,7 @@ export default function ProjectsPage() {
           workspaceId,
           projectIds: projects.map((p) => p.id),
         }
-  ) as Record<string, Array<any>> | undefined
+        ) as Record<string, unknown[]> | undefined
 
   const loadProjects = useCallback(async () => {
     // Use preview data when in preview mode
@@ -178,7 +186,7 @@ export default function ProjectsPage() {
       return
     }
 
-    // Cancel any pending request
+    // Cancel pending request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -194,24 +202,32 @@ export default function ProjectsPage() {
 
     const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
 
-    const mapped: ProjectRecord[] = rows.map((row: any) => ({
-      id: String(row.legacyId),
-      name: String(row.name ?? ''),
-      description: typeof row.description === 'string' ? row.description : null,
-      status: row.status as ProjectStatus,
-      clientId: typeof row.clientId === 'string' ? row.clientId : null,
-      clientName: typeof row.clientName === 'string' ? row.clientName : null,
-      startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
-      endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
-      tags: Array.isArray(row.tags) ? row.tags : [],
-      ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
-      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-      updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-      taskCount: 0,
-      openTaskCount: 0,
-      recentActivityAt: null,
-      deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-    }))
+    const mapped: ProjectRecord[] = rows.map((row) => {
+      const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
+      const status = isProjectStatus(record?.status) ? record.status : 'planning'
+      const tags = Array.isArray(record?.tags)
+        ? record.tags.filter((tag): tag is string => typeof tag === 'string')
+        : []
+
+      return {
+        id: String(record?.legacyId ?? ''),
+        name: String(record?.name ?? ''),
+        description: typeof record?.description === 'string' ? record.description : null,
+        status,
+        clientId: typeof record?.clientId === 'string' ? record.clientId : null,
+        clientName: typeof record?.clientName === 'string' ? record.clientName : null,
+        startDate: typeof record?.startDateMs === 'number' ? new Date(record.startDateMs).toISOString() : null,
+        endDate: typeof record?.endDateMs === 'number' ? new Date(record.endDateMs).toISOString() : null,
+        tags,
+        ownerId: typeof record?.ownerId === 'string' ? record.ownerId : null,
+        createdAt: typeof record?.createdAtMs === 'number' ? new Date(record.createdAtMs).toISOString() : null,
+        updatedAt: typeof record?.updatedAtMs === 'number' ? new Date(record.updatedAtMs).toISOString() : null,
+        taskCount: 0,
+        openTaskCount: 0,
+        recentActivityAt: null,
+        deletedAt: typeof record?.deletedAtMs === 'number' ? new Date(record.deletedAtMs).toISOString() : null,
+      }
+    })
 
     setProjects(mapped)
     setError(null)
@@ -261,19 +277,22 @@ export default function ProjectsPage() {
 
           for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
             const list = Array.isArray(rows) ? rows : []
-            mapped[projectId] = list.map((row: any) => ({
-              id: String(row.legacyId),
-              projectId: String(row.projectId),
-              title: String(row.title ?? ''),
-              description: typeof row.description === 'string' ? row.description : null,
-              status: row.status,
-              startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,
-              endDate: typeof row.endDateMs === 'number' ? new Date(row.endDateMs).toISOString() : null,
-              ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
-              order: typeof row.order === 'number' ? row.order : null,
-              createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-              updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-            }))
+            mapped[projectId] = list.map((row) => {
+              const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
+              return {
+                id: String(record?.legacyId ?? ''),
+                projectId: String(record?.projectId ?? ''),
+                title: String(record?.title ?? ''),
+                description: typeof record?.description === 'string' ? record.description : null,
+                status: isMilestoneStatus(record?.status) ? record.status : 'planned',
+                startDate: typeof record?.startDateMs === 'number' ? new Date(record.startDateMs).toISOString() : null,
+                endDate: typeof record?.endDateMs === 'number' ? new Date(record.endDateMs).toISOString() : null,
+                ownerId: typeof record?.ownerId === 'string' ? record.ownerId : null,
+                order: typeof record?.order === 'number' ? record.order : null,
+                createdAt: typeof record?.createdAtMs === 'number' ? new Date(record.createdAtMs).toISOString() : null,
+                updatedAt: typeof record?.updatedAtMs === 'number' ? new Date(record.updatedAtMs).toISOString() : null,
+              }
+            })
           }
 
           setMilestonesByProject(mapped)

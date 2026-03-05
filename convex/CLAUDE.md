@@ -128,7 +128,7 @@ v.record(v.string(), v.number())
 v.optional(v.string())  // Field may be missing
 v.nullable(v.string())  // Shorthand for v.union(v.string(), v.null())
 v.union(v.literal("a"), v.literal("b"))  // Enum-like
-v.any()                 // Escape hatch
+v.unknown()             // Escape hatch
 ```
 
 ### Index Queries - ALWAYS use for large tables
@@ -222,7 +222,7 @@ Prefer testing with real Convex backend over mocks when possible.
 
 ## Project-Specific Notes
 
-[Add any project-specific conventions, business logic notes, or architecture decisions here]
+[Add project-specific conventions, business logic notes, or architecture decisions here]
 
 ## Quick Reference
 

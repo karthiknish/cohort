@@ -73,11 +73,39 @@ function toIsoDateString(input: number | null): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
-function mapConvexTaskToTaskRecord(row: any): TaskRecord {
+type TaskQueryRow = {
+  legacyId: string
+  title: string
+  description: string | null
+  status: TaskStatus
+  priority: TaskRecord['priority']
+  assignedTo: string[]
+  clientId: string | null
+  client: string | null
+  projectId: string | null
+  projectName: string | null
+  dueDateMs: number | null
+  tags: string[]
+  attachments?: TaskAttachment[]
+  createdAtMs: number | null
+  updatedAtMs: number | null
+  deletedAtMs: number | null
+}
+
+type PaginatedTaskRows = {
+  items: TaskQueryRow[]
+}
+
+function hasPaginatedItems(value: unknown): value is PaginatedTaskRows {
+  if (!value || typeof value !== 'object') return false
+  return Array.isArray((value as { items?: unknown }).items)
+}
+
+function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
   const attachments = Array.isArray(row.attachments)
     ? row.attachments
-      .filter((item: any) => item && typeof item.name === 'string' && typeof item.url === 'string')
-      .map((item: any) => ({
+      .filter((item) => item && typeof item.name === 'string' && typeof item.url === 'string')
+      .map((item) => ({
         name: item.name,
         url: item.url,
         type: typeof item.type === 'string' ? item.type : null,
@@ -151,17 +179,18 @@ export function useTasks({
       return
     }
 
-    const isArray = Array.isArray(convexTasksQuery)
-    const hasPaginatedItems = Array.isArray((convexTasksQuery as any)?.items)
+    const queryValue = convexTasksQuery as unknown
+    const isArray = Array.isArray(queryValue)
+    const paginated = hasPaginatedItems(queryValue)
     
     const rows = isArray
-      ? convexTasksQuery
-      : hasPaginatedItems
-        ? ((convexTasksQuery as any).items as any[])
+      ? (queryValue as TaskQueryRow[])
+      : paginated
+        ? queryValue.items
         : []
 
     // Only log error if we have a response that's neither an array nor a paginated shape
-    if (convexTasksQuery && !isArray && !hasPaginatedItems) {
+    if (queryValue && !isArray && !paginated) {
       logError(convexTasksQuery, 'useTasks:unexpectedQueryShape')
     }
 

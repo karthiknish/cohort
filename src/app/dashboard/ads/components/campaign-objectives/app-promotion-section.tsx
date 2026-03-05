@@ -31,7 +31,9 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
             <Label htmlFor="app-store">App Store</Label>
             <Select
               value={formData.destinationType}
-              onValueChange={(value) => onChange({ destinationType: value as any })}
+              onValueChange={(value) =>
+                onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' })
+              }
               disabled={disabled}
             >
               <SelectTrigger id="app-store">
@@ -156,7 +158,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
                 <li>Create compelling app store listings</li>
                 <li>Use playable ads to let users try before installing</li>
                 <li>Set up deep linking for better user experience</li>
-                <li>Retarget users who installed but haven't opened the app</li>
+                <li>Retarget users who installed but have not opened the app</li>
               </ul>
             </div>
           </div>

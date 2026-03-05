@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAction } from 'convex/react'
 import { Plus, Loader2, Upload, AlertCircle } from 'lucide-react'
 
@@ -110,7 +110,7 @@ export function CreateCreativeDialog({
   const [pageId, setPageId] = useState('')
   const [instagramActorId, setInstagramActorId] = useState('')
   const [status, setStatus] = useState<'ACTIVE' | 'PAUSED'>('PAUSED')
-  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<string | null>(null)
+  const submissionRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const resetForm = () => {
     setName('')
@@ -127,12 +127,27 @@ export function CreateCreativeDialog({
     setInstagramActorId('')
     setStatus('PAUSED')
     setSelectedAdSetId(propAdSetId)
-    setSubmitIdempotencyKey(null)
+    submissionRef.current = null
   }
 
-  useEffect(() => {
-    setSubmitIdempotencyKey(null)
-  }, [
+  const formFingerprint = useMemo(
+    () => JSON.stringify({
+      name,
+      objectType,
+      title,
+      body,
+      description,
+      callToActionType,
+      linkUrl,
+      imageUrl,
+      imageHash,
+      videoId,
+      pageId,
+      instagramActorId,
+      status,
+      selectedAdSetId: selectedAdSetId ?? null,
+    }),
+    [
     name,
     objectType,
     title,
@@ -183,7 +198,11 @@ export function CreateCreativeDialog({
     if (!open || !isMeta || !workspaceId) return
 
     let cancelled = false
-    setLoadingPageActors(true)
+    const loadingFrame = window.requestAnimationFrame(() => {
+      if (!cancelled) {
+        setLoadingPageActors(true)
+      }
+    })
 
     void listMetaPageActors({
       workspaceId,
@@ -234,6 +253,7 @@ export function CreateCreativeDialog({
 
     return () => {
       cancelled = true
+      window.cancelAnimationFrame(loadingFrame)
     }
   }, [open, isMeta, workspaceId, clientId, listMetaPageActors])
 
@@ -268,7 +288,7 @@ export function CreateCreativeDialog({
 
     await uploadMedia({
       workspaceId,
-      providerId: providerId as any,
+      providerId: 'facebook',
       clientId: clientId ?? null,
       fileName: file.name,
       fileData: Array.from(fileData),
@@ -360,16 +380,21 @@ export function CreateCreativeDialog({
       return
     }
 
-    const effectiveIdempotencyKey = submitIdempotencyKey ?? generateCreativeIdempotencyKey()
-    if (!submitIdempotencyKey) {
-      setSubmitIdempotencyKey(effectiveIdempotencyKey)
+    const currentSubmission = submissionRef.current
+    const effectiveIdempotencyKey =
+      currentSubmission && currentSubmission.fingerprint === formFingerprint
+        ? currentSubmission.key
+        : generateCreativeIdempotencyKey()
+    submissionRef.current = {
+      fingerprint: formFingerprint,
+      key: effectiveIdempotencyKey,
     }
 
     setLoading(true)
 
     await createCreative({
       workspaceId,
-      providerId: providerId as any,
+      providerId: 'facebook',
       clientId: clientId ?? null,
       idempotencyKey: effectiveIdempotencyKey,
       campaignId,
@@ -443,7 +468,11 @@ export function CreateCreativeDialog({
           {/* Object Type */}
           <div className="space-y-2">
             <Label htmlFor="objectType">Ad Format</Label>
-            <Select value={objectType} onValueChange={(v: any) => setObjectType(v)} disabled={loading}>
+            <Select
+              value={objectType}
+              onValueChange={(value) => setObjectType(value as 'IMAGE' | 'VIDEO' | 'CAROUSEL' | 'DYNAMIC')}
+              disabled={loading}
+            >
               <SelectTrigger id="objectType">
                 <SelectValue />
               </SelectTrigger>
@@ -670,7 +699,11 @@ export function CreateCreativeDialog({
           {/* Initial Status */}
           <div className="space-y-2">
             <Label htmlFor="status">Initial Status</Label>
-            <Select value={status} onValueChange={(v: any) => setStatus(v)} disabled={loading}>
+            <Select
+              value={status}
+              onValueChange={(value) => setStatus(value as 'ACTIVE' | 'PAUSED')}
+              disabled={loading}
+            >
               <SelectTrigger id="status">
                 <SelectValue />
               </SelectTrigger>

@@ -58,7 +58,7 @@ export const _getByEmailInternal = internalQuery({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) return null
@@ -89,7 +89,7 @@ export const _updateUserRoleStatus = internalMutation({
 
     const matches = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (matches.length === 0) throw Errors.resource.notFound('User', args.email)
@@ -119,7 +119,7 @@ export const getByLegacyId = zAuthenticatedQuery({
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('User', args.legacyId)
@@ -151,7 +151,7 @@ export const getByEmail = zAuthenticatedQuery({
     // Historical data may contain duplicates; prefer the most recently updated record.
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) throw Errors.resource.notFound('User', args.email)
@@ -201,11 +201,11 @@ export const listWorkspaceMembers = zAuthenticatedQuery({
     const [membersByAgency, agencyAdmin] = await Promise.all([
       ctx.db
         .query('users')
-        .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
+        .withIndex('by_agencyId', (q) => q.eq('agencyId', args.workspaceId))
         .take(limit),
       ctx.db
         .query('users')
-        .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.workspaceId))
+        .withIndex('by_legacyId', (q) => q.eq('legacyId', args.workspaceId))
         .unique(),
     ])
 
@@ -288,11 +288,11 @@ export const listDMParticipants = zAuthenticatedQuery({
     const [membersByAgency, agencyAdmin] = await Promise.all([
       ctx.db
         .query('users')
-        .withIndex('by_agencyId', (q: any) => q.eq('agencyId', args.workspaceId))
+        .withIndex('by_agencyId', (q) => q.eq('agencyId', args.workspaceId))
         .take(limit),
       ctx.db
         .query('users')
-        .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.workspaceId))
+        .withIndex('by_legacyId', (q) => q.eq('legacyId', args.workspaceId))
         .unique(),
     ])
 
@@ -336,7 +336,7 @@ export const getWorkspaceIdForUser = internalQuery({
     // The userId comes from authenticated server context
     const row = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.userId))
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.userId))
       .unique()
 
     // If user doesn't exist or has no agencyId, fall back to userId
@@ -360,7 +360,7 @@ export const getNotificationPreferencesByEmail = internalQuery({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) throw Errors.auth.userNotFound()
@@ -422,7 +422,7 @@ export const bulkUpsert = zAuthenticatedMutation({
     for (const user of args.users) {
       const existing = await ctx.db
         .query('users')
-        .withIndex('by_legacyId', (q: any) => q.eq('legacyId', user.legacyId))
+        .withIndex('by_legacyId', (q) => q.eq('legacyId', user.legacyId))
         .unique()
 
       const normalized = normalizeEmail((user.email ?? null) as string | null)
@@ -483,8 +483,21 @@ export const getByLegacyIdSafe = query({
     agencyId: string | null
     phoneNumber: string | null
     photoUrl: string | null
-    notificationPreferences: any
-    regionalPreferences: any
+    notificationPreferences:
+      | {
+          emailAdAlerts: boolean
+          emailPerformanceDigest: boolean
+          emailTaskActivity: boolean
+          emailCollaboration: boolean
+        }
+      | null
+    regionalPreferences:
+      | {
+          currency?: string | null
+          timezone?: string | null
+          locale?: string | null
+        }
+      | null
     createdAtMs: number | null
     updatedAtMs: number | null
   } | null> => {
@@ -495,7 +508,7 @@ export const getByLegacyIdSafe = query({
 
     const row = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) return null
@@ -534,7 +547,7 @@ export const bootstrapUpsert = mutation({
 
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
       .unique()
 
     const normalized = normalizeEmail(args.email ?? existing?.email ?? null)
@@ -579,7 +592,7 @@ export const getUserByEmailPublic = internalQuery({
 
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_emailLower', (q: any) => q.eq('emailLower', normalized.emailLower))
+      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
     if (rows.length === 0) return { found: false, user: null }

@@ -20,6 +20,11 @@ function generateId(prefix: string) {
   const rand = Math.random().toString(36).slice(2, 10)
   return `${prefix}-${Date.now().toString(36)}-${rand}` 
 }
+
+const jsonScalarZ = z.union([z.string(), z.number(), z.boolean(), z.null()])
+const jsonLayer1Z = z.union([jsonScalarZ, z.array(jsonScalarZ), z.record(z.string(), jsonScalarZ)])
+const jsonLayer2Z = z.union([jsonLayer1Z, z.array(jsonLayer1Z), z.record(z.string(), jsonLayer1Z)])
+const jsonRecordZ = z.record(z.string(), jsonLayer2Z)
  
 const proposalZ = z.object({
   legacyId: z.string(),
@@ -28,8 +33,8 @@ const proposalZ = z.object({
   lastAgentInteractionAtMs: z.number().nullable().optional(),
   status: z.string(),
   stepProgress: z.number(),
-  formData: z.any(),
-  aiInsights: z.any().nullable(),
+  formData: jsonRecordZ,
+  aiInsights: jsonRecordZ.nullable(),
   aiSuggestions: z.string().nullable(),
   pdfUrl: z.string().nullable(),
   pptUrl: z.string().nullable(),
@@ -37,7 +42,7 @@ const proposalZ = z.object({
   pptStorageId: z.string().nullable().optional(),
   clientId: z.string().nullable(),
   clientName: z.string().nullable(),
-  presentationDeck: z.any().nullable(),
+  presentationDeck: jsonRecordZ.nullable(),
   createdAtMs: z.number(),
   updatedAtMs: z.number(),
   lastAutosaveAtMs: z.number().nullable(),
@@ -160,7 +165,7 @@ export const create = zWorkspaceMutation({
     ownerId: z.string().nullable(),
     status: z.string(),
     stepProgress: z.number(),
-    formData: z.any(),
+    formData: jsonRecordZ,
     clientId: z.string().nullable(),
     clientName: z.string().nullable(),
     agentConversationId: z.string().nullable().optional(),
@@ -212,16 +217,16 @@ export const update = zWorkspaceMutation({
     legacyId: z.string(),
     status: z.string().optional(),
     stepProgress: z.number().optional(),
-    formData: z.any().optional(),
+    formData: jsonRecordZ.optional(),
     clientId: z.string().nullable().optional(),
     clientName: z.string().nullable().optional(),
-    aiInsights: z.any().nullable().optional(),
+    aiInsights: jsonRecordZ.nullable().optional(),
     aiSuggestions: z.string().nullable().optional(),
     pdfUrl: z.string().nullable().optional(),
     pptUrl: z.string().nullable().optional(),
     pdfStorageId: z.string().nullable().optional(),
     pptStorageId: z.string().nullable().optional(),
-    presentationDeck: z.any().nullable().optional(),
+    presentationDeck: jsonRecordZ.nullable().optional(),
     agentConversationId: z.string().nullable().optional(),
     lastAgentInteractionAtMs: z.number().nullable().optional(),
     updatedAtMs: z.number(),
@@ -291,8 +296,8 @@ export const bulkUpsert = zAdminMutation({
         ownerId: z.string().nullable(),
         status: z.string(),
         stepProgress: z.number(),
-        formData: z.any(),
-        aiInsights: z.any().nullable(),
+        formData: jsonRecordZ,
+        aiInsights: jsonRecordZ.nullable(),
         aiSuggestions: z.string().nullable(),
         pdfUrl: z.string().nullable(),
         pptUrl: z.string().nullable(),
@@ -302,7 +307,7 @@ export const bulkUpsert = zAdminMutation({
         clientName: z.string().nullable(),
         agentConversationId: z.string().nullable().optional(),
         lastAgentInteractionAtMs: z.number().nullable().optional(),
-        presentationDeck: z.any().nullable(),
+        presentationDeck: jsonRecordZ.nullable(),
         createdAtMs: z.number(),
         updatedAtMs: z.number(),
         lastAutosaveAtMs: z.number(),

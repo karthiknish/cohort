@@ -57,7 +57,7 @@ export function MessageForwardDialog({
   onForward,
 }: MessageForwardDialogProps) {
   const { toast } = useToast()
-  const createMessage = useMutation((collaborationApi as any).create)
+  const createMessage = useMutation(collaborationApi.createMessage)
 
   const [selectedChannelId, setSelectedChannelId] = useState<string>('')
   const [forwardMessage, setForwardMessage] = useState('')

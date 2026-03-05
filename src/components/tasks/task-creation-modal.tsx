@@ -34,7 +34,7 @@ import { useSmartDefaults } from '@/hooks/use-smart-defaults'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
-import type { TaskRecord } from '@/types/tasks'
+import type { TaskPriority, TaskRecord } from '@/types/tasks'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useMutation } from 'convex/react'
 import { filesApi, tasksApi } from '@/lib/convex-api'
@@ -86,7 +86,7 @@ export function TaskCreationModal({
     projectName: initialData?.projectName || taskDefaults.projectName || '',
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim()) return
 
@@ -118,91 +118,102 @@ export function TaskCreationModal({
       return
     }
 
-    try {
-      const attachments =
-        pendingAttachments.length > 0
-          ? await Promise.all(
-              pendingAttachments.map((attachment) =>
-                uploadTaskAttachment({
-                  userId: user.id,
-                  file: attachment.file,
-                  generateUploadUrl,
-                  getPublicUrl,
-                })
-              )
+    const attachmentsPromise =
+      pendingAttachments.length > 0
+        ? Promise.all(
+            pendingAttachments.map((attachment) =>
+              uploadTaskAttachment({
+                userId: user.id,
+                file: attachment.file,
+                generateUploadUrl,
+                getPublicUrl,
+              })
             )
-          : []
+          )
+        : Promise.resolve([])
 
-      const result = await createTask({
-        workspaceId: user.agencyId,
-        title: payload.title,
-        description: payload.description ?? null,
-        status: payload.status,
-        priority: payload.priority,
-        assignedTo: payload.assignedTo,
-        clientId: payload.clientId ?? '',
-        client: payload.client ?? null,
-        dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
-        tags: payload.tags,
-        attachments,
+    void attachmentsPromise
+      .then((attachments) => {
+        return createTask({
+          workspaceId: user.agencyId,
+          title: payload.title,
+          description: payload.description ?? null,
+          status: payload.status,
+          priority: payload.priority,
+          assignedTo: payload.assignedTo,
+          clientId: payload.clientId ?? '',
+          client: payload.client ?? null,
+          dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
+          tags: payload.tags,
+          attachments,
+        }).then((result) => ({ attachments, result }))
       })
+      .then(({ attachments, result }) => {
+        const legacyId = typeof result === 'string' ? result : result?.legacyId
 
-      const legacyId = typeof result === 'string' ? result : result?.legacyId
+        if (!legacyId) {
+          const message = 'Failed to create task'
+          setError(message)
+          toast({
+            title: 'Failed to create task',
+            description: message,
+            variant: 'destructive',
+          })
+          return
+        }
 
-      if (!legacyId) {
-        throw new Error('Failed to create task')
-      }
+        const createdTask: TaskRecord = {
+          id: legacyId,
+          title: payload.title,
+          description: payload.description ?? null,
+          status: payload.status,
+          priority: payload.priority as TaskRecord['priority'],
+          assignedTo: payload.assignedTo,
+          clientId: payload.clientId ?? null,
+          client: payload.client ?? null,
+          projectId: payload.projectId ?? null,
+          projectName: payload.projectName ?? null,
+          dueDate: payload.dueDate ?? null,
+          tags: payload.tags,
+          attachments,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+        }
 
-      const createdTask: TaskRecord = {
-        id: legacyId,
-        title: payload.title,
-        description: payload.description ?? null,
-        status: payload.status,
-        priority: payload.priority as TaskRecord['priority'],
-        assignedTo: payload.assignedTo,
-        clientId: payload.clientId ?? null,
-        client: payload.client ?? null,
-        projectId: payload.projectId ?? null,
-        projectName: payload.projectName ?? null,
-        dueDate: payload.dueDate ?? null,
-        tags: payload.tags,
-        attachments,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        deletedAt: null,
-      }
+        toast({
+          title: 'Task created!',
+          description: `"${createdTask.title}" has been added and is ready to track.`,
+        })
 
-      toast({
-        title: 'Task created!',
-        description: `"${createdTask.title}" has been added and is ready to track.`,
+        onTaskCreated?.(createdTask)
+        emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
+        onClose()
+
+        setFormData({
+          title: '',
+          description: '',
+          priority: taskDefaults.priority || 'medium',
+          dueDate: taskDefaults.dueDate || '',
+          assignedTo: taskDefaults.assignedTo || [],
+          projectId: taskDefaults.projectId || '',
+          projectName: taskDefaults.projectName || '',
+        })
+        setPendingAttachments([])
       })
-
-      onTaskCreated?.(createdTask)
-      emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
-      onClose()
-
-      setFormData({
-        title: '',
-        description: '',
-        priority: taskDefaults.priority || 'medium',
-        dueDate: taskDefaults.dueDate || '',
-        assignedTo: taskDefaults.assignedTo || [],
-        projectId: taskDefaults.projectId || '',
-        projectName: taskDefaults.projectName || '',
+      .catch((err) => {
+        console.error('Failed to create task:', err)
+        const message = err instanceof Error ? err.message : 'Unexpected error creating task'
+        setError(message)
+        toast({
+          title: 'Failed to create task',
+          description: message,
+          variant: 'destructive',
+        })
       })
-      setPendingAttachments([])
-    } catch (err) {
-      console.error('Failed to create task:', err)
-      const message = err instanceof Error ? err.message : 'Unexpected error creating task'
-      setError(message)
-      toast({
-        title: 'Failed to create task',
-        description: message,
-        variant: 'destructive',
+      .finally(() => {
+        setIsLoading(false)
       })
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   const handleAddAttachments = (files: FileList | null) => {
@@ -273,7 +284,7 @@ export function TaskCreationModal({
               <Label htmlFor="priority">Priority</Label>
               <Select
                 value={formData.priority}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as any }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as TaskPriority }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />
@@ -370,7 +381,7 @@ export function TaskCreationModal({
 
             {pendingAttachments.length > 0 ? (
               <PendingAttachmentsList
-                attachments={pendingAttachments as any}
+                attachments={pendingAttachments}
                 uploading={isLoading}
                 onRemove={handleRemoveAttachment}
               />

@@ -339,6 +339,8 @@ function CompletedOperationItem({ operation, onDismiss }: CompletedOperationItem
       const timer = setTimeout(onDismiss, 5000)
       return () => clearTimeout(timer)
     }
+
+    return undefined
   }, [operation.status, onDismiss])
 
   const statusConfig = {

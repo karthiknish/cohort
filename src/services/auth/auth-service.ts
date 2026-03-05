@@ -77,7 +77,7 @@ export class AuthService {
       
       const session =
         sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult
-          ? (sessionResult as any).data
+          ? ((sessionResult as { data?: { user?: Record<string, unknown> | null } | null }).data ?? null)
           : null
 
       if (process.env.NODE_ENV !== 'production') {
@@ -185,8 +185,12 @@ export class AuthService {
 
     try {
       const result = await authClient.signIn.email({ email: email.trim(), password })
-      const data = result && typeof result === 'object' && 'data' in result ? (result as any).data : null
-      const errorInResult = result && typeof result === 'object' && 'error' in result ? (result as any).error : null
+      const data = result && typeof result === 'object' && 'data' in result
+        ? ((result as { data?: { user?: Record<string, unknown> | null } | null }).data ?? null)
+        : null
+      const errorInResult = result && typeof result === 'object' && 'error' in result
+        ? ((result as { error?: unknown }).error ?? null)
+        : null
 
       if (errorInResult) {
         throw parseAuthError(errorInResult)
@@ -233,8 +237,12 @@ export class AuthService {
         name: signUpData.displayName ?? signUpData.email,
       })
 
-      const payload = result && typeof result === 'object' && 'data' in result ? (result as any).data : null
-      const errorInResult = result && typeof result === 'object' && 'error' in result ? (result as any).error : null
+      const payload = result && typeof result === 'object' && 'data' in result
+        ? ((result as { data?: { user?: Record<string, unknown> | null } | null }).data ?? null)
+        : null
+      const errorInResult = result && typeof result === 'object' && 'error' in result
+        ? ((result as { error?: unknown }).error ?? null)
+        : null
 
       if (errorInResult) {
         throw parseAuthError(errorInResult)

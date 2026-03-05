@@ -50,7 +50,7 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
     }
 
     try {
-      // Filter out any null/undefined proposals or those with missing formData
+      // Filter out null/undefined proposals or those with missing formData
       const validProposals = proposals.filter(
         (p): p is ProposalDraft => p != null && typeof p === 'object'
       )
@@ -77,7 +77,7 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
             totalValue += Math.max(...values)
           }
         } catch {
-          // Skip this proposal if there's any issue
+          // Skip this proposal if there is an issue
           continue
         }
       }

@@ -69,9 +69,6 @@ export interface DataExportCardProps {
   handleExportData: () => Promise<void>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PrivacySettingsCardProps {}
-
 export interface DeleteAccountCardProps {
   deleteDialogOpen: boolean
   setDeleteDialogOpen: (value: boolean) => void

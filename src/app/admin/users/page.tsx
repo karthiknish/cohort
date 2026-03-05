@@ -73,6 +73,20 @@ const ROLE_ASSIGNABLE: AdminUserRole[] = ['team', 'client']
 const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
 const INVITATION_STATUSES: InvitationLifecycleStatus[] = ['pending', 'accepted', 'expired', 'revoked']
 
+function normalizeAdminRole(value: string | null | undefined): AdminUserRole {
+  if (typeof value === 'string' && ADMIN_USER_ROLES.includes(value as AdminUserRole)) {
+    return value as AdminUserRole
+  }
+  return 'team'
+}
+
+function normalizeAdminStatus(value: string | null | undefined): AdminUserStatus {
+  if (typeof value === 'string' && ADMIN_USER_STATUSES.includes(value as AdminUserStatus)) {
+    return value as AdminUserStatus
+  }
+  return 'pending'
+}
+
 export default function AdminUsersPage() {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -121,8 +135,8 @@ export default function AdminUsersPage() {
       id: row.legacyId,
       email: row.email ?? '',
       name: row.name ?? '',
-      role: row.role ?? 'team',
-      status: row.status ?? 'pending',
+      role: normalizeAdminRole(row.role),
+      status: normalizeAdminStatus(row.status),
       agencyId: row.agencyId ?? null,
       createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
       updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
@@ -159,7 +173,6 @@ export default function AdminUsersPage() {
 
   const invitations: AdminInvitationRecord[] = useMemo(() => {
     const rows = Array.isArray(invitationResponse?.invitations) ? invitationResponse.invitations : []
-    const now = Date.now()
 
     return rows
       .map((row) => {
@@ -179,10 +192,10 @@ export default function AdminUsersPage() {
         }
 
         const status = invitation.status ?? 'pending'
-        const expiresAtMs = typeof invitation.expiresAtMs === 'number' ? invitation.expiresAtMs : now
+        const expiresAtMs = typeof invitation.expiresAtMs === 'number' ? invitation.expiresAtMs : 0
         const effectiveStatus =
           invitation.effectiveStatus ??
-          (status === 'pending' && expiresAtMs <= now ? 'expired' : status)
+          status
 
         return {
           id: invitation.id ?? '',
@@ -195,7 +208,7 @@ export default function AdminUsersPage() {
           invitedBy: invitation.invitedBy ?? '',
           invitedByName: invitation.invitedByName ?? null,
           expiresAtMs,
-          createdAtMs: typeof invitation.createdAtMs === 'number' ? invitation.createdAtMs : now,
+          createdAtMs: typeof invitation.createdAtMs === 'number' ? invitation.createdAtMs : 0,
           acceptedAtMs: typeof invitation.acceptedAtMs === 'number' ? invitation.acceptedAtMs : null,
         }
       })

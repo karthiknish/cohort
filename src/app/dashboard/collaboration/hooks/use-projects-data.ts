@@ -5,12 +5,33 @@ import { useQuery } from 'convex/react'
 
 import { projectsApi } from '@/lib/convex-api'
 import type { ProjectRecord } from '@/types/projects'
+import { PROJECT_STATUSES } from '@/types/projects'
 
 interface UseProjectsDataOptions {
   workspaceId: string | null
   userId: string | null
   selectedClientId?: string | null
   isPreviewMode: boolean
+}
+
+type ProjectRow = {
+  legacyId: string
+  name?: string
+  description?: string | null
+  status?: ProjectRecord['status']
+  clientId?: string | null
+  clientName?: string | null
+  startDateMs?: number
+  endDateMs?: number
+  tags?: unknown
+  ownerId?: string | null
+  createdAtMs?: number
+  updatedAtMs?: number
+  deletedAtMs?: number
+}
+
+function isProjectStatus(value: unknown): value is ProjectRecord['status'] {
+  return typeof value === 'string' && PROJECT_STATUSES.includes(value as ProjectRecord['status'])
 }
 
 export function useProjectsData({
@@ -31,7 +52,7 @@ export function useProjectsData({
           clientId: selectedClientId ?? undefined,
           limit: 100,
         }
-  ) as Array<any> | undefined
+  ) as ProjectRow[] | undefined
 
   useEffect(() => {
     if (isPreviewMode || !workspaceId || !userId) {
@@ -46,11 +67,11 @@ export function useProjectsData({
     }
 
     const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
-    const mapped: ProjectRecord[] = rows.map((row: any) => ({
+    const mapped: ProjectRecord[] = rows.map((row) => ({
       id: String(row.legacyId),
       name: String(row.name ?? ''),
       description: typeof row.description === 'string' ? row.description : null,
-      status: row.status,
+      status: isProjectStatus(row.status) ? row.status : 'planning',
       clientId: typeof row.clientId === 'string' ? row.clientId : null,
       clientName: typeof row.clientName === 'string' ? row.clientName : null,
       startDate: typeof row.startDateMs === 'number' ? new Date(row.startDateMs).toISOString() : null,

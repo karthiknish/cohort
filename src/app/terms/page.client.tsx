@@ -42,7 +42,7 @@ const sections = [
     title: 'Account Responsibilities',
     icon: Key,
     description:
-      'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. Notify us immediately of any unauthorized use or security breach.',
+      'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. Notify us immediately of unauthorized use or a security breach.',
   },
   {
     title: 'Platform Usage',
@@ -66,13 +66,13 @@ const sections = [
     title: 'Termination',
     icon: LogOut,
     description:
-      'We may suspend or terminate your access to Cohorts at any time if you violate these terms or engage in misuse of the platform. You may terminate your account by contacting support.',
+      'We may suspend or terminate your access to Cohorts at our discretion if you violate these terms or engage in misuse of the platform. You may terminate your account by contacting support.',
   },
   {
     title: 'Limitation of Liability',
     icon: TriangleAlert,
     description:
-      'To the fullest extent permitted by law, Cohorts is not liable for any indirect, incidental, or consequential damages arising from your use of the platform. Your sole remedy is to discontinue use.',
+      'To the fullest extent permitted by law, Cohorts is not liable for indirect, incidental, or consequential damages arising from your use of the platform. Your sole remedy is to discontinue use.',
   },
   {
     title: 'Changes to Terms',
@@ -136,7 +136,7 @@ export default function TermsPage() {
             <div className="border-t border-border bg-muted/30 p-8 sm:p-12 text-center">
               <h2 className="text-xl font-semibold text-foreground mb-4">Legal Inquiries</h2>
               <p className="mb-8 max-w-lg mx-auto">
-                For any questions regarding these Terms of Service or other legal matters, please reach out to our legal department.
+                For questions regarding these Terms of Service or other legal matters, please reach out to our legal department.
               </p>
               <Button asChild size="lg">
                 <Link href="mailto:legal@cohorts.app">

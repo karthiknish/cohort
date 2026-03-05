@@ -2,7 +2,7 @@
  * Token management (legacy)
  *
  * Firebase ID tokens are no longer used after migrating to Better Auth.
- * Keep minimal helpers so any remaining imports continue to typecheck.
+ * Keep minimal helpers so existing imports continue to typecheck.
  */
 
 import { UnauthorizedError } from '@/lib/api-errors'

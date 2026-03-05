@@ -50,6 +50,11 @@ type Props = {
   isPreviewMode?: boolean
 }
 
+type AudienceTargetingResponse = {
+  targeting?: TargetingData[]
+  insights?: Insights | null
+}
+
 export function AudienceControlSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
   const { user } = useAuth()
 
@@ -107,16 +112,17 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
 
     void getTargeting({
         workspaceId,
-        providerId: providerId as any,
+        providerId,
         clientId: clientId ?? null,
         campaignId,
       })
 
       .then((data) => {
-        const nextTargetingRaw = (data as any)?.targeting
+        const payload = data as AudienceTargetingResponse | null | undefined
+        const nextTargetingRaw = payload?.targeting
         const nextTargeting = Array.isArray(nextTargetingRaw) ? nextTargetingRaw : []
         setTargeting(nextTargeting)
-        setInsights(((data as any)?.insights ?? null) as Insights | null)
+        setInsights(payload?.insights ?? null)
         setHasLoaded(true)
 
         setSelectedTargetingId((current) => {

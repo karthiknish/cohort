@@ -303,13 +303,17 @@ export function MessageList({
 
     lastFocusedMessageRef.current = resolvedFocusId
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setHighlightedMessageId(resolvedFocusId)
+
+    const frame = window.requestAnimationFrame(() => {
+      setHighlightedMessageId(resolvedFocusId)
+    })
 
     const timer = window.setTimeout(() => {
       setHighlightedMessageId((current) => (current === resolvedFocusId ? null : current))
     }, 2400)
 
     return () => {
+      window.cancelAnimationFrame(frame)
       window.clearTimeout(timer)
     }
   }, [focusMessageId, focusThreadId, sortedMessages])

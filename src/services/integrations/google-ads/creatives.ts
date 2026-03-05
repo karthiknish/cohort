@@ -165,7 +165,7 @@ export async function fetchGoogleCreatives(options: {
         } else if (adTypeStr.includes('SMART_DISPLAY')) {
             type = 'SMART_DISPLAY_AD'
         } else {
-            type = (adTypeStr as any) || 'OTHER'
+            type = 'OTHER'
         }
 
         // Extract headlines and descriptions

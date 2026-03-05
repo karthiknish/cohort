@@ -12,7 +12,7 @@ describe('apiFetch', () => {
       status: 200,
       headers: new Headers(),
       json: async () => ({ success: true, data: { hello: 'world' } }),
-    })) as any
+    })) as unknown as typeof fetch
 
     const { apiFetch } = await import('./api-client')
 
@@ -26,7 +26,7 @@ describe('apiFetch', () => {
       status: 401,
       headers: new Headers(),
       json: async () => ({ error: 'Nope' }),
-    })) as any
+    })) as unknown as typeof fetch
 
     const { apiFetch } = await import('./api-client')
 
@@ -43,7 +43,7 @@ describe('apiFetch', () => {
       status: 200,
       headers: new Headers(),
       json: async () => ({ success: false, code: 'BOOM', error: 'Bad' }),
-    })) as any
+    })) as unknown as typeof fetch
 
     const { apiFetch } = await import('./api-client')
 

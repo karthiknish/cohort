@@ -14,6 +14,18 @@ import type { AlertRule, AlertEvaluationInput, DailyMetricData } from './types'
 // -----------------------------------------------------------------------------
 let _convexClient: ConvexHttpClient | null = null
 
+type AdminAuthClient = ConvexHttpClient & {
+    setAdminAuth?: (
+        token: string,
+        identity: {
+            issuer: string
+            subject: string
+        }
+    ) => void
+}
+
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
+
 function getConvexClient(): ConvexHttpClient | null {
     if (_convexClient) return _convexClient
     const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
@@ -28,7 +40,7 @@ function getConvexClient(): ConvexHttpClient | null {
         return null
     }
     _convexClient = new ConvexHttpClient(url)
-    ;(_convexClient as any).setAdminAuth(deployKey, {
+    ;(_convexClient as AdminAuthClient).setAdminAuth?.(deployKey, {
         issuer: 'system',
         subject: 'alert-processor',
     })
@@ -53,7 +65,7 @@ const fetchRecentMetrics = cache(async (convex: ConvexHttpClient, workspaceId: s
 })
 
 const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, email: string) => {
-    return await convex.query(internal.users.getNotificationPreferencesByEmail as any, { email })
+    return await convex.query(internal.users.getNotificationPreferencesByEmail as unknown as QueryReference, { email })
 })
 
 /**

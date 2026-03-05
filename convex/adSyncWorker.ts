@@ -37,7 +37,7 @@ export const run = httpAction(async (ctx, request) => {
     return jsonResponse({ error: 'Unauthorized' }, 401)
   }
 
-  const body = (await request.json().catch(() => null)) as any
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null
   const workspaceId = typeof body?.workspaceId === 'string' ? body.workspaceId : null
 
   if (!workspaceId) {

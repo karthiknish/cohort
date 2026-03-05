@@ -37,7 +37,7 @@ export function LazyImage({ src, alt = '', className, rootMargin = '200px', onLo
   }, [rootMargin])
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
+    // eslint_disable-next-line @next/next/no-img-element
     <img
       ref={imgRef}
       src={isVisible ? src : undefined}

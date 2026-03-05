@@ -1,6 +1,8 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { internal } from './_generated/api'
 import { Errors, withErrorHandling } from './errors'
+import type { LinkedInCampaignGroup } from '@/services/integrations/linkedin-ads'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -40,7 +42,7 @@ export const listCampaignGroups = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -62,12 +64,11 @@ export const listCampaignGroups = action({
     })
 
     return groups.map(
-      (group: any): CampaignGroup => ({
+      (group: LinkedInCampaignGroup): CampaignGroup => ({
         id: group.id,
         name: group.name,
         status: group.status,
         totalBudget: group.totalBudget,
-        currency: group.currency,
       })
     )
   }, 'adsCampaignGroups:listCampaignGroups', { maxRetries: 3 }),
@@ -88,7 +89,7 @@ export const updateCampaignGroup = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

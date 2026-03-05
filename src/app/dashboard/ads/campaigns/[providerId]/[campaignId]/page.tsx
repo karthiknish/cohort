@@ -40,6 +40,8 @@ type Campaign = {
   accountLogoUrl?: string
 }
 
+type ProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
+
 type CampaignInsightsResponse = {
   providerId: string
   campaignId: string
@@ -121,6 +123,10 @@ function clampDateRange(range: { start: Date; end: Date }): { start: Date; end: 
   const end = range.end
   const start = range.start.getTime() > end.getTime() ? end : range.start
   return { start, end }
+}
+
+function isProviderId(value: string): value is ProviderId {
+  return value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook'
 }
 
 // ============================================================================
@@ -249,13 +255,20 @@ export default function CampaignInsightsPage() {
       return
     }
 
+    if (!isProviderId(providerId)) {
+      setCampaignError('Unsupported provider')
+      setCampaignLoading(false)
+      return
+    }
+
     await listCampaigns({
       workspaceId,
-      providerId: providerId as any,
+      providerId,
       clientId: selectedClientId ?? null,
     })
       .then((campaigns) => {
-        const match = (Array.isArray(campaigns) ? campaigns : []).find((c: any) => c.id === campaignId) ?? null
+        const normalizedCampaigns = Array.isArray(campaigns) ? (campaigns as Campaign[]) : []
+        const match = normalizedCampaigns.find((c) => c.id === campaignId) ?? null
 
         if (!match) {
           throw new Error('Campaign not found')
@@ -299,9 +312,15 @@ export default function CampaignInsightsPage() {
       return
     }
 
+    if (!isProviderId(providerId)) {
+      setInsightsError('Unsupported provider')
+      setInsightsLoading(false)
+      return
+    }
+
     await getCampaignInsights({
       workspaceId,
-      providerId: providerId as any,
+      providerId,
       campaignId,
       clientId: selectedClientId ?? null,
       startDate,
@@ -435,8 +454,8 @@ export default function CampaignInsightsPage() {
       totalImpressions: calculatedMetrics.impressions,
       averageRoaS: calculatedMetrics.roas,
       averageCpc: calculatedMetrics.cpc,
-      averageCtr: (calculatedMetrics as any).ctr || 0,
-      averageConvRate: (calculatedMetrics as any).convRate || (calculatedMetrics.clicks > 0 ? (calculatedMetrics.conversions / calculatedMetrics.clicks) * 100 : 0),
+      averageCtr: calculatedMetrics.ctr || 0,
+      averageConvRate: calculatedMetrics.convRate || (calculatedMetrics.clicks > 0 ? (calculatedMetrics.conversions / calculatedMetrics.clicks) * 100 : 0),
       period: 'current',
       dayCount: insights?.series?.length || 0
     }
@@ -455,8 +474,8 @@ export default function CampaignInsightsPage() {
       totalImpressions: calculatedMetrics.impressions,
       averageRoaS: calculatedMetrics.roas,
       averageCpc: calculatedMetrics.cpc,
-      averageCtr: (calculatedMetrics as any).ctr || 0,
-      averageConvRate: (calculatedMetrics as any).convRate || (calculatedMetrics.clicks > 0 ? (calculatedMetrics.conversions / calculatedMetrics.clicks) * 100 : 0),
+      averageCtr: calculatedMetrics.ctr || 0,
+      averageConvRate: calculatedMetrics.convRate || (calculatedMetrics.clicks > 0 ? (calculatedMetrics.conversions / calculatedMetrics.clicks) * 100 : 0),
       period: 'current',
       dayCount: insights?.series?.length || 0
     }

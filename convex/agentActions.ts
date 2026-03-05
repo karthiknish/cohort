@@ -1,6 +1,6 @@
 "use node"
 
-import { action } from './_generated/server'
+import { action, type ActionCtx } from './_generated/server'
 import { api } from './_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
@@ -34,6 +34,11 @@ type OperationResult = {
   userMessage?: string
 }
 
+type JsonScalar = string | number | boolean | null
+type JsonLayer1 = JsonScalar | JsonScalar[] | Record<string, JsonScalar>
+type JsonLayer2 = JsonLayer1 | JsonLayer1[] | Record<string, JsonLayer1>
+type JsonRecord = Record<string, JsonLayer2>
+
 type OperationInput = {
   workspaceId: string
   userId: string
@@ -42,7 +47,39 @@ type OperationInput = {
   context?: AgentRequestContextType
 }
 
-type OperationHandler = (ctx: unknown, input: OperationInput) => Promise<OperationResult>
+type OperationHandler = (ctx: ActionCtx, input: OperationInput) => Promise<OperationResult>
+
+type ConversationListResult = {
+  conversations: Array<{
+    legacyId: string
+    title: string | null
+    startedAt: number | null
+    lastMessageAt: number | null
+    messageCount: number
+  }>
+}
+
+type ConversationGetResult = {
+  conversation: {
+    userId: string
+    startedAt: number | null
+    lastMessageAt: number | null
+    messageCount: number
+  } | null
+}
+
+type ConversationMessagesResult = {
+  messages: Array<{
+    legacyId: string
+    type: 'user' | 'agent'
+    content: string
+    createdAt: number
+    route: string | null
+    action: string | null
+    operation: string | null
+    executeResult: Record<string, unknown> | null
+  }>
+}
 
 type DeterministicAgentIntent =
   | {
@@ -889,7 +926,6 @@ function resolveProposalId(params: Record<string, unknown>, context?: AgentReque
 
 const operationHandlers: Record<string, OperationHandler> = {
   async createTask(ctx, input) {
-    const runtime = ctx as any
     const title = asNonEmptyString(input.params.title)
 
     if (!title) {
@@ -908,7 +944,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const clientId = asNonEmptyString(input.params.clientId) ?? ''
     const clientName = asNonEmptyString(input.params.clientName)
 
-    const rawResult = await runtime.runMutation(api.tasks.createTask, {
+    const rawResult = await ctx.runMutation(api.tasks.createTask, {
       workspaceId: input.workspaceId,
       title,
       description: description ?? null,
@@ -938,7 +974,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async updateTask(ctx, input) {
-    const runtime = ctx as any
     const taskId = asNonEmptyString(input.params.taskId) ?? asNonEmptyString(input.params.legacyId) ?? asNonEmptyString(input.params.id)
     if (!taskId) {
       return { success: false, data: { error: 'taskId is required.' }, userMessage: 'Please tell me which task to update.' }
@@ -978,7 +1013,7 @@ const operationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    await runtime.runMutation(api.tasks.patchTask, {
+    await ctx.runMutation(api.tasks.patchTask, {
       workspaceId: input.workspaceId,
       legacyId: taskId,
       update,
@@ -992,7 +1027,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async createProject(ctx, input) {
-    const runtime = ctx as any
     const name = asNonEmptyString(input.params.name)
     if (!name) {
       return { success: false, data: { error: 'Project name is required.' }, userMessage: 'Please provide a project name.' }
@@ -1008,7 +1042,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const endDateMs = asNumber(input.params.endDateMs) ?? parseDateToMs(input.params.endDate)
     const tags = asStringArray(input.params.tags)
 
-    const rawResult = await runtime.runMutation(api.projects.create, {
+    const rawResult = await ctx.runMutation(api.projects.create, {
       workspaceId: input.workspaceId,
       legacyId,
       name,
@@ -1035,13 +1069,24 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async updateProject(ctx, input) {
-    const runtime = ctx as any
     const projectId = asNonEmptyString(input.params.projectId) ?? asNonEmptyString(input.params.legacyId) ?? asNonEmptyString(input.params.id)
     if (!projectId) {
       return { success: false, data: { error: 'projectId is required.' }, userMessage: 'Please tell me which project to update.' }
     }
 
-    const updateArgs: Record<string, unknown> = {
+    const updateArgs: {
+      workspaceId: string
+      legacyId: string
+      updatedAtMs: number
+      name?: string
+      description?: string | null
+      status?: string
+      clientId?: string | null
+      clientName?: string | null
+      startDateMs?: number | null
+      endDateMs?: number | null
+      tags?: string[]
+    } = {
       workspaceId: input.workspaceId,
       legacyId: projectId,
       updatedAtMs: Date.now(),
@@ -1089,7 +1134,7 @@ const operationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    await runtime.runMutation(api.projects.update, updateArgs)
+    await ctx.runMutation(api.projects.update, updateArgs)
 
     return {
       success: true,
@@ -1099,7 +1144,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async createClient(ctx, input) {
-    const runtime = ctx as any
     const name = asNonEmptyString(input.params.name)
     if (!name) {
       return { success: false, data: { error: 'Client name is required.' }, userMessage: 'Please provide a client name.' }
@@ -1125,7 +1169,7 @@ const operationHandlers: Record<string, OperationHandler> = {
       })
       .filter((member): member is { name: string; role: string } => member !== null)
 
-    const rawResult = await runtime.runMutation(api.clients.create, {
+    const rawResult = await ctx.runMutation(api.clients.create, {
       workspaceId: input.workspaceId,
       name,
       accountManager,
@@ -1145,7 +1189,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async addClientTeamMember(ctx, input) {
-    const runtime = ctx as any
     const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.params.legacyId)
     const name = asNonEmptyString(input.params.name)
 
@@ -1159,7 +1202,7 @@ const operationHandlers: Record<string, OperationHandler> = {
 
     const role = asNonEmptyString(input.params.role) ?? undefined
 
-    await runtime.runMutation(api.clients.addTeamMember, {
+    await ctx.runMutation(api.clients.addTeamMember, {
       workspaceId: input.workspaceId,
       legacyId: clientId,
       name,
@@ -1174,7 +1217,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async createProposalDraft(ctx, input) {
-    const runtime = ctx as any
     const now = Date.now()
     const formDataPatch = asRecord(input.params.formData) ?? {}
     const formData = mergeProposalForm(formDataPatch)
@@ -1183,7 +1225,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
     const clientName = asNonEmptyString(input.params.clientName)
 
-    const rawResult = await runtime.runMutation(api.proposals.create, {
+    const rawResult = await ctx.runMutation(api.proposals.create, {
       workspaceId: input.workspaceId,
       ownerId: input.userId,
       status,
@@ -1207,7 +1249,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async updateProposalDraft(ctx, input) {
-    const runtime = ctx as any
     const proposalId = resolveProposalId(input.params, input.context)
     if (!proposalId) {
       return {
@@ -1218,7 +1259,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     }
 
     const now = Date.now()
-    const current = await runtime.runQuery(api.proposals.getByLegacyId, {
+    const current = await ctx.runQuery(api.proposals.getByLegacyId, {
       workspaceId: input.workspaceId,
       legacyId: proposalId,
     })
@@ -1232,7 +1273,19 @@ const operationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    const updateArgs: Record<string, unknown> = {
+    const updateArgs: {
+      workspaceId: string
+      legacyId: string
+      updatedAtMs: number
+      lastAutosaveAtMs: number
+      agentConversationId: string
+      lastAgentInteractionAtMs: number
+      formData?: JsonRecord
+      status?: string
+      stepProgress?: number
+      clientId?: string | null
+      clientName?: string | null
+    } = {
       workspaceId: input.workspaceId,
       legacyId: proposalId,
       updatedAtMs: now,
@@ -1244,7 +1297,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const formPatch = asRecord(input.params.formPatch) ?? asRecord(input.params.formData)
     if (formPatch) {
       const mergedForm = mergeProposalPatch(asRecord(currentRecord.formData) ?? {}, formPatch)
-      updateArgs.formData = mergedForm
+      updateArgs.formData = mergedForm as JsonRecord
     }
 
     const status = normalizeProposalStatus(input.params.status)
@@ -1276,7 +1329,7 @@ const operationHandlers: Record<string, OperationHandler> = {
       }
     }
 
-    await runtime.runMutation(api.proposals.update, updateArgs)
+    await ctx.runMutation(api.proposals.update, updateArgs)
 
     return {
       success: true,
@@ -1286,7 +1339,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async generateProposalFromDraft(ctx, input) {
-    const runtime = ctx as any
     const proposalId = resolveProposalId(input.params, input.context)
     if (!proposalId) {
       return {
@@ -1297,7 +1349,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     }
 
     const now = Date.now()
-    await runtime.runMutation(api.proposals.update, {
+    await ctx.runMutation(api.proposals.update, {
       workspaceId: input.workspaceId,
       legacyId: proposalId,
       updatedAtMs: now,
@@ -1306,7 +1358,7 @@ const operationHandlers: Record<string, OperationHandler> = {
       lastAgentInteractionAtMs: now,
     })
 
-    const rawGeneration = await runtime.runAction(api.proposalGeneration.generateFromProposal, {
+    const rawGeneration = await ctx.runAction(api.proposalGeneration.generateFromProposal, {
       workspaceId: input.workspaceId,
       legacyId: proposalId,
     })
@@ -1331,7 +1383,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async updateAdsCampaignStatus(ctx, input) {
-    const runtime = ctx as any
     const providerId = normalizeProviderId(input.params.providerId ?? input.params.provider)
     const campaignId = asNonEmptyString(input.params.campaignId) ?? asNonEmptyString(input.params.id)
     if (!providerId || !campaignId) {
@@ -1358,7 +1409,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const budget = asNumber(input.params.budget)
     const biddingValue = asNumber(input.params.biddingValue)
 
-    const rawResult = await runtime.runAction(api.adsCampaigns.updateCampaign, {
+    const rawResult = await ctx.runAction(api.adsCampaigns.updateCampaign, {
       workspaceId: input.workspaceId,
       providerId,
       clientId: clientId ?? null,
@@ -1386,7 +1437,6 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async updateAdsCreativeStatus(ctx, input) {
-    const runtime = ctx as any
     const providerId = normalizeProviderId(input.params.providerId ?? input.params.provider)
     const creativeId = asNonEmptyString(input.params.creativeId) ?? asNonEmptyString(input.params.id)
     if (!providerId || !creativeId) {
@@ -1400,7 +1450,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
     const status = normalizeCreativeStatus(input.params.status)
 
-    const rawResult = await runtime.runAction(api.adsCreatives.updateCreativeStatus, {
+    const rawResult = await ctx.runAction(api.adsCreatives.updateCreativeStatus, {
       workspaceId: input.workspaceId,
       providerId,
       clientId: clientId ?? null,
@@ -1425,14 +1475,13 @@ const operationHandlers: Record<string, OperationHandler> = {
   },
 
   async generatePerformanceReport(ctx, input) {
-    const runtime = ctx as any
     const period = normalizeReportPeriod(input.params.period)
     const { periodLabel, startDate, endDate, startDateMs, endDateMs } = getPeriodWindow(period)
 
     const clientId = asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
     const providerIds = asStringArray(input.params.providerIds)
 
-    const metricsRaw = await runtime.runQuery(api.adsMetrics.listMetricsWithSummary, {
+    const metricsRaw = await ctx.runQuery(api.adsMetrics.listMetricsWithSummary, {
       workspaceId: input.workspaceId,
       clientId: clientId ?? undefined,
       providerIds: providerIds.length > 0 ? providerIds : undefined,
@@ -1453,7 +1502,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     const roas = spend > 0 ? revenue / spend : 0
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
 
-    const proposalRaw = await runtime.runQuery(api.proposalAnalytics.summarize, {
+    const proposalRaw = await ctx.runQuery(api.proposalAnalytics.summarize, {
       workspaceId: input.workspaceId,
       startDateMs,
       endDateMs,
@@ -1480,7 +1529,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     let inAppDelivered = false
 
     try {
-      await runtime.runMutation(api.notifications.create, {
+      await ctx.runMutation(api.notifications.create, {
         workspaceId: input.workspaceId,
         legacyId: notificationLegacyId,
         kind: 'report.generated',
@@ -1540,7 +1589,7 @@ const operationHandlers: Record<string, OperationHandler> = {
 }
 
 async function safeExecuteOperation(
-  ctx: unknown,
+  ctx: ActionCtx,
   args: OperationInput & {
     operation: string
   }
@@ -1752,8 +1801,8 @@ export const sendMessage = action({
         action: agentAction,
         route: agentRoute,
         operation: agentOperation,
-        params: agentParams,
-        executeResult,
+        params: agentParams as JsonRecord | null,
+        executeResult: executeResult as JsonRecord | null,
       })
 
       await ctx.runMutation(api.agentConversations.upsert, {
@@ -1795,16 +1844,16 @@ export const listConversations = action({
 
       const limit = Math.min(Math.max(args.limit ?? 20, 1), 50)
 
-      const result: any = await ctx.runQuery(api.agentConversations.list, {
+      const result = await ctx.runQuery(api.agentConversations.list, {
         workspaceId: args.workspaceId,
         userId: identity.subject,
         limit,
-      })
+      }) as ConversationListResult
 
       return {
-        conversations: result.conversations.map((row: any) => ({
+        conversations: result.conversations.map((row) => ({
           id: row.legacyId,
-          title: row.title,
+          title: row.title ?? 'Untitled conversation',
           startedAt: typeof row.startedAt === 'number' ? new Date(row.startedAt).toISOString() : null,
           lastMessageAt:
             typeof row.lastMessageAt === 'number' ? new Date(row.lastMessageAt).toISOString() : null,
@@ -1842,10 +1891,10 @@ export const getConversation = action({
       const identity = await ctx.auth.getUserIdentity()
       requireIdentity(identity)
 
-      const conv: any = await ctx.runQuery(api.agentConversations.get, {
+      const conv = await ctx.runQuery(api.agentConversations.get, {
         workspaceId: args.workspaceId,
         legacyId: args.conversationId,
-      })
+      }) as ConversationGetResult
 
       if (!conv.conversation) {
         throw Errors.resource.notFound('Conversation', args.conversationId)
@@ -1857,11 +1906,11 @@ export const getConversation = action({
 
       const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
 
-      const msgs: any = await ctx.runQuery(api.agentMessages.listByConversation, {
+      const msgs = await ctx.runQuery(api.agentMessages.listByConversation, {
         workspaceId: args.workspaceId,
         conversationLegacyId: args.conversationId,
         limit,
-      })
+      }) as ConversationMessagesResult
 
       return {
         conversation: {
@@ -1876,7 +1925,7 @@ export const getConversation = action({
               : null,
           messageCount: conv.conversation.messageCount,
         },
-        messages: msgs.messages.map((msg: any) => ({
+        messages: msgs.messages.map((msg) => ({
           id: msg.legacyId,
           type: msg.type,
           content: msg.content,

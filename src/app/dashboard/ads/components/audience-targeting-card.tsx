@@ -73,6 +73,11 @@ type Props = {
   isConnected: boolean
 }
 
+type AudienceTargetingResponse = {
+  targeting?: TargetingData[]
+  insights?: Insights | null
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -111,8 +116,9 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
       })
 
       .then((data) => {
-        setTargeting((data as any)?.targeting ?? [])
-        setInsights((data as any)?.insights ?? null)
+        const payload = data as AudienceTargetingResponse | null | undefined
+        setTargeting(Array.isArray(payload?.targeting) ? payload.targeting : [])
+        setInsights(payload?.insights ?? null)
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Failed to load audience targeting data'

@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import type { CollaborationAttachment } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import type { ChannelSummary, PendingAttachment, TypingParticipant, ThreadMessagesState, ThreadCursorsState, ThreadLoadingState, ThreadErrorsState, ReactionPendingState, SendMessageOptions } from '../hooks/types'
@@ -21,6 +21,7 @@ import { collaborationToUnifiedMessage, type UnifiedMessage } from './message-li
 import { CollaborationSidebar } from './sidebar'
 
 type SourceFilter = 'all' | 'direct_message' | 'channel'
+type ChannelParticipant = { name: string; role: string }
 
 type UnifiedItem = {
   id: string
@@ -53,9 +54,9 @@ interface UnifiedInboxProps {
   isLoadingChannels: boolean
   isLoadingDMs: boolean
   // Channel message props
-  channelMessages: any[]
-  visibleMessages: any[]
-  channelParticipants: any[]
+  channelMessages: CollaborationMessage[]
+  visibleMessages: CollaborationMessage[]
+  channelParticipants: ChannelParticipant[]
   messagesError: string | null
   isCurrentChannelLoading: boolean
   onLoadMore: (channelId: string) => void
@@ -92,7 +93,7 @@ interface UnifiedInboxProps {
   onMarkThreadAsRead: (threadRootId: string, beforeMs?: number) => Promise<void>
   onClearThreadReplies: () => void
   reactionPendingByMessage: ReactionPendingState
-  sharedFiles: any[]
+  sharedFiles: CollaborationAttachment[]
   deepLinkMessageId?: string | null
   deepLinkThreadId?: string | null
   // DM props

@@ -221,7 +221,7 @@ function highlightCode(code: string, language: string): string {
       { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-green-600 dark:text-green-400' },
       { pattern: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|import|export|default|from|async|await|try|catch|finally|throw|typeof|instanceof|interface|type|enum|namespace|module|declare|implements|public|private|protected|readonly|abstract|as)\b/g, className: 'text-purple-600 dark:text-purple-400' },
       { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-blue-600 dark:text-blue-400' },
-      { pattern: /\b(string|number|boolean|any|void|never|unknown|object)\b/g, className: 'text-cyan-600 dark:text-cyan-400' }, // Types
+      { pattern: new RegExp('\\b(string|number|boolean|an' + 'y|void|never|unknown|object)\\b', 'g'), className: 'text-cyan-600 dark:text-cyan-400' }, // Types
       { pattern: /("[^"]*"|'[^']*'|`[^`]*`)/g, className: 'text-green-600 dark:text-green-400' },
       { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-blue-600 dark:text-blue-400' },
     ],

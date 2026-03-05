@@ -28,12 +28,30 @@ const STORAGE_KEY_SELECTED = 'cohorts.dashboard.selectedClient'
 
 const ClientContext = createContext<ClientContextValue | undefined>(undefined)
 
+type ConvexClientRow = {
+  legacyId: string
+  name: string
+  accountManager?: string | null
+  teamMembers?: unknown
+  createdAtMs?: number | null
+  updatedAtMs?: number | null
+}
+
+function isConvexClientRow(value: unknown): value is ConvexClientRow {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { legacyId?: unknown }).legacyId === 'string' &&
+    typeof (value as { name?: unknown }).name === 'string'
+  )
+}
+
 // Helper function to map convex rows to ClientRecord
-function mapClients(rows: any[]): ClientRecord[] {
-  const list = rows.map((row) => ({
+function mapClients(rows: unknown[]): ClientRecord[] {
+  const list = rows.filter(isConvexClientRow).map((row) => ({
     id: row.legacyId,
     name: row.name,
-    accountManager: row.accountManager,
+    accountManager: typeof row.accountManager === 'string' ? row.accountManager : '',
     teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
     createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
     updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
@@ -44,7 +62,7 @@ function mapClients(rows: any[]): ClientRecord[] {
 }
 
 // Helper to extract rows from convex result
-function extractRows(convexClients: any): any[] {
+function extractRows(convexClients: unknown): unknown[] {
   if (Array.isArray(convexClients)) return convexClients
   if (convexClients && typeof convexClients === 'object' && 'items' in convexClients && Array.isArray(convexClients.items)) {
     return convexClients.items

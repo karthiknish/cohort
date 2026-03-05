@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { workspaceQuery, workspaceMutation } from './functions'
+import { workspaceQuery, workspaceMutation, type AuthenticatedQueryCtx } from './functions'
 import { query } from './_generated/server'
 
 function generateId(prefix: string) {
@@ -106,7 +106,19 @@ type ListedEvent = {
   createdAtMs: number
 }
 
-async function listEventsImpl(ctx: any, args: ListEventsArgs): Promise<ListedEvent[]> {
+function toAnalyticsMetadata(value: unknown): Record<string, string | number | boolean | null> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {}
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>).filter(([, item]) => {
+    return item === null || typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+  })
+
+  return Object.fromEntries(entries) as Record<string, string | number | boolean | null>
+}
+
+async function listEventsImpl(ctx: AuthenticatedQueryCtx, args: ListEventsArgs): Promise<ListedEvent[]> {
   const limit = typeof args.limit === 'number' && Number.isFinite(args.limit) ? Math.min(Math.max(args.limit, 1), 1000) : 500
 
   const useClientIndex = args.clientId !== undefined
@@ -114,33 +126,33 @@ async function listEventsImpl(ctx: any, args: ListEventsArgs): Promise<ListedEve
   const rows = useClientIndex
     ? await ctx.db
         .query('proposalAnalyticsEvents')
-        .withIndex('by_workspace_clientId_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId ?? null))
+      .withIndex('by_workspace_clientId_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId ?? null))
         .order('desc')
         .take(limit)
     : await ctx.db
         .query('proposalAnalyticsEvents')
-        .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
         .order('desc')
         .take(limit)
 
   const start = typeof args.startDateMs === 'number' ? args.startDateMs : null
   const end = typeof args.endDateMs === 'number' ? args.endDateMs : null
 
-  const filtered = rows.filter((row: any) => {
+  const filtered = rows.filter((row) => {
     const createdAtMs = typeof row.createdAtMs === 'number' ? row.createdAtMs : 0
     if (start !== null && createdAtMs < start) return false
     if (end !== null && createdAtMs > end) return false
     return true
   })
 
-  return filtered.map((row: any) => ({
+  return filtered.map((row) => ({
     legacyId: String(row.legacyId),
     eventType: String(row.eventType),
     proposalId: String(row.proposalId),
     userId: String(row.userId),
     clientId: row.clientId ?? null,
     clientName: row.clientName ?? null,
-    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    metadata: toAnalyticsMetadata(row.metadata),
     duration: typeof row.duration === 'number' ? row.duration : null,
     error: typeof row.error === 'string' ? row.error : null,
     createdAtMs: typeof row.createdAtMs === 'number' ? row.createdAtMs : 0,
@@ -416,6 +428,7 @@ function calculateTimeSeries(events: Array<{ eventType: string; createdAtMs?: nu
 type EventRow = {
   eventType: string
   clientId: string | null
+  clientName: string | null
   duration: number | null
   createdAtMs: number
 }
@@ -438,7 +451,7 @@ function calculateByClient(events: EventRow[]) {
   const aiTimes = new Map<string, number[]>()
   const deckTimes = new Map<string, number[]>()
 
-  events.forEach((event: any) => {
+  events.forEach((event) => {
     const clientId = typeof event.clientId === 'string' ? event.clientId : null
     const clientName = typeof event.clientName === 'string' ? event.clientName : null
     if (!clientId || !clientName) return

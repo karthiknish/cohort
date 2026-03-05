@@ -125,11 +125,12 @@ export const create = workspaceMutation({
 
     const task = await ctx.db
       .query('tasks')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.taskLegacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.taskLegacyId))
       .unique()
 
     const taskTitle = task?.title ?? 'Task'
     const taskClientId = typeof task?.clientId === 'string' && task.clientId.length > 0 ? task.clientId : null
+    const taskClientName = typeof task?.client === 'string' && task.client.length > 0 ? task.client : null
     const baseRoles = taskClientId ? ['admin', 'team', 'client'] : ['admin', 'team']
 
     const content = typeof args.content === 'string' ? args.content : ''
@@ -152,7 +153,7 @@ export const create = workspaceMutation({
         taskId: args.taskLegacyId,
         commentId: args.legacyId,
         clientId: taskClientId,
-        clientName: (task as any)?.client ?? null,
+        clientName: taskClientName,
       },
       createdAtMs: timestamp,
       updatedAtMs: timestamp,

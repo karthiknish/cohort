@@ -36,10 +36,10 @@ export const createMask = zWorkspaceMutation({
     visibleToRoles: z.array(z.string()).optional(),
     visibleToUserIds: z.array(z.string()).optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_resource', (q: any) =>
+      .withIndex('by_workspace_resource', (q) =>
         q
           .eq('workspaceId', args.workspaceId)
           .eq('resourceType', args.resourceType)
@@ -92,10 +92,10 @@ export const getMaskForResource = zWorkspaceQuery({
     resourceType: z.enum(['conversation', 'channel', 'user']),
     resourceId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const mask = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_resource', (q: any) =>
+      .withIndex('by_workspace_resource', (q) =>
         q
           .eq('workspaceId', args.workspaceId)
           .eq('resourceType', args.resourceType)
@@ -119,10 +119,10 @@ export const resolveIdentity = zWorkspaceMutation({
   args: {
     maskLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const mask = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.maskLegacyId)
       )
       .first()
@@ -132,7 +132,7 @@ export const resolveIdentity = zWorkspaceMutation({
     }
 
     const currentUserId = ctx.user._id
-    const currentUserRole = ctx.user.role
+    const currentUserRole = typeof ctx.user.role === 'string' ? ctx.user.role : ''
 
     const canViewRealIdentity =
       currentUserRole === 'admin' ||
@@ -157,10 +157,10 @@ export const updateMaskVisibility = zWorkspaceMutation({
     visibleToRoles: z.array(z.string()).optional(),
     visibleToUserIds: z.array(z.string()).optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const mask = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.maskLegacyId)
       )
       .first()
@@ -170,7 +170,7 @@ export const updateMaskVisibility = zWorkspaceMutation({
     }
 
     const now = Date.now()
-    const updates: any = { updatedAtMs: now }
+    const updates: { updatedAtMs: number; visibleToRoles?: string[]; visibleToUserIds?: string[] } = { updatedAtMs: now }
 
     if (args.visibleToRoles !== undefined) {
       updates.visibleToRoles = args.visibleToRoles
@@ -190,7 +190,7 @@ export const setRealName = zWorkspaceMutation({
     maskLegacyId: z.string(),
     realName: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const currentUserRole = ctx.user.role
 
@@ -200,7 +200,7 @@ export const setRealName = zWorkspaceMutation({
 
     const mask = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.maskLegacyId)
       )
       .first()
@@ -223,7 +223,7 @@ export const removeMask = zWorkspaceMutation({
   args: {
     maskLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const currentUserRole = ctx.user.role
 
@@ -233,7 +233,7 @@ export const removeMask = zWorkspaceMutation({
 
     const mask = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.maskLegacyId)
       )
       .first()
@@ -252,15 +252,15 @@ export const listMasks = zWorkspaceQueryActive({
   args: {
     resourceType: z.enum(['conversation', 'channel', 'user']).optional(),
   },
-  handler: async (ctx: any, args: any) => {
-    let q = ctx.db.query('privacyMasks')
+  handler: async (ctx, args) => {
+    const q = ctx.db.query('privacyMasks')
 
     const masks = await q.collect()
 
     return masks
-      .filter((m: any) => m.workspaceId === args.workspaceId)
-      .filter((m: any) => !args.resourceType || m.resourceType === args.resourceType)
-      .map((m: any) => ({
+      .filter((m) => m.workspaceId === args.workspaceId)
+      .filter((m) => !args.resourceType || m.resourceType === args.resourceType)
+      .map((m) => ({
         _id: m._id,
         legacyId: m.legacyId,
         resourceType: m.resourceType,
@@ -279,10 +279,10 @@ export const getOrCreateUserMask = zWorkspaceMutation({
     userName: z.string(),
     maskType: z.enum(['pseudonym', 'relay_number', 'anonymous']).optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const existing = await ctx.db
       .query('privacyMasks')
-      .withIndex('by_workspace_resource', (q: any) =>
+      .withIndex('by_workspace_resource', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('resourceType', 'user').eq('resourceId', args.userId)
       )
       .first()

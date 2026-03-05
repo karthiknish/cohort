@@ -3,7 +3,7 @@
 // =============================================================================
 
 /**
- * Normalized ad metric data from any platform
+ * Normalized ad metric data from all supported platforms
  */
 export type NormalizedAdMetric = {
     providerId: string

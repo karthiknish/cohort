@@ -9,8 +9,8 @@ import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
-import { adsMetricsApi } from '@/lib/convex-api'
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
+import { api } from '../../../../../convex/_generated/api'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -168,7 +168,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   }, [canQueryConvex, isPreviewMode, workspaceId])
 
   const metricsRealtime = useQuery(
-    adsMetricsApi.listMetrics,
+    api.adsMetrics.listMetrics,
     isPreviewMode || !workspaceId || !canQueryConvex
       ? 'skip'
       : {
@@ -178,7 +178,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
           endDate: dateRange.end.toISOString().split('T')[0],
           limit: 1000,
         }
-  ) as Array<any> | undefined
+  )
 
   // Compute the full metric list from Convex (or preview)
   const metricsSource = useMemo(() => {
@@ -186,7 +186,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     if (!workspaceId || !canQueryConvex) return [] as MetricRecord[]
 
     const rows = Array.isArray(metricsRealtime) ? metricsRealtime : []
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       id: `${String(row.providerId)}:${String(row.accountId ?? '')}:${String(row.date)}`,
       providerId: String(row.providerId),
       accountId: typeof row.accountId === 'string' ? row.accountId : null,
@@ -225,7 +225,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     setMetricsLoading(false)
 
-    // Reset pagination + derived state on any refresh trigger.
+    // Reset pagination + derived state on each refresh trigger.
     setVisibleCount(METRICS_PAGE_SIZE)
     setMetricError(null)
     setLoadMoreError(null)

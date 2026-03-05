@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { Lock, RefreshCw, Copy, Code2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -99,7 +100,7 @@ export default function AuthError({
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <a href="/">Go to sign in</a>
+              <Link href="/">Go to sign in</Link>
             </Button>
           </div>
         </CardContent>

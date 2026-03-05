@@ -48,7 +48,7 @@ export function evaluateAlerts(
         )
     )
 
-    // Add algorithmic alerts if any
+    // Add algorithmic alerts when configured
     const algorithmicResults = evaluateAlgorithmicAlerts(input, rules)
     results.push(...algorithmicResults)
 
@@ -82,8 +82,8 @@ export function evaluateAlgorithmicAlerts(
         totalImpressions: input.current.impressions,
         averageRoaS: input.current.roas,
         averageCpc: input.current.cpc,
-        averageCtr: (input.current as any).ctr || (input.current.impressions > 0 ? (input.current.clicks / input.current.impressions) * 100 : 0),
-        averageConvRate: (input.current as any).convRate || (input.current.clicks > 0 ? (input.current.conversions / input.current.clicks) * 100 : 0),
+        averageCtr: input.current.impressions > 0 ? (input.current.clicks / input.current.impressions) * 100 : input.current.ctr,
+        averageConvRate: input.current.clicks > 0 ? (input.current.conversions / input.current.clicks) * 100 : 0,
         period: '1d',
         dayCount: 1,
     }

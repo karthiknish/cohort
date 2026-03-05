@@ -2,7 +2,7 @@
  * OAuth Provider Connection Helpers (legacy)
  *
  * Firebase popup OAuth flows are no longer supported after migrating to Better Auth.
- * Keep this module as a stub so any lingering imports fail loudly.
+ * Keep this module as a stub so lingering imports fail loudly.
  */
 
 import { ServiceUnavailableError } from '@/lib/api-errors'

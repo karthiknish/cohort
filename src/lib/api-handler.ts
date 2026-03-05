@@ -41,6 +41,58 @@ export type ApiResponse<T = unknown> = {
   requestId?: string
 }
 
+type IdempotencyScalar = string | number | boolean | null
+type IdempotencyLayer1 = IdempotencyScalar | IdempotencyScalar[] | Record<string, IdempotencyScalar>
+type IdempotencyLayer2 = IdempotencyLayer1 | IdempotencyLayer1[] | Record<string, IdempotencyLayer1>
+
+function toIdempotencyScalar(value: unknown): IdempotencyScalar {
+  if (value === null) return null
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+  return String(value)
+}
+
+function toIdempotencyLayer1(value: unknown): IdempotencyLayer1 {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toIdempotencyScalar(item))
+  }
+
+  if (typeof value === 'object') {
+    const normalized: Record<string, IdempotencyScalar> = {}
+    for (const [key, entry] of Object.entries(value)) {
+      normalized[key] = toIdempotencyScalar(entry)
+    }
+    return normalized
+  }
+
+  return String(value)
+}
+
+function toIdempotencyLayer2(value: unknown): IdempotencyLayer2 {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toIdempotencyLayer1(item))
+  }
+
+  if (typeof value === 'object') {
+    const normalized: Record<string, IdempotencyLayer1> = {}
+    for (const [key, entry] of Object.entries(value)) {
+      normalized[key] = toIdempotencyLayer1(entry)
+    }
+    return normalized
+  }
+
+  return String(value)
+}
+
 function isApiResponseLike(value: unknown): value is ApiResponse {
   if (!value || typeof value !== 'object') return false
   const record = value as Record<string, unknown>
@@ -362,7 +414,7 @@ export function createApiHandler<
             if (convex) {
               await convex.mutation(api.apiIdempotency.complete, {
                 key: idempotencyKey,
-                response: payload,
+                response: toIdempotencyLayer2(payload),
                 httpStatus: status,
               }).catch(() => {})
             }
@@ -398,7 +450,7 @@ export function createApiHandler<
           if (convex) {
             await convex.mutation(api.apiIdempotency.complete, {
               key: idempotencyKey,
-              response: successResponse,
+              response: toIdempotencyLayer2(successResponse),
               httpStatus: 200,
             }).catch(() => {})
           }

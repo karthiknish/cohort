@@ -50,6 +50,16 @@ interface ConvexThreadRow {
   sharedTo?: unknown[]
 }
 
+type ThreadRepliesQueryPage = {
+  replies: CollaborationMessage[]
+  nextCursor: string | null
+}
+
+type ThreadRepliesQueryData = {
+  pages: ThreadRepliesQueryPage[]
+  pageParams: unknown[]
+}
+
 const VALID_CHANNEL_TYPES: CollaborationChannelType[] = ['client', 'team', 'project']
 
 function isValidChannelType(value: unknown): value is CollaborationChannelType {
@@ -292,13 +302,16 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
 
   const addThreadReply = useCallback(
     (rootId: string, message: CollaborationMessage) => {
-      queryClient.setQueryData(['threadReplies', workspaceId, rootId], (existing: any) => {
-        const data = existing as any
-        if (!data?.pages?.length) return existing
+      queryClient.setQueryData(['threadReplies', workspaceId, rootId], (existing: unknown) => {
+        if (!existing || typeof existing !== 'object') return existing
+
+        const data = existing as ThreadRepliesQueryData
+        if (!Array.isArray(data.pages) || data.pages.length === 0) return existing
 
         const pages = [...data.pages]
         const lastPageIndex = pages.length - 1
         const lastPage = pages[lastPageIndex]
+        if (!lastPage) return existing
         const currentReplies: CollaborationMessage[] = lastPage?.replies ?? []
 
         const exists = currentReplies.some((entry) => entry.id === message.id)

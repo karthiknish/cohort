@@ -59,6 +59,25 @@ type RoleFilter = 'all' | AdminUserRole
 const ROLE_OPTIONS = ADMIN_USER_ROLES
 const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
 
+type AdminUserRow = {
+  legacyId: string
+  email?: string | null
+  name?: string | null
+  role?: string | null
+  status?: string | null
+  agencyId?: string | null
+  createdAtMs?: number | null
+  updatedAtMs?: number | null
+}
+
+function isAdminUserRole(value: unknown): value is AdminUserRole {
+  return typeof value === 'string' && ADMIN_USER_ROLES.includes(value as AdminUserRole)
+}
+
+function isAdminUserStatus(value: unknown): value is AdminUserStatus {
+  return typeof value === 'string' && ADMIN_USER_STATUSES.includes(value as AdminUserStatus)
+}
+
 export default function AdminTeamPage() {
   const { user } = useAuth()
   const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
@@ -72,7 +91,7 @@ export default function AdminTeamPage() {
   const { toast } = useToast()
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
-    api.adminUsers.listUsers as any,
+    api.adminUsers.listUsers,
     {
       workspaceId,
       includeAllWorkspaces: false,
@@ -93,17 +112,19 @@ export default function AdminTeamPage() {
     if (usersOverride) return usersOverride
 
     // Convex returns a simplified record; adapt to existing AdminUserRecord expectations.
-    return (Array.isArray(usersPage) ? usersPage : []).map((row: any) => ({
-      id: row.legacyId,
-      email: row.email ?? '',
-      name: row.name ?? '',
-      role: row.role ?? 'team',
-      status: row.status ?? 'pending',
-      agencyId: row.agencyId ?? null,
-      createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
-      updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
+    return (Array.isArray(usersPage) ? usersPage : []).map((row) => {
+      const typedRow = row as AdminUserRow
+      return {
+      id: typedRow.legacyId,
+      email: typedRow.email ?? '',
+      name: typedRow.name ?? '',
+      role: isAdminUserRole(typedRow.role) ? typedRow.role : 'team',
+      status: isAdminUserStatus(typedRow.status) ? typedRow.status : 'pending',
+      agencyId: typedRow.agencyId ?? null,
+      createdAt: typedRow.createdAtMs ? new Date(typedRow.createdAtMs).toISOString() : null,
+      updatedAt: typedRow.updatedAtMs ? new Date(typedRow.updatedAtMs).toISOString() : null,
       lastLoginAt: null,
-    }))
+    }})
   }, [usersOverride, usersPage])
 
   const loading = isLoading

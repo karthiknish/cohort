@@ -31,10 +31,22 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 
+type FilterValue = string | number | null | string[]
+type FilterMap = Record<string, FilterValue>
+
+function getStringFilterValue(value: FilterValue | undefined): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function getStringArrayFilterValue(value: FilterValue | undefined): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
 export interface FilterConfig {
   id: string
   name: string
-  filters: Record<string, any>
+  filters: FilterMap
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }
@@ -46,7 +58,7 @@ interface AdvancedFilterProps {
     type: 'text' | 'select' | 'multiselect' | 'date' | 'number'
     options?: Array<{ value: string; label: string }>
   }>
-  onFilterChange: (filters: Record<string, any>) => void
+  onFilterChange: (filters: FilterMap) => void
   onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void
   activeFiltersCount?: number
   savedFilters?: FilterConfig[]
@@ -79,14 +91,14 @@ export function AdvancedFilter({
 }: AdvancedFilterProps) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
-  const [currentFilters, setCurrentFilters] = useState<Record<string, any>>({})
+  const [currentFilters, setCurrentFilters] = useState<FilterMap>({})
   const [filterName, setFilterName] = useState('')
   const [sortBy, setSortBy] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   const activeFilterCount = Object.keys(currentFilters).length + activeFiltersCount
 
-  const applyFilter = useCallback((key: string, value: any) => {
+  const applyFilter = useCallback((key: string, value: FilterValue) => {
     setCurrentFilters((prev) => {
       const newFilters = { ...prev }
       if (value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
@@ -208,7 +220,7 @@ export function AdvancedFilter({
                 <Label>{filter.label}</Label>
                 {filter.type === 'text' && (
                   <Input
-                    value={currentFilters[filter.key] || ''}
+                    value={getStringFilterValue(currentFilters[filter.key])}
                     onChange={(e) => applyFilter(filter.key, e.target.value)}
                     placeholder={`Search ${filter.label.toLowerCase()}...`}
                   />
@@ -216,7 +228,7 @@ export function AdvancedFilter({
 
                 {filter.type === 'select' && (
                   <Select
-                    value={currentFilters[filter.key] || ''}
+                    value={getStringFilterValue(currentFilters[filter.key])}
                     onValueChange={(value) => applyFilter(filter.key, value)}
                   >
                     <SelectTrigger>
@@ -239,14 +251,14 @@ export function AdvancedFilter({
                       <div key={option.value} className="flex items-center gap-2">
                         <Checkbox
                           id={`${filter.key}-${option.value}`}
-                          checked={(currentFilters[filter.key] || []).includes(option.value)}
+                          checked={getStringArrayFilterValue(currentFilters[filter.key]).includes(option.value)}
                           onCheckedChange={(checked) => {
-                            const current = currentFilters[filter.key] || []
+                            const current = getStringArrayFilterValue(currentFilters[filter.key])
                             applyFilter(
                               filter.key,
                               checked
                                 ? [...current, option.value]
-                                : current.filter((v: any) => v !== option.value)
+                                : current.filter((v: string) => v !== option.value)
                             )
                           }}
                         />
@@ -346,7 +358,7 @@ export function ActiveFiltersBar({
   onClearAll,
   className,
 }: {
-  filters: Record<string, any>
+  filters: FilterMap
   onRemove: (key: string) => void
   onClearAll: () => void
   className?: string

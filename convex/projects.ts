@@ -46,25 +46,22 @@ export const list = zWorkspacePaginatedQueryActive({
     const hasStatus = typeof args.status === 'string'
     const hasClientId = typeof args.clientId === 'string'
 
-    let q: any = ctx.db.query('projects')
+    const baseQuery = ctx.db.query('projects')
+    const indexedQuery = hasStatus && hasClientId
+      ? baseQuery.withIndex('by_workspace_status_clientId_updatedAtMs_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('status', args.status!).eq('clientId', args.clientId!)
+        )
+      : hasStatus
+        ? baseQuery.withIndex('by_workspace_status_updatedAtMs_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('status', args.status!)
+          )
+        : hasClientId
+          ? baseQuery.withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+              q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId!)
+            )
+          : baseQuery.withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
 
-    if (hasStatus && hasClientId) {
-      q = q.withIndex('by_workspace_status_clientId_updatedAtMs_legacyId', (q: any) =>
-        q.eq('workspaceId', args.workspaceId).eq('status', args.status!).eq('clientId', args.clientId!)
-      )
-    } else if (hasStatus) {
-      q = q.withIndex('by_workspace_status_updatedAtMs_legacyId', (q: any) =>
-        q.eq('workspaceId', args.workspaceId).eq('status', args.status!)
-      )
-    } else if (hasClientId) {
-      q = q.withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q: any) =>
-        q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId!)
-      )
-    } else {
-      q = q.withIndex('by_workspace_updatedAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
-    }
-
-    q = q.order('desc')
+    let q = indexedQuery.order('desc')
     q = applyManualPagination(q, args.cursor, 'updatedAtMs', 'desc')
 
     const limit = args.limit ?? 50
@@ -72,7 +69,7 @@ export const list = zWorkspacePaginatedQueryActive({
     const result = getPaginatedResponse(rows, limit, 'updatedAtMs')
 
     return {
-      items: result.items.map((row: any) => ({
+      items: result.items.map((row) => ({
         legacyId: row.legacyId,
         name: row.name,
         description: row.description,
@@ -98,7 +95,7 @@ export const getByLegacyId = zWorkspaceQuery({
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query('projects')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!row) throw Errors.resource.notFound('Project', args.legacyId)
@@ -180,7 +177,7 @@ export const update = zWorkspaceMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db
       .query('projects')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!project || project.deletedAtMs !== null) {
@@ -216,7 +213,7 @@ export const softDelete = zWorkspaceMutation({
   handler: async (ctx, args) => {
     const project = await ctx.db
       .query('projects')
-      .withIndex('by_workspace_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
       .unique()
 
     if (!project) {

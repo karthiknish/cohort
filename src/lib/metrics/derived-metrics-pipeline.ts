@@ -22,7 +22,7 @@ import {
  * This should be called after normalization in the API route to calculate
  * all advanced metrics server-side.
  * 
- * @param metrics - Normalized ad metrics from any platform
+ * @param metrics - Normalized ad metrics from all supported platforms
  * @param options - Optional configuration for the pipeline
  * @returns Complete derived metrics result
  * 

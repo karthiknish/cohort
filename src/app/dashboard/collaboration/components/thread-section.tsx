@@ -98,10 +98,7 @@ export function ThreadLoading({ hasReplies }: ThreadLoadingProps) {
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ThreadEmptyStateProps {}
-
-export function ThreadEmptyState({}: ThreadEmptyStateProps) {
+export function ThreadEmptyState() {
   return (
     <div className="rounded-md border border-dashed border-muted/50 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
       Be the first to reply in this thread

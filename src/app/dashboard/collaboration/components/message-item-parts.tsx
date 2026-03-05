@@ -350,10 +350,22 @@ export function MessageHeader({
         <MessageReadReceipts
           message={{
             id: messageId,
+            channelType: 'team',
+            clientId: null,
+            projectId: null,
+            content: '',
             senderId: currentUserId,
+            senderName,
+            senderRole: senderRole ?? null,
+            createdAt: createdAt ?? null,
+            updatedAt: null,
+            isEdited: Boolean(isEdited),
+            deletedAt: null,
+            deletedBy: null,
             readBy,
+            deliveredTo: [],
             isDeleted: isDeleted ?? false,
-          } as any}
+          }}
           currentUserId={currentUserId}
           channelMemberCount={channelMemberCount}
           readByNames={readByNames}

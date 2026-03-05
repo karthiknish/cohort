@@ -82,11 +82,41 @@ const reachChartConfig = {
   },
 } satisfies ChartConfig
 
+type PerformanceMetricPoint = {
+  date: string
+  spend: number
+  revenue: number
+}
+
+type EngagementChartPoint = {
+  date: string
+  dateFormatted: string
+  clicks: number
+  impressions: number
+  ctr: number
+}
+
+type ConversionChartPoint = {
+  date: string
+  dateFormatted: string
+  conversions: number
+  revenue: number
+  cpc: number
+  cpa: number
+}
+
+type ReachChartPoint = {
+  date: string
+  dateFormatted: string
+  reach: number
+  impressions: number
+}
+
 interface InsightsChartsSectionProps {
-  chartMetrics: any[]
-  engagementChartData: any[]
-  conversionsChartData: any[]
-  reachChartData?: any[]
+  chartMetrics: PerformanceMetricPoint[]
+  engagementChartData: EngagementChartPoint[]
+  conversionsChartData: ConversionChartPoint[]
+  reachChartData?: ReachChartPoint[]
   insightsLoading: boolean
   currency?: string
 }

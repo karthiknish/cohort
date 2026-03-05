@@ -67,12 +67,15 @@ function shouldUseConvexAds(): boolean {
     return Boolean(process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL)
 }
 
+type ConvexCallArgs = Record<string, unknown>
+type ConvexLogContext = Record<string, unknown>
+
 /**
  * Executes a Convex mutation with error handling and logging.
  */
-async function executeMutation(convex: ConvexHttpClient, name: string, args: any, context: any = {}): Promise<any> {
+async function executeMutation(convex: ConvexHttpClient, name: string, args: ConvexCallArgs, context: ConvexLogContext = {}): Promise<unknown> {
     try {
-        return await convex.mutation(name as any, args)
+        return await convex.mutation(name as never, args as never)
     } catch (error) {
         logger.error(`Convex Mutation Error: ${name}`, error, {
             type: 'convex_error',
@@ -87,9 +90,9 @@ async function executeMutation(convex: ConvexHttpClient, name: string, args: any
 /**
  * Executes a Convex query with error handling and logging.
  */
-const executeQuery = cache(async (convex: ConvexHttpClient, name: string, args: any, context: any = {}): Promise<any> => {
+const executeQuery = cache(async (convex: ConvexHttpClient, name: string, args: ConvexCallArgs, context: ConvexLogContext = {}): Promise<unknown> => {
     try {
-        return await convex.query(name as any, args)
+        return await convex.query(name as never, args as never)
     } catch (error) {
         logger.error(`Convex Query Error: ${name}`, error, {
             type: 'convex_error',
@@ -268,13 +271,13 @@ export async function getAdIntegration(options: {
         developerToken: row.developerToken,
         loginCustomerId: row.loginCustomerId,
         managerCustomerId: row.managerCustomerId,
-        accessTokenExpiresAt: (row.accessTokenExpiresAtMs as any) ?? null,
-        refreshTokenExpiresAt: (row.refreshTokenExpiresAtMs as any) ?? null,
+        accessTokenExpiresAt: row.accessTokenExpiresAtMs ?? null,
+        refreshTokenExpiresAt: row.refreshTokenExpiresAtMs ?? null,
         lastSyncStatus: row.lastSyncStatus,
         lastSyncMessage: row.lastSyncMessage,
-        lastSyncedAt: (row.lastSyncedAtMs as any) ?? null,
-        lastSyncRequestedAt: (row.lastSyncRequestedAtMs as any) ?? null,
-        linkedAt: (row.linkedAtMs as any) ?? null,
+        lastSyncedAt: row.lastSyncedAtMs ?? null,
+        lastSyncRequestedAt: row.lastSyncRequestedAtMs ?? null,
+        linkedAt: row.linkedAtMs ?? null,
         autoSyncEnabled: row.autoSyncEnabled,
         syncFrequencyMinutes: row.syncFrequencyMinutes,
         scheduledTimeframeDays: row.scheduledTimeframeDays,
@@ -316,9 +319,9 @@ export async function claimNextSyncJob(options: { userId: string }): Promise<Syn
         jobType: job.jobType,
         timeframeDays: job.timeframeDays,
         status: job.status,
-        createdAt: (job.createdAtMs as any) ?? null,
-        startedAt: (job.startedAtMs as any) ?? null,
-        processedAt: (job.processedAtMs as any) ?? null,
+        createdAt: job.createdAtMs ?? null,
+        startedAt: job.startedAtMs ?? null,
+        processedAt: job.processedAtMs ?? null,
         errorMessage: job.errorMessage,
     }
 }
@@ -330,7 +333,7 @@ export async function completeSyncJob(options: { userId: string; jobId: string }
     }
 
     await executeMutation(convex, 'adsIntegrations:completeSyncJob', {
-        jobId: options.jobId as any,
+        jobId: options.jobId,
     }, { userId: options.userId, jobId: options.jobId })
 }
 
@@ -341,7 +344,7 @@ export async function failSyncJob(options: { userId: string; jobId: string; mess
     }
 
     await executeMutation(convex, 'adsIntegrations:failSyncJob', {
-        jobId: options.jobId as any,
+        jobId: options.jobId,
         message: options.message,
     }, { userId: options.userId, jobId: options.jobId })
 }

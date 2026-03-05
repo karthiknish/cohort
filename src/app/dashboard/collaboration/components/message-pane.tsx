@@ -199,7 +199,7 @@ export function CollaborationMessagePane({
 
   // Clear editing state if message is deleted
   useEffect(() => {
-    if (!editingMessageId) return
+    if (!editingMessageId) return undefined
     const stillExists = channelMessages.some((message) => message.id === editingMessageId && !message.isDeleted)
     if (!stillExists) {
       const frame = requestAnimationFrame(() => {
@@ -211,6 +211,8 @@ export function CollaborationMessagePane({
         cancelAnimationFrame(frame)
       }
     }
+
+    return undefined
   }, [channelMessages, editingMessageId])
 
   // Reset thread state when channel changes

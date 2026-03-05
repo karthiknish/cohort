@@ -31,7 +31,9 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
             <Label htmlFor="destination-type">Destination Type</Label>
             <Select
               value={formData.destinationType}
-              onValueChange={(value) => onChange({ destinationType: value as any })}
+              onValueChange={(value) =>
+                onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' })
+              }
               disabled={disabled}
             >
               <SelectTrigger id="destination-type">

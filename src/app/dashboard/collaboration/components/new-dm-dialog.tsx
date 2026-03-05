@@ -27,6 +27,13 @@ interface NewDMDialogProps {
   currentUserRole: string | null | undefined
 }
 
+type DmParticipant = {
+  id: string
+  name?: string
+  email?: string
+  role?: string | null
+}
+
 export function NewDMDialog({
   open,
   onOpenChange,
@@ -39,15 +46,17 @@ export function NewDMDialog({
   const [isCreating, setIsCreating] = useState(false)
 
   const dmParticipants = useQuery(
-    (api as any).users.listDMParticipants,
+    api.users.listDMParticipants,
     workspaceId && currentUserId ? { workspaceId, currentUserId, currentUserRole: currentUserRole ?? null } : 'skip'
   )
 
   const filteredUsers = useMemo(() => {
-    if (!dmParticipants) return []
+    if (!Array.isArray(dmParticipants)) return []
 
-    return dmParticipants
-      .filter((member: any) => {
+    const participants = dmParticipants as DmParticipant[]
+
+    return participants
+      .filter((member) => {
         if (!searchQuery.trim()) return true
         const query = searchQuery.toLowerCase()
         return (
@@ -109,7 +118,7 @@ export function NewDMDialog({
             </div>
           ) : (
             <div className="space-y-1 pr-4">
-              {filteredUsers.map((user: any) => (
+              {filteredUsers.map((user) => (
                 <button
                   key={user.id}
                   type="button"

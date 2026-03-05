@@ -1,5 +1,6 @@
 import { checkRateLimit, RateLimitConfig, RateLimitResult, RateLimitPreset, RATE_LIMITS } from './rate-limiter'
 import { ConvexHttpClient } from 'convex/browser'
+import { api } from '../../convex/_generated/api'
 
 let convexClient: ConvexHttpClient | null = null
 
@@ -31,7 +32,7 @@ export async function checkConvexRateLimit(
   try {
     const name = typeof configOrPreset === 'string' ? configOrPreset : `custom:${config.maxRequests}:${config.windowMs}`
 
-    const result = (await client.mutation('rateLimitApi:limit' as any, {
+    const result = (await client.mutation(api.rateLimitApi.limit, {
       name,
       key,
       config:

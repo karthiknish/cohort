@@ -36,16 +36,16 @@ export function useReadReceipts({
 }: UseReadReceiptsOptions) {
   const { toast } = useToast()
 
-  const markAsRead = useMutation((collaborationApi as any).markAsRead)
-  const markMultipleAsRead = useMutation((collaborationApi as any).markMultipleAsRead)
-  const markChannelAsRead = useMutation((collaborationApi as any).markChannelAsRead)
+  const markAsRead = useMutation(collaborationApi.markAsRead)
+  const markMultipleAsRead = useMutation(collaborationApi.markMultipleAsRead)
+  const markChannelAsRead = useMutation(collaborationApi.markChannelAsRead)
 
   // Track which messages have been marked as read in this session
   const markedAsReadRef = useRef<Set<string>>(new Set())
 
   // Get unread count for the channel
   const unreadResult = useQuery(
-    (collaborationApi as any).getUnreadCount,
+    collaborationApi.getUnreadCount,
     enabled && workspaceId && userId && channelId
       ? {
           workspaceId: String(workspaceId),
@@ -162,7 +162,7 @@ export function useReadReceipts({
 
   // Auto-mark visible messages as read
   useEffect(() => {
-    if (!enabled || !userId) return
+    if (!enabled || !userId) return undefined
 
     // Mark messages that are visible as read
     // In a real implementation, you'd use Intersection Observer
@@ -176,6 +176,8 @@ export function useReadReceipts({
 
       return () => clearTimeout(timer)
     }
+
+    return undefined
   }, [channelId, messages, userId, enabled, handleMarkAsRead])
 
   // Get read status for a message

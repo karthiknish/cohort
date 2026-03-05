@@ -23,7 +23,7 @@ export type UseDirectMessagesReturn = {
   isLoadingMore: boolean
   loadMoreMessages: () => void
   hasMoreMessages: boolean
-  sendMessage: (content: string, attachments?: any[]) => Promise<void>
+  sendMessage: (content: string, attachments?: DirectMessage['attachments']) => Promise<void>
   isSending: boolean
   markAsRead: () => Promise<void>
   editMessage: (messageLegacyId: string, newContent: string) => Promise<void>
@@ -41,6 +41,19 @@ type MessageCursor = {
   legacyId: string
 } | null
 
+type DirectMessageRow = Omit<DirectMessage, 'id'> & {
+  _id: string
+}
+
+type DirectConversationRow = Omit<DirectConversation, 'id'> & {
+  _id: string
+}
+
+type DirectMessagesQueryResult = {
+  items: DirectMessageRow[]
+  nextCursor: MessageCursor
+}
+
 export function useDirectMessages({
   workspaceId,
   currentUserId,
@@ -53,25 +66,28 @@ export function useDirectMessages({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   const conversationsQuery = useQuery(
-    (api as any).directMessages.listConversations,
+    api.directMessages.listConversations,
     workspaceId ? { workspaceId, includeArchived: false } : 'skip'
   )
 
   const unreadCountQuery = useQuery(
-    (api as any).directMessages.getUnreadCount,
+    api.directMessages.getUnreadCount,
     workspaceId ? { workspaceId } : 'skip'
   )
 
   const messagesQuery = useQuery(
-    (api as any).directMessages.listMessages,
+    api.directMessages.listMessages,
     selectedConversation && workspaceId
       ? { workspaceId, conversationLegacyId: selectedConversation.legacyId, cursor: messageCursor, limit: MESSAGE_PAGE_SIZE }
       : 'skip'
   )
 
+  const typedMessagesQuery = messagesQuery as DirectMessagesQueryResult | undefined
+  const conversationRows = (conversationsQuery ?? []) as DirectConversationRow[]
+
   useEffect(() => {
-    if (messagesQuery) {
-      const newMessages = (messagesQuery.items ?? []).map((m: any) => ({
+    if (typedMessagesQuery) {
+      const newMessages = (typedMessagesQuery.items ?? []).map((m) => ({
         id: m._id,
         legacyId: m.legacyId,
         senderId: m.senderId,
@@ -114,9 +130,9 @@ export function useDirectMessages({
           .sort((a, b) => b.createdAtMs - a.createdAtMs)
       })
       
-      setHasMore(!!messagesQuery.nextCursor)
+      setHasMore(!!typedMessagesQuery.nextCursor)
     }
-  }, [messagesQuery])
+  }, [typedMessagesQuery, isLoadingMore, messageCursor])
 
   useEffect(() => {
     setMessageCursor(null)
@@ -125,17 +141,17 @@ export function useDirectMessages({
     setIsLoadingMore(false)
   }, [selectedConversation?.legacyId])
 
-  const getOrCreateConversationMutation = useMutation((api as any).directMessages.getOrCreateConversation)
-  const sendMessageMutation = useMutation((api as any).directMessages.sendMessage)
-  const markAsReadMutation = useMutation((api as any).directMessages.markAsRead)
-  const editMessageMutation = useMutation((api as any).directMessages.editMessage)
-  const deleteMessageMutation = useMutation((api as any).directMessages.deleteMessage)
-  const toggleReactionMutation = useMutation((api as any).directMessages.toggleReaction)
-  const setArchiveStatusMutation = useMutation((api as any).directMessages.setArchiveStatus)
-  const setMuteStatusMutation = useMutation((api as any).directMessages.setMuteStatus)
+  const getOrCreateConversationMutation = useMutation(api.directMessages.getOrCreateConversation)
+  const sendMessageMutation = useMutation(api.directMessages.sendMessage)
+  const markAsReadMutation = useMutation(api.directMessages.markAsRead)
+  const editMessageMutation = useMutation(api.directMessages.editMessage)
+  const deleteMessageMutation = useMutation(api.directMessages.deleteMessage)
+  const toggleReactionMutation = useMutation(api.directMessages.toggleReaction)
+  const setArchiveStatusMutation = useMutation(api.directMessages.setArchiveStatus)
+  const setMuteStatusMutation = useMutation(api.directMessages.setMuteStatus)
 
-  const conversations: DirectConversation[] = (conversationsQuery ?? [])
-    .map((c: any) => ({
+  const conversations: DirectConversation[] = conversationRows
+    .map((c) => ({
       id: c._id,
       legacyId: c.legacyId,
       otherParticipantId: c.otherParticipantId,
@@ -150,18 +166,18 @@ export function useDirectMessages({
       createdAtMs: c.createdAtMs,
       updatedAtMs: c.updatedAtMs,
     }))
-    .sort((a: DirectConversation, b: DirectConversation) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
+    .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
 
   const selectConversation = useCallback((conversation: DirectConversation | null) => {
     setSelectedConversation(conversation)
   }, [])
 
   const loadMoreMessages = useCallback(() => {
-    if (messagesQuery?.nextCursor && hasMore && !isLoadingMore) {
+    if (typedMessagesQuery?.nextCursor && hasMore && !isLoadingMore) {
       setIsLoadingMore(true)
-      setMessageCursor(messagesQuery.nextCursor)
+      setMessageCursor(typedMessagesQuery.nextCursor)
     }
-  }, [messagesQuery, hasMore, isLoadingMore])
+  }, [typedMessagesQuery, hasMore, isLoadingMore])
 
   const getOrCreateConversation = useCallback(
     async (otherUserId: string, otherUserName: string, otherUserRole?: string | null) => {
@@ -205,7 +221,7 @@ export function useDirectMessages({
   )
 
   const sendMessage = useCallback(
-    async (content: string, attachments?: any[]) => {
+    async (content: string, attachments?: DirectMessage['attachments']) => {
       if (!selectedConversation || !workspaceId) return
 
       setIsSending(true)
@@ -316,7 +332,7 @@ export function useDirectMessages({
     selectConversation,
     isLoadingConversations: conversationsQuery === undefined,
     messages: allMessages,
-    isLoadingMessages: messagesQuery === undefined && messageCursor === null,
+    isLoadingMessages: typedMessagesQuery === undefined && messageCursor === null,
     isLoadingMore,
     loadMoreMessages,
     hasMoreMessages: hasMore,

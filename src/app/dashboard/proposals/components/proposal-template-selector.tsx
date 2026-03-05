@@ -39,6 +39,18 @@ interface ProposalTemplateSelectorProps {
   disabled?: boolean
 }
 
+type TemplateRow = {
+  legacyId: string
+  name?: string
+  description?: string | null
+  formData?: unknown
+  industry?: string | null
+  tags?: unknown
+  isDefault?: boolean
+  createdAtMs?: number
+  updatedAtMs?: number
+}
+
 export function ProposalTemplateSelector({
   currentFormData,
   onApplyTemplate,
@@ -57,19 +69,21 @@ export function ProposalTemplateSelector({
   const deleteTemplate = useMutation(proposalTemplatesApi.remove)
 
   const templates: ProposalTemplate[] = useMemo(() => {
-    if (!templatesRows) return []
+    if (!Array.isArray(templatesRows)) return []
 
-    return templatesRows.map((row: any) => ({
+    return templatesRows.map((row) => {
+      const typedRow = row as TemplateRow
+      return {
       id: String(row.legacyId),
-      name: typeof row.name === 'string' ? row.name : 'Untitled Template',
-      description: typeof row.description === 'string' ? row.description : null,
-      formData: row.formData as ProposalFormData,
-      industry: typeof row.industry === 'string' ? row.industry : null,
-      tags: Array.isArray(row.tags) ? row.tags.filter((t: any): t is string => typeof t === 'string') : [],
-      isDefault: row.isDefault === true,
-      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-      updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-    }))
+      name: typeof typedRow.name === 'string' ? typedRow.name : 'Untitled Template',
+      description: typeof typedRow.description === 'string' ? typedRow.description : null,
+      formData: typedRow.formData as ProposalFormData,
+      industry: typeof typedRow.industry === 'string' ? typedRow.industry : null,
+      tags: Array.isArray(typedRow.tags) ? typedRow.tags.filter((t): t is string => typeof t === 'string') : [],
+      isDefault: typedRow.isDefault === true,
+      createdAt: typeof typedRow.createdAtMs === 'number' ? new Date(typedRow.createdAtMs).toISOString() : null,
+      updatedAt: typeof typedRow.updatedAtMs === 'number' ? new Date(typedRow.updatedAtMs).toISOString() : null,
+    }})
   }, [templatesRows])
 
   const [open, setOpen] = useState(false)

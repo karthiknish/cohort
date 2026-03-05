@@ -36,9 +36,9 @@ export interface UseAlgorithmicInsightsReturn {
   globalEfficiencyScore: number
   /** Per-provider efficiency scores */
   providerEfficiencyScores: Record<string, number>
-  /** Whether there are any critical insights */
+  /** Whether there are critical insights */
   hasCriticalInsights: boolean
-  /** Whether there are any warning insights */
+  /** Whether there are warning insights */
   hasWarningInsights: boolean
   /** Count of insights by level */
   insightCounts: {

@@ -202,7 +202,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                     <div>
                       <h4 className="font-semibold text-foreground">Quick tip</h4>
                       <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                        Press <KeyboardShortcutBadge combo="mod+k" /> anytime to quickly navigate to any page.
+                        Press <KeyboardShortcutBadge combo="mod+k" /> to quickly navigate across pages.
                       </p>
                     </div>
                   </div>

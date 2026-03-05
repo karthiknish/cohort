@@ -21,19 +21,19 @@ export const assignConversation = zWorkspaceMutation({
     priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
     slaDeadlineMs: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const currentUserName = ctx.user.name ?? 'Unknown'
 
     const existing = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_resource', (q: any) =>
+      .withIndex('by_workspace_resource', (q) =>
         q
           .eq('workspaceId', args.workspaceId)
           .eq('resourceType', args.resourceType)
           .eq('resourceId', args.resourceId)
       )
-      .filter((q: any) => q.eq(q.field('status'), 'active'))
+      .filter((q) => q.eq(q.field('status'), 'active'))
       .first()
 
     if (existing) {
@@ -79,10 +79,10 @@ export const transferAssignment = zWorkspaceMutation({
     newAssignedToName: z.string(),
     reason: z.string().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const assignment = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.assignmentLegacyId)
       )
       .first()
@@ -131,10 +131,10 @@ export const escalateAssignment = zWorkspaceMutation({
     escalatedToName: z.string(),
     reason: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const assignment = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.assignmentLegacyId)
       )
       .first()
@@ -184,10 +184,10 @@ export const completeAssignment = zWorkspaceMutation({
   args: {
     assignmentLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const assignment = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.assignmentLegacyId)
       )
       .first()
@@ -212,24 +212,24 @@ export const getAssignmentsForUser = zWorkspaceQueryActive({
     status: z.enum(['active', 'completed', 'escalated', 'transferred']).optional(),
     priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
-    let q = ctx.db
+    const q = ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_assignedTo_status', (q: any) =>
+      .withIndex('by_workspace_assignedTo_status', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('assignedToId', currentUserId)
       )
 
     const rows = await q.order('desc').collect()
 
     return rows
-      .filter((a: any) => {
+      .filter((a) => {
         if (args.status && a.status !== args.status) return false
         if (args.priority && a.priority !== args.priority) return false
         return true
       })
-      .map((a: any) => ({
+      .map((a) => ({
         _id: a._id,
         legacyId: a.legacyId,
         resourceType: a.resourceType,
@@ -253,27 +253,33 @@ export const getAssignmentsForUser = zWorkspaceQueryActive({
 
 export const getOverdueAssignments = zWorkspaceQueryActive({
   args: {},
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const now = Date.now()
+    const writableDb = ctx.db as unknown as {
+      patch: (id: unknown, value: { slaBreached: boolean; updatedAtMs: number }) => Promise<void>
+    }
 
     const overdue = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_slaDeadline', (q: any) =>
+      .withIndex('by_workspace_slaDeadline', (q) =>
         q.eq('workspaceId', args.workspaceId).lt('slaDeadlineMs', now)
       )
-      .filter((q: any) => 
-        q.eq(q.field('status'), 'active').and(q.eq(q.field('slaBreached'), false))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field('status'), 'active'),
+          q.eq(q.field('slaBreached'), false),
+        )
       )
       .collect()
 
     for (const assignment of overdue) {
-      await ctx.db.patch(assignment._id, {
+      await writableDb.patch(assignment._id, {
         slaBreached: true,
         updatedAtMs: now,
       })
     }
 
-    return overdue.map((a: any) => ({
+    return overdue.map((a) => ({
       _id: a._id,
       legacyId: a.legacyId,
       resourceType: a.resourceType,
@@ -291,10 +297,10 @@ export const recordFirstResponse = zWorkspaceMutation({
   args: {
     assignmentLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const assignment = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.assignmentLegacyId)
       )
       .first()
@@ -314,10 +320,10 @@ export const recordFirstResponse = zWorkspaceMutation({
 
 export const getRoutingStats = zWorkspaceQuery({
   args: {},
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const assignments = await ctx.db
       .query('conversationAssignments')
-      .withIndex('by_workspace_status_priority', (q: any) =>
+      .withIndex('by_workspace_status_priority', (q) =>
         q.eq('workspaceId', args.workspaceId)
       )
       .collect()

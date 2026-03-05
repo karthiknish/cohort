@@ -116,9 +116,10 @@ export function ProposalAnalyticsCard() {
     workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
   )
 
-  const summary = (summaryRes as any)?.summary as ProposalAnalyticsSummary | undefined
-  const timeSeries = ((timeSeriesRes as any)?.timeseries ?? []) as ProposalAnalyticsTimeSeriesPoint[]
-  const byClient = ((byClientRes as any)?.byClient ?? []) as ProposalAnalyticsByClient[]
+  const summary = (summaryRes as { summary?: ProposalAnalyticsSummary } | undefined)?.summary
+  const timeSeries =
+    (timeSeriesRes as { timeseries?: ProposalAnalyticsTimeSeriesPoint[] } | undefined)?.timeseries ?? []
+  const byClient = (byClientRes as { byClient?: ProposalAnalyticsByClient[] } | undefined)?.byClient ?? []
 
   const loading = summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined
 

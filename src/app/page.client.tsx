@@ -197,7 +197,7 @@ export default function HomePage() {
     return () => clearTimeout(fallbackTimeout)
   }, [loading, user, router, searchParams, toast])
 
-  // When we're back on the home page without a user, clear any stale redirect-loop tracking.
+  // When we're back on the home page without a user, clear stale redirect-loop tracking.
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!user) {

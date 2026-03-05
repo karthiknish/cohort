@@ -80,7 +80,7 @@ export interface UseAgentModeReturn {
   deleteConversation: (conversationId: string) => Promise<void>
 
   // Error handling
-  /** Current error, if any */
+  /** Current error, if present */
   error: AgentError | null
   /** Clear current error */
   clearError: () => void

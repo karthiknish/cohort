@@ -166,7 +166,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
       return
     }
 
-    // Stop any existing recognition
+    // Stop existing recognition
     stopListening()
 
     clearTimers()

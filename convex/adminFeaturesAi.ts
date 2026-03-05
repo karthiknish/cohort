@@ -2,6 +2,15 @@ import { v } from 'convex/values'
 import { adminAction } from './functions'
 import { Errors, withErrorHandling } from './errors'
 
+type GeminiContentPart = string | { text?: string }
+type GeminiPayload = {
+  candidates?: Array<{
+    content?: {
+      parts?: GeminiContentPart[]
+    }
+  }>
+}
+
 function buildPrompt(args: {
   field: 'title' | 'description'
   context?: {
@@ -73,13 +82,13 @@ async function generateWithGemini(prompt: string): Promise<string> {
     throw Errors.base.internal(`Gemini API error ${response.status}: ${details}`)
   }
 
-  const payload = (await response.json()) as any
+  const payload = (await response.json()) as GeminiPayload
   const candidate = payload?.candidates?.[0]
   const parts = candidate?.content?.parts
 
   const text = Array.isArray(parts)
     ? parts
-        .map((part: any) => {
+        .map((part) => {
           if (typeof part === 'string') return part
           if (part && typeof part === 'object' && typeof part.text === 'string') return part.text
           return null

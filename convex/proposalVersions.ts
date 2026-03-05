@@ -11,11 +11,29 @@ function generateId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${rand}`
 }
 
+const formScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
+const formLayer1Validator = v.union(
+  formScalarValidator,
+  v.array(formScalarValidator),
+  v.record(v.string(), formScalarValidator),
+)
+const formLayer2Validator = v.union(
+  formLayer1Validator,
+  v.array(formLayer1Validator),
+  v.record(v.string(), formLayer1Validator),
+)
+const formDataValidator = v.record(v.string(), formLayer2Validator)
+
+type FormScalar = string | number | boolean | null
+type FormLayer1 = FormScalar | FormScalar[] | Record<string, FormScalar>
+type FormLayer2 = FormLayer1 | FormLayer1[] | Record<string, FormLayer1>
+type FormData = Record<string, FormLayer2>
+
 const versionRowValidator = v.object({
   legacyId: v.string(),
   proposalLegacyId: v.string(),
   versionNumber: v.number(),
-  formData: v.record(v.string(), v.any()),
+  formData: formDataValidator,
   status: v.string(),
   stepProgress: v.number(),
   changeDescription: v.union(v.string(), v.null()),
@@ -28,7 +46,7 @@ type VersionRow = {
   legacyId: string
   proposalLegacyId: string
   versionNumber: number
-  formData: any
+  formData: FormData
   status: string
   stepProgress: number
   changeDescription: string | null
@@ -37,18 +55,22 @@ type VersionRow = {
   createdAtMs: number
 }
 
-function mapRow(row: any): VersionRow {
+function mapRow(row: unknown): VersionRow {
+  const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
   return {
-    legacyId: String(row.legacyId),
-    proposalLegacyId: String(row.proposalLegacyId),
-    versionNumber: typeof row.versionNumber === 'number' ? row.versionNumber : 1,
-    formData: row.formData ?? {},
-    status: typeof row.status === 'string' ? row.status : 'draft',
-    stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
-    changeDescription: typeof row.changeDescription === 'string' ? row.changeDescription : null,
-    createdBy: typeof row.createdBy === 'string' ? row.createdBy : '',
-    createdByName: typeof row.createdByName === 'string' ? row.createdByName : null,
-    createdAtMs: typeof row.createdAtMs === 'number' ? row.createdAtMs : 0,
+    legacyId: String(record?.legacyId ?? ''),
+    proposalLegacyId: String(record?.proposalLegacyId ?? ''),
+    versionNumber: typeof record?.versionNumber === 'number' ? record.versionNumber : 1,
+    formData:
+      record?.formData && typeof record.formData === 'object' && !Array.isArray(record.formData)
+        ? (record.formData as FormData)
+        : {},
+    status: typeof record?.status === 'string' ? record.status : 'draft',
+    stepProgress: typeof record?.stepProgress === 'number' ? record.stepProgress : 0,
+    changeDescription: typeof record?.changeDescription === 'string' ? record.changeDescription : null,
+    createdBy: typeof record?.createdBy === 'string' ? record.createdBy : '',
+    createdByName: typeof record?.createdByName === 'string' ? record.createdByName : null,
+    createdAtMs: typeof record?.createdAtMs === 'number' ? record.createdAtMs : 0,
   }
 }
 
@@ -273,7 +295,7 @@ export const bulkUpsert = workspaceMutation({
         proposalLegacyId: v.string(),
         legacyId: v.string(),
         versionNumber: v.number(),
-        formData: v.record(v.string(), v.any()),
+        formData: formDataValidator,
         status: v.string(),
         stepProgress: v.number(),
         changeDescription: v.union(v.string(), v.null()),

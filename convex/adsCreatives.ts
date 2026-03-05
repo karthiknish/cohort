@@ -1,7 +1,12 @@
 import { action } from './_generated/server'
+import { api } from './_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 import { optimizeMetaImageUrl } from '../src/services/integrations/meta-ads'
+import type { GoogleCreative } from '../src/services/integrations/google-ads'
+import type { TikTokCreative } from '../src/services/integrations/tiktok-ads'
+import type { LinkedInAd, LinkedInCreative } from '../src/services/integrations/linkedin-ads'
+import type { MetaCreative } from '../src/services/integrations/meta-ads'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -68,7 +73,19 @@ export type NormalizedCreative = {
   instagramPermalinkUrl?: string
 }
 
-function normalizeGoogleCreatives(creatives: any[]): NormalizedCreative[] {
+type CreateCreativeResult = {
+  success: boolean
+  creativeId: string
+  adId?: string
+  status?: 'ACTIVE' | 'PAUSED'
+}
+
+type IdempotencyClaimResult =
+  | { type: 'new' }
+  | { type: 'pending' }
+  | { type: 'completed'; response: unknown; httpStatus: number | null }
+
+function normalizeGoogleCreatives(creatives: GoogleCreative[]): NormalizedCreative[] {
   return creatives.map((c) => ({
     providerId: 'google',
     creativeId: c.adId,
@@ -87,7 +104,7 @@ function normalizeGoogleCreatives(creatives: any[]): NormalizedCreative[] {
   }))
 }
 
-function normalizeTikTokCreatives(creatives: any[]): NormalizedCreative[] {
+function normalizeTikTokCreatives(creatives: TikTokCreative[]): NormalizedCreative[] {
   return creatives.map((c) => ({
     providerId: 'tiktok',
     creativeId: c.adId,
@@ -106,7 +123,7 @@ function normalizeTikTokCreatives(creatives: any[]): NormalizedCreative[] {
   }))
 }
 
-function normalizeLinkedInCreatives(creatives: any[]): NormalizedCreative[] {
+function normalizeLinkedInCreatives(creatives: LinkedInCreative[]): NormalizedCreative[] {
   return creatives.map((c) => ({
     providerId: 'linkedin',
     creativeId: c.creativeId,
@@ -125,7 +142,7 @@ function normalizeLinkedInCreatives(creatives: any[]): NormalizedCreative[] {
   }))
 }
 
-function normalizeLinkedInAds(ads: any[]): NormalizedCreative[] {
+function normalizeLinkedInAds(ads: LinkedInAd[]): NormalizedCreative[] {
   return ads.map((a) => ({
     providerId: 'linkedin',
     creativeId: a.creativeId,
@@ -137,7 +154,7 @@ function normalizeLinkedInAds(ads: any[]): NormalizedCreative[] {
   }))
 }
 
-function normalizeMetaCreatives(creatives: any[]): NormalizedCreative[] {
+function normalizeMetaCreatives(creatives: MetaCreative[]): NormalizedCreative[] {
   return creatives.map((c) => ({
     providerId: 'facebook',
     creativeId: c.adId,
@@ -181,7 +198,7 @@ export const listCreatives = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(api.adsIntegrations.getAdIntegration, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -311,7 +328,7 @@ export const updateCreativeStatus = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(api.adsIntegrations.getAdIntegration, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -426,7 +443,7 @@ export const listMetaPageActors = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(api.adsIntegrations.getAdIntegration, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -466,7 +483,15 @@ export const createCreative = action({
     campaignId: v.string(),
     adSetId: v.optional(v.string()),
     name: v.string(),
-    objectType: v.optional(v.string()),
+    objectType: v.optional(
+      v.union(
+        v.literal('IMAGE'),
+        v.literal('VIDEO'),
+        v.literal('CAROUSEL_IMAGE'),
+        v.literal('CAROUSEL_VIDEO'),
+        v.literal('DYNAMIC_CAROUSEL')
+      )
+    ),
     title: v.optional(v.string()),
     body: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -480,7 +505,7 @@ export const createCreative = action({
     assetFeedSpec: v.optional(v.string()),
     status: v.optional(v.union(v.literal('ACTIVE'), v.literal('PAUSED'))),
   },
-  handler: async (ctx, args) => withErrorHandling(async () => {
+  handler: async (ctx, args): Promise<CreateCreativeResult> => withErrorHandling(async (): Promise<CreateCreativeResult> => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -492,20 +517,15 @@ export const createCreative = action({
     let idempotencyClaimed = false
 
     if (idempotencyKey) {
-      const claimResult = await ctx.runMutation('apiIdempotency:checkAndClaim' as any, {
+      const claimResult = await ctx.runMutation(api.apiIdempotency.checkAndClaim, {
         key: idempotencyKey,
         requestId: `adsCreatives_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
         method: 'ACTION',
         path: 'adsCreatives:createCreative',
-      })
+      }) as IdempotencyClaimResult
 
       if (claimResult.type === 'completed') {
-        return claimResult.response as {
-          success: boolean
-          creativeId: string
-          adId?: string
-          status?: 'ACTIVE' | 'PAUSED'
-        }
+        return claimResult.response as CreateCreativeResult
       }
 
       if (claimResult.type === 'pending') {
@@ -517,7 +537,7 @@ export const createCreative = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(api.adsIntegrations.getAdIntegration, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -531,16 +551,11 @@ export const createCreative = action({
       throw Errors.integration.expired(args.providerId)
     }
 
-    const completeIdempotency = async (response: {
-      success: boolean
-      creativeId: string
-      adId?: string
-      status?: 'ACTIVE' | 'PAUSED'
-    }) => {
+    const completeIdempotency = async (response: CreateCreativeResult) => {
       if (!idempotencyKey || !idempotencyClaimed) return
 
       try {
-        await ctx.runMutation('apiIdempotency:complete' as any, {
+        await ctx.runMutation(api.apiIdempotency.complete, {
           key: idempotencyKey,
           response,
           httpStatus: 200,
@@ -548,7 +563,7 @@ export const createCreative = action({
       } catch (commitError) {
         console.warn('[adsCreatives:createCreative] Failed to persist idempotency completion', commitError)
         try {
-          await ctx.runMutation('apiIdempotency:release' as any, { key: idempotencyKey })
+          await ctx.runMutation(api.apiIdempotency.release, { key: idempotencyKey })
         } catch (releaseAfterCommitError) {
           console.warn('[adsCreatives:createCreative] Failed to release idempotency key after commit failure', releaseAfterCommitError)
         }
@@ -592,7 +607,7 @@ export const createCreative = action({
           accessToken: integration.accessToken,
           adAccountId,
           name: args.name,
-          objectType: (args.objectType as any) || 'IMAGE',
+          objectType: args.objectType ?? 'IMAGE',
           title: args.title,
           body: args.body,
           description: args.description,
@@ -620,7 +635,7 @@ export const createCreative = action({
             adSetId: args.adSetId,
             creativeId: creativeResult.creativeId,
             name: args.name,
-            status: (args.status as any) || 'PAUSED',
+            status: args.status ?? 'PAUSED',
           })
 
           if (!adResult.success) {
@@ -678,7 +693,7 @@ export const createCreative = action({
 
       if (idempotencyKey && idempotencyClaimed) {
         try {
-          await ctx.runMutation('apiIdempotency:release' as any, { key: idempotencyKey })
+          await ctx.runMutation(api.apiIdempotency.release, { key: idempotencyKey })
         } catch (releaseError) {
           console.warn('[adsCreatives:createCreative] Failed to release idempotency key', releaseError)
         }
@@ -712,7 +727,7 @@ export const updateCreative = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(api.adsIntegrations.getAdIntegration, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -772,7 +787,7 @@ export const uploadMedia = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(api.adsIntegrations.getAdIntegration, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

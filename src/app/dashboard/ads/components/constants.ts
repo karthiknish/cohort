@@ -94,13 +94,13 @@ export const ERROR_GUIDANCE = {
   // Platform-specific errors
   NO_AD_ACCOUNTS: {
     title: 'No ad accounts found',
-    message: 'We couldn\'t find any ad accounts linked to your profile.',
+    message: 'We couldn\'t find ad accounts linked to your profile.',
     action: 'Make sure you have admin or advertiser access to at least one ad account.',
   },
   ACCOUNT_SUSPENDED: {
     title: 'Account issue detected',
     message: 'Your ad account may be suspended or have restrictions.',
-    action: 'Check your ad platform for any account alerts.',
+    action: 'Check your ad platform for account alerts.',
   },
   RATE_LIMITED: {
     title: 'Too many attempts',

@@ -23,7 +23,7 @@ function sortParticipantIds(id1: string, id2: string): [string, string] {
 }
 
 async function hydrateAttachments(
-  ctx: any,
+  ctx: { storage: { getUrl: (id: Id<'_storage'>) => Promise<string | null> } },
   attachments: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null,
 ) {
   if (!Array.isArray(attachments) || attachments.length === 0) return attachments
@@ -31,13 +31,13 @@ async function hydrateAttachments(
   const next = await Promise.all(
     attachments.map(async (attachment) => {
       if (!attachment || typeof attachment !== 'object') return attachment
-      const storageId = (attachment as any).storageId
+      const storageId = attachment.storageId
       if (typeof storageId !== 'string' || storageId.length === 0) return attachment
 
       const url = await ctx.storage.getUrl(storageId as Id<'_storage'>)
       return {
-        ...(attachment as any),
-        url: url ?? (attachment as any).url,
+        ...attachment,
+        url: url ?? attachment.url,
       }
     }),
   )
@@ -45,12 +45,14 @@ async function hydrateAttachments(
   return next
 }
 
-async function hydrateMessageRow(ctx: any, row: any) {
-  if (!row || typeof row !== 'object') return row
-  const attachments = Array.isArray((row as any).attachments) ? ((row as any).attachments as any[]) : null
-  const hydrated = await hydrateAttachments(ctx, attachments as any)
+async function hydrateMessageRow<TRow extends { attachments?: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null }>(
+  ctx: { storage: { getUrl: (id: Id<'_storage'>) => Promise<string | null> } },
+  row: TRow,
+): Promise<TRow> {
+  const attachments = Array.isArray(row.attachments) ? row.attachments : null
+  const hydrated = await hydrateAttachments(ctx, attachments)
   if (hydrated === attachments) return row
-  return { ...(row as any), attachments: hydrated }
+  return { ...row, attachments: hydrated }
 }
 
 const attachmentZ = z.object({
@@ -73,7 +75,7 @@ export const getOrCreateConversation = zWorkspaceMutation({
     otherUserName: z.string(),
     otherUserRole: z.string().nullable().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const currentUserName = ctx.user.name ?? 'Unknown'
     const currentUserRole = ctx.user.role ?? null
@@ -82,7 +84,7 @@ export const getOrCreateConversation = zWorkspaceMutation({
     
     const existing = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantOne_participantTwo', (q: any) =>
+      .withIndex('by_workspace_participantOne_participantTwo', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('participantOneId', participantOneId).eq('participantTwoId', participantTwoId)
       )
       .first()
@@ -131,12 +133,12 @@ export const listConversations = zWorkspaceQueryActive({
   args: {
     includeArchived: z.boolean().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const asParticipantOne = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantOne_updatedAtMs', (q: any) =>
+      .withIndex('by_workspace_participantOne_updatedAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId)
       )
       .order('desc')
@@ -144,22 +146,22 @@ export const listConversations = zWorkspaceQueryActive({
 
     const asParticipantTwo = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantTwo_updatedAtMs', (q: any) =>
+      .withIndex('by_workspace_participantTwo_updatedAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId)
       )
       .order('desc')
       .collect()
 
     const allConversations = [...asParticipantOne, ...asParticipantTwo]
-      .filter((conv: any) => {
+      .filter((conv) => {
         if (args.includeArchived) return true
         if (conv.participantOneId === currentUserId && conv.archivedByParticipantOne) return false
         if (conv.participantTwoId === currentUserId && conv.archivedByParticipantTwo) return false
         return true
       })
-      .sort((a: any, b: any) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0))
+      .sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0))
 
-    return allConversations.map((conv: any) => {
+    return allConversations.map((conv) => {
       const isParticipantOne = conv.participantOneId === currentUserId
       const otherParticipantId = isParticipantOne ? conv.participantTwoId : conv.participantOneId
       const otherParticipantName = isParticipantOne ? conv.participantTwoName : conv.participantOneName
@@ -191,10 +193,10 @@ export const listMessages = zWorkspacePaginatedQueryActive({
   args: {
     conversationLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
-    let q: any = ctx.db
+  handler: async (ctx, args) => {
+    let q = ctx.db
       .query('directMessages')
-      .withIndex('by_workspace_conversation_createdAtMs_legacyId', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', args.conversationLegacyId)
       )
       .order('desc')
@@ -204,10 +206,10 @@ export const listMessages = zWorkspacePaginatedQueryActive({
     const limit = args.limit ?? 50
     const rows = await q.take(limit + 1)
     const result = getPaginatedResponse(rows, limit, 'createdAtMs')
-    const items = await Promise.all(result.items.map((row: any) => hydrateMessageRow(ctx, row)))
+    const items = await Promise.all(result.items.map((row) => hydrateMessageRow(ctx, row)))
 
     return {
-      items: items.map((msg: any) => ({
+      items: items.map((msg) => ({
         _id: msg._id,
         legacyId: msg.legacyId,
         senderId: msg.senderId,
@@ -239,14 +241,14 @@ export const sendMessage = zWorkspaceMutation({
     content: z.string(),
     attachments: z.array(attachmentZ).nullable().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const currentUserName = ctx.user.name ?? 'Unknown'
     const currentUserRole = ctx.user.role ?? null
 
     const conversation = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationLegacyId)
       )
       .first()
@@ -308,12 +310,12 @@ export const markAsRead = zWorkspaceMutation({
   args: {
     conversationLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const conversation = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationLegacyId)
       )
       .first()
@@ -330,7 +332,7 @@ export const markAsRead = zWorkspaceMutation({
     }
 
     const now = Date.now()
-    const updates: any = { updatedAtMs: now }
+    const updates: Record<string, unknown> = { updatedAtMs: now }
 
     if (isParticipantOne) {
       updates.readByParticipantOne = true
@@ -344,10 +346,10 @@ export const markAsRead = zWorkspaceMutation({
 
     const unreadMessages = await ctx.db
       .query('directMessages')
-      .withIndex('by_workspace_conversation_createdAtMs_legacyId', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', args.conversationLegacyId)
       )
-      .filter((q: any) => q.neq(q.field('senderId'), currentUserId))
+      .filter((q) => q.neq(q.field('senderId'), currentUserId))
       .collect()
 
     const now2 = Date.now()
@@ -371,12 +373,12 @@ export const editMessage = zWorkspaceMutation({
     messageLegacyId: z.string(),
     newContent: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const message = await ctx.db
       .query('directMessages')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.messageLegacyId)
       )
       .first()
@@ -404,7 +406,7 @@ export const editMessage = zWorkspaceMutation({
     const snippet = args.newContent.length > 100 ? args.newContent.substring(0, 97) + '...' : args.newContent
     const conversation = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', message.conversationLegacyId)
       )
       .first()
@@ -424,12 +426,12 @@ export const deleteMessage = zWorkspaceMutation({
   args: {
     messageLegacyId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const message = await ctx.db
       .query('directMessages')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.messageLegacyId)
       )
       .first()
@@ -459,12 +461,12 @@ export const toggleReaction = zWorkspaceMutation({
     messageLegacyId: z.string(),
     emoji: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const message = await ctx.db
       .query('directMessages')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.messageLegacyId)
       )
       .first()
@@ -477,12 +479,26 @@ export const toggleReaction = zWorkspaceMutation({
       throw Errors.validation.invalidInput('Cannot react to deleted message')
     }
 
-    const reactions = Array.isArray(message.reactions) ? [...message.reactions] : []
-    const existingIndex = reactions.findIndex((r: any) => r.emoji === args.emoji)
+    const reactions = Array.isArray(message.reactions)
+      ? message.reactions
+          .filter(
+            (reaction): reaction is { emoji: string; count: number; userIds: string[] } =>
+              Boolean(reaction) &&
+              typeof reaction.emoji === 'string' &&
+              typeof reaction.count === 'number' &&
+              Array.isArray(reaction.userIds),
+          )
+          .map((reaction) => ({ ...reaction, userIds: [...reaction.userIds] }))
+      : []
+    const existingIndex = reactions.findIndex((r) => r.emoji === args.emoji)
     const now = Date.now()
 
     if (existingIndex >= 0) {
       const reaction = reactions[existingIndex]
+      if (!reaction) {
+        return { success: true }
+      }
+
       const userIds = Array.isArray(reaction.userIds) ? reaction.userIds : []
       
       if (userIds.includes(currentUserId)) {
@@ -513,12 +529,12 @@ export const setArchiveStatus = zWorkspaceMutation({
     conversationLegacyId: z.string(),
     archived: z.boolean(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const conversation = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationLegacyId)
       )
       .first()
@@ -535,7 +551,7 @@ export const setArchiveStatus = zWorkspaceMutation({
     }
 
     const now = Date.now()
-    const updates: any = { updatedAtMs: now }
+    const updates: Record<string, unknown> = { updatedAtMs: now }
 
     if (isParticipantOne) {
       updates.archivedByParticipantOne = args.archived
@@ -554,12 +570,12 @@ export const setMuteStatus = zWorkspaceMutation({
     conversationLegacyId: z.string(),
     muted: z.boolean(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const conversation = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_legacyId', (q: any) =>
+      .withIndex('by_workspace_legacyId', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationLegacyId)
       )
       .first()
@@ -576,7 +592,7 @@ export const setMuteStatus = zWorkspaceMutation({
     }
 
     const now = Date.now()
-    const updates: any = { updatedAtMs: now }
+    const updates: Record<string, unknown> = { updatedAtMs: now }
 
     if (isParticipantOne) {
       updates.mutedByParticipantOne = args.muted
@@ -592,23 +608,23 @@ export const setMuteStatus = zWorkspaceMutation({
 
 export const getUnreadCount = zWorkspaceQuery({
   args: {},
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
     const asParticipantOne = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantOne_updatedAtMs', (q: any) =>
+      .withIndex('by_workspace_participantOne_updatedAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId)
       )
-      .filter((q: any) => q.eq(q.field('readByParticipantOne'), false))
+      .filter((q) => q.eq(q.field('readByParticipantOne'), false))
       .collect()
 
     const asParticipantTwo = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantTwo_updatedAtMs', (q: any) =>
+      .withIndex('by_workspace_participantTwo_updatedAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId)
       )
-      .filter((q: any) => q.eq(q.field('readByParticipantTwo'), false))
+      .filter((q) => q.eq(q.field('readByParticipantTwo'), false))
       .collect()
 
     return asParticipantOne.length + asParticipantTwo.length

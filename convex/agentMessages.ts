@@ -2,6 +2,19 @@ import { v } from 'convex/values'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation } from './functions'
 
+const paramScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
+const paramLayer1Validator = v.union(
+  paramScalarValidator,
+  v.array(paramScalarValidator),
+  v.record(v.string(), paramScalarValidator),
+)
+const paramLayer2Validator = v.union(
+  paramLayer1Validator,
+  v.array(paramLayer1Validator),
+  v.record(v.string(), paramLayer1Validator),
+)
+const paramRecordValidator = v.record(v.string(), paramLayer2Validator)
+
 export const upsert = workspaceMutation({
   args: {
     conversationLegacyId: v.string(),
@@ -15,8 +28,8 @@ export const upsert = workspaceMutation({
     action: v.union(v.string(), v.null()),
     route: v.union(v.string(), v.null()),
     operation: v.union(v.string(), v.null()),
-    params: v.union(v.record(v.string(), v.any()), v.null()),
-    executeResult: v.union(v.record(v.string(), v.any()), v.null()),
+    params: v.union(paramRecordValidator, v.null()),
+    executeResult: v.union(paramRecordValidator, v.null()),
   },
   returns: v.object({
     ok: v.literal(true),
@@ -80,8 +93,8 @@ export const listByConversation = workspaceQuery({
         route: v.union(v.string(), v.null()),
         action: v.union(v.string(), v.null()),
         operation: v.union(v.string(), v.null()),
-        params: v.union(v.record(v.string(), v.any()), v.null()),
-        executeResult: v.union(v.record(v.string(), v.any()), v.null()),
+        params: v.union(paramRecordValidator, v.null()),
+        executeResult: v.union(paramRecordValidator, v.null()),
       })
     ),
   }),

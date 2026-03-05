@@ -1,10 +1,12 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import type { FunctionReference } from 'convex/server'
 
 import { appendMetaAuthParams, calculateMetaAdsInsights, coerceNumber, META_API_BASE } from '@/services/integrations/meta-ads'
 import type { MetaInsightsResponse, MetaInsightsRow } from '@/services/integrations/meta-ads'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import { Errors, withErrorHandling } from './errors'
+import { getAdIntegrationInternal } from './adsIntegrations'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -38,6 +40,37 @@ type SeriesRow = {
   reach: number | null
 }
 
+type AdIntegrationForInsights = {
+  accessToken: string | null
+  accountId: string | null
+  currency: string | null
+}
+
+type CampaignInsightsResult = {
+  providerId: 'facebook'
+  campaignId: string
+  startDate: string
+  endDate: string
+  totals: {
+    spend: number
+    impressions: number
+    clicks: number
+    conversions: number
+    revenue: number
+    reach: number | null
+  }
+  series: SeriesRow[]
+  insights: ReturnType<typeof calculateMetaAdsInsights>
+  currency: string
+}
+
+const getAdIntegrationInternalRef = getAdIntegrationInternal as unknown as FunctionReference<
+  'query',
+  'internal',
+  { workspaceId: string; providerId: string; clientId?: string | null },
+  AdIntegrationForInsights
+>
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
 }
@@ -51,7 +84,7 @@ export const getCampaignInsights = action({
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
   },
-  handler: async (ctx, args) => withErrorHandling(async () => {
+  handler: async (ctx, args): Promise<CampaignInsightsResult> => withErrorHandling(async (): Promise<CampaignInsightsResult> => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
@@ -68,7 +101,7 @@ export const getCampaignInsights = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(getAdIntegrationInternalRef, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

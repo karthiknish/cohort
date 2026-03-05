@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiError, apiSuccess, createApiHandler } from '@/lib/api-handler'
+import type { AuthResult } from '@/lib/server-auth'
+import { api as convexApi } from '../../../../convex/_generated/api'
 
 export const GET = createApiHandler(
   {
@@ -15,21 +17,23 @@ export const GET = createApiHandler(
       const checkStart = Date.now()
       const { createConvexAdminClient } = await import('@/lib/convex-admin')
 
+      const healthAuth: AuthResult = {
+        uid: 'healthcheck',
+        email: null,
+        name: null,
+        claims: { provider: 'system', role: 'admin' },
+        isCron: true,
+      }
+
       const convex = createConvexAdminClient({
-        auth: {
-          uid: 'healthcheck',
-          email: null,
-          name: null,
-          claims: { provider: 'system', role: 'admin' },
-          isCron: true,
-        } as any,
+        auth: healthAuth,
       })
 
       if (!convex) {
         throw new Error('Convex admin client is not configured')
       }
 
-      await convex.query('health:ping' as any, {})
+      await convex.query(convexApi.health.ping, {})
 
       checks.convex = {
         status: 'ok',

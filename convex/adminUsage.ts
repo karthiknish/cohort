@@ -66,15 +66,15 @@ export const getStats = adminQuery({
     ])
 
     const totalProjects = projects.length
-    const projectsThisWeek = projects.filter((p: any) => (p.createdAtMs ?? 0) >= weekAgoMs).length
+    const projectsThisWeek = projects.filter((p) => (p.createdAtMs ?? 0) >= weekAgoMs).length
 
     const totalTasks = tasks.length
-    const tasksCompletedThisWeek = tasks.filter((t: any) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs).length
+    const tasksCompletedThisWeek = tasks.filter((t) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs).length
 
     const totalClients = clients.length
 
     const agentConversations = conversations.length
-    const agentActionsThisWeek = conversations.filter((c: any) => (c.createdAtMs ?? 0) >= weekAgoMs).length
+  const agentActionsThisWeek = conversations.filter((c) => (c.createdAt ?? 0) >= weekAgoMs).length
 
     const dailyActiveUsers: Array<{ date: string; count: number }> = []
     for (let i = 6; i >= 0; i--) {

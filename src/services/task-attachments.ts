@@ -1,4 +1,5 @@
 import type { TaskAttachment } from '@/types/tasks'
+import type { PendingAttachment } from '@/app/dashboard/collaboration/hooks/types'
 
 const ALLOWED_TASK_ATTACHMENT_MIME_TYPES = new Set<string>([
   'image/png',
@@ -21,13 +22,7 @@ const ALLOWED_TASK_ATTACHMENT_MIME_TYPES = new Set<string>([
 
 const MAX_TASK_ATTACHMENT_BYTES = 15 * 1024 * 1024
 
-export type PendingTaskAttachment = {
-  id: string
-  file: File
-  name: string
-  mimeType: string
-  sizeLabel: string
-}
+export type PendingTaskAttachment = PendingAttachment
 
 function formatFileSize(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '1 KB'

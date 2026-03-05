@@ -14,6 +14,17 @@ import type { WorkspaceNotificationInput, WorkspaceNotificationRecipients } from
 
 // Lazy-init Convex client with admin auth
 let _convexClient: ConvexHttpClient | null = null
+
+type AdminAuthClient = ConvexHttpClient & {
+  setAdminAuth?: (
+    token: string,
+    identity: {
+      issuer: string
+      subject: string
+    }
+  ) => void
+}
+
 function getConvexClient(): ConvexHttpClient | null {
   if (_convexClient) return _convexClient
   const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
@@ -26,7 +37,7 @@ function getConvexClient(): ConvexHttpClient | null {
   if (!url || !deployKey) return null
   _convexClient = new ConvexHttpClient(url)
   // Set admin auth for server-side mutations
-  ;(_convexClient as any).setAdminAuth(deployKey, {
+  ;(_convexClient as AdminAuthClient).setAdminAuth?.(deployKey, {
     issuer: 'system',
     subject: 'notification-service',
   })

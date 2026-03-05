@@ -132,7 +132,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
 
     void listCreatives({
         workspaceId,
-        providerId: providerId as any,
+        providerId,
         clientId: null,
       })
 

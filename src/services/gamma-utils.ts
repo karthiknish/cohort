@@ -19,7 +19,7 @@ export type GammaDeckPayload = {
   pdfStorageId: string | null
 }
 
-const FALLBACK_GAMMA_INSTRUCTIONS = `Slide 1: Executive Summary\nSlide 2: Objectives & KPIs\nSlide 3: Strategy Overview\nSlide 4: Budget Allocation (distribute 100% across channels and note any testing allowance)\nSlide 5: Execution Roadmap\nSlide 6: Optimization & Testing\nSlide 7: Next Steps & Call-to-Action`
+const FALLBACK_GAMMA_INSTRUCTIONS = `Slide 1: Executive Summary\nSlide 2: Objectives & KPIs\nSlide 3: Strategy Overview\nSlide 4: Budget Allocation (distribute 100% across channels and note a testing allowance)\nSlide 5: Execution Roadmap\nSlide 6: Optimization & Testing\nSlide 7: Next Steps & Call-to-Action`
 
 function normalizeGammaFileType(value: string): string {
   const lower = value.toLowerCase()
@@ -47,11 +47,15 @@ export function parseGammaDeckPayload(value: unknown): GammaDeckPayload | null {
     pptxUrl: typeof record.pptxUrl === 'string' ? record.pptxUrl : null,
     pdfUrl: typeof record.pdfUrl === 'string' ? record.pdfUrl : null,
     generatedFiles: Array.isArray(record.generatedFiles)
-      ? (record.generatedFiles as Array<any>)
-          .map((entry) => ({
-            fileType: typeof entry?.fileType === 'string' ? normalizeGammaFileType(entry.fileType) : '',
-            fileUrl: typeof entry?.fileUrl === 'string' ? entry.fileUrl : '',
-          }))
+      ? record.generatedFiles
+          .map((entry) => {
+            const fileRecord = entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : null
+            return {
+              fileType:
+                typeof fileRecord?.fileType === 'string' ? normalizeGammaFileType(fileRecord.fileType) : '',
+              fileUrl: typeof fileRecord?.fileUrl === 'string' ? fileRecord.fileUrl : '',
+            }
+          })
           .filter((entry) => entry.fileType && entry.fileUrl)
       : [],
     pptStorageId: typeof record.pptStorageId === 'string' ? record.pptStorageId : null,
@@ -154,18 +158,21 @@ async function findGammaFileInternal(args: {
   fileType: 'pptx' | 'pdf'
 }): Promise<NormalizedGammaFile | null> {
   const status = (await gammaService.getGeneration(args.generationId)) as GammaGenerationStatus
-  const files = Array.isArray((status as any)?.generatedFiles) ? ((status as any).generatedFiles as any[]) : []
+  const statusRecord =
+    status && typeof status === 'object' ? (status as unknown as Record<string, unknown>) : null
+  const files = Array.isArray(statusRecord?.generatedFiles) ? statusRecord.generatedFiles : []
 
   for (const file of files) {
-    if (!file) continue
-    const normalizedType = normalizeGammaFileType(String(file.fileType ?? ''))
-    const url = typeof file.fileUrl === 'string' ? file.fileUrl : ''
+    const fileRecord = file && typeof file === 'object' ? (file as Record<string, unknown>) : null
+    if (!fileRecord) continue
+    const normalizedType = normalizeGammaFileType(String(fileRecord.fileType ?? ''))
+    const url = typeof fileRecord.fileUrl === 'string' ? fileRecord.fileUrl : ''
     if (normalizedType === args.fileType && url) {
       return { fileType: normalizedType, fileUrl: url }
     }
   }
 
-  const directUrl = args.fileType === 'pptx' ? (status as any)?.pptxUrl : (status as any)?.pdfUrl
+  const directUrl = args.fileType === 'pptx' ? statusRecord?.pptxUrl : statusRecord?.pdfUrl
   if (typeof directUrl === 'string' && directUrl) {
     return { fileType: args.fileType, fileUrl: directUrl }
   }

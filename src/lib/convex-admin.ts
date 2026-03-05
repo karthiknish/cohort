@@ -6,6 +6,17 @@ export type ConvexAdminClientOptions = {
   auth: AuthResult
 }
 
+type AdminIdentity = {
+  issuer: string
+  subject: string
+  email?: string
+  name?: string
+} & Record<string, unknown>
+
+type ConvexAdminHttpClient = ConvexHttpClient & {
+  setAdminAuth: (deployKey: string, identity: AdminIdentity) => void
+}
+
 function getConvexDeploymentUrl(): string | null {
   return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? null
 }
@@ -37,7 +48,8 @@ export function createConvexAdminClient({ auth }: ConvexAdminClientOptions): Con
   const issuer = provider === 'better-auth' ? 'better-auth' : provider
   const subject = auth.uid ?? 'anonymous'
 
-  ;(client as any).setAdminAuth(deployKey, {
+  const adminClient = client as unknown as ConvexAdminHttpClient
+  adminClient.setAdminAuth(deployKey, {
     issuer,
     subject,
     email: auth.email ?? undefined,

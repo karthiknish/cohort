@@ -253,7 +253,7 @@ export function CreateTaskSheet({
 
               {pendingAttachments.length > 0 ? (
                 <PendingAttachmentsList
-                  attachments={pendingAttachments as any}
+                  attachments={pendingAttachments}
                   uploading={creating}
                   onRemove={onRemoveAttachment}
                 />

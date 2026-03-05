@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
+import type { Id } from '../../../../convex/_generated/dataModel'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
@@ -22,6 +23,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+
+type FeatureRow = {
+  id: string
+  title: string
+  description: string
+  status: FeatureStatus
+  priority: FeaturePriority
+  imageUrl: string | null
+  references: FeatureReference[]
+  createdAtMs: number
+  updatedAtMs: number
+}
+
+type FeatureDocId = Id<'platformFeatures'>
+
+function toFeatureDocId(value: string): FeatureDocId {
+  return value as unknown as FeatureDocId
+}
 
 export default function AdminFeaturesPage() {
   // Convex identity auth is handled by Convex client.
@@ -47,8 +66,8 @@ export default function AdminFeaturesPage() {
   const deleteFeature = useMutation(api.adminFeatures.deleteFeature)
 
   const features: FeatureItem[] = useMemo(() => {
-    const raw = featuresResponse?.features ?? []
-    return raw.map((row: any) => ({
+    const raw = (featuresResponse?.features ?? []) as FeatureRow[]
+    return raw.map((row) => ({
       id: row.id,
       title: row.title,
       description: row.description,
@@ -95,7 +114,7 @@ export default function AdminFeaturesPage() {
 
     setIsDeleting(true)
 
-    void deleteFeature({ id: featureToDelete.id as any })
+    void deleteFeature({ id: toFeatureDocId(featureToDelete.id) })
       .then(() => {
         toast({
           title: 'Feature deleted',
@@ -123,7 +142,7 @@ export default function AdminFeaturesPage() {
       const feature = features.find((f) => f.id === featureId)
       if (!feature || feature.status === newStatus) return
 
-      void updateFeature({ id: featureId as any, status: newStatus as any })
+      void updateFeature({ id: toFeatureDocId(featureId), status: newStatus })
         .then(() => {
           toast({
             title: 'Status updated',
@@ -156,19 +175,19 @@ export default function AdminFeaturesPage() {
 
       const operation = editingFeature
         ? updateFeature({
-            id: editingFeature.id as any,
+            id: toFeatureDocId(editingFeature.id),
             title: data.title,
             description: data.description,
-            status: data.status as any,
-            priority: data.priority as any,
+            status: data.status,
+            priority: data.priority,
             imageUrl: data.imageUrl,
             references: data.references,
           })
         : createFeature({
             title: data.title,
             description: data.description,
-            status: data.status as any,
-            priority: data.priority as any,
+            status: data.status,
+            priority: data.priority,
             imageUrl: data.imageUrl,
             references: data.references,
           })

@@ -251,7 +251,7 @@ export function analyzeAllTrends(dataPoints: MetricDataPoint[]): Record<string, 
  */
 export function getTrendChartData(
   dataPoints: MetricDataPoint[],
-  metricKey: string
+  metricKey: 'spend' | 'revenue' | 'clicks' | 'conversions' | 'impressions' | 'roas'
 ): { date: string; actual: number; trend: number; forecast?: number }[] {
   const sorted = [...dataPoints].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -261,16 +261,19 @@ export function getTrendChartData(
     if (metricKey === 'roas') {
       return d.spend > 0 ? d.revenue / d.spend : 0
     }
-    return (d as any)[metricKey] || 0
+    return d[metricKey]
   })
 
   const { slope, intercept } = linearRegression(values)
   const ema = exponentialMovingAverage(values)
 
-  return sorted.map((d, i) => ({
-    date: d.date,
-    actual: values[i],
-    trend: ema[i] || values[i],
-    forecast: i === sorted.length - 1 ? intercept + slope * (i + 7) : undefined,
-  }))
+  return sorted.map((d, i) => {
+    const actual = values[i] ?? 0
+    return {
+      date: d.date,
+      actual,
+      trend: ema[i] ?? actual,
+      forecast: i === sorted.length - 1 ? intercept + slope * (i + 7) : undefined,
+    }
+  })
 }

@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useMutation } from 'convex/react'
-import { collaborationApi } from '@/lib/convex-api'
+import { api as generatedApi } from '../../../../../convex/_generated/api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
@@ -73,8 +73,8 @@ interface PinnedMessageItemProps {
 
 function PinnedMessageItem({ message, workspaceId, userId, onClick }: PinnedMessageItemProps) {
   const { toast } = useToast()
-  const pinMessage = useMutation((collaborationApi as any).pinMessage)
-  const unpinMessage = useMutation((collaborationApi as any).unpinMessage)
+  const pinMessage = useMutation(generatedApi.collaborationMessages.pinMessage)
+  const unpinMessage = useMutation(generatedApi.collaborationMessages.unpinMessage)
 
   const [isPinning, setIsPinning] = useState(false)
   const [isUnpinning, setIsUnpinning] = useState(false)
@@ -199,8 +199,8 @@ export function PinMessageButton({
   className?: string
 }) {
   const { toast } = useToast()
-  const pinMessageMutation = useMutation((collaborationApi as any).pinMessage)
-  const unpinMessageMutation = useMutation((collaborationApi as any).unpinMessage)
+  const pinMessageMutation = useMutation(generatedApi.collaborationMessages.pinMessage)
+  const unpinMessageMutation = useMutation(generatedApi.collaborationMessages.unpinMessage)
 
   const [isLoading, setIsLoading] = useState(false)
 

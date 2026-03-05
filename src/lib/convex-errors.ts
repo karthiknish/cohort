@@ -7,7 +7,7 @@ import { ConvexError } from 'convex/values'
 export type AppErrorData = {
   code: string
   message: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 }
 
 /**
@@ -29,7 +29,7 @@ export function logError(error: unknown, context?: string): void {
 }
 
 /**
- * Extract a user-friendly error message from any error,
+ * Extract a user-friendly error message from unknown error values,
  * including standardized ConvexError objects.
  */
 export function asErrorMessage(error: unknown): string {
@@ -60,7 +60,7 @@ export function extractErrorCode(error: unknown): string | null {
 /**
  * Extract the details from a ConvexError.
  */
-export function extractErrorDetails(error: unknown): Record<string, any> | null {
+export function extractErrorDetails(error: unknown): Record<string, unknown> | null {
   if (error instanceof ConvexError) {
     const data = error.data as AppErrorData
     return data?.details ?? null

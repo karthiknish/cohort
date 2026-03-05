@@ -1,4 +1,5 @@
 import { action } from './_generated/server'
+import { internal } from './_generated/api'
 import { v } from 'convex/values'
 import { ErrorCode, Errors, isAppError, withErrorHandling } from './errors'
 
@@ -54,6 +55,14 @@ export type NormalizedTargeting = {
     audienceNetwork?: string[]
     messenger?: string[]
   }
+}
+
+type IntegrationRecord = {
+  accessToken?: string | null
+  accessTokenExpiresAtMs?: number | null
+  accountId?: string | null
+  developerToken?: string | null
+  loginCustomerId?: string | null
 }
 
 function buildInsights(targeting: NormalizedTargeting[]) {
@@ -232,13 +241,13 @@ export const getTargeting = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    let integration: any
+    let integration: IntegrationRecord
     try {
-      integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+      integration = (await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
         workspaceId: args.workspaceId,
         providerId: args.providerId,
         clientId,
-      })
+      })) as IntegrationRecord
     } catch (error) {
       if (isAppError(error, ErrorCode.RESOURCE.NOT_FOUND)) {
         const targeting: NormalizedTargeting[] = []

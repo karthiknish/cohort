@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -11,7 +11,6 @@ import {
   Trash2,
 } from 'lucide-react'
 import { format } from 'date-fns'
-import { useAuth } from '@/contexts/auth-context'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import {
@@ -44,16 +43,18 @@ import { cn } from '@/lib/utils'
 
 interface ProblemReport {
   id: string
-  userId: string
-  userEmail: string
-  userName: string
+  userId: string | null
+  userEmail: string | null
+  userName: string | null
   workspaceId: string | null
   title: string
   description: string
-  severity: 'low' | 'medium' | 'high' | 'critical'
-  status: 'open' | 'in-progress' | 'resolved'
-  createdAt: any
-  updatedAt: any
+  severity: string
+  status: string
+  fixed: boolean | null
+  resolution: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export default function AdminIssuesPage() {
@@ -66,7 +67,7 @@ export default function AdminIssuesPage() {
   const reports = useQuery(api.problemReports.list, {
     status: statusFilter === 'all' ? null : statusFilter,
     limit: 200,
-  })
+  }) as ProblemReport[] | undefined
 
   const updateReport = useMutation(api.problemReports.update)
   const removeReport = useMutation(api.problemReports.remove)
@@ -110,7 +111,7 @@ export default function AdminIssuesPage() {
       })
   }
 
-  const filteredReports = (reports ?? []).filter((r) => {
+  const filteredReports = (reports ?? []).filter((r: ProblemReport) => {
     const search = searchTerm.toLowerCase()
     return (
       r.title.toLowerCase().includes(search) ||
@@ -138,9 +139,9 @@ export default function AdminIssuesPage() {
     }
   }
 
-  const formatDate = (date: any) => {
+  const formatDate = (date: string | null) => {
     if (!date) return 'N/A'
-    const parsed = typeof date === 'string' ? new Date(date) : new Date(date)
+    const parsed = new Date(date)
     return format(parsed, 'MMM d, h:mm a')
   }
 
@@ -207,7 +208,7 @@ export default function AdminIssuesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReports.map((report) => (
+                  {filteredReports.map((report: ProblemReport) => (
                     <TableRow key={report.id}>
                       <TableCell className="max-w-[300px]">
                         <div className="font-medium">{report.title}</div>

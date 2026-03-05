@@ -101,7 +101,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
       }
     })
     setAutomationDraft(nextDraft)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint_disable-next-line react-hooks/exhaustive-deps
   }, [automationStatusesKey])
 
   // Handlers

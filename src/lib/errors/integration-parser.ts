@@ -37,6 +37,30 @@ interface ParsedPayload {
     traceId?: string
 }
 
+type UnknownRecord = Record<string, unknown>
+
+function asRecord(value: unknown): UnknownRecord | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return null
+    }
+    return value as UnknownRecord
+}
+
+function asString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined
+}
+
+function asNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined
+}
+
+function asCode(value: unknown): number | string | undefined {
+    if (typeof value === 'number' || typeof value === 'string') {
+        return value
+    }
+    return undefined
+}
+
 function extractMetaPayload(payload: unknown): ParsedPayload {
     // Handle null/undefined payload - log for debugging
     if (payload == null) {
@@ -50,37 +74,42 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
         return { message: payload.slice(0, 200) || 'Meta API error' }
     }
 
-    const data = payload as any
+    const data = asRecord(payload)
+    if (!data) {
+        return { message: 'Meta API error' }
+    }
 
     // Check for standard Meta error format
-    if (data.error) {
-        const error = data.error
+    const error = asRecord(data.error)
+    if (error) {
         return {
-            message: String(error.message || error.error_user_msg || 'Meta API error'),
-            code: error.code as number | undefined,
-            subcode: error.error_subcode as number | undefined,
-            type: error.type as string | undefined,
-            traceId: error.fbtrace_id as string | undefined,
+            message: String(asString(error.message) || asString(error.error_user_msg) || 'Meta API error'),
+            code: asCode(error.code),
+            subcode: asNumber(error.error_subcode),
+            type: asString(error.type),
+            traceId: asString(error.fbtrace_id),
         }
     }
 
     // Check for alternate error format (data.error_code, data.error_msg)
-    if (data.error_code) {
+    const errorCode = asCode(data.error_code)
+    if (errorCode !== undefined) {
         return {
-            message: String(data.error_msg || data.error_message || 'Meta API error'),
-            code: data.error_code as number | undefined,
+            message: String(asString(data.error_msg) || asString(data.error_message) || 'Meta API error'),
+            code: errorCode,
         }
     }
 
     // Check for response-level errors
-    if (data.code && data.code !== 200) {
+    const responseCode = asCode(data.code)
+    if (responseCode !== undefined && responseCode !== 200 && responseCode !== '200') {
         return {
-            message: String(data.message || data.error_description || 'Meta API request failed'),
-            code: data.code,
+            message: String(asString(data.message) || asString(data.error_description) || 'Meta API request failed'),
+            code: responseCode,
         }
     }
 
-    // Fallback: search for any "message" or "error" related string
+    // Fallback: search for generic message/error strings
     if (data.message && typeof data.message === 'string') {
         return { message: data.message }
     }
@@ -288,7 +317,7 @@ export async function readResponsePayloadSafe(response: Response): Promise<unkno
 }
 
 /**
- * Parse response errors for any platform
+ * Parse response errors for all platforms
  */
 export async function parseResponseError(
     response: Response,

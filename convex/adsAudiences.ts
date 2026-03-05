@@ -54,8 +54,9 @@ export const createAudience = action({
     requireIdentity(identity)
 
     const clientId = normalizeClientId(args.clientId ?? null)
+    const { internal } = await import('./_generated/api')
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import type { MutationCtx } from './_generated/server'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation } from './functions'
 
@@ -7,10 +8,23 @@ function generateId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${rand}`
 }
 
-async function unsetOtherDefaults(ctx: any, workspaceId: string, excludeLegacyId?: string | null) {
+const formDataLeafValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
+const formDataLevel1Validator = v.union(
+  formDataLeafValidator,
+  v.array(formDataLeafValidator),
+  v.record(v.string(), formDataLeafValidator)
+)
+const formDataValueValidator = v.union(
+  formDataLevel1Validator,
+  v.array(formDataLevel1Validator),
+  v.record(v.string(), formDataLevel1Validator)
+)
+const formDataValidator = v.record(v.string(), formDataValueValidator)
+
+async function unsetOtherDefaults(ctx: Pick<MutationCtx, 'db'>, workspaceId: string, excludeLegacyId?: string | null) {
   const defaults = await ctx.db
     .query('proposalTemplates')
-    .withIndex('by_workspace_isDefault', (q: any) => q.eq('workspaceId', workspaceId).eq('isDefault', true))
+    .withIndex('by_workspace_isDefault', (q) => q.eq('workspaceId', workspaceId).eq('isDefault', true))
     .collect()
 
   for (const row of defaults) {
@@ -26,7 +40,7 @@ export const list = workspaceQuery({
       legacyId: v.string(),
       name: v.string(),
       description: v.union(v.string(), v.null()),
-      formData: v.record(v.string(), v.any()),
+      formData: formDataValidator,
       industry: v.union(v.string(), v.null()),
       tags: v.array(v.string()),
       isDefault: v.boolean(),
@@ -42,7 +56,7 @@ export const list = workspaceQuery({
       .order('desc')
       .take(args.limit)
 
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       legacyId: row.legacyId,
       name: row.name,
       description: row.description,
@@ -65,7 +79,7 @@ export const count = workspaceQuery({
   handler: async (ctx, args) => {
     const rows = await ctx.db
       .query('proposalTemplates')
-      .withIndex('by_workspace_createdAtMs_legacyId', (q: any) => q.eq('workspaceId', args.workspaceId))
+      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
       .collect()
 
     return { count: rows.length }
@@ -80,7 +94,7 @@ export const getByLegacyId = workspaceQuery({
       legacyId: v.string(),
       name: v.string(),
       description: v.union(v.string(), v.null()),
-      formData: v.record(v.string(), v.any()),
+      formData: formDataValidator,
       industry: v.union(v.string(), v.null()),
       tags: v.array(v.string()),
       isDefault: v.boolean(),
@@ -115,7 +129,7 @@ export const create = workspaceMutation({
   args: {
     name: v.string(),
     description: v.union(v.string(), v.null()),
-    formData: v.record(v.string(), v.any()),
+    formData: formDataValidator,
     industry: v.union(v.string(), v.null()),
     tags: v.array(v.string()),
     isDefault: v.boolean(),
@@ -165,7 +179,7 @@ export const update = workspaceMutation({
     legacyId: v.string(),
     name: v.optional(v.string()),
     description: v.optional(v.union(v.string(), v.null())),
-    formData: v.optional(v.record(v.string(), v.any())),
+    formData: v.optional(formDataValidator),
     industry: v.optional(v.union(v.string(), v.null())),
     tags: v.optional(v.array(v.string())),
     isDefault: v.optional(v.boolean()),
@@ -229,7 +243,7 @@ export const bulkUpsert = workspaceMutation({
         legacyId: v.string(),
         name: v.string(),
         description: v.union(v.string(), v.null()),
-        formData: v.record(v.string(), v.any()),
+        formData: formDataValidator,
         industry: v.union(v.string(), v.null()),
         tags: v.array(v.string()),
         isDefault: v.boolean(),
@@ -245,7 +259,7 @@ export const bulkUpsert = workspaceMutation({
   handler: async (ctx, args) => {
     let upserted = 0
 
-    // First, if any incoming template isDefault=true, ensure uniqueness.
+    // First, if at least one incoming template isDefault=true, ensure uniqueness.
     const defaultByWorkspace = new Set<string>()
     for (const tpl of args.templates) {
       if (tpl.isDefault) defaultByWorkspace.add(tpl.workspaceId)

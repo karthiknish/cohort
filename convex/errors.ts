@@ -141,7 +141,7 @@ export const Errors = {
 }
 
 /**
- * Extract a user-friendly error message from any error.
+ * Extract a user-friendly error message from an unknown error.
  */
 export function asErrorMessage(error: unknown): string {
   if (error instanceof ConvexError) {
@@ -168,7 +168,7 @@ export function isAppError(error: unknown, code?: string): error is ConvexError<
 }
 
 /**
- * Check if error is a rate limit error from any platform.
+ * Check if error is a rate limit error across supported platforms.
  */
 function isRateLimitError(error: unknown): boolean {
   if (error instanceof ConvexError) {

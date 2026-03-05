@@ -13,6 +13,7 @@ import {
   enrichSummaryWithMetrics,
   type AdMetricsSummary,
   type AlgorithmicInsight,
+  type EnrichedMetricsSummary,
 } from '../src/lib/ad-algorithms'
 
 interface MetricRecord {
@@ -89,7 +90,7 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
   return Array.from(map.values())
 }
 
-function buildInsightPrompt(summary: any) {
+function buildInsightPrompt(summary: EnrichedMetricsSummary) {
   return `You are an expert marketing analyst. Provide a concise, actionable summary for the following ad platform.
 
 Platform: ${summary.providerId}
@@ -111,7 +112,7 @@ Include:
 Keep it under 120 words.`
 }
 
-function buildComparisonPrompt(google: any, meta: any) {
+function buildComparisonPrompt(google: EnrichedMetricsSummary, meta: EnrichedMetricsSummary) {
   return `You are an expert marketing analyst. Compare the performance of Google Ads and Meta (Facebook) Ads based on the following data.
 
 Google Ads:
@@ -197,12 +198,11 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
 
   const googleSummary = summaries.find((s) => s.providerId === 'google')
   const metaSummary = summaries.find((s) => s.providerId === 'facebook')
+  const googleEnrichedSummary = enrichedSummaries.find((s) => s.providerId === 'google')
+  const metaEnrichedSummary = enrichedSummaries.find((s) => s.providerId === 'facebook')
 
-  if (googleSummary && metaSummary) {
-    const prompt = buildComparisonPrompt(
-      enrichedSummaries.find(s => s.providerId === 'google'),
-      enrichedSummaries.find(s => s.providerId === 'facebook')
-    )
+  if (googleSummary && metaSummary && googleEnrichedSummary && metaEnrichedSummary) {
+    const prompt = buildComparisonPrompt(googleEnrichedSummary, metaEnrichedSummary)
     try {
       const content = await geminiAI.generateContent(prompt)
       insights.push({ providerId: 'google_vs_facebook', summary: content })
@@ -272,18 +272,23 @@ export const generateInsights = action({
         limit: 150,
       })
 
-      const records: MetricRecord[] = (metrics as any[])
-        .map((row) => ({
-          providerId: typeof row.providerId === 'string' ? row.providerId : 'unknown',
-          date: typeof row.date === 'string' ? row.date : 'unknown',
-          spend: Number(row.spend ?? 0),
-          impressions: Number(row.impressions ?? 0),
-          clicks: Number(row.clicks ?? 0),
-          conversions: Number(row.conversions ?? 0),
-          revenue: row.revenue !== undefined && row.revenue !== null ? Number(row.revenue) : null,
-          createdAt: toISO(row.createdAtMs ?? null),
-          clientId: typeof row.clientId === 'string' ? row.clientId : null,
-        }))
+      const metricRows = Array.isArray(metrics) ? metrics : []
+
+      const records: MetricRecord[] = metricRows
+        .map((row) => {
+          const record = row && typeof row === 'object' ? (row as Record<string, unknown>) : null
+          return {
+            providerId: typeof record?.providerId === 'string' ? record.providerId : 'unknown',
+            date: typeof record?.date === 'string' ? record.date : 'unknown',
+            spend: Number(record?.spend ?? 0),
+            impressions: Number(record?.impressions ?? 0),
+            clicks: Number(record?.clicks ?? 0),
+            conversions: Number(record?.conversions ?? 0),
+            revenue: record?.revenue !== undefined && record.revenue !== null ? Number(record.revenue) : null,
+            createdAt: toISO(typeof record?.createdAtMs === 'number' ? record.createdAtMs : null),
+            clientId: typeof record?.clientId === 'string' ? record.clientId : null,
+          }
+        })
         .filter((metric) => {
           if (!metric.date) return false
           const metricDate = new Date(metric.date).getTime()

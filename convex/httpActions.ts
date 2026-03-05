@@ -28,7 +28,7 @@ export const adSyncNotification = httpAction(async (ctx, request) => {
     }
   }
 
-  const payload = await request.json().catch(() => null) as any
+  const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null
 
   const workspaceId = typeof payload?.workspaceId === 'string' ? payload.workspaceId : null
   const providerId = typeof payload?.providerId === 'string' ? payload.providerId : null

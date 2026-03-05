@@ -47,6 +47,7 @@ export async function listLinkedInCampaigns(options: {
       id?: string
       name?: string
       status?: string
+      campaignGroup?: string
       dailyBudget?: { amount?: string; currencyCode?: string }
       totalBudget?: { amount?: string; currencyCode?: string }
       costType?: string
@@ -66,7 +67,7 @@ export async function listLinkedInCampaigns(options: {
 
   const elements = Array.isArray(payload?.elements) ? payload.elements : []
 
-  return elements.map((item: any) => {
+  return elements.map((item) => {
     const id = typeof item.id === 'string' ? item.id.replace('urn:li:sponsoredCampaign:', '') : ''
     const campaignGroupId = item.campaignGroup?.replace('urn:li:sponsoredCampaignGroup:', '')
 

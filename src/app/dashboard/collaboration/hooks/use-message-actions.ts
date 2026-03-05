@@ -29,9 +29,9 @@ export function useMessageActions({
 }: UseMessageActionsOptions) {
   const { toast } = useToast()
 
-  const updateMessage = useMutation((collaborationApi as any).updateMessage)
-  const softDeleteMessage = useMutation((collaborationApi as any).softDeleteMessage)
-  const toggleReaction = useMutation((collaborationApi as any).toggleReaction)
+  const updateMessage = useMutation(collaborationApi.updateMessage)
+  const softDeleteMessage = useMutation(collaborationApi.softDeleteMessage)
+  const toggleReaction = useMutation(collaborationApi.toggleReaction)
 
   const [messageUpdatingId, setMessageUpdatingId] = useState<string | null>(null)
   const [messageDeletingId, setMessageDeletingId] = useState<string | null>(null)

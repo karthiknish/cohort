@@ -43,6 +43,19 @@ export const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME ?? 'Cohorts'
 
 // Lazy-init Convex client
 let _convexClient: ConvexHttpClient | null = null
+
+type AdminAuthClient = ConvexHttpClient & {
+  setAdminAuth?: (
+    token: string,
+    identity: {
+      issuer: string
+      subject: string
+    }
+  ) => void
+}
+
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
+
 function getConvexClient(): ConvexHttpClient | null {
   if (_convexClient) return _convexClient
   const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
@@ -54,7 +67,7 @@ function getConvexClient(): ConvexHttpClient | null {
     process.env.CONVEX_ADMIN_TOKEN
   if (!url || !deployKey) return null
   _convexClient = new ConvexHttpClient(url)
-  ;(_convexClient as any).setAdminAuth(deployKey, {
+  ;(_convexClient as AdminAuthClient).setAdminAuth?.(deployKey, {
     issuer: 'system',
     subject: 'notification-service',
   })
@@ -96,7 +109,7 @@ function getBrevoClient(): Brevo.TransactionalEmailsApi | null {
 }
 
 const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, email: string) => {
-  return await convex.query(internal.users.getNotificationPreferencesByEmail as any, { email })
+  return await convex.query(internal.users.getNotificationPreferencesByEmail as unknown as QueryReference, { email })
 })
 
 /**

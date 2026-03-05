@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { proposalGenerationApi, proposalsApi } from '@/lib/convex-api'
 import { refreshProposalDraft } from '@/services/proposals'
-import type { ProposalPresentationDeck } from '@/types/proposals'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import {
@@ -19,6 +19,46 @@ import {
 } from '@/services/proposal-analytics'
 import { createInitialProposalFormState, stepErrorPaths } from '../utils/form-steps'
 import type { SubmissionSnapshot } from './use-proposal-drafts'
+
+type ProposalDeckState = {
+    status: string
+    pptUrl: string | null
+    presentationDeck: ProposalPresentationDeck | null
+    aiSuggestions: string | null
+}
+
+function toProposalDeckState(value: unknown): ProposalDeckState {
+    const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+
+    return {
+        status: typeof record?.status === 'string' ? record.status : 'draft',
+        pptUrl:
+            typeof record?.pptUrl === 'string'
+                ? record.pptUrl
+                : record?.pptUrl === null
+                    ? null
+                    : null,
+        presentationDeck:
+            record?.presentationDeck && typeof record.presentationDeck === 'object'
+                ? (record.presentationDeck as ProposalPresentationDeck)
+                : null,
+        aiSuggestions:
+            typeof record?.aiSuggestions === 'string'
+                ? record.aiSuggestions
+                : record?.aiSuggestions === null
+                    ? null
+                    : null,
+    }
+}
+
+function getDeckWarnings(deck: ProposalPresentationDeck | null | undefined): string[] | undefined {
+    if (!Array.isArray(deck?.warnings)) return undefined
+    return deck.warnings.filter((warning): warning is string => typeof warning === 'string')
+}
+
+function getDeckError(deck: ProposalPresentationDeck | null | undefined): string | undefined {
+    return typeof deck?.error === 'string' ? deck.error : undefined
+}
 
 export interface UseProposalSubmissionOptions {
     draftId: string | null
@@ -174,7 +214,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             // AI generation happens server-side (Convex + integrations).
             // Here we just poll Convex for status changes.
-            let response = activeConvexProposal
+            let response = toProposalDeckState(activeConvexProposal)
             const aiDuration = Date.now() - aiStartTime
 
             // Increased polling timeout to match server-side timeout (5 minutes)
@@ -187,7 +227,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                             convexToken: (await getIdToken()) ?? '',
 
                 })
-                response = latest as any
+                response = toProposalDeckState(latest)
 
                 // Accept ready, partial_success, or failed as terminal states
                 if (latest.status === 'ready' || latest.status === 'partial_success' || latest.status === 'failed') {
@@ -257,7 +297,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             setAiSuggestions(response.aiSuggestions ?? null)
 
             // Collect warnings from the response
-            const deckWarnings = (response.presentationDeck as any)?.warnings as string[] | undefined
+            const deckWarnings = getDeckWarnings(response.presentationDeck)
             const hasPdfWarning = deckWarnings?.some(w => w.toLowerCase().includes('pdf'))
             const isPartialSuccess = response?.status === 'partial_success'
 
@@ -404,16 +444,17 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
         setIsRecheckingDeck(true)
         try {
-            const convexDeckUrl = activeConvexProposal?.pptUrl ?? null
-            const proposalStatus = activeConvexProposal?.status ?? 'unknown'
+            const activeProposal = toProposalDeckState(activeConvexProposal)
+            const convexDeckUrl = activeProposal.pptUrl ?? null
+            const proposalStatus = activeProposal.status ?? 'unknown'
 
             // Handle already ready proposals (including partial_success)
             if (convexDeckUrl && (proposalStatus === 'ready' || proposalStatus === 'partial_success')) {
                 setPresentationDeck(
-                    activeConvexProposal?.presentationDeck
+                    activeProposal.presentationDeck
                         ? {
-                            ...(activeConvexProposal.presentationDeck as any),
-                            storageUrl: (activeConvexProposal.presentationDeck as any)?.storageUrl ?? convexDeckUrl,
+                            ...activeProposal.presentationDeck,
+                            storageUrl: activeProposal.presentationDeck.storageUrl ?? convexDeckUrl,
                         }
                         : presentationDeck
                             ? { ...presentationDeck, storageUrl: convexDeckUrl, status: proposalStatus }
@@ -423,7 +464,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setSubmitted(true)
                 await refreshProposals()
 
-                const deckWarnings = (activeConvexProposal?.presentationDeck as any)?.warnings as string[] | undefined
+                const deckWarnings = getDeckWarnings(activeProposal.presentationDeck)
                 if (deckWarnings?.length) {
                     toast({
                         title: 'Presentation ready with warnings',
@@ -441,7 +482,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             // Handle failed proposals
             if (proposalStatus === 'failed') {
-                const deckError = (activeConvexProposal?.presentationDeck as any)?.error as string | undefined
+                const deckError = getDeckError(activeProposal.presentationDeck)
                 toast({
                     title: 'Generation failed',
                     description: deckError || 'The presentation generation failed. Please try again.',
@@ -477,7 +518,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                     setSubmitted(true)
                     await refreshProposals()
 
-                    const deckWarnings = (currentProposal.presentationDeck as any)?.warnings as string[] | undefined
+                    const deckWarnings = getDeckWarnings(currentProposal.presentationDeck)
                     if (deckWarnings?.length) {
                         toast({
                             title: 'Presentation ready with warnings',
@@ -494,7 +535,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 }
 
                 if (newStatus === 'failed') {
-                    const deckError = (currentProposal.presentationDeck as any)?.error as string | undefined
+                    const deckError = getDeckError(currentProposal.presentationDeck)
                     toast({
                         title: 'Generation failed',
                         description: deckError || 'The presentation generation failed. Please try again.',

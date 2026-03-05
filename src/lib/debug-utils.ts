@@ -2,19 +2,32 @@
 
 import { useEffect, useRef } from 'react'
 
+type ChangedProp = { from: unknown; to: unknown }
+
+type RenderLogEntry = {
+  name: string
+  renderCount: number
+  timestamp: string
+  changedProps: Record<string, ChangedProp> | string
+}
+
+type RenderLogWindow = Window & {
+  __RENDER_LOGS__?: RenderLogEntry[]
+}
+
 /**
  * Debug hook to track how many times a component renders and what changed.
  * Only active in development mode.
  */
-export function useRenderLog(name: string, props?: Record<string, any>) {
+export function useRenderLog(name: string, props?: Record<string, unknown>) {
   const countRef = useRef(0)
-  const prevPropsRef = useRef<Record<string, any>>({})
+  const prevPropsRef = useRef<Record<string, unknown>>({})
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return
 
     countRef.current += 1
-    const changedProps: Record<string, { from: any; to: any }> = {}
+    const changedProps: Record<string, ChangedProp> = {}
 
     if (props) {
       Object.keys(props).forEach((key) => {
@@ -36,7 +49,7 @@ export function useRenderLog(name: string, props?: Record<string, any>) {
     }
 
     if (typeof window !== 'undefined') {
-      const win = window as any
+      const win = window as RenderLogWindow
       if (!win.__RENDER_LOGS__) win.__RENDER_LOGS__ = []
       win.__RENDER_LOGS__.push(logEntry)
       if (win.__RENDER_LOGS__.length > 200) win.__RENDER_LOGS__.shift()

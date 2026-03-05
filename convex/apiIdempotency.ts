@@ -11,6 +11,22 @@ import { mutation, internalMutation } from './_generated/server'
  */
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+const idempotencyScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
+const idempotencyLayer1Validator = v.union(
+  idempotencyScalarValidator,
+  v.array(idempotencyScalarValidator),
+  v.record(v.string(), idempotencyScalarValidator),
+)
+const idempotencyLayer2Validator = v.union(
+  idempotencyLayer1Validator,
+  v.array(idempotencyLayer1Validator),
+  v.record(v.string(), idempotencyLayer1Validator),
+)
+const idempotencyLayer3Validator = v.union(
+  idempotencyLayer2Validator,
+  v.array(idempotencyLayer2Validator),
+  v.record(v.string(), idempotencyLayer2Validator),
+)
 
 /**
  * Check if an idempotency key exists and claim it if new.
@@ -68,7 +84,7 @@ export const checkAndClaim = mutation({
 
 /**
  * Mark an idempotency record as completed with the response.
- * Response can be any JSON-serializable value (for caching API responses).
+ * Response can be a JSON-serializable value (for caching API responses).
  */
 export const complete = mutation({
   args: {
@@ -78,8 +94,8 @@ export const complete = mutation({
       v.boolean(),
       v.number(),
       v.string(),
-      v.array(v.any()), // Arrays of any JSON-serializable values
-      v.record(v.string(), v.any()) // Objects with string keys
+      v.array(idempotencyLayer3Validator),
+      v.record(v.string(), idempotencyLayer3Validator),
     ),
     httpStatus: v.number(),
   },

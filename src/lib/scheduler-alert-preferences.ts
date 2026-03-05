@@ -29,6 +29,15 @@ function isValidThreshold(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
 }
 
+function toSchedulerAlertPreference(value: unknown): SchedulerAlertPreference | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const threshold = (value as Record<string, unknown>).failureThreshold
+  if (threshold === null || isValidThreshold(threshold)) {
+    return { failureThreshold: threshold }
+  }
+  return null
+}
+
 export async function getSchedulerAlertPreference(providerId: string): Promise<SchedulerAlertPreference | null> {
   const cached = preferenceCache.get(providerId)
   if (cached && cached.expiresAt > Date.now()) {
@@ -42,12 +51,12 @@ export async function getSchedulerAlertPreference(providerId: string): Promise<S
   }
 
   const result = await convex.query(api.schedulerAlertPreferences.get, { providerId })
-  if (!result) {
+  const preference = toSchedulerAlertPreference(result)
+  if (!preference) {
     preferenceCache.delete(providerId)
     return null
   }
 
-  const preference: SchedulerAlertPreference = { failureThreshold: result.failureThreshold }
   preferenceCache.set(providerId, { value: preference, expiresAt: Date.now() + CACHE_TTL_MS })
   return preference
 }
@@ -59,13 +68,18 @@ export async function listSchedulerAlertPreferences(): Promise<Record<string, Sc
   }
 
   const result = await convex.query(api.schedulerAlertPreferences.list, {})
-  
-  // Update cache for each returned preference
-  for (const [providerId, pref] of Object.entries(result)) {
-    preferenceCache.set(providerId, { value: pref, expiresAt: Date.now() + CACHE_TTL_MS })
+  const normalized: Record<string, SchedulerAlertPreference> = {}
+
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    for (const [providerId, pref] of Object.entries(result as Record<string, unknown>)) {
+      const preference = toSchedulerAlertPreference(pref)
+      if (!preference) continue
+      preferenceCache.set(providerId, { value: preference, expiresAt: Date.now() + CACHE_TTL_MS })
+      normalized[providerId] = preference
+    }
   }
 
-  return result
+  return normalized
 }
 
 export async function upsertSchedulerAlertPreference(providerId: string, preference: SchedulerAlertPreference): Promise<void> {

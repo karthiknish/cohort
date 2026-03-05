@@ -22,7 +22,7 @@ class AuthenticationError extends ApiError {
 
 const fetchCurrentUser = cache(async (convex: ConvexHttpClient) => {
   return (await convex.query(api.auth.getCurrentUser, {})) as
-    | { id?: string; email?: string | null; name?: string | null }
+    | { id?: string; _id?: string; userId?: string; sub?: string; email?: string | null; name?: string | null }
     | null
 })
 
@@ -70,15 +70,15 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
     let status: string | undefined
     let agencyId: string | undefined
 
-    const betterAuthUserId = (user as any).id ?? (user as any)._id ?? (user as any).userId ?? (user as any).sub ?? null
+    const betterAuthUserId = user.id ?? user._id ?? user.userId ?? user.sub ?? null
     const betterAuthUserEmail = user.email ? String(user.email) : null
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('[server-auth] resolved betterAuthUserId:', {
-        id: (user as any).id,
-        _id: (user as any)._id,
-        userId: (user as any).userId,
-        sub: (user as any).sub,
+        id: user.id,
+        _id: user._id,
+        userId: user.userId,
+        sub: user.sub,
         final: betterAuthUserId
       })
     }

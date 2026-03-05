@@ -138,7 +138,7 @@ export function TaskArchiveView({
           <CardHeader>
             <CardTitle className="text-sm font-semibold">Archived Tasks</CardTitle>
             <CardDescription>
-              These tasks are archived and won't appear in your main task list
+              These tasks are archived and will not appear in your main task list
             </CardDescription>
           </CardHeader>
           <CardContent>

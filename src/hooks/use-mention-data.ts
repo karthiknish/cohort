@@ -28,6 +28,12 @@ interface TeamMember {
   role?: string
 }
 
+type ProjectRow = {
+  legacyId: string
+  name?: string
+  status?: string
+}
+
 
 export function useMentionData() {
   const { user } = useAuth()
@@ -50,7 +56,7 @@ export function useMentionData() {
           clientId: selectedClient?.id,
           limit: 100,
         }
-  ) as Array<any> | undefined
+  ) as ProjectRow[] | undefined
 
   const projectsLoading = Boolean(workspaceId) && projectsRealtime === undefined
 
@@ -68,7 +74,7 @@ export function useMentionData() {
 
   const projects = useMemo(() => {
     const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
-    return rows.map((row: any) => ({
+    return rows.map((row) => ({
       id: String(row.legacyId),
       name: String(row.name ?? ''),
       status: typeof row.status === 'string' ? row.status : undefined,

@@ -19,7 +19,7 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
   const lastTypingUpdateRef = useRef(0)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const setTyping = useMutation((collaborationApi as any).setTyping)
+  const setTyping = useMutation(collaborationApi.setTyping)
 
   const sendTypingUpdate = useCallback(
     async (isTyping: boolean) => {

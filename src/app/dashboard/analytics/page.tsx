@@ -123,6 +123,8 @@ export default function AnalyticsPage() {
         cancelAnimationFrame(frame)
       }
     }
+
+    return undefined
   }, [platformParam])
 
   const handleDateRangeChange = (range: AnalyticsDateRange, days?: number) => {
@@ -217,34 +219,40 @@ export default function AnalyticsPage() {
 
   const loadGoogleAnalyticsPropertyOptions = useCallback(async (clientIdOverride?: string | null) => {
     if (!workspaceId) {
-      throw new Error('Workspace context is required')
+      return Promise.reject(new Error('Workspace context is required'))
     }
 
-    setGaLoadingProperties(true)
-    try {
-      const payload = (await listGoogleAnalyticsProperties({
-        workspaceId,
-        providerId: 'google-analytics',
-        clientId: clientIdOverride ?? selectedClientId ?? null,
-      })) as GoogleAnalyticsPropertyOption[]
+    requestAnimationFrame(() => {
+      setGaLoadingProperties(true)
+    })
+    return listGoogleAnalyticsProperties({
+      workspaceId,
+      providerId: 'google-analytics',
+      clientId: clientIdOverride ?? selectedClientId ?? null,
+    })
+      .then((payload) => {
+        const options = Array.isArray(payload)
+          ? (payload as GoogleAnalyticsPropertyOption[])
+          : []
 
-      const options = Array.isArray(payload) ? payload : []
-      setGaProperties(options)
-      setGaSelectedPropertyId((current) => {
-        if (current && options.some((option) => option.id === current)) {
-          return current
-        }
-        return options[0]?.id ?? ''
+        setGaProperties(options)
+        setGaSelectedPropertyId((current) => {
+          if (current && options.some((option) => option.id === current)) {
+            return current
+          }
+          return options[0]?.id ?? ''
+        })
+
+        return options
       })
-
-      return options
-    } catch (error) {
-      setGaProperties([])
-      setGaSelectedPropertyId('')
-      throw error
-    } finally {
-      setGaLoadingProperties(false)
-    }
+      .catch((error) => {
+        setGaProperties([])
+        setGaSelectedPropertyId('')
+        return Promise.reject(error)
+      })
+      .finally(() => {
+        setGaLoadingProperties(false)
+      })
   }, [listGoogleAnalyticsProperties, selectedClientId, workspaceId])
 
   useEffect(() => {
@@ -265,11 +273,15 @@ export default function AnalyticsPage() {
     url.searchParams.delete('message')
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
 
-    setGaLoading(false)
+    requestAnimationFrame(() => {
+      setGaLoading(false)
+    })
 
     if (oauthSuccess) {
-      setGaSetupMessage(null)
-      setGaSetupDialogOpen(true)
+      requestAnimationFrame(() => {
+        setGaSetupMessage(null)
+        setGaSetupDialogOpen(true)
+      })
       toast({
         title: 'Google Analytics connected',
         description: 'Select a property to finish setup.',
@@ -277,7 +289,9 @@ export default function AnalyticsPage() {
       void loadGoogleAnalyticsPropertyOptions()
         .catch((error) => {
           const mappedMessage = asErrorMessage(error)
-          setGaSetupMessage(mappedMessage)
+          requestAnimationFrame(() => {
+            setGaSetupMessage(mappedMessage)
+          })
           toast({ title: 'Property load failed', description: mappedMessage, variant: 'destructive' })
         })
     } else {
@@ -292,7 +306,9 @@ export default function AnalyticsPage() {
     }
 
     if (!gaSetupDialogOpen) {
-      setGaSetupDialogOpen(true)
+      requestAnimationFrame(() => {
+        setGaSetupDialogOpen(true)
+      })
     }
 
     if (gaLoadingProperties || gaProperties.length > 0) {
@@ -302,7 +318,9 @@ export default function AnalyticsPage() {
     void loadGoogleAnalyticsPropertyOptions()
       .catch((error) => {
         const message = asErrorMessage(error)
-        setGaSetupMessage(message)
+        requestAnimationFrame(() => {
+          setGaSetupMessage(message)
+        })
       })
   }, [
     gaLoadingProperties,
@@ -428,7 +446,7 @@ export default function AnalyticsPage() {
       })
   }, [loadGoogleAnalyticsPropertyOptions, toast])
 
-  const handleFinalizeGoogleAnalyticsSetup = useCallback(async () => {
+  const handleFinalizeGoogleAnalyticsSetup = useCallback(() => {
     if (isPreviewMode) {
       return
     }
@@ -446,31 +464,37 @@ export default function AnalyticsPage() {
     setGaInitializingProperty(true)
     setGaSetupMessage(null)
 
-    try {
-      const payload = (await initializeAdAccount({
-        workspaceId,
-        providerId: 'google-analytics',
-        clientId: selectedClientId ?? null,
-        accountId: gaSelectedPropertyId,
-      })) as { accountName?: string }
+    const clientId = selectedClientId === undefined ? null : selectedClientId
 
-      toast({
-        title: 'Google Analytics setup complete',
-        description: payload?.accountName
-          ? `Using property ${payload.accountName}.`
-          : 'Property linked successfully.',
+    void initializeAdAccount({
+      workspaceId,
+      providerId: 'google-analytics',
+      clientId,
+      accountId: gaSelectedPropertyId,
+    })
+      .then((rawPayload) => {
+        const payload = rawPayload as { accountName?: string }
+        let description = 'Property linked successfully.'
+        if (typeof payload.accountName === 'string' && payload.accountName.length > 0) {
+          description = `Using property ${payload.accountName}.`
+        }
+
+        toast({
+          title: 'Google Analytics setup complete',
+          description,
+        })
+
+        setGaSetupDialogOpen(false)
+        return refreshGoogleAnalyticsStatus().then(() => mutateMetrics())
       })
-
-      setGaSetupDialogOpen(false)
-      await refreshGoogleAnalyticsStatus()
-      await mutateMetrics()
-    } catch (error) {
-      const message = asErrorMessage(error)
-      setGaSetupMessage(message)
-      toast({ title: 'Setup failed', description: message, variant: 'destructive' })
-    } finally {
-      setGaInitializingProperty(false)
-    }
+      .catch((error) => {
+        const message = asErrorMessage(error)
+        setGaSetupMessage(message)
+        toast({ title: 'Setup failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setGaInitializingProperty(false)
+      })
   }, [
     gaSelectedPropertyId,
     initializeAdAccount,
@@ -482,55 +506,65 @@ export default function AnalyticsPage() {
     workspaceId,
   ])
 
-  const handleDisconnectGoogleAnalytics = useCallback(async (options: { clearHistoricalData: boolean }) => {
+  const handleDisconnectGoogleAnalytics = useCallback((options: { clearHistoricalData: boolean }): Promise<void> => {
     if (isPreviewMode) {
-      return
+      return Promise.resolve()
     }
 
     if (!workspaceId) {
       toast({ title: 'Disconnect failed', description: 'Workspace context is required.', variant: 'destructive' })
-      return
+      return Promise.resolve()
     }
 
-    try {
-      setGaDisconnecting(true)
-      let deletedMetrics = 0
-      if (options.clearHistoricalData) {
-        const result = (await deleteProviderMetricsMutation({
+    setGaDisconnecting(true)
+
+    const effectiveClientId = selectedClientId === undefined ? null : selectedClientId
+    const deleteMetricsPromise = options.clearHistoricalData
+      ? deleteProviderMetricsMutation({
           workspaceId,
           providerId: 'google-analytics',
-          clientId: selectedClientId ?? null,
-        })) as { deleted?: number }
-        deletedMetrics = typeof result?.deleted === 'number' ? result.deleted : 0
-      }
+          clientId: effectiveClientId,
+        }).then((result) => {
+          const typedResult = result as { deleted?: number }
+          return typeof typedResult.deleted === 'number' ? typedResult.deleted : 0
+        })
+      : Promise.resolve(0)
 
-      await deleteSyncJobsMutation({
-        workspaceId,
-        providerId: 'google-analytics',
-        clientId: selectedClientId ?? null,
+    return deleteMetricsPromise
+      .then((deletedMetrics) => {
+        return Promise.all([
+          deleteSyncJobsMutation({
+            workspaceId,
+            providerId: 'google-analytics',
+            clientId: effectiveClientId,
+          }),
+          deleteAdIntegrationMutation({
+            workspaceId,
+            providerId: 'google-analytics',
+            clientId: effectiveClientId,
+          }),
+        ]).then(() => deletedMetrics)
       })
-      await deleteAdIntegrationMutation({
-        workspaceId,
-        providerId: 'google-analytics',
-        clientId: selectedClientId ?? null,
+      .then((deletedMetrics) => {
+        setGaSetupDialogOpen(false)
+        setGaProperties([])
+        setGaSelectedPropertyId('')
+        return refreshGoogleAnalyticsStatus().then(() => deletedMetrics)
       })
-
-      setGaSetupDialogOpen(false)
-      setGaProperties([])
-      setGaSelectedPropertyId('')
-      await refreshGoogleAnalyticsStatus()
-
-      toast({
-        title: 'Google Analytics disconnected',
-        description: options.clearHistoricalData
-          ? `Disconnected and removed ${deletedMetrics} historical metric row(s).`
-          : 'Disconnected. Historical metrics were kept.',
+      .then((deletedMetrics) => {
+        toast({
+          title: 'Google Analytics disconnected',
+          description: options.clearHistoricalData
+            ? `Disconnected and removed ${deletedMetrics} historical metric row(s).`
+            : 'Disconnected. Historical metrics were kept.',
+        })
       })
-    } catch (error) {
-      toast({ title: 'Disconnect failed', description: asErrorMessage(error), variant: 'destructive' })
-    } finally {
-      setGaDisconnecting(false)
-    }
+      .catch((error) => {
+        toast({ title: 'Disconnect failed', description: asErrorMessage(error), variant: 'destructive' })
+      })
+      .finally(() => {
+        setGaDisconnecting(false)
+      })
   }, [
     deleteAdIntegrationMutation,
     deleteProviderMetricsMutation,

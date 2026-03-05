@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState, forwardRef } from 'react'
+import React, { useCallback, useId, useMemo, useRef, useState, forwardRef } from 'react'
 import { X, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -113,27 +113,18 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       return filtered.slice(0, MAX_MENTION_RESULTS)
     }, [mentionState, users, selectedMentions, effectiveAllowMultiple, mentionLimit])
 
+    const effectiveHighlightedIndex = useMemo(() => {
+      if (mentionResults.length === 0) {
+        return 0
+      }
+
+      return highlightedIndex >= mentionResults.length ? 0 : highlightedIndex
+    }, [highlightedIndex, mentionResults.length])
+
     const resetMentionState = useCallback(() => {
       setMentionState(DEFAULT_MENTION_STATE)
       setHighlightedIndex(0)
     }, [])
-
-    useEffect(() => {
-      if (disabled) {
-        resetMentionState()
-      }
-    }, [disabled, resetMentionState])
-
-    useEffect(() => {
-      if (mentionResults.length === 0) {
-        setHighlightedIndex(0)
-        return
-      }
-
-      if (highlightedIndex >= mentionResults.length) {
-        setHighlightedIndex(0)
-      }
-    }, [highlightedIndex, mentionResults.length])
 
     const detectMentionTrigger = useCallback(
       (currentValue: string, caretPosition: number) => {
@@ -334,7 +325,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
           event.preventDefault()
 
           if (mentionResults.length > 0) {
-            const user = mentionResults[highlightedIndex]
+            const user = mentionResults[effectiveHighlightedIndex]
             if (user) {
               insertMention(user)
             }
@@ -346,7 +337,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
           resetMentionState()
         }
       },
-      [mentionState, mentionResults, highlightedIndex, insertMention, resetMentionState]
+      [mentionState, mentionResults, effectiveHighlightedIndex, insertMention, resetMentionState]
     )
 
     const hasReachedMentionLimit =
@@ -435,12 +426,12 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
                         id={`${inputId}-option-${user.id}`}
                         type="button"
                         role="option"
-                        aria-selected={index === highlightedIndex}
+                        aria-selected={index === effectiveHighlightedIndex}
                         onMouseEnter={() => setHighlightedIndex(index)}
                         onClick={() => handleUserSelect(user)}
                         className={cn(
                           'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors',
-                          index === highlightedIndex
+                          index === effectiveHighlightedIndex
                             ? 'bg-primary/10 text-primary'
                             : 'hover:bg-muted'
                         )}

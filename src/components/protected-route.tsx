@@ -123,6 +123,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         clearTimeout(timeoutId)
       }
     }
+
+    return undefined
   }, [user, isAwaitingAuthRestore])
 
   // Handle blocked user with retry mechanism

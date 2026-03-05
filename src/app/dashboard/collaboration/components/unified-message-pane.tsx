@@ -359,12 +359,14 @@ export function UnifiedMessagePane({
 
     lastAutoOpenedThreadRef.current = effectiveFocusThreadId
 
-    setExpandedThreadIds((prev) => {
-      if (prev[effectiveFocusThreadId]) return prev
-      return {
-        ...prev,
-        [effectiveFocusThreadId]: true,
-      }
+    const frame = window.requestAnimationFrame(() => {
+      setExpandedThreadIds((prev) => {
+        if (prev[effectiveFocusThreadId]) return prev
+        return {
+          ...prev,
+          [effectiveFocusThreadId]: true,
+        }
+      })
     })
 
     const hasRepliesLoaded = (threadMessagesByRootId[effectiveFocusThreadId]?.length ?? 0) > 0
@@ -374,6 +376,10 @@ export function UnifiedMessagePane({
     }
 
     void onMarkThreadAsRead?.(effectiveFocusThreadId)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+    }
   }, [effectiveFocusThreadId, onLoadThreadReplies, onMarkThreadAsRead, threadLoadingByRootId, threadMessagesByRootId])
 
   const renderMessageExtras = (message: UnifiedMessage) => {

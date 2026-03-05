@@ -133,7 +133,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
                 <Label htmlFor="time-unit">Time Period</Label>
                 <Select
                   value={formData.frequencyCapTimeUnit}
-                  onValueChange={(value) => onChange({ frequencyCapTimeUnit: value as any })}
+                  onValueChange={(value) => onChange({ frequencyCapTimeUnit: value as 'DAY' | 'WEEK' | 'MONTH' })}
                   disabled={disabled}
                 >
                   <SelectTrigger id="time-unit">

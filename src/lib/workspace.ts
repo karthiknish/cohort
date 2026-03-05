@@ -1,7 +1,20 @@
 import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
+import { internal } from '../../convex/_generated/api'
 
 import { ValidationError } from './api-errors'
+
+type AdminAuthClient = ConvexHttpClient & {
+  setAdminAuth?: (
+    token: string,
+    identity: {
+      issuer: string
+      subject: string
+    }
+  ) => void
+}
+
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
 
 function normalizeCandidate(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -24,7 +37,7 @@ function getConvexClient(): ConvexHttpClient | null {
   }
 
   const client = new ConvexHttpClient(url)
-  ;(client as any).setAdminAuth(deployKey, {
+  ;(client as AdminAuthClient).setAdminAuth?.(deployKey, {
     issuer: 'system',
     subject: 'workspace-resolver',
   })
@@ -49,7 +62,7 @@ export const resolveWorkspaceIdForUser = cache(async (userId: string): Promise<s
   }
 
   try {
-    const result = (await convex.query('users:getWorkspaceIdForUser' as any, {
+    const result = (await convex.query(internal.users.getWorkspaceIdForUser as unknown as QueryReference, {
       userId,
     })) as { workspaceId: string; userExists: boolean } | null
 

@@ -60,6 +60,23 @@ export interface UseProposalDraftsReturn {
     wizardRef: React.RefObject<HTMLDivElement | null>
 }
 
+type ProposalRow = {
+    legacyId: string
+    status?: ProposalDraft['status']
+    stepProgress?: number
+    formData?: unknown
+    aiInsights?: unknown
+    aiSuggestions?: string | null
+    pdfUrl?: string | null
+    pptUrl?: string | null
+    createdAtMs?: number
+    updatedAtMs?: number
+    lastAutosaveAtMs?: number
+    clientId?: string | null
+    clientName?: string | null
+    presentationDeck?: ProposalPresentationDeck | null
+}
+
 export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposalDraftsReturn {
     const {
         formState,
@@ -97,9 +114,9 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
     const proposals: ProposalDraft[] = useMemo(() => {
         if (!workspaceId || !selectedClientId) return []
-        const rows = convexProposals ?? []
+        const rows = Array.isArray(convexProposals) ? (convexProposals as ProposalRow[]) : []
 
-        return rows.map((row: any) => ({
+        return rows.map((row) => ({
             id: String(row.legacyId),
             status: (row.status ?? 'draft') as ProposalDraft['status'],
             stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,

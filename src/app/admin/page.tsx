@@ -90,7 +90,7 @@ export default function AdminPage() {
   const { user } = useAuth()
   const workspaceId = user?.agencyId || user?.id || ''
   const { results: usersPage } = usePaginatedQuery(
-    (api as any).adminUsers.listUsers,
+    api.adminUsers.listUsers,
     {
       workspaceId,
       includeAllWorkspaces: false,
@@ -98,21 +98,27 @@ export default function AdminPage() {
     { initialNumItems: 50 }
   )
 
-  const clientsRealtime = useQuery((api as any).clients.list, {
+  const clientsRealtime = useQuery(api.clients.list, {
     workspaceId,
     limit: 100,
     includeAllWorkspaces: false,
-  }) as any
+  }) as { items?: Array<unknown> } | undefined
 
-  const schedulerEventsRealtime = useQuery((api as any).schedulerEvents.list, {
+  const schedulerEventsRealtime = useQuery(api.schedulerEvents.list, {
     limit: 10,
-  }) as any
+  }) as
+    | { events?: Array<{ severity?: string; source?: string; createdAt?: string }> }
+    | Array<{ severity?: string; source?: string; createdAt?: string }>
+    | undefined
 
-  const adminNotificationsRealtime = useQuery((api as any).adminNotifications.list, {
+  const adminNotificationsRealtime = useQuery(api.adminNotifications.list, {
     limit: 10,
-  }) as any
+  }) as
+    | { notifications?: Array<{ id?: string; type?: string; title?: string; message?: string; createdAt?: string }> }
+    | Array<{ id?: string; type?: string; title?: string; message?: string; createdAt?: string }>
+    | undefined
 
-  const usageStatsRealtime = useQuery((api as any).adminUsage.getStats, {}) as any
+  const usageStatsRealtime = useQuery(api.adminUsage.getStats, {}) as UsageStats | undefined
 
   const statsLoading =
     usersPage === undefined ||
@@ -133,7 +139,7 @@ export default function AdminPage() {
     if (usersPayload) {
       const usersArray = Array.isArray(usersPayload) ? usersPayload : []
       totalUsers = usersArray.length
-      activeUsers = usersArray.filter((u: any) => u.status === 'active').length
+      activeUsers = usersArray.filter((u) => u.status === 'active').length
     }
 
     let totalClients = 0
@@ -150,31 +156,35 @@ export default function AdminPage() {
     let lastSyncTime: string | null = null
     let recentErrors = 0
     {
-      const events = Array.isArray(schedulerPayload?.events) ? schedulerPayload.events : Array.isArray(schedulerPayload) && Array.isArray(schedulerPayload[0]?.events) ? schedulerPayload[0].events : []
-      recentErrors = events.filter((e: { severity: string }) => e.severity === 'error').length
+      const events = Array.isArray(schedulerPayload)
+        ? schedulerPayload
+        : Array.isArray(schedulerPayload?.events)
+          ? schedulerPayload.events
+          : []
+      recentErrors = events.filter((e) => e.severity === 'error').length
       if (recentErrors > 5) schedulerHealth = 'error'
       else if (recentErrors > 0) schedulerHealth = 'warning'
 
-      const lastSync = events.find((e: { source: string }) => e.source === 'cron' || e.source === 'worker')
-      if (lastSync?.createdAt) {
+      const lastSync = events.find((e) => e.source === 'cron' || e.source === 'worker')
+      if (typeof lastSync?.createdAt === 'string') {
         lastSyncTime = lastSync.createdAt
       }
     }
 
     {
-      const notifications = Array.isArray(notificationsPayload?.notifications)
-        ? notificationsPayload.notifications
-        : Array.isArray(notificationsPayload)
-          ? notificationsPayload
+      const notifications = Array.isArray(notificationsPayload)
+        ? notificationsPayload
+        : Array.isArray(notificationsPayload?.notifications)
+          ? notificationsPayload.notifications
           : []
-      notifications.forEach((n: { id: string; type: string; title: string; message: string; createdAt: string }) => {
+      notifications.forEach((n) => {
         if (n.type === 'new_user_signup') {
           recentActivities.push({
-            id: `notification-${n.id}`,
+            id: `notification-${n.id ?? 'unknown'}`,
             type: 'new_user_signup',
             title: n.title || 'New User Signup',
-            description: n.message,
-            timestamp: n.createdAt,
+            description: n.message ?? '',
+            timestamp: n.createdAt ?? new Date().toISOString(),
           })
         }
       })

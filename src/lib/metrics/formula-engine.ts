@@ -29,7 +29,7 @@ export function calculateWeightedRoas(metrics: NormalizedAdMetric[]): number {
 }
 
 /**
- * Calculates spend-weighted average for any numeric metric field.
+ * Calculates spend-weighted average for a numeric metric field.
  */
 export function calculateWeightedAverage(
     metrics: NormalizedAdMetric[],

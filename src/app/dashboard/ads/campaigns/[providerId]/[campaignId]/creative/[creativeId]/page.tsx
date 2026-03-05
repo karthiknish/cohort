@@ -36,6 +36,12 @@ type NormalizedAdMetric = {
   roas?: number
 }
 
+type ProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
+
+function isProviderId(value: string): value is ProviderId {
+  return value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook'
+}
+
 export default function CreativeDetailPage() {
   const params = useParams<{ providerId: string; campaignId: string; creativeId: string }>()
   const searchParams = useSearchParams()
@@ -71,6 +77,16 @@ export default function CreativeDetailPage() {
   const fetchCreative = useCallback(async () => {
     setLoading(true)
 
+    if (!isProviderId(params.providerId)) {
+      setLoading(false)
+      toast({
+        title: 'Unsupported provider',
+        description: 'This provider is not supported in the creative detail view.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     if (!workspaceId) {
       setLoading(false)
       return
@@ -78,13 +94,14 @@ export default function CreativeDetailPage() {
 
     await listCreatives({
       workspaceId,
-      providerId: params.providerId as any,
+      providerId: params.providerId,
       clientId: selectedClientId ?? null,
       campaignId: params.campaignId,
       includeMedia: params.providerId === 'facebook',
     })
       .then((creatives) => {
-        const match = (Array.isArray(creatives) ? creatives : []).find((c: any) => c.creativeId === params.creativeId)
+        const normalizedCreatives = Array.isArray(creatives) ? (creatives as Creative[]) : []
+        const match = normalizedCreatives.find((c) => c.creativeId === params.creativeId)
 
         if (!match) {
           throw new Error('Creative not found')
@@ -106,6 +123,13 @@ export default function CreativeDetailPage() {
   }, [listCreatives, params.providerId, params.campaignId, params.creativeId, selectedClientId, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
+    if (!isProviderId(params.providerId)) {
+      setCreativeMetrics(null)
+      setMetricsError('Unsupported provider')
+      setMetricsLoading(false)
+      return
+    }
+
     if (params.providerId === 'facebook') {
       setCreativeMetrics(null)
       setMetricsError(null)
@@ -124,7 +148,7 @@ export default function CreativeDetailPage() {
 
     await listAdMetrics({
       workspaceId,
-      providerId: params.providerId as any,
+      providerId: params.providerId,
       clientId: selectedClientId ?? null,
       campaignId: params.campaignId,
       adGroupId: creative?.adGroupId,
@@ -132,7 +156,8 @@ export default function CreativeDetailPage() {
       level: params.providerId === 'linkedin' ? 'creative' : 'ad',
     })
       .then((response) => {
-        const allMetrics = Array.isArray((response as any)?.metrics) ? ((response as any).metrics as NormalizedAdMetric[]) : []
+        const record = response && typeof response === 'object' ? (response as { metrics?: unknown }) : null
+        const allMetrics = Array.isArray(record?.metrics) ? (record.metrics as NormalizedAdMetric[]) : []
         const filtered = allMetrics.filter((m) => m.adId === params.creativeId)
         setCreativeMetrics(filtered)
       })
@@ -336,6 +361,15 @@ export default function CreativeDetailPage() {
       return
     }
 
+    if (!isProviderId(params.providerId)) {
+      toast({
+        title: 'Unsupported provider',
+        description: 'This provider is not supported for updates.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsSaving(true)
 
     const normalizedHeadlines = editedHeadlines.map((headline) => headline.trim()).filter(Boolean)
@@ -345,7 +379,7 @@ export default function CreativeDetailPage() {
 
     await updateCreative({
       workspaceId,
-      providerId: params.providerId as any,
+      providerId: params.providerId,
       clientId: selectedClientId ?? null,
       creativeId: params.creativeId,
       title: normalizedHeadlines[0],

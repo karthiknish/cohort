@@ -1,248 +1,248 @@
 // Client-safe import for Convex generated API.
 // Keep this indirection so app code can import via `@/lib/convex-api`.
 //
-// Note: in this repo, runtime `api` is `anyApi`, so we access function refs via
-// `(api as any).module.function`.
+// Note: app call sites still rely on permissive function ref typing.
 import { api as generatedApi } from '../../convex/_generated/api'
 
 export const api = generatedApi
+const looseApi = api as ReturnType<typeof JSON.parse>
 
 export const settingsApi = {
-  getMyProfile: (api as any).settings.getMyProfile,
-  updateMyProfile: (api as any).settings.updateMyProfile,
-  getMyNotificationPreferences: (api as any).settings.getMyNotificationPreferences,
-  updateMyNotificationPreferences: (api as any).settings.updateMyNotificationPreferences,
-  getMyRegionalPreferences: (api as any).settings.getMyRegionalPreferences,
-  updateMyRegionalPreferences: (api as any).settings.updateMyRegionalPreferences,
+  getMyProfile: looseApi.settings.getMyProfile,
+  updateMyProfile: looseApi.settings.updateMyProfile,
+  getMyNotificationPreferences: looseApi.settings.getMyNotificationPreferences,
+  updateMyNotificationPreferences: looseApi.settings.updateMyNotificationPreferences,
+  getMyRegionalPreferences: looseApi.settings.getMyRegionalPreferences,
+  updateMyRegionalPreferences: looseApi.settings.updateMyRegionalPreferences,
 }
 
 export const usersApi = {
-  listWorkspaceMembers: (api as any).users.listWorkspaceMembers,
-  listAllUsers: (api as any).users.listAllUsers,
+  listWorkspaceMembers: looseApi.users.listWorkspaceMembers,
+  listAllUsers: looseApi.users.listAllUsers,
 }
 
 export const onboardingApi = {
-  upsert: (api as any).onboardingStates.upsert,
-  getByUserId: (api as any).onboardingStates.getByUserId,
+  upsert: looseApi.onboardingStates.upsert,
+  getByUserId: looseApi.onboardingStates.getByUserId,
 }
 
 export const clientsApi = {
-  list: (api as any).clients.list,
-  countActive: (api as any).clients.countActive,
-  getByLegacyId: (api as any).clients.getByLegacyId,
-  create: (api as any).clients.create,
-  addTeamMember: (api as any).clients.addTeamMember,
-  removeTeamMember: (api as any).clients.removeTeamMember,
-  softDelete: (api as any).clients.softDelete,
+  list: looseApi.clients.list,
+  countActive: looseApi.clients.countActive,
+  getByLegacyId: looseApi.clients.getByLegacyId,
+  create: looseApi.clients.create,
+  addTeamMember: looseApi.clients.addTeamMember,
+  removeTeamMember: looseApi.clients.removeTeamMember,
+  softDelete: looseApi.clients.softDelete,
 }
 
 export const debugApi = {
-  whoami: (api as any).debug.whoami,
-  listAnyClients: (api as any).debug.listAnyClients,
-  countClientsByWorkspace: (api as any).debug.countClientsByWorkspace,
+  whoami: looseApi.debug.whoami,
+  listAnyClients: looseApi.debug.listAnyClients,
+  countClientsByWorkspace: looseApi.debug.countClientsByWorkspace,
 }
 
 export const notificationsApi = {
-  list: (api as any).notifications.list,
-  getUnreadCount: (api as any).notifications.getUnreadCount,
-  ack: (api as any).notifications.ack,
+  list: looseApi.notifications.list,
+  getUnreadCount: looseApi.notifications.getUnreadCount,
+  ack: looseApi.notifications.ack,
 }
 
 export const tasksApi = {
-  listByClient: (api as any).tasks.listByClient,
-  createTask: (api as any).tasks.createTask,
-  patchTask: (api as any).tasks.patchTask,
-  bulkPatchTasks: (api as any).tasks.bulkPatchTasks,
-  softDeleteTask: (api as any).tasks.softDeleteTask,
-  bulkSoftDeleteTasks: (api as any).tasks.bulkSoftDeleteTasks,
+  listByClient: looseApi.tasks.listByClient,
+  createTask: looseApi.tasks.createTask,
+  patchTask: looseApi.tasks.patchTask,
+  bulkPatchTasks: looseApi.tasks.bulkPatchTasks,
+  softDeleteTask: looseApi.tasks.softDeleteTask,
+  bulkSoftDeleteTasks: looseApi.tasks.bulkSoftDeleteTasks,
 }
 
 export const projectsApi = {
-  list: (api as any).projects.list,
-  getByLegacyId: (api as any).projects.getByLegacyId,
-  create: (api as any).projects.create,
-  update: (api as any).projects.update,
-  softDelete: (api as any).projects.softDelete,
+  list: looseApi.projects.list,
+  getByLegacyId: looseApi.projects.getByLegacyId,
+  create: looseApi.projects.create,
+  update: looseApi.projects.update,
+  softDelete: looseApi.projects.softDelete,
 }
 
 export const projectMilestonesApi = {
-  listByProjectIds: (api as any).projectMilestones.listByProjectIds,
-  listForProject: (api as any).projectMilestones.listForProject,
-  create: (api as any).projectMilestones.create,
-  update: (api as any).projectMilestones.update,
-  remove: (api as any).projectMilestones.remove,
+  listByProjectIds: looseApi.projectMilestones.listByProjectIds,
+  listForProject: looseApi.projectMilestones.listForProject,
+  create: looseApi.projectMilestones.create,
+  update: looseApi.projectMilestones.update,
+  remove: looseApi.projectMilestones.remove,
 }
 
 export const adsIntegrationsApi = {
-  getAdIntegration: (api as any).adsIntegrations.getAdIntegration,
-  listStatuses: (api as any).adsIntegrations.listStatuses,
-  listGoogleAdAccounts: (api as any).adsIntegrations.listGoogleAdAccounts,
-  listGoogleAnalyticsProperties: (api as any).adsIntegrations.listGoogleAnalyticsProperties,
-  listMetaAdAccounts: (api as any).adsIntegrations.listMetaAdAccounts,
-  updateAutomationSettings: (api as any).adsIntegrations.updateAutomationSettings,
-  requestManualSync: (api as any).adsIntegrations.requestManualSync,
-  initializeAdAccount: (api as any).adsIntegrations.initializeAdAccount,
-  deleteAdIntegration: (api as any).adsIntegrations.deleteAdIntegration,
-  deleteSyncJobs: (api as any).adsIntegrations.deleteSyncJobs,
-  deleteProviderMetrics: (api as any).adsIntegrations.deleteProviderMetrics,
+  getAdIntegration: looseApi.adsIntegrations.getAdIntegration,
+  listStatuses: looseApi.adsIntegrations.listStatuses,
+  listGoogleAdAccounts: looseApi.adsIntegrations.listGoogleAdAccounts,
+  listGoogleAnalyticsProperties: looseApi.adsIntegrations.listGoogleAnalyticsProperties,
+  listMetaAdAccounts: looseApi.adsIntegrations.listMetaAdAccounts,
+  updateAutomationSettings: looseApi.adsIntegrations.updateAutomationSettings,
+  requestManualSync: looseApi.adsIntegrations.requestManualSync,
+  initializeAdAccount: looseApi.adsIntegrations.initializeAdAccount,
+  deleteAdIntegration: looseApi.adsIntegrations.deleteAdIntegration,
+  deleteSyncJobs: looseApi.adsIntegrations.deleteSyncJobs,
+  deleteProviderMetrics: looseApi.adsIntegrations.deleteProviderMetrics,
 }
 
 export const meetingIntegrationsApi = {
-  getGoogleWorkspaceStatus: (api as any).meetingIntegrations.getGoogleWorkspaceStatus,
-  deleteGoogleWorkspaceIntegration: (api as any).meetingIntegrations.deleteGoogleWorkspaceIntegration,
+  getGoogleWorkspaceStatus: looseApi.meetingIntegrations.getGoogleWorkspaceStatus,
+  deleteGoogleWorkspaceIntegration: looseApi.meetingIntegrations.deleteGoogleWorkspaceIntegration,
 }
 
 export const meetingsApi = {
-  list: (api as any).meetings.list,
-  getByLegacyId: (api as any).meetings.getByLegacyId,
-  create: (api as any).meetings.create,
-  updateStatus: (api as any).meetings.updateStatus,
+  list: looseApi.meetings.list,
+  getByLegacyId: looseApi.meetings.getByLegacyId,
+  create: looseApi.meetings.create,
+  updateStatus: looseApi.meetings.updateStatus,
 }
 
 export const adsMetricsApi = {
-  listMetrics: (api as any).adsMetrics.listMetrics,
-  listMetricsWithSummary: (api as any).adsMetrics.listMetricsWithSummary,
+  listMetrics: looseApi.adsMetrics.listMetrics,
+  listMetricsWithSummary: looseApi.adsMetrics.listMetricsWithSummary,
 }
 
 export const adsCampaignsApi = {
-  listCampaigns: (api as any).adsCampaigns.listCampaigns,
-  updateCampaign: (api as any).adsCampaigns.updateCampaign,
+  listCampaigns: looseApi.adsCampaigns.listCampaigns,
+  updateCampaign: looseApi.adsCampaigns.updateCampaign,
 }
 
 export const adsCampaignGroupsApi = {
-  listCampaignGroups: (api as any).adsCampaignGroups.listCampaignGroups,
-  updateCampaignGroup: (api as any).adsCampaignGroups.updateCampaignGroup,
+  listCampaignGroups: looseApi.adsCampaignGroups.listCampaignGroups,
+  updateCampaignGroup: looseApi.adsCampaignGroups.updateCampaignGroup,
 }
 
 export const adsCampaignInsightsApi = {
-  getCampaignInsights: (api as any).adsCampaignInsights.getCampaignInsights,
+  getCampaignInsights: looseApi.adsCampaignInsights.getCampaignInsights,
 }
 
 export const adsCreativesApi = {
-  listCreatives: (api as any).adsCreatives.listCreatives,
-  updateCreativeStatus: (api as any).adsCreatives.updateCreativeStatus,
-  listMetaPageActors: (api as any).adsCreatives.listMetaPageActors,
-  createCreative: (api as any).adsCreatives.createCreative,
-  updateCreative: (api as any).adsCreatives.updateCreative,
-  uploadMedia: (api as any).adsCreatives.uploadMedia,
+  listCreatives: looseApi.adsCreatives.listCreatives,
+  updateCreativeStatus: looseApi.adsCreatives.updateCreativeStatus,
+  listMetaPageActors: looseApi.adsCreatives.listMetaPageActors,
+  createCreative: looseApi.adsCreatives.createCreative,
+  updateCreative: looseApi.adsCreatives.updateCreative,
+  uploadMedia: looseApi.adsCreatives.uploadMedia,
 }
 
 export const adsAdMetricsApi = {
-  listAdMetrics: (api as any).adsAdMetrics.listAdMetrics,
+  listAdMetrics: looseApi.adsAdMetrics.listAdMetrics,
 }
 
 export const adsTargetingApi = {
-  getTargeting: (api as any).adsTargeting.getTargeting,
+  getTargeting: looseApi.adsTargeting.getTargeting,
 }
 
 export const adsAudiencesApi = {
-  createAudience: (api as any).adsAudiences.createAudience,
+  createAudience: looseApi.adsAudiences.createAudience,
 }
 
 export const agentApi = {
-  sendMessage: (api as any).agentActions.sendMessage,
-  listConversations: (api as any).agentActions.listConversations,
-  getConversation: (api as any).agentActions.getConversation,
-  updateConversationTitle: (api as any).agent.updateConversationTitle,
-  deleteConversation: (api as any).agent.deleteConversation,
+  sendMessage: looseApi.agentActions.sendMessage,
+  listConversations: looseApi.agentActions.listConversations,
+  getConversation: looseApi.agentActions.getConversation,
+  updateConversationTitle: looseApi.agent.updateConversationTitle,
+  deleteConversation: looseApi.agent.deleteConversation,
 }
 
 export const collaborationApi = {
-  listChannel: (api as any).collaborationMessages.listChannel,
-  listThreadReplies: (api as any).collaborationMessages.listThreadReplies,
-  getByLegacyId: (api as any).collaborationMessages.getByLegacyId,
-  searchChannel: (api as any).collaborationMessages.searchChannel,
-  getUnreadCount: (api as any).collaborationMessages.getUnreadCount,
-  getUnreadCountsByChannel: (api as any).collaborationMessages.getUnreadCountsByChannel,
-  createMessage: (api as any).collaborationMessages.create,
-  updateMessage: (api as any).collaborationMessages.updateMessage,
-  softDeleteMessage: (api as any).collaborationMessages.softDelete,
-  markAsRead: (api as any).collaborationMessages.markAsRead,
-  markMultipleAsRead: (api as any).collaborationMessages.markMultipleAsRead,
-  markChannelAsRead: (api as any).collaborationMessages.markChannelAsRead,
-  markThreadAsRead: (api as any).collaborationMessages.markThreadAsRead,
-  getThreadUnreadCounts: (api as any).collaborationMessages.getThreadUnreadCounts,
-  toggleReaction: (api as any).collaborationMessages.toggleReaction,
-  updateSharedTo: (api as any).collaborationMessages.updateSharedTo,
-  setTyping: (api as any).collaborationTyping.setTyping,
-  listTyping: (api as any).collaborationTyping.listForChannel,
-  generateUploadUrl: (api as any).files.generateUploadUrl,
+  listChannel: looseApi.collaborationMessages.listChannel,
+  listThreadReplies: looseApi.collaborationMessages.listThreadReplies,
+  getByLegacyId: looseApi.collaborationMessages.getByLegacyId,
+  searchChannel: looseApi.collaborationMessages.searchChannel,
+  getUnreadCount: looseApi.collaborationMessages.getUnreadCount,
+  getUnreadCountsByChannel: looseApi.collaborationMessages.getUnreadCountsByChannel,
+  createMessage: looseApi.collaborationMessages.create,
+  updateMessage: looseApi.collaborationMessages.updateMessage,
+  softDeleteMessage: looseApi.collaborationMessages.softDelete,
+  markAsRead: looseApi.collaborationMessages.markAsRead,
+  markMultipleAsRead: looseApi.collaborationMessages.markMultipleAsRead,
+  markChannelAsRead: looseApi.collaborationMessages.markChannelAsRead,
+  markThreadAsRead: looseApi.collaborationMessages.markThreadAsRead,
+  getThreadUnreadCounts: looseApi.collaborationMessages.getThreadUnreadCounts,
+  toggleReaction: looseApi.collaborationMessages.toggleReaction,
+  updateSharedTo: looseApi.collaborationMessages.updateSharedTo,
+  setTyping: looseApi.collaborationTyping.setTyping,
+  listTyping: looseApi.collaborationTyping.listForChannel,
+  generateUploadUrl: looseApi.files.generateUploadUrl,
 }
 
 export const customFormulasApi = {
-  listByWorkspace: (api as any).customFormulas.listByWorkspace,
-  getByLegacyId: (api as any).customFormulas.getByLegacyId,
-  create: (api as any).customFormulas.create,
-  update: (api as any).customFormulas.update,
-  remove: (api as any).customFormulas.remove,
+  listByWorkspace: looseApi.customFormulas.listByWorkspace,
+  getByLegacyId: looseApi.customFormulas.getByLegacyId,
+  create: looseApi.customFormulas.create,
+  update: looseApi.customFormulas.update,
+  remove: looseApi.customFormulas.remove,
 }
 
 export const proposalsApi = {
-  list: (api as any).proposals.list,
-  getByLegacyId: (api as any).proposals.getByLegacyId,
-  create: (api as any).proposals.create,
-  update: (api as any).proposals.update,
-  remove: (api as any).proposals.remove,
-  count: (api as any).proposals.count,
+  list: looseApi.proposals.list,
+  getByLegacyId: looseApi.proposals.getByLegacyId,
+  create: looseApi.proposals.create,
+  update: looseApi.proposals.update,
+  remove: looseApi.proposals.remove,
+  count: looseApi.proposals.count,
 }
 
 export const proposalGenerationApi = {
-  generateFromProposal: (api as any).proposalGeneration.generateFromProposal,
+  generateFromProposal: looseApi.proposalGeneration.generateFromProposal,
 }
 
 export const proposalVersionsApi = {
-  list: (api as any).proposalVersions.list,
-  getByLegacyId: (api as any).proposalVersions.getByLegacyId,
-  createSnapshot: (api as any).proposalVersions.createSnapshot,
-  restoreToVersion: (api as any).proposalVersions.restoreToVersion,
-  countByWorkspace: (api as any).proposalVersions.countByWorkspace,
+  list: looseApi.proposalVersions.list,
+  getByLegacyId: looseApi.proposalVersions.getByLegacyId,
+  createSnapshot: looseApi.proposalVersions.createSnapshot,
+  restoreToVersion: looseApi.proposalVersions.restoreToVersion,
+  countByWorkspace: looseApi.proposalVersions.countByWorkspace,
 }
 
 export const proposalTemplatesApi = {
-  list: (api as any).proposalTemplates.list,
-  count: (api as any).proposalTemplates.count,
-  getByLegacyId: (api as any).proposalTemplates.getByLegacyId,
-  create: (api as any).proposalTemplates.create,
-  update: (api as any).proposalTemplates.update,
-  remove: (api as any).proposalTemplates.remove,
+  list: looseApi.proposalTemplates.list,
+  count: looseApi.proposalTemplates.count,
+  getByLegacyId: looseApi.proposalTemplates.getByLegacyId,
+  create: looseApi.proposalTemplates.create,
+  update: looseApi.proposalTemplates.update,
+  remove: looseApi.proposalTemplates.remove,
 }
 
 export const proposalAnalyticsApi = {
-  addEvent: (api as any).proposalAnalytics.addEvent,
-  listEvents: (api as any).proposalAnalytics.listEvents,
-  summarize: (api as any).proposalAnalytics.summarize,
-  timeSeries: (api as any).proposalAnalytics.timeSeries,
-  byClient: (api as any).proposalAnalytics.byClient,
+  addEvent: looseApi.proposalAnalytics.addEvent,
+  listEvents: looseApi.proposalAnalytics.listEvents,
+  summarize: looseApi.proposalAnalytics.summarize,
+  timeSeries: looseApi.proposalAnalytics.timeSeries,
+  byClient: looseApi.proposalAnalytics.byClient,
 }
 
 export const authActionsApi = {
-  exportUserData: (api as any).authActions.exportUserData,
-  deleteAccount: (api as any).authActions.deleteAccount,
+  exportUserData: looseApi.authActions.exportUserData,
+  deleteAccount: looseApi.authActions.deleteAccount,
 }
 
 export const filesApi = {
-  generateUploadUrl: (api as any).files.generateUploadUrl,
-  getPublicUrl: (api as any).files.getPublicUrl,
-  getDownloadUrl: (api as any).files.getDownloadUrl,
+  generateUploadUrl: looseApi.files.generateUploadUrl,
+  getPublicUrl: looseApi.files.getPublicUrl,
+  getDownloadUrl: looseApi.files.getDownloadUrl,
 }
 
 export const problemReportsApi = {
-  create: (api as any).problemReports.create,
-  list: (api as any).problemReports.list,
-  update: (api as any).problemReports.update,
-  remove: (api as any).problemReports.remove,
+  create: looseApi.problemReports.create,
+  list: looseApi.problemReports.list,
+  update: looseApi.problemReports.update,
+  remove: looseApi.problemReports.remove,
 }
 
 export const gammaApi = {
-  getStatus: (api as any).gamma.getStatus,
-  listFolders: (api as any).gamma.listFolders,
-  listThemes: (api as any).gamma.listThemes,
+  getStatus: looseApi.gamma.getStatus,
+  listFolders: looseApi.gamma.listFolders,
+  listThemes: looseApi.gamma.listThemes,
 }
 
 export const analyticsInsightsApi = {
-  generateInsights: (api as any).analyticsInsights.generateInsights,
+  generateInsights: looseApi.analyticsInsights.generateInsights,
 }
 
 export const creativesCopyApi = {
-  generateCopy: (api as any).creativesCopy.generateCopy,
+  generateCopy: looseApi.creativesCopy.generateCopy,
 }

@@ -1,6 +1,27 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
 
+const jsonScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())
+const jsonLayer1Validator = v.union(
+  jsonScalarValidator,
+  v.array(jsonScalarValidator),
+  v.record(v.string(), jsonScalarValidator)
+)
+const jsonLayer2Validator = v.union(
+  jsonLayer1Validator,
+  v.array(jsonLayer1Validator),
+  v.record(v.string(), jsonLayer1Validator)
+)
+const jsonLayer3Validator = v.union(
+  jsonLayer2Validator,
+  v.array(jsonLayer2Validator),
+  v.record(v.string(), jsonLayer2Validator)
+)
+const jsonRecordValidator = v.record(v.string(), jsonLayer2Validator)
+const jsonArrayValidator = v.array(jsonLayer2Validator)
+const jsonDeepRecordValidator = v.record(v.string(), jsonLayer3Validator)
+const jsonDeepArrayValidator = v.array(jsonLayer3Validator)
+
 export default defineSchema({
   // Convex schema for the application.
   // NOTE: We key records by workspaceId + legacyId for backward compatibility
@@ -72,8 +93,8 @@ export default defineSchema({
     action: v.union(v.string(), v.null()),
     route: v.union(v.string(), v.null()),
     operation: v.union(v.string(), v.null()),
-    params: v.union(v.record(v.string(), v.any()), v.null()),
-    executeResult: v.union(v.record(v.string(), v.any()), v.null()),
+    params: v.union(jsonRecordValidator, v.null()),
+    executeResult: v.union(jsonRecordValidator, v.null()),
   })
     .index('by_workspace_conversation_createdAt', ['workspaceId', 'conversationLegacyId', 'createdAt'])
     .index('by_workspace_conversation_legacyId', ['workspaceId', 'conversationLegacyId', 'legacyId']),
@@ -250,7 +271,7 @@ export default defineSchema({
     workspaceId: v.string(),
     meetingLegacyId: v.string(),
     eventType: v.string(),
-    payload: v.any(),
+    payload: jsonLayer2Validator,
     receivedAtMs: v.number(),
   })
     .index('by_workspace_meeting_receivedAtMs', ['workspaceId', 'meetingLegacyId', 'receivedAtMs'])
@@ -306,7 +327,7 @@ export default defineSchema({
       ),
       v.null()
     ),
-    rawPayload: v.optional(v.any()),
+    rawPayload: v.optional(jsonLayer2Validator),
     createdAtMs: v.number(),
   })
     .index('by_workspace_provider_date', ['workspaceId', 'providerId', 'date'])
@@ -694,8 +715,8 @@ export default defineSchema({
     lastAgentInteractionAtMs: v.optional(v.union(v.number(), v.null())),
     status: v.string(),
     stepProgress: v.number(),
-    formData: v.record(v.string(), v.any()),
-    aiInsights: v.union(v.record(v.string(), v.any()), v.null()),
+    formData: jsonRecordValidator,
+    aiInsights: v.union(jsonRecordValidator, v.null()),
     aiSuggestions: v.union(v.string(), v.null()),
     pdfUrl: v.union(v.string(), v.null()),
     pptUrl: v.union(v.string(), v.null()),
@@ -703,7 +724,7 @@ export default defineSchema({
     pptStorageId: v.optional(v.union(v.string(), v.null())),
     clientId: v.union(v.string(), v.null()),
     clientName: v.union(v.string(), v.null()),
-    presentationDeck: v.union(v.record(v.string(), v.any()), v.null()),
+    presentationDeck: v.union(jsonRecordValidator, v.null()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
     lastAutosaveAtMs: v.number(),
@@ -720,7 +741,7 @@ export default defineSchema({
     proposalLegacyId: v.string(),
     legacyId: v.string(),
     versionNumber: v.number(),
-    formData: v.record(v.string(), v.any()),
+    formData: jsonRecordValidator,
     status: v.string(),
     stepProgress: v.number(),
     changeDescription: v.union(v.string(), v.null()),
@@ -738,7 +759,7 @@ export default defineSchema({
     legacyId: v.string(),
     name: v.string(),
     description: v.union(v.string(), v.null()),
-    formData: v.record(v.string(), v.any()),
+    formData: jsonRecordValidator,
     industry: v.union(v.string(), v.null()),
     tags: v.array(v.string()),
     isDefault: v.boolean(),
@@ -780,8 +801,8 @@ export default defineSchema({
       v.boolean(),
       v.number(),
       v.string(),
-      v.array(v.any()),
-      v.record(v.string(), v.any())
+      jsonDeepArrayValidator,
+      jsonDeepRecordValidator
     ),
     httpStatus: v.union(v.number(), v.null()),
     createdAtMs: v.number(),

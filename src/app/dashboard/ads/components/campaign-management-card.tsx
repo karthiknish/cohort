@@ -215,7 +215,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
     await listCampaigns({
       workspaceId,
-      providerId: providerId as any,
+      providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
       clientId: selectedClientId ?? null,
     })
       .then((result) => {
@@ -302,7 +302,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
     await updateCampaign({
       workspaceId,
-      providerId: providerId as any,
+      providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
       clientId: selectedClientId ?? null,
       campaignId,
       action,
@@ -401,7 +401,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
         })
       : updateCampaign({
           workspaceId,
-          providerId: providerId as any,
+          providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
           clientId: selectedClientId ?? null,
           campaignId: targetId,
           action: 'updateBudget',
@@ -456,7 +456,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
 
     await updateCampaign({
       workspaceId,
-      providerId: providerId as any,
+      providerId: providerId as 'google' | 'tiktok' | 'linkedin' | 'facebook',
       clientId: selectedClientId ?? null,
       campaignId: selectedCampaign.id,
       action: 'updateBidding',

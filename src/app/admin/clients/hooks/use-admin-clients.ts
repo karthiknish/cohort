@@ -9,6 +9,17 @@ import { useToast } from '@/components/ui/use-toast'
 import { clientsApi } from '@/lib/convex-api'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 
+type ConvexArgs = Record<string, unknown>
+
+type ClientRow = {
+    legacyId?: string
+    name?: string
+    accountManager?: string
+    teamMembers?: ClientTeamMember[]
+    createdAtMs?: number | null
+    updatedAtMs?: number | null
+}
+
 export interface TeamMemberField extends ClientTeamMember {
     key: string
 }
@@ -85,39 +96,39 @@ export function useAdminClients(): UseAdminClientsReturn {
         queryKey: ['adminClients', workspaceId],
         queryFn: async () => {
             if (!workspaceId) return { items: [], nextCursor: null }
-            return await convex.query((clientsApi as any).list, {
+            return await convex.query(clientsApi.list as never, {
                 workspaceId,
                 limit: 100,
                 cursor: null,
                 includeAllWorkspaces: false,
-            })
+            } as never)
         },
         enabled: Boolean(workspaceId),
     })
 
     const createClientMutation = useMutation({
-        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).create, args),
+        mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.create as never, args as never),
         onSuccess: () => {
             clientsQuery.refetch()
         },
     })
 
     const softDeleteClientMutation = useMutation({
-        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).softDelete, args),
+        mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.softDelete as never, args as never),
         onSuccess: () => {
             clientsQuery.refetch()
         },
     })
 
     const addTeamMemberMutation = useMutation({
-        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).addTeamMember, args),
+        mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.addTeamMember as never, args as never),
         onSuccess: () => {
             clientsQuery.refetch()
         },
     })
 
     const removeTeamMemberMutation = useMutation({
-        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).removeTeamMember, args),
+        mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.removeTeamMember as never, args as never),
         onSuccess: () => {
             clientsQuery.refetch()
         },
@@ -150,12 +161,12 @@ export function useAdminClients(): UseAdminClientsReturn {
         const data = clientsQuery.data
         if (!data || typeof data !== 'object') return []
 
-        const rows = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : []
+        const rows = (Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : []) as ClientRow[]
 
-        const list: ClientRecord[] = rows.map((row: any) => ({
-            id: row.legacyId,
-            name: row.name,
-            accountManager: row.accountManager,
+        const list: ClientRecord[] = rows.map((row) => ({
+            id: row.legacyId ?? '',
+            name: row.name ?? '',
+            accountManager: row.accountManager ?? '',
             teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
             createdAt: row.createdAtMs ? new Date(row.createdAtMs).toISOString() : null,
             updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,

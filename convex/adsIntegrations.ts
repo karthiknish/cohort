@@ -1,4 +1,5 @@
 import { action, internalMutation, mutation, query, internalQuery } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { internal } from './_generated/api'
@@ -105,6 +106,19 @@ const adIntegrationZ = z.object({
   syncFrequencyMinutes: z.number().nullable(),
   scheduledTimeframeDays: z.number().nullable(),
 })
+
+type ClaimedSyncJob = {
+  id: Id<'adSyncJobs'>
+  providerId: string
+  clientId: string | null
+  jobType: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
+  timeframeDays: number
+  status: 'running'
+  createdAtMs: number
+  startedAtMs: number
+  processedAtMs: null
+  errorMessage: null
+}
 
 export const getAdIntegrationInternal = internalQuery({
   args: {
@@ -405,7 +419,7 @@ export const listMetaAdAccounts = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -442,7 +456,7 @@ export const listGoogleAdAccounts = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -486,7 +500,7 @@ export const listGoogleAnalyticsProperties = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -528,7 +542,7 @@ export const initializeAdAccount = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -571,7 +585,7 @@ export const initializeAdAccount = action({
       const loginCustomerId = selectedAccount.loginCustomerId ?? (selectedAccount.manager ? selectedAccount.id : null)
       const managerCustomerId = selectedAccount.managerCustomerId ?? (selectedAccount.manager ? selectedAccount.id : null)
 
-      await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
         workspaceId: args.workspaceId,
         providerId: 'google',
         clientId,
@@ -583,7 +597,7 @@ export const initializeAdAccount = action({
         linkedAtMs,
       })
 
-      await ctx.runMutation('adsIntegrations:enqueueSyncJob' as any, {
+      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
         workspaceId: args.workspaceId,
         providerId: 'google',
         clientId,
@@ -624,7 +638,7 @@ export const initializeAdAccount = action({
         throw Errors.validation.invalidInput('Selected Google Analytics property is not available for this integration token')
       }
 
-      await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
         workspaceId: args.workspaceId,
         providerId: 'google-analytics',
         clientId,
@@ -662,7 +676,7 @@ export const initializeAdAccount = action({
 
       const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ACTIVE') ?? accounts[0]!
 
-      await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
         workspaceId: args.workspaceId,
         providerId: 'linkedin',
         clientId,
@@ -714,7 +728,7 @@ export const initializeAdAccount = action({
         throw Errors.validation.invalidInput('Selected Meta ad account is not active')
       }
 
-      await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
         workspaceId: args.workspaceId,
         providerId: 'facebook',
         clientId,
@@ -752,7 +766,7 @@ export const initializeAdAccount = action({
 
     const preferredAccount = accounts.find((account) => account.status?.toUpperCase() === 'ENABLE') ?? accounts[0]!
 
-    await ctx.runMutation('adsIntegrations:updateIntegrationCredentials' as any, {
+    await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
       workspaceId: args.workspaceId,
       providerId: 'tiktok',
       clientId,
@@ -777,33 +791,30 @@ export const initializeAdAccount = action({
   }, 'adsIntegrations:initializeAdAccount'),
 })
 
-export const updateIntegrationCredentials = mutation({
-  args: {
-    workspaceId: v.string(),
-    providerId: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
+const updateIntegrationCredentialsArgs = {
+  workspaceId: v.string(),
+  providerId: v.string(),
+  clientId: v.optional(v.union(v.string(), v.null())),
 
-    accessToken: v.optional(v.union(v.string(), v.null())),
-    refreshToken: v.optional(v.union(v.string(), v.null())),
-    idToken: v.optional(v.union(v.string(), v.null())),
-    accessTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
-    refreshTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
-    developerToken: v.optional(v.union(v.string(), v.null())),
-    loginCustomerId: v.optional(v.union(v.string(), v.null())),
-    managerCustomerId: v.optional(v.union(v.string(), v.null())),
-    accountId: v.optional(v.union(v.string(), v.null())),
-    accountName: v.optional(v.union(v.string(), v.null())),
+  accessToken: v.optional(v.union(v.string(), v.null())),
+  refreshToken: v.optional(v.union(v.string(), v.null())),
+  idToken: v.optional(v.union(v.string(), v.null())),
+  accessTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
+  refreshTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
+  developerToken: v.optional(v.union(v.string(), v.null())),
+  loginCustomerId: v.optional(v.union(v.string(), v.null())),
+  managerCustomerId: v.optional(v.union(v.string(), v.null())),
+  accountId: v.optional(v.union(v.string(), v.null())),
+  accountName: v.optional(v.union(v.string(), v.null())),
 
-    // Used by init/setup flows to indicate an account is linked even if the
-    // first sync hasn't completed yet.
-    linkedAtMs: v.optional(v.union(v.number(), v.null())),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
+  // Used by init/setup flows to indicate an account is linked even if the
+  // first sync hasn't completed yet.
+  linkedAtMs: v.optional(v.union(v.number(), v.null())),
+}
 
+export const updateIntegrationCredentialsInternal = internalMutation({
+  args: updateIntegrationCredentialsArgs,
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
 
@@ -866,6 +877,17 @@ export const updateIntegrationCredentials = mutation({
 
     await ctx.db.patch(existing._id, patch)
     return { ok: true }
+  },
+})
+
+export const updateIntegrationCredentials = mutation({
+  args: updateIntegrationCredentialsArgs,
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw Errors.auth.unauthorized()
+    }
+    return await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, args)
   },
 })
 
@@ -1061,7 +1083,7 @@ export const claimNextSyncJobInternal = internalMutation({
   args: {
     workspaceId: v.string(),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<ClaimedSyncJob | null> => {
     const timestamp = nowMs()
 
     const next = await ctx.db
@@ -1100,7 +1122,7 @@ export const claimNextSyncJob = mutation({
     workspaceId: v.string(),
     cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args): Promise<any> => {
+  handler: async (ctx, args): Promise<ClaimedSyncJob | null> => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
       assertCronKey(ctx, { cronKey: args.cronKey ?? null })
@@ -1294,40 +1316,51 @@ export const hasPendingSyncJob = zWorkspaceQuery({
   },
 })
 
+const metricRawPayloadValidator = v.union(
+  v.null(),
+  v.boolean(),
+  v.number(),
+  v.string(),
+  v.array(v.string()),
+  v.array(v.number()),
+  v.array(v.boolean()),
+  v.record(v.string(), v.string()),
+  v.record(v.string(), v.number()),
+  v.record(v.string(), v.boolean())
+)
+
+const metricCreativeValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  type: v.string(),
+  url: v.optional(v.string()),
+  spend: v.optional(v.number()),
+  impressions: v.optional(v.number()),
+  clicks: v.optional(v.number()),
+  conversions: v.optional(v.number()),
+  revenue: v.optional(v.number()),
+})
+
+const metricInputValidator = v.object({
+  providerId: v.string(),
+  clientId: v.optional(v.union(v.string(), v.null())),
+  accountId: v.optional(v.union(v.string(), v.null())),
+  date: v.string(),
+  spend: v.number(),
+  impressions: v.number(),
+  clicks: v.number(),
+  conversions: v.number(),
+  revenue: v.optional(v.union(v.number(), v.null())),
+  campaignId: v.optional(v.string()),
+  campaignName: v.optional(v.string()),
+  creatives: v.optional(v.array(metricCreativeValidator)),
+  rawPayload: v.optional(metricRawPayloadValidator),
+})
+
 export const writeMetricsBatchInternal = internalMutation({
   args: {
     workspaceId: v.string(),
-    metrics: v.array(
-      v.object({
-        providerId: v.string(),
-        clientId: v.optional(v.union(v.string(), v.null())),
-        accountId: v.optional(v.union(v.string(), v.null())),
-        date: v.string(),
-        spend: v.number(),
-        impressions: v.number(),
-        clicks: v.number(),
-        conversions: v.number(),
-        revenue: v.optional(v.union(v.number(), v.null())),
-        campaignId: v.optional(v.string()),
-        campaignName: v.optional(v.string()),
-        creatives: v.optional(
-          v.array(
-            v.object({
-              id: v.string(),
-              name: v.string(),
-              type: v.string(),
-              url: v.optional(v.string()),
-              spend: v.optional(v.number()),
-              impressions: v.optional(v.number()),
-              clicks: v.optional(v.number()),
-              conversions: v.optional(v.number()),
-              revenue: v.optional(v.number()),
-            })
-          )
-        ),
-        rawPayload: v.optional(v.any()),
-      })
-    ),
+    metrics: v.array(metricInputValidator),
   },
   handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
     const timestamp = nowMs()
@@ -1359,7 +1392,7 @@ export const writeMetricsBatch = mutation({
   args: {
     workspaceId: v.string(),
     cronKey: v.optional(v.union(v.string(), v.null())),
-    metrics: v.array(v.any()), // Raw payload passed through to internal
+    metrics: v.array(metricInputValidator),
   },
   handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
     const identity = await ctx.auth.getUserIdentity()

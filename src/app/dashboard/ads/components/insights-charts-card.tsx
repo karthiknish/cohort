@@ -231,8 +231,8 @@ function FunnelChart({
           <XAxis type="number" tickFormatter={(v) => v.toLocaleString()} />
           <YAxis type="category" dataKey="name" width={80} />
           <Tooltip
-            formatter={(value: number, name: string, props: any) => {
-              const dropOff = props?.payload?.dropOff ?? 0
+            formatter={(value: number, name: string, props: { payload?: { dropOff?: number } }) => {
+              const dropOff = props.payload?.dropOff ?? 0
               return [
                 `${value.toLocaleString()} (${dropOff.toFixed(1)}% drop-off)`,
                 name

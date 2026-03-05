@@ -41,7 +41,9 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
             <Label htmlFor="engagement-type">Engagement Goal</Label>
             <Select
               value={formData.engagementType}
-              onValueChange={(value) => onChange({ engagementType: value as any })}
+              onValueChange={(value) =>
+                onChange({ engagementType: value as 'POST_ENGAGEMENT' | 'PAGE_ENGAGEMENT' | 'EVENT_RESPONSES' })
+              }
               disabled={disabled}
             >
               <SelectTrigger id="engagement-type">

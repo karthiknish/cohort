@@ -24,6 +24,10 @@ const EMPTY: IntegrationStatusSummary = {
   lastErrorProviders: [],
 }
 
+type IntegrationStatusRow = {
+  lastSyncStatus?: string | null
+}
+
 export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
   const { clientIds } = options
   const { user } = useAuth()
@@ -35,7 +39,7 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
     const uniq = Array.from(new Set(clientIds.filter(Boolean)))
     uniq.sort()
     return uniq
-  }, [JSON.stringify(clientIds)]) // Use stringified version to catch content changes vs reference changes
+  }, [clientIds])
 
   const previewSummary = useMemo<{
     summary: IntegrationStatusSummary
@@ -75,11 +79,9 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
           workspaceId,
           clientId: null,
         }
-  ) as Array<any> | undefined
+  ) as IntegrationStatusRow[] | undefined
 
   const liveSummary = useMemo(() => {
-    if (isPreviewMode) return previewSummary
-
     if (!workspaceId || !user?.id || stableClientIds.length === 0) {
       return { summary: EMPTY, loading: false, error: null }
     }
@@ -93,9 +95,9 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
     const totalTargets = stableClientIds.length
     const totalIntegrations = statuses.length * totalTargets
 
-    const failedCount = statuses.filter((s: any) => s?.lastSyncStatus === 'error').length * totalTargets
-    const pendingCount = statuses.filter((s: any) => s?.lastSyncStatus === 'pending').length * totalTargets
-    const neverCount = statuses.filter((s: any) => (s?.lastSyncStatus ?? 'never') === 'never').length * totalTargets
+    const failedCount = statuses.filter((s) => s?.lastSyncStatus === 'error').length * totalTargets
+    const pendingCount = statuses.filter((s) => s?.lastSyncStatus === 'pending').length * totalTargets
+    const neverCount = statuses.filter((s) => (s?.lastSyncStatus ?? 'never') === 'never').length * totalTargets
 
     return {
       summary: {

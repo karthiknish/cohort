@@ -27,7 +27,7 @@ export function useRealtimeActivity(limitCount = 20) {
     !isPreviewMode && Boolean(user?.agencyId) && Boolean(selectedClient?.id)
 
   const convexActivities = useQuery(
-    (api as any).activity.listForClient,
+    api.activity.listForClient,
     convexEnabled
       ? {
           workspaceId: String(user!.agencyId),

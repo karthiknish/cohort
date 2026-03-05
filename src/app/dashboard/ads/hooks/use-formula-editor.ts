@@ -166,12 +166,13 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
     const formulasFromQuery = useMemo(() => {
         if (!Array.isArray(formulasResult)) return []
 
-        return formulasResult.map((formula: any) => {
+        return formulasResult.map((formula) => {
+            const typedFormula = formula as CustomFormula
             const createdAtMs = typeof formula.createdAtMs === 'number' ? formula.createdAtMs : undefined
             const updatedAtMs = typeof formula.updatedAtMs === 'number' ? formula.updatedAtMs : undefined
 
             return {
-                ...formula,
+                ...typedFormula,
                 createdAtMs,
                 updatedAtMs,
                 createdAt: createdAtMs ? new Date(createdAtMs).toISOString() : null,

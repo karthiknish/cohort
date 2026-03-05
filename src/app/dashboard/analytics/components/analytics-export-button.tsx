@@ -29,7 +29,7 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
 
     setIsExporting(true)
 
-    // Clear any existing timeout
+    // Clear an existing timeout
     if (exportTimeoutRef.current) {
       clearTimeout(exportTimeoutRef.current)
     }

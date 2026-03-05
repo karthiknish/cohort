@@ -10,6 +10,32 @@ import {
     GoogleAdsApiErrorResponse,
 } from './types'
 
+type GoogleCriterion = {
+    type?: string
+    negative?: boolean
+    ageRange?: { type?: string }
+    gender?: { type?: string }
+    parentalStatus?: { type?: string }
+    incomeRange?: { type?: string }
+    userInterest?: { userInterestCategory?: string }
+    userList?: { userList?: string }
+    customAudience?: { customAudience?: string }
+    combinedAudience?: { combinedAudience?: string }
+    keyword?: { text?: string; matchType?: string }
+    placement?: { url?: string }
+    topic?: { path?: string[] }
+    language?: { languageConstant?: string }
+    location?: { geoTargetConstant?: string }
+    device?: { type?: string }
+}
+
+function toGoogleCriterion(value: unknown): GoogleCriterion {
+    if (!value || typeof value !== 'object') {
+        return {}
+    }
+    return value as GoogleCriterion
+}
+
 export async function fetchGoogleAudienceTargeting(options: {
     accessToken: string
     developerToken: string
@@ -146,7 +172,7 @@ export async function fetchGoogleAudienceTargeting(options: {
     for (const row of adGroupRows) {
         const adGroup = row.adGroup as { id?: string; name?: string } | undefined
         const campaign = row.campaign as { id?: string; name?: string } | undefined
-        const criterion = row.adGroupCriterion as any
+        const criterion = toGoogleCriterion(row.adGroupCriterion)
 
         if (!adGroup?.id) continue
         const targeting = getOrCreateTargeting(adGroup.id, 'adGroup', adGroup.name, campaign?.id, campaign?.name)
@@ -156,14 +182,14 @@ export async function fetchGoogleAudienceTargeting(options: {
     // Process Campaign Rows
     for (const row of campaignRows) {
         const campaign = row.campaign as { id?: string; name?: string } | undefined
-        const criterion = row.campaignCriterion as any
+        const criterion = toGoogleCriterion(row.campaignCriterion)
 
         if (!campaign?.id) continue
         const targeting = getOrCreateTargeting(campaign.id, 'campaign', campaign.name)
         processCriterion(targeting, criterion)
     }
 
-    function processCriterion(targeting: GoogleAudienceTargeting, criterion: any) {
+    function processCriterion(targeting: GoogleAudienceTargeting, criterion: GoogleCriterion) {
         const type = criterion?.type
         const negative = criterion?.negative === true
 

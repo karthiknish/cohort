@@ -33,7 +33,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
             <Label htmlFor="app-store">App Store</Label>
             <Select
               value={formData.appStore}
-              onValueChange={(value) => onChange({ appStore: value as any })}
+              onValueChange={(value) => onChange({ appStore: value as 'GOOGLE_PLAY' | 'APPLE_APP_STORE' })}
               disabled={disabled}
             >
               <SelectTrigger id="app-store">
@@ -157,7 +157,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
                 <li>Implement the Google Play Install Referrer API for accurate attribution</li>
                 <li>Set up in-app event tracking with Firebase or Google Analytics</li>
                 <li>Upload at least 10 images and 5 videos for best performance</li>
-                <li>Use the "App Engagement" subtype to re-engage existing users</li>
+                <li>Use the App Engagement subtype to re-engage existing users</li>
                 <li>Test different bidding strategies to find your optimal cost per install</li>
               </ul>
             </div>

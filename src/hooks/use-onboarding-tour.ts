@@ -28,7 +28,7 @@ export function useOnboardingTour() {
             element: '#tour-command-menu',
             popover: {
                 title: 'Quick Navigation',
-                description: 'Press <kbd className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium">⌘K</kbd> to open the command menu for fast access to any page or action.',
+                description: 'Press <kbd className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium">⌘K</kbd> to open the command menu for fast access across pages and actions.',
                 position: 'bottom' as const,
             }
         },

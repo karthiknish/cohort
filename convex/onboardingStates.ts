@@ -32,8 +32,8 @@ export const getByUserId = authenticatedQuery({
       userId: row.userId,
       onboardingTourCompleted: row.onboardingTourCompleted,
       onboardingTourCompletedAtMs: row.onboardingTourCompletedAtMs,
-      welcomeSeenAtMs: (row as any).welcomeSeenAtMs ?? null,
-      welcomeSeen: Boolean((row as any).welcomeSeen),
+      welcomeSeenAtMs: row.welcomeSeenAtMs ?? null,
+      welcomeSeen: Boolean(row.welcomeSeen),
       createdAtMs: row.createdAtMs,
       updatedAtMs: row.updatedAtMs,
     }

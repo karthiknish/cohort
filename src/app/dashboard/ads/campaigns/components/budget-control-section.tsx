@@ -131,7 +131,7 @@ export function BudgetControlSection({
 
     void updateCampaign({
         workspaceId,
-        providerId: providerId as any,
+      providerId,
         clientId: clientId ?? null,
         campaignId,
         action: 'updateBudget',

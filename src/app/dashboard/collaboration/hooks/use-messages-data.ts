@@ -10,6 +10,7 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationChannelType } from '@/types/collaboration'
 import type { CollaborationMessageFormat } from '@/types/collaboration'
 
 import type { Channel } from '../types'
@@ -48,6 +49,13 @@ function toSharedPlatforms(value: unknown): Array<'email'> | undefined {
   return normalized.length > 0 ? normalized : undefined
 }
 
+function toChannelType(value: unknown, fallback: CollaborationChannelType): CollaborationChannelType {
+  if (value === 'client' || value === 'team' || value === 'project') {
+    return value
+  }
+  return fallback
+}
+
 export function useMessagesData({
   workspaceId,
   currentUserId,
@@ -64,10 +72,10 @@ export function useMessagesData({
 }: UseMessagesDataOptions) {
   const { toast } = useToast()
   const convex = useConvex()
-  const createMessage = useMutation((collaborationApi as any).createMessage)
-  const updateSharedTo = useMutation((collaborationApi as any).updateSharedTo)
-  const markChannelAsRead = useMutation((collaborationApi as any).markChannelAsRead)
-  const markThreadAsReadMutation = useMutation((collaborationApi as any).markThreadAsRead)
+  const createMessage = useMutation(collaborationApi.createMessage)
+  const updateSharedTo = useMutation(collaborationApi.updateSharedTo)
+  const markChannelAsRead = useMutation(collaborationApi.markChannelAsRead)
+  const markThreadAsReadMutation = useMutation(collaborationApi.markThreadAsRead)
 
   const [messagesByChannel, setMessagesByChannel] = useState<MessagesByChannelState>({})
   const [nextCursorByChannel, setNextCursorByChannel] = useState<Record<string, string | null>>({})
@@ -86,7 +94,7 @@ export function useMessagesData({
   const lastMarkedMessageByChannelRef = useRef<Record<string, string>>({})
 
   const unreadCountsResult = useQuery(
-    (collaborationApi as any).getUnreadCountsByChannel,
+    collaborationApi.getUnreadCountsByChannel,
     workspaceId && currentUserId
       ? {
           workspaceId: String(workspaceId),
@@ -118,7 +126,7 @@ export function useMessagesData({
   const normalizedMessageSearch = messageSearchQuery.trim()
 
   const threadUnreadCountsResult = useQuery(
-    (collaborationApi as any).getThreadUnreadCounts,
+    collaborationApi.getThreadUnreadCounts,
     workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
       ? {
           workspaceId: String(workspaceId),
@@ -242,7 +250,7 @@ export function useMessagesData({
     const endMs = parsed.end ? Date.parse(parsed.end) : NaN
 
     void convex
-      .query((collaborationApi as any).searchChannel, {
+      .query(collaborationApi.searchChannel, {
         workspaceId: String(workspaceId),
         channelType: selectedChannel.type,
         clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
@@ -255,53 +263,58 @@ export function useMessagesData({
         endMs: Number.isFinite(endMs) ? endMs : null,
         limit: 200,
       })
-      .then((payload: any) => {
+      .then((payload: { rows?: unknown[]; highlights?: unknown[] }) => {
         const rows = Array.isArray(payload?.rows) ? payload.rows : []
-        const highlights = Array.isArray(payload?.highlights) ? payload.highlights : parsed.highlights
+        const highlights = Array.isArray(payload?.highlights)
+          ? payload.highlights.filter((entry): entry is string => typeof entry === 'string')
+          : parsed.highlights
 
         const mapped: CollaborationMessage[] = rows
-          .map((row: any) => ({
-            id: String(row?.legacyId ?? ''),
-            channelType: typeof row?.channelType === 'string' ? row.channelType : 'team',
-            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
-            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
-            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
-            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
-            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
-            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
-            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
-            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
-            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
-            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? (row.attachments as any) : undefined,
-            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
-            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
-            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
-            readBy: toStringArray(row?.readBy),
-            deliveredTo: toStringArray(row?.deliveredTo),
-            isPinned: Boolean(row?.isPinned),
-            pinnedAt: typeof row?.pinnedAtMs === 'number' ? new Date(row.pinnedAtMs).toISOString() : null,
-            pinnedBy: typeof row?.pinnedBy === 'string' ? row.pinnedBy : null,
-            sharedTo: toSharedPlatforms(row?.sharedTo),
-            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
-            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
-            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+          .map((row: unknown) => {
+            const item = (row ?? {}) as Record<string, unknown>
+            return {
+            id: String(item.legacyId ?? ''),
+            channelType: toChannelType(item.channelType, 'team'),
+            clientId: typeof item.clientId === 'string' ? item.clientId : null,
+            projectId: typeof item.projectId === 'string' ? item.projectId : null,
+            senderId: typeof item.senderId === 'string' ? item.senderId : null,
+            senderName: typeof item.senderName === 'string' ? item.senderName : 'Unknown teammate',
+            senderRole: typeof item.senderRole === 'string' ? item.senderRole : null,
+            content: Boolean(item.deleted || item.deletedAtMs) ? '' : String(item.content ?? ''),
+            createdAt: typeof item.createdAtMs === 'number' ? new Date(item.createdAtMs).toISOString() : null,
+            updatedAt: typeof item.updatedAtMs === 'number' ? new Date(item.updatedAtMs).toISOString() : null,
+            isEdited: Boolean(item.updatedAtMs && item.createdAtMs && item.updatedAtMs !== item.createdAtMs),
+            deletedAt: typeof item.deletedAtMs === 'number' ? new Date(item.deletedAtMs).toISOString() : null,
+            deletedBy: typeof item.deletedBy === 'string' ? item.deletedBy : null,
+            isDeleted: Boolean(item.deleted || item.deletedAtMs),
+            attachments:
+              Array.isArray(item.attachments) && item.attachments.length > 0
+                ? (item.attachments as CollaborationAttachment[])
+                : undefined,
+            format: (item.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+            mentions: Array.isArray(item.mentions) && item.mentions.length > 0 ? item.mentions : undefined,
+            reactions: Array.isArray(item.reactions) && item.reactions.length > 0 ? item.reactions : undefined,
+            readBy: toStringArray(item.readBy),
+            deliveredTo: toStringArray(item.deliveredTo),
+            isPinned: Boolean(item.isPinned),
+            pinnedAt: typeof item.pinnedAtMs === 'number' ? new Date(item.pinnedAtMs).toISOString() : null,
+            pinnedBy: typeof item.pinnedBy === 'string' ? item.pinnedBy : null,
+            sharedTo: toSharedPlatforms(item.sharedTo),
+            parentMessageId: typeof item.parentMessageId === 'string' ? item.parentMessageId : null,
+            threadRootId: typeof item.threadRootId === 'string' ? item.threadRootId : null,
+            threadReplyCount: typeof item.threadReplyCount === 'number' ? item.threadReplyCount : undefined,
             threadLastReplyAt:
-              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
-          }))
-          .filter((m: CollaborationMessage) => m.id)
-          .sort(
-            (a: CollaborationMessage, b: CollaborationMessage) =>
-              new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
-          )
+              typeof item.threadLastReplyAtMs === 'number' ? new Date(item.threadLastReplyAtMs).toISOString() : null,
+          }
+          })
+          .filter((m) => m.id)
+          .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
 
         setSearchResults(mapped)
         setSearchHighlights(highlights)
         setSearchError(null)
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         logError(error, 'useCollaborationData:searchChannel')
         setSearchError(asErrorMessage(error))
         setSearchResults([])
@@ -311,7 +324,7 @@ export function useMessagesData({
       })
 
     return
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint_disable-next-line react-hooks/exhaustive-deps
   }, [normalizedMessageSearch, parseSearchQuery, selectedChannelId])
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
@@ -510,7 +523,7 @@ export function useMessagesData({
     async (message: CollaborationMessage, wsId: string) => {
       try {
         // Fetch notification preferences
-        const prefs = await convex.query((api as any).settings.getMyNotificationPreferences, {})
+        const prefs = await convex.query(api.settings.getMyNotificationPreferences, {})
 
         if (!prefs) return
 
@@ -586,7 +599,7 @@ export function useMessagesData({
         const uploadedAttachments = await uploadAttachments(pendingAttachments)
 
         const mentionMatches = extractMentionsFromContent(trimmedContent)
-        const mentionMetadata = mentionMatches.map((mention: any) => {
+        const mentionMetadata = mentionMatches.map((mention) => {
           const participant = participantNameMap.get(mention.name.toLowerCase())
           return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
         })
@@ -621,7 +634,7 @@ export function useMessagesData({
           isThreadRoot: options?.parentMessageId ? false : true,
         })
 
-        const createdRow = await convex.query((collaborationApi as any).getByLegacyId, {
+        const createdRow = await convex.query(collaborationApi.getByLegacyId, {
           workspaceId: String(workspaceId),
           legacyId: messageId,
         })
@@ -765,7 +778,7 @@ export function useMessagesData({
         const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
         const afterLegacyId = decoded ? decoded.id : undefined
 
-        const rows = (await convex.query((collaborationApi as any).listChannel, {
+        const rows = (await convex.query(collaborationApi.listChannel, {
           workspaceId: String(workspaceId),
           channelType: channel.type,
           clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
@@ -773,55 +786,60 @@ export function useMessagesData({
           limit: 50 + 1,
           afterCreatedAtMs,
           afterLegacyId,
-        })) as any[]
+        })) as Array<Record<string, unknown>>
 
         const hasMore = rows.length > 50
         const pageRows = hasMore ? rows.slice(0, 50) : rows
 
         const mapped: CollaborationMessage[] = pageRows
-          .map((row: any) => ({
-            id: String(row?.legacyId ?? ''),
-            channelType: typeof row?.channelType === 'string' ? row.channelType : channel.type,
-            clientId: typeof row?.clientId === 'string' ? row.clientId : null,
-            projectId: typeof row?.projectId === 'string' ? row.projectId : null,
-            senderId: typeof row?.senderId === 'string' ? row.senderId : null,
-            senderName: typeof row?.senderName === 'string' ? row.senderName : 'Unknown teammate',
-            senderRole: typeof row?.senderRole === 'string' ? row.senderRole : null,
-            content: Boolean(row?.deleted || row?.deletedAtMs) ? '' : String(row?.content ?? ''),
-            createdAt: typeof row?.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-            updatedAt: typeof row?.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
-            isEdited: Boolean(row?.updatedAtMs && row?.createdAtMs && row.updatedAtMs !== row.createdAtMs),
-            deletedAt: typeof row?.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,
-            deletedBy: typeof row?.deletedBy === 'string' ? row.deletedBy : null,
-            isDeleted: Boolean(row?.deleted || row?.deletedAtMs),
-            attachments: Array.isArray(row?.attachments) && row.attachments.length > 0 ? row.attachments : undefined,
-            format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
-            mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
-            reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
-            readBy: toStringArray(row?.readBy),
-            deliveredTo: toStringArray(row?.deliveredTo),
-            isPinned: Boolean(row?.isPinned),
-            pinnedAt: typeof row?.pinnedAtMs === 'number' ? new Date(row.pinnedAtMs).toISOString() : null,
-            pinnedBy: typeof row?.pinnedBy === 'string' ? row.pinnedBy : null,
-            sharedTo: toSharedPlatforms(row?.sharedTo),
-            parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
-            threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
-            threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
+          .map((row: unknown) => {
+            const item = (row ?? {}) as Record<string, unknown>
+            return {
+            id: String(item.legacyId ?? ''),
+            channelType: toChannelType(item.channelType, channel.type),
+            clientId: typeof item.clientId === 'string' ? item.clientId : null,
+            projectId: typeof item.projectId === 'string' ? item.projectId : null,
+            senderId: typeof item.senderId === 'string' ? item.senderId : null,
+            senderName: typeof item.senderName === 'string' ? item.senderName : 'Unknown teammate',
+            senderRole: typeof item.senderRole === 'string' ? item.senderRole : null,
+            content: Boolean(item.deleted || item.deletedAtMs) ? '' : String(item.content ?? ''),
+            createdAt: typeof item.createdAtMs === 'number' ? new Date(item.createdAtMs).toISOString() : null,
+            updatedAt: typeof item.updatedAtMs === 'number' ? new Date(item.updatedAtMs).toISOString() : null,
+            isEdited: Boolean(item.updatedAtMs && item.createdAtMs && item.updatedAtMs !== item.createdAtMs),
+            deletedAt: typeof item.deletedAtMs === 'number' ? new Date(item.deletedAtMs).toISOString() : null,
+            deletedBy: typeof item.deletedBy === 'string' ? item.deletedBy : null,
+            isDeleted: Boolean(item.deleted || item.deletedAtMs),
+            attachments:
+              Array.isArray(item.attachments) && item.attachments.length > 0
+                ? (item.attachments as CollaborationAttachment[])
+                : undefined,
+            format: (item.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
+            mentions: Array.isArray(item.mentions) && item.mentions.length > 0 ? item.mentions : undefined,
+            reactions: Array.isArray(item.reactions) && item.reactions.length > 0 ? item.reactions : undefined,
+            readBy: toStringArray(item.readBy),
+            deliveredTo: toStringArray(item.deliveredTo),
+            isPinned: Boolean(item.isPinned),
+            pinnedAt: typeof item.pinnedAtMs === 'number' ? new Date(item.pinnedAtMs).toISOString() : null,
+            pinnedBy: typeof item.pinnedBy === 'string' ? item.pinnedBy : null,
+            sharedTo: toSharedPlatforms(item.sharedTo),
+            parentMessageId: typeof item.parentMessageId === 'string' ? item.parentMessageId : null,
+            threadRootId: typeof item.threadRootId === 'string' ? item.threadRootId : null,
+            threadReplyCount: typeof item.threadReplyCount === 'number' ? item.threadReplyCount : undefined,
             threadLastReplyAt:
-              typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
-          }))
+              typeof item.threadLastReplyAtMs === 'number' ? new Date(item.threadLastReplyAtMs).toISOString() : null,
+          }
+          })
           .filter((m) => m.id)
-          .sort(
-            (a: CollaborationMessage, b: CollaborationMessage) =>
-              new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
-          )
+          .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
         const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
+        const oldestCreatedAtMs = oldestRow && typeof oldestRow.createdAtMs === 'number' ? oldestRow.createdAtMs : null
+        const oldestLegacyId = oldestRow && typeof oldestRow.legacyId === 'string' ? oldestRow.legacyId : ''
         const newCursor =
-          hasMore && oldestRow && typeof oldestRow.createdAtMs === 'number'
+          hasMore && oldestCreatedAtMs !== null
             ? encodeTimestampIdCursor(
-                new Date(oldestRow.createdAtMs).toISOString(),
-                String(oldestRow.legacyId ?? '')
+                new Date(oldestCreatedAtMs).toISOString(),
+                String(oldestLegacyId)
               )
             : null
 

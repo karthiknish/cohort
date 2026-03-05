@@ -1,7 +1,12 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
+import { internal } from './_generated/api'
 
 import { runDerivedMetricsPipeline } from '@/lib/metrics'
+import type { GoogleAdMetric } from '@/services/integrations/google-ads'
+import type { TikTokAdMetric } from '@/services/integrations/tiktok-ads'
+import type { LinkedInCreativeMetric } from '@/services/integrations/linkedin-ads'
+import type { MetaAdMetric } from '@/services/integrations/meta-ads'
 import { Errors, withErrorHandling } from './errors'
 
 function requireIdentity(identity: unknown): asserts identity {
@@ -46,7 +51,7 @@ export type NormalizedAdMetric = {
   reach?: number
 }
 
-function normalizeGoogleMetrics(metrics: any[]): NormalizedAdMetric[] {
+function normalizeGoogleMetrics(metrics: GoogleAdMetric[]): NormalizedAdMetric[] {
   return metrics.map((m) => {
     const ctr = m.impressions > 0 ? (m.clicks / m.impressions) * 100 : 0
     const cpc = m.clicks > 0 ? m.spend / m.clicks : 0
@@ -71,7 +76,7 @@ function normalizeGoogleMetrics(metrics: any[]): NormalizedAdMetric[] {
   })
 }
 
-function normalizeTikTokMetrics(metrics: any[]): NormalizedAdMetric[] {
+function normalizeTikTokMetrics(metrics: TikTokAdMetric[]): NormalizedAdMetric[] {
   return metrics.map((m) => {
     const ctr = m.impressions > 0 ? (m.clicks / m.impressions) * 100 : 0
     const cpc = m.clicks > 0 ? m.spend / m.clicks : 0
@@ -96,7 +101,7 @@ function normalizeTikTokMetrics(metrics: any[]): NormalizedAdMetric[] {
   })
 }
 
-function normalizeLinkedInMetrics(metrics: any[]): NormalizedAdMetric[] {
+function normalizeLinkedInMetrics(metrics: LinkedInCreativeMetric[]): NormalizedAdMetric[] {
   return metrics.map((m) => {
     const ctr = m.impressions > 0 ? (m.clicks / m.impressions) * 100 : 0
     const cpc = m.clicks > 0 ? m.spend / m.clicks : 0
@@ -121,7 +126,7 @@ function normalizeLinkedInMetrics(metrics: any[]): NormalizedAdMetric[] {
   })
 }
 
-function normalizeMetaMetrics(metrics: any[]): NormalizedAdMetric[] {
+function normalizeMetaMetrics(metrics: MetaAdMetric[]): NormalizedAdMetric[] {
   return metrics.map((m) => {
     const ctr = m.impressions > 0 ? (m.clicks / m.impressions) * 100 : 0
     const cpc = m.clicks > 0 ? m.spend / m.clicks : 0
@@ -164,7 +169,7 @@ export const listAdMetrics = action({
     const timeframeDays = Number.parseInt(args.days ?? '7', 10) || 7
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

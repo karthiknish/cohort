@@ -57,13 +57,14 @@ export const listCampaigns = action({
     providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
     clientId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => withErrorHandling(async () => {
+  handler: async (ctx, args): Promise<NormalizedCampaign[]> => withErrorHandling(async (): Promise<NormalizedCampaign[]> => {
     const identity = await ctx.auth.getUserIdentity()
     requireIdentity(identity)
 
     const clientId = normalizeClientId(args.clientId ?? null)
+    const { internal } = await import('./_generated/api')
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,
@@ -255,8 +256,9 @@ export const updateCampaign = action({
     requireIdentity(identity)
 
     const clientId = normalizeClientId(args.clientId ?? null)
+    const { internal } = await import('./_generated/api')
 
-    const integration = await ctx.runQuery('adsIntegrations:getAdIntegration' as any, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

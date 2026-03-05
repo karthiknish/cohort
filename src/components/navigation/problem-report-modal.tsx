@@ -117,7 +117,11 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
             <Label htmlFor="severity">Severity Level</Label>
             <Select
               value={severity}
-              onValueChange={(value: any) => setSeverity(value)}
+              onValueChange={(value) => {
+                if (value === 'low' || value === 'medium' || value === 'high' || value === 'critical') {
+                  setSeverity(value)
+                }
+              }}
               disabled={submitting}
             >
               <SelectTrigger id="severity">

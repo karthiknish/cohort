@@ -173,7 +173,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
 
     void createAudience({
         workspaceId,
-        providerId: providerId as any,
+      providerId,
         clientId: selectedClientId ?? null,
         name: formData.name,
         description: formData.description,

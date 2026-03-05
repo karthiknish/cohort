@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, RefreshCw, Home, Copy, Code2, FileJson } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -12,16 +13,31 @@ interface DashboardErrorProps {
   reset: () => void
 }
 
+type RenderLogEntry = {
+  name?: string
+  renderCount?: number
+  timestamp?: string
+  changedProps?: unknown
+}
+
+type RenderLogWindow = Window & {
+  __RENDER_LOGS__?: RenderLogEntry[]
+}
+
 export default function DashboardError({ error, reset }: DashboardErrorProps) {
   useEffect(() => {
     console.error('[DashboardErrorBoundary]', error)
-    console.error('[DashboardErrorBoundary] componentStack:', (error as any).componentStack)
+    console.error('[DashboardErrorBoundary] componentStack:', error.componentStack)
   }, [error])
 
   const isDev = process.env.NODE_ENV === 'development'
   const errorDigest = error.digest
   const componentName = 'DashboardError'
-  const componentStack = (error as any).componentStack
+  const componentStack = error.componentStack
+  const renderLogs = useMemo(() => {
+    if (!isDev || typeof window === 'undefined') return [] as RenderLogEntry[]
+    return (window as RenderLogWindow).__RENDER_LOGS__ ?? []
+  }, [isDev])
 
   // Check for specific error types
   const isUserNotFoundError = error.message?.includes('USER_NOT_FOUND') || 
@@ -95,10 +111,10 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
                 Try again
               </Button>
               <Button variant="outline" asChild className="w-full">
-                <a href="/">
+                <Link href="/">
                   <Home className="mr-2 h-4 w-4" />
                   Go to home
-                </a>
+                </Link>
               </Button>
             </div>
           </CardContent>
@@ -118,22 +134,22 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
             </div>
             <CardTitle className="text-xl">Session expired</CardTitle>
             <CardDescription>
-              Your session has expired or you don't have permission to access this page.
+              Your session has expired or you do not have permission to access this page.
               Please sign in again to continue.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-2 pt-2">
               <Button asChild className="w-full">
-                <a href="/auth/signin">
+                <Link href="/auth/signin">
                   Sign in
-                </a>
+                </Link>
               </Button>
               <Button variant="outline" asChild className="w-full">
-                <a href="/">
+                <Link href="/">
                   <Home className="mr-2 h-4 w-4" />
                   Go to home
-                </a>
+                </Link>
               </Button>
             </div>
           </CardContent>
@@ -231,17 +247,17 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
                 </details>
               )}
               {/* Show render history in development if available */}
-              {isDev && typeof window !== 'undefined' && (window as any).__RENDER_LOGS__ && (window as any).__RENDER_LOGS__.length > 0 && (
+              {isDev && renderLogs.length > 0 && (
                 <details className="rounded-lg border border-purple-500/40 bg-purple-500/10 p-3">
                   <summary className="cursor-pointer p-2 text-xs font-medium text-muted-foreground hover:text-foreground">
-                    View Render History (Last {(window as any).__RENDER_LOGS__.length} renders)
+                    View Render History (Last {renderLogs.length} renders)
                   </summary>
                   <div className="max-h-64 overflow-auto space-y-2 mt-2">
-                    {(window as any).__RENDER_LOGS__.slice(-20).reverse().map((log: any, i: number) => (
+                    {renderLogs.slice(-20).reverse().map((log, i) => (
                       <div key={i} className="text-[10px] font-mono border-b border-purple-500/20 pb-1 last:border-0">
                         <div className="flex justify-between text-purple-700 dark:text-purple-300">
-                          <span>{log.name} #{log.renderCount}</span>
-                          <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
+                          <span>{log.name ?? 'Unknown'} #{log.renderCount ?? '-'}</span>
+                          <span>{log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--'}</span>
                         </div>
                         <pre className="text-muted-foreground overflow-auto">
                           {JSON.stringify(log.changedProps, null, 2)}
@@ -260,10 +276,10 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <a href="/">
+              <Link href="/">
                 <Home className="mr-2 h-4 w-4" />
                 Go to home
-              </a>
+              </Link>
             </Button>
           </div>
         </CardContent>

@@ -36,6 +36,19 @@ interface ProposalVersionHistoryProps {
   disabled?: boolean
 }
 
+type VersionRow = {
+  legacyId: string
+  proposalLegacyId?: string
+  versionNumber?: number
+  formData?: unknown
+  status?: string
+  stepProgress?: number
+  changeDescription?: string | null
+  createdBy?: string
+  createdByName?: string | null
+  createdAtMs?: number
+}
+
 function formatRelativeTime(dateString: string | null): string {
   if (!dateString) return 'Unknown'
 
@@ -87,18 +100,21 @@ export function ProposalVersionHistory({
 
   const versions: ProposalVersion[] = useMemo(() => {
     if (!rows) return []
-    return rows.map((row: any) => ({
+    if (!Array.isArray(rows)) return []
+    return rows.map((row) => {
+      const typedRow = row as VersionRow
+      return {
       id: String(row.legacyId),
-      proposalId: String(row.proposalLegacyId ?? ''),
-      versionNumber: typeof row.versionNumber === 'number' ? row.versionNumber : 1,
-      formData: row.formData as ProposalFormData,
-      status: typeof row.status === 'string' ? row.status : 'draft',
-      stepProgress: typeof row.stepProgress === 'number' ? row.stepProgress : 0,
-      changeDescription: typeof row.changeDescription === 'string' ? row.changeDescription : null,
-      createdBy: typeof row.createdBy === 'string' ? row.createdBy : '',
-      createdByName: typeof row.createdByName === 'string' ? row.createdByName : null,
-      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-    }))
+      proposalId: String(typedRow.proposalLegacyId ?? ''),
+      versionNumber: typeof typedRow.versionNumber === 'number' ? typedRow.versionNumber : 1,
+      formData: typedRow.formData as ProposalFormData,
+      status: typeof typedRow.status === 'string' ? typedRow.status : 'draft',
+      stepProgress: typeof typedRow.stepProgress === 'number' ? typedRow.stepProgress : 0,
+      changeDescription: typeof typedRow.changeDescription === 'string' ? typedRow.changeDescription : null,
+      createdBy: typeof typedRow.createdBy === 'string' ? typedRow.createdBy : '',
+      createdByName: typeof typedRow.createdByName === 'string' ? typedRow.createdByName : null,
+      createdAt: typeof typedRow.createdAtMs === 'number' ? new Date(typedRow.createdAtMs).toISOString() : null,
+    }})
   }, [rows])
 
   const loading = rows === undefined

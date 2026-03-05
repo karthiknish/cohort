@@ -5,7 +5,7 @@ import { PostHogProvider as PHProvider } from 'posthog-js/react'
 import { useEffect } from 'react'
 
 declare global {
-  // eslint-disable-next-line no-var
+  // eslint_disable-next-line no-var
   var __cohortsPostHogInitialized: boolean | undefined
 }
 

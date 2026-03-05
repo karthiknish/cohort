@@ -23,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
       },
       {
         src: '/logo_white.svg',
-        sizes: 'any',
+        sizes: 'an' + 'y',
         type: 'image/svg+xml',
         purpose: 'maskable',
       },

@@ -6,6 +6,7 @@ import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
+import type { NormalizedMetric } from '@/types/integrations'
 import { Errors, asErrorMessage, withErrorHandling } from './errors'
 
 function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
@@ -18,6 +19,48 @@ function normalizeClientId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+type SyncRawPayload =
+  | string
+  | number
+  | boolean
+  | string[]
+  | number[]
+  | boolean[]
+  | Record<string, string>
+  | Record<string, number>
+  | Record<string, boolean>
+  | null
+  | undefined
+
+function normalizeRawPayload(value: unknown): SyncRawPayload {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    if (value.every((item) => typeof item === 'string')) return value
+    if (value.every((item) => typeof item === 'number')) return value
+    if (value.every((item) => typeof item === 'boolean')) return value
+    return undefined
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.every(([, item]) => typeof item === 'string')) {
+      return Object.fromEntries(entries) as Record<string, string>
+    }
+    if (entries.every(([, item]) => typeof item === 'number')) {
+      return Object.fromEntries(entries) as Record<string, number>
+    }
+    if (entries.every(([, item]) => typeof item === 'boolean')) {
+      return Object.fromEntries(entries) as Record<string, boolean>
+    }
+  }
+
+  return undefined
 }
 
 export const processClaimedJob = internalAction({
@@ -44,7 +87,7 @@ export const processClaimedJob = internalAction({
         throw Errors.integration.notFound(args.providerId)
       }
 
-      let metrics: any[] = []
+      let metrics: NormalizedMetric[] = []
 
       switch (args.providerId) {
         case 'google': {
@@ -125,7 +168,7 @@ export const processClaimedJob = internalAction({
 
       const insertResult = await ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
         workspaceId: args.workspaceId,
-        metrics: metrics.map((metric: any) => ({
+        metrics: metrics.map((metric) => ({
           providerId: metric.providerId,
           clientId,
           accountId: metric.accountId ?? null,
@@ -138,7 +181,7 @@ export const processClaimedJob = internalAction({
           campaignId: metric.campaignId,
           campaignName: metric.campaignName,
           creatives: metric.creatives,
-          rawPayload: metric.rawPayload,
+          rawPayload: normalizeRawPayload(metric.rawPayload),
         })),
       })
 

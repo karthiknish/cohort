@@ -19,7 +19,7 @@ export const recordMessageSent = zWorkspaceMutation({
     clientId: z.string().optional(),
     projectId: z.string().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const legacyId = generateLegacyId()
     const now = Date.now()
@@ -57,10 +57,10 @@ export const recordMessageRead = zWorkspaceMutation({
     messageId: z.string(),
     readerId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const analytics = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.messageId)
       )
       .first()
@@ -86,10 +86,10 @@ export const recordMessageResponse = zWorkspaceMutation({
     originalMessageId: z.string(),
     responseMessageId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const analytics = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.originalMessageId)
       )
       .first()
@@ -115,10 +115,10 @@ export const incrementReactionCount = zWorkspaceMutation({
     messageId: z.string(),
     delta: z.number(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const analytics = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.messageId)
       )
       .first()
@@ -139,10 +139,10 @@ export const incrementReplyCount = zWorkspaceMutation({
   args: {
     messageId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const analytics = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.messageId)
       )
       .first()
@@ -163,10 +163,10 @@ export const incrementShareCount = zWorkspaceMutation({
   args: {
     messageId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const analytics = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.messageId)
       )
       .first()
@@ -189,10 +189,10 @@ export const updateDeliveryStatus = zWorkspaceMutation({
     status: z.enum(['pending', 'delivered', 'failed']),
     attempts: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const analytics = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.messageId)
       )
       .first()
@@ -215,16 +215,16 @@ export const getConversationAnalytics = zWorkspaceQuery({
   args: {
     conversationId: z.string(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const items = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversation_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_conversation_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('conversationId', args.conversationId)
       )
       .order('desc')
       .take(100)
 
-    return items.map((item: any) => ({
+    return items.map((item) => ({
       _id: item._id,
       legacyId: item.legacyId,
       messageId: item.messageId,
@@ -244,17 +244,17 @@ export const getUserAnalytics = zWorkspaceQueryActive({
   args: {
     days: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
     const days = args.days ?? 30
     const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
 
     const items = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_sender_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_sender_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId).eq('senderId', currentUserId)
       )
-      .filter((q: any) => q.gte(q.field('createdAtMs'), cutoffMs))
+      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
       .collect()
 
     const stats = {
@@ -300,16 +300,16 @@ export const getWorkspaceAnalytics = zWorkspaceQuery({
   args: {
     days: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const days = args.days ?? 30
     const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
 
     const items = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_sender_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_sender_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId)
       )
-      .filter((q: any) => q.gte(q.field('createdAtMs'), cutoffMs))
+      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
       .collect()
 
     const stats = {
@@ -360,28 +360,28 @@ export const getAverageResponseTime = zWorkspaceQuery({
     conversationType: z.enum(['direct', 'channel', 'thread']).optional(),
     days: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const days = args.days ?? 30
     const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
 
     let q = ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_conversationType_responseTime', (q: any) =>
+      .withIndex('by_workspace_conversationType_responseTime', (q) =>
         q.eq('workspaceId', args.workspaceId)
       )
 
     if (args.conversationType) {
-      q = q.filter((q: any) => q.eq(q.field('conversationType'), args.conversationType))
+      q = q.filter((q) => q.eq(q.field('conversationType'), args.conversationType))
     }
 
     const items = await q
-      .filter((q: any) => q.gte(q.field('createdAtMs'), cutoffMs))
-      .filter((q: any) => q.neq(q.field('responseTimeMs'), null))
+      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
+      .filter((q) => q.neq(q.field('responseTimeMs'), null))
       .collect()
 
     if (items.length === 0) return { avgMs: 0, count: 0 }
 
-    const total = items.reduce((sum: number, item: any) => sum + (item.responseTimeMs ?? 0), 0)
+    const total = items.reduce((sum: number, item) => sum + (item.responseTimeMs ?? 0), 0)
     return {
       avgMs: Math.round(total / items.length),
       count: items.length,
@@ -393,24 +393,24 @@ export const getEngagementMetrics = zWorkspaceQuery({
   args: {
     days: z.number().optional(),
   },
-  handler: async (ctx: any, args: any) => {
+  handler: async (ctx, args) => {
     const days = args.days ?? 30
     const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
 
     const items = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_sender_createdAtMs', (q: any) =>
+      .withIndex('by_workspace_sender_createdAtMs', (q) =>
         q.eq('workspaceId', args.workspaceId)
       )
-      .filter((q: any) => q.gte(q.field('createdAtMs'), cutoffMs))
+      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
       .collect()
 
     return {
-      totalReactions: items.reduce((sum: number, item: any) => sum + item.reactionCount, 0),
-      totalReplies: items.reduce((sum: number, item: any) => sum + item.replyCount, 0),
-      totalShares: items.reduce((sum: number, item: any) => sum + item.shareCount, 0),
-      avgReactionsPerMessage: items.length > 0 
-        ? Math.round(items.reduce((sum: number, item: any) => sum + item.reactionCount, 0) / items.length * 100) / 100 
+      totalReactions: items.reduce((sum: number, item) => sum + item.reactionCount, 0),
+      totalReplies: items.reduce((sum: number, item) => sum + item.replyCount, 0),
+      totalShares: items.reduce((sum: number, item) => sum + item.shareCount, 0),
+      avgReactionsPerMessage: items.length > 0
+        ? Math.round(items.reduce((sum: number, item) => sum + item.reactionCount, 0) / items.length * 100) / 100
         : 0,
       messageCount: items.length,
     }

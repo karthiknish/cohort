@@ -146,7 +146,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Load navigation state from localStorage on mount and client change
   useEffect(() => {
     if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
-      return
+      return undefined
     }
 
     if (mountedRef.current && typeof window !== 'undefined') {
@@ -158,17 +158,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         window.cancelAnimationFrame(frameId)
       }
     }
+
+    return undefined
   }, [selectedClientId, loadNavigationState])
 
   // Initialize on first mount
   useEffect(() => {
     if (mountedRef.current) {
-      return
+      return undefined
     }
     mountedRef.current = true
 
     if (typeof window === 'undefined') {
-      return
+      return undefined
     }
 
     if (isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
@@ -180,12 +182,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         window.cancelAnimationFrame(frameId)
       }
     }
+
+    return undefined
   }, [loadNavigationState])
 
   // Sync with URL parameters (URL takes precedence over localStorage)
   useEffect(() => {
     if (!isFeatureEnabled('NAVIGATION_PERSISTENCE')) {
-      return
+      return undefined
     }
 
     const urlProjectId = searchParams.get('projectId')
@@ -204,6 +208,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         cancelAnimationFrame(frameId)
       }
     }
+
+    return undefined
   }, [searchParams])
 
 

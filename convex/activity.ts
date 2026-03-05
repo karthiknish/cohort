@@ -254,7 +254,10 @@ export const listForClient = zAuthenticatedQuery({
               ? message.threadRootId
               : (typeof message.parentMessageId === 'string' ? message.parentMessageId : null),
         }),
-        userName: readString(message.senderName, null as any) ?? null,
+        userName:
+          typeof message.senderName === 'string' && message.senderName.trim().length > 0
+            ? message.senderName
+            : null,
         isRead: false,
         kind: 'collaboration.message',
       })
