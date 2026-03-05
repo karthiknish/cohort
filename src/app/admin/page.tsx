@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   TrendingUp,
   TrendingDown,
+  UserCheck,
   Users,
   Zap,
   FolderKanban,
@@ -87,16 +88,20 @@ type AdminSection = {
 
 export default function AdminPage() {
   const { user } = useAuth()
+  const workspaceId = user?.agencyId || user?.id || ''
   const { results: usersPage } = usePaginatedQuery(
     (api as any).adminUsers.listUsers,
-    {},
+    {
+      workspaceId,
+      includeAllWorkspaces: false,
+    },
     { initialNumItems: 50 }
   )
 
   const clientsRealtime = useQuery((api as any).clients.list, {
-    workspaceId: user?.agencyId || user?.id || '',
+    workspaceId,
     limit: 100,
-    includeAllWorkspaces: true,
+    includeAllWorkspaces: false,
   }) as any
 
   const schedulerEventsRealtime = useQuery((api as any).schedulerEvents.list, {
@@ -202,6 +207,15 @@ export default function AdminPage() {
   }, [])
 
   const adminSections: AdminSection[] = [
+    {
+      title: 'User Approvals',
+      description: 'Review pending users, approve access, and assign safe baseline roles.',
+      href: '/admin/users',
+      icon: UserCheck,
+      cta: 'Review approvals',
+      badge: stats ? `${Math.max(stats.totalUsers - stats.activeUsers, 0)} pending` : undefined,
+      badgeVariant: 'secondary',
+    },
     {
       title: 'Team Management',
       description: 'Invite members, manage roles, and control access permissions.',
@@ -636,6 +650,12 @@ export default function AdminPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-2">
+                <Button asChild variant="outline" size="sm" className="justify-start">
+                  <Link href="/admin/users">
+                    <UserCheck className="mr-2 h-4 w-4" />
+                    Review user approvals
+                  </Link>
+                </Button>
                 <Button asChild variant="outline" size="sm" className="justify-start">
                   <Link href="/admin/team">
                     <Users className="mr-2 h-4 w-4" />

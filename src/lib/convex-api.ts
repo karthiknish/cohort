@@ -31,6 +31,7 @@ export const clientsApi = {
   getByLegacyId: (api as any).clients.getByLegacyId,
   create: (api as any).clients.create,
   addTeamMember: (api as any).clients.addTeamMember,
+  removeTeamMember: (api as any).clients.removeTeamMember,
   softDelete: (api as any).clients.softDelete,
 }
 

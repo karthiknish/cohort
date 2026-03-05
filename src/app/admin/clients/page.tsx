@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 import {
   Card,
@@ -21,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { LoaderCircle, Plus, Trash2, Users as UsersIcon } from 'lucide-react'
+import { LoaderCircle, Plus, Trash2, Users as UsersIcon, X } from 'lucide-react'
 import { useAdminClients } from './hooks'
 
 export default function AdminClientsPage() {
@@ -63,6 +64,7 @@ export default function AdminClientsPage() {
     clientPendingMembers,
     isTeamDialogOpen,
     addingMember,
+    removingTeamMemberKey,
     memberName,
     memberRole,
     setMemberName,
@@ -70,7 +72,21 @@ export default function AdminClientsPage() {
     requestAddTeamMember,
     handleTeamDialogChange,
     handleAddTeamMember,
+    handleRemoveTeamMember,
   } = useAdminClients()
+
+  const [clientSearch, setClientSearch] = useState('')
+
+  const filteredClients = useMemo(() => {
+    const query = clientSearch.trim().toLowerCase()
+    if (!query) return clients
+
+    return clients.filter((client) => {
+      const teamText = client.teamMembers.map((member) => `${member.name} ${member.role}`).join(' ')
+      const haystack = `${client.name} ${client.accountManager} ${teamText}`.toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [clients, clientSearch])
 
   if (!user) {
     return (
@@ -248,10 +264,18 @@ export default function AdminClientsPage() {
 
             {/* Client List */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <UsersIcon className="h-4 w-4" />
-                <span>Existing client workspaces</span>
-                <Badge variant="secondary">{clients.length}</Badge>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <UsersIcon className="h-4 w-4" />
+                  <span>Existing client workspaces</span>
+                  <Badge variant="secondary">{clients.length}</Badge>
+                </div>
+                <Input
+                  value={clientSearch}
+                  onChange={(event) => setClientSearch(event.target.value)}
+                  placeholder="Search clients or teammates"
+                  className="w-full sm:w-72"
+                />
               </div>
               {clientsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -261,9 +285,11 @@ export default function AdminClientsPage() {
                 <p className="text-sm text-destructive">{clientsError}</p>
               ) : clients.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No clients yet. Add a workspace to get started.</p>
+              ) : filteredClients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No client workspaces match your search.</p>
               ) : (
                 <div className="space-y-3">
-                  {clients.map((client) => (
+                  {filteredClients.map((client) => (
                     <div key={client.id} className="rounded-md border p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -301,13 +327,34 @@ export default function AdminClientsPage() {
                       {client.teamMembers.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {client.teamMembers.map((member) => (
-                            <span
+                            <div
                               key={`${client.id}-${member.name}-${member.role}`}
-                              className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
+                              className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
                             >
                               <span className="font-medium text-foreground">{member.name}</span>
                               {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
-                            </span>
+                              <button
+                                type="button"
+                                className="ml-2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={() => void handleRemoveTeamMember(client, member.name)}
+                                disabled={
+                                  removingTeamMemberKey === `${client.id}:${member.name.toLowerCase()}` ||
+                                  member.name.toLowerCase() === client.accountManager.toLowerCase()
+                                }
+                                aria-label={`Remove ${member.name} from ${client.name}`}
+                                title={
+                                  member.name.toLowerCase() === client.accountManager.toLowerCase()
+                                    ? 'Account manager cannot be removed from the team'
+                                    : `Remove ${member.name}`
+                                }
+                              >
+                                {removingTeamMemberKey === `${client.id}:${member.name.toLowerCase()}` ? (
+                                  <LoaderCircle className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <X className="h-3 w-3" />
+                                )}
+                              </button>
+                            </div>
                           ))}
                         </div>
                       )}

@@ -113,6 +113,18 @@ export type AuthenticatedActionCtx = ActionCtx & {
   cachedResponse?: any
 }
 
+function assertUserIsActive(user: Doc<'users'>) {
+  if (user.status === 'active') {
+    return
+  }
+
+  if (user.status === 'disabled' || user.status === 'suspended') {
+    throw Errors.auth.userDisabled()
+  }
+
+  throw Errors.auth.forbidden('Your account is awaiting admin approval.')
+}
+
 /**
  * Shared helper to get validated authentication context for queries/mutations.
  */
@@ -133,9 +145,7 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
     )
   }
 
-  if (user.status === 'disabled' || user.status === 'suspended') {
-    throw Errors.auth.userDisabled()
-  }
+  assertUserIsActive(user)
 
   return {
     user,
@@ -281,9 +291,7 @@ async function getAuthenticatedActionContext(ctx: ActionCtx) {
     throw Errors.auth.userNotFound()
   }
 
-  if (user.status === 'disabled' || user.status === 'suspended') {
-    throw Errors.auth.userDisabled()
-  }
+  assertUserIsActive(user)
 
   return {
     user,
@@ -377,14 +385,15 @@ export const adminPaginatedQuery = customQuery(query, {
       cursor: v.union(v.string(), v.null()),
       id: v.optional(v.number()),
     }),
-  },
-  input: async (ctx, args) => {
+  } as any,
+  input: async (ctx, args: any) => {
     const auth = await getAuthenticatedContext(ctx)
     if (auth.user.role !== 'admin') {
       throw Errors.auth.adminRequired()
     }
-    const { numItems, cursor } = args.paginationOpts
-    return { ctx: { ...ctx, ...auth }, args: { numItems, cursor } }
+    const { paginationOpts, ...restArgs } = args
+    const { numItems, cursor } = paginationOpts
+    return { ctx: { ...ctx, ...auth }, args: { ...restArgs, numItems, cursor } }
   },
 })
 

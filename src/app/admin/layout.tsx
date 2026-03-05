@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   ShieldCheck,
+  UserCheck,
   Users,
   AlertCircle,
 } from 'lucide-react'
@@ -39,6 +40,11 @@ const adminNavItems = [
     title: 'Team',
     href: '/admin/team',
     icon: Users,
+  },
+  {
+    title: 'Users',
+    href: '/admin/users',
+    icon: UserCheck,
   },
   {
     title: 'Clients',

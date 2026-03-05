@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { CircleAlert, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { useMutation, usePaginatedQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -44,16 +44,34 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 import { cn } from '@/lib/utils'
 
 type StatusFilter = 'all' | AdminUserStatus
 type RoleFilter = 'all' | AdminUserRole
+type InvitationLifecycleStatus = 'pending' | 'accepted' | 'expired' | 'revoked'
+
+type AdminInvitationRecord = {
+  id: string
+  email: string
+  role: AdminUserRole
+  name: string | null
+  message: string | null
+  status: InvitationLifecycleStatus
+  effectiveStatus: InvitationLifecycleStatus
+  invitedBy: string
+  invitedByName: string | null
+  expiresAtMs: number
+  createdAtMs: number
+  acceptedAtMs: number | null
+}
 
 const ROLE_ASSIGNABLE: AdminUserRole[] = ['team', 'client']
 
 const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
+const INVITATION_STATUSES: InvitationLifecycleStatus[] = ['pending', 'accepted', 'expired', 'revoked']
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
@@ -64,17 +82,29 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [invitationSearchTerm, setInvitationSearchTerm] = useState('')
+  const [invitationStatusFilter, setInvitationStatusFilter] = useState<InvitationLifecycleStatus>('pending')
+  const [error] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [invitationActionKey, setInvitationActionKey] = useState<string | null>(null)
+  const workspaceId = user?.agencyId ?? user?.id
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
-    api.adminUsers.listUsers as any,
-    {},
+    api.adminUsers.listUsers,
+    {
+      workspaceId,
+      includeAllWorkspaces: false,
+    },
     { initialNumItems: 50 }
   )
 
   const updateUserRoleStatus = useMutation(api.adminUsers.updateUserRoleStatus)
   const createInvitation = useMutation(api.adminInvitations.createInvitation)
+  const resendInvitation = useMutation(api.adminInvitations.resendInvitation)
+  const revokeInvitation = useMutation(api.adminInvitations.revokeInvitation)
+  const invitationResponse = useQuery(api.adminInvitations.listInvitations, { limit: 100 }) as
+    | { invitations?: Array<Record<string, unknown>> }
+    | undefined
 
   // Dialog states
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -87,7 +117,7 @@ export default function AdminUsersPage() {
   const users: AdminUserRecord[] = useMemo(() => {
     if (usersOverride) return usersOverride
 
-    return (Array.isArray(usersPage) ? usersPage : []).map((row: any) => ({
+    return (Array.isArray(usersPage) ? usersPage : []).map((row) => ({
       id: row.legacyId,
       email: row.email ?? '',
       name: row.name ?? '',
@@ -124,6 +154,85 @@ export default function AdminUsersPage() {
     const total = users.length
     return { total, pending, active }
   }, [users])
+
+  const invitationsLoading = invitationResponse === undefined
+
+  const invitations: AdminInvitationRecord[] = useMemo(() => {
+    const rows = Array.isArray(invitationResponse?.invitations) ? invitationResponse.invitations : []
+    const now = Date.now()
+
+    return rows
+      .map((row) => {
+        const invitation = row as {
+          id?: string
+          email?: string
+          role?: AdminUserRole
+          name?: string | null
+          message?: string | null
+          status?: InvitationLifecycleStatus
+          effectiveStatus?: InvitationLifecycleStatus
+          invitedBy?: string
+          invitedByName?: string | null
+          expiresAtMs?: number
+          createdAtMs?: number
+          acceptedAtMs?: number | null
+        }
+
+        const status = invitation.status ?? 'pending'
+        const expiresAtMs = typeof invitation.expiresAtMs === 'number' ? invitation.expiresAtMs : now
+        const effectiveStatus =
+          invitation.effectiveStatus ??
+          (status === 'pending' && expiresAtMs <= now ? 'expired' : status)
+
+        return {
+          id: invitation.id ?? '',
+          email: invitation.email ?? '',
+          role: invitation.role ?? 'team',
+          name: invitation.name ?? null,
+          message: invitation.message ?? null,
+          status,
+          effectiveStatus,
+          invitedBy: invitation.invitedBy ?? '',
+          invitedByName: invitation.invitedByName ?? null,
+          expiresAtMs,
+          createdAtMs: typeof invitation.createdAtMs === 'number' ? invitation.createdAtMs : now,
+          acceptedAtMs: typeof invitation.acceptedAtMs === 'number' ? invitation.acceptedAtMs : null,
+        }
+      })
+      .filter((invitation) => invitation.id.length > 0)
+  }, [invitationResponse])
+
+  const invitationSummary = useMemo(() => {
+    return invitations.reduce<Record<InvitationLifecycleStatus, number>>(
+      (acc, invitation) => {
+        acc[invitation.effectiveStatus] += 1
+        return acc
+      },
+      {
+        pending: 0,
+        accepted: 0,
+        expired: 0,
+        revoked: 0,
+      }
+    )
+  }, [invitations])
+
+  const filteredInvitations = useMemo(() => {
+    const search = invitationSearchTerm.trim().toLowerCase()
+
+    return invitations.filter((invitation) => {
+      if (invitation.effectiveStatus !== invitationStatusFilter) {
+        return false
+      }
+
+      if (search.length === 0) {
+        return true
+      }
+
+      const haystack = `${invitation.email} ${invitation.name ?? ''}`.toLowerCase()
+      return haystack.includes(search)
+    })
+  }, [invitations, invitationSearchTerm, invitationStatusFilter])
 
   const handleRoleChange = (record: AdminUserRecord, nextRole: AdminUserRole) => {
     if (record.role === nextRole) {
@@ -199,13 +308,9 @@ export default function AdminUsersPage() {
       invitedByName: user?.name ?? null,
     })
       .then(() => {
-        const emailSent = true
-
         toast({
           title: 'Invitation created',
-          description: emailSent
-            ? `Invitation sent to ${inviteEmail} as ${inviteRole}.`
-            : `Invitation created for ${inviteEmail}. Email notification could not be sent.`,
+          description: `Invitation created for ${inviteEmail} as ${inviteRole}. Email delivery depends on server integration settings.`,
         })
         setInviteOpen(false)
         setInviteEmail('')
@@ -221,11 +326,55 @@ export default function AdminUsersPage() {
       })
   }
 
+  const handleResendInvitation = (invitation: AdminInvitationRecord) => {
+    const actionKey = `resend:${invitation.id}`
+    setInvitationActionKey(actionKey)
+
+    void resendInvitation({ id: invitation.id })
+      .then(() => {
+        toast({
+          title: 'Invitation resent',
+          description: `A fresh invitation was created for ${invitation.email}. Email delivery depends on server integration settings.`,
+        })
+      })
+      .catch((err: unknown) => {
+        logError(err, 'AdminUsers:handleResendInvitation')
+        const message = asErrorMessage(err)
+        toast({ title: 'Resend failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setInvitationActionKey((current) => (current === actionKey ? null : current))
+      })
+  }
+
+  const handleRevokeInvitation = (invitation: AdminInvitationRecord) => {
+    const actionKey = `revoke:${invitation.id}`
+    setInvitationActionKey(actionKey)
+
+    void revokeInvitation({ id: invitation.id })
+      .then(() => {
+        toast({
+          title: 'Invitation revoked',
+          description: `${invitation.email} can no longer use this invitation token.`,
+        })
+      })
+      .catch((err: unknown) => {
+        logError(err, 'AdminUsers:handleRevokeInvitation')
+        const message = asErrorMessage(err)
+        toast({ title: 'Revoke failed', description: message, variant: 'destructive' })
+      })
+      .finally(() => {
+        setInvitationActionKey((current) => (current === actionKey ? null : current))
+      })
+  }
+
   const handleRefresh = () => {
     if (loading) return
     setStatusFilter('pending')
     setRoleFilter('all')
     setSearchTerm('')
+    setInvitationStatusFilter('pending')
+    setInvitationSearchTerm('')
     setUsersOverride(null)
   }
 
@@ -525,6 +674,131 @@ export default function AdminUsersPage() {
             ) : null}
           </CardContent>
         </Card>
+
+        <Card className="border-muted/60 bg-background">
+          <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <CardTitle className="text-lg">Invitation lifecycle</CardTitle>
+              <CardDescription>
+                Track pending, accepted, expired, and revoked invitations. Resend expired invites or revoke outstanding ones.
+              </CardDescription>
+            </div>
+            <Input
+              value={invitationSearchTerm}
+              onChange={(event) => setInvitationSearchTerm(event.target.value)}
+              placeholder="Search invitations by name or email"
+              className="lg:w-72"
+            />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Tabs
+              value={invitationStatusFilter}
+              onValueChange={(value) => setInvitationStatusFilter(value as InvitationLifecycleStatus)}
+              className="space-y-4"
+            >
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+                {INVITATION_STATUSES.map((status) => (
+                  <TabsTrigger key={status} value={status} className="capitalize">
+                    {invitationStatusLabel(status)} ({invitationSummary[status]})
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-fixed text-left text-sm">
+                <thead>
+                  <tr className="border-b border-muted/40">
+                    <th className="w-64 py-2 pr-3 font-medium">Invitee</th>
+                    <th className="w-28 py-2 pr-3 font-medium">Role</th>
+                    <th className="w-28 py-2 pr-3 font-medium">Status</th>
+                    <th className="w-36 py-2 pr-3 font-medium">Sent</th>
+                    <th className="w-36 py-2 pr-3 font-medium">Expires</th>
+                    <th className="w-44 py-2 pr-3 font-medium">Invited by</th>
+                    <th className="py-2 text-right font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInvitations.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                        {invitationsLoading
+                          ? 'Loading invitation lifecycle…'
+                          : 'No invitations match this lifecycle status and search.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredInvitations.map((invitation) => {
+                      const resendKey = `resend:${invitation.id}`
+                      const revokeKey = `revoke:${invitation.id}`
+                      const isResending = invitationActionKey === resendKey
+                      const isRevoking = invitationActionKey === revokeKey
+                      const canRevoke = invitation.effectiveStatus === 'pending'
+                      const canResend = invitation.effectiveStatus === 'expired' || invitation.effectiveStatus === 'revoked'
+
+                      return (
+                        <tr key={invitation.id} className="border-b border-muted/30">
+                          <td className="py-3 pr-3 align-top">
+                            <div className="font-medium text-foreground">{invitation.name || invitation.email}</div>
+                            <div className="text-xs text-muted-foreground">{invitation.email}</div>
+                          </td>
+                          <td className="py-3 pr-3 align-middle">
+                            <Badge variant="outline" className="capitalize">
+                              {invitation.role}
+                            </Badge>
+                          </td>
+                          <td className="py-3 pr-3 align-middle">
+                            <Badge variant={invitationStatusToVariant(invitation.effectiveStatus)} className="capitalize">
+                              {invitationStatusLabel(invitation.effectiveStatus)}
+                            </Badge>
+                          </td>
+                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
+                            {formatDateMs(invitation.createdAtMs)}
+                          </td>
+                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
+                            {formatDateMs(invitation.expiresAtMs)}
+                          </td>
+                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
+                            {invitation.invitedByName || invitation.invitedBy}
+                          </td>
+                          <td className="py-3 text-right align-middle">
+                            <div className="flex justify-end gap-2">
+                              {canResend ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleResendInvitation(invitation)}
+                                  disabled={isResending || isRevoking}
+                                >
+                                  {isResending ? 'Resending…' : 'Resend'}
+                                </Button>
+                              ) : null}
+                              {canRevoke ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleRevokeInvitation(invitation)}
+                                  disabled={isResending || isRevoking}
+                                >
+                                  {isRevoking ? 'Revoking…' : 'Revoke'}
+                                </Button>
+                              ) : null}
+                              {!canResend && !canRevoke ? (
+                                <span className="text-xs text-muted-foreground">No actions</span>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={revokeOpen} onOpenChange={setRevokeOpen}>
@@ -573,6 +847,30 @@ function statusToVariant(status: AdminUserStatus) {
     default:
       return 'destructive' as const
   }
+}
+
+function invitationStatusLabel(status: InvitationLifecycleStatus): string {
+  return status.replace('_', ' ')
+}
+
+function invitationStatusToVariant(status: InvitationLifecycleStatus) {
+  switch (status) {
+    case 'accepted':
+      return 'default' as const
+    case 'pending':
+      return 'secondary' as const
+    case 'expired':
+    case 'revoked':
+    default:
+      return 'destructive' as const
+  }
+}
+
+function formatDateMs(value: number | null): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return '—'
+  }
+  return formatDate(new Date(value).toISOString())
 }
 
 function formatDate(value: string | null): string {

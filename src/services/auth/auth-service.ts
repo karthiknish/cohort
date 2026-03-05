@@ -174,6 +174,9 @@ export class AuthService {
     if (user.status === 'suspended') {
       throw new AccountSuspendedError()
     }
+    if (user.status === 'pending' || user.status === 'invited') {
+      throw new AccountPendingError('Your account is awaiting admin approval.')
+    }
   }
 
   async signIn(email: string, password: string): Promise<AuthUser> {

@@ -62,6 +62,7 @@ export interface UseAdminClientsReturn {
     clientPendingMembers: ClientRecord | null
     isTeamDialogOpen: boolean
     addingMember: boolean
+    removingTeamMemberKey: string | null
     memberName: string
     memberRole: string
     setMemberName: (value: string) => void
@@ -69,6 +70,7 @@ export interface UseAdminClientsReturn {
     requestAddTeamMember: (client: ClientRecord) => void
     handleTeamDialogChange: (open: boolean) => void
     handleAddTeamMember: () => Promise<void>
+    handleRemoveTeamMember: (client: ClientRecord, memberName: string) => Promise<void>
 
 }
 
@@ -87,7 +89,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 workspaceId,
                 limit: 100,
                 cursor: null,
-                includeAllWorkspaces: true,
+                includeAllWorkspaces: false,
             })
         },
         enabled: Boolean(workspaceId),
@@ -114,6 +116,13 @@ export function useAdminClients(): UseAdminClientsReturn {
         },
     })
 
+    const removeTeamMemberMutation = useMutation({
+        mutationFn: async (args: any) => await convex.mutation((clientsApi as any).removeTeamMember, args),
+        onSuccess: () => {
+            clientsQuery.refetch()
+        },
+    })
+
     // Client list state (derived from Convex query)
     const [clientsError, setClientsError] = useState<string | null>(null)
 
@@ -126,6 +135,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     const [clientPendingMembers, setClientPendingMembers] = useState<ClientRecord | null>(null)
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false)
     const [addingMember, setAddingMember] = useState(false)
+    const [removingTeamMemberKey, setRemovingTeamMemberKey] = useState<string | null>(null)
     const [memberName, setMemberName] = useState('')
     const [memberRole, setMemberRole] = useState('')
 
@@ -266,6 +276,44 @@ export function useAdminClients(): UseAdminClientsReturn {
         }
     }, [clientPendingMembers, workspaceId, memberName, memberRole, addTeamMemberMutation, toast])
 
+    const handleRemoveTeamMember = useCallback(async (client: ClientRecord, memberName: string) => {
+        if (!workspaceId) return
+
+        const normalizedName = memberName.trim()
+        if (!normalizedName) return
+
+        if (normalizedName.toLowerCase() === client.accountManager.toLowerCase()) {
+            toast({
+                title: 'Cannot remove account manager',
+                description: 'Change the account manager before removing this teammate.',
+                variant: 'destructive',
+            })
+            return
+        }
+
+        const removeKey = `${client.id}:${normalizedName.toLowerCase()}`
+
+        try {
+            setRemovingTeamMemberKey(removeKey)
+            await removeTeamMemberMutation.mutateAsync({
+                workspaceId,
+                legacyId: client.id,
+                name: normalizedName,
+            })
+
+            toast({
+                title: 'Teammate removed',
+                description: `${normalizedName} was removed from ${client.name}.`,
+            })
+        } catch (err: unknown) {
+            logError(err, 'useAdminClients:handleRemoveTeamMember')
+            const message = asErrorMessage(err)
+            toast({ title: 'Remove teammate failed', description: message, variant: 'destructive' })
+        } finally {
+            setRemovingTeamMemberKey(null)
+        }
+    }, [workspaceId, removeTeamMemberMutation, toast])
+
     // Client form handlers
     const resetClientForm = useCallback(() => {
         setClientName('')
@@ -368,6 +416,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         clientPendingMembers,
         isTeamDialogOpen,
         addingMember,
+        removingTeamMemberKey,
         memberName,
         memberRole,
         setMemberName,
@@ -375,5 +424,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         requestAddTeamMember,
         handleTeamDialogChange,
         handleAddTeamMember,
+        handleRemoveTeamMember,
     }
 }

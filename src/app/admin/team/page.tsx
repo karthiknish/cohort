@@ -68,11 +68,15 @@ export default function AdminTeamPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const workspaceId = user?.agencyId ?? user?.id
   const { toast } = useToast()
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
     api.adminUsers.listUsers as any,
-    {},
+    {
+      workspaceId,
+      includeAllWorkspaces: false,
+    },
     { initialNumItems: 50 }
   )
 
@@ -210,13 +214,9 @@ export default function AdminTeamPage() {
       invitedByName: user?.name ?? null,
     })
       .then(() => {
-        const emailSent = true
-
         toast({
           title: 'Invitation sent!',
-          description: emailSent
-            ? `${inviteEmail} will receive an invite to join as ${inviteRole}.`
-            : `Invitation created for ${inviteEmail}, but email delivery failed.`,
+          description: `Invitation created for ${inviteEmail} as ${inviteRole}. Email delivery depends on server integration settings.`,
         })
         setInviteOpen(false)
         setInviteEmail('')
@@ -327,7 +327,7 @@ export default function AdminTeamPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{summary.total}</div>
-              <p className="text-xs text-muted-foreground">Across all agencies</p>
+              <p className="text-xs text-muted-foreground">In this workspace</p>
             </CardContent>
           </Card>
 

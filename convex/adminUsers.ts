@@ -9,20 +9,36 @@ const userSummaryValidator = v.object({
   name: v.union(v.string(), v.null()),
   role: v.union(v.string(), v.null()),
   status: v.union(v.string(), v.null()),
+  agencyId: v.union(v.string(), v.null()),
   createdAtMs: v.union(v.number(), v.null()),
   updatedAtMs: v.union(v.number(), v.null()),
 })
 
 export const listUsers = adminPaginatedQuery({
-  args: {}, // No additional args beyond pagination
+  args: {
+    workspaceId: v.optional(v.string()),
+    includeAllWorkspaces: v.optional(v.boolean()),
+  },
   returns: v.object({
     page: v.array(userSummaryValidator),
     continueCursor: v.union(v.string(), v.null()),
     isDone: v.boolean(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args: any) => {
     const { numItems, cursor } = args
-    const result = await ctx.db.query('users').order('desc').paginate({ numItems, cursor })
+    const adminWorkspaceId = (ctx.user.agencyId ?? ctx.user.legacyId) as string
+    const includeAllWorkspaces = args.includeAllWorkspaces === true
+    const targetWorkspaceId = includeAllWorkspaces
+      ? null
+      : (args.workspaceId ?? adminWorkspaceId)
+
+    const result = targetWorkspaceId
+      ? await ctx.db
+          .query('users')
+          .withIndex('by_agencyId', (q: any) => q.eq('agencyId', targetWorkspaceId))
+          .order('desc')
+          .paginate({ numItems, cursor })
+      : await ctx.db.query('users').order('desc').paginate({ numItems, cursor })
 
     // Transform to match validator
     return {
@@ -33,6 +49,7 @@ export const listUsers = adminPaginatedQuery({
         name: user.name ?? null,
         role: user.role ?? null,
         status: user.status ?? null,
+        agencyId: user.agencyId ?? null,
         createdAtMs: user.createdAtMs ?? null,
         updatedAtMs: user.updatedAtMs ?? null,
       })),
@@ -94,6 +111,15 @@ export const updateUserRoleStatus = adminMutation({
 
     if (!existing) {
       throw Errors.auth.userNotFound()
+    }
+
+    // Admin actions are workspace-scoped by default for safer multi-tenant control.
+    const adminWorkspaceId = (ctx.user.agencyId ?? ctx.user.legacyId) as string
+    const targetWorkspaceId = (existing.agencyId ?? existing.legacyId) as string
+    const isSelfUpdate = existing.legacyId === ctx.user.legacyId
+
+    if (!isSelfUpdate && adminWorkspaceId !== targetWorkspaceId) {
+      throw Errors.auth.workspaceAccessDenied('Cannot modify users outside your workspace')
     }
 
     const patch: Record<string, unknown> = {

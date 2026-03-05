@@ -537,20 +537,25 @@ export const bootstrapUpsert = mutation({
       .withIndex('by_legacyId', (q: any) => q.eq('legacyId', args.legacyId))
       .unique()
 
-    const normalized = normalizeEmail(args.email ?? null)
+    const normalized = normalizeEmail(args.email ?? existing?.email ?? null)
     const timestamp = nowMs()
+    const role = args.role ?? existing?.role ?? 'client'
+    const status = args.status ?? existing?.status ?? 'pending'
+    const agencyId = args.agencyId ?? existing?.agencyId ?? args.legacyId
+    const name = args.name ?? existing?.name ?? null
+
     const payload = {
       legacyId: args.legacyId,
       email: normalized.email,
       emailLower: normalized.emailLower,
-      name: args.name ?? null,
-      role: args.role ?? null,
-      status: args.status ?? null,
-      agencyId: args.agencyId ?? null,
-      phoneNumber: null,
-      photoUrl: null,
-      notificationPreferences: undefined,
-      regionalPreferences: undefined,
+      name,
+      role,
+      status,
+      agencyId,
+      phoneNumber: existing?.phoneNumber ?? null,
+      photoUrl: existing?.photoUrl ?? null,
+      notificationPreferences: existing?.notificationPreferences,
+      regionalPreferences: existing?.regionalPreferences,
       createdAtMs: existing?.createdAtMs ?? timestamp,
       updatedAtMs: timestamp,
     }

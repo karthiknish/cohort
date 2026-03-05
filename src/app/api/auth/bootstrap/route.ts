@@ -5,6 +5,9 @@ import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError, NotFoundError, ValidationError } from '@/lib/api-errors'
 import { api } from '../../../../../convex/_generated/api'
 
+const DEFAULT_USER_ROLE = 'client'
+const DEFAULT_USER_STATUS = 'pending'
+
 // Helper to add timeout to promises
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -82,14 +85,24 @@ export const POST = createApiHandler(
       throw new ValidationError('User email missing')
     }
 
-    await withTimeout(
+    const existingUser = await withTimeout(
+      convex.query(api.users.getByLegacyIdSafe, { legacyId }),
+      10000,
+      'getByLegacyIdSafe'
+    )
+
+    const role = existingUser?.role ?? DEFAULT_USER_ROLE
+    const status = existingUser?.status ?? DEFAULT_USER_STATUS
+    const agencyId = existingUser?.agencyId ?? legacyId
+
+    const bootstrapResult = await withTimeout(
       convex.mutation(api.users.bootstrapUpsert, {
         legacyId,
         email: email.toLowerCase(),
         name,
-        role: 'admin',
-        status: 'active',
-        agencyId: legacyId,
+        role,
+        status,
+        agencyId,
       }),
       10000,
       'bootstrapUpsert'
@@ -97,9 +110,10 @@ export const POST = createApiHandler(
 
     return {
       ok: true,
-      role: 'admin',
-      status: 'active',
-      agencyId: legacyId,
+      role,
+      status,
+      agencyId,
+      created: bootstrapResult.created,
     }
   }
 )

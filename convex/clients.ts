@@ -162,7 +162,29 @@ export const create = zWorkspaceMutation({
   },
   returns: z.object({ legacyId: z.string() }),
   handler: async (ctx, args) => {
-    const baseId = slugify(args.name)
+    const normalizedName = args.name.trim()
+    const normalizedAccountManager = args.accountManager.trim()
+
+    if (!normalizedName) {
+      throw Errors.validation.invalidInput('Client name is required')
+    }
+
+    if (!normalizedAccountManager) {
+      throw Errors.validation.invalidInput('Account manager is required')
+    }
+
+    const normalizedTeamMembers = args.teamMembers
+      .map((member) => ({
+        name: member.name.trim(),
+        role: member.role.trim() || 'Contributor',
+      }))
+      .filter((member) => member.name.length > 0)
+
+    if (!normalizedTeamMembers.some((member) => member.name.toLowerCase() === normalizedAccountManager.toLowerCase())) {
+      normalizedTeamMembers.unshift({ name: normalizedAccountManager, role: 'Account Manager' })
+    }
+
+    const baseId = slugify(normalizedName)
     let candidateId = baseId
     let attempt = 1
     let finalId: string | null = null
@@ -189,10 +211,10 @@ export const create = zWorkspaceMutation({
     const payload = {
       workspaceId: args.workspaceId,
       legacyId: finalId,
-      name: args.name,
-      nameLower: args.name.toLowerCase(),
-      accountManager: args.accountManager,
-      teamMembers: args.teamMembers,
+      name: normalizedName,
+      nameLower: normalizedName.toLowerCase(),
+      accountManager: normalizedAccountManager,
+      teamMembers: normalizedTeamMembers,
       createdBy: args.createdBy,
       createdAtMs: ctx.now,
       updatedAtMs: ctx.now,
@@ -225,6 +247,10 @@ export const addTeamMember = zWorkspaceMutation({
     const normalizedName = args.name.trim()
     const normalizedRole = (args.role ?? '').trim() || 'Contributor'
 
+    if (!normalizedName) {
+      throw Errors.validation.invalidInput('Team member name is required')
+    }
+
     const exists = client.teamMembers.some((member) => member.name.toLowerCase() === normalizedName.toLowerCase())
     if (exists) {
       throw Errors.resource.alreadyExists('Team member')
@@ -232,6 +258,49 @@ export const addTeamMember = zWorkspaceMutation({
 
     await ctx.db.patch(client._id, {
       teamMembers: [...client.teamMembers, { name: normalizedName, role: normalizedRole }],
+      updatedAtMs: ctx.now,
+    })
+
+    return client.legacyId
+  },
+})
+
+export const removeTeamMember = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    name: z.string(),
+  },
+  returns: z.string(),
+  handler: async (ctx, args) => {
+    const client = await ctx.db
+      .query('clients')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!client || client.deletedAtMs !== null) {
+      throw Errors.resource.notFound('Client')
+    }
+
+    const normalizedName = args.name.trim()
+    if (!normalizedName) {
+      throw Errors.validation.invalidInput('Team member name is required')
+    }
+
+    if (client.accountManager.toLowerCase() === normalizedName.toLowerCase()) {
+      throw Errors.validation.invalidState('Account manager cannot be removed from team members')
+    }
+
+    const nextTeamMembers = client.teamMembers.filter(
+      (member) => member.name.toLowerCase() !== normalizedName.toLowerCase()
+    )
+
+    if (nextTeamMembers.length === client.teamMembers.length) {
+      throw Errors.resource.notFound('Team member')
+    }
+
+    await ctx.db.patch(client._id, {
+      teamMembers: nextTeamMembers,
       updatedAtMs: ctx.now,
     })
 
