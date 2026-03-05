@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Bell, Check, LoaderCircle, Trash2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useMutation, useQuery as useConvexQuery, useConvex } from 'convex/react'
@@ -41,6 +42,7 @@ type AckOptions = {
 }
 
 export function NotificationsDropdown() {
+  const router = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
@@ -173,6 +175,22 @@ export function NotificationsDropdown() {
     [updateNotificationStatus]
   )
 
+  const handleOpenNotification = useCallback((notification: WorkspaceNotification) => {
+    const target = typeof notification.navigationUrl === 'string' ? notification.navigationUrl : null
+    if (!target) return
+
+    setOpen(false)
+
+    if (target.startsWith('/')) {
+      router.push(target)
+      return
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.assign(target)
+    }
+  }, [router])
+
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
     if (unreadIds.length === 0) {
@@ -244,6 +262,7 @@ export function NotificationsDropdown() {
                     !notification.read && 'bg-muted/40'
                   )}
                   onSelect={(event) => event.preventDefault()}
+                  onClick={() => handleOpenNotification(notification)}
                 >
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium text-foreground">{notification.title}</p>
@@ -261,7 +280,10 @@ export function NotificationsDropdown() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleDismiss(notification.id)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleDismiss(notification.id)
+                    }}
                     disabled={ackInFlight}
                   >
                     <Trash2 className="h-4 w-4" />

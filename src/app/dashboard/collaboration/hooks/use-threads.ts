@@ -42,6 +42,12 @@ interface ConvexThreadRow {
   threadRootId?: string
   threadReplyCount?: number
   threadLastReplyAtMs?: number
+  readBy?: unknown[]
+  deliveredTo?: unknown[]
+  isPinned?: boolean
+  pinnedAtMs?: number
+  pinnedBy?: string
+  sharedTo?: unknown[]
 }
 
 const VALID_CHANNEL_TYPES: CollaborationChannelType[] = ['client', 'team', 'project']
@@ -51,6 +57,16 @@ function isValidChannelType(value: unknown): value is CollaborationChannelType {
 }
 
 function mapThreadReplyRow(row: ConvexThreadRow): CollaborationMessage {
+  const readBy = Array.isArray(row?.readBy)
+    ? row.readBy.filter((entry): entry is string => typeof entry === 'string')
+    : []
+  const deliveredTo = Array.isArray(row?.deliveredTo)
+    ? row.deliveredTo.filter((entry): entry is string => typeof entry === 'string')
+    : []
+  const sharedTo = Array.isArray(row?.sharedTo)
+    ? row.sharedTo.filter((entry): entry is 'email' => entry === 'email')
+    : []
+
   return {
     id: String(row?.legacyId ?? ''),
     channelType: isValidChannelType(row?.channelType) ? row.channelType : 'team',
@@ -83,6 +99,12 @@ function mapThreadReplyRow(row: ConvexThreadRow): CollaborationMessage {
     threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
     threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
     threadLastReplyAt: typeof row?.threadLastReplyAtMs === 'number' ? new Date(row.threadLastReplyAtMs).toISOString() : null,
+    readBy,
+    deliveredTo,
+    isPinned: Boolean(row?.isPinned),
+    pinnedAt: typeof row?.pinnedAtMs === 'number' ? new Date(row.pinnedAtMs).toISOString() : null,
+    pinnedBy: typeof row?.pinnedBy === 'string' ? row.pinnedBy : null,
+    sharedTo,
   }
 }
 

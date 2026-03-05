@@ -22,7 +22,14 @@ import { v } from 'convex/values'
 import { internal } from './_generated/api'
 
 import { Errors } from './errors'
- 
+
+const taskAttachmentZ = z.object({
+  name: z.string(),
+  url: z.string(),
+  type: z.string().nullable().optional(),
+  size: z.string().nullable().optional(),
+})
+
 const taskZ = z.object({
   legacyId: z.string(),
   title: z.string(),
@@ -36,10 +43,56 @@ const taskZ = z.object({
   projectName: z.string().nullable(),
   dueDateMs: z.number().nullable(),
   tags: z.array(z.string()),
+  attachments: z.array(taskAttachmentZ),
   createdAtMs: z.number(),
   updatedAtMs: z.number(),
   deletedAtMs: z.number().nullable(),
 })
+
+function normalizeTaskAttachments(raw: unknown): Array<z.infer<typeof taskAttachmentZ>> {
+  if (!Array.isArray(raw)) return []
+
+  const normalized: Array<z.infer<typeof taskAttachmentZ>> = []
+
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+
+    const name = typeof (item as any).name === 'string' ? (item as any).name : null
+    const url = typeof (item as any).url === 'string' ? (item as any).url : null
+
+    if (!name || !url) continue
+
+    normalized.push({
+      name,
+      url,
+      type: typeof (item as any).type === 'string' ? (item as any).type : null,
+      size: typeof (item as any).size === 'string' ? (item as any).size : null,
+    })
+  }
+
+  return normalized
+}
+
+function mapTaskRow(row: any): z.infer<typeof taskZ> {
+  return {
+    legacyId: row.legacyId,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    priority: row.priority,
+    assignedTo: row.assignedTo,
+    client: row.client,
+    clientId: row.clientId,
+    projectId: row.projectId,
+    projectName: row.projectName,
+    dueDateMs: row.dueDateMs,
+    tags: row.tags,
+    attachments: normalizeTaskAttachments(row.attachments),
+    createdAtMs: row.createdAtMs,
+    updatedAtMs: row.updatedAtMs,
+    deletedAtMs: row.deletedAtMs,
+  }
+}
 
 export const list = zWorkspacePaginatedQueryActive({
   args: {},
@@ -63,23 +116,7 @@ export const list = zWorkspacePaginatedQueryActive({
     const result = getPaginatedResponse(rows, limit, 'createdAtMs')
 
     return {
-      items: result.items.map((row: any) => ({
-        legacyId: row.legacyId,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        priority: row.priority,
-        assignedTo: row.assignedTo,
-        client: row.client,
-        clientId: row.clientId,
-        projectId: row.projectId,
-        projectName: row.projectName,
-        dueDateMs: row.dueDateMs,
-        tags: row.tags,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-        deletedAtMs: row.deletedAtMs,
-      })),
+      items: result.items.map(mapTaskRow),
       nextCursor: result.nextCursor,
     }
   },
@@ -95,23 +132,7 @@ export const getByLegacyId = zWorkspaceQuery({
       .unique()
 
     if (!row) throw Errors.resource.notFound('Task', args.legacyId)
-    return {
-      legacyId: row.legacyId,
-      title: row.title,
-      description: row.description,
-      status: row.status,
-      priority: row.priority,
-      assignedTo: row.assignedTo,
-      client: row.client,
-      clientId: row.clientId,
-      projectId: row.projectId,
-      projectName: row.projectName,
-      dueDateMs: row.dueDateMs,
-      tags: row.tags,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
-      deletedAtMs: row.deletedAtMs,
-    }
+    return mapTaskRow(row)
   },
 })
 
@@ -141,23 +162,7 @@ export const listByStatus = zWorkspacePaginatedQueryActive({
     const result = getPaginatedResponse(rows, limit, 'createdAtMs')
 
     return {
-      items: result.items.map((row: any) => ({
-        legacyId: row.legacyId,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        priority: row.priority,
-        assignedTo: row.assignedTo,
-        client: row.client,
-        clientId: row.clientId,
-        projectId: row.projectId,
-        projectName: row.projectName,
-        dueDateMs: row.dueDateMs,
-        tags: row.tags,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-        deletedAtMs: row.deletedAtMs,
-      })),
+      items: result.items.map(mapTaskRow),
       nextCursor: result.nextCursor,
     }
   },
@@ -189,23 +194,7 @@ export const listForProject = zWorkspacePaginatedQueryActive({
     const result = getPaginatedResponse(rows, limit, 'createdAtMs')
 
     return {
-      items: result.items.map((row: any) => ({
-        legacyId: row.legacyId,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        priority: row.priority,
-        assignedTo: row.assignedTo,
-        client: row.client,
-        clientId: row.clientId,
-        projectId: row.projectId,
-        projectName: row.projectName,
-        dueDateMs: row.dueDateMs,
-        tags: row.tags,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-        deletedAtMs: row.deletedAtMs,
-      })),
+      items: result.items.map(mapTaskRow),
       nextCursor: result.nextCursor,
     }
   },
@@ -236,23 +225,7 @@ export const listByClient = zWorkspacePaginatedQueryActive({
     const result = getPaginatedResponse(rows, args.limit, 'createdAtMs')
 
     return {
-      items: result.items.map((row: any) => ({
-        legacyId: row.legacyId,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        priority: row.priority,
-        assignedTo: row.assignedTo,
-        client: row.client,
-        clientId: row.clientId,
-        projectId: row.projectId,
-        projectName: row.projectName,
-        dueDateMs: row.dueDateMs,
-        tags: row.tags,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-        deletedAtMs: row.deletedAtMs,
-      })),
+      items: result.items.map(mapTaskRow),
       nextCursor: result.nextCursor,
     }
   },
@@ -270,6 +243,7 @@ export const createTask = zAuthenticatedMutation({
     client: z.string().nullable(),
     dueDateMs: z.number().nullable(),
     tags: z.array(z.string()),
+    attachments: z.array(taskAttachmentZ).optional(),
   },
   returns: z.string(),
   handler: async (ctx: any, args: any) => {
@@ -289,6 +263,7 @@ export const createTask = zAuthenticatedMutation({
       projectName: null,
       dueDateMs: args.dueDateMs,
       tags: args.tags,
+      attachments: Array.isArray(args.attachments) ? args.attachments : [],
       createdBy: ctx.legacyId,
       updatedAtMs: ctx.now,
       createdAtMs: ctx.now,
@@ -302,6 +277,9 @@ export const createTask = zAuthenticatedMutation({
       segments.push(`Due: ${new Date(args.dueDateMs).toLocaleDateString()}`)
     }
     if (args.client) segments.push(`Client: ${args.client}`)
+    if (Array.isArray(args.attachments) && args.attachments.length > 0) {
+      segments.push(`Attachments: ${args.attachments.length}`)
+    }
 
     const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
     const baseRoles = clientId ? ['admin', 'team', 'client'] : ['admin', 'team']
@@ -506,6 +484,7 @@ export const upsert = zAuthenticatedMutation({
     projectName: z.string().nullable(),
     dueDateMs: z.number().nullable(),
     tags: z.array(z.string()),
+    attachments: z.array(taskAttachmentZ).optional(),
     createdBy: z.string().nullable(),
     createdAtMs: z.number().optional(),
     updatedAtMs: z.number().optional(),
@@ -532,6 +511,9 @@ export const upsert = zAuthenticatedMutation({
       projectName: args.projectName,
       dueDateMs: args.dueDateMs,
       tags: args.tags,
+      attachments: Array.isArray(args.attachments)
+        ? args.attachments
+        : (existing ? normalizeTaskAttachments(existing.attachments) : []),
       createdBy: args.createdBy,
       createdAtMs: args.createdAtMs ?? ctx.now,
       updatedAtMs: args.updatedAtMs ?? ctx.now,
@@ -565,6 +547,7 @@ export const bulkUpsert = zAuthenticatedMutation({
         projectName: z.string().nullable(),
         dueDateMs: z.number().nullable(),
         tags: z.array(z.string()),
+        attachments: z.array(taskAttachmentZ).optional(),
         createdBy: z.string().nullable(),
         createdAtMs: z.number(),
         updatedAtMs: z.number(),
@@ -597,6 +580,9 @@ export const bulkUpsert = zAuthenticatedMutation({
         projectName: task.projectName,
         dueDateMs: task.dueDateMs,
         tags: task.tags,
+        attachments: Array.isArray(task.attachments)
+          ? task.attachments
+          : (existing ? normalizeTaskAttachments(existing.attachments) : []),
         createdBy: task.createdBy,
         createdAtMs: task.createdAtMs,
         updatedAtMs: task.updatedAtMs,
@@ -645,6 +631,7 @@ export const bulkUpdate = zAuthenticatedMutation({
       projectName: string | null
       dueDateMs: number | null
       tags: string[]
+      attachments: Array<z.infer<typeof taskAttachmentZ>>
       createdAtMs: number
       updatedAtMs: number
       deletedAtMs: number | null
@@ -684,6 +671,7 @@ export const bulkUpdate = zAuthenticatedMutation({
         projectName: row.projectName,
         dueDateMs: row.dueDateMs,
         tags: args.update.tags ?? row.tags,
+        attachments: normalizeTaskAttachments(row.attachments),
         createdAtMs: row.createdAtMs,
         updatedAtMs: ctx.now,
         deletedAtMs: row.deletedAtMs,

@@ -6,7 +6,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
-import { TaskRecord, TaskStatus } from '@/types/tasks'
+import { TaskAttachment, TaskRecord, TaskStatus } from '@/types/tasks'
 import { getPreviewTasks } from '@/lib/preview-data'
 import { formatStatusLabel } from '../task-types'
 
@@ -48,6 +48,7 @@ export type CreateTaskPayload = {
   client?: string
   dueDate?: string
   tags: string[]
+  attachments?: TaskAttachment[]
 }
 
 export type UpdateTaskPayload = {
@@ -73,6 +74,17 @@ function toIsoDateString(input: number | null): string | null {
 }
 
 function mapConvexTaskToTaskRecord(row: any): TaskRecord {
+  const attachments = Array.isArray(row.attachments)
+    ? row.attachments
+      .filter((item: any) => item && typeof item.name === 'string' && typeof item.url === 'string')
+      .map((item: any) => ({
+        name: item.name,
+        url: item.url,
+        type: typeof item.type === 'string' ? item.type : null,
+        size: typeof item.size === 'string' ? item.size : null,
+      }))
+    : []
+
   return {
     id: String(row.legacyId),
     title: row.title,
@@ -86,6 +98,7 @@ function mapConvexTaskToTaskRecord(row: any): TaskRecord {
     projectName: row.projectName ?? null,
     dueDate: toIsoDateString(row.dueDateMs ?? null),
     tags: Array.isArray(row.tags) ? row.tags : [],
+    attachments,
     createdAt: toIsoDateString(row.createdAtMs ?? null),
     updatedAt: toIsoDateString(row.updatedAtMs ?? null),
     deletedAt: toIsoDateString(row.deletedAtMs ?? null),
@@ -257,6 +270,7 @@ export function useTasks({
           projectName: null,
           dueDate: payload.dueDate ?? null,
           tags: payload.tags,
+          attachments: payload.attachments ?? [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           deletedAt: null,
@@ -282,13 +296,16 @@ export function useTasks({
           client: payload.client ?? null,
           dueDateMs: msFromIsoDateString(payload.dueDate),
           tags: payload.tags,
+          attachments: payload.attachments ?? [],
         })
+
+        const legacyId = typeof result === 'string' ? result : result?.legacyId
 
         toast({ title: 'Task created', description: `"${payload.title}" added.` })
 
-        return result?.legacyId
+        return legacyId
           ? {
-            id: result.legacyId,
+            id: legacyId,
             title: payload.title,
             description: payload.description ?? null,
             status: payload.status,
@@ -300,6 +317,7 @@ export function useTasks({
             projectName: null,
             dueDate: payload.dueDate ?? null,
             tags: payload.tags,
+            attachments: payload.attachments ?? [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             deletedAt: null,

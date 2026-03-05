@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { memo, type ChangeEvent } from 'react'
-import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2, MessageCircle, Copy, CalendarX2, Clock4, Repeat, Link2, ChevronRight, ListTodo } from 'lucide-react'
+import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2, MessageCircle, Copy, CalendarX2, Clock4, Repeat, Link2, ChevronRight, ListTodo, Paperclip } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -190,6 +190,22 @@ function TaskCardComponent({
                         </Badge>
                       </TooltipTrigger>
                       <TooltipContent>{task.commentCount} comment{task.commentCount !== 1 ? 's' : ''}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+                {(task.attachments ?? []).length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-slate-50/70 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
+                          <Paperclip className="h-2.5 w-2.5" />
+                          {task.attachments?.length}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {task.attachments?.length} attachment{(task.attachments?.length ?? 0) !== 1 ? 's' : ''}
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}

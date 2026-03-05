@@ -59,6 +59,7 @@ export interface UseCollaborationDataReturn {
   searchQuery: string
   setSearchQuery: (query: string) => void
   channelSummaries: Map<string, ChannelSummary>
+  channelUnreadCounts: Record<string, number>
   selectedChannel: Channel | null
   selectChannel: (channelId: string | null) => void
 
@@ -119,8 +120,10 @@ export interface UseCollaborationDataReturn {
   threadNextCursorByRootId: ThreadCursorsState
   threadLoadingByRootId: ThreadLoadingState
   threadErrorsByRootId: ThreadErrorsState
+  threadUnreadCountsByRootId: Record<string, number>
   loadThreadReplies: (threadRootId: string) => Promise<void>
   loadMoreThreadReplies: (threadRootId: string) => Promise<void>
+  markThreadAsRead: (threadRootId: string, beforeMs?: number) => Promise<void>
   clearThreadReplies: (threadRootId?: string) => void
 
   // Reactions

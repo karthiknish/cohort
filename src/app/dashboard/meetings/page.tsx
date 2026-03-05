@@ -97,6 +97,15 @@ export default function MeetingsPage() {
       : 'skip'
   ) as WorkspaceMember[] | undefined
 
+  const platformUsers = useQuery(
+    usersApi.listAllUsers,
+    workspaceId
+      ? {
+          limit: 500,
+        }
+      : 'skip'
+  ) as WorkspaceMember[] | undefined
+
   const disconnectGoogleWorkspace = useMutation(meetingIntegrationsApi.deleteGoogleWorkspaceIntegration)
   const updateMeetingStatus = useMutation(meetingsApi.updateStatus)
 
@@ -150,7 +159,20 @@ export default function MeetingsPage() {
   const scheduleDisabled = !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !googleWorkspaceStatus?.connected)
 
   const attendeeSuggestions = useMemo(() => {
-    const members = workspaceMembers ?? []
+    const workspaceList = workspaceMembers ?? []
+    const platformList = platformUsers ?? []
+
+    const mergedByEmail = new Map<string, WorkspaceMember>()
+    for (const member of [...workspaceList, ...platformList]) {
+      if (!hasEmail(member)) continue
+
+      const key = normalizeEmail(member.email)
+      if (!mergedByEmail.has(key)) {
+        mergedByEmail.set(key, member)
+      }
+    }
+
+    const members = Array.from(mergedByEmail.values())
     if (members.length === 0) {
       return []
     }
@@ -169,7 +191,7 @@ export default function MeetingsPage() {
         )
       })
       .slice(0, 8)
-  }, [workspaceMembers, attendeeInput, attendeeEmails])
+  }, [workspaceMembers, platformUsers, attendeeInput, attendeeEmails])
 
   const addAttendees = (entries: string[]) => {
     if (entries.length === 0) return
@@ -344,6 +366,7 @@ export default function MeetingsPage() {
         body: JSON.stringify({
           title: 'Quick Meet',
           durationMinutes: 30,
+          attendeeEmails,
           timezone,
           clientId: selectedClientId ?? null,
         }),
@@ -366,17 +389,29 @@ export default function MeetingsPage() {
 
       const meeting = payload.data?.meeting ?? payload.meeting
       const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl
+      const quickMeetUrl = meeting?.meetLink ?? null
 
-      if (!meeting || !inSiteEmbedUrl) {
-        throw new Error('Quick meet was created without an in-site room URL')
+      if (!meeting) {
+        throw new Error('Quick meet was created without a meeting record')
       }
 
-      setActiveInSiteMeeting(meeting)
-      setActiveInSiteUrl(inSiteEmbedUrl)
+      if (inSiteEmbedUrl) {
+        setActiveInSiteMeeting(meeting)
+        setActiveInSiteUrl(inSiteEmbedUrl)
+      } else {
+        setActiveInSiteMeeting(null)
+        setActiveInSiteUrl(null)
+      }
+
+      if (quickMeetUrl && typeof window !== 'undefined') {
+        window.open(quickMeetUrl, '_blank', 'noopener,noreferrer')
+      }
 
       toast({
         title: 'Quick meet started',
-        description: 'Your in-site meeting room is live.',
+        description: quickMeetUrl
+          ? 'Google Meet opened in a new tab and invites were sent.'
+          : 'Quick meeting created successfully.',
       })
     } catch (error) {
       toast({
@@ -606,6 +641,7 @@ export default function MeetingsPage() {
         googleWorkspaceConnected={Boolean(googleWorkspaceStatus?.connected)}
         canSchedule={canSchedule}
         quickStarting={quickStarting}
+        quickMeetDisabled={!googleWorkspaceStatus?.connected}
         onStartQuickMeet={() => void handleStartQuickMeet()}
       />
 
@@ -802,7 +838,7 @@ export default function MeetingsPage() {
               {attendeeSuggestions.length > 0 && (
                 <div className="rounded-md border border-muted/60 bg-muted/20 p-2">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Suggested Users
+                    Suggested Platform Users
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {attendeeSuggestions.map((member) => (

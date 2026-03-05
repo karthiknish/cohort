@@ -18,6 +18,7 @@ export const settingsApi = {
 
 export const usersApi = {
   listWorkspaceMembers: (api as any).users.listWorkspaceMembers,
+  listAllUsers: (api as any).users.listAllUsers,
 }
 
 export const onboardingApi = {
@@ -151,9 +152,16 @@ export const collaborationApi = {
   listThreadReplies: (api as any).collaborationMessages.listThreadReplies,
   getByLegacyId: (api as any).collaborationMessages.getByLegacyId,
   searchChannel: (api as any).collaborationMessages.searchChannel,
+  getUnreadCount: (api as any).collaborationMessages.getUnreadCount,
+  getUnreadCountsByChannel: (api as any).collaborationMessages.getUnreadCountsByChannel,
   createMessage: (api as any).collaborationMessages.create,
   updateMessage: (api as any).collaborationMessages.updateMessage,
   softDeleteMessage: (api as any).collaborationMessages.softDelete,
+  markAsRead: (api as any).collaborationMessages.markAsRead,
+  markMultipleAsRead: (api as any).collaborationMessages.markMultipleAsRead,
+  markChannelAsRead: (api as any).collaborationMessages.markChannelAsRead,
+  markThreadAsRead: (api as any).collaborationMessages.markThreadAsRead,
+  getThreadUnreadCounts: (api as any).collaborationMessages.getThreadUnreadCounts,
   toggleReaction: (api as any).collaborationMessages.toggleReaction,
   updateSharedTo: (api as any).collaborationMessages.updateSharedTo,
   setTyping: (api as any).collaborationTyping.setTyping,

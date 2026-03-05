@@ -440,6 +440,16 @@ export default defineSchema({
     projectName: v.union(v.string(), v.null()),
     dueDateMs: v.union(v.number(), v.null()),
     tags: v.array(v.string()),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          url: v.string(),
+          type: v.optional(v.union(v.string(), v.null())),
+          size: v.optional(v.union(v.string(), v.null())),
+        })
+      )
+    ),
     createdBy: v.union(v.string(), v.null()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
@@ -554,6 +564,30 @@ export default defineSchema({
     .index('by_workspace_channel_project_createdAtMs_legacyId', ['workspaceId', 'channelType', 'projectId', 'createdAtMs', 'legacyId'])
     .index('by_workspace_threadRoot_createdAtMs_legacyId', ['workspaceId', 'threadRootId', 'createdAtMs', 'legacyId'])
     .index('by_workspace_clientId_createdAtMs_legacyId', ['workspaceId', 'clientId', 'createdAtMs', 'legacyId']),
+
+  // Collaboration read checkpoints for scalable unread tracking.
+  collaborationReadCheckpoints: defineTable({
+    workspaceId: v.string(),
+    userId: v.string(),
+    scopeType: v.union(v.literal('channel'), v.literal('thread')),
+    channelType: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    projectId: v.union(v.string(), v.null()),
+    threadRootId: v.union(v.string(), v.null()),
+    lastReadCreatedAtMs: v.number(),
+    lastReadLegacyId: v.string(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_user_scope_updatedAtMs', ['workspaceId', 'userId', 'scopeType', 'updatedAtMs'])
+    .index('by_workspace_user_scope_channel_client_project_thread', [
+      'workspaceId',
+      'userId',
+      'scopeType',
+      'channelType',
+      'clientId',
+      'projectId',
+      'threadRootId',
+    ]),
 
   // Collaboration typing presence (ephemeral; replaces Firestore `workspaces/{workspaceId}/collaborationTyping/{channelId}`).
   collaborationTyping: defineTable({

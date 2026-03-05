@@ -7,6 +7,13 @@ export type TaskPriority = (typeof TASK_PRIORITIES)[number]
 export const RECURRENCE_RULES = ['none', 'daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const
 export type RecurrenceRule = (typeof RECURRENCE_RULES)[number]
 
+export type TaskAttachment = {
+  name: string
+  url: string
+  type?: string | null
+  size?: string | null
+}
+
 export type TaskDependency = {
   taskId: string
   type: 'blocks' | 'blocked-by' | 'related' | 'parent' | 'child'
@@ -61,6 +68,7 @@ export type TaskRecord = {
   projectName?: string | null
   dueDate?: string | null
   tags: string[]
+  attachments?: TaskAttachment[]
   createdAt?: string | null
   updatedAt?: string | null
   deletedAt?: string | null

@@ -54,6 +54,21 @@ export const setTyping = workspaceMutation({
     ok: v.literal(true),
   }),
   handler: async (ctx, args) => {
+    const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
+    if (!currentUserId) {
+      throw Errors.auth.unauthorized()
+    }
+
+    if (args.userId !== currentUserId) {
+      throw Errors.auth.forbidden('Cannot set typing state for another user')
+    }
+
+    const resolvedName =
+      typeof ctx?.user?.name === 'string' && ctx.user.name.trim().length > 0
+        ? ctx.user.name
+        : args.name
+    const resolvedRole = typeof ctx?.user?.role === 'string' ? ctx.user.role : args.role
+
     const timestamp = ctx.now
 
     const existing = await ctx.db
@@ -62,7 +77,7 @@ export const setTyping = workspaceMutation({
         q
           .eq('workspaceId', args.workspaceId)
           .eq('channelId', args.channelId)
-          .eq('userId', args.userId),
+          .eq('userId', currentUserId),
       )
       .unique()
 
@@ -81,9 +96,9 @@ export const setTyping = workspaceMutation({
       channelType: args.channelType,
       clientId: args.clientId,
       projectId: args.projectId,
-      userId: args.userId,
-      name: args.name,
-      role: args.role,
+      userId: currentUserId,
+      name: resolvedName,
+      role: resolvedRole,
       updatedAtMs: timestamp,
       expiresAtMs: timestamp + clampedTtl,
     }

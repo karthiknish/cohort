@@ -1,9 +1,14 @@
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
-import { ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
-import { createMeetingRecord } from '@/lib/meetings-admin'
+import { BadRequestError, ForbiddenError, ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
+import { createMeetingRecord, getGoogleWorkspaceTokens, upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { notifyMeetingScheduledEmail } from '@/lib/notifications/brevo'
+import {
+  createGoogleCalendarMeetEvent,
+  refreshGoogleWorkspaceAccessToken,
+  resolveGoogleWorkspaceOAuthCredentials,
+} from '@/services/google-workspace'
 
 const quickMeetingSchema = z.object({
   title: z.string().min(1).optional(),
@@ -26,17 +31,6 @@ function normalizeAttendees(attendees: string[] | undefined, includeEmail?: stri
   return Array.from(new Set(base))
 }
 
-function sanitizeToken(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-}
-
-function buildQuickMeetUrl(workspaceId: string): string {
-  const safeWorkspace = sanitizeToken(workspaceId).slice(0, 24) || 'workspace'
-  const nonce = Math.random().toString(36).slice(2, 8)
-  const room = `cohorts-${safeWorkspace}-${Date.now().toString(36)}-${nonce}`
-  return `https://meet.jit.si/${room}`
-}
-
 export const POST = createApiHandler(
   {
     workspace: 'required',
@@ -57,6 +51,46 @@ export const POST = createApiHandler(
       throw new ForbiddenError('Workspace context is required for quick meetings')
     }
 
+    const { tokens } = await getGoogleWorkspaceTokens({ userId: auth.uid })
+    if (!tokens?.accessToken) {
+      throw new BadRequestError('Connect Google Workspace before starting a quick meet')
+    }
+
+    const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleWorkspaceOAuthCredentials()
+
+    let accessToken = tokens.accessToken
+    const tokenExpired =
+      typeof tokens.accessTokenExpiresAtMs === 'number' && tokens.accessTokenExpiresAtMs <= Date.now() + 60_000
+
+    if (tokenExpired) {
+      if (!tokens.refreshToken) {
+        throw new BadRequestError('Google Workspace access has expired. Reconnect your account.')
+      }
+
+      if (!googleClientId || !googleClientSecret) {
+        throw new ServiceUnavailableError('Google Workspace refresh credentials are not configured')
+      }
+
+      const refreshed = await refreshGoogleWorkspaceAccessToken({
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        refreshToken: tokens.refreshToken,
+      })
+
+      accessToken = refreshed.access_token
+
+      await upsertGoogleWorkspaceTokens({
+        userId: auth.uid,
+        userEmail: tokens.userEmail,
+        accessToken: refreshed.access_token,
+        refreshToken: refreshed.refresh_token ?? tokens.refreshToken,
+        idToken: refreshed.id_token ?? tokens.idToken,
+        scopes: typeof refreshed.scope === 'string' ? refreshed.scope.split(' ').filter(Boolean) : tokens.scopes,
+        accessTokenExpiresAtMs:
+          typeof refreshed.expires_in === 'number' ? Date.now() + refreshed.expires_in * 1000 : tokens.accessTokenExpiresAtMs,
+      })
+    }
+
     const durationMinutes = Number.isFinite(body.durationMinutes) ? Math.floor(body.durationMinutes as number) : 30
     const now = Date.now()
     const startTimeMs = now
@@ -68,22 +102,33 @@ export const POST = createApiHandler(
       : 'Quick Meet'
 
     const attendeeEmails = normalizeAttendees(body.attendeeEmails, auth.email)
-    const meetLink = buildQuickMeetUrl(workspace.workspaceId)
+
+    const calendarEvent = await createGoogleCalendarMeetEvent({
+      accessToken,
+      title,
+      description: body.description ?? 'Instant Google Meet quick meeting',
+      startTimeMs,
+      endTimeMs,
+      timezone,
+      attendeeEmails,
+    })
+
+    const meetLink = calendarEvent.meetLink ?? calendarEvent.eventLink
 
     const meeting = await createMeetingRecord({
       userId: auth.uid,
       userEmail: auth.email,
       title,
-      description: body.description ?? 'Instant in-site quick meeting',
+      description: body.description ?? 'Instant Google Meet quick meeting',
       startTimeMs,
       endTimeMs,
       timezone,
       attendeeEmails,
       clientId: body.clientId ?? null,
-      integrationUserId: null,
-      providerId: 'cohorts-quick-meet',
+      integrationUserId: auth.uid,
+      providerId: 'google-workspace',
       meetLink,
-      calendarEventId: null,
+      calendarEventId: calendarEvent.eventId,
     })
 
     const meetingStartIso = new Date(startTimeMs).toISOString()
@@ -100,14 +145,13 @@ export const POST = createApiHandler(
           meetingTimezone: timezone,
           organizerName: auth.name ?? auth.email ?? 'Cohorts',
           meetLink,
-          inSiteJoinUrl: meetLink,
         })
       })
     )
 
     return {
       meeting,
-      inSiteEmbedUrl: meetLink,
+      calendarEvent,
     }
   }
 )

@@ -525,6 +525,9 @@ export default function TasksPage() {
           createError={form.createError}
           onSubmit={form.handleCreateSubmit}
           participants={selectedClient?.teamMembers ?? []}
+          pendingAttachments={form.createAttachments}
+          onAddAttachments={form.handleCreateAttachmentsAdd}
+          onRemoveAttachment={form.handleCreateAttachmentRemove}
         />
 
         {/* Edit Task Sheet */}

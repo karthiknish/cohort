@@ -33,6 +33,7 @@ export type WorkspaceNotification = {
     userIds?: string[]
   }
   metadata?: Record<string, unknown>
+  navigationUrl?: string | null
   createdAt: string | null
   updatedAt: string | null
   read: boolean

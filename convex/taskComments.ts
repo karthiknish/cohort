@@ -86,6 +86,21 @@ export const create = workspaceMutation({
     ok: v.literal(true),
   }),
   handler: async (ctx, args) => {
+    const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
+    if (!currentUserId) {
+      throw Errors.auth.unauthorized()
+    }
+
+    if (args.authorId && args.authorId !== currentUserId) {
+      throw Errors.auth.forbidden('Cannot create comments on behalf of another user')
+    }
+
+    const currentUserName =
+      typeof ctx?.user?.name === 'string' && ctx.user.name.trim().length > 0
+        ? ctx.user.name
+        : args.authorName
+    const currentUserRole = typeof ctx?.user?.role === 'string' ? ctx.user.role : args.authorRole
+
     const timestamp = ctx.now
 
     await ctx.db.insert('taskComments', {
@@ -94,9 +109,9 @@ export const create = workspaceMutation({
       legacyId: args.legacyId,
       content: args.content,
       format: args.format,
-      authorId: args.authorId,
-      authorName: args.authorName,
-      authorRole: args.authorRole,
+      authorId: currentUserId,
+      authorName: currentUserName,
+      authorRole: currentUserRole,
       createdAtMs: timestamp,
       updatedAtMs: timestamp,
       deleted: false,
@@ -126,8 +141,8 @@ export const create = workspaceMutation({
       kind: 'task.comment',
       title: `New comment: ${taskTitle}`,
       body: snippet || '(no content)',
-      actorId: args.authorId ?? null,
-      actorName: args.authorName ?? null,
+      actorId: currentUserId,
+      actorName: currentUserName ?? null,
       resourceType: 'task',
       resourceId: args.taskLegacyId,
       recipientRoles: baseRoles,
@@ -148,7 +163,7 @@ export const create = workspaceMutation({
       if (!mention || typeof mention.slug !== 'string' || !mention.slug) continue
 
       const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
-      const senderName = args.authorName ?? 'Someone'
+      const senderName = currentUserName ?? 'Someone'
 
       await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
         workspaceId: args.workspaceId,
@@ -156,7 +171,7 @@ export const create = workspaceMutation({
         kind: 'task.mention',
         title: `${senderName} mentioned you`,
         body: mentionSnippet || '(no content)',
-        actorId: args.authorId ?? null,
+        actorId: currentUserId,
         actorName: senderName,
         resourceType: 'task',
         resourceId: args.taskLegacyId,
@@ -272,6 +287,11 @@ export const updateContent = workspaceMutation({
     v.object({ ok: v.literal(false), error: v.literal('not_found') })
   ),
   handler: async (ctx, args) => {
+    const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
+    if (!currentUserId) {
+      throw Errors.auth.unauthorized()
+    }
+
     const row = await ctx.db
       .query('taskComments')
       .withIndex('by_workspace_task_legacyId', (q) =>
@@ -280,6 +300,12 @@ export const updateContent = workspaceMutation({
       .unique()
 
     if (!row) return { ok: false as const, error: 'not_found' as const }
+
+    const isAdmin = ctx?.user?.role === 'admin'
+    const isAuthor = typeof row.authorId === 'string' && row.authorId === currentUserId
+    if (!isAdmin && !isAuthor) {
+      throw Errors.auth.forbidden('You can only edit your own comments')
+    }
 
     await ctx.db.patch(row._id, {
       content: args.content,
@@ -302,6 +328,15 @@ export const softDelete = workspaceMutation({
     v.object({ ok: v.literal(false), error: v.literal('not_found') })
   ),
   handler: async (ctx, args) => {
+    const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
+    if (!currentUserId) {
+      throw Errors.auth.unauthorized()
+    }
+
+    if (args.deletedBy && args.deletedBy !== currentUserId) {
+      throw Errors.auth.forbidden('Cannot delete comments on behalf of another user')
+    }
+
     const row = await ctx.db
       .query('taskComments')
       .withIndex('by_workspace_task_legacyId', (q) =>
@@ -311,10 +346,16 @@ export const softDelete = workspaceMutation({
 
     if (!row) return { ok: false as const, error: 'not_found' as const }
 
+    const isAdmin = ctx?.user?.role === 'admin'
+    const isAuthor = typeof row.authorId === 'string' && row.authorId === currentUserId
+    if (!isAdmin && !isAuthor) {
+      throw Errors.auth.forbidden('You can only delete your own comments')
+    }
+
     await ctx.db.patch(row._id, {
       deleted: true,
       deletedAtMs: ctx.now,
-      deletedBy: args.deletedBy,
+      deletedBy: currentUserId,
       updatedAtMs: ctx.now,
     })
 

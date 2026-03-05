@@ -30,40 +30,94 @@ export function CollaborationDashboard() {
   
   const collab = useCollaborationData()
   const dm = useDirectMessages({ workspaceId, currentUserId })
+  const clearThreadReplies = collab.clearThreadReplies
+  const selectedChannelId = collab.selectedChannel?.id ?? null
+  const collabChannels = collab.channels
+  const collabSelectedChannelId = collab.selectedChannel?.id ?? null
+  const selectCollabChannel = collab.selectChannel
 
   const requestedProjectId = searchParams.get('projectId')
   const requestedProjectName = searchParams.get('projectName')
+  const requestedChannelId = searchParams.get('channelId')
+  const requestedChannelType = searchParams.get('channelType')
+  const requestedClientId = searchParams.get('clientId')
+  const requestedMessageId = searchParams.get('messageId')
+  const requestedThreadId = searchParams.get('threadId')
   const projectParamHandledRef = useRef<string | null>(null)
+  const channelParamHandledRef = useRef<string | null>(null)
 
   useEffect(() => {
-    collab.clearThreadReplies()
-  }, [collab.selectedChannel?.id])
+    clearThreadReplies()
+  }, [clearThreadReplies, selectedChannelId])
 
   useEffect(() => {
-    if (!requestedProjectId) {
+    if (!requestedProjectId && !requestedChannelId && !requestedChannelType) {
       projectParamHandledRef.current = null
+      channelParamHandledRef.current = null
       return
     }
 
-    const alreadyApplied = projectParamHandledRef.current === requestedProjectId
-    if (alreadyApplied && collab.selectedChannel?.projectId === requestedProjectId) {
+    const paramSignature = [
+      requestedProjectId ?? '',
+      requestedProjectName ?? '',
+      requestedChannelId ?? '',
+      requestedChannelType ?? '',
+      requestedClientId ?? '',
+    ].join('|')
+
+    const alreadyApplied =
+      projectParamHandledRef.current === paramSignature ||
+      channelParamHandledRef.current === paramSignature
+
+    if (alreadyApplied) {
       return
     }
 
     const normalizedName = requestedProjectName?.toLowerCase() ?? null
     const targetChannel =
-      collab.channels.find((channel) => channel.type === 'project' && channel.projectId === requestedProjectId) ??
+      (requestedChannelId
+        ? collabChannels.find((channel) => channel.id === requestedChannelId)
+        : undefined) ??
+      (requestedChannelType === 'team'
+        ? collabChannels.find((channel) => channel.type === 'team')
+        : undefined) ??
+      (requestedChannelType === 'client' && requestedClientId
+        ? collabChannels.find(
+            (channel) => channel.type === 'client' && channel.clientId === requestedClientId,
+          )
+        : undefined) ??
+      (requestedChannelType === 'project' && requestedProjectId
+        ? collabChannels.find(
+            (channel) => channel.type === 'project' && channel.projectId === requestedProjectId,
+          )
+        : undefined) ??
+      (requestedProjectId
+        ? collabChannels.find((channel) => channel.type === 'project' && channel.projectId === requestedProjectId)
+        : undefined) ??
       (normalizedName
-        ? collab.channels.find(
-          (channel) => channel.type === 'project' && channel.name.toLowerCase() === normalizedName
-        )
+        ? collabChannels.find(
+            (channel) => channel.type === 'project' && channel.name.toLowerCase() === normalizedName,
+          )
         : undefined)
 
-    if (targetChannel && targetChannel.id !== collab.selectedChannel?.id) {
-      collab.selectChannel(targetChannel.id)
-      projectParamHandledRef.current = requestedProjectId
+    if (targetChannel && targetChannel.id !== collabSelectedChannelId) {
+      selectCollabChannel(targetChannel.id)
     }
-  }, [collab.channels, requestedProjectId, requestedProjectName, collab])
+
+    if (targetChannel) {
+      projectParamHandledRef.current = paramSignature
+      channelParamHandledRef.current = paramSignature
+    }
+  }, [
+    collabChannels,
+    collabSelectedChannelId,
+    selectCollabChannel,
+    requestedProjectId,
+    requestedProjectName,
+    requestedChannelId,
+    requestedChannelType,
+    requestedClientId,
+  ])
 
   const clearProjectFilter = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString())
@@ -138,6 +192,7 @@ export function CollaborationDashboard() {
             currentUserId={currentUserId}
             channels={collab.channels}
             channelSummaries={collab.channelSummaries}
+            channelUnreadCounts={collab.channelUnreadCounts}
             dmConversations={dm.conversations}
             selectedChannel={collab.selectedChannel}
             selectedDM={dm.selectedConversation}
@@ -179,11 +234,15 @@ export function CollaborationDashboard() {
             threadNextCursorByRootId={collab.threadNextCursorByRootId}
             threadLoadingByRootId={collab.threadLoadingByRootId}
             threadErrorsByRootId={collab.threadErrorsByRootId}
+            threadUnreadCountsByRootId={collab.threadUnreadCountsByRootId}
             onLoadThreadReplies={collab.loadThreadReplies}
             onLoadMoreThreadReplies={collab.loadMoreThreadReplies}
+            onMarkThreadAsRead={collab.markThreadAsRead}
             onClearThreadReplies={collab.clearThreadReplies}
             reactionPendingByMessage={collab.reactionPendingByMessage}
             sharedFiles={collab.sharedFiles}
+            deepLinkMessageId={requestedMessageId}
+            deepLinkThreadId={requestedThreadId}
             dmMessages={dm.messages}
             dmIsLoadingMessages={dm.isLoadingMessages}
             dmIsLoadingMore={dm.isLoadingMore}

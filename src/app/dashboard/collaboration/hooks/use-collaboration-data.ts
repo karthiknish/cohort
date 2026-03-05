@@ -100,6 +100,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     selectedChannel,
     selectChannel,
     channelSummaries: messages.channelSummaries,
+    channelUnreadCounts: messages.channelUnreadCounts,
 
     channelMessages: messages.channelMessages,
     visibleMessages: messages.visibleMessages,
@@ -150,8 +151,10 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     threadNextCursorByRootId: messages.threadNextCursorByRootId,
     threadLoadingByRootId: messages.threadLoadingByRootId,
     threadErrorsByRootId: messages.threadErrorsByRootId,
+    threadUnreadCountsByRootId: messages.threadUnreadCountsByRootId,
     loadThreadReplies: messages.loadThreadReplies,
     loadMoreThreadReplies: messages.loadMoreThreadReplies,
+    markThreadAsRead: messages.markThreadAsRead,
     clearThreadReplies: messages.clearThreadReplies,
 
     reactionPendingByMessage: messages.reactionPendingByMessage,

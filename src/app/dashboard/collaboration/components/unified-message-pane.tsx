@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, type ChangeEvent, type ClipboardEvent } from 'react'
+import { useRef, useState, useCallback, useMemo, useEffect, type ChangeEvent, type ClipboardEvent } from 'react'
 import { 
   Send, MoreVertical, Archive, BellOff, Bell, ArchiveRestore, 
   Share2, Mail, LoaderCircle, Hash, RefreshCw
@@ -38,6 +38,7 @@ import { MessageAttachments } from './message-attachments'
 import { MessageReactions } from './message-reactions'
 import { MessageContent } from './message-content'
 import { DeletedMessageInfo } from './message-item-parts'
+import { ThreadSection } from './thread-section'
 
 import type { CollaborationMessage, CollaborationAttachment } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
@@ -95,11 +96,25 @@ export interface UnifiedMessagePaneProps {
   onShareToPlatform?: (message: UnifiedMessage, platform: 'email') => Promise<void>
   onCreateTask?: (message: UnifiedMessage) => void
   typingIndicator?: string
+  onComposerFocus?: () => void
+  onComposerBlur?: () => void
   emptyState?: React.ReactNode
   placeholder?: string
   participants?: ClientTeamMember[]
   channelMessages?: CollaborationMessage[]
   deletedInfoByMessage?: Record<string, { deletedBy: string | null; deletedAt: string | null }>
+  threadMessagesByRootId?: Record<string, CollaborationMessage[]>
+  threadNextCursorByRootId?: Record<string, string | null>
+  threadLoadingByRootId?: Record<string, boolean>
+  threadErrorsByRootId?: Record<string, string | null>
+  threadUnreadCountsByRootId?: Record<string, number>
+  onLoadThreadReplies?: (threadRootId: string) => Promise<void> | void
+  onLoadMoreThreadReplies?: (threadRootId: string) => Promise<void> | void
+  onMarkThreadAsRead?: (threadRootId: string, beforeMs?: number) => Promise<void> | void
+  focusMessageId?: string | null
+  focusThreadId?: string | null
+  messageUpdatingId?: string | null
+  messageDeletingId?: string | null
 }
 
 export function UnifiedMessagePane({
@@ -128,17 +143,68 @@ export function UnifiedMessagePane({
   onShareToPlatform,
   onCreateTask,
   typingIndicator,
+  onComposerFocus,
+  onComposerBlur,
   emptyState,
   placeholder = 'Type a message...',
   participants = [],
   channelMessages,
   deletedInfoByMessage,
+  threadMessagesByRootId = {},
+  threadNextCursorByRootId = {},
+  threadLoadingByRootId = {},
+  threadErrorsByRootId = {},
+  threadUnreadCountsByRootId = {},
+  onLoadThreadReplies,
+  onLoadMoreThreadReplies,
+  onMarkThreadAsRead,
+  focusMessageId = null,
+  focusThreadId = null,
+  messageUpdatingId = null,
+  messageDeletingId = null,
 }: UnifiedMessagePaneProps) {
   const [sharingTo, setSharingTo] = useState<string | null>(null)
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
+  const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({})
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const lastAutoOpenedThreadRef = useRef<string | null>(null)
   const { toast } = useToast()
+
+  const channelMessagesById = useMemo(() => {
+    const map = new Map<string, CollaborationMessage>()
+    for (const message of channelMessages ?? []) {
+      if (message?.id) {
+        map.set(message.id, message)
+      }
+    }
+    return map
+  }, [channelMessages])
+  const effectiveFocusMessageId = useMemo(() => {
+    if (typeof focusMessageId !== 'string') return null
+    const normalizedId = focusMessageId.trim()
+    if (!normalizedId) return null
+
+    const focusedMessage = channelMessagesById.get(normalizedId)
+    if (!focusedMessage?.parentMessageId) {
+      return normalizedId
+    }
+
+    return focusedMessage.threadRootId?.trim() || focusedMessage.parentMessageId?.trim() || normalizedId
+  }, [channelMessagesById, focusMessageId])
+  const effectiveFocusThreadId = useMemo(() => {
+    if (typeof focusThreadId === 'string' && focusThreadId.trim().length > 0) {
+      return focusThreadId.trim()
+    }
+
+    if (typeof focusMessageId !== 'string' || focusMessageId.trim().length === 0) {
+      return null
+    }
+
+    const focusedMessage = channelMessagesById.get(focusMessageId.trim())
+    if (!focusedMessage) return null
+    return focusedMessage.threadRootId?.trim() || focusedMessage.parentMessageId?.trim() || null
+  }, [channelMessagesById, focusMessageId, focusThreadId])
 
   const hasPendingAttachments = pendingAttachments.length > 0
 
@@ -229,6 +295,87 @@ export function UnifiedMessagePane({
     [onAddAttachments]
   )
 
+  const resolveThreadRootId = useCallback((message: UnifiedMessage) => {
+    const original = channelMessagesById.get(message.id)
+    if (original?.threadRootId && original.threadRootId.trim().length > 0) {
+      return original.threadRootId.trim()
+    }
+    if (message.threadRootId && message.threadRootId.trim().length > 0) {
+      return message.threadRootId.trim()
+    }
+    return message.id
+  }, [channelMessagesById])
+
+  const handleThreadToggle = useCallback((threadRootId: string, beforeMs?: number) => {
+    const normalizedId = typeof threadRootId === 'string' ? threadRootId.trim() : ''
+    if (!normalizedId) return
+
+    const isCurrentlyOpen = Boolean(expandedThreadIds[normalizedId])
+
+    setExpandedThreadIds((prev) => {
+      const next = { ...prev }
+      if (isCurrentlyOpen) {
+        delete next[normalizedId]
+      } else {
+        next[normalizedId] = true
+      }
+      return next
+    })
+
+    if (!isCurrentlyOpen) {
+      const hasRepliesLoaded = (threadMessagesByRootId[normalizedId]?.length ?? 0) > 0
+      const hasError = Boolean(threadErrorsByRootId[normalizedId])
+      const isLoadingReplies = Boolean(threadLoadingByRootId[normalizedId])
+
+      if ((!hasRepliesLoaded || hasError) && !isLoadingReplies) {
+        void onLoadThreadReplies?.(normalizedId)
+      }
+
+      void onMarkThreadAsRead?.(normalizedId, beforeMs)
+    }
+  }, [expandedThreadIds, onLoadThreadReplies, onMarkThreadAsRead, threadErrorsByRootId, threadLoadingByRootId, threadMessagesByRootId])
+
+  const handleRetryThreadLoad = useCallback((threadRootId: string) => {
+    const normalizedId = typeof threadRootId === 'string' ? threadRootId.trim() : ''
+    if (!normalizedId) return
+    void onLoadThreadReplies?.(normalizedId)
+  }, [onLoadThreadReplies])
+
+  const handleLoadMoreThread = useCallback((threadRootId: string) => {
+    const normalizedId = typeof threadRootId === 'string' ? threadRootId.trim() : ''
+    if (!normalizedId) return
+    void onLoadMoreThreadReplies?.(normalizedId)
+  }, [onLoadMoreThreadReplies])
+
+  useEffect(() => {
+    if (!effectiveFocusThreadId) {
+      lastAutoOpenedThreadRef.current = null
+      return
+    }
+
+    if (lastAutoOpenedThreadRef.current === effectiveFocusThreadId) {
+      return
+    }
+
+    lastAutoOpenedThreadRef.current = effectiveFocusThreadId
+
+    setExpandedThreadIds((prev) => {
+      if (prev[effectiveFocusThreadId]) return prev
+      return {
+        ...prev,
+        [effectiveFocusThreadId]: true,
+      }
+    })
+
+    const hasRepliesLoaded = (threadMessagesByRootId[effectiveFocusThreadId]?.length ?? 0) > 0
+    const isLoadingReplies = Boolean(threadLoadingByRootId[effectiveFocusThreadId])
+    if (!hasRepliesLoaded && !isLoadingReplies) {
+      void onLoadThreadReplies?.(effectiveFocusThreadId)
+    }
+
+    void onMarkThreadAsRead?.(effectiveFocusThreadId)
+  }, [effectiveFocusThreadId, onLoadThreadReplies, onMarkThreadAsRead, threadLoadingByRootId, threadMessagesByRootId])
+
   const renderMessageExtras = (message: UnifiedMessage) => {
     if (!message.sharedTo || message.sharedTo.length === 0) return null
     
@@ -254,9 +401,6 @@ export function UnifiedMessagePane({
   }
 
   const renderMessageActions = (message: UnifiedMessage) => {
-    const canManage = !message.deleted && 
-      ((message.senderId && message.senderId === currentUserId) || currentUserRole === 'admin')
-    
     return (
       <>
         {onShareToPlatform && (
@@ -299,6 +443,82 @@ export function UnifiedMessagePane({
     if (!info) return <p className="text-sm italic text-muted-foreground">Message removed</p>
     return <DeletedMessageInfo deletedBy={info.deletedBy} deletedAt={info.deletedAt} />
   }
+
+  const renderThreadSection = useCallback((message: UnifiedMessage) => {
+    if (header?.type !== 'channel' || message.deleted) {
+      return null
+    }
+
+    const original = channelMessagesById.get(message.id)
+    const threadRootId = resolveThreadRootId(message)
+    const threadReplies = threadMessagesByRootId[threadRootId] ?? []
+    const threadLoading = threadLoadingByRootId[threadRootId] ?? false
+    const threadError = threadErrorsByRootId[threadRootId] ?? null
+    const threadNextCursor = threadNextCursorByRootId[threadRootId] ?? null
+    const replyCount = Math.max(
+      typeof original?.threadReplyCount === 'number'
+        ? original.threadReplyCount
+        : (typeof message.threadReplyCount === 'number' ? message.threadReplyCount : 0),
+      threadReplies.length,
+    )
+    const lastReplyIso =
+      original?.threadLastReplyAt ??
+      message.threadLastReplyAt ??
+      (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
+    const unreadCount = Math.max(0, threadUnreadCountsByRootId[threadRootId] ?? 0)
+    const beforeMs = lastReplyIso ? Date.parse(lastReplyIso) : NaN
+
+    return (
+      <ThreadSection
+        threadRootId={threadRootId}
+        replyCount={replyCount}
+        unreadCount={unreadCount}
+        lastReplyIso={lastReplyIso}
+        isOpen={Boolean(expandedThreadIds[threadRootId])}
+        isLoading={threadLoading}
+        error={threadError}
+        hasNextCursor={Boolean(threadNextCursor)}
+        replies={threadReplies}
+        onToggle={() =>
+          handleThreadToggle(threadRootId, Number.isFinite(beforeMs) ? beforeMs : undefined)
+        }
+        onRetry={() => handleRetryThreadLoad(threadRootId)}
+        onLoadMore={() => handleLoadMoreThread(threadRootId)}
+        onReply={() => handleReply(message)}
+        canReply={Boolean(onReply)}
+        renderReply={(reply) => (
+          <div key={reply.id} className="rounded-md border border-muted/40 bg-muted/15 px-3 py-2">
+            <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{reply.senderName}</span>
+              {reply.createdAt && (
+                <span>{new Date(reply.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+              )}
+            </div>
+            {reply.isDeleted ? (
+              <p className="text-sm italic text-muted-foreground">Message removed</p>
+            ) : (
+              <MessageContent content={reply.content ?? ''} mentions={reply.mentions} />
+            )}
+          </div>
+        )}
+      />
+    )
+  }, [
+    channelMessagesById,
+    expandedThreadIds,
+    handleLoadMoreThread,
+    handleReply,
+    handleRetryThreadLoad,
+    handleThreadToggle,
+    header?.type,
+    onReply,
+    resolveThreadRootId,
+    threadErrorsByRootId,
+    threadLoadingByRootId,
+    threadMessagesByRootId,
+    threadNextCursorByRootId,
+    threadUnreadCountsByRootId,
+  ])
 
   const renderMessageWrapper = (message: UnifiedMessage, children: React.ReactNode) => (
     <SwipeableMessage
@@ -444,14 +664,18 @@ export function UnifiedMessagePane({
           reactionPendingByMessage={reactionPendingByMessage}
           onReply={onReply}
           onDeleteMessage={onDeleteMessage}
-          deletingMessageId={deletingMessageId}
+          deletingMessageId={deletingMessageId ?? messageDeletingId}
+          updatingMessageId={messageUpdatingId}
           renderMessageExtras={renderMessageExtras}
           renderMessageActions={renderMessageActions}
           renderMessageAttachments={renderMessageAttachments}
           renderDeletedInfo={renderDeletedInfo}
+          renderThreadSection={header.type === 'channel' ? renderThreadSection : undefined}
           renderMessageWrapper={renderMessageWrapper}
           emptyState={emptyState}
           variant={header.type === 'channel' ? 'channel' : 'dm'}
+          focusMessageId={effectiveFocusMessageId}
+          focusThreadId={effectiveFocusThreadId}
         />
       </div>
 
@@ -471,6 +695,8 @@ export function UnifiedMessagePane({
             disabled={isSending || uploadingAttachments}
             placeholder={placeholder}
             participants={participants}
+            onFocus={onComposerFocus}
+            onBlur={onComposerBlur}
             onDrop={handleComposerDrop}
             onDragOver={handleComposerDragOver}
             onPaste={handleComposerPaste}

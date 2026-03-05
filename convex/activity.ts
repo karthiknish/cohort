@@ -1,6 +1,4 @@
-import { mutation, query } from './_generated/server'
 import type { QueryCtx } from './_generated/server'
-import { v } from 'convex/values'
 import { Errors } from './errors'
 import {
   zAuthenticatedQuery,
@@ -37,6 +35,74 @@ function toIso(ms: number): string {
 
 function readString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim().length > 0 ? value : fallback
+}
+
+function readMetadataString(metadata: Record<string, unknown> | undefined, key: string): string | null {
+  const value = metadata?.[key]
+  return typeof value === 'string' && value.trim().length > 0 ? value : null
+}
+
+function resolveChannelId(args: {
+  channelType: string | null
+  channelId: string | null
+  clientId: string | null
+  projectId: string | null
+}): string | null {
+  if (args.channelId) return args.channelId
+  if (args.channelType === 'team') return 'team-agency'
+  if (args.channelType === 'client' && args.clientId) return `client-${args.clientId}`
+  if (args.channelType === 'project' && args.projectId) return `project-${args.projectId}`
+  return null
+}
+
+function buildCollaborationNavigationUrl(args: {
+  channelType: string | null
+  channelId: string | null
+  clientId: string | null
+  projectId: string | null
+  messageId: string | null
+  threadId: string | null
+}) {
+  const params = new URLSearchParams()
+
+  const resolvedChannelId = resolveChannelId(args)
+  if (resolvedChannelId) params.set('channelId', resolvedChannelId)
+  if (args.channelType) params.set('channelType', args.channelType)
+  if (args.clientId) params.set('clientId', args.clientId)
+  if (args.projectId) params.set('projectId', args.projectId)
+  if (args.messageId) params.set('messageId', args.messageId)
+  if (args.threadId) params.set('threadId', args.threadId)
+
+  const query = params.toString()
+  return query ? `/dashboard/collaboration?${query}` : '/dashboard/collaboration'
+}
+
+function resolveNotificationNavigationUrl(notification: {
+  resourceType?: string | null
+  resourceId?: string | null
+  metadata?: Record<string, unknown>
+}) {
+  const resourceType = typeof notification.resourceType === 'string' ? notification.resourceType : ''
+  if (resourceType !== 'collaboration') {
+    return RESOURCE_TO_URL[resourceType] ?? '/dashboard'
+  }
+
+  const metadata = notification.metadata
+  const channelType = readMetadataString(metadata, 'channelType')
+  const channelId = readMetadataString(metadata, 'channelId')
+  const clientId = readMetadataString(metadata, 'clientId')
+  const projectId = readMetadataString(metadata, 'projectId')
+  const messageId = readMetadataString(metadata, 'messageId') ?? (readString(notification.resourceId, '') || null)
+  const threadId = readMetadataString(metadata, 'threadRootId') ?? readMetadataString(metadata, 'parentMessageId')
+
+  return buildCollaborationNavigationUrl({
+    channelType,
+    channelId,
+    clientId,
+    projectId,
+    messageId,
+    threadId,
+  })
 }
 
 const KIND_TO_TYPE: Record<string, ActivityType> = {
@@ -92,8 +158,11 @@ export const listForClient = zAuthenticatedQuery({
       const activityType = KIND_TO_TYPE[n.kind]
       if (!activityType) continue
 
-      const resourceType = n.resourceType ?? ''
-      const navigationUrl = RESOURCE_TO_URL[resourceType] ?? '/dashboard'
+      const navigationUrl = resolveNotificationNavigationUrl({
+        resourceType: n.resourceType,
+        resourceId: n.resourceId,
+        metadata: (n.metadata as Record<string, unknown> | undefined) ?? undefined,
+      })
 
       const id = typeof n.legacyId === 'string' ? n.legacyId : String(n._id)
       seenIds.add(id)
@@ -174,9 +243,17 @@ export const listForClient = zAuthenticatedQuery({
         entityId: String(message.legacyId),
         entityName,
         description: `New message in ${entityName}`,
-        navigationUrl: message.projectId
-          ? `/dashboard/collaboration?projectId=${encodeURIComponent(readString(message.projectId, args.clientId))}`
-          : '/dashboard/collaboration',
+        navigationUrl: buildCollaborationNavigationUrl({
+          channelType: typeof message.channelType === 'string' ? message.channelType : null,
+          channelId: null,
+          clientId: typeof message.clientId === 'string' ? message.clientId : null,
+          projectId: typeof message.projectId === 'string' ? message.projectId : null,
+          messageId: typeof message.legacyId === 'string' ? message.legacyId : null,
+          threadId:
+            typeof message.threadRootId === 'string'
+              ? message.threadRootId
+              : (typeof message.parentMessageId === 'string' ? message.parentMessageId : null),
+        }),
         userName: readString(message.senderName, null as any) ?? null,
         isRead: false,
         kind: 'collaboration.message',

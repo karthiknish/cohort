@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useMutation } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
 import type { Channel } from '../types'
@@ -97,6 +97,32 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
   const handleComposerBlur = useCallback(() => {
     composerFocusedRef.current = false
     stopTyping()
+  }, [stopTyping])
+
+  useEffect(() => {
+    return () => {
+      stopTyping()
+    }
+  }, [selectedChannel?.id, stopTyping])
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      stopTyping()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stopTyping()
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [stopTyping])
 
   return {

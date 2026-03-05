@@ -36,6 +36,18 @@ interface UseMessagesDataOptions {
   uploadAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>
 }
 
+function toStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined
+  const normalized = value.filter((entry): entry is string => typeof entry === 'string')
+  return normalized.length > 0 ? normalized : undefined
+}
+
+function toSharedPlatforms(value: unknown): Array<'email'> | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined
+  const normalized = value.filter((entry): entry is 'email' => entry === 'email')
+  return normalized.length > 0 ? normalized : undefined
+}
+
 export function useMessagesData({
   workspaceId,
   currentUserId,
@@ -54,6 +66,8 @@ export function useMessagesData({
   const convex = useConvex()
   const createMessage = useMutation((collaborationApi as any).createMessage)
   const updateSharedTo = useMutation((collaborationApi as any).updateSharedTo)
+  const markChannelAsRead = useMutation((collaborationApi as any).markChannelAsRead)
+  const markThreadAsReadMutation = useMutation((collaborationApi as any).markThreadAsRead)
 
   const [messagesByChannel, setMessagesByChannel] = useState<MessagesByChannelState>({})
   const [nextCursorByChannel, setNextCursorByChannel] = useState<Record<string, string | null>>({})
@@ -69,9 +83,53 @@ export function useMessagesData({
   const [searchError, setSearchError] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const lastMarkedMessageByChannelRef = useRef<Record<string, string>>({})
 
-  const channelMessages = selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []
+  const unreadCountsResult = useQuery(
+    (collaborationApi as any).getUnreadCountsByChannel,
+    workspaceId && currentUserId
+      ? {
+          workspaceId: String(workspaceId),
+          userId: String(currentUserId),
+        }
+      : 'skip'
+  )
+
+  const channelMessages = useMemo(
+    () => (selectedChannel ? messagesByChannel[selectedChannel.id] ?? [] : []),
+    [messagesByChannel, selectedChannel],
+  )
+  const threadRootIdsForUnread = useMemo(() => {
+    const ids = new Set<string>()
+    for (const message of channelMessages) {
+      if (message.parentMessageId) continue
+
+      const rootId =
+        typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
+          ? message.threadRootId.trim()
+          : message.id
+      if (rootId) {
+        ids.add(rootId)
+      }
+    }
+
+    return Array.from(ids).slice(0, 200)
+  }, [channelMessages])
   const normalizedMessageSearch = messageSearchQuery.trim()
+
+  const threadUnreadCountsResult = useQuery(
+    (collaborationApi as any).getThreadUnreadCounts,
+    workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
+      ? {
+          workspaceId: String(workspaceId),
+          channelType: selectedChannel.type,
+          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+          threadRootIds: threadRootIdsForUnread,
+          userId: String(currentUserId),
+        }
+      : 'skip'
+  )
 
   const participantNameMap = useMemo(
     () => new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant])),
@@ -90,6 +148,33 @@ export function useMessagesData({
 
   const isSearchActive = Boolean(normalizedMessageSearch)
   const activeMessagesError = isSearchActive ? searchError : messagesError
+  const channelUnreadCounts = useMemo(() => {
+    const source = (unreadCountsResult as { countsByChannelId?: Record<string, number> } | null)?.countsByChannelId
+    if (!source || typeof source !== 'object') {
+      return {} as Record<string, number>
+    }
+
+    return Object.fromEntries(
+      Object.entries(source).map(([channelId, count]) => [
+        channelId,
+        Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
+      ]),
+    )
+  }, [unreadCountsResult])
+  const threadUnreadCountsByRootId = useMemo(() => {
+    const source =
+      (threadUnreadCountsResult as { countsByThreadRootId?: Record<string, number> } | null)?.countsByThreadRootId
+    if (!source || typeof source !== 'object') {
+      return {} as Record<string, number>
+    }
+
+    return Object.fromEntries(
+      Object.entries(source).map(([threadRootId, count]) => [
+        threadRootId,
+        Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
+      ]),
+    )
+  }, [threadUnreadCountsResult])
 
   const parseSearchQuery = useCallback((input: string) => {
     const tokens = input.split(/\s+/).filter(Boolean)
@@ -194,6 +279,12 @@ export function useMessagesData({
             format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
             mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
             reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            readBy: toStringArray(row?.readBy),
+            deliveredTo: toStringArray(row?.deliveredTo),
+            isPinned: Boolean(row?.isPinned),
+            pinnedAt: typeof row?.pinnedAtMs === 'number' ? new Date(row.pinnedAtMs).toISOString() : null,
+            pinnedBy: typeof row?.pinnedBy === 'string' ? row.pinnedBy : null,
+            sharedTo: toSharedPlatforms(row?.sharedTo),
             parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
             threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
             threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
@@ -330,6 +421,90 @@ export function useMessagesData({
     [handleToggleReactionBase]
   )
 
+  const handleMarkSelectedChannelAsRead = useCallback(async () => {
+    if (!workspaceId || !currentUserId || !selectedChannel) {
+      return
+    }
+
+    const latestUnread = [...channelMessages]
+      .reverse()
+      .find((message) => {
+        if (message.isDeleted) return false
+        if (message.senderId === currentUserId) return false
+
+        const readBy = Array.isArray(message.readBy) ? message.readBy : []
+        return !readBy.includes(currentUserId)
+      })
+
+    if (!latestUnread) {
+      return
+    }
+
+    const alreadyMarked = lastMarkedMessageByChannelRef.current[selectedChannel.id]
+    if (alreadyMarked === latestUnread.id) {
+      return
+    }
+
+    const createdAtMs = latestUnread.createdAt ? Date.parse(latestUnread.createdAt) : NaN
+
+    try {
+      await markChannelAsRead({
+        workspaceId: String(workspaceId),
+        channelType: selectedChannel.type,
+        clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+        projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+        userId: String(currentUserId),
+        beforeMs: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
+      })
+
+      lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
+    } catch (error) {
+      logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
+    }
+  }, [channelMessages, currentUserId, markChannelAsRead, selectedChannel, workspaceId])
+
+  const handleMarkThreadAsRead = useCallback(
+    async (threadRootId: string, beforeMs?: number) => {
+      if (!workspaceId || !currentUserId || !selectedChannel) {
+        return
+      }
+
+      const normalizedThreadRootId = typeof threadRootId === 'string' ? threadRootId.trim() : ''
+      if (!normalizedThreadRootId) {
+        return
+      }
+
+      try {
+        await markThreadAsReadMutation({
+          workspaceId: String(workspaceId),
+          channelType: selectedChannel.type,
+          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+          threadRootId: normalizedThreadRootId,
+          userId: String(currentUserId),
+          beforeMs,
+        })
+      } catch (error) {
+        logError(error, 'useCollaborationData:handleMarkThreadAsRead')
+      }
+    },
+    [currentUserId, markThreadAsReadMutation, selectedChannel, workspaceId],
+  )
+
+  useEffect(() => {
+    if (!selectedChannel) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      void handleMarkSelectedChannelAsRead()
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [channelMessages, handleMarkSelectedChannelAsRead, selectedChannel])
+
   // Send message to external channels based on notification preferences
   const sendToExternalPlatforms = useCallback(
     async (message: CollaborationMessage, wsId: string) => {
@@ -420,6 +595,13 @@ export function useMessagesData({
           return
         }
 
+        const parentMessage = options?.parentMessageId
+          ? channelMessages.find((message) => message.id === options.parentMessageId)
+          : null
+        const resolvedThreadRootId = options?.parentMessageId
+          ? (parentMessage?.threadRootId || parentMessage?.id || options.parentMessageId)
+          : null
+
         const messageId = uuidv4()
         await createMessage({
           workspaceId: String(workspaceId),
@@ -435,7 +617,7 @@ export function useMessagesData({
           format: 'markdown',
           mentions: mentionMetadata,
           parentMessageId: options?.parentMessageId ?? null,
-          threadRootId: null,
+          threadRootId: resolvedThreadRootId,
           isThreadRoot: options?.parentMessageId ? false : true,
         })
 
@@ -472,8 +654,17 @@ export function useMessagesData({
               format: createdRow?.format === 'plaintext' ? 'plaintext' : 'markdown',
               mentions: Array.isArray(createdRow?.mentions) && createdRow.mentions.length > 0 ? createdRow.mentions : undefined,
               reactions: Array.isArray(createdRow?.reactions) && createdRow.reactions.length > 0 ? createdRow.reactions : undefined,
+              readBy: toStringArray(createdRow?.readBy),
+              deliveredTo: toStringArray(createdRow?.deliveredTo),
+              isPinned: Boolean(createdRow?.isPinned),
+              pinnedAt: typeof createdRow?.pinnedAtMs === 'number' ? new Date(createdRow.pinnedAtMs).toISOString() : null,
+              pinnedBy: typeof createdRow?.pinnedBy === 'string' ? createdRow.pinnedBy : null,
+              sharedTo: toSharedPlatforms(createdRow?.sharedTo),
               parentMessageId: typeof createdRow?.parentMessageId === 'string' ? createdRow.parentMessageId : null,
-              threadRootId: typeof createdRow?.threadRootId === 'string' ? createdRow.threadRootId : null,
+              threadRootId:
+                typeof createdRow?.threadRootId === 'string'
+                  ? createdRow.threadRootId
+                  : resolvedThreadRootId,
               threadReplyCount: typeof createdRow?.threadReplyCount === 'number' ? createdRow.threadReplyCount : undefined,
               threadLastReplyAt:
                 typeof createdRow?.threadLastReplyAtMs === 'number'
@@ -499,8 +690,14 @@ export function useMessagesData({
               format: 'markdown',
               mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
               reactions: [],
+              readBy: [String(currentUserId)],
+              deliveredTo: [String(currentUserId)],
+              isPinned: false,
+              pinnedAt: null,
+              pinnedBy: null,
+              sharedTo: undefined,
               parentMessageId: options?.parentMessageId ?? null,
-              threadRootId: null,
+              threadRootId: resolvedThreadRootId,
             }
 
         mutateChannelMessages(channelId, (messages) => {
@@ -509,10 +706,8 @@ export function useMessagesData({
         })
 
         // Also add to thread replies if this is a reply
-        if (options?.parentMessageId) {
-          const parentMessage = channelMessages.find((m) => m.id === options.parentMessageId)
-          const threadRootId = parentMessage?.threadRootId || parentMessage?.id || options.parentMessageId
-          addThreadReplyToState(threadRootId, createdMessage)
+        if (resolvedThreadRootId) {
+          addThreadReplyToState(resolvedThreadRootId, createdMessage)
         }
 
         clearAttachments()
@@ -535,7 +730,6 @@ export function useMessagesData({
       addThreadReplyToState,
       channels,
       channelMessages,
-      channelParticipants,
       clearAttachments,
       createMessage,
       convex,
@@ -543,7 +737,9 @@ export function useMessagesData({
       messageInput,
       mutateChannelMessages,
       pendingAttachments,
+      participantNameMap,
       resolveSenderDetails,
+      sendToExternalPlatforms,
       selectedChannel,
       stopTyping,
       toast,
@@ -602,6 +798,12 @@ export function useMessagesData({
             format: (row?.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
             mentions: Array.isArray(row?.mentions) && row.mentions.length > 0 ? row.mentions : undefined,
             reactions: Array.isArray(row?.reactions) && row.reactions.length > 0 ? row.reactions : undefined,
+            readBy: toStringArray(row?.readBy),
+            deliveredTo: toStringArray(row?.deliveredTo),
+            isPinned: Boolean(row?.isPinned),
+            pinnedAt: typeof row?.pinnedAtMs === 'number' ? new Date(row.pinnedAtMs).toISOString() : null,
+            pinnedBy: typeof row?.pinnedBy === 'string' ? row.pinnedBy : null,
+            sharedTo: toSharedPlatforms(row?.sharedTo),
             parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
             threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,
             threadReplyCount: typeof row?.threadReplyCount === 'number' ? row.threadReplyCount : undefined,
@@ -679,9 +881,12 @@ export function useMessagesData({
     threadNextCursorByRootId,
     threadLoadingByRootId,
     threadErrorsByRootId,
+    threadUnreadCountsByRootId,
     loadThreadReplies,
     loadMoreThreadReplies,
+    markThreadAsRead: handleMarkThreadAsRead,
     clearThreadReplies,
     reactionPendingByMessage: reactionUpdatingByMessage,
+    channelUnreadCounts,
   }
 }

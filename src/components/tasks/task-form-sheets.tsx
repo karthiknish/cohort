@@ -1,12 +1,12 @@
 'use client'
 
-import type { FormEvent, Dispatch, SetStateAction } from 'react'
-import { LoaderCircle, Calendar as CalendarIcon } from 'lucide-react'
-import { format, parseISO, isValid } from 'date-fns'
+import { useRef, type FormEvent, type Dispatch, type SetStateAction } from 'react'
+import { LoaderCircle, Calendar as CalendarIcon, Paperclip } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { MentionInput, type MentionableUser } from '@/components/ui/mention-input'
+import { MentionInput } from '@/components/ui/mention-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -36,6 +36,8 @@ import { TaskPriority, TaskStatus } from '@/types/tasks'
 import type { ClientTeamMember } from '@/types/clients'
 import { TaskFormState, teamMembersToMentionable } from './task-types'
 import { TaskCommentsPanel } from './task-comments'
+import { PendingAttachmentsList } from '@/app/dashboard/collaboration/components/message-composer'
+import type { PendingTaskAttachment } from '@/services/task-attachments'
 
 export type CreateTaskSheetProps = {
   open: boolean
@@ -46,6 +48,9 @@ export type CreateTaskSheetProps = {
   createError: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   participants: ClientTeamMember[]
+  pendingAttachments: PendingTaskAttachment[]
+  onAddAttachments: (files: FileList | null) => void
+  onRemoveAttachment: (attachmentId: string) => void
 }
 
 export function CreateTaskSheet({
@@ -57,7 +62,11 @@ export function CreateTaskSheet({
   createError,
   onSubmit,
   participants,
+  pendingAttachments,
+  onAddAttachments,
+  onRemoveAttachment,
 }: CreateTaskSheetProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const mentionableUsers = teamMembersToMentionable(participants)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -213,6 +222,46 @@ export function CreateTaskSheet({
                 placeholder="Separate tags with commas"
                 disabled={creating}
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Attachments</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={creating}
+                >
+                  <Paperclip className="h-4 w-4" />
+                  Attach files
+                </Button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  onAddAttachments(event.target.files)
+                  event.currentTarget.value = ''
+                }}
+              />
+
+              {pendingAttachments.length > 0 ? (
+                <PendingAttachmentsList
+                  attachments={pendingAttachments as any}
+                  uploading={creating}
+                  onRemove={onRemoveAttachment}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Add up to 10 files (max 15MB each).
+                </p>
+              )}
             </div>
             {createError && <p className="text-sm text-destructive">{createError}</p>}
           </div>

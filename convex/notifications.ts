@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation } from './_generated/server'
+import { internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import {
@@ -7,6 +7,13 @@ import {
 } from './functions'
 import { z } from 'zod/v4'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole, WorkspaceNotificationResource } from '../src/types/notifications'
+
+const RESOURCE_TO_URL: Record<string, string> = {
+  task: '/dashboard/tasks',
+  collaboration: '/dashboard/collaboration',
+  project: '/dashboard/projects',
+  proposal: '/dashboard/proposals',
+}
 
 function toNotificationKind(input: string): WorkspaceNotificationKind {
   const allowed: WorkspaceNotificationKind[] = [
@@ -30,9 +37,77 @@ function toResource(type: string, id: string): WorkspaceNotificationResource {
   return { type: 'task', id }
 }
 
+function readMetadataString(metadata: Record<string, unknown> | undefined, key: string): string | null {
+  const value = metadata?.[key]
+  return typeof value === 'string' && value.trim().length > 0 ? value : null
+}
+
+function resolveChannelId(args: {
+  channelType: string | null
+  channelId: string | null
+  clientId: string | null
+  projectId: string | null
+}): string | null {
+  if (args.channelId) return args.channelId
+  if (args.channelType === 'team') return 'team-agency'
+  if (args.channelType === 'client' && args.clientId) return `client-${args.clientId}`
+  if (args.channelType === 'project' && args.projectId) return `project-${args.projectId}`
+  return null
+}
+
+function buildCollaborationNavigationUrl(args: {
+  channelType: string | null
+  channelId: string | null
+  clientId: string | null
+  projectId: string | null
+  messageId: string | null
+  threadId: string | null
+}) {
+  const params = new URLSearchParams()
+
+  const resolvedChannelId = resolveChannelId(args)
+  if (resolvedChannelId) params.set('channelId', resolvedChannelId)
+  if (args.channelType) params.set('channelType', args.channelType)
+  if (args.clientId) params.set('clientId', args.clientId)
+  if (args.projectId) params.set('projectId', args.projectId)
+  if (args.messageId) params.set('messageId', args.messageId)
+  if (args.threadId) params.set('threadId', args.threadId)
+
+  const query = params.toString()
+  return query ? `/dashboard/collaboration?${query}` : '/dashboard/collaboration'
+}
+
+function buildNotificationNavigationUrl(row: any): string {
+  const resourceType = typeof row?.resourceType === 'string' ? row.resourceType : ''
+  if (resourceType !== 'collaboration') {
+    return RESOURCE_TO_URL[resourceType] ?? '/dashboard'
+  }
+
+  const metadata = row?.metadata && typeof row.metadata === 'object'
+    ? (row.metadata as Record<string, unknown>)
+    : undefined
+
+  const channelType = readMetadataString(metadata, 'channelType')
+  const channelId = readMetadataString(metadata, 'channelId')
+  const clientId = readMetadataString(metadata, 'clientId')
+  const projectId = readMetadataString(metadata, 'projectId')
+  const messageId = readMetadataString(metadata, 'messageId') ?? (typeof row?.resourceId === 'string' ? row.resourceId : null)
+  const threadId = readMetadataString(metadata, 'threadRootId') ?? readMetadataString(metadata, 'parentMessageId')
+
+  return buildCollaborationNavigationUrl({
+    channelType,
+    channelId,
+    clientId,
+    projectId,
+    messageId,
+    threadId,
+  })
+}
+
 function mapNotification(row: any, userId: string): WorkspaceNotification {
   const recipientRoles = Array.isArray(row.recipientRoles) ? row.recipientRoles : []
   const roles = recipientRoles.filter((value: unknown): value is WorkspaceNotificationRole => value === 'admin' || value === 'team' || value === 'client')
+  const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : undefined
 
   return {
     id: typeof row.legacyId === 'string' ? row.legacyId : String(row._id),
@@ -53,7 +128,8 @@ function mapNotification(row: any, userId: string): WorkspaceNotification {
       clientId: typeof row.recipientClientId === 'string' ? row.recipientClientId : null,
       userIds: Array.isArray(row.recipientUserIds) ? row.recipientUserIds : undefined,
     },
-    metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : undefined,
+    metadata,
+    navigationUrl: buildNotificationNavigationUrl(row),
     createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
     updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
     read: Array.isArray(row.readBy) ? row.readBy.includes(userId) : false,

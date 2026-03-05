@@ -40,6 +40,12 @@ interface ConvexMessageRow {
   threadRootId?: string
   threadReplyCount?: number
   threadLastReplyAtMs?: number
+  readBy?: unknown[]
+  deliveredTo?: unknown[]
+  isPinned?: boolean
+  pinnedAtMs?: number | null
+  pinnedBy?: string | null
+  sharedTo?: unknown[]
 }
 
 const VALID_CHANNEL_TYPES: CollaborationChannelType[] = ['client', 'team', 'project']
@@ -85,6 +91,21 @@ function mapConvexRealtimeMessageRow(row: ConvexMessageRow): CollaborationMessag
     reactions:
       Array.isArray(row?.reactions) && row.reactions.length > 0
         ? (row.reactions as CollaborationReaction[])
+        : undefined,
+    readBy:
+      Array.isArray(row?.readBy) && row.readBy.length > 0
+        ? row.readBy.filter((value): value is string => typeof value === 'string')
+        : undefined,
+    deliveredTo:
+      Array.isArray(row?.deliveredTo) && row.deliveredTo.length > 0
+        ? row.deliveredTo.filter((value): value is string => typeof value === 'string')
+        : undefined,
+    isPinned: Boolean(row?.isPinned),
+    pinnedAt: typeof row?.pinnedAtMs === 'number' ? new Date(row.pinnedAtMs).toISOString() : null,
+    pinnedBy: typeof row?.pinnedBy === 'string' ? row.pinnedBy : null,
+    sharedTo:
+      Array.isArray(row?.sharedTo) && row.sharedTo.length > 0
+        ? row.sharedTo.filter((platform): platform is 'email' => platform === 'email')
         : undefined,
     parentMessageId: typeof row?.parentMessageId === 'string' ? row.parentMessageId : null,
     threadRootId: typeof row?.threadRootId === 'string' ? row.threadRootId : null,

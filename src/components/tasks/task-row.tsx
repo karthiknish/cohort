@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { memo, type ChangeEvent } from 'react'
-import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2 } from 'lucide-react'
+import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2, Paperclip } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -156,6 +156,13 @@ function TaskRowComponent({
                 {task.dueDate ? `Due ${formatDate(task.dueDate)}` : 'No due date'}
               </span>
             </span>
+
+            {(task.attachments ?? []).length > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" />
+                {task.attachments?.length} attachment{(task.attachments?.length ?? 0) !== 1 ? 's' : ''}
+              </span>
+            )}
 
             {(task.tags ?? []).length > 0 && (
               <div className="flex items-center gap-1.5 ml-auto">

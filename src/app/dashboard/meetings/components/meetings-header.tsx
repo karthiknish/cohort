@@ -8,11 +8,12 @@ type MeetingsHeaderProps = {
   googleWorkspaceConnected: boolean
   canSchedule: boolean
   quickStarting: boolean
+  quickMeetDisabled: boolean
   onStartQuickMeet: () => void
 }
 
 export function MeetingsHeader(props: MeetingsHeaderProps) {
-  const { googleWorkspaceConnected, canSchedule, quickStarting, onStartQuickMeet } = props
+  const { googleWorkspaceConnected, canSchedule, quickStarting, quickMeetDisabled, onStartQuickMeet } = props
 
   return (
     <div className={DASHBOARD_THEME.layout.header}>
@@ -29,7 +30,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
         </Badge>
         <Button
           className={getButtonClasses('primary')}
-          disabled={!canSchedule || quickStarting}
+          disabled={!canSchedule || quickStarting || quickMeetDisabled}
           onClick={onStartQuickMeet}
         >
           {quickStarting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}

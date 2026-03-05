@@ -98,6 +98,9 @@ export interface MessageListProps {
   editingMessageId?: string | null
   deletingMessageId?: string | null
   updatingMessageId?: string | null
+  // Deep-link focus support
+  focusMessageId?: string | null
+  focusThreadId?: string | null
 }
 
 function formatTime(ms: number): string {
@@ -168,11 +171,14 @@ export function MessageList({
   editingMessageId,
   deletingMessageId,
   updatingMessageId,
+  focusMessageId,
+  focusThreadId,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prependSnapshotRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null)
   const loadingOlderRef = useRef(false)
+  const lastFocusedMessageRef = useRef<string | null>(null)
   const previousEdgeRef = useRef<{ firstId: string | null; lastId: string | null }>({
     firstId: null,
     lastId: null,
@@ -180,6 +186,7 @@ export function MessageList({
   const shouldStickToBottomRef = useRef(true)
   const hasAutoScrolledInitiallyRef = useRef(false)
   const [localReactionPending, setLocalReactionPending] = useState<string | null>(null)
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
 
   const sortedMessages = useMemo(() => 
     [...messages].sort((a, b) => a.createdAtMs - b.createdAtMs),
@@ -254,6 +261,58 @@ export function MessageList({
 
     previousEdgeRef.current = { firstId, lastId }
   }, [sortedMessages])
+
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const resolvedFocusId =
+      (typeof focusMessageId === 'string' && focusMessageId.trim().length > 0
+        ? focusMessageId.trim()
+        : null) ??
+      (typeof focusThreadId === 'string' && focusThreadId.trim().length > 0
+        ? sortedMessages.find((message) => {
+            const threadRootId =
+              typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
+                ? message.threadRootId.trim()
+                : message.id
+            return threadRootId === focusThreadId.trim()
+          })?.id ?? null
+        : null)
+
+    if (!resolvedFocusId) {
+      return
+    }
+
+    if (lastFocusedMessageRef.current === resolvedFocusId) {
+      return
+    }
+
+    const candidates = container.querySelectorAll<HTMLElement>('[data-message-id]')
+    let target: HTMLElement | null = null
+    for (const node of candidates) {
+      if (node.dataset.messageId === resolvedFocusId) {
+        target = node
+        break
+      }
+    }
+
+    if (!target) {
+      return
+    }
+
+    lastFocusedMessageRef.current = resolvedFocusId
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setHighlightedMessageId(resolvedFocusId)
+
+    const timer = window.setTimeout(() => {
+      setHighlightedMessageId((current) => (current === resolvedFocusId ? null : current))
+    }, 2400)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [focusMessageId, focusThreadId, sortedMessages])
 
   const handleScroll = useCallback(() => {
     const container = scrollRef.current
@@ -353,16 +412,17 @@ export function MessageList({
                   const isEditing = editingMessageId === message.id
                   const isDeleting = deletingMessageId === message.id
                   const isUpdating = updatingMessageId === message.id
-                  const canManage = !message.deleted && 
-                    ((message.senderId && message.senderId === currentUserId) || currentUserRole === 'admin')
                   
                   if (isChannel) {
                     return (
                       <div
                         key={message.id}
+                        data-message-id={message.id}
+                        data-thread-root-id={message.threadRootId ?? message.id}
                         className={cn(
                           "group relative flex items-start gap-3 px-6 py-2.5 transition-all duration-200",
-                          !message.deleted && "hover:bg-muted/5"
+                          !message.deleted && "hover:bg-muted/5",
+                          message.id === highlightedMessageId && 'bg-primary/10 ring-1 ring-primary/30 rounded-lg'
                         )}
                       >
                         {showAvatars && (
@@ -490,6 +550,8 @@ export function MessageList({
                   const messageContent = (
                     <div
                       key={message.id}
+                      data-message-id={message.id}
+                      data-thread-root-id={message.threadRootId ?? message.id}
                       className={cn('flex gap-2 group', isOwn && 'justify-end')}
                     >
                       {showAvatars && !isOwn && (

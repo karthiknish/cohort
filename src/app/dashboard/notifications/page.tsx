@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import {
-  Bell,
   BellOff,
   Check,
   CheckCheck,
@@ -14,7 +13,9 @@ import {
   BarChart,
   CircleCheck,
   Mail,
+  ExternalLink,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useConvex, useMutation } from 'convex/react'
@@ -50,6 +51,7 @@ type AckAction = 'read' | 'dismiss'
 type FilterType = 'all' | 'unread' | 'mentions' | 'system'
 
 export default function NotificationsPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
@@ -167,6 +169,20 @@ export default function NotificationsPage() {
     },
     [updateNotificationStatus]
   )
+
+  const handleOpenNotification = useCallback((notification: WorkspaceNotification) => {
+    const target = typeof notification.navigationUrl === 'string' ? notification.navigationUrl : null
+    if (!target) return
+
+    if (target.startsWith('/')) {
+      router.push(target)
+      return
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.assign(target)
+    }
+  }, [router])
 
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
@@ -373,6 +389,17 @@ export default function NotificationsPage() {
                           </div>
                         </div>
                         <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          {notification.navigationUrl && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleOpenNotification(notification)}
+                              title="Open"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
                           {!notification.read && (
                             <Button
                               variant="ghost"

@@ -1,7 +1,15 @@
 'use client'
 
 import { useCallback, useState, type FormEvent } from 'react'
-import { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks'
+import { useMutation } from 'convex/react'
+import { TaskRecord } from '@/types/tasks'
+import { asErrorMessage } from '@/lib/convex-errors'
+import { filesApi } from '@/lib/convex-api'
+import {
+  buildPendingTaskAttachments,
+  type PendingTaskAttachment,
+  uploadTaskAttachment,
+} from '@/services/task-attachments'
 import { TaskFormState, buildInitialFormState, parseMentionNames } from '../task-types'
 import type { CreateTaskPayload, UpdateTaskPayload } from './use-tasks'
 
@@ -22,6 +30,9 @@ export type UseTaskFormReturn = {
   createError: string | null
   handleCreateOpenChange: (open: boolean) => void
   handleCreateSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  createAttachments: PendingTaskAttachment[]
+  handleCreateAttachmentsAdd: (files: FileList | null) => void
+  handleCreateAttachmentRemove: (attachmentId: string) => void
 
   // Edit form
   isEditOpen: boolean
@@ -55,8 +66,12 @@ export function useTaskForm({
   const [formState, setFormState] = useState<TaskFormState>(() =>
     buildInitialFormState(selectedClient ?? undefined)
   )
+  const [createAttachments, setCreateAttachments] = useState<PendingTaskAttachment[]>([])
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const getPublicUrl = useMutation(filesApi.getPublicUrl)
 
   // Edit form state
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null)
@@ -72,8 +87,20 @@ export function useTaskForm({
 
   const resetForm = useCallback(() => {
     setFormState(buildInitialFormState(selectedClient ?? undefined))
+    setCreateAttachments([])
     setCreateError(null)
   }, [selectedClient])
+
+  const handleCreateAttachmentsAdd = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    const next = buildPendingTaskAttachments(files)
+    setCreateAttachments((prev) => [...prev, ...next].slice(0, 10))
+  }, [])
+
+  const handleCreateAttachmentRemove = useCallback((attachmentId: string) => {
+    setCreateAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
+  }, [])
 
   const handleCreateOpenChange = useCallback(
     (open: boolean) => {
@@ -133,13 +160,29 @@ export function useTaskForm({
       client: normalizedClientName || undefined,
       dueDate: formState.dueDate || undefined,
       tags: normalizedTags,
+      attachments: [],
     }
 
     try {
+      if (createAttachments.length > 0) {
+        const uploadedAttachments = await Promise.all(
+          createAttachments.map((attachment) =>
+            uploadTaskAttachment({
+              userId,
+              file: attachment.file,
+              generateUploadUrl,
+              getPublicUrl,
+            })
+          )
+        )
+
+        payload.attachments = uploadedAttachments
+      }
+
       await onCreateTask(payload)
       handleCreateOpenChange(false)
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'Unexpected error creating task')
+      setCreateError(asErrorMessage(err))
     } finally {
       setCreating(false)
     }
@@ -229,6 +272,9 @@ export function useTaskForm({
     createError,
     handleCreateOpenChange,
     handleCreateSubmit,
+    createAttachments,
+    handleCreateAttachmentsAdd,
+    handleCreateAttachmentRemove,
 
     // Edit
     isEditOpen,

@@ -43,6 +43,7 @@ interface UnifiedInboxProps {
   currentUserId: string | null
   channels: Channel[]
   channelSummaries: Map<string, ChannelSummary>
+  channelUnreadCounts: Record<string, number>
   dmConversations: DirectConversation[]
   selectedChannel: Channel | null
   selectedDM: DirectConversation | null
@@ -85,11 +86,15 @@ interface UnifiedInboxProps {
   threadNextCursorByRootId: ThreadCursorsState
   threadLoadingByRootId: ThreadLoadingState
   threadErrorsByRootId: ThreadErrorsState
+  threadUnreadCountsByRootId: Record<string, number>
   onLoadThreadReplies: (threadRootId: string) => void
   onLoadMoreThreadReplies: (threadRootId: string) => void
+  onMarkThreadAsRead: (threadRootId: string, beforeMs?: number) => Promise<void>
   onClearThreadReplies: () => void
   reactionPendingByMessage: ReactionPendingState
   sharedFiles: any[]
+  deepLinkMessageId?: string | null
+  deepLinkThreadId?: string | null
   // DM props
   dmMessages: DirectMessage[]
   dmIsLoadingMessages: boolean
@@ -118,6 +123,7 @@ function getInitials(name: string | null | undefined): string {
 export function UnifiedInbox({
   channels,
   channelSummaries,
+  channelUnreadCounts,
   dmConversations,
   selectedChannel,
   selectedDM,
@@ -160,11 +166,15 @@ export function UnifiedInbox({
   threadNextCursorByRootId,
   threadLoadingByRootId,
   threadErrorsByRootId,
+  threadUnreadCountsByRootId,
   onLoadThreadReplies,
   onLoadMoreThreadReplies,
+  onMarkThreadAsRead,
   onClearThreadReplies,
   reactionPendingByMessage,
   sharedFiles,
+  deepLinkMessageId,
+  deepLinkThreadId,
   dmMessages,
   dmIsLoadingMessages,
   dmIsLoadingMore,
@@ -236,6 +246,7 @@ export function UnifiedInbox({
 
     for (const channel of channels) {
       const summary = channelSummaries.get(channel.id)
+      const unreadCount = channelUnreadCounts[channel.id] ?? 0
       items.push({
         id: channel.id,
         legacyId: channel.id,
@@ -243,8 +254,8 @@ export function UnifiedInbox({
         name: channel.name,
         lastMessageSnippet: summary?.lastMessage ?? null,
         lastMessageAtMs: summary?.lastTimestamp ? new Date(summary.lastTimestamp).getTime() : null,
-        isRead: true,
-        unreadCount: 0,
+        isRead: unreadCount <= 0,
+        unreadCount,
         metadata: { channelType: channel.type },
         originalData: channel,
       })
@@ -266,7 +277,7 @@ export function UnifiedInbox({
     }
 
     return items.sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
-  }, [channels, channelSummaries, dmConversations])
+  }, [channels, channelSummaries, channelUnreadCounts, dmConversations])
 
   const filteredItems = useMemo(() => {
     return unifiedItems.filter((item) => {
@@ -286,6 +297,34 @@ export function UnifiedInbox({
   const channelCount = channels.length
   const dmCount = dmConversations.length
   const isLoading = isLoadingChannels || isLoadingDMs
+  const topLevelChannelMessages = useMemo(
+    () => channelMessages.filter((message) => !message?.parentMessageId),
+    [channelMessages],
+  )
+
+  const typingIndicatorText = useMemo(() => {
+    if (!selectedChannel || typingParticipants.length === 0) {
+      return undefined
+    }
+
+    const names = typingParticipants
+      .map((participant) => participant.name)
+      .filter((name) => typeof name === 'string' && name.trim().length > 0)
+
+    if (names.length === 0) {
+      return undefined
+    }
+
+    if (names.length === 1) {
+      return `${names[0]} is typing...`
+    }
+
+    if (names.length === 2) {
+      return `${names[0]} and ${names[1]} are typing...`
+    }
+
+    return `${names[0]}, ${names[1]}, and ${names.length - 2} others are typing...`
+  }, [selectedChannel, typingParticipants])
 
   const handleSelectItem = useCallback((item: UnifiedItem) => {
     if (item.type === 'channel') {
@@ -454,7 +493,7 @@ export function UnifiedInbox({
             participantCount: channelParticipants.length,
             messageCount: channelMessages.length,
           }}
-          messages={channelMessages.map(collaborationToUnifiedMessage)}
+          messages={topLevelChannelMessages.map(collaborationToUnifiedMessage)}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
           isLoading={isCurrentChannelLoading}
@@ -469,12 +508,27 @@ export function UnifiedInbox({
           uploadingAttachments={uploading}
           onAddAttachments={onAddAttachments}
           onRemoveAttachment={onRemoveAttachment}
+          typingIndicator={typingIndicatorText}
+          onComposerFocus={onComposerFocus}
+          onComposerBlur={onComposerBlur}
           onToggleReaction={async (messageId: string, emoji: string) => onToggleReaction(selectedChannel.id, messageId, emoji)}
           reactionPendingByMessage={reactionPendingByMessage}
           onDeleteMessage={async (messageId: string) => onDeleteMessage(selectedChannel.id, messageId)}
           onEditMessage={async (messageId: string, newContent: string) => onEditMessage(selectedChannel.id, messageId, newContent)}
           participants={channelParticipants}
           channelMessages={channelMessages}
+          threadMessagesByRootId={threadMessagesByRootId}
+          threadNextCursorByRootId={threadNextCursorByRootId}
+          threadLoadingByRootId={threadLoadingByRootId}
+          threadErrorsByRootId={threadErrorsByRootId}
+          threadUnreadCountsByRootId={threadUnreadCountsByRootId}
+          onLoadThreadReplies={onLoadThreadReplies}
+          onLoadMoreThreadReplies={onLoadMoreThreadReplies}
+          onMarkThreadAsRead={onMarkThreadAsRead}
+          focusMessageId={deepLinkMessageId ?? null}
+          focusThreadId={deepLinkThreadId ?? null}
+          messageUpdatingId={messageUpdatingId}
+          messageDeletingId={messageDeletingId}
         />
       ) : selectedDM ? (
         <UnifiedMessagePane

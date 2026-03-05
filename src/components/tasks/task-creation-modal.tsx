@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { MessageSquare, Calendar as CalendarIcon } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { MessageSquare, Calendar as CalendarIcon, Paperclip } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
@@ -28,16 +28,21 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
+import { PendingAttachmentsList } from '@/app/dashboard/collaboration/components/message-composer'
 import { cn } from '@/lib/utils'
-import { useSmartDefaults, createTaskWithDefaults } from '@/hooks/use-smart-defaults'
+import { useSmartDefaults } from '@/hooks/use-smart-defaults'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
-import { authService } from '@/services/auth'
 import type { TaskRecord } from '@/types/tasks'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useMutation } from 'convex/react'
-import { tasksApi } from '@/lib/convex-api'
+import { filesApi, tasksApi } from '@/lib/convex-api'
+import {
+  buildPendingTaskAttachments,
+  type PendingTaskAttachment,
+  uploadTaskAttachment,
+} from '@/services/task-attachments'
 
 interface TaskCreationModalProps {
   isOpen: boolean
@@ -61,10 +66,14 @@ export function TaskCreationModal({
   const { selectedClientId, selectedClient } = useClientContext()
   const { toast } = useToast()
   const { taskDefaults, contextInfo } = useSmartDefaults()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const createTask = useMutation(tasksApi.createTask)
+  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const getPublicUrl = useMutation(filesApi.getPublicUrl)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([])
 
   // Form state with smart defaults
   const [formData, setFormData] = useState({
@@ -77,7 +86,7 @@ export function TaskCreationModal({
     projectName: initialData?.projectName || taskDefaults.projectName || '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim()) return
 
@@ -109,7 +118,22 @@ export function TaskCreationModal({
       return
     }
 
-    void createTask({
+    try {
+      const attachments =
+        pendingAttachments.length > 0
+          ? await Promise.all(
+              pendingAttachments.map((attachment) =>
+                uploadTaskAttachment({
+                  userId: user.id,
+                  file: attachment.file,
+                  generateUploadUrl,
+                  getPublicUrl,
+                })
+              )
+            )
+          : []
+
+      const result = await createTask({
         workspaceId: user.agencyId,
         title: payload.title,
         description: payload.description ?? null,
@@ -120,64 +144,75 @@ export function TaskCreationModal({
         client: payload.client ?? null,
         dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
         tags: payload.tags,
+        attachments,
       })
 
-      .then((result) => {
-        if (!result?.legacyId) {
-          throw new Error('Failed to create task')
-        }
+      const legacyId = typeof result === 'string' ? result : result?.legacyId
 
-        const createdTask: TaskRecord = {
-          id: result.legacyId,
-          title: payload.title,
-          description: payload.description ?? null,
-          status: payload.status,
-          priority: payload.priority as TaskRecord['priority'],
-          assignedTo: payload.assignedTo,
-          clientId: payload.clientId ?? null,
-          client: payload.client ?? null,
-          projectId: payload.projectId ?? null,
-          projectName: payload.projectName ?? null,
-          dueDate: payload.dueDate ?? null,
-          tags: payload.tags,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          deletedAt: null,
-        }
+      if (!legacyId) {
+        throw new Error('Failed to create task')
+      }
 
-        toast({
-          title: 'Task created!',
-          description: `"${createdTask.title}" has been added and is ready to track.`,
-        })
+      const createdTask: TaskRecord = {
+        id: legacyId,
+        title: payload.title,
+        description: payload.description ?? null,
+        status: payload.status,
+        priority: payload.priority as TaskRecord['priority'],
+        assignedTo: payload.assignedTo,
+        clientId: payload.clientId ?? null,
+        client: payload.client ?? null,
+        projectId: payload.projectId ?? null,
+        projectName: payload.projectName ?? null,
+        dueDate: payload.dueDate ?? null,
+        tags: payload.tags,
+        attachments,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        deletedAt: null,
+      }
 
-        onTaskCreated?.(createdTask)
-        emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
-        onClose()
-
-        // Reset form
-        setFormData({
-          title: '',
-          description: '',
-          priority: taskDefaults.priority || 'medium',
-          dueDate: taskDefaults.dueDate || '',
-          assignedTo: taskDefaults.assignedTo || [],
-          projectId: taskDefaults.projectId || '',
-          projectName: taskDefaults.projectName || '',
-        })
+      toast({
+        title: 'Task created!',
+        description: `"${createdTask.title}" has been added and is ready to track.`,
       })
-      .catch((err) => {
-        console.error('Failed to create task:', err)
-        const message = err instanceof Error ? err.message : 'Unexpected error creating task'
-        setError(message)
-        toast({
-          title: 'Failed to create task',
-          description: message,
-          variant: 'destructive',
-        })
+
+      onTaskCreated?.(createdTask)
+      emitDashboardRefresh({ reason: 'task-mutated', clientId: createdTask.clientId ?? selectedClientId ?? null })
+      onClose()
+
+      setFormData({
+        title: '',
+        description: '',
+        priority: taskDefaults.priority || 'medium',
+        dueDate: taskDefaults.dueDate || '',
+        assignedTo: taskDefaults.assignedTo || [],
+        projectId: taskDefaults.projectId || '',
+        projectName: taskDefaults.projectName || '',
       })
-      .finally(() => {
-        setIsLoading(false)
+      setPendingAttachments([])
+    } catch (err) {
+      console.error('Failed to create task:', err)
+      const message = err instanceof Error ? err.message : 'Unexpected error creating task'
+      setError(message)
+      toast({
+        title: 'Failed to create task',
+        description: message,
+        variant: 'destructive',
       })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAddAttachments = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const next = buildPendingTaskAttachments(files)
+    setPendingAttachments((prev) => [...prev, ...next].slice(0, 10))
+  }
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    setPendingAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
   }
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -304,6 +339,44 @@ export function TaskCreationModal({
             <div className="px-3 py-2 bg-muted rounded-md text-sm">
               {formData.assignedTo.length > 0 ? `${formData.assignedTo.length} user(s)` : 'Unassigned'}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Attachments</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={isLoading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="h-4 w-4" />
+                Attach files
+              </Button>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                handleAddAttachments(event.target.files)
+                event.currentTarget.value = ''
+              }}
+            />
+
+            {pendingAttachments.length > 0 ? (
+              <PendingAttachmentsList
+                attachments={pendingAttachments as any}
+                uploading={isLoading}
+                onRemove={handleRemoveAttachment}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Add up to 10 files (max 15MB each).</p>
+            )}
           </div>
 
           {error && (

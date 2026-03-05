@@ -8,6 +8,7 @@ import { formatRelativeTime } from '../utils'
 
 export interface ThreadToggleButtonProps {
   replyCount: number
+  unreadCount?: number
   lastReplyLabel: string | null
   isOpen: boolean
   isLoading: boolean
@@ -17,6 +18,7 @@ export interface ThreadToggleButtonProps {
 
 export function ThreadToggleButton({
   replyCount,
+  unreadCount = 0,
   lastReplyLabel,
   isOpen,
   isLoading,
@@ -46,6 +48,11 @@ export function ThreadToggleButton({
       <span className="font-medium">
         {replyCount === 1 ? '1 reply' : `${replyCount} replies`}
       </span>
+      {unreadCount > 0 && (
+        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+          {unreadCount} new
+        </span>
+      )}
       {lastReplyLabel && (
         <span className="font-normal text-muted-foreground">· Last reply {lastReplyLabel}</span>
       )}
@@ -176,9 +183,10 @@ export function ThreadRetryButton({ isLoading, onRetry }: ThreadRetryButtonProps
       size="sm"
       className="h-6 px-2 text-[11px] text-destructive hover:text-destructive/90"
       onClick={onRetry}
+      disabled={isLoading}
     >
-      <RefreshCw className="mr-1 h-3 w-3" />
-      Retry
+      <RefreshCw className={cn('mr-1 h-3 w-3', isLoading && 'animate-spin')} />
+      {isLoading ? 'Retrying…' : 'Retry'}
     </Button>
   )
 }
@@ -186,6 +194,7 @@ export function ThreadRetryButton({ isLoading, onRetry }: ThreadRetryButtonProps
 export interface ThreadSectionProps {
   threadRootId: string
   replyCount: number
+  unreadCount?: number
   lastReplyIso: string | null
   isOpen: boolean
   isLoading: boolean
@@ -196,12 +205,14 @@ export interface ThreadSectionProps {
   onRetry: () => void
   onLoadMore: () => void
   onReply: () => void
+  canReply?: boolean
   renderReply: (reply: CollaborationMessage) => React.ReactNode
 }
 
 export function ThreadSection({
   threadRootId,
   replyCount,
+  unreadCount = 0,
   lastReplyIso,
   isOpen,
   isLoading,
@@ -212,6 +223,7 @@ export function ThreadSection({
   onRetry,
   onLoadMore,
   onReply,
+  canReply = true,
   renderReply,
 }: ThreadSectionProps) {
   const hasThreadReplies = replyCount > 0
@@ -219,12 +231,13 @@ export function ThreadSection({
   const hasRepliesLoaded = replies.length > 0
 
   return (
-    <div className="pt-2">
+    <div className="pt-2" data-thread-root-id={threadRootId}>
       {/* Thread Toggle Button */}
       {hasThreadReplies ? (
         <div className="flex flex-wrap items-center gap-2">
           <ThreadToggleButton
             replyCount={replyCount}
+            unreadCount={unreadCount}
             lastReplyLabel={lastReplyLabel}
             isOpen={isOpen}
             isLoading={isLoading}
@@ -234,7 +247,7 @@ export function ThreadSection({
           {error && !isOpen && <ThreadRetryButton isLoading={isLoading} onRetry={onRetry} />}
         </div>
       ) : (
-        <StartThreadButton onReply={onReply} />
+        canReply ? <StartThreadButton onReply={onReply} /> : null
       )}
 
       {/* Thread Replies Container */}
@@ -261,7 +274,7 @@ export function ThreadSection({
           )}
 
           {/* Inline Thread Reply Composer */}
-          <ThreadReplyButton onReply={onReply} />
+          {canReply && <ThreadReplyButton onReply={onReply} />}
         </div>
       )}
     </div>
