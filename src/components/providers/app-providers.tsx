@@ -5,7 +5,6 @@ import { Suspense, type ReactNode } from 'react'
 import { AuthProvider } from '@/contexts/auth-context'
 import { AnalyticsProvider } from '@/components/providers/analytics-provider'
 import { PostHogProvider } from '@/components/providers/posthog-provider'
-import { MotionProvider } from '@/components/providers/motion-provider'
 import { ConvexClientProvider } from '@/components/providers/convex-provider'
 import { QueryProvider } from '@/components/providers/query-provider'
 
@@ -22,7 +21,7 @@ export function AppProviders({ children, initialToken }: AppProvidersProps) {
           <Suspense fallback={null}>
             <AnalyticsProvider>
               <PostHogProvider>
-                <MotionProvider>{children}</MotionProvider>
+                {children}
               </PostHogProvider>
             </AnalyticsProvider>
           </Suspense>

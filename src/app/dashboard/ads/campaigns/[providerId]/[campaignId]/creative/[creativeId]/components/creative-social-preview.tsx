@@ -35,6 +35,7 @@ import {
 
 import type { AdMetricsSummary } from '@/lib/ad-algorithms'
 import { cn } from '@/lib/utils'
+import { motionLoopSeconds } from '@/lib/animation-system'
 
 import type { Creative } from './types'
 import { getTypeIcon, isDirectVideoUrl, formatCTALabel } from './helpers'
@@ -66,6 +67,7 @@ export function CreativeSocialPreview(props: {
   const [aspectRatio, setAspectRatio] = useState<'feed' | 'reel'>('feed')
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = React.useRef<HTMLVideoElement>(null)
+  const efficiencyBarDurationSeconds = motionLoopSeconds.shimmer
 
   const mediaAspectClass = aspectRatio === 'reel' ? 'aspect-[9/16]' : 'aspect-square'
 
@@ -96,7 +98,7 @@ export function CreativeSocialPreview(props: {
           />
           <button
             onClick={togglePlayPause}
-            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity duration-300"
+            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
           >
             <div className="h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl">
               {isPlaying ? <Pause className="h-6 w-6 text-white" /> : <Play className="h-6 w-6 text-white ml-1" />}
@@ -116,7 +118,7 @@ export function CreativeSocialPreview(props: {
               fill
               unoptimized
               sizes="(max-width: 768px) 100vw, 640px"
-              className="object-cover opacity-70 group-hover:scale-105 transition-transform duration-700"
+              className="object-cover opacity-70 group-hover:scale-105 transition-transform duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
               onError={() => setImageLoadFailed(true)}
               style={{ imageRendering: 'crisp-edges' }}
             />
@@ -126,7 +128,7 @@ export function CreativeSocialPreview(props: {
               <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">Video Preview</p>
             </div>
           )}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none">
           <m.div
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -160,12 +162,12 @@ export function CreativeSocialPreview(props: {
               fill
               unoptimized
               sizes="(max-width: 768px) 100vw, 640px"
-              className="object-cover transition-transform duration-1000 group-hover:scale-110"
+              className="object-cover transition-transform duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-110"
               onError={() => setImageLoadFailed(true)}
               style={{ imageRendering: 'crisp-edges' }}
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none" />
         </div>
       )
     }
@@ -502,7 +504,7 @@ export function CreativeSocialPreview(props: {
                   <m.div
                     initial={{ width: 0 }}
                     animate={{ width: `${efficiencyScore}%` }}
-                    transition={{ duration: 1.5, ease: easings.easeOut }}
+                    transition={{ duration: efficiencyBarDurationSeconds, ease: easings.easeOut }}
                     className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full shadow-[0_0_20px_rgba(var(--primary),0.5)]"
                   />
                 </div>

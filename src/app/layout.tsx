@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { PWAProvider } from '@/components/providers/pwa-provider'
 import { AppProviders } from '@/components/providers/app-providers'
+import { MotionProvider } from '@/components/providers/motion-provider'
 import { GoogleAnalyticsScript } from '@/components/providers/google-analytics-script'
 
 const geistSans = Geist({
@@ -65,7 +66,9 @@ export default function RootLayout({
         <AppProviders>
           <div className="flex min-h-screen flex-col">
             <SiteHeader />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1">
+              <MotionProvider>{children}</MotionProvider>
+            </main>
             <SiteFooter />
           </div>
           <Suspense fallback={null}>

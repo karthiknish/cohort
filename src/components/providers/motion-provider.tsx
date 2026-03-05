@@ -4,17 +4,19 @@ import type { ReactNode } from 'react'
 import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
+
 interface MotionProviderProps {
   children: ReactNode
 }
 
 const pageVariants = {
-  initial: { opacity: 0, y: 16 },
+  initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
+  exit: { opacity: 0, y: -8 },
 }
 
-const transition = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const }
+const transition = { duration: motionDurationSeconds.page, ease: motionEasing.out }
 
 export function MotionProvider({ children }: MotionProviderProps) {
   const pathname = usePathname()

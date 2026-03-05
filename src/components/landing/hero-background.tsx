@@ -2,6 +2,8 @@
 
 import { LazyMotion, domAnimation, m } from 'framer-motion'
 
+import { motionEasing, motionLoopSeconds } from '@/lib/animation-system'
+
 const orbs = [
   {
     id: 'hero-orb-primary-left',
@@ -44,7 +46,7 @@ export function HeroBackground() {
             style={{ width: orb.size, height: orb.size }}
             initial={orb.initial}
             animate={orb.animate}
-            transition={{ duration: 12, repeat: Infinity, repeatType: 'reverse', ease: [0.16, 1, 0.3, 1], delay: orb.delay }}
+            transition={{ duration: motionLoopSeconds.heroOrbit, repeat: Infinity, repeatType: 'reverse', ease: motionEasing.out, delay: orb.delay }}
           />
         ))}
       </div>

@@ -3,7 +3,6 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import { CHART_COLORS } from '@/lib/colors'
 
 export interface FunnelStep {
@@ -31,7 +30,6 @@ export function FunnelChart({
   description = 'Track user journey through each stage',
   className,
   showPercentages = true,
-  showPrevious = false,
 }: FunnelChartProps) {
   // Calculate totals and percentages
   const funnelData = useMemo(() => {
@@ -120,7 +118,7 @@ export function FunnelChart({
 
                   {/* Filled bar */}
                   <div
-                    className="absolute inset-y-0 left-0 h-full rounded-lg transition-all duration-500"
+                    className="absolute inset-y-0 left-0 h-full rounded-lg transition-[width] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
                     style={{
                       width: `${step.width}%`,
                       backgroundColor: stepColor,

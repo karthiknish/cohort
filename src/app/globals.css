@@ -38,6 +38,18 @@
   --success-bg: #16a34a;
   --success-text: #ffffff;
   --success-border: #15803d;
+  --motion-duration-fast: 160ms;
+  --motion-duration-normal: 220ms;
+  --motion-duration-slow: 280ms;
+  --motion-duration-xslow: 1000ms;
+  --motion-duration-page: 220ms;
+  --motion-duration-shimmer: 1400ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-distance-sm: 8px;
+  --motion-distance-md: 12px;
+  --motion-scale-subtle: 0.98;
 }
 
 
@@ -192,15 +204,15 @@ h6 {
   }
 
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
+    animation: fade-in var(--motion-duration-normal) var(--motion-ease-out);
   }
 
   .animate-slide-in-from-bottom {
-    animation: slide-in-from-bottom 0.4s ease-out;
+    animation: slide-in-from-bottom var(--motion-duration-slow) var(--motion-ease-out);
   }
 
   .animate-scale-in {
-    animation: scale-in 0.2s ease-out;
+    animation: scale-in var(--motion-duration-fast) var(--motion-ease-out);
   }
 
   .animate-spin-slow {
@@ -247,7 +259,10 @@ h6 {
 
   /* Interactive card hover effect */
   .card-interactive {
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      transform var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard);
 
     &:hover {
       box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -266,7 +281,7 @@ h6 {
 
   /* Premium Driver.js / Onboarding Tour styling */
   .cohorts-tour-popover {
-    @apply !bg-background !backdrop-blur-md !border !border-primary/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-all duration-300;
+    @apply !bg-background !backdrop-blur-md !border !border-primary/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none;
   }
 
   .cohorts-tour-popover .driver-popover-title {
@@ -357,5 +372,16 @@ h6 {
   [data-sonner-toast] .toast-title,
   [data-sonner-toast] .toast-description {
     color: inherit !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }

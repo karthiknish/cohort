@@ -261,7 +261,7 @@ export function Sidebar() {
     <aside
       id="tour-sidebar"
       className={cn(
-        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-all duration-300 ease-in-out lg:flex',
+        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none lg:flex',
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
       )}
     >
@@ -269,7 +269,7 @@ export function Sidebar() {
         type="button"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-all duration-200 hover:border-primary/40 hover:text-primary hover:bg-muted/50',
+          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-primary/40 hover:text-primary hover:bg-muted/50',
           collapsed && 'mt-2'
         )}
         onClick={toggleCollapsed}

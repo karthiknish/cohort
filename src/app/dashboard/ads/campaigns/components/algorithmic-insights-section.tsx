@@ -66,7 +66,7 @@ export function AlgorithmicInsightsSection({
                   />
                   <circle
                     className={cn(
-                      "transition-all duration-1000",
+                      "transition-all duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
                       efficiencyScore > 80 ? "stroke-emerald-500" :
                       efficiencyScore > 60 ? "stroke-yellow-500" :
                       "stroke-red-500"

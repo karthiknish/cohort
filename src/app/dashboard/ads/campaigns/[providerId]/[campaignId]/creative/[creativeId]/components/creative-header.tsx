@@ -76,7 +76,7 @@ export function CreativeHeader(props: {
       >
         <div className="flex items-center gap-5">
         <Link href={backUrl} className="group">
-          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-300">
+          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
             <ArrowLeft className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </Link>

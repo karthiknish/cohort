@@ -123,7 +123,7 @@ export function AnalyticsInsightsSection({
                             disabled={insightsLoading || insightsRefreshing}
                             className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
                         >
-                            <RefreshCw className={`h-3 w-3 transition-transform duration-500 group-hover:rotate-180 ${insightsRefreshing ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`h-3 w-3 transition-transform duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:rotate-180 ${insightsRefreshing ? 'animate-spin' : ''}`} />
                             Refresh
                         </button>
                     </div>

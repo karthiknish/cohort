@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { interactiveTransitionClass } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 
 export interface MetricCardData {
@@ -78,7 +79,8 @@ export function InteractiveMetricCards({
           <Card
             key={metric.label}
             className={cn(
-              'transition-all duration-200',
+              'group',
+              interactiveTransitionClass,
               isClickable && 'cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]',
               isHovered && 'ring-2 ring-primary/20'
             )}

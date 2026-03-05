@@ -61,7 +61,7 @@ export function PerformanceSummaryCard({
             size="sm"
             onClick={onRefresh}
             disabled={metricsLoading}
-            className="h-10 px-4 inline-flex items-center gap-2 transition-all duration-200 hover:shadow-md"
+            className="h-10 px-4 inline-flex items-center gap-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
           >
             <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} />
             Refresh
@@ -71,7 +71,7 @@ export function PerformanceSummaryCard({
             variant="outline"
             size="sm"
             onClick={onExport}
-            className="h-10 px-4 inline-flex items-center gap-2 transition-all duration-200 hover:shadow-md"
+            className="h-10 px-4 inline-flex items-center gap-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
           >
             <Download className="h-4 w-4" />
             Export CSV
@@ -115,18 +115,18 @@ export function PerformanceSummaryCard({
                 >
                   <Card
                     className={cn(
-                      'group relative overflow-hidden rounded-xl border transition-all duration-300',
+                      'group relative overflow-hidden rounded-xl border transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
                       'hover:shadow-lg hover:shadow-black/5 hover:-translate-y-1',
                       theme.bg, theme.border
                     )}
                   >
                     {/* Subtle inner glow on hover */}
-                    <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-tr from-white/60 to-transparent dark:from-white/10" />
+                    <div className="absolute inset-0 opacity-0 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:opacity-100 bg-gradient-to-tr from-white/60 to-transparent dark:from-white/10" />
 
                     <CardHeader className="pb-3 relative z-10">
                       <div className="flex items-center gap-2">
                         <div className={cn(
-                          'flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br shadow-sm transition-transform duration-300',
+                          'flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br shadow-sm transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
                           'group-hover:scale-110 group-hover:shadow-md',
                           theme.iconBg
                         )}>

@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { Mic, MicOff } from 'lucide-react'
+import { interactiveTransitionClass } from '@/lib/animation-system'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useVoiceInput } from '@/hooks/use-voice-input'
@@ -77,7 +78,8 @@ export function VoiceInputButton({
           onClick={toggleListening}
           disabled={disabled}
           className={cn(
-            'h-7 w-7 p-0 transition-all duration-200',
+            'h-7 w-7 p-0',
+            interactiveTransitionClass,
             isListening && 'animate-pulse'
           )}
           title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
@@ -121,7 +123,8 @@ export function VoiceInputButton({
         onClick={toggleListening}
         disabled={disabled}
         className={cn(
-          'h-10 w-10 shrink-0 rounded-full transition-all',
+          'h-10 w-10 shrink-0 rounded-full',
+          interactiveTransitionClass,
           isListening && 'animate-pulse ring-2 ring-destructive/50'
         )}
         title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}

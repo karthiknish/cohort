@@ -657,7 +657,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
                   <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-500 ease-out"
+                    className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
                     style={{ width: `${completionRate}%` }}
                   />
                 </div>

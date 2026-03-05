@@ -40,7 +40,7 @@ function ProposalStepIndicatorComponent({
       
       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
         <div 
-          className="h-full bg-primary transition-all duration-500 ease-in-out"
+          className="h-full bg-primary transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none"
           style={{ width: `${submitted ? 100 : progress}%` }}
         />
       </div>

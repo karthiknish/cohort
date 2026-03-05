@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { interactiveTransitionClass } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { LoaderCircle } from 'lucide-react'
 
@@ -126,7 +127,8 @@ export function ProgressBar({
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={cn(
-            'h-full rounded-full transition-all duration-300 ease-out',
+            'h-full rounded-full',
+            interactiveTransitionClass,
             variantColors[variant]
           )}
           style={{ width: `${clampedProgress}%` }}

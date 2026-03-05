@@ -424,7 +424,7 @@ export function MessageList({
                         data-message-id={message.id}
                         data-thread-root-id={message.threadRootId ?? message.id}
                         className={cn(
-                          "group relative flex items-start gap-3 px-6 py-2.5 transition-all duration-200",
+                          "group relative flex items-start gap-3 px-6 py-2.5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                           !message.deleted && "hover:bg-muted/5",
                           message.id === highlightedMessageId && 'bg-primary/10 ring-1 ring-primary/30 rounded-lg'
                         )}

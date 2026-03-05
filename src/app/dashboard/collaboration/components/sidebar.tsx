@@ -42,7 +42,7 @@ function CollaborationSidebarContent({
             <div className="space-y-4">
               {channelParticipants.map((participant) => (
                 <div key={participant.name} className="flex items-center gap-3 group px-1">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-muted/60 text-xs font-bold text-foreground shadow-sm group-hover:border-primary/40 group-hover:bg-primary/5 transition-all duration-200">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-background border border-muted/60 text-xs font-bold text-foreground shadow-sm group-hover:border-primary/40 group-hover:bg-primary/5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
                     {getInitials(participant.name)}
                   </div>
                   <div className="flex flex-col min-w-0">
@@ -79,7 +79,7 @@ function CollaborationSidebarContent({
                 rel="noopener noreferrer"
                 className="group block"
               >
-                <Card className="border-muted/40 bg-background shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all duration-200 overflow-hidden">
+                <Card className="border-muted/40 bg-background shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none overflow-hidden">
                   <CardContent className="flex items-center gap-3 p-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/20 text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
                       <FileText className="h-4 w-4" />

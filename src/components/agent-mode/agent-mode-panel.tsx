@@ -7,6 +7,7 @@ import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { useMentionData } from '@/hooks/use-mention-data'
 import { VoiceInputButton } from '@/components/ui/voice-input'
@@ -268,7 +269,7 @@ export function AgentModePanel({
             initial={{ opacity: 0, y: 0 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: motionDurationSeconds.fast, ease: motionEasing.out }}
             className="fixed inset-0 z-[9999] flex flex-col bg-background h-screen"
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}

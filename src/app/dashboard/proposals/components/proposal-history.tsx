@@ -152,7 +152,7 @@ function ProposalHistoryComponent({
                 <div
                   key={proposal.id}
                   className={cn(
-                    'group relative rounded-xl border bg-card p-5 transition-all duration-200 hover:shadow-sm hover:border-primary/20',
+                    'group relative rounded-xl border bg-card p-5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm hover:border-primary/20',
                     isActiveDraft && 'border-primary shadow-[0_0_0_1px_rgba(var(--primary),0.05)] bg-primary/[0.01]'
                   )}
                 >

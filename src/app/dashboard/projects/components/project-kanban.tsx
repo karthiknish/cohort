@@ -51,7 +51,7 @@ export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, 
                   ) : (
                     <div className="space-y-4">
                       {items.map((project) => (
-                        <div key={project.id} className="transition-all duration-200 active:scale-[0.98]">
+                        <div key={project.id} className="transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]">
                           <ProjectCard
                             project={project}
                             onDelete={onDelete}

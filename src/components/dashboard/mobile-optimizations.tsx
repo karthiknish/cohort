@@ -419,7 +419,7 @@ export function PullToRefresh({
     >
       {/* Pull indicator */}
       <div
-        className="fixed left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur transition-transform duration-200 ease-out md:hidden"
+        className="fixed left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] motion-reduce:transition-none md:hidden"
         style={{
           transform: `translateY(${Math.max(0, pullDistance - threshold)}px)`,
           opacity: isPulling ? pullDistance / threshold : 0,

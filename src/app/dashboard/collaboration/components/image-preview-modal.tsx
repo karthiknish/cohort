@@ -283,7 +283,7 @@ export function ImagePreviewModal({
           src={currentImage.url}
           alt={currentImage.name}
           className={cn(
-            "max-h-full max-w-full object-contain transition-transform duration-200",
+            "max-h-full max-w-full object-contain transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
             zoom > 1 ? "cursor-grab" : "cursor-zoom-in",
             isDragging && "cursor-grabbing"
           )}

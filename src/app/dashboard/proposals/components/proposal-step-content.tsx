@@ -206,7 +206,7 @@ function ProposalStepContentComponent({
                   <label
                     key={platform}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-200 hover:shadow-sm active:scale-[0.98]",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10 hover:border-muted-foreground/30"
@@ -272,7 +272,7 @@ function ProposalStepContentComponent({
                   <label
                     key={goal}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-200 hover:shadow-sm active:scale-[0.98]",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10 hover:border-muted-foreground/30"
@@ -362,7 +362,7 @@ function ProposalStepContentComponent({
                   <label
                     key={service}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-200 hover:shadow-sm active:scale-[0.98]",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10 hover:border-muted-foreground/30"
@@ -417,7 +417,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['timelines', 'startTime'], option)}
                     className={cn(
-                      "flex items-center justify-between rounded-xl border p-4 transition-all duration-200 hover:shadow-sm active:scale-[0.98]",
+                      "flex items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10"
@@ -461,7 +461,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['value', 'proposalSize'], option)}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-all duration-300",
+                      "flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                       isSelected
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-lg scale-[1.05]"
                         : "border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/5"
@@ -492,7 +492,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['value', 'engagementType'], option)}
                     className={cn(
-                      "flex items-center justify-between rounded-xl border p-4 transition-all duration-200 hover:shadow-sm active:scale-[0.98]",
+                      "flex items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm"
                         : "border-muted/60 bg-background/50 hover:bg-muted/10"
@@ -520,7 +520,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['value', 'presentationTheme'], theme.id)}
                     className={cn(
-                      "group relative flex flex-col gap-2 rounded-xl border p-4 transition-all duration-300",
+                      "group relative flex flex-col gap-2 rounded-xl border p-4 transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                       isSelected
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-md"
                         : "border-muted/60 bg-background hover:border-muted-foreground/30 hover:shadow-sm"

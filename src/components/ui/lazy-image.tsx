@@ -37,12 +37,16 @@ export function LazyImage({ src, alt = '', className, rootMargin = '200px', onLo
   }, [rootMargin])
 
   return (
-    // eslint_disable-next-line @next/next/no-img-element
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       ref={imgRef}
       src={isVisible ? src : undefined}
       alt={alt}
-      className={cn('transition-opacity duration-300 ease-out', isLoaded ? 'opacity-100' : 'opacity-0', className)}
+      className={cn(
+        'transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+        isLoaded ? 'opacity-100' : 'opacity-0',
+        className
+      )}
       loading="lazy"
       decoding="async"
       onLoad={(event) => {

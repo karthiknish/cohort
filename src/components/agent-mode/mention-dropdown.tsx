@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Building2, FolderKanban, Users, User, Loader2 } from 'lucide-react'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -190,7 +191,7 @@ export function MentionDropdown({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: motionDurationSeconds.fast, ease: motionEasing.out }}
           className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border bg-background shadow-lg"
         >
         {/* Category tabs */}

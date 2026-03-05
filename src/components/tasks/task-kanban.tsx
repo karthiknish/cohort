@@ -238,7 +238,7 @@ export function TaskKanban({
                         onDragStart={(e) => handleDragStart(e, task)}
                         onDragEnd={handleDragEnd}
                         className={cn(
-                          "transition-all duration-200 active:scale-[0.98]",
+                          "transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]",
                           !bulkActive && !pendingStatusUpdates.has(task.id) && "cursor-grab active:cursor-grabbing",
                           (bulkActive || pendingStatusUpdates.has(task.id)) && "cursor-default"
                         )}

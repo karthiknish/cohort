@@ -453,14 +453,14 @@ export function CollaborationMessagePane({
       (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
 
     const containerClass = cn(
-      'relative group flex items-start gap-3 px-6 py-2.5 transition-all duration-200',
+      'relative group flex items-start gap-3 px-6 py-2.5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
       isSearchResult && 'bg-primary/5 ring-1 ring-primary/20',
       !showAvatar && !isReply && 'py-1',
       isReply && 'ml-14 mt-2'
     )
 
     const bubbleClass = cn(
-      'relative min-w-0 flex-1 flex flex-col space-y-1.5 p-4 rounded-2xl transition-all duration-200',
+      'relative min-w-0 flex-1 flex flex-col space-y-1.5 p-4 rounded-2xl transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
       isReply ? 'bg-muted/10 border border-muted/30' : 'bg-muted/5 border border-transparent group-hover:bg-muted/10 group-hover:border-muted/20',
       (isSearchResult || isReply) && 'shadow-sm'
     )

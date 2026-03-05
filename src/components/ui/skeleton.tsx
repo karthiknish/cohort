@@ -11,7 +11,7 @@ export function Skeleton({ className, variant = 'shimmer', ...props }: SkeletonP
     <div
       className={cn(
         'relative overflow-hidden rounded-md bg-muted',
-        variant === 'shimmer' && 'before:absolute before:inset-0 before:-translate-x-full before:animate-[skeleton-shimmer_1.4s_ease-in-out_infinite] before:bg-gradient-to-r before:from-transparent before:via-muted-foreground/20 before:to-transparent before:content-[""]',
+        variant === 'shimmer' && 'before:absolute before:inset-0 before:-translate-x-full before:animate-[skeleton-shimmer_var(--motion-duration-shimmer)_var(--motion-ease-in-out)_infinite] before:bg-gradient-to-r before:from-transparent before:via-muted-foreground/20 before:to-transparent before:content-[""] motion-reduce:before:animate-none',
         variant === 'pulse' && 'animate-pulse',
         className
       )}

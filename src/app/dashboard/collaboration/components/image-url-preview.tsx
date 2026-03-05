@@ -64,7 +64,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
             src={url}
             alt={fileName}
             className={cn(
-              "max-h-80 w-auto object-contain transition-all duration-300",
+              "max-h-80 w-auto object-contain transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
               isLoading && "opacity-0",
               "group-hover:scale-105"
             )}

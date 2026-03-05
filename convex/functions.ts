@@ -91,7 +91,7 @@ function wrapDatabaseActive(db: QueryCtx['db']): QueryCtx['db'] {
             if (typeof method !== 'function') {
               return method
             }
-            return (method as (...methodArgs: unknown[]) => unknown)(...args)
+            return (method as (...methodArgs: unknown[]) => unknown).apply(filtered, args)
           }
         }
         const value = Reflect.get(target, prop, receiver)

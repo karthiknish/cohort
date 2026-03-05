@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { format } from 'date-fns'
 import { CalendarPlus, CalendarDays, X } from 'lucide-react'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -58,6 +59,12 @@ export default function MeetingsPage() {
   const [cancellingMeetingId, setCancellingMeetingId] = useState<string | null>(null)
   const [activeInSiteMeeting, setActiveInSiteMeeting] = useState<MeetingRecord | null>(null)
   const [activeInSiteUrl, setActiveInSiteUrl] = useState<string | null>(null)
+  const [quickMeetDialogOpen, setQuickMeetDialogOpen] = useState(false)
+  const [quickMeetTitle, setQuickMeetTitle] = useState('Quick Meet')
+  const [quickMeetDescription, setQuickMeetDescription] = useState('Instant in-site quick meeting')
+  const [quickMeetDurationMinutes, setQuickMeetDurationMinutes] = useState('30')
+  const [quickAttendeeInput, setQuickAttendeeInput] = useState('')
+  const [quickAttendeeEmails, setQuickAttendeeEmails] = useState<string[]>([])
   const oauthHandledRef = useRef(false)
 
   const meetings = useQuery(
@@ -158,7 +165,7 @@ export default function MeetingsPage() {
   const scheduleRequiresGoogleWorkspace = editingMeeting ? editingMeeting.providerId === 'google-workspace' : true
   const scheduleDisabled = !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !googleWorkspaceStatus?.connected)
 
-  const attendeeSuggestions = useMemo(() => {
+  const getAttendeeSuggestions = useCallback((queryValue: string, selectedEmails: string[]) => {
     const workspaceList = workspaceMembers ?? []
     const platformList = platformUsers ?? []
 
@@ -177,8 +184,8 @@ export default function MeetingsPage() {
       return []
     }
 
-    const query = attendeeInput.trim().toLowerCase()
-    const selected = new Set(attendeeEmails.map((email) => normalizeEmail(email)))
+    const query = queryValue.trim().toLowerCase()
+    const selected = new Set(selectedEmails.map((email) => normalizeEmail(email)))
 
     return members
       .filter(hasEmail)
@@ -191,7 +198,17 @@ export default function MeetingsPage() {
         )
       })
       .slice(0, 8)
-  }, [workspaceMembers, platformUsers, attendeeInput, attendeeEmails])
+  }, [workspaceMembers, platformUsers])
+
+  const attendeeSuggestions = useMemo(
+    () => getAttendeeSuggestions(attendeeInput, attendeeEmails),
+    [attendeeEmails, attendeeInput, getAttendeeSuggestions]
+  )
+
+  const quickAttendeeSuggestions = useMemo(
+    () => getAttendeeSuggestions(quickAttendeeInput, quickAttendeeEmails),
+    [getAttendeeSuggestions, quickAttendeeEmails, quickAttendeeInput]
+  )
 
   const addAttendees = (entries: string[]) => {
     if (entries.length === 0) return
@@ -256,6 +273,79 @@ export default function MeetingsPage() {
   const addSuggestedAttendee = (email: string) => {
     addAttendees([email])
     setAttendeeInput('')
+  }
+
+  const addQuickAttendees = (entries: string[]) => {
+    if (entries.length === 0) return
+
+    setQuickAttendeeEmails((current) => {
+      const normalizedCurrent = current.map((email) => normalizeEmail(email))
+      const merged = [...normalizedCurrent]
+
+      for (const entry of entries) {
+        const email = normalizeEmail(entry)
+        if (!EMAIL_REGEX.test(email) || merged.includes(email)) {
+          continue
+        }
+        merged.push(email)
+      }
+
+      return merged
+    })
+  }
+
+  const commitQuickAttendeeInput = () => {
+    const parsed = parseAttendeeInput(quickAttendeeInput)
+
+    if (parsed.length === 0 && quickAttendeeInput.trim().length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid attendee email',
+        description: 'Enter a valid email or choose a teammate from suggestions.',
+      })
+      return
+    }
+
+    addQuickAttendees(parsed)
+    setQuickAttendeeInput('')
+  }
+
+  const removeQuickAttendee = (email: string) => {
+    setQuickAttendeeEmails((current) => current.filter((value) => value !== email))
+  }
+
+  const addQuickSuggestedAttendee = (email: string) => {
+    addQuickAttendees([email])
+    setQuickAttendeeInput('')
+  }
+
+  const handleQuickAttendeeKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      const firstSuggestion = quickAttendeeSuggestions[0]
+
+      if (firstSuggestion && quickAttendeeInput.trim().length > 0) {
+        event.preventDefault()
+        addQuickSuggestedAttendee(firstSuggestion.email)
+        return
+      }
+
+      event.preventDefault()
+      commitQuickAttendeeInput()
+      return
+    }
+
+    if (event.key === ',' || event.key === ';') {
+      event.preventDefault()
+      commitQuickAttendeeInput()
+    }
+  }
+
+  const resetQuickMeetForm = () => {
+    setQuickMeetTitle('Quick Meet')
+    setQuickMeetDescription('Instant in-site quick meeting')
+    setQuickMeetDurationMinutes('30')
+    setQuickAttendeeInput('')
+    setQuickAttendeeEmails([])
   }
 
   const handleConnectGoogleWorkspace = () => {
@@ -359,7 +449,13 @@ export default function MeetingsPage() {
     setActiveInSiteUrl(url)
   }
 
-  const handleStartQuickMeet = () => {
+  const handleStartQuickMeet = (options: {
+    title: string
+    description: string | null
+    durationMinutes: number
+    attendeeEmails: string[]
+    timezone: string
+  }) => {
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -378,10 +474,11 @@ export default function MeetingsPage() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        title: 'Quick Meet',
-        durationMinutes: 30,
-        attendeeEmails,
-        timezone,
+        title: options.title,
+        description: options.description,
+        durationMinutes: options.durationMinutes,
+        attendeeEmails: options.attendeeEmails,
+        timezone: options.timezone,
         clientId: quickMeetClientId,
       }),
     })
@@ -407,8 +504,8 @@ export default function MeetingsPage() {
         }
 
         const meeting = payload.data?.meeting ?? payload.meeting
-        const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl
-        const quickMeetUrl = meeting?.meetLink ?? null
+        const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl ??
+          (meeting ? buildInSiteMeetingUrl(workspaceId, meeting) : null)
 
         if (!meeting) {
           toast({
@@ -422,20 +519,22 @@ export default function MeetingsPage() {
         if (inSiteEmbedUrl) {
           setActiveInSiteMeeting(meeting)
           setActiveInSiteUrl(inSiteEmbedUrl)
+          setQuickMeetDialogOpen(false)
+          resetQuickMeetForm()
         } else {
           setActiveInSiteMeeting(null)
           setActiveInSiteUrl(null)
-        }
-
-        if (quickMeetUrl && typeof window !== 'undefined') {
-          window.open(quickMeetUrl, '_blank', 'noopener,noreferrer')
+          toast({
+            variant: 'destructive',
+            title: 'Room link missing',
+            description: 'Quick meet was created but no in-site room URL was returned.',
+          })
+          return
         }
 
         toast({
           title: 'Quick meet started',
-          description: quickMeetUrl
-            ? 'Google Meet opened in a new tab and invites were sent.'
-            : 'Quick meeting created successfully.',
+          description: 'In-site meeting room is now open. Attendees were notified by email.',
         })
       })
       .catch((error) => {
@@ -655,6 +754,47 @@ export default function MeetingsPage() {
       })
   }
 
+  const handleSubmitQuickMeet = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const duration = Number(quickMeetDurationMinutes)
+    if (!Number.isFinite(duration) || duration < 10 || duration > 240) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid duration',
+        description: 'Quick meet duration must be between 10 and 240 minutes.',
+      })
+      return
+    }
+
+    const title = quickMeetTitle.trim().length > 0 ? quickMeetTitle.trim() : 'Quick Meet'
+    const description = quickMeetDescription.trim().length > 0
+      ? quickMeetDescription.trim()
+      : null
+    const typedAttendees = parseAttendeeInput(quickAttendeeInput)
+
+    if (quickAttendeeInput.trim().length > 0 && typedAttendees.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid attendee email',
+        description: 'Enter a valid email before starting the quick meet.',
+      })
+      return
+    }
+
+    const attendeeEmails = Array.from(
+      new Set([...quickAttendeeEmails, ...typedAttendees.map((email) => normalizeEmail(email))])
+    )
+
+    void handleStartQuickMeet({
+      title,
+      description,
+      durationMinutes: Math.floor(duration),
+      attendeeEmails,
+      timezone,
+    })
+  }
+
   const handleMarkCompleted = async (legacyId: string) => {
     if (!workspaceId || !canSchedule) return
 
@@ -683,9 +823,180 @@ export default function MeetingsPage() {
         googleWorkspaceConnected={Boolean(googleWorkspaceStatus?.connected)}
         canSchedule={canSchedule}
         quickStarting={quickStarting}
-        quickMeetDisabled={!googleWorkspaceStatus?.connected}
-        onStartQuickMeet={() => void handleStartQuickMeet()}
+        quickMeetDisabled={false}
+        onStartQuickMeet={() => setQuickMeetDialogOpen(true)}
       />
+
+      <Dialog
+        open={quickMeetDialogOpen}
+        onOpenChange={(open) => {
+          if (quickStarting) return
+          setQuickMeetDialogOpen(open)
+          if (!open) {
+            resetQuickMeetForm()
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Start In-Site Quick Meet</DialogTitle>
+            <DialogDescription>
+              Add participants, launch the meeting in-app, and enable transcript-based AI notes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmitQuickMeet}>
+            <div className="space-y-2 md:col-span-2">
+              <label htmlFor="quick-meet-title" className="text-sm font-medium">Title</label>
+              <Input
+                id="quick-meet-title"
+                required
+                value={quickMeetTitle}
+                onChange={(event) => setQuickMeetTitle(event.target.value)}
+                placeholder="Quick Meet"
+                disabled={quickStarting}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label htmlFor="quick-meet-description" className="text-sm font-medium">Description</label>
+              <Textarea
+                id="quick-meet-description"
+                rows={3}
+                value={quickMeetDescription}
+                onChange={(event) => setQuickMeetDescription(event.target.value)}
+                placeholder="What this quick meet is for"
+                disabled={quickStarting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="quick-meet-duration" className="text-sm font-medium">Duration (minutes)</label>
+              <Input
+                id="quick-meet-duration"
+                type="number"
+                min={10}
+                max={240}
+                step={5}
+                required
+                value={quickMeetDurationMinutes}
+                onChange={(event) => setQuickMeetDurationMinutes(event.target.value)}
+                disabled={quickStarting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="quick-meet-timezone" className="text-sm font-medium">Timezone</label>
+              <Input
+                id="quick-meet-timezone"
+                required
+                value={timezone}
+                onChange={(event) => setTimezone(event.target.value)}
+                placeholder="America/New_York"
+                disabled={quickStarting}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label htmlFor="quick-attendees-input" className="text-sm font-medium">Invite Users</label>
+              <div className="rounded-md border border-input bg-background p-2">
+                {quickAttendeeEmails.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {quickAttendeeEmails.map((email) => (
+                      <Badge key={email} variant="secondary" className="gap-1 pr-1">
+                        {email}
+                        <button
+                          type="button"
+                          onClick={() => removeQuickAttendee(email)}
+                          disabled={quickStarting}
+                          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                          aria-label={`Remove ${email}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mb-2 px-1 text-xs text-muted-foreground">
+                    Add people by selecting users below or typing email addresses.
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <Input
+                    id="quick-attendees-input"
+                    value={quickAttendeeInput}
+                    onChange={(event) => setQuickAttendeeInput(event.target.value)}
+                    onKeyDown={handleQuickAttendeeKeyDown}
+                    placeholder="Type name or email and press Enter"
+                    disabled={quickStarting}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={commitQuickAttendeeInput}
+                    disabled={quickStarting || quickAttendeeInput.trim().length === 0}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              {quickAttendeeSuggestions.length > 0 && (
+                <div className="rounded-md border border-muted/60 bg-muted/20 p-2">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Suggested Platform Users
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {quickAttendeeSuggestions.map((member) => (
+                      <Button
+                        key={member.id}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addQuickSuggestedAttendee(member.email)}
+                        disabled={quickStarting}
+                        className="h-auto py-1.5 text-left"
+                      >
+                        <span className="flex flex-col items-start leading-tight">
+                          <span className="text-xs font-medium">{member.name}</span>
+                          <span className="text-[11px] text-muted-foreground">{member.email}</span>
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Use Enter, Tab, comma, or semicolon to add typed emails. Your own account is auto-added.
+              </p>
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" className={getButtonClasses('primary')} disabled={quickStarting}>
+                  {quickStarting ? 'Starting...' : 'Start In-Site Quick Meet'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={getButtonClasses('outline')}
+                  onClick={() => {
+                    if (quickStarting) return
+                    setQuickMeetDialogOpen(false)
+                    resetQuickMeetForm()
+                  }}
+                  disabled={quickStarting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {!canSchedule && (
         <Alert>
@@ -705,8 +1016,10 @@ export default function MeetingsPage() {
 
       {activeInSiteMeeting && activeInSiteUrl && (
         <InSiteMeetingCard
+          key={activeInSiteMeeting.legacyId}
           meeting={activeInSiteMeeting}
           inSiteUrl={activeInSiteUrl}
+          canRecord={canSchedule}
           onClose={() => {
             setActiveInSiteMeeting(null)
             setActiveInSiteUrl(null)
@@ -738,8 +1051,9 @@ export default function MeetingsPage() {
 
           <form className="grid gap-4 md:grid-cols-2" onSubmit={handleScheduleMeeting}>
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium">Title</label>
+              <label htmlFor="schedule-title" className="text-sm font-medium">Title</label>
               <Input
+                id="schedule-title"
                 required
                 disabled={scheduleDisabled}
                 value={title}
@@ -749,8 +1063,9 @@ export default function MeetingsPage() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium">Description</label>
+              <label htmlFor="schedule-description" className="text-sm font-medium">Description</label>
               <Textarea
+                id="schedule-description"
                 rows={3}
                 disabled={scheduleDisabled}
                 value={description}
@@ -760,10 +1075,11 @@ export default function MeetingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date</label>
+              <label htmlFor="schedule-date" className="text-sm font-medium">Date</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    id="schedule-date"
                     type="button"
                     variant="outline"
                     className={cn(
@@ -789,13 +1105,13 @@ export default function MeetingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Start Time</label>
+              <label htmlFor="schedule-start-time" className="text-sm font-medium">Start Time</label>
               <Select
                 value={meetingTime}
                 onValueChange={setMeetingTime}
                 disabled={scheduleDisabled}
               >
-                <SelectTrigger>
+                <SelectTrigger id="schedule-start-time">
                   <SelectValue placeholder="Select time" />
                 </SelectTrigger>
                 <SelectContent>
@@ -809,8 +1125,9 @@ export default function MeetingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Duration (minutes)</label>
+              <label htmlFor="schedule-duration" className="text-sm font-medium">Duration (minutes)</label>
               <Input
+                id="schedule-duration"
                 type="number"
                 min={15}
                 step={15}
@@ -822,8 +1139,9 @@ export default function MeetingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Timezone</label>
+              <label htmlFor="schedule-timezone" className="text-sm font-medium">Timezone</label>
               <Input
+                id="schedule-timezone"
                 required
                 disabled={scheduleDisabled}
                 value={timezone}
@@ -833,7 +1151,7 @@ export default function MeetingsPage() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium">Attendees</label>
+              <label htmlFor="schedule-attendees-input" className="text-sm font-medium">Attendees</label>
               <div className="rounded-md border border-input bg-background p-2">
                 {attendeeEmails.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-2">
@@ -860,6 +1178,7 @@ export default function MeetingsPage() {
 
                 <div className="flex gap-2">
                   <Input
+                    id="schedule-attendees-input"
                     disabled={scheduleDisabled}
                     value={attendeeInput}
                     onChange={(event) => setAttendeeInput(event.target.value)}

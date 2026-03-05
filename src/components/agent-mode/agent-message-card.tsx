@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { LazyMotion, domAnimation, m } from 'framer-motion'
 
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -87,7 +88,7 @@ export function AgentMessageCard({ message }: AgentMessageCardProps) {
         <m.div
           initial={{ opacity: 0, y: 10, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.25 }}
+                    transition={{ duration: motionDurationSeconds.normal, ease: motionEasing.out }}
           className="flex justify-start"
         >
                 <div

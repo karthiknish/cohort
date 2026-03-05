@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react'
 import { LazyMotion, domAnimation, m, type HTMLMotionProps, useReducedMotion } from 'framer-motion'
 
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
+
 const tagMap = {
   div: m.div,
   section: m.section,
@@ -15,7 +17,8 @@ const tagMap = {
 
 type MotionElement = keyof typeof tagMap
 
-const easeOutBezier = [0.16, 1, 0.3, 1] as const
+const defaultFadeInDuration = motionDurationSeconds.normal
+const defaultStaggerInterval = motionDurationSeconds.fast * 0.5
 
 type BaseMotionProps = HTMLMotionProps<'div'>
 
@@ -32,7 +35,7 @@ export function FadeIn({
   children,
   as,
   delay = 0,
-  duration = 0.35,
+  duration = defaultFadeInDuration,
   y = 16,
   ...props
 }: FadeInProps) {
@@ -55,7 +58,7 @@ export function FadeIn({
         initial={{ opacity: 0, y }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
-        transition={{ delay, duration, ease: easeOutBezier }}
+        transition={{ delay, duration, ease: motionEasing.out }}
         {...props}
       >
         {children}
@@ -77,8 +80,8 @@ export function FadeInStagger({
   children,
   as,
   delay = 0,
-  duration = 0.35,
-  stagger = 0.08,
+  duration = defaultFadeInDuration,
+  stagger = defaultStaggerInterval,
   ...props
 }: FadeInStaggerProps) {
   const prefersReducedMotion = useReducedMotion()
@@ -132,7 +135,7 @@ export function FadeInItem({
   children,
   as,
   y = 18,
-  duration = 0.35,
+  duration = defaultFadeInDuration,
   initial,
   whileInView,
   viewport,
@@ -164,7 +167,7 @@ export function FadeInItem({
         viewport={viewport ?? { once: true, amount: 0.2 }}
         variants={{
           hidden: { opacity: 0, y },
-          visible: { opacity: 1, y: 0, transition: { duration, ease: easeOutBezier } },
+          visible: { opacity: 1, y: 0, transition: { duration, ease: motionEasing.out } },
         }}
         {...props}
       >

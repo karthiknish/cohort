@@ -103,7 +103,7 @@ export function SwipeableMessage({
       <div
         ref={containerRef}
         className={cn(
-          'transition-transform duration-150 touch-pan-y',
+          'transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] motion-reduce:transition-none touch-pan-y',
           state.isSwiping && 'transition-none',
           className
         )}
@@ -180,7 +180,7 @@ export function LongPressMessage({
     <div
       className={cn(
         isPressed && 'bg-muted/50 scale-[0.98]',
-        'transition-all duration-150',
+        'transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
         className
       )}
       onTouchStart={handleTouchStart}

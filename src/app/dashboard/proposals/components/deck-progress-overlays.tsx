@@ -165,7 +165,7 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
           <div className="w-full mt-4 space-y-3">
             <div className="h-2 w-full bg-muted/30 rounded-full overflow-hidden border border-muted/20">
               <div 
-                className="h-full bg-primary transition-all duration-1000 ease-out relative"
+                className="h-full bg-primary transition-all duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none relative"
                 style={{ width: `${progressPercent}%` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" />
@@ -186,7 +186,7 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
               <div 
                 key={flowStage.label}
                 className={cn(
-                  "h-1 rounded-full transition-all duration-500",
+                  "h-1 rounded-full transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
                   index <= stageIndex ? "bg-primary" : "bg-muted/40",
                   index === stageIndex && !isComplete && "animate-pulse"
                 )}

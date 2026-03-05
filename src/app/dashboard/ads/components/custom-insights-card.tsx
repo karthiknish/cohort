@@ -134,7 +134,7 @@ function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, th
         <div
             className={cn(
                 'group relative flex flex-col gap-3 rounded-xl border p-5 overflow-hidden',
-                'transition-all duration-300 ease-out',
+                'transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
                 'hover:shadow-xl hover:shadow-black/5 hover:scale-[1.02] hover:-translate-y-0.5',
                 styles.bg, styles.border, styles.glow,
                 hasAnomaly && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-background'
@@ -142,7 +142,7 @@ function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, th
         >
             {/* Subtle inner glow on hover */}
             <div className={cn(
-                'absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500',
+                'absolute inset-0 rounded-xl opacity-0 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
                 'group-hover:opacity-100 bg-gradient-to-tr from-white/60 to-transparent dark:from-white/10'
             )} />
 
@@ -166,7 +166,7 @@ function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, th
             <div className="relative z-10 flex items-center gap-2.5">
                 <div className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-xl',
-                    'bg-gradient-to-br shadow-md transition-transform duration-300',
+                    'bg-gradient-to-br shadow-md transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
                     'group-hover:scale-110 group-hover:shadow-lg',
                     theme === 'emerald' && 'from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50',
                     theme === 'blue' && 'from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50',
@@ -197,7 +197,7 @@ function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, th
                         variant="secondary"
                         className={cn(
                             'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full',
-                            'transition-all duration-200',
+                            'transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
                             'group-hover:scale-110',
                             trendStatus === 'up' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50',
                             trendStatus === 'down' && 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50'

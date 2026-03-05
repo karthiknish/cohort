@@ -1,17 +1,21 @@
 import type { Transition, Variants } from 'framer-motion'
 
+import { motionDurationSeconds, motionEasing, motionLoopSeconds } from '@/lib/animation-system'
+
 export const easings = {
-  easeOut: [0.16, 1, 0.3, 1] as const,
-  easeInOut: [0.65, 0, 0.35, 1] as const,
+  easeOut: motionEasing.out,
+  easeInOut: motionEasing.inOut,
+  standard: motionEasing.standard,
   spring: { type: 'spring', stiffness: 300, damping: 30 } as const,
 }
 
 // Standard durations (in seconds)
 export const durations = {
-  fast: 0.2,
-  normal: 0.35,
-  slow: 0.5,
-  slower: 0.6,
+  fast: motionDurationSeconds.fast,
+  normal: motionDurationSeconds.normal,
+  slow: motionDurationSeconds.slow,
+  slower: 0.36,
+  page: motionDurationSeconds.page,
 } as const
 
 // Common transitions
@@ -22,10 +26,10 @@ export const transitions = {
   slower: { duration: durations.slower, ease: easings.easeOut } as Transition,
   spring: easings.spring,
   // Infinite transitions
-  pulse: { duration: 3, repeat: Infinity, ease: 'easeInOut' } as Transition,
-  blob: { duration: 20, repeat: Infinity, ease: 'linear' } as Transition,
-  blobSlow: { duration: 25, repeat: Infinity, ease: 'linear' } as Transition,
-  shimmer: { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } as Transition,
+  pulse: { duration: motionLoopSeconds.pulseSlow, repeat: Infinity, ease: easings.easeInOut } as Transition,
+  blob: { duration: motionLoopSeconds.blob, repeat: Infinity, ease: motionEasing.linear } as Transition,
+  blobSlow: { duration: motionLoopSeconds.blobSlow, repeat: Infinity, ease: motionEasing.linear } as Transition,
+  shimmer: { duration: motionLoopSeconds.shimmer, repeat: Infinity, ease: easings.easeInOut } as Transition,
 }
 
 // Fade animations
@@ -86,7 +90,7 @@ export const subtlePulseVariants: Variants = {
   animate: {
     scale: [1, 1.2, 1],
     opacity: [0.2, 0.5, 0.2],
-    transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+    transition: { duration: motionLoopSeconds.pulse, repeat: Infinity, ease: easings.easeInOut },
   },
 }
 
@@ -114,7 +118,7 @@ export const progressVariants: Variants = {
   hidden: { width: 0 },
   visible: (progress: number) => ({
     width: `${progress}%`,
-    transition: { duration: 1.5, ease: easings.easeOut },
+    transition: { duration: motionLoopSeconds.shimmer, ease: easings.easeOut },
   }),
 }
 
@@ -131,7 +135,7 @@ export const staggerContainerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: motionDurationSeconds.fast / 2,
       delayChildren: 0,
     },
   },
@@ -153,25 +157,25 @@ export const pageTransitionVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
+    transition: { duration: durations.page, ease: easings.easeOut },
   },
   exit: {
     opacity: 0,
     y: -10,
-    transition: { duration: 0.2 },
+    transition: { duration: durations.fast, ease: easings.easeOut },
   },
 }
 
 // Card hover effect
 export const cardHoverVariants: Variants = {
   rest: { scale: 1, y: 0 },
-  hover: { scale: 1.02, y: -4, transition: { duration: 0.2, ease: 'easeOut' } },
+  hover: { scale: 1.02, y: -4, transition: { duration: durations.fast, ease: easings.easeOut } },
 }
 
 // Button press effect
 export const buttonPressVariants: Variants = {
   rest: { scale: 1 },
-  tap: { scale: 0.95, transition: { duration: 0.1 } },
+  tap: { scale: 0.95, transition: { duration: motionDurationSeconds.fast / 2, ease: easings.standard } },
 }
 
 export const animationProps = {

@@ -44,7 +44,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
             <LazyImage
               src={image.url}
               alt={image.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
               <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -103,7 +103,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
                 <LazyImage
                   src={image.url}
                   alt={image.name}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                   <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -138,7 +138,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
               <LazyImage
                 src={images[0]!.url}
                 alt={images[0]!.name}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                 <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -157,7 +157,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
                 <LazyImage
                   src={image.url}
                   alt={image.name}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                   <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -196,7 +196,7 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
               <LazyImage
                 src={image.url}
                 alt={image.name}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                 {index === 3 && remainingCount > 0 ? (

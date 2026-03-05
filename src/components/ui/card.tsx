@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { interactiveTransitionClass } from "@/lib/animation-system"
 import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef<
@@ -9,7 +10,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-200",
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      interactiveTransitionClass,
       className
     )}
     {...props}

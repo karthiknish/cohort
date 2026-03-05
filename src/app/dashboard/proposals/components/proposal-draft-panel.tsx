@@ -37,7 +37,7 @@ export function ProposalDraftPanel({
       <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 px-1">
         <div className="flex items-center gap-2">
           <div className={cn(
-             "h-1.5 w-1.5 rounded-full transition-all duration-500",
+             "h-1.5 w-1.5 rounded-full transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
              autosaveStatus === "saving" ? "bg-primary animate-pulse" : "bg-emerald-500"
           )} />
           <span>{autosaveStatus === "saving" ? "Saving progress..." : "All changes saved"}</span>
@@ -45,7 +45,7 @@ export function ProposalDraftPanel({
         <span>Draft #{draftId?.slice(0, 8).toUpperCase() ?? "NEW"}</span>
       </div>
 
-      <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 sm:p-6 backdrop-blur-sm shadow-inner transition-all duration-300">
+      <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 sm:p-6 backdrop-blur-sm shadow-inner transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
         {stepContent}
       </div>
 

@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { ProposalFormData } from "@/lib/proposals"
 import type { ProposalPresentationDeck } from "@/types/proposals"
 import { cn } from "@/lib/utils"
+import { motionEasing, motionLoopSeconds } from '@/lib/animation-system'
 
 import { LazyMotion, domAnimation, m } from "framer-motion"
 import {
@@ -34,6 +35,8 @@ interface ProposalSubmittedPanelProps {
   isRecheckingDeck?: boolean
   isSubmitting: boolean
 }
+
+const deckTrackDurationSeconds = motionLoopSeconds.trackLong
 
 export function ProposalSubmittedPanel({
   summary,
@@ -255,7 +258,7 @@ Timeline: ${summary.timelines.startTime}
                       </div>
 
                       <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-background/20 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="p-4 rounded-full bg-primary shadow-2xl shadow-primary/40 scale-0 group-hover:scale-100 transition-transform duration-300">
+                        <div className="p-4 rounded-full bg-primary shadow-2xl shadow-primary/40 scale-0 group-hover:scale-100 transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none">
                           <Presentation className="h-8 w-8 text-primary-foreground" />
                         </div>
                         <p className="mt-4 text-xs font-black uppercase tracking-widest text-foreground">Launch Interactive Viewer</p>
@@ -342,7 +345,7 @@ Timeline: ${summary.timelines.startTime}
                         scale: [1, 1.2, 1],
                         opacity: [0.2, 0.5, 0.2]
                       }}
-                      transition={{ duration: 2, repeat: Infinity }}
+                      transition={{ duration: motionLoopSeconds.pulse, repeat: Infinity, ease: motionEasing.inOut }}
                       className="absolute inset-0 bg-primary/20 blur-2xl rounded-full"
                     />
                     <div className="relative p-6 rounded-[2rem] bg-muted/40 border border-muted ring-1 ring-muted-foreground/10">
@@ -356,12 +359,12 @@ Timeline: ${summary.timelines.startTime}
                   <m.div 
                     initial={{ width: 0 }}
                     animate={{ width: "100%" }}
-                    transition={{ duration: 60, ease: "linear" }}
+                    transition={{ duration: deckTrackDurationSeconds, ease: "linear" }}
                     className="h-1 bg-primary/30 rounded-full mt-8 max-w-[200px] w-full relative overflow-hidden"
                   >
                     <m.div 
                       animate={{ x: ["-100%", "100%"] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      transition={transitions.shimmer}
                       className="absolute inset-0 bg-primary w-1/3"
                     />
                   </m.div>

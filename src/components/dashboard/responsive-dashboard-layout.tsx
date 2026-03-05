@@ -156,7 +156,7 @@ interface HideOnScrollProps {
 export function HideOnScroll({ children, className }: HideOnScrollProps) {
   return (
     <div className={cn(
-      'sticky top-0 z-40 transition-transform duration-300',
+      'sticky top-0 z-40 transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
       className
     )}>
       {children}
