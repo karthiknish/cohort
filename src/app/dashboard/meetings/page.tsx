@@ -3,35 +3,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { format } from 'date-fns'
-import { CalendarPlus, CalendarDays, X } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api'
-import { cn, getWorkspaceId } from '@/lib/utils'
+import { getWorkspaceId } from '@/lib/utils'
 
 import { GoogleWorkspaceCard } from './components/google-workspace-card'
 import { InSiteMeetingCard } from './components/in-site-meeting-card'
+import { MeetingScheduleCard } from './components/meeting-schedule-card'
 import { MeetingsHeader } from './components/meetings-header'
+import { QuickMeetDialog } from './components/quick-meet-dialog'
 import { UpcomingMeetingsCard } from './components/upcoming-meetings-card'
 import type { MeetingRecord, WorkspaceMember } from './types'
 import {
   EMAIL_REGEX,
-  TIME_OPTIONS,
   buildInSiteMeetingUrl,
   hasEmail,
   normalizeEmail,
@@ -128,6 +118,41 @@ function getPreviewGoogleWorkspaceStatus() {
   }
 }
 
+type MeetingNotificationSummary = {
+  attempted: number
+  sent: number
+  failed: number
+  skipped: number
+}
+
+function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+function describeNotificationSummary(
+  summary: MeetingNotificationSummary | undefined,
+  builder: {
+    none: string
+    allSent: (sent: number, skipped: number) => string
+    partial: (sent: number, failed: number, skipped: number) => string
+    failed: (failed: number, skipped: number) => string
+  }
+): string {
+  if (!summary || summary.attempted === 0) {
+    return builder.none
+  }
+
+  if (summary.failed === 0) {
+    return builder.allSent(summary.sent, summary.skipped)
+  }
+
+  if (summary.sent === 0) {
+    return builder.failed(summary.failed, summary.skipped)
+  }
+
+  return builder.partial(summary.sent, summary.failed, summary.skipped)
+}
+
 export default function MeetingsPage() {
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
@@ -151,6 +176,7 @@ export default function MeetingsPage() {
   const [cancellingMeetingId, setCancellingMeetingId] = useState<string | null>(null)
   const [activeInSiteMeeting, setActiveInSiteMeeting] = useState<MeetingRecord | null>(null)
   const [activeInSiteUrl, setActiveInSiteUrl] = useState<string | null>(null)
+  const [meetingOverrides, setMeetingOverrides] = useState<Record<string, MeetingRecord>>({})
   const [quickMeetDialogOpen, setQuickMeetDialogOpen] = useState(false)
   const [quickMeetTitle, setQuickMeetTitle] = useState('Quick Meet')
   const [quickMeetDescription, setQuickMeetDescription] = useState('Instant in-site quick meeting')
@@ -262,10 +288,11 @@ export default function MeetingsPage() {
     oauthHandledRef.current = true
   }, [toast])
 
-  const upcomingMeetings = useMemo(
-    () => (isPreviewMode ? previewMeetings : (meetings ?? [])),
-    [isPreviewMode, meetings, previewMeetings]
-  )
+  const upcomingMeetings = useMemo(() => {
+    const sourceMeetings = isPreviewMode ? previewMeetings : (meetings ?? [])
+
+    return sourceMeetings.map((meeting) => meetingOverrides[meeting.legacyId] ?? meeting)
+  }, [isPreviewMode, meetingOverrides, meetings, previewMeetings])
 
   const editingMeeting = useMemo(
     () => upcomingMeetings.find((meeting) => meeting.legacyId === editingMeetingId) ?? null,
@@ -569,6 +596,14 @@ export default function MeetingsPage() {
     setEditingMeetingId(null)
   }
 
+  const handleMeetingUpdated = useCallback((updatedMeeting: MeetingRecord) => {
+    setMeetingOverrides((current) => ({
+      ...current,
+      [updatedMeeting.legacyId]: updatedMeeting,
+    }))
+    setActiveInSiteMeeting((current) => (current?.legacyId === updatedMeeting.legacyId ? updatedMeeting : current))
+  }, [])
+
   const openInSiteMeeting = (meeting: MeetingRecord) => {
     const url = buildInSiteMeetingUrl(workspaceIdForRoom, meeting)
     setActiveInSiteMeeting(meeting)
@@ -623,9 +658,11 @@ export default function MeetingsPage() {
           data?: {
             meeting?: MeetingRecord
             inSiteEmbedUrl?: string | null
+            notificationSummary?: MeetingNotificationSummary
           }
           meeting?: MeetingRecord
           inSiteEmbedUrl?: string | null
+          notificationSummary?: MeetingNotificationSummary
         }
 
         if (!response.ok || payload.success === false) {
@@ -640,6 +677,7 @@ export default function MeetingsPage() {
         const meeting = payload.data?.meeting ?? payload.meeting
         const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl ??
           (meeting ? buildInSiteMeetingUrl(workspaceId, meeting) : null)
+        const notificationSummary = payload.data?.notificationSummary ?? payload.notificationSummary
 
         if (!meeting) {
           toast({
@@ -651,6 +689,7 @@ export default function MeetingsPage() {
         }
 
         if (inSiteEmbedUrl) {
+          handleMeetingUpdated(meeting)
           setActiveInSiteMeeting(meeting)
           setActiveInSiteUrl(inSiteEmbedUrl)
           setQuickMeetDialogOpen(false)
@@ -668,7 +707,21 @@ export default function MeetingsPage() {
 
         toast({
           title: 'Quick meet started',
-          description: 'In-site meeting room is now open. Attendees were notified by email.',
+          description: describeNotificationSummary(notificationSummary, {
+            none: 'In-site meeting room is now open. No invite emails were sent.',
+            allSent: (sent, skipped) => {
+              const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+              return `In-site meeting room is now open. ${pluralize(sent, 'invite email')} sent.${skippedText}`
+            },
+            partial: (sent, failed, skipped) => {
+              const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+              return `In-site meeting room is now open. ${pluralize(sent, 'invite email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${skippedText}`
+            },
+            failed: (failed, skipped) => {
+              const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} were skipped.` : ''
+              return `In-site meeting room is now open, but ${pluralize(failed, 'invite email delivery', 'invite email deliveries')} failed.${skippedText}`
+            },
+          }),
         })
       })
       .catch((error) => {
@@ -735,6 +788,9 @@ export default function MeetingsPage() {
         const payload = (await response.json().catch(() => ({}))) as {
           success?: boolean
           error?: string
+          data?: {
+            notificationSummary?: MeetingNotificationSummary
+          }
         }
 
         if (!response.ok || payload.success === false) {
@@ -752,7 +808,21 @@ export default function MeetingsPage() {
 
         toast({
           title: 'Meeting cancelled',
-          description: 'Attendees received a cancellation email.',
+          description: describeNotificationSummary(payload.data?.notificationSummary, {
+            none: 'Meeting cancelled. No cancellation emails were sent.',
+            allSent: (sent, skipped) => {
+              const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+              return `Meeting cancelled. ${pluralize(sent, 'cancellation email')} sent.${skippedText}`
+            },
+            partial: (sent, failed, skipped) => {
+              const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+              return `Meeting cancelled. ${pluralize(sent, 'cancellation email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${skippedText}`
+            },
+            failed: (failed, skipped) => {
+              const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} were skipped.` : ''
+              return `Meeting cancelled, but ${pluralize(failed, 'cancellation email delivery', 'cancellation email deliveries')} failed.${skippedText}`
+            },
+          }),
         })
       })
       .catch((error) => {
@@ -803,6 +873,7 @@ export default function MeetingsPage() {
     const start = new Date(meetingDate)
     start.setHours(parsedHours, parsedMinutes, 0, 0)
     const duration = Number(durationMinutes)
+    const normalizedTitle = title.replace(/\s+/g, ' ').trim()
 
     if (
       !Number.isFinite(start.getTime()) ||
@@ -821,6 +892,52 @@ export default function MeetingsPage() {
 
     const startTimeMs = start.getTime()
     const endTimeMs = startTimeMs + duration * 60_000
+    const now = Date.now()
+
+    if (normalizedTitle.length < 3) {
+      toast({
+        variant: 'destructive',
+        title: 'Title too short',
+        description: 'Meeting titles should be at least 3 characters long.',
+      })
+      return
+    }
+
+    if (normalizedTitle.length > 120) {
+      toast({
+        variant: 'destructive',
+        title: 'Title too long',
+        description: 'Meeting titles must stay within 120 characters.',
+      })
+      return
+    }
+
+    if (startTimeMs < now + 5 * 60_000) {
+      toast({
+        variant: 'destructive',
+        title: 'Start time too soon',
+        description: 'Schedule meetings at least 5 minutes in advance.',
+      })
+      return
+    }
+
+    if (startTimeMs > now + 365 * 24 * 60 * 60 * 1000) {
+      toast({
+        variant: 'destructive',
+        title: 'Start time too far away',
+        description: 'Meetings cannot be scheduled more than 12 months ahead.',
+      })
+      return
+    }
+
+    if (endTimeMs - startTimeMs < 10 * 60_000 || endTimeMs - startTimeMs > 8 * 60 * 60 * 1000) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid duration',
+        description: 'Meetings must be between 10 minutes and 8 hours long.',
+      })
+      return
+    }
 
     if (editingMeeting?.status === 'cancelled') {
       toast({
@@ -847,7 +964,7 @@ export default function MeetingsPage() {
       },
       body: JSON.stringify({
         legacyId,
-        title,
+        title: normalizedTitle,
         description: payloadDescription,
         startTimeMs,
         endTimeMs,
@@ -862,6 +979,7 @@ export default function MeetingsPage() {
           error?: string
           data?: {
             meeting?: { meetLink?: string | null }
+            notificationSummary?: MeetingNotificationSummary
           }
         }
 
@@ -875,18 +993,50 @@ export default function MeetingsPage() {
         }
 
         const meetLink = payload.data?.meeting?.meetLink
+        const notificationSummary = payload.data?.notificationSummary
 
         if (isEditing) {
           toast({
             title: 'Meeting rescheduled',
-            description: 'Updated details were saved and attendees were notified.',
+            description: describeNotificationSummary(notificationSummary, {
+              none: 'Updated details were saved. No reschedule emails were sent.',
+              allSent: (sent, skipped) => {
+                const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+                return `Updated details were saved and ${pluralize(sent, 'reschedule email')} sent.${skippedText}`
+              },
+              partial: (sent, failed, skipped) => {
+                const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+                return `Updated details were saved. ${pluralize(sent, 'reschedule email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${skippedText}`
+              },
+              failed: (failed, skipped) => {
+                const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} were skipped.` : ''
+                return `Updated details were saved, but ${pluralize(failed, 'reschedule email delivery', 'reschedule email deliveries')} failed.${skippedText}`
+              },
+            }),
           })
         } else {
           toast({
             title: 'Meeting scheduled',
-            description: meetLink
-              ? 'Invites were sent and your Google Meet link is ready.'
-              : 'Meeting saved successfully.',
+            description: describeNotificationSummary(notificationSummary, {
+              none: meetLink
+                ? 'Meeting saved and your Google Meet link is ready. No invite emails were sent.'
+                : 'Meeting saved successfully. No invite emails were sent.',
+              allSent: (sent, skipped) => {
+                const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+                const linkText = meetLink ? ' Your Google Meet link is ready.' : ''
+                return `${pluralize(sent, 'invite email')} sent.${linkText}${skippedText}`
+              },
+              partial: (sent, failed, skipped) => {
+                const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
+                const linkText = meetLink ? ' Your Google Meet link is ready.' : ''
+                return `${pluralize(sent, 'invite email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${linkText}${skippedText}`
+              },
+              failed: (failed, skipped) => {
+                const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} were skipped.` : ''
+                const linkText = meetLink ? ' Your Google Meet link is ready.' : ''
+                return `Meeting saved, but ${pluralize(failed, 'invite email delivery', 'invite email deliveries')} failed.${linkText}${skippedText}`
+              },
+            }),
           })
         }
 
@@ -962,6 +1112,21 @@ export default function MeetingsPage() {
         legacyId,
         status: 'completed',
       })
+      setMeetingOverrides((current) => {
+        const existingMeeting = current[legacyId] ?? upcomingMeetings.find((meeting) => meeting.legacyId === legacyId)
+        if (!existingMeeting) {
+          return current
+        }
+
+        return {
+          ...current,
+          [legacyId]: {
+            ...existingMeeting,
+            status: 'completed',
+          },
+        }
+      })
+      setActiveInSiteMeeting((current) => (current?.legacyId === legacyId ? { ...current, status: 'completed' } : current))
       toast({
         title: 'Meeting updated',
         description: 'Status marked as completed.',
@@ -994,8 +1159,16 @@ export default function MeetingsPage() {
         </Alert>
       )}
 
-      <Dialog
+      <QuickMeetDialog
         open={quickMeetDialogOpen}
+        quickStarting={quickStarting}
+        title={quickMeetTitle}
+        description={quickMeetDescription}
+        durationMinutes={quickMeetDurationMinutes}
+        timezone={timezone}
+        attendeeInput={quickAttendeeInput}
+        attendeeEmails={quickAttendeeEmails}
+        attendeeSuggestions={quickAttendeeSuggestions}
         onOpenChange={(open) => {
           if (quickStarting) return
           setQuickMeetDialogOpen(open)
@@ -1003,167 +1176,22 @@ export default function MeetingsPage() {
             resetQuickMeetForm()
           }
         }}
-      >
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Start In-Site Quick Meet</DialogTitle>
-            <DialogDescription>
-              Add participants, launch the meeting in-app, and enable transcript-based AI notes.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmitQuickMeet}>
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="quick-meet-title" className="text-sm font-medium">Title</label>
-              <Input
-                id="quick-meet-title"
-                required
-                value={quickMeetTitle}
-                onChange={(event) => setQuickMeetTitle(event.target.value)}
-                placeholder="Quick Meet"
-                disabled={quickStarting}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="quick-meet-description" className="text-sm font-medium">Description</label>
-              <Textarea
-                id="quick-meet-description"
-                rows={3}
-                value={quickMeetDescription}
-                onChange={(event) => setQuickMeetDescription(event.target.value)}
-                placeholder="What this quick meet is for"
-                disabled={quickStarting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="quick-meet-duration" className="text-sm font-medium">Duration (minutes)</label>
-              <Input
-                id="quick-meet-duration"
-                type="number"
-                min={10}
-                max={240}
-                step={5}
-                required
-                value={quickMeetDurationMinutes}
-                onChange={(event) => setQuickMeetDurationMinutes(event.target.value)}
-                disabled={quickStarting}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="quick-meet-timezone" className="text-sm font-medium">Timezone</label>
-              <Input
-                id="quick-meet-timezone"
-                required
-                value={timezone}
-                onChange={(event) => setTimezone(event.target.value)}
-                placeholder="America/New_York"
-                disabled={quickStarting}
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="quick-attendees-input" className="text-sm font-medium">Invite Users</label>
-              <div className="rounded-md border border-input bg-background p-2">
-                {quickAttendeeEmails.length > 0 ? (
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {quickAttendeeEmails.map((email) => (
-                      <Badge key={email} variant="secondary" className="gap-1 pr-1">
-                        {email}
-                        <button
-                          type="button"
-                          onClick={() => removeQuickAttendee(email)}
-                          disabled={quickStarting}
-                          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-                          aria-label={`Remove ${email}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mb-2 px-1 text-xs text-muted-foreground">
-                    Add people by selecting users below or typing email addresses.
-                  </p>
-                )}
-
-                <div className="flex gap-2">
-                  <Input
-                    id="quick-attendees-input"
-                    value={quickAttendeeInput}
-                    onChange={(event) => setQuickAttendeeInput(event.target.value)}
-                    onKeyDown={handleQuickAttendeeKeyDown}
-                    placeholder="Type name or email and press Enter"
-                    disabled={quickStarting}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={commitQuickAttendeeInput}
-                    disabled={quickStarting || quickAttendeeInput.trim().length === 0}
-                  >
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              {quickAttendeeSuggestions.length > 0 && (
-                <div className="rounded-md border border-muted/60 bg-muted/20 p-2">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Suggested Platform Users
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {quickAttendeeSuggestions.map((member) => (
-                      <Button
-                        key={member.id}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addQuickSuggestedAttendee(member.email)}
-                        disabled={quickStarting}
-                        className="h-auto py-1.5 text-left"
-                      >
-                        <span className="flex flex-col items-start leading-tight">
-                          <span className="text-xs font-medium">{member.name}</span>
-                          <span className="text-[11px] text-muted-foreground">{member.email}</span>
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-                Use Enter, Tab, comma, or semicolon to add typed emails. Your own account is auto-added.
-              </p>
-            </div>
-
-            <div className="md:col-span-2">
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit" className={getButtonClasses('primary')} disabled={quickStarting}>
-                  {quickStarting ? 'Starting...' : 'Start In-Site Quick Meet'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={getButtonClasses('outline')}
-                  onClick={() => {
-                    if (quickStarting) return
-                    setQuickMeetDialogOpen(false)
-                    resetQuickMeetForm()
-                  }}
-                  disabled={quickStarting}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+        onCancel={() => {
+          if (quickStarting) return
+          setQuickMeetDialogOpen(false)
+          resetQuickMeetForm()
+        }}
+        onSubmit={handleSubmitQuickMeet}
+        onTitleChange={setQuickMeetTitle}
+        onDescriptionChange={setQuickMeetDescription}
+        onDurationMinutesChange={setQuickMeetDurationMinutes}
+        onTimezoneChange={setTimezone}
+        onAttendeeInputChange={setQuickAttendeeInput}
+        onAttendeeKeyDown={handleQuickAttendeeKeyDown}
+        onCommitAttendeeInput={commitQuickAttendeeInput}
+        onRemoveAttendee={removeQuickAttendee}
+        onAddSuggestedAttendee={addQuickSuggestedAttendee}
+      />
 
       {!canSchedule && (
         <Alert>
@@ -1187,6 +1215,7 @@ export default function MeetingsPage() {
           meeting={activeInSiteMeeting}
           inSiteUrl={activeInSiteUrl}
           canRecord={canSchedule && !isPreviewMode}
+          onMeetingUpdated={handleMeetingUpdated}
           onClose={() => {
             setActiveInSiteMeeting(null)
             setActiveInSiteUrl(null)
@@ -1194,237 +1223,35 @@ export default function MeetingsPage() {
         />
       )}
 
-      <Card className="border-muted/70 bg-background shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarPlus className="h-4 w-4" />
-            {editingMeeting ? 'Reschedule Meeting' : 'Schedule Meeting'}
-          </CardTitle>
-          <CardDescription>
-            {editingMeeting
-              ? 'Update time, attendees, and details. Branded reschedule emails are sent automatically.'
-              : 'Creates a Calendar invite, sends branded emails, and stores transcript-ready metadata.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected && (
-            <Alert className="mb-4">
-              <AlertTitle>Google Workspace required</AlertTitle>
-              <AlertDescription>
-                Connect Google Workspace to create or reschedule calendar-backed meetings.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <form className="grid gap-4 md:grid-cols-2" onSubmit={handleScheduleMeeting}>
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="schedule-title" className="text-sm font-medium">Title</label>
-              <Input
-                id="schedule-title"
-                required
-                disabled={scheduleDisabled}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Weekly client strategy sync"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="schedule-description" className="text-sm font-medium">Description</label>
-              <Textarea
-                id="schedule-description"
-                rows={3}
-                disabled={scheduleDisabled}
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Agenda, links, and expected outcomes"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="schedule-date" className="text-sm font-medium">Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="schedule-date"
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !meetingDate && 'text-muted-foreground'
-                    )}
-                    disabled={scheduleDisabled}
-                  >
-                    <CalendarDays className="mr-2 h-4 w-4" />
-                    {meetingDate ? format(meetingDate, 'PPP') : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={meetingDate}
-                    onSelect={setMeetingDate}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="schedule-start-time" className="text-sm font-medium">Start Time</label>
-              <Select
-                value={meetingTime}
-                onValueChange={setMeetingTime}
-                disabled={scheduleDisabled}
-              >
-                <SelectTrigger id="schedule-start-time">
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_OPTIONS.map((time) => (
-                    <SelectItem key={time.value} value={time.value}>
-                      {time.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="schedule-duration" className="text-sm font-medium">Duration (minutes)</label>
-              <Input
-                id="schedule-duration"
-                type="number"
-                min={15}
-                step={15}
-                required
-                disabled={scheduleDisabled}
-                value={durationMinutes}
-                onChange={(event) => setDurationMinutes(event.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="schedule-timezone" className="text-sm font-medium">Timezone</label>
-              <Input
-                id="schedule-timezone"
-                required
-                disabled={scheduleDisabled}
-                value={timezone}
-                onChange={(event) => setTimezone(event.target.value)}
-                placeholder="America/New_York"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="schedule-attendees-input" className="text-sm font-medium">Attendees</label>
-              <div className="rounded-md border border-input bg-background p-2">
-                {attendeeEmails.length > 0 ? (
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    {attendeeEmails.map((email) => (
-                      <Badge key={email} variant="secondary" className="gap-1 pr-1">
-                        {email}
-                        <button
-                          type="button"
-                          onClick={() => removeAttendee(email)}
-                          disabled={scheduleDisabled}
-                          className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-                          aria-label={`Remove ${email}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mb-2 px-1 text-xs text-muted-foreground">
-                    Add people by selecting users below or typing email addresses.
-                  </p>
-                )}
-
-                <div className="flex gap-2">
-                  <Input
-                    id="schedule-attendees-input"
-                    disabled={scheduleDisabled}
-                    value={attendeeInput}
-                    onChange={(event) => setAttendeeInput(event.target.value)}
-                    onKeyDown={handleAttendeeKeyDown}
-                    placeholder="Type name or email and press Enter"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={commitAttendeeInput}
-                    disabled={scheduleDisabled || attendeeInput.trim().length === 0}
-                  >
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              {attendeeSuggestions.length > 0 && (
-                <div className="rounded-md border border-muted/60 bg-muted/20 p-2">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Suggested Platform Users
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {attendeeSuggestions.map((member) => (
-                      <Button
-                        key={member.id}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addSuggestedAttendee(member.email)}
-                        disabled={scheduleDisabled}
-                        className="h-auto py-1.5 text-left"
-                      >
-                        <span className="flex flex-col items-start leading-tight">
-                          <span className="text-xs font-medium">{member.name}</span>
-                          <span className="text-[11px] text-muted-foreground">{member.email}</span>
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-                Use Enter, Tab, comma, or semicolon to add typed emails.
-              </p>
-            </div>
-
-            <div className="md:col-span-2">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="submit"
-                  className={getButtonClasses('primary')}
-                  disabled={scheduleDisabled}
-                >
-                  {scheduling
-                    ? editingMeeting
-                      ? 'Saving...'
-                      : 'Scheduling...'
-                    : editingMeeting
-                      ? 'Save Reschedule'
-                      : 'Schedule with Google Meet'}
-                </Button>
-                {editingMeeting && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={getButtonClasses('outline')}
-                    onClick={resetScheduleForm}
-                    disabled={scheduling}
-                  >
-                    Cancel Edit
-                  </Button>
-                )}
-              </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <MeetingScheduleCard
+        editingMeeting={editingMeeting}
+        meetingDate={meetingDate}
+        meetingTime={meetingTime}
+        durationMinutes={durationMinutes}
+        timezone={timezone}
+        title={title}
+        description={description}
+        attendeeInput={attendeeInput}
+        attendeeEmails={attendeeEmails}
+        attendeeSuggestions={attendeeSuggestions}
+        scheduleRequiresGoogleWorkspace={scheduleRequiresGoogleWorkspace}
+        googleWorkspaceConnected={Boolean(resolvedGoogleWorkspaceStatus?.connected)}
+        scheduleDisabled={scheduleDisabled}
+        scheduling={scheduling}
+        onMeetingDateChange={setMeetingDate}
+        onMeetingTimeChange={setMeetingTime}
+        onDurationMinutesChange={setDurationMinutes}
+        onTimezoneChange={setTimezone}
+        onTitleChange={setTitle}
+        onDescriptionChange={setDescription}
+        onAttendeeInputChange={setAttendeeInput}
+        onAttendeeKeyDown={handleAttendeeKeyDown}
+        onCommitAttendeeInput={commitAttendeeInput}
+        onRemoveAttendee={removeAttendee}
+        onAddSuggestedAttendee={addSuggestedAttendee}
+        onReset={resetScheduleForm}
+        onSubmit={handleScheduleMeeting}
+      />
 
       <UpcomingMeetingsCard
         meetings={upcomingMeetings}

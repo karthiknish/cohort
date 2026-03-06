@@ -265,6 +265,7 @@ export async function saveMeetingNotes(options: {
   legacyId: string
   summary: string
   model?: string
+  eventType?: string
 }) {
   const convex = getConvexClientForUser(options.userId, null, null)
 
@@ -277,5 +278,6 @@ export async function saveMeetingNotes(options: {
     legacyId: options.legacyId,
     summary: options.summary,
     model: options.model,
+    eventType: options.eventType,
   })
 }

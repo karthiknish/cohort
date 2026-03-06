@@ -8,7 +8,7 @@ import {
   updateMeetingRecord,
   upsertGoogleWorkspaceTokens,
 } from '@/lib/meetings-admin'
-import { notifyMeetingCancelledEmail } from '@/lib/notifications/brevo'
+import { notifyMeetingCancelledEmails } from '@/lib/notifications/brevo'
 import {
   cancelGoogleCalendarEvent,
   refreshGoogleWorkspaceAccessToken,
@@ -122,22 +122,18 @@ export const POST = createApiHandler(
     const attendeeEmails = normalizeAttendees(meeting.attendeeEmails, auth.email)
     const meetingStartIso = new Date(meeting.startTimeMs).toISOString()
 
-    await Promise.all(
-      attendeeEmails.map(async (recipientEmail) => {
-        await notifyMeetingCancelledEmail({
-          recipientEmail,
-          recipientName: undefined,
-          meetingTitle: meeting.title,
-          meetingStartIso,
-          meetingTimezone: meeting.timezone,
-          cancelledBy: auth.name ?? auth.email ?? 'Cohorts',
-          cancellationReason: body.reason ?? null,
-        })
-      })
-    )
+    const notificationSummary = await notifyMeetingCancelledEmails({
+      recipientEmails: attendeeEmails,
+      meetingTitle: meeting.title,
+      meetingStartIso,
+      meetingTimezone: meeting.timezone,
+      cancelledBy: auth.name ?? auth.email ?? 'Cohorts',
+      cancellationReason: body.reason ?? null,
+    })
 
     return {
       meeting: updatedMeeting,
+      notificationSummary,
     }
   }
 )

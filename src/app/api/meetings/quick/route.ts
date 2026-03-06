@@ -1,9 +1,9 @@
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
-import { BadRequestError, ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
+import { ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
 import { createMeetingRecord } from '@/lib/meetings-admin'
-import { notifyMeetingScheduledEmail } from '@/lib/notifications/brevo'
+import { notifyMeetingScheduledEmails } from '@/lib/notifications/brevo'
 
 const quickMeetingSchema = z.object({
   title: z.string().min(1).optional(),
@@ -14,14 +14,10 @@ const quickMeetingSchema = z.object({
   clientId: z.string().nullable().optional(),
 })
 
-function normalizeAttendees(attendees: string[] | undefined, includeEmail?: string | null): string[] {
+function normalizeAttendees(attendees: string[] | undefined): string[] {
   const base = (attendees ?? [])
     .map((value) => value.trim().toLowerCase())
     .filter((value) => value.length > 0)
-
-  if (includeEmail) {
-    base.push(includeEmail.trim().toLowerCase())
-  }
 
   return Array.from(new Set(base))
 }
@@ -68,11 +64,9 @@ export const POST = createApiHandler(
     const title = (body.title?.trim() && body.title.trim().length > 0)
       ? body.title.trim()
       : 'Quick Meet'
+    const description = body.description?.trim() ? body.description.trim() : 'Instant in-site quick meeting'
 
-    const attendeeEmails = normalizeAttendees(body.attendeeEmails, auth.email)
-    if (attendeeEmails.length === 0) {
-      throw new BadRequestError('Add at least one attendee email for quick meet')
-    }
+    const attendeeEmails = normalizeAttendees(body.attendeeEmails)
 
     const roomSeed = `${workspace.workspaceId}-${auth.uid}-${now}`
     const inSiteEmbedUrl = buildQuickMeetUrl(workspace.workspaceId, roomSeed)
@@ -81,7 +75,7 @@ export const POST = createApiHandler(
       userId: auth.uid,
       userEmail: auth.email,
       title,
-      description: body.description ?? 'Instant in-site quick meeting',
+      description,
       startTimeMs,
       endTimeMs,
       timezone,
@@ -96,25 +90,21 @@ export const POST = createApiHandler(
     const meetingStartIso = new Date(startTimeMs).toISOString()
     const meetingEndIso = new Date(endTimeMs).toISOString()
 
-    await Promise.all(
-      attendeeEmails.map(async (recipientEmail) => {
-        await notifyMeetingScheduledEmail({
-          recipientEmail,
-          recipientName: undefined,
-          meetingTitle: title,
-          meetingStartIso,
-          meetingEndIso,
-          meetingTimezone: timezone,
-          organizerName: auth.name ?? auth.email ?? 'Cohorts',
-          meetLink: inSiteEmbedUrl,
-          inSiteJoinUrl: inSiteEmbedUrl,
-        })
-      })
-    )
+    const notificationSummary = await notifyMeetingScheduledEmails({
+      recipientEmails: attendeeEmails,
+      meetingTitle: title,
+      meetingStartIso,
+      meetingEndIso,
+      meetingTimezone: timezone,
+      organizerName: auth.name ?? auth.email ?? 'Cohorts',
+      meetLink: inSiteEmbedUrl,
+      inSiteJoinUrl: inSiteEmbedUrl,
+    })
 
     return {
       meeting,
       inSiteEmbedUrl,
+      notificationSummary,
     }
   }
 )

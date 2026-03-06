@@ -93,6 +93,13 @@ export interface BrevoSendOptions {
   tags?: string[]
 }
 
+export interface MeetingNotificationSummary {
+  attempted: number
+  sent: number
+  failed: number
+  skipped: number
+}
+
 // =============================================================================
 // API CLIENT SETUP
 // =============================================================================
@@ -194,6 +201,67 @@ export async function sendTransactionalEmail(options: BrevoSendOptions): Promise
 
   console.error('[brevo] failed to send email after all retries', lastError)
   return { success: false, error: lastError ?? undefined }
+}
+
+const EMAIL_RECIPIENT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function normalizeNotificationRecipients(recipientEmails: string[]): string[] {
+  return Array.from(
+    new Set(
+      recipientEmails
+        .map((recipientEmail) => recipientEmail.trim().toLowerCase())
+        .filter((recipientEmail) => EMAIL_RECIPIENT_REGEX.test(recipientEmail))
+    )
+  )
+}
+
+async function sendMeetingNotificationBatch(
+  notificationType: 'scheduled' | 'rescheduled' | 'cancelled',
+  recipientEmails: string[],
+  sendEmail: (recipientEmail: string) => Promise<BrevoEmailResult>
+): Promise<MeetingNotificationSummary> {
+  const normalizedRecipients = normalizeNotificationRecipients(recipientEmails)
+  const skipped = Math.max(recipientEmails.length - normalizedRecipients.length, 0)
+
+  if (normalizedRecipients.length === 0) {
+    return {
+      attempted: 0,
+      sent: 0,
+      failed: 0,
+      skipped,
+    }
+  }
+
+  const results = await Promise.all(
+    normalizedRecipients.map(async (recipientEmail) => {
+      try {
+        const result = await sendEmail(recipientEmail)
+        if (!result.success) {
+          console.warn(`[brevo] meeting ${notificationType} email failed`, {
+            recipientEmail,
+            error: result.error?.message,
+          })
+        }
+        return result.success
+      } catch (error) {
+        console.error(`[brevo] unexpected meeting ${notificationType} email error`, {
+          recipientEmail,
+          error,
+        })
+        return false
+      }
+    })
+  )
+
+  const sent = results.filter(Boolean).length
+  const failed = results.length - sent
+
+  return {
+    attempted: normalizedRecipients.length,
+    sent,
+    failed,
+    skipped,
+  }
 }
 
 // =============================================================================
@@ -389,6 +457,19 @@ export async function notifyMeetingScheduledEmail(options: {
   })
 }
 
+export async function notifyMeetingScheduledEmails(options: {
+  recipientEmails: string[]
+} & MeetingScheduledTemplateParams): Promise<MeetingNotificationSummary> {
+  const { recipientEmails, ...params } = options
+
+  return await sendMeetingNotificationBatch('scheduled', recipientEmails, async (recipientEmail) => {
+    return await notifyMeetingScheduledEmail({
+      recipientEmail,
+      ...params,
+    })
+  })
+}
+
 export async function notifyMeetingRescheduledEmail(options: {
   recipientEmail: string
   recipientName?: string
@@ -406,6 +487,19 @@ export async function notifyMeetingRescheduledEmail(options: {
   })
 }
 
+export async function notifyMeetingRescheduledEmails(options: {
+  recipientEmails: string[]
+} & MeetingRescheduledTemplateParams): Promise<MeetingNotificationSummary> {
+  const { recipientEmails, ...params } = options
+
+  return await sendMeetingNotificationBatch('rescheduled', recipientEmails, async (recipientEmail) => {
+    return await notifyMeetingRescheduledEmail({
+      recipientEmail,
+      ...params,
+    })
+  })
+}
+
 export async function notifyMeetingCancelledEmail(options: {
   recipientEmail: string
   recipientName?: string
@@ -420,6 +514,19 @@ export async function notifyMeetingCancelledEmail(options: {
     subject,
     htmlContent,
     tags: ['meeting-cancelled'],
+  })
+}
+
+export async function notifyMeetingCancelledEmails(options: {
+  recipientEmails: string[]
+} & MeetingCancelledTemplateParams): Promise<MeetingNotificationSummary> {
+  const { recipientEmails, ...params } = options
+
+  return await sendMeetingNotificationBatch('cancelled', recipientEmails, async (recipientEmail) => {
+    return await notifyMeetingCancelledEmail({
+      recipientEmail,
+      ...params,
+    })
   })
 }
 

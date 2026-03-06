@@ -14,6 +14,10 @@ export type MeetingRecord = {
   attendeeEmails: string[]
   notesSummary: string | null
   transcriptText: string | null
+  transcriptUpdatedAtMs?: number | null
+  transcriptSource?: string | null
+  notesUpdatedAtMs?: number | null
+  notesModel?: string | null
 }
 
 export type WorkspaceMember = {

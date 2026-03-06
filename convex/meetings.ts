@@ -151,6 +151,7 @@ export const list = zWorkspaceQuery({
   returns: z.array(meetingZ),
   handler: async (ctx, args) => {
     const clientId = typeof args.clientId === 'string' && args.clientId.trim().length > 0 ? args.clientId.trim() : null
+    const status = args.status
     const includePast = args.includePast === true
     const limit = Math.min(Math.max(args.limit ?? 50, 1), 100)
 
@@ -159,10 +160,10 @@ export const list = zWorkspaceQuery({
           .query('meetings')
           .withIndex('by_workspace_client_startTimeMs', (q) => q.eq('workspaceId', args.workspaceId).eq('clientId', clientId))
           .order('desc')
-      : args.status
+        : status
         ? ctx.db
             .query('meetings')
-            .withIndex('by_workspace_status_startTimeMs', (q) => q.eq('workspaceId', args.workspaceId).eq('status', args.status!))
+          .withIndex('by_workspace_status_startTimeMs', (q) => q.eq('workspaceId', args.workspaceId).eq('status', status))
             .order('desc')
         : ctx.db
             .query('meetings')
@@ -174,8 +175,8 @@ export const list = zWorkspaceQuery({
       query = query.filter((q) => q.gte(q.field('endTimeMs'), now))
     }
 
-    if (args.status && clientId) {
-      query = query.filter((q) => q.eq(q.field('status'), args.status!))
+    if (status && clientId) {
+      query = query.filter((q) => q.eq(q.field('status'), status))
     }
 
     const rows = await query.take(limit)
@@ -463,6 +464,7 @@ export const saveNotes = zWorkspaceMutation({
     legacyId: z.string(),
     summary: z.string(),
     model: z.string().optional(),
+    eventType: z.string().optional(),
   },
   returns: z.string(),
   handler: async (ctx, args) => {
@@ -477,8 +479,13 @@ export const saveNotes = zWorkspaceMutation({
       throw Errors.resource.notFound('Meeting', args.legacyId)
     }
 
+    const summary = args.summary.trim()
+    if (summary.length === 0) {
+      throw Errors.validation.invalidInput('Meeting notes are required')
+    }
+
     await ctx.db.patch(meeting._id, {
-      notesSummary: args.summary,
+      notesSummary: summary,
       notesUpdatedAtMs: ctx.now,
       notesModel: args.model ?? null,
       updatedAtMs: ctx.now,
@@ -487,7 +494,7 @@ export const saveNotes = zWorkspaceMutation({
     await ctx.db.insert('meetingEvents', {
       workspaceId: args.workspaceId,
       meetingLegacyId: meeting.legacyId,
-      eventType: 'notes.generated',
+      eventType: args.eventType ?? 'notes.generated',
       payload: {
         model: args.model ?? null,
       },

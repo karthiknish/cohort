@@ -93,16 +93,35 @@ export function UpcomingMeetingsCard(props: UpcomingMeetingsCardProps) {
                 )}
               </div>
 
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {meeting.transcriptUpdatedAtMs ? (
+                  <Badge variant="info">Transcript saved {formatLocalDateTime(meeting.transcriptUpdatedAtMs, meeting.timezone)}</Badge>
+                ) : (
+                  <Badge variant="outline">Transcript not saved</Badge>
+                )}
+                {meeting.transcriptSource ? <Badge variant="outline">Source: {meeting.transcriptSource}</Badge> : null}
+                {meeting.notesUpdatedAtMs ? (
+                  <Badge variant="success">Notes saved {formatLocalDateTime(meeting.notesUpdatedAtMs, meeting.timezone)}</Badge>
+                ) : (
+                  <Badge variant="outline">Notes pending</Badge>
+                )}
+                {meeting.notesSummary ? (
+                  <Badge variant="outline">{meeting.notesModel ? `AI notes: ${meeting.notesModel}` : 'Manual notes'}</Badge>
+                ) : null}
+              </div>
+
               {meeting.notesSummary && (
                 <div className="mt-3 rounded-md bg-muted/40 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AI Meeting Notes</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {meeting.notesModel ? 'AI Meeting Notes' : 'Meeting Notes'}
+                  </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{meeting.notesSummary}</p>
                 </div>
               )}
 
               {!meeting.notesSummary && meeting.transcriptText && (
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Transcript captured. Notes will appear after AI processing completes.
+                  Transcript captured. You can generate AI notes from the in-site room or save manual notes there.
                 </p>
               )}
             </div>

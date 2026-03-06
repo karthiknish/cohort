@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, ForbiddenError, ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
 import { createMeetingRecord, getGoogleWorkspaceTokens, upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
-import { notifyMeetingScheduledEmail } from '@/lib/notifications/brevo'
+import { notifyMeetingScheduledEmails } from '@/lib/notifications/brevo'
 import {
   createGoogleCalendarMeetEvent,
   refreshGoogleWorkspaceAccessToken,
@@ -20,6 +20,11 @@ const scheduleMeetingSchema = z.object({
   clientId: z.string().nullable().optional(),
 })
 
+const MIN_MEETING_DURATION_MS = 10 * 60 * 1000
+const MAX_MEETING_DURATION_MS = 8 * 60 * 60 * 1000
+const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000
+const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000
+
 function normalizeAttendees(attendees: string[], includeEmail?: string | null): string[] {
   const base = attendees
     .map((value) => value.trim().toLowerCase())
@@ -30,6 +35,10 @@ function normalizeAttendees(attendees: string[], includeEmail?: string | null): 
   }
 
   return Array.from(new Set(base))
+}
+
+function normalizeMeetingText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
 }
 
 export const POST = createApiHandler(
@@ -56,6 +65,31 @@ export const POST = createApiHandler(
       throw new BadRequestError('Meeting end time must be after start time')
     }
 
+    const normalizedTitle = normalizeMeetingText(body.title)
+    const normalizedDescription = typeof body.description === 'string' ? body.description.trim() : null
+    const durationMs = body.endTimeMs - body.startTimeMs
+    const now = Date.now()
+
+    if (normalizedTitle.length < 3) {
+      throw new BadRequestError('Meeting title must be at least 3 characters long')
+    }
+
+    if (normalizedTitle.length > 120) {
+      throw new BadRequestError('Meeting title must be 120 characters or fewer')
+    }
+
+    if (body.startTimeMs < now + MIN_SCHEDULE_LEAD_MS) {
+      throw new BadRequestError('Meetings must be scheduled at least 5 minutes in advance')
+    }
+
+    if (body.startTimeMs > now + MAX_SCHEDULE_AHEAD_MS) {
+      throw new BadRequestError('Meetings cannot be scheduled more than 12 months ahead')
+    }
+
+    if (durationMs < MIN_MEETING_DURATION_MS || durationMs > MAX_MEETING_DURATION_MS) {
+      throw new BadRequestError('Meetings must be between 10 minutes and 8 hours long')
+    }
+
     const { tokens } = await getGoogleWorkspaceTokens({ userId: auth.uid })
 
     if (!tokens?.accessToken) {
@@ -65,7 +99,6 @@ export const POST = createApiHandler(
     const { clientId: googleClientId, clientSecret: googleClientSecret } = resolveGoogleWorkspaceOAuthCredentials()
 
     let accessToken = tokens.accessToken
-    const now = Date.now()
     const tokenExpired = typeof tokens.accessTokenExpiresAtMs === 'number' && tokens.accessTokenExpiresAtMs <= now + 60_000
 
     if (tokenExpired) {
@@ -101,8 +134,8 @@ export const POST = createApiHandler(
 
     const calendarEvent = await createGoogleCalendarMeetEvent({
       accessToken,
-      title: body.title,
-      description: body.description,
+      title: normalizedTitle,
+      description: normalizedDescription,
       startTimeMs: body.startTimeMs,
       endTimeMs: body.endTimeMs,
       timezone: body.timezone,
@@ -112,8 +145,8 @@ export const POST = createApiHandler(
     const meeting = await createMeetingRecord({
       userId: auth.uid,
       userEmail: auth.email,
-      title: body.title,
-      description: body.description,
+      title: normalizedTitle,
+      description: normalizedDescription,
       startTimeMs: body.startTimeMs,
       endTimeMs: body.endTimeMs,
       timezone: body.timezone,
@@ -128,24 +161,20 @@ export const POST = createApiHandler(
     const meetingStartIso = new Date(body.startTimeMs).toISOString()
     const meetingEndIso = new Date(body.endTimeMs).toISOString()
 
-    await Promise.all(
-      attendeeEmails.map(async (recipientEmail) => {
-        await notifyMeetingScheduledEmail({
-          recipientEmail,
-          recipientName: undefined,
-          meetingTitle: body.title,
-          meetingStartIso,
-          meetingEndIso,
-          meetingTimezone: body.timezone,
-          organizerName: auth.name ?? tokens.userEmail ?? 'Cohorts',
-          meetLink: calendarEvent.meetLink,
-        })
-      })
-    )
+    const notificationSummary = await notifyMeetingScheduledEmails({
+      recipientEmails: attendeeEmails,
+      meetingTitle: normalizedTitle,
+      meetingStartIso,
+      meetingEndIso,
+      meetingTimezone: body.timezone,
+      organizerName: auth.name ?? tokens.userEmail ?? 'Cohorts',
+      meetLink: calendarEvent.meetLink,
+    })
 
     return {
       meeting,
       calendarEvent,
+      notificationSummary,
     }
   }
 )

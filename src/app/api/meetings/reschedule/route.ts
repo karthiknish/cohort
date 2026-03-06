@@ -8,7 +8,7 @@ import {
   updateMeetingRecord,
   upsertGoogleWorkspaceTokens,
 } from '@/lib/meetings-admin'
-import { notifyMeetingRescheduledEmail } from '@/lib/notifications/brevo'
+import { notifyMeetingRescheduledEmails } from '@/lib/notifications/brevo'
 import {
   refreshGoogleWorkspaceAccessToken,
   resolveGoogleWorkspaceOAuthCredentials,
@@ -25,6 +25,11 @@ const rescheduleMeetingSchema = z.object({
   attendeeEmails: z.array(z.string().email()),
 })
 
+const MIN_MEETING_DURATION_MS = 10 * 60 * 1000
+const MAX_MEETING_DURATION_MS = 8 * 60 * 60 * 1000
+const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000
+const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000
+
 function normalizeAttendees(attendees: string[], includeEmail?: string | null): string[] {
   const base = attendees
     .map((value) => value.trim().toLowerCase())
@@ -35,6 +40,10 @@ function normalizeAttendees(attendees: string[], includeEmail?: string | null): 
   }
 
   return Array.from(new Set(base))
+}
+
+function normalizeMeetingText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
 }
 
 export const POST = createApiHandler(
@@ -59,6 +68,31 @@ export const POST = createApiHandler(
 
     if (body.endTimeMs <= body.startTimeMs) {
       throw new BadRequestError('Meeting end time must be after start time')
+    }
+
+    const normalizedTitle = normalizeMeetingText(body.title)
+    const normalizedDescription = typeof body.description === 'string' ? body.description.trim() : null
+    const durationMs = body.endTimeMs - body.startTimeMs
+    const now = Date.now()
+
+    if (normalizedTitle.length < 3) {
+      throw new BadRequestError('Meeting title must be at least 3 characters long')
+    }
+
+    if (normalizedTitle.length > 120) {
+      throw new BadRequestError('Meeting title must be 120 characters or fewer')
+    }
+
+    if (body.startTimeMs < now + MIN_SCHEDULE_LEAD_MS) {
+      throw new BadRequestError('Rescheduled meetings must start at least 5 minutes in the future')
+    }
+
+    if (body.startTimeMs > now + MAX_SCHEDULE_AHEAD_MS) {
+      throw new BadRequestError('Meetings cannot be rescheduled more than 12 months ahead')
+    }
+
+    if (durationMs < MIN_MEETING_DURATION_MS || durationMs > MAX_MEETING_DURATION_MS) {
+      throw new BadRequestError('Meetings must be between 10 minutes and 8 hours long')
     }
 
     const { meeting } = await getMeetingRecord({
@@ -121,8 +155,8 @@ export const POST = createApiHandler(
       const calendarEvent = await updateGoogleCalendarMeetEvent({
         accessToken,
         eventId: meeting.calendarEventId,
-        title: body.title,
-        description: body.description,
+        title: normalizedTitle,
+        description: normalizedDescription,
         startTimeMs: body.startTimeMs,
         endTimeMs: body.endTimeMs,
         timezone: body.timezone,
@@ -137,8 +171,8 @@ export const POST = createApiHandler(
       userEmail: auth.email,
       workspaceId: workspace.workspaceId,
       legacyId: body.legacyId,
-      title: body.title,
-      description: body.description ?? null,
+      title: normalizedTitle,
+      description: normalizedDescription,
       startTimeMs: body.startTimeMs,
       endTimeMs: body.endTimeMs,
       timezone: body.timezone,
@@ -151,25 +185,21 @@ export const POST = createApiHandler(
     const newMeetingStartIso = new Date(body.startTimeMs).toISOString()
     const newMeetingEndIso = new Date(body.endTimeMs).toISOString()
 
-    await Promise.all(
-      attendeeEmails.map(async (recipientEmail) => {
-        await notifyMeetingRescheduledEmail({
-          recipientEmail,
-          recipientName: undefined,
-          meetingTitle: body.title,
-          previousMeetingStartIso,
-          newMeetingStartIso,
-          newMeetingEndIso,
-          meetingTimezone: body.timezone,
-          organizerName: auth.name ?? auth.email ?? 'Cohorts',
-          meetLink: nextMeetLink,
-          inSiteJoinUrl: updatedMeeting.providerId === 'cohorts-quick-meet' ? nextMeetLink : null,
-        })
-      })
-    )
+    const notificationSummary = await notifyMeetingRescheduledEmails({
+      recipientEmails: attendeeEmails,
+      meetingTitle: normalizedTitle,
+      previousMeetingStartIso,
+      newMeetingStartIso,
+      newMeetingEndIso,
+      meetingTimezone: body.timezone,
+      organizerName: auth.name ?? auth.email ?? 'Cohorts',
+      meetLink: nextMeetLink,
+      inSiteJoinUrl: updatedMeeting.providerId === 'cohorts-quick-meet' ? nextMeetLink : null,
+    })
 
     return {
       meeting: updatedMeeting,
+      notificationSummary,
     }
   }
 )
