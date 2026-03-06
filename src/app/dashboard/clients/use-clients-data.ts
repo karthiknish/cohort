@@ -9,7 +9,9 @@ import { customFormulasApi, projectsApi, proposalsApi, tasksApi } from '@/lib/co
 import { getPreviewProjects, getPreviewTasks, getPreviewProposals } from '@/lib/preview-data'
 import type { ClientRecord } from '@/types/clients'
 
-type QueryRow = Record<string, unknown>
+type QueryRow = {
+  status?: unknown
+}
 
 function toStatus(row: QueryRow): string | null {
   return typeof row.status === 'string' ? row.status : null

@@ -16,6 +16,7 @@ import type { Channel } from '../types'
 import type { ChannelSummary, PendingAttachment, TypingParticipant, ThreadMessagesState, ThreadCursorsState, ThreadLoadingState, ThreadErrorsState, ReactionPendingState, SendMessageOptions } from '../hooks/types'
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import { CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
+import { collaborationToUnifiedMessage } from './message-list'
 import { UnifiedMessagePane } from './unified-message-pane'
 import { CollaborationSidebar } from './sidebar'
 
