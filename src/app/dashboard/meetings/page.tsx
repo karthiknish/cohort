@@ -1,6 +1,7 @@
 'use client'
 
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { format } from 'date-fns'
 import { CalendarPlus, CalendarDays, X } from 'lucide-react'
@@ -18,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
 import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api'
 import { cn, getWorkspaceId } from '@/lib/utils'
@@ -37,9 +39,99 @@ import {
   toTimeValue,
 } from './utils'
 
+function getPreviewMeetingWorkspaceMembers(): WorkspaceMember[] {
+  return [
+    { id: 'preview-member-1', name: 'Alex Morgan', email: 'alex@cohorts.ai', role: 'Account Manager' },
+    { id: 'preview-member-2', name: 'Jordan Lee', email: 'jordan@cohorts.ai', role: 'Strategist' },
+    { id: 'preview-member-3', name: 'Priya Patel', email: 'priya@cohorts.ai', role: 'Growth Lead' },
+    { id: 'preview-member-4', name: 'Taylor Kim', email: 'taylor@cohorts.ai', role: 'Client Partner' },
+    { id: 'preview-member-5', name: 'Sam Chen', email: 'sam@cohorts.ai', role: 'Performance Marketer' },
+  ]
+}
+
+function getPreviewMeetings(clientId: string | null, timezone: string): MeetingRecord[] {
+  const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()
+  const hour = 60 * 60 * 1000
+  const day = 24 * hour
+
+  const meetings: Array<{ clientId: string; meeting: MeetingRecord }> = [
+    {
+      clientId: 'preview-tech-corp',
+      meeting: {
+        legacyId: 'preview-meeting-1',
+        providerId: 'google-workspace',
+        title: 'Weekly Growth Sync',
+        description: 'Review pacing, creative tests, and SQL quality before the Q2 push.',
+        startTimeMs: now.getTime() + 2 * hour,
+        endTimeMs: now.getTime() + 2 * hour + 45 * 60 * 1000,
+        timezone,
+        calendarEventId: 'preview-gcal-1',
+        status: 'scheduled',
+        meetLink: 'https://meet.jit.si/cohorts-preview-growth-sync',
+        attendeeEmails: ['alex@cohorts.ai', 'jordan@cohorts.ai', 'growth@techcorp.example'],
+        notesSummary: null,
+        transcriptText: null,
+      },
+    },
+    {
+      clientId: 'preview-startupxyz',
+      meeting: {
+        legacyId: 'preview-meeting-2',
+        providerId: 'in-site',
+        title: 'Launch War Room',
+        description: 'Creator shortlist, teaser edits, and launch-week escalation plan.',
+        startTimeMs: now.getTime() + day,
+        endTimeMs: now.getTime() + day + 30 * 60 * 1000,
+        timezone,
+        calendarEventId: null,
+        status: 'in_progress',
+        meetLink: 'https://meet.jit.si/cohorts-preview-launch-war-room',
+        attendeeEmails: ['priya@cohorts.ai', 'launch@startupxyz.example'],
+        notesSummary: 'Key actions:\n- Lock creator roster by Friday\n- Approve 3 teaser cutdowns\n- QA waitlist onboarding flow before launch day',
+        transcriptText: 'We agreed to prioritize creator deliverables, finalize the teaser cutdowns, and tighten the waitlist onboarding experience before launch week.',
+      },
+    },
+    {
+      clientId: 'preview-retail-store',
+      meeting: {
+        legacyId: 'preview-meeting-3',
+        providerId: 'google-workspace',
+        title: 'Retail Retention Review',
+        description: 'Audit repeat purchase rate, spring promo cadence, and lifecycle email segmentation.',
+        startTimeMs: now.getTime() + 2 * day + 3 * hour,
+        endTimeMs: now.getTime() + 2 * day + 4 * hour,
+        timezone,
+        calendarEventId: 'preview-gcal-3',
+        status: 'scheduled',
+        meetLink: 'https://meet.jit.si/cohorts-preview-retail-retention-review',
+        attendeeEmails: ['taylor@cohorts.ai', 'marketing@retailstore.example'],
+        notesSummary: null,
+        transcriptText: null,
+      },
+    },
+  ]
+
+  if (!clientId) {
+    return meetings.map((entry) => entry.meeting)
+  }
+
+  return meetings.filter((entry) => entry.clientId === clientId).map((entry) => entry.meeting)
+}
+
+function getPreviewGoogleWorkspaceStatus() {
+  const linkedAt = typeof window === 'undefined' ? new Date('2024-01-10T10:00:00.000Z') : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+
+  return {
+    connected: true,
+    linkedAtMs: linkedAt.getTime(),
+    scopes: ['calendar.events', 'meetings.space.created'],
+  }
+}
+
 export default function MeetingsPage() {
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const workspaceId = getWorkspaceId(user)
@@ -69,7 +161,7 @@ export default function MeetingsPage() {
 
   const meetings = useQuery(
     meetingsApi.list,
-    workspaceId
+    workspaceId && !isPreviewMode
       ? {
           workspaceId,
           clientId: selectedClientId ?? null,
@@ -81,7 +173,7 @@ export default function MeetingsPage() {
 
   const googleWorkspaceStatus = useQuery(
     meetingIntegrationsApi.getGoogleWorkspaceStatus,
-    workspaceId
+    workspaceId && !isPreviewMode
       ? {
           workspaceId,
         }
@@ -96,7 +188,7 @@ export default function MeetingsPage() {
 
   const workspaceMembers = useQuery(
     usersApi.listWorkspaceMembers,
-    workspaceId
+    workspaceId && !isPreviewMode
       ? {
           workspaceId,
           limit: 200,
@@ -106,7 +198,7 @@ export default function MeetingsPage() {
 
   const platformUsers = useQuery(
     usersApi.listAllUsers,
-    workspaceId
+    workspaceId && !isPreviewMode
       ? {
           limit: 500,
         }
@@ -115,6 +207,21 @@ export default function MeetingsPage() {
 
   const disconnectGoogleWorkspace = useMutation(meetingIntegrationsApi.deleteGoogleWorkspaceIntegration)
   const updateMeetingStatus = useMutation(meetingsApi.updateStatus)
+  const previewTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
+  const previewMeetings = useMemo(
+    () => getPreviewMeetings(selectedClientId ?? null, previewTimezone),
+    [previewTimezone, selectedClientId]
+  )
+  const resolvedGoogleWorkspaceStatus = isPreviewMode ? getPreviewGoogleWorkspaceStatus() : googleWorkspaceStatus
+  const resolvedWorkspaceMembers = useMemo(
+    () => (isPreviewMode ? getPreviewMeetingWorkspaceMembers() : (workspaceMembers ?? [])),
+    [isPreviewMode, workspaceMembers]
+  )
+  const resolvedPlatformUsers = useMemo(
+    () => (isPreviewMode ? getPreviewMeetingWorkspaceMembers() : (platformUsers ?? [])),
+    [isPreviewMode, platformUsers]
+  )
+  const workspaceIdForRoom = workspaceId ?? 'preview-workspace'
 
   useEffect(() => {
     if (oauthHandledRef.current || typeof window === 'undefined') return
@@ -155,7 +262,10 @@ export default function MeetingsPage() {
     oauthHandledRef.current = true
   }, [toast])
 
-  const upcomingMeetings = useMemo(() => meetings ?? [], [meetings])
+  const upcomingMeetings = useMemo(
+    () => (isPreviewMode ? previewMeetings : (meetings ?? [])),
+    [isPreviewMode, meetings, previewMeetings]
+  )
 
   const editingMeeting = useMemo(
     () => upcomingMeetings.find((meeting) => meeting.legacyId === editingMeetingId) ?? null,
@@ -163,11 +273,11 @@ export default function MeetingsPage() {
   )
 
   const scheduleRequiresGoogleWorkspace = editingMeeting ? editingMeeting.providerId === 'google-workspace' : true
-  const scheduleDisabled = !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !googleWorkspaceStatus?.connected)
+  const scheduleDisabled = isPreviewMode || !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected)
 
   const getAttendeeSuggestions = useCallback((queryValue: string, selectedEmails: string[]) => {
-    const workspaceList = workspaceMembers ?? []
-    const platformList = platformUsers ?? []
+    const workspaceList = resolvedWorkspaceMembers
+    const platformList = resolvedPlatformUsers
 
     const mergedByEmail = new Map<string, WorkspaceMember>()
     for (const member of [...workspaceList, ...platformList]) {
@@ -198,7 +308,7 @@ export default function MeetingsPage() {
         )
       })
       .slice(0, 8)
-  }, [workspaceMembers, platformUsers])
+  }, [resolvedPlatformUsers, resolvedWorkspaceMembers])
 
   const attendeeSuggestions = useMemo(
     () => getAttendeeSuggestions(attendeeInput, attendeeEmails),
@@ -349,6 +459,14 @@ export default function MeetingsPage() {
   }
 
   const handleConnectGoogleWorkspace = () => {
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Google Workspace actions are disabled while sample meeting data is active.',
+      })
+      return
+    }
+
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -408,6 +526,14 @@ export default function MeetingsPage() {
   }
 
   const handleDisconnectGoogleWorkspace = async () => {
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Google Workspace actions are disabled while sample meeting data is active.',
+      })
+      return
+    }
+
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -444,7 +570,7 @@ export default function MeetingsPage() {
   }
 
   const openInSiteMeeting = (meeting: MeetingRecord) => {
-    const url = buildInSiteMeetingUrl(workspaceId, meeting)
+    const url = buildInSiteMeetingUrl(workspaceIdForRoom, meeting)
     setActiveInSiteMeeting(meeting)
     setActiveInSiteUrl(url)
   }
@@ -456,6 +582,14 @@ export default function MeetingsPage() {
     attendeeEmails: string[]
     timezone: string
   }) => {
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Quick Meet is disabled while sample meeting data is active.',
+      })
+      return
+    }
+
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -562,6 +696,14 @@ export default function MeetingsPage() {
   }
 
   const handleCancelMeeting = (meeting: MeetingRecord) => {
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: `"${meeting.title}" is sample data and cannot be updated.`,
+      })
+      return
+    }
+
     if (!canSchedule) {
       toast({
         variant: 'destructive',
@@ -572,7 +714,7 @@ export default function MeetingsPage() {
     }
 
     if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Cancel meeting \"${meeting.title}\"?`)
+      const confirmed = window.confirm(`Cancel meeting "${meeting.title}"?`)
       if (!confirmed) {
         return
       }
@@ -627,6 +769,14 @@ export default function MeetingsPage() {
 
   const handleScheduleMeeting = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Scheduling is disabled while sample meeting data is active.',
+      })
+      return
+    }
 
     if (!canSchedule) {
       toast({
@@ -796,6 +946,14 @@ export default function MeetingsPage() {
   }
 
   const handleMarkCompleted = async (legacyId: string) => {
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Sample meeting statuses cannot be updated.',
+      })
+      return
+    }
+
     if (!workspaceId || !canSchedule) return
 
     try {
@@ -820,12 +978,21 @@ export default function MeetingsPage() {
   return (
     <div className={DASHBOARD_THEME.layout.container}>
       <MeetingsHeader
-        googleWorkspaceConnected={Boolean(googleWorkspaceStatus?.connected)}
+        googleWorkspaceConnected={Boolean(resolvedGoogleWorkspaceStatus?.connected)}
         canSchedule={canSchedule}
         quickStarting={quickStarting}
-        quickMeetDisabled={false}
+        quickMeetDisabled={isPreviewMode}
         onStartQuickMeet={() => setQuickMeetDialogOpen(true)}
       />
+
+      {isPreviewMode && (
+        <Alert>
+          <AlertTitle>Preview mode</AlertTitle>
+          <AlertDescription>
+            Meetings use sample data in preview mode. You can browse upcoming calls and open the in-site room, but scheduling and integration actions are disabled.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Dialog
         open={quickMeetDialogOpen}
@@ -1008,8 +1175,8 @@ export default function MeetingsPage() {
       )}
 
       <GoogleWorkspaceCard
-        connected={Boolean(googleWorkspaceStatus?.connected)}
-        canSchedule={canSchedule}
+        connected={Boolean(resolvedGoogleWorkspaceStatus?.connected)}
+        canSchedule={canSchedule && !isPreviewMode}
         onConnect={() => void handleConnectGoogleWorkspace()}
         onDisconnect={() => void handleDisconnectGoogleWorkspace()}
       />
@@ -1019,7 +1186,7 @@ export default function MeetingsPage() {
           key={activeInSiteMeeting.legacyId}
           meeting={activeInSiteMeeting}
           inSiteUrl={activeInSiteUrl}
-          canRecord={canSchedule}
+          canRecord={canSchedule && !isPreviewMode}
           onClose={() => {
             setActiveInSiteMeeting(null)
             setActiveInSiteUrl(null)
@@ -1040,7 +1207,7 @@ export default function MeetingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {scheduleRequiresGoogleWorkspace && !googleWorkspaceStatus?.connected && (
+          {scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected && (
             <Alert className="mb-4">
               <AlertTitle>Google Workspace required</AlertTitle>
               <AlertDescription>
@@ -1261,7 +1428,7 @@ export default function MeetingsPage() {
 
       <UpcomingMeetingsCard
         meetings={upcomingMeetings}
-        canSchedule={canSchedule}
+        canSchedule={canSchedule && !isPreviewMode}
         cancellingMeetingId={cancellingMeetingId}
         onOpenInSiteMeeting={openInSiteMeeting}
         onRescheduleMeeting={handleRescheduleMeeting}

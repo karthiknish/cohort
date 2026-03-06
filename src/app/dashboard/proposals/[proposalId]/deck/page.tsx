@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Download, LoaderCircle, Presentation, Layout, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
+import { ArrowLeft, Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,25 +11,41 @@ import { Badge } from '@/components/ui/badge'
 import type { ProposalDraft } from '@/types/proposals'
 import { mergeProposalForm } from '@/lib/proposals'
 import { useAuth } from '@/contexts/auth-context'
+import { usePreview } from '@/contexts/preview-context'
 import { useQuery } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
+import { getPreviewProposals } from '@/lib/preview-data'
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
   const proposalId = params?.proposalId
 
   const { user } = useAuth()
+  const { isPreviewMode } = usePreview()
   const workspaceId = user?.agencyId ?? null
 
   const proposalRow = useQuery(
     proposalsApi.getByLegacyId,
-    workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip'
+    !isPreviewMode && workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip'
   )
 
-  const isLoading = proposalRow === undefined
-  const error = !isLoading && proposalRow === null ? 'Proposal not found' : null
+  const previewProposal = useMemo(
+    () => (isPreviewMode && proposalId ? getPreviewProposals(null).find((proposal) => proposal.id === proposalId) ?? null : null),
+    [isPreviewMode, proposalId]
+  )
+
+  const isLoading = !isPreviewMode && proposalRow === undefined
+  const error = isPreviewMode
+    ? (previewProposal ? null : 'Proposal not found')
+    : !isLoading && proposalRow === null
+      ? 'Proposal not found'
+      : null
 
   const proposal: ProposalDraft | null = useMemo(() => {
+    if (isPreviewMode) {
+      return previewProposal
+    }
+
     if (!proposalRow) return null
 
     return {
@@ -49,7 +65,7 @@ export default function ProposalDeckPage() {
       presentationDeck: proposalRow.presentationDeck ?? null,
       gammaDeck: proposalRow.presentationDeck ?? null,
     }
-  }, [proposalRow])
+  }, [isPreviewMode, previewProposal, proposalRow])
 
   // PDF storage URL (preferred for viewing)
   const pdfStorageUrl = useMemo(() => {
@@ -88,7 +104,7 @@ export default function ProposalDeckPage() {
     const rawSlides = text.split(/(?=Slide \d+:)/).filter(Boolean)
     return rawSlides.map((s, index) => {
       const titleMatch = s.match(/Slide \d+:\s*([^*]+)/)
-      const title = titleMatch ? titleMatch[1]!.trim() : `Slide ${index + 1}`
+      const title = typeof titleMatch?.[1] === 'string' ? titleMatch[1].trim() : `Slide ${index + 1}`
       const points = s.split('*').slice(1).map(p => p.trim()).filter(Boolean)
       
       return { 
@@ -101,7 +117,7 @@ export default function ProposalDeckPage() {
 
   const getSlideIcon = (index: number) => {
     const icons = [Presentation, Target, Lightbulb, Users, Sparkles, Layers, BarChart3, Wallet, Calendar, Rocket]
-    const Icon = icons[index % icons.length]!
+    const Icon = icons[index % icons.length] ?? Presentation
     return <Icon className="h-4 w-4" />
   }
 

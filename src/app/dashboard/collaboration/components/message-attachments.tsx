@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Download, FileText, FileVideo, MonitorPlay, Play, Video } from 'lucide-react'
+import { Download, FileText, MonitorPlay, Video } from 'lucide-react'
 import type { CollaborationAttachment } from '@/types/collaboration'
 import { isLikelyImageUrl } from '../utils'
 import { ImageGallery } from './image-gallery'
@@ -16,22 +16,45 @@ export interface MessageAttachmentsProps {
   highlightTerms?: string[]
 }
 
+function hasUsableAttachmentUrl(url: string | null | undefined): boolean {
+  if (typeof url !== 'string') {
+    return false
+  }
+
+  const normalizedUrl = url.trim()
+  return normalizedUrl.length > 0 && normalizedUrl !== '#' && normalizedUrl !== 'about:blank'
+}
+
 export function MessageAttachments({ attachments, highlightTerms }: MessageAttachmentsProps) {
   const [activePdf, setActivePdf] = useState<CollaborationAttachment | null>(null)
 
-  const { imageAttachments, videoAttachments, pdfAttachments, otherAttachments } = useMemo(() => {
+  const { imageAttachments, videoAttachments, pdfAttachments, otherAttachments, unavailableAttachments } = useMemo(() => {
     const images: CollaborationAttachment[] = []
     const videos: CollaborationAttachment[] = []
     const pdfs: CollaborationAttachment[] = []
     const other: CollaborationAttachment[] = []
+    const unavailable: CollaborationAttachment[] = []
 
     if (!attachments || attachments.length === 0) {
-      return { imageAttachments: images, videoAttachments: videos, pdfAttachments: pdfs, otherAttachments: other }
+      return {
+        imageAttachments: images,
+        videoAttachments: videos,
+        pdfAttachments: pdfs,
+        otherAttachments: other,
+        unavailableAttachments: unavailable,
+      }
     }
 
     attachments.forEach((a) => {
       const type = (a.type || '').toLowerCase()
       const url = a.url || ''
+      const hasUsableUrl = hasUsableAttachmentUrl(url)
+
+      if (!hasUsableUrl) {
+        unavailable.push(a)
+        return
+      }
+
       if (isLikelyImageUrl(url) || type.startsWith('image/')) {
         images.push(a)
       } else if (type.startsWith('video/') || url.match(/\.(mp4|mov|webm|ogg)(\?.*)?$/i)) {
@@ -43,14 +66,22 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
       }
     })
 
-    return { imageAttachments: images, videoAttachments: videos, pdfAttachments: pdfs, otherAttachments: other }
+    return {
+      imageAttachments: images,
+      videoAttachments: videos,
+      pdfAttachments: pdfs,
+      otherAttachments: other,
+      unavailableAttachments: unavailable,
+    }
   }, [attachments])
 
   if (!attachments || attachments.length === 0) return null
 
+  const downloadableAttachments = attachments.filter((attachment) => hasUsableAttachmentUrl(attachment.url))
+  const canDownloadAny = downloadableAttachments.length > 0
+
   const handleDownloadAll = () => {
-    attachments.forEach((attachment, index) => {
-      if (!attachment.url) return
+    downloadableAttachments.forEach((attachment, index) => {
       const anchor = document.createElement('a')
       anchor.href = attachment.url
       anchor.download = attachment.name || `attachment-${index + 1}`
@@ -65,9 +96,9 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{attachments.length} attachment{attachments.length === 1 ? '' : 's'}</span>
-        <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={handleDownloadAll}>
+        <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={handleDownloadAll} disabled={!canDownloadAny}>
           <Download className="h-3.5 w-3.5" />
-          Download all
+          {canDownloadAny ? 'Download all' : 'Preparing files'}
         </Button>
       </div>
 
@@ -105,6 +136,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
                 </div>
                 <div className="overflow-hidden rounded-md border border-muted/50">
                   <video src={attachment.url} controls className="h-52 w-full bg-black" preload="metadata">
+                    <track kind="captions" label={`${attachment.name || 'Video'} captions`} />
                     Sorry, your browser does not support embedded videos.
                   </video>
                 </div>
@@ -165,6 +197,30 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
                     <span className="sr-only">Download {attachment.name}</span>
                   </a>
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })}
+
+      {unavailableAttachments.map((attachment) => {
+        const key = `${attachment.name}-pending`
+
+        return (
+          <Card key={key} className="border-dashed border-muted/60 bg-muted/10 animate-in fade-in-50 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none">
+            <CardContent className="flex items-center justify-between gap-3 p-3 text-sm">
+              <div className="flex items-center gap-2 truncate">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <div className="min-w-0">
+                  <span className="block truncate" title={attachment.name}>
+                    {hasHighlightTerms(highlightTerms) ? highlightText(attachment.name, highlightTerms) : attachment.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">Attachment is syncing and will be previewable once ready.</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {attachment.size && <span>{attachment.size}</span>}
+                <Badge variant="secondary" className="text-[11px]">Preparing</Badge>
               </div>
             </CardContent>
           </Card>

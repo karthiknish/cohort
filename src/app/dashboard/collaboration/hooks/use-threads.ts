@@ -5,7 +5,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useConvex } from 'convex/react'
 
 import { useToast } from '@/components/ui/use-toast'
+import { usePreview } from '@/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
+import { getPreviewCollaborationThreadReplies } from '@/lib/preview-data'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
 import { THREAD_PAGE_SIZE } from './constants'
@@ -120,10 +122,12 @@ function mapThreadReplyRow(row: ConvexThreadRow): CollaborationMessage {
 
 interface UseThreadsOptions {
   workspaceId: string | null
+  currentUserId: string | null
 }
 
-export function useThreads({ workspaceId }: UseThreadsOptions) {
+export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   const convex = useConvex()
   const queryClient = useQueryClient()
 
@@ -136,6 +140,13 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
 
   const fetchThreadRepliesPage = useCallback(
     async (threadRootId: string, cursor: string | null) => {
+      if (isPreviewMode) {
+        return {
+          replies: cursor ? [] : getPreviewCollaborationThreadReplies(threadRootId, currentUserId),
+          nextCursor: null as string | null,
+        }
+      }
+
       if (!workspaceId) {
         return {
           replies: [] as CollaborationMessage[],
@@ -180,7 +191,7 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
         nextCursor,
       }
     },
-    [convex, workspaceId]
+    [convex, currentUserId, isPreviewMode, workspaceId]
   )
 
   // Keep state maps aligned with active thread set.
@@ -338,6 +349,45 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
     })
   }, [])
 
+  const mutateThreadMessageById = useCallback(
+    (messageId: string, updater: (message: CollaborationMessage) => CollaborationMessage) => {
+      const trimmedMessageId = messageId.trim()
+      if (!trimmedMessageId) return
+
+      setThreadMessagesByRootId((prev) => {
+        let changed = false
+        const nextEntries = Object.entries(prev).map(([threadRootId, replies]) => {
+          const replyIndex = replies.findIndex((message) => message.id === trimmedMessageId)
+          if (replyIndex === -1) {
+            return [threadRootId, replies] as const
+          }
+
+          const currentReply = replies[replyIndex]
+          if (!currentReply) {
+            return [threadRootId, replies] as const
+          }
+
+          const updatedReply = updater(currentReply)
+          if (updatedReply === currentReply) {
+            return [threadRootId, replies] as const
+          }
+
+          changed = true
+          const nextReplies = [...replies]
+          nextReplies[replyIndex] = updatedReply
+          return [threadRootId, nextReplies] as const
+        })
+
+        if (!changed) {
+          return prev
+        }
+
+        return Object.fromEntries(nextEntries)
+      })
+    },
+    []
+  )
+
   return {
     threadMessagesByRootId,
     threadNextCursorByRootId,
@@ -348,5 +398,6 @@ export function useThreads({ workspaceId }: UseThreadsOptions) {
     clearThreadReplies,
     addThreadReply,
     addThreadReplyToState,
+    mutateThreadMessageById,
   }
 }

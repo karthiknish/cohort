@@ -27,9 +27,16 @@ export function CollaborationDashboard() {
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const currentUserId = user?.id ?? null
+  const currentUserName = user?.name?.trim() || user?.email?.trim() || 'You'
+  const currentUserRole = user?.role ?? null
   
   const collab = useCollaborationData()
-  const dm = useDirectMessages({ workspaceId, currentUserId })
+  const dm = useDirectMessages({
+    workspaceId,
+    currentUserId,
+    currentUserName,
+    currentUserRole,
+  })
   const clearThreadReplies = collab.clearThreadReplies
   const selectedChannelId = collab.selectedChannel?.id ?? null
   const collabChannels = collab.channels
@@ -47,6 +54,11 @@ export function CollaborationDashboard() {
   const channelParamHandledRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (selectedChannelId === null) {
+      clearThreadReplies()
+      return
+    }
+
     clearThreadReplies()
   }, [clearThreadReplies, selectedChannelId])
 

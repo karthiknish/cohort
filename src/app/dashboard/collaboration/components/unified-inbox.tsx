@@ -16,8 +16,7 @@ import type { Channel } from '../types'
 import type { ChannelSummary, PendingAttachment, TypingParticipant, ThreadMessagesState, ThreadCursorsState, ThreadLoadingState, ThreadErrorsState, ReactionPendingState, SendMessageOptions } from '../hooks/types'
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import { CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
-import { UnifiedMessagePane, type MessagePaneHeaderInfo } from './unified-message-pane'
-import { collaborationToUnifiedMessage, type UnifiedMessage } from './message-list'
+import { UnifiedMessagePane } from './unified-message-pane'
 import { CollaborationSidebar } from './sidebar'
 
 type SourceFilter = 'all' | 'direct_message' | 'channel'
@@ -134,9 +133,7 @@ export function UnifiedInbox({
   isLoadingChannels,
   isLoadingDMs,
   channelMessages,
-  visibleMessages,
   channelParticipants,
-  messagesError,
   isCurrentChannelLoading,
   onLoadMore,
   canLoadMore,
@@ -145,7 +142,6 @@ export function UnifiedInbox({
   onMessageInputChange,
   onSendMessage,
   sending,
-  isSendDisabled,
   pendingAttachments,
   onAddAttachments,
   onRemoveAttachment,
@@ -160,7 +156,6 @@ export function UnifiedInbox({
   onToggleReaction,
   messageUpdatingId,
   messageDeletingId,
-  messagesEndRef,
   currentUserId,
   currentUserRole,
   threadMessagesByRootId,
@@ -171,7 +166,6 @@ export function UnifiedInbox({
   onLoadThreadReplies,
   onLoadMoreThreadReplies,
   onMarkThreadAsRead,
-  onClearThreadReplies,
   reactionPendingByMessage,
   sharedFiles,
   deepLinkMessageId,
@@ -191,7 +185,6 @@ export function UnifiedInbox({
 }: UnifiedInboxProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
-  const [messageSearchQuery, setMessageSearchQuery] = useState('')
   const [dmMessageInputByConversation, setDmMessageInputByConversation] = useState<Record<string, string>>({})
 
   const activeDmLegacyId = selectedDM?.legacyId ?? null
@@ -503,7 +496,7 @@ export function UnifiedInbox({
           onLoadMore={selectedChannel ? () => onLoadMore(selectedChannel.id) : () => {}}
           messageInput={messageInput}
           onMessageInputChange={onMessageInputChange}
-          onSendMessage={async (content: string) => { await onSendMessage() }}
+          onSendMessage={async () => { await onSendMessage() }}
           isSending={sending || uploading}
           pendingAttachments={pendingAttachments}
           uploadingAttachments={uploading}
@@ -551,6 +544,8 @@ export function UnifiedInbox({
             createdAtMs: msg.createdAtMs,
             edited: msg.edited,
             deleted: msg.deleted,
+            deletedBy: msg.deletedBy ?? undefined,
+            deletedAt: typeof msg.deletedAtMs === 'number' ? new Date(msg.deletedAtMs).toISOString() : undefined,
             reactions: msg.reactions ?? undefined,
             attachments: msg.attachments?.map(a => ({
               url: a.url,

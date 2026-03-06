@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from 'convex/react'
 
 import { projectsApi } from '@/lib/convex-api'
+import { getPreviewProjects } from '@/lib/preview-data'
 import type { ProjectRecord } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 
@@ -55,7 +56,13 @@ export function useProjectsData({
   ) as ProjectRow[] | undefined
 
   useEffect(() => {
-    if (isPreviewMode || !workspaceId || !userId) {
+    if (isPreviewMode) {
+      setProjects(getPreviewProjects(selectedClientId ?? null))
+      setProjectsLoading(false)
+      return
+    }
+
+    if (!workspaceId || !userId) {
       setProjects([])
       setProjectsLoading(false)
       return
@@ -88,7 +95,7 @@ export function useProjectsData({
 
     setProjects(mapped)
     setProjectsLoading(false)
-  }, [isPreviewMode, projectsRealtime, userId, workspaceId])
+  }, [isPreviewMode, projectsRealtime, selectedClientId, userId, workspaceId])
 
   return { projects, projectsLoading }
 }

@@ -9,10 +9,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
+import { usePreview } from '@/contexts/preview-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
 import { useAction } from 'convex/react'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi, creativesCopyApi } from '@/lib/convex-api'
+import { isoDaysAgo } from '@/lib/preview-data'
 
 import { CreativeHeader } from './components/creative-header'
 import { CreativeSocialPreview } from './components/creative-social-preview'
@@ -42,11 +44,164 @@ function isProviderId(value: string): value is ProviderId {
   return value === 'google' || value === 'tiktok' || value === 'linkedin' || value === 'facebook'
 }
 
+function buildPreviewCreative(
+  providerId: ProviderId,
+  campaignId: string,
+  creativeId: string,
+  campaignName: string,
+): Creative {
+  const baseCreative = {
+    providerId,
+    creativeId,
+    campaignId,
+    campaignName,
+    status: providerId === 'google' ? 'ENABLED' : 'ACTIVE',
+  }
+
+  switch (providerId) {
+    case 'linkedin':
+      return {
+        ...baseCreative,
+        name: 'Executive Pipeline Narrative',
+        type: 'image',
+        headlines: ['Turn paid media into qualified pipeline, not vanity clicks'],
+        descriptions: ['Position your team as the clear category leader with proof-led creative, sharper ICP targeting, and landing pages designed for decision makers.'],
+        imageUrl: 'https://placehold.co/1200x1200/png?text=LinkedIn+Creative',
+        landingPageUrl: 'https://techcorp.example/demo',
+        callToAction: 'LEARN_MORE',
+        pageName: 'Tech Corp',
+        pageProfileImageUrl: 'https://placehold.co/80x80/png?text=TC',
+        metrics: {
+          impressions: 48200,
+          clicks: 912,
+          spend: 1240,
+          conversions: 38,
+        },
+      }
+    case 'google':
+      return {
+        ...baseCreative,
+        name: 'Brand Search Expansion',
+        type: 'search',
+        headlines: ['Capture demand already looking for you'],
+        descriptions: ['Tighten intent capture, lower wasted spend, and direct high-intent traffic into a conversion-first landing flow.'],
+        landingPageUrl: 'https://startupxyz.example/waitlist',
+        callToAction: 'SIGN_UP',
+        pageName: 'StartupXYZ',
+        metrics: {
+          impressions: 36100,
+          clicks: 1348,
+          spend: 880,
+          conversions: 71,
+        },
+      }
+    case 'tiktok':
+      return {
+        ...baseCreative,
+        name: 'Launch Momentum Cutdown',
+        type: 'video',
+        headlines: ['Make launch week impossible to ignore'],
+        descriptions: ['Fast-paced product proof, creator energy, and a simple CTA built for waitlist growth during launch week.'],
+        imageUrl: 'https://placehold.co/1080x1920/png?text=TikTok+Preview',
+        thumbnailUrl: 'https://placehold.co/1080x1920/png?text=TikTok+Preview',
+        landingPageUrl: 'https://startupxyz.example/app',
+        callToAction: 'DOWNLOAD',
+        pageName: 'StartupXYZ',
+        pageProfileImageUrl: 'https://placehold.co/80x80/png?text=SX',
+        metrics: {
+          impressions: 112000,
+          clicks: 2840,
+          spend: 940,
+          conversions: 54,
+        },
+      }
+    case 'facebook':
+    default:
+      return {
+        ...baseCreative,
+        name: 'Spring Collection Hero',
+        type: 'image',
+        headlines: ['Make every scroll feel like a store visit'],
+        descriptions: ['Showcase your spring collection with dynamic product storytelling, stronger urgency, and repeat-purchase messaging built for higher AOV.'],
+        imageUrl: 'https://placehold.co/1200x1200/png?text=Meta+Creative',
+        landingPageUrl: 'https://retailstore.example/spring',
+        callToAction: 'SHOP_NOW',
+        pageName: 'Retail Store',
+        pageProfileImageUrl: 'https://placehold.co/80x80/png?text=RS',
+        metrics: {
+          impressions: 84600,
+          clicks: 1834,
+          spend: 640,
+          conversions: 96,
+        },
+      }
+  }
+}
+
+function buildPreviewCreativeMetrics(
+  providerId: ProviderId,
+  creativeId: string,
+  campaignId: string,
+  days: string,
+): NormalizedAdMetric[] {
+  const dayCount = Math.max(1, Number.parseInt(days, 10) || 7)
+  const baseByProvider: Record<ProviderId, { impressions: number; clicks: number; spend: number; conversions: number; revenue: number }> = {
+    google: { impressions: 5200, clicks: 180, spend: 126, conversions: 9, revenue: 950 },
+    facebook: { impressions: 9800, clicks: 220, spend: 88, conversions: 11, revenue: 760 },
+    linkedin: { impressions: 2600, clicks: 52, spend: 178, conversions: 3, revenue: 1100 },
+    tiktok: { impressions: 13200, clicks: 320, spend: 104, conversions: 6, revenue: 620 },
+  }
+
+  const base = baseByProvider[providerId]
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const impressions = Math.round(base.impressions * (0.88 + index * 0.03))
+    const clicks = Math.round(base.clicks * (0.9 + index * 0.025))
+    const spend = Math.round(base.spend * (0.92 + index * 0.02) * 100) / 100
+    const conversions = Math.round(base.conversions * (0.86 + index * 0.04))
+    const revenue = Math.round(base.revenue * (0.9 + index * 0.03))
+
+    return {
+      providerId,
+      adId: creativeId,
+      campaignId,
+      date: isoDaysAgo(dayCount - index - 1).split('T')[0] ?? isoDaysAgo(dayCount - index - 1),
+      impressions,
+      clicks,
+      spend,
+      conversions,
+      revenue,
+      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+      cpc: clicks > 0 ? spend / clicks : 0,
+      roas: spend > 0 ? revenue / spend : 0,
+    }
+  })
+}
+
+function buildPreviewCopySuggestions(kind: 'headlines' | 'captions', creative: Creative, campaignName: string): string[] {
+  const baseName = creative.pageName || creative.campaignName || creative.name || campaignName
+
+  if (kind === 'headlines') {
+    return [
+      `${baseName} with clearer performance proof`,
+      `The fastest route from impression to action for ${baseName}`,
+      `Creative built to convert high-intent buyers, not just attract clicks`,
+    ]
+  }
+
+  return [
+    `Give ${baseName} a stronger hook, sharper social proof, and a cleaner CTA so the ad does more than win attention. It should push people into the next step with less friction.`,
+    `Use this version when you want the first sentence to establish urgency, the middle section to prove credibility, and the close to point directly at the offer.`,
+    `This sample caption keeps the message concise while still covering the customer problem, the core promise, and the action worth taking right now.`,
+  ]
+}
+
 export default function CreativeDetailPage() {
   const params = useParams<{ providerId: string; campaignId: string; creativeId: string }>()
   const searchParams = useSearchParams()
   const { selectedClientId } = useClientContext()
   const { user } = useAuth()
+  const { isPreviewMode } = usePreview()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
   const listCreatives = useAction(adsCreativesApi.listCreatives)
@@ -87,6 +242,12 @@ export default function CreativeDetailPage() {
       return
     }
 
+    if (isPreviewMode) {
+      setCreative(buildPreviewCreative(params.providerId, params.campaignId, params.creativeId, campaignName))
+      setLoading(false)
+      return
+    }
+
     if (!workspaceId) {
       setLoading(false)
       return
@@ -120,12 +281,20 @@ export default function CreativeDetailPage() {
       .finally(() => {
         setLoading(false)
       })
-  }, [listCreatives, params.providerId, params.campaignId, params.creativeId, selectedClientId, workspaceId])
+  }, [campaignName, isPreviewMode, listCreatives, params.providerId, params.campaignId, params.creativeId, selectedClientId, workspaceId])
 
   const fetchMetrics = useCallback(async () => {
     if (!isProviderId(params.providerId)) {
       setCreativeMetrics(null)
       setMetricsError('Unsupported provider')
+      setMetricsLoading(false)
+      return
+    }
+
+    if (isPreviewMode) {
+      setMetricsLoading(true)
+      setMetricsError(null)
+      setCreativeMetrics(buildPreviewCreativeMetrics(params.providerId, params.creativeId, params.campaignId, days))
       setMetricsLoading(false)
       return
     }
@@ -169,7 +338,7 @@ export default function CreativeDetailPage() {
       .finally(() => {
         setMetricsLoading(false)
       })
-  }, [listAdMetrics, params.providerId, params.campaignId, params.creativeId, days, selectedClientId, creative?.adGroupId, workspaceId])
+  }, [days, isPreviewMode, listAdMetrics, params.providerId, params.campaignId, params.creativeId, selectedClientId, creative?.adGroupId, workspaceId])
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {
@@ -267,6 +436,50 @@ export default function CreativeDetailPage() {
     }
 
     const setLoading = kind === 'headlines' ? setGeneratingHeadlines : setGeneratingDescriptions
+
+    if (isPreviewMode) {
+      setLoading(true)
+
+      const additions = buildPreviewCopySuggestions(kind, creative, campaignName)
+
+      if (kind === 'headlines') {
+        setEditedHeadlines((prev) => {
+          const base = prev.length > 0 ? prev : (creative.headlines ?? [])
+          const seen = new Set(base.map((value) => value.trim().toLowerCase()).filter(Boolean))
+          const uniqueAdditions = additions.filter((value) => {
+            const key = value.trim().toLowerCase()
+            if (!key || seen.has(key)) {
+              return false
+            }
+            seen.add(key)
+            return true
+          })
+          return [...base, ...uniqueAdditions]
+        })
+      } else {
+        setEditedDescriptions((prev) => {
+          const base = prev.length > 0 ? prev : (creative.descriptions ?? [])
+          const seen = new Set(base.map((value) => value.trim().toLowerCase()).filter(Boolean))
+          const uniqueAdditions = additions.filter((value) => {
+            const key = value.trim().toLowerCase()
+            if (!key || seen.has(key)) {
+              return false
+            }
+            seen.add(key)
+            return true
+          })
+          return [...base, ...uniqueAdditions]
+        })
+      }
+
+      toast({
+        title: kind === 'headlines' ? 'Sample headlines added' : 'Sample captions added',
+        description: 'Preview mode generated local-only sample variants for this session.',
+      })
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
 
     await generateCopyAction({
@@ -340,9 +553,34 @@ export default function CreativeDetailPage() {
       .finally(() => {
         setLoading(false)
       })
-  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
+  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, isPreviewMode, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
 
   const handleSave = async () => {
+    if (isPreviewMode) {
+      if (!creative) {
+        return
+      }
+
+      const normalizedHeadlines = editedHeadlines.map((headline) => headline.trim()).filter(Boolean)
+      const normalizedDescriptions = editedDescriptions.map((description) => description.trim()).filter(Boolean)
+      const normalizedCta = editedCta.trim()
+      const normalizedLandingPage = editedLandingPage.trim()
+
+      setCreative({
+        ...creative,
+        headlines: normalizedHeadlines,
+        descriptions: normalizedDescriptions,
+        callToAction: normalizedCta,
+        landingPageUrl: normalizedLandingPage,
+      })
+      setIsEditing(false)
+      toast({
+        title: 'Sample creative updated',
+        description: 'Preview mode applied your edits locally for this session only.',
+      })
+      return
+    }
+
     if (!workspaceId) {
       toast({
         title: 'Sign in required',

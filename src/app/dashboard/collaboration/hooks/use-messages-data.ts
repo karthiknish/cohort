@@ -5,9 +5,11 @@ import { useConvex, useMutation, useQuery } from 'convex/react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { useToast } from '@/components/ui/use-toast'
+import { usePreview } from '@/contexts/preview-context'
 import { api, collaborationApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
+import { getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { CollaborationChannelType } from '@/types/collaboration'
@@ -26,7 +28,6 @@ interface UseMessagesDataOptions {
   workspaceId: string | null
   currentUserId: string | null
   selectedChannel: Channel | null
-  selectedChannelId: string | null
   channels: Channel[]
   channelParticipants: ClientTeamMember[]
   fallbackDisplayName: string
@@ -56,11 +57,21 @@ function toChannelType(value: unknown, fallback: CollaborationChannelType): Coll
   return fallback
 }
 
+function previewPendingAttachmentToCollaborationAttachment(
+  attachment: PendingAttachment,
+): CollaborationAttachment {
+  return {
+    name: attachment.name,
+    url: '#',
+    type: attachment.mimeType,
+    size: attachment.sizeLabel,
+  }
+}
+
 export function useMessagesData({
   workspaceId,
   currentUserId,
   selectedChannel,
-  selectedChannelId,
   channels,
   channelParticipants,
   fallbackDisplayName,
@@ -71,6 +82,7 @@ export function useMessagesData({
   uploadAttachments,
 }: UseMessagesDataOptions) {
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   const convex = useConvex()
   const createMessage = useMutation(collaborationApi.createMessage)
   const updateSharedTo = useMutation(collaborationApi.updateSharedTo)
@@ -95,7 +107,7 @@ export function useMessagesData({
 
   const unreadCountsResult = useQuery(
     collaborationApi.getUnreadCountsByChannel,
-    workspaceId && currentUserId
+    !isPreviewMode && workspaceId && currentUserId
       ? {
           workspaceId: String(workspaceId),
           userId: String(currentUserId),
@@ -127,7 +139,7 @@ export function useMessagesData({
 
   const threadUnreadCountsResult = useQuery(
     collaborationApi.getThreadUnreadCounts,
-    workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
+    !isPreviewMode && workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
       ? {
           workspaceId: String(workspaceId),
           channelType: selectedChannel.type,
@@ -138,6 +150,49 @@ export function useMessagesData({
         }
       : 'skip'
   )
+
+  useEffect(() => {
+    if (!isPreviewMode || channels.length === 0) {
+      return
+    }
+
+    setMessagesByChannel((prev) => {
+      let changed = false
+      const next = { ...prev }
+
+      for (const channel of channels) {
+        if (Array.isArray(next[channel.id])) {
+          continue
+        }
+
+        next[channel.id] = getPreviewCollaborationMessages(
+          channel.type,
+          channel.clientId ?? null,
+          channel.projectId ?? null,
+          currentUserId,
+        )
+        changed = true
+      }
+
+      return changed ? next : prev
+    })
+
+    setNextCursorByChannel((prev) => {
+      let changed = false
+      const next = { ...prev }
+
+      for (const channel of channels) {
+        if (next[channel.id] === null) {
+          continue
+        }
+
+        next[channel.id] = null
+        changed = true
+      }
+
+      return changed ? next : prev
+    })
+  }, [channels, currentUserId, isPreviewMode])
 
   const participantNameMap = useMemo(
     () => new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant])),
@@ -157,6 +212,23 @@ export function useMessagesData({
   const isSearchActive = Boolean(normalizedMessageSearch)
   const activeMessagesError = isSearchActive ? searchError : messagesError
   const channelUnreadCounts = useMemo(() => {
+    if (isPreviewMode) {
+      return Object.fromEntries(
+        channels.map((channel) => {
+          const unreadCount = (messagesByChannel[channel.id] ?? []).filter((message) => {
+            if (message.isDeleted || message.parentMessageId) return false
+            if (!currentUserId) return false
+            if (message.senderId === currentUserId) return false
+
+            const readBy = Array.isArray(message.readBy) ? message.readBy : []
+            return !readBy.includes(currentUserId)
+          }).length
+
+          return [channel.id, unreadCount]
+        })
+      )
+    }
+
     const source = (unreadCountsResult as { countsByChannelId?: Record<string, number> } | null)?.countsByChannelId
     if (!source || typeof source !== 'object') {
       return {} as Record<string, number>
@@ -168,7 +240,7 @@ export function useMessagesData({
         Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0,
       ]),
     )
-  }, [unreadCountsResult])
+  }, [channels, currentUserId, isPreviewMode, messagesByChannel, unreadCountsResult])
   const threadUnreadCountsByRootId = useMemo(() => {
     const source =
       (threadUnreadCountsResult as { countsByThreadRootId?: Record<string, number> } | null)?.countsByThreadRootId
@@ -245,6 +317,43 @@ export function useMessagesData({
     setSearchError(null)
 
     const parsed = parseSearchQuery(normalizedMessageSearch)
+
+    if (isPreviewMode) {
+      const startMs = parsed.start ? Date.parse(parsed.start) : NaN
+      const endMs = parsed.end ? Date.parse(parsed.end) : NaN
+      const channelMessagesForSearch = messagesByChannel[selectedChannel.id] ?? []
+
+      const results = channelMessagesForSearch
+        .filter((message) => {
+          const createdAtMs = message.createdAt ? Date.parse(message.createdAt) : NaN
+          const text = `${message.content} ${message.senderName}`.toLowerCase()
+          const matchesQuery = !parsed.q || parsed.q.toLowerCase().split(/\s+/).every((term) => text.includes(term))
+          const matchesSender = !parsed.sender || message.senderName.toLowerCase().includes(parsed.sender.toLowerCase())
+          const attachmentSearch = parsed.attachment?.toLowerCase() ?? null
+          const matchesAttachment =
+            !attachmentSearch ||
+            (message.attachments ?? []).some((attachment) =>
+              attachment.name.toLowerCase().includes(attachmentSearch)
+            )
+          const mentionSearch = parsed.mention?.toLowerCase() ?? null
+          const matchesMention =
+            !mentionSearch ||
+            (message.mentions ?? []).some((mention) => {
+              return mention.name.toLowerCase().includes(mentionSearch) || mention.slug.toLowerCase().includes(mentionSearch)
+            })
+          const matchesStart = !Number.isFinite(startMs) || (Number.isFinite(createdAtMs) && createdAtMs >= startMs)
+          const matchesEnd = !Number.isFinite(endMs) || (Number.isFinite(createdAtMs) && createdAtMs <= endMs)
+
+          return matchesQuery && matchesSender && matchesAttachment && matchesMention && matchesStart && matchesEnd
+        })
+        .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
+
+      setSearchResults(results)
+      setSearchHighlights(parsed.highlights)
+      setSearchError(null)
+      setSearchingMessages(false)
+      return
+    }
 
     const startMs = parsed.start ? Date.parse(parsed.start) : NaN
     const endMs = parsed.end ? Date.parse(parsed.end) : NaN
@@ -325,14 +434,16 @@ export function useMessagesData({
 
     return
     // eslint_disable-next-line react-hooks/exhaustive-deps
-  }, [normalizedMessageSearch, parseSearchQuery, selectedChannelId])
+  }, [convex, isPreviewMode, messagesByChannel, normalizedMessageSearch, parseSearchQuery, selectedChannel, workspaceId])
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
     const result = new Map<string, ChannelSummary>()
     Object.entries(messagesByChannel).forEach(([channelId, list]) => {
       if (list && list.length > 0) {
-        const last = list[list.length - 1]! // Safe: we verified list.length > 0
-        result.set(channelId, { lastMessage: last.content, lastTimestamp: last.createdAt })
+        const last = list[list.length - 1]
+        if (last) {
+          result.set(channelId, { lastMessage: last.content, lastTimestamp: last.createdAt })
+        }
       }
     })
     return result
@@ -368,7 +479,8 @@ export function useMessagesData({
     loadMoreThreadReplies,
     clearThreadReplies,
     addThreadReplyToState,
-  } = useThreads({ workspaceId })
+    mutateThreadMessageById,
+  } = useThreads({ workspaceId, currentUserId })
 
   const mutateChannelMessages = useCallback(
     (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => {
@@ -392,14 +504,17 @@ export function useMessagesData({
   } = useMessageActions({
     workspaceId,
     userId: currentUserId,
+    isPreviewMode,
     channels,
     channelParticipants,
     mutateChannelMessages,
+    mutateThreadMessageById,
   })
 
   useRealtimeMessages({
     workspaceId,
     selectedChannel,
+    currentUserId,
     setMessagesByChannel,
     setNextCursorByChannel,
     setLoadingChannelId,
@@ -435,7 +550,7 @@ export function useMessagesData({
   )
 
   const handleMarkSelectedChannelAsRead = useCallback(async () => {
-    if (!workspaceId || !currentUserId || !selectedChannel) {
+    if (!currentUserId || !selectedChannel || (!isPreviewMode && !workspaceId)) {
       return
     }
 
@@ -461,6 +576,28 @@ export function useMessagesData({
     const createdAtMs = latestUnread.createdAt ? Date.parse(latestUnread.createdAt) : NaN
 
     try {
+      if (isPreviewMode) {
+        mutateChannelMessages(selectedChannel.id, (messages) =>
+          messages.map((message) => {
+            if (message.isDeleted || message.senderId === currentUserId) {
+              return message
+            }
+
+            const readBy = Array.isArray(message.readBy) ? message.readBy : []
+            if (readBy.includes(currentUserId)) {
+              return message
+            }
+
+            return {
+              ...message,
+              readBy: [...readBy, currentUserId],
+            }
+          })
+        )
+        lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
+        return
+      }
+
       await markChannelAsRead({
         workspaceId: String(workspaceId),
         channelType: selectedChannel.type,
@@ -474,11 +611,11 @@ export function useMessagesData({
     } catch (error) {
       logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
     }
-  }, [channelMessages, currentUserId, markChannelAsRead, selectedChannel, workspaceId])
+  }, [channelMessages, currentUserId, isPreviewMode, markChannelAsRead, mutateChannelMessages, selectedChannel, workspaceId])
 
   const handleMarkThreadAsRead = useCallback(
     async (threadRootId: string, beforeMs?: number) => {
-      if (!workspaceId || !currentUserId || !selectedChannel) {
+      if (!currentUserId || !selectedChannel || (!isPreviewMode && !workspaceId)) {
         return
       }
 
@@ -488,6 +625,10 @@ export function useMessagesData({
       }
 
       try {
+        if (isPreviewMode) {
+          return
+        }
+
         await markThreadAsReadMutation({
           workspaceId: String(workspaceId),
           channelType: selectedChannel.type,
@@ -501,7 +642,7 @@ export function useMessagesData({
         logError(error, 'useCollaborationData:handleMarkThreadAsRead')
       }
     },
-    [currentUserId, markThreadAsReadMutation, selectedChannel, workspaceId],
+    [currentUserId, isPreviewMode, markThreadAsReadMutation, selectedChannel, workspaceId],
   )
 
   useEffect(() => {
@@ -516,7 +657,7 @@ export function useMessagesData({
     return () => {
       window.clearTimeout(timer)
     }
-  }, [channelMessages, handleMarkSelectedChannelAsRead, selectedChannel])
+  }, [handleMarkSelectedChannelAsRead, selectedChannel])
 
   // Send message to external channels based on notification preferences
   const sendToExternalPlatforms = useCallback(
@@ -596,7 +737,9 @@ export function useMessagesData({
       try {
         await stopTyping()
 
-        const uploadedAttachments = await uploadAttachments(pendingAttachments)
+        const uploadedAttachments = isPreviewMode
+          ? pendingAttachments.map(previewPendingAttachmentToCollaborationAttachment)
+          : await uploadAttachments(pendingAttachments)
 
         const mentionMatches = extractMentionsFromContent(trimmedContent)
         const mentionMetadata = mentionMatches.map((mention) => {
@@ -604,7 +747,7 @@ export function useMessagesData({
           return { slug: mention.slug, name: participant?.name ?? mention.name, role: participant?.role ?? null }
         })
 
-        if (!workspaceId || !currentUserId) {
+        if (!currentUserId || (!isPreviewMode && !workspaceId)) {
           return
         }
 
@@ -614,6 +757,67 @@ export function useMessagesData({
         const resolvedThreadRootId = options?.parentMessageId
           ? (parentMessage?.threadRootId || parentMessage?.id || options.parentMessageId)
           : null
+
+        if (isPreviewMode) {
+          const messageId = uuidv4()
+          const createdMessage: CollaborationMessage = {
+            id: messageId,
+            channelType: selectedChannel.type,
+            clientId: selectedChannel.clientId ?? null,
+            projectId: selectedChannel.projectId ?? null,
+            senderId: String(currentUserId),
+            senderName: resolveSenderDetails().senderName,
+            senderRole: resolveSenderDetails().senderRole,
+            content: trimmedContent,
+            createdAt: new Date().toISOString(),
+            updatedAt: null,
+            isEdited: false,
+            deletedAt: null,
+            deletedBy: null,
+            isDeleted: false,
+            attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+            format: 'markdown',
+            mentions: mentionMetadata.length > 0 ? mentionMetadata : undefined,
+            reactions: [],
+            readBy: [String(currentUserId)],
+            deliveredTo: [String(currentUserId)],
+            isPinned: false,
+            pinnedAt: null,
+            pinnedBy: null,
+            sharedTo: undefined,
+            parentMessageId: options?.parentMessageId ?? null,
+            threadRootId: resolvedThreadRootId,
+            threadReplyCount: undefined,
+            threadLastReplyAt: null,
+          }
+
+          mutateChannelMessages(channelId, (messages) => {
+            if (createdMessage.parentMessageId) {
+              return messages.map((message) => {
+                if (message.id !== resolvedThreadRootId) {
+                  return message
+                }
+
+                return {
+                  ...message,
+                  threadReplyCount: (message.threadReplyCount ?? 0) + 1,
+                  threadLastReplyAt: createdMessage.createdAt,
+                }
+              })
+            }
+
+            return [...messages, createdMessage]
+          })
+
+          if (resolvedThreadRootId) {
+            addThreadReplyToState(resolvedThreadRootId, createdMessage)
+          }
+
+          clearAttachments()
+          setMessageInputState('')
+          toast({ title: 'Preview message sent', description: 'This only updates the sample collaboration feed.' })
+          return
+        }
 
         const messageId = uuidv4()
         await createMessage({
@@ -747,6 +951,7 @@ export function useMessagesData({
       createMessage,
       convex,
       currentUserId,
+      isPreviewMode,
       messageInput,
       mutateChannelMessages,
       pendingAttachments,
@@ -763,6 +968,10 @@ export function useMessagesData({
 
   const handleLoadMore = useCallback(
     async (channelId: string) => {
+      if (isPreviewMode) {
+        return
+      }
+
       const nextCursor = nextCursorByChannel[channelId]
       if (!nextCursor) return
 
@@ -857,7 +1066,7 @@ export function useMessagesData({
         setLoadingMoreChannelId(null)
       }
     },
-    [channels, convex, mutateChannelMessages, nextCursorByChannel, toast, workspaceId]
+    [channels, convex, isPreviewMode, mutateChannelMessages, nextCursorByChannel, toast, workspaceId]
   )
 
   const setMessageInput = useCallback(

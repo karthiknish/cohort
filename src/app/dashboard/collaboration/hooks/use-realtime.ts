@@ -117,6 +117,7 @@ function mapConvexRealtimeMessageRow(row: ConvexMessageRow): CollaborationMessag
 interface UseRealtimeMessagesOptions {
   workspaceId: string | null
   selectedChannel: Channel | null
+  currentUserId?: string | null
   setMessagesByChannel: React.Dispatch<React.SetStateAction<MessagesByChannelState>>
   setNextCursorByChannel: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   setLoadingChannelId: React.Dispatch<React.SetStateAction<string | null>>
@@ -127,6 +128,7 @@ interface UseRealtimeMessagesOptions {
 export function useRealtimeMessages({
   workspaceId,
   selectedChannel,
+  currentUserId,
   setMessagesByChannel,
   setNextCursorByChannel,
   setLoadingChannelId,
@@ -231,10 +233,15 @@ export function useRealtimeMessages({
     }
 
     if (isPreviewMode) {
-      const previewMessages = getPreviewCollaborationMessages(channelClientId, channelProjectId)
+      const previewMessages = getPreviewCollaborationMessages(
+        channelType,
+        channelClientId,
+        channelProjectId,
+        currentUserId,
+      )
       setMessagesByChannel((prev) => {
         const existing = prev[channelId]
-        if (existing && existing.length === previewMessages.length) {
+        if (Array.isArray(existing)) {
           return prev
         }
         return {
@@ -252,7 +259,7 @@ export function useRealtimeMessages({
       setLoadingChannelId(null)
       setMessagesError(null)
     }
-  }, [channelClientId, channelId, channelProjectId, channelType, convexEnabled, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel])
+  }, [channelClientId, channelId, channelProjectId, channelType, convexEnabled, currentUserId, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel])
 }
 
 interface UseRealtimeTypingOptions {
@@ -269,10 +276,12 @@ interface ConvexTypingRow {
 
 export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseRealtimeTypingOptions) {
   const [typingParticipants, setTypingParticipants] = useState<TypingParticipant[]>([])
+  const { isPreviewMode } = usePreview()
 
   const channelId = selectedChannel?.id ?? null
 
   const convexEnabled =
+    !isPreviewMode &&
     Boolean(userId) &&
     Boolean(workspaceId) &&
     Boolean(channelId)

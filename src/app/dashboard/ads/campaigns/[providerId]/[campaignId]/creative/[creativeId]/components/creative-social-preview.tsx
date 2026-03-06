@@ -4,9 +4,7 @@ import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import {
   fadeInUpVariants,
   slideInLeftVariants,
-  slideInRightVariants,
   scaleVariants,
-  shimmerVariants,
   transitions,
   easings,
 } from '@/lib/dashboard-animations'
@@ -14,7 +12,6 @@ import {
   FileText,
   Image as ImageIcon,
   Video,
-  ZoomIn,
   Heart,
   MessageCircle,
   Share2,
@@ -23,10 +20,8 @@ import {
   Facebook,
   Instagram,
   Linkedin,
-  Twitter,
   Globe,
   Activity,
-  Smartphone,
   RectangleVertical,
   Square,
   Play,
@@ -38,11 +33,10 @@ import { cn } from '@/lib/utils'
 import { motionLoopSeconds } from '@/lib/animation-system'
 
 import type { Creative } from './types'
-import { getTypeIcon, isDirectVideoUrl, formatCTALabel } from './helpers'
+import { isDirectVideoUrl, formatCTALabel } from './helpers'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export type CreativePerformanceSummary = AdMetricsSummary & {
@@ -95,8 +89,11 @@ export function CreativeSocialPreview(props: {
             onPause={() => setIsPlaying(false)}
             onEnded={() => setIsPlaying(false)}
             style={{ imageRendering: 'crisp-edges' }}
-          />
+          >
+            <track kind="captions" />
+          </video>
           <button
+            type="button"
             onClick={togglePlayPause}
             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
           >
@@ -304,6 +301,59 @@ export function CreativeSocialPreview(props: {
             </div>
           )}
 
+          {activePlatform === 'tiktok' && (
+            <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden text-left">
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center font-black text-sm overflow-hidden shrink-0">
+                    {creative.pageProfileImageUrl && !profileImageError ? (
+                      <NextImage
+                        src={creative.pageProfileImageUrl}
+                        alt=""
+                        width={40}
+                        height={40}
+                        unoptimized
+                        className="h-full w-full object-cover"
+                        onError={() => setProfileImageError(true)}
+                        style={{ imageRendering: 'crisp-edges' }}
+                      />
+                    ) : (
+                      (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold leading-tight truncate">{creative.pageName || creative.campaignName || campaignName}</p>
+                    <p className="text-[11px] opacity-60 leading-tight">Sponsored content</p>
+                  </div>
+                </div>
+                <MoreHorizontal className="h-4 w-4 opacity-40" />
+              </div>
+
+              {renderMedia()}
+
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-6 text-[11px] font-bold opacity-80">
+                  <span className="flex items-center gap-1.5"><Heart className="h-4 w-4" /> 12.4K</span>
+                  <span className="flex items-center gap-1.5"><MessageCircle className="h-4 w-4" /> 418</span>
+                  <span className="flex items-center gap-1.5"><Share2 className="h-4 w-4" /> 109</span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-[13px] font-bold truncate">{creative.headlines?.[0] || displayName}</p>
+                  <p className="text-xs leading-relaxed line-clamp-3 text-black/80">
+                    {creative.descriptions?.[0] || 'No description available.'}
+                  </p>
+                </div>
+
+                {creative.callToAction && (
+                  <Button className="w-full h-10 rounded-xl bg-black text-white hover:bg-black/90 text-[11px] font-black uppercase tracking-widest">
+                    {formatCTALabel(creative.callToAction)}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {activePlatform === 'facebook' && (
             <div className="bg-background flex flex-col relative">
               {/* Account Header */}
@@ -385,7 +435,7 @@ export function CreativeSocialPreview(props: {
       : ['facebook', 'instagram'] // Meta ads show Facebook & Instagram
 
   // Default to the first available platform
-  const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0]!)
+  const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0] ?? 'facebook')
 
   return (
     <LazyMotion features={domAnimation}>
@@ -401,6 +451,7 @@ export function CreativeSocialPreview(props: {
             {/* Aspect Ratio Toggle */}
             <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/30 border border-muted-foreground/10">
               <button
+                type="button"
                 onClick={() => setAspectRatio('feed')}
                 className={cn(
                   "h-8 w-8 rounded-md flex items-center justify-center transition-all",
@@ -411,6 +462,7 @@ export function CreativeSocialPreview(props: {
                 <Square className="h-4 w-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setAspectRatio('reel')}
                 className={cn(
                   "h-8 w-8 rounded-md flex items-center justify-center transition-all",

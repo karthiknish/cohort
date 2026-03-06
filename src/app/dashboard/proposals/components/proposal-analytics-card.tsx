@@ -33,8 +33,10 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
+import { usePreview } from '@/contexts/preview-context'
 import { useQuery } from 'convex/react'
 import { proposalAnalyticsApi } from '@/lib/convex-api'
+import { getPreviewProposals } from '@/lib/preview-data'
 import type {
   ProposalAnalyticsSummary,
   ProposalAnalyticsTimeSeriesPoint,
@@ -65,8 +67,8 @@ function getDateRange(range: TimeRange): { startDate: string; endDate: string } 
   }
 
   return {
-    startDate: startDate.toISOString().split('T')[0]!,
-    endDate: endDate.toISOString().split('T')[0]!,
+    startDate: startDate.toISOString().split('T')[0] ?? startDate.toISOString(),
+    endDate: endDate.toISOString().split('T')[0] ?? endDate.toISOString(),
   }
 }
 
@@ -83,6 +85,7 @@ function formatPercentage(value: number): string {
 
 export function ProposalAnalyticsCard() {
   const { user } = useAuth()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const workspaceId = user?.agencyId ?? null
@@ -105,27 +108,108 @@ export function ProposalAnalyticsCard() {
 
   const summaryRes = useQuery(
     proposalAnalyticsApi.summarize,
-    workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
+    !isPreviewMode && workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
   )
   const timeSeriesRes = useQuery(
     proposalAnalyticsApi.timeSeries,
-    workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
+    !isPreviewMode && workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
   )
   const byClientRes = useQuery(
     proposalAnalyticsApi.byClient,
-    workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
+    !isPreviewMode && workspaceId ? { workspaceId, startDateMs, endDateMs, limit: 1000 } : 'skip',
   )
 
-  const summary = (summaryRes as { summary?: ProposalAnalyticsSummary } | undefined)?.summary
-  const timeSeries =
-    (timeSeriesRes as { timeseries?: ProposalAnalyticsTimeSeriesPoint[] } | undefined)?.timeseries ?? []
-  const byClient = (byClientRes as { byClient?: ProposalAnalyticsByClient[] } | undefined)?.byClient ?? []
+  const previewProposals = useMemo(() => getPreviewProposals(null), [])
 
-  const loading = summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined
+  const previewSummary = useMemo<ProposalAnalyticsSummary>(() => ({
+    totalDrafts: previewProposals.length,
+    totalSubmitted: previewProposals.filter((proposal) => proposal.status === 'ready' || proposal.status === 'sent').length,
+    totalSent: previewProposals.filter((proposal) => proposal.status === 'sent').length,
+    aiGenerationsAttempted: 12,
+    aiGenerationsSucceeded: 11,
+    aiGenerationsFailed: 1,
+    deckGenerationsAttempted: 9,
+    deckGenerationsSucceeded: 8,
+    deckGenerationsFailed: 1,
+    averageAiGenerationTime: 24_000,
+    averageDeckGenerationTime: 71_000,
+    successRate: (11 / 12) * 100,
+    deckSuccessRate: (8 / 9) * 100,
+  }), [previewProposals])
+
+  const previewTimeSeries = useMemo<ProposalAnalyticsTimeSeriesPoint[]>(() => {
+    const points: ProposalAnalyticsTimeSeriesPoint[] = []
+
+    for (let offset = 13; offset >= 0; offset -= 1) {
+      const date = isoDateDaysAgo(offset)
+      const matching = previewProposals.filter((proposal) => (proposal.createdAt ?? '').startsWith(date))
+
+      points.push({
+        date,
+        draftsCreated: matching.length,
+        proposalsSubmitted: matching.filter((proposal) => proposal.status === 'ready' || proposal.status === 'sent').length,
+        aiGenerations: matching.length > 0 ? matching.length + 1 : 0,
+        aiFailures: offset === 6 ? 1 : 0,
+        deckGenerations: matching.filter((proposal) => proposal.presentationDeck).length,
+        deckFailures: offset === 4 ? 1 : 0,
+      })
+    }
+
+    return points
+  }, [previewProposals])
+
+  const previewByClient = useMemo<ProposalAnalyticsByClient[]>(() => {
+    const grouped = new Map<string, ProposalAnalyticsByClient>()
+
+    previewProposals.forEach((proposal) => {
+      const clientKey = proposal.clientId ?? 'unknown-client'
+      const current = grouped.get(clientKey)
+
+      if (!current) {
+        grouped.set(clientKey, {
+          clientId: clientKey,
+          clientName: proposal.clientName ?? 'Unknown client',
+          proposalCount: 1,
+          submittedCount: proposal.status === 'ready' || proposal.status === 'sent' ? 1 : 0,
+          sentCount: proposal.status === 'sent' ? 1 : 0,
+          lastProposalAt: proposal.updatedAt ?? proposal.createdAt ?? null,
+        })
+        return
+      }
+
+      current.proposalCount += 1
+      if (proposal.status === 'ready' || proposal.status === 'sent') {
+        current.submittedCount += 1
+      }
+      if (proposal.status === 'sent') {
+        current.sentCount += 1
+      }
+      if (!current.lastProposalAt || (proposal.updatedAt && proposal.updatedAt > current.lastProposalAt)) {
+        current.lastProposalAt = proposal.updatedAt ?? proposal.createdAt ?? current.lastProposalAt
+      }
+    })
+
+    return Array.from(grouped.values()).sort((left, right) => right.proposalCount - left.proposalCount)
+  }, [previewProposals])
+
+  const summary = isPreviewMode
+    ? previewSummary
+    : (summaryRes as { summary?: ProposalAnalyticsSummary } | undefined)?.summary
+  const timeSeries = isPreviewMode
+    ? previewTimeSeries
+    : (timeSeriesRes as { timeseries?: ProposalAnalyticsTimeSeriesPoint[] } | undefined)?.timeseries ?? []
+  const byClient = isPreviewMode
+    ? previewByClient
+    : (byClientRes as { byClient?: ProposalAnalyticsByClient[] } | undefined)?.byClient ?? []
+
+  const loading = isPreviewMode ? false : summaryRes === undefined || timeSeriesRes === undefined || byClientRes === undefined
 
   const handleRefresh = useCallback(() => {
-    toast({ title: 'Refreshing…', description: 'Analytics will update automatically.' })
-  }, [toast])
+    toast({
+      title: isPreviewMode ? 'Preview data refreshed' : 'Refreshing…',
+      description: isPreviewMode ? 'Showing sample proposal analytics.' : 'Analytics will update automatically.',
+    })
+  }, [isPreviewMode, toast])
 
   // Calculate simple chart data from time series
   const chartData = useMemo(() => {
@@ -333,7 +417,7 @@ export function ProposalAnalyticsCard() {
           </CardHeader>
           <CardContent>
             <div className="flex h-32 items-end gap-1">
-              {chartData.points.map((point, idx) => {
+              {chartData.points.map((point) => {
                 const totalGenerations = point.aiGenerations + point.deckGenerations
                 const totalFailures = point.aiFailures + point.deckFailures
                 const height = (totalGenerations / chartData.maxGenerations) * 100
@@ -440,4 +524,11 @@ export function ProposalAnalyticsCard() {
       )}
     </div>
   )
+}
+
+function isoDateDaysAgo(daysAgo: number): string {
+  const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()
+  const date = new Date(now)
+  date.setDate(date.getDate() - daysAgo)
+  return date.toISOString().split('T')[0] ?? now.toISOString().split('T')[0] ?? now.toISOString()
 }

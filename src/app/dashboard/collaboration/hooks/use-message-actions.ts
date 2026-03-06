@@ -15,17 +15,21 @@ import type { ClientTeamMember } from '@/types/clients'
 interface UseMessageActionsOptions {
   workspaceId: string | null
   userId: string | null
+  isPreviewMode: boolean
   channels: Channel[]
   channelParticipants: ClientTeamMember[]
   mutateChannelMessages: (channelId: string, updater: (messages: CollaborationMessage[]) => CollaborationMessage[]) => void
+  mutateThreadMessageById?: (messageId: string, updater: (message: CollaborationMessage) => CollaborationMessage) => void
 }
 
 export function useMessageActions({
   workspaceId,
   userId,
+  isPreviewMode,
   channels,
   channelParticipants,
   mutateChannelMessages,
+  mutateThreadMessageById,
 }: UseMessageActionsOptions) {
   const { toast } = useToast()
 
@@ -36,6 +40,34 @@ export function useMessageActions({
   const [messageUpdatingId, setMessageUpdatingId] = useState<string | null>(null)
   const [messageDeletingId, setMessageDeletingId] = useState<string | null>(null)
   const [reactionUpdatingByMessage, setReactionUpdatingByMessage] = useState<ReactionPendingState>({})
+
+  const applyMessageUpdate = useCallback(
+    (channelId: string, messageId: string, updater: (message: CollaborationMessage) => CollaborationMessage) => {
+      mutateChannelMessages(channelId, (messages) => {
+        const index = messages.findIndex((entry) => entry.id === messageId)
+        if (index === -1) {
+          return messages
+        }
+
+        const currentMessage = messages[index]
+        if (!currentMessage) {
+          return messages
+        }
+
+        const updatedMessage = updater(currentMessage)
+        if (updatedMessage === currentMessage) {
+          return messages
+        }
+
+        const next = [...messages]
+        next[index] = updatedMessage
+        return next
+      })
+
+      mutateThreadMessageById?.(messageId, updater)
+    },
+    [mutateChannelMessages, mutateThreadMessageById]
+  )
 
   const handleToggleReaction = useCallback(
     async (channelId: string, messageId: string, emoji: string) => {
@@ -59,6 +91,47 @@ export function useMessageActions({
       }))
 
       try {
+        if (isPreviewMode) {
+          const reactionUserId = userId ?? 'preview-current-user'
+          applyMessageUpdate(channelId, messageId, (currentMessage) => {
+            const currentReactions = currentMessage.reactions ?? []
+            const existingReaction = currentReactions.find((reaction) => reaction.emoji === emoji)
+
+            let nextReactions: CollaborationReaction[]
+            if (existingReaction) {
+              const hasReacted = existingReaction.userIds.includes(reactionUserId)
+              nextReactions = currentReactions
+                .map((reaction) => {
+                  if (reaction.emoji !== emoji) {
+                    return reaction
+                  }
+                  const nextUserIds = hasReacted
+                    ? reaction.userIds.filter((entry) => entry !== reactionUserId)
+                    : [...reaction.userIds, reactionUserId]
+
+                  if (nextUserIds.length === 0) {
+                    return null
+                  }
+
+                  return {
+                    ...reaction,
+                    count: nextUserIds.length,
+                    userIds: nextUserIds,
+                  }
+                })
+                .filter(Boolean) as CollaborationReaction[]
+            } else {
+              nextReactions = [...currentReactions, { emoji, count: 1, userIds: [reactionUserId] }]
+            }
+
+            return {
+              ...currentMessage,
+              reactions: nextReactions,
+            }
+          })
+          return
+        }
+
         if (!workspaceId) {
           throw new Error('Workspace unavailable')
         }
@@ -76,18 +149,10 @@ export function useMessageActions({
 
         const reactions = Array.isArray(result?.reactions) ? result.reactions : []
 
-        mutateChannelMessages(channelId, (messages) => {
-          const index = messages.findIndex((entry) => entry.id === messageId)
-          if (index === -1) {
-            return messages
-          }
-          const next = [...messages]
-          next[index] = {
-            ...messages[index]!, // Safe: we verified index !== -1
+        applyMessageUpdate(channelId, messageId, (currentMessage) => ({
+            ...currentMessage,
             reactions,
-          }
-          return next
-        })
+        }))
       } catch (error) {
         logError(error, 'useMessageActions:handleToggleReaction')
         toast({ title: 'Reaction failed', description: asErrorMessage(error), variant: 'destructive' })
@@ -101,7 +166,7 @@ export function useMessageActions({
         })
       }
     },
-    [channels, mutateChannelMessages, toast, toggleReaction, userId, workspaceId]
+    [applyMessageUpdate, channels, isPreviewMode, toast, toggleReaction, userId, workspaceId]
   )
 
   const handleEditMessage = useCallback(
@@ -131,6 +196,20 @@ export function useMessageActions({
             role: participant?.role ?? null,
           }
         })
+
+        if (isPreviewMode) {
+          applyMessageUpdate(channelId, messageId, (currentMessage) => ({
+              ...currentMessage,
+              content: trimmedContent,
+              format: 'markdown',
+              mentions: mentionMetadata,
+              updatedAt: new Date().toISOString(),
+              isEdited: true,
+            }))
+
+          toast({ title: 'Preview message updated', description: 'Changes apply only in sample mode.' })
+          return
+        }
 
         if (!workspaceId) {
           throw new Error('Workspace unavailable')
@@ -171,20 +250,12 @@ export function useMessageActions({
           threadRootId: null,
         }
 
-        mutateChannelMessages(channelId, (messages) => {
-          const index = messages.findIndex((entry) => entry.id === messageId)
-          if (index === -1) {
-            return messages
-          }
-          const next = [...messages]
-          next[index] = {
-            ...messages[index],
+        applyMessageUpdate(channelId, messageId, (currentMessage) => ({
+            ...currentMessage,
             ...updatedMessage,
             mentions: updatedMessage.mentions ?? mentionMetadata,
             format: updatedMessage.format ?? 'markdown',
-          }
-          return next
-        })
+          }))
 
         toast({ title: 'Message updated', description: 'Your edit is live for the team.' })
       } catch (error) {
@@ -194,7 +265,7 @@ export function useMessageActions({
         setMessageUpdatingId((current) => (current === messageId ? null : current))
       }
     },
-    [channelParticipants, channels, mutateChannelMessages, toast, updateMessage, userId, workspaceId]
+    [applyMessageUpdate, channelParticipants, channels, isPreviewMode, toast, updateMessage, userId, workspaceId]
    )
 
 
@@ -208,6 +279,21 @@ export function useMessageActions({
       setMessageDeletingId(messageId)
 
       try {
+        if (isPreviewMode) {
+          applyMessageUpdate(channelId, messageId, (currentMessage) => ({
+              ...currentMessage,
+              content: '',
+              isDeleted: true,
+              deletedAt: new Date().toISOString(),
+              deletedBy: userId ?? 'preview-current-user',
+              attachments: [],
+              reactions: [],
+            }))
+
+          toast({ title: 'Preview message removed', description: 'This only changes the sample conversation.' })
+          return
+        }
+
         if (!workspaceId) {
           throw new Error('Workspace unavailable')
         }
@@ -245,19 +331,12 @@ export function useMessageActions({
           threadRootId: null,
         }
 
-        mutateChannelMessages(channelId, (messages) => {
-          const index = messages.findIndex((entry) => entry.id === messageId)
-          if (index === -1) {
-            return messages
-          }
-          const next = [...messages]
-          next[index] = {
-            ...messages[index],
+        applyMessageUpdate(channelId, messageId, (currentMessage) => ({
+            ...currentMessage,
             ...deletedMessage,
             attachments: [],
-          }
-          return next
-        })
+            reactions: [],
+          }))
 
         toast({ title: 'Message removed', description: 'The message is no longer visible to teammates.' })
       } catch (error) {
@@ -267,7 +346,7 @@ export function useMessageActions({
         setMessageDeletingId((current) => (current === messageId ? null : current))
       }
     },
-     [channels, mutateChannelMessages, softDeleteMessage, toast, userId, workspaceId]
+     [applyMessageUpdate, channels, isPreviewMode, softDeleteMessage, toast, userId, workspaceId]
    )
 
 

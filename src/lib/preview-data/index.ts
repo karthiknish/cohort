@@ -26,7 +26,13 @@ export { getPreviewActivity } from './activity'
 export { getPreviewNotifications } from './notifications'
 
 // Collaboration
-export { getPreviewCollaborationMessages } from './collaboration'
+export {
+    getPreviewCollaborationMessages,
+    getPreviewCollaborationParticipants,
+    getPreviewCollaborationThreadReplies,
+    getPreviewDirectConversations,
+    getPreviewDirectMessages,
+} from './collaboration'
 
 // Ads
 export { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses, getPreviewCampaigns, getPreviewCampaignInsights } from './ads'

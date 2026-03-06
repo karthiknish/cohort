@@ -9,12 +9,14 @@ import {
   CardContent,
   CardHeader,
 } from '@/components/ui/card'
-import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
+import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
-import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { usePreview } from '@/contexts/preview-context'
+import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
+import { getPreviewProposals } from '@/lib/preview-data'
 import { ProposalStepContent } from './components/proposal-step-content'
 import { ProposalStepIndicator } from './components/proposal-step-indicator'
 import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
@@ -34,14 +36,14 @@ import {
   useProposalDrafts,
   useProposalSubmission,
   useDeckPreparation,
-  type SubmissionSnapshot,
 } from './hooks'
 
 export default function ProposalsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { selectedClient, selectedClientId, selectClient } = useClientContext()
+  const { selectedClientId, selectClient } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const [isWizardOpen, setIsWizardOpen] = useState(false)
 
   // Handle URL params for client selection
@@ -148,7 +150,6 @@ export default function ProposalsPage() {
     submitted,
     isPresentationReady,
     presentationDeck,
-    aiSuggestions,
     lastSubmissionSnapshot,
     submitProposal,
     handleContinueEditingFromSnapshot,
@@ -202,6 +203,7 @@ export default function ProposalsPage() {
   }, [formState, lastSubmissionSnapshot, submitted])
 
   const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
+  const previewProposals = useMemo(() => getPreviewProposals(selectedClientId ?? null), [selectedClientId])
 
   const handleSelectTemplate = (templateFormData: ProposalFormData) => {
     setFormState(templateFormData)
@@ -250,6 +252,75 @@ export default function ProposalsPage() {
   const handleContinueEditingInModal = async () => {
     await handleContinueEditingFromSnapshot()
     setIsWizardOpen(true)
+  }
+
+  if (isPreviewMode) {
+    const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? null
+
+    return (
+      <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
+        <div className={DASHBOARD_THEME.layout.header}>
+          <ProposalWizardHeader />
+          <Button disabled className={cn(getButtonClasses('primary'), 'shrink-0 opacity-70')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Preview Mode
+          </Button>
+        </div>
+
+        <Card className="border-dashed border-primary/30 bg-primary/5">
+          <CardHeader>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg font-semibold text-foreground">Sample proposal data</h3>
+              <p className="text-sm text-muted-foreground">
+                Preview mode shows representative proposal history, metrics, and deck previews. Editing and generation actions stay read-only.
+              </p>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <ProposalMetrics proposals={previewProposals} isLoading={false} />
+
+        <ProposalHistory
+          proposals={previewProposals}
+          draftId={previewDraftId}
+          isLoading={false}
+          deletingProposalId={null}
+          onRefresh={() => {
+            toast({ title: 'Preview data refreshed', description: 'Showing sample proposal history.' })
+          }}
+          onResume={(proposal: ProposalDraft) => {
+            if (proposal.status === 'ready' || proposal.status === 'sent') {
+              router.push(`/dashboard/proposals/${proposal.id}/deck`)
+              return
+            }
+
+            toast({
+              title: 'Preview mode',
+              description: 'Sample proposals are read-only. Exit preview mode to create or edit live proposals.',
+            })
+          }}
+          onRequestDelete={() => {
+            toast({
+              title: 'Preview mode',
+              description: 'Sample proposals cannot be deleted.',
+            })
+          }}
+          isGenerating={false}
+          downloadingDeckId={null}
+          onDownloadDeck={(proposal: ProposalDraft) => {
+            router.push(`/dashboard/proposals/${proposal.id}/deck`)
+          }}
+          onCreateNew={() => {
+            toast({
+              title: 'Preview mode',
+              description: 'Switch off preview mode to start a real proposal.',
+            })
+          }}
+          canCreate={false}
+          isCreating={false}
+        />
+      </div>
+    )
   }
 
   return (

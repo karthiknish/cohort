@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useConvexAuth } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
-import { getPreviewMetrics, getPreviewTasks } from '@/lib/preview-data'
+import { getPreviewMetrics, getPreviewProposals, getPreviewTasks } from '@/lib/preview-data'
 import type { TaskRecord } from '@/types/tasks'
 import type { MetricRecord, DashboardTaskItem } from '@/types/dashboard'
 import { mapTasksForDashboard } from '@/lib/dashboard-utils'
@@ -156,7 +156,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
 
     // Derived Data: Proposals
     const proposals = useMemo(() => {
-        if (isPreviewMode) return []
+        if (isPreviewMode) return getPreviewProposals(selectedClientId ?? null)
         const shouldLoad = user?.role === 'client' || user?.role === 'admin' || user?.role === 'team'
         if (!user?.id || !shouldLoad || convexProposals === undefined) return []
 
@@ -187,7 +187,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
                 : null,
             }
         }) as ProposalDraft[]
-    }, [isPreviewMode, user?.id, user?.role, convexProposals])
+    }, [isPreviewMode, selectedClientId, user?.id, user?.role, convexProposals])
 
     const proposalsLoading = useMemo(() => {
         if (isPreviewMode) return false

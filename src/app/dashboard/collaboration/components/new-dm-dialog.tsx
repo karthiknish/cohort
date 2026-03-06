@@ -11,12 +11,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { useQuery } from 'convex/react'
+
+import { usePreview } from '@/contexts/preview-context'
 import { api } from '@/lib/convex-api'
+import { getPreviewCollaborationParticipants } from '@/lib/preview-data'
 
 interface NewDMDialogProps {
   open: boolean
@@ -42,18 +44,28 @@ export function NewDMDialog({
   currentUserId,
   currentUserRole,
 }: NewDMDialogProps) {
+  const { isPreviewMode } = usePreview()
   const [searchQuery, setSearchQuery] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
   const dmParticipants = useQuery(
     api.users.listDMParticipants,
-    workspaceId && currentUserId ? { workspaceId, currentUserId, currentUserRole: currentUserRole ?? null } : 'skip'
+    !isPreviewMode && workspaceId && currentUserId
+      ? { workspaceId, currentUserId, currentUserRole: currentUserRole ?? null }
+      : 'skip'
   )
 
   const filteredUsers = useMemo(() => {
-    if (!Array.isArray(dmParticipants)) return []
-
-    const participants = dmParticipants as DmParticipant[]
+    const participants = isPreviewMode
+      ? getPreviewCollaborationParticipants()
+          .filter((participant) => participant.id !== currentUserId)
+          .map((participant) => ({
+            id: participant.id,
+            name: participant.name,
+            email: participant.email,
+            role: participant.role,
+          }))
+      : (Array.isArray(dmParticipants) ? (dmParticipants as DmParticipant[]) : [])
 
     return participants
       .filter((member) => {
@@ -64,7 +76,7 @@ export function NewDMDialog({
           member.email?.toLowerCase().includes(query)
         )
       })
-  }, [dmParticipants, searchQuery])
+  }, [currentUserId, dmParticipants, isPreviewMode, searchQuery])
 
   const handleUserClick = async (user: { id: string; name?: string; role?: string | null }) => {
     setIsCreating(true)

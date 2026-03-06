@@ -3,15 +3,13 @@
 import { useRef, useState, useCallback, useMemo, useEffect, type ChangeEvent, type ClipboardEvent } from 'react'
 import { 
   Send, MoreVertical, Archive, BellOff, Bell, ArchiveRestore, 
-  Share2, Mail, LoaderCircle, Hash, RefreshCw
+  Share2, Mail, LoaderCircle, Hash, Reply, Pencil, Trash2
 } from 'lucide-react'
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,16 +26,12 @@ import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { RichComposer } from './rich-composer'
 import { PendingAttachmentsList } from './message-composer'
-import { 
-  MessageList, 
-  collaborationToUnifiedMessage, 
-  type UnifiedMessage 
-} from './message-list'
+import { MessageList, collaborationToUnifiedMessage, type UnifiedMessage } from './message-list'
 import { SwipeableMessage } from './swipeable-message'
 import { MessageAttachments } from './message-attachments'
-import { MessageReactions } from './message-reactions'
 import { MessageContent } from './message-content'
-import { DeletedMessageInfo } from './message-item-parts'
+import { DeletedMessageInfo, DeletingOverlay, MessageEditForm } from './message-item-parts'
+import { MessageReactions } from './message-reactions'
 import { ThreadSection } from './thread-section'
 
 import type { CollaborationMessage, CollaborationAttachment } from '@/types/collaboration'
@@ -141,7 +135,6 @@ export function UnifiedMessagePane({
   onDeleteMessage,
   onEditMessage,
   onShareToPlatform,
-  onCreateTask,
   typingIndicator,
   onComposerFocus,
   onComposerBlur,
@@ -165,11 +158,19 @@ export function UnifiedMessagePane({
 }: UnifiedMessagePaneProps) {
   const [sharingTo, setSharingTo] = useState<string | null>(null)
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
+  const [confirmingDeleteMessageId, setConfirmingDeleteMessageId] = useState<string | null>(null)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+  const [editingPreview, setEditingPreview] = useState('')
   const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({})
+  const [isComposerFocused, setIsComposerFocused] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const lastAutoOpenedThreadRef = useRef<string | null>(null)
+  const lastConversationKeyRef = useRef<string | null>(null)
   const { toast } = useToast()
+  const activeDeletingMessageId = deletingMessageId ?? messageDeletingId
+  const conversationKey = header ? `${header.type}:${header.name}` : 'none'
 
   const channelMessagesById = useMemo(() => {
     const map = new Map<string, CollaborationMessage>()
@@ -178,8 +179,17 @@ export function UnifiedMessagePane({
         map.set(message.id, message)
       }
     }
+
+    for (const replies of Object.values(threadMessagesByRootId)) {
+      for (const reply of replies) {
+        if (reply?.id) {
+          map.set(reply.id, reply)
+        }
+      }
+    }
+
     return map
-  }, [channelMessages])
+  }, [channelMessages, threadMessagesByRootId])
   const effectiveFocusMessageId = useMemo(() => {
     if (typeof focusMessageId !== 'string') return null
     const normalizedId = focusMessageId.trim()
@@ -208,6 +218,27 @@ export function UnifiedMessagePane({
 
   const hasPendingAttachments = pendingAttachments.length > 0
 
+  useEffect(() => {
+    if (lastConversationKeyRef.current === conversationKey) {
+      return
+    }
+
+    lastConversationKeyRef.current = conversationKey
+
+    const frame = window.requestAnimationFrame(() => {
+      setEditingMessageId(null)
+      setEditingValue('')
+      setEditingPreview('')
+      setConfirmingDeleteMessageId(null)
+      setDeletingMessageId(null)
+      setIsComposerFocused(false)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+    }
+  }, [conversationKey])
+
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     await onToggleReaction(messageId, emoji)
   }, [onToggleReaction])
@@ -222,6 +253,67 @@ export function UnifiedMessagePane({
     await onDeleteMessage(messageId).catch(() => undefined)
     setDeletingMessageId(null)
   }, [onDeleteMessage])
+
+  const handleRequestDelete = useCallback((messageId: string) => {
+    setConfirmingDeleteMessageId(messageId)
+  }, [])
+
+  const handleCancelDelete = useCallback(() => {
+    if (activeDeletingMessageId) {
+      return
+    }
+    setConfirmingDeleteMessageId(null)
+  }, [activeDeletingMessageId])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!confirmingDeleteMessageId) {
+      return
+    }
+
+    await handleDelete(confirmingDeleteMessageId)
+    setConfirmingDeleteMessageId(null)
+  }, [confirmingDeleteMessageId, handleDelete])
+
+  const handleStartEdit = useCallback((message: UnifiedMessage) => {
+    if (!onEditMessage || message.deleted) {
+      return
+    }
+
+    setEditingMessageId(message.id)
+    setEditingValue(message.content ?? '')
+    setEditingPreview((message.content ?? '').trim().slice(0, 120))
+  }, [onEditMessage])
+
+  const handleCancelEdit = useCallback(() => {
+    if (messageUpdatingId) {
+      return
+    }
+
+    setEditingMessageId(null)
+    setEditingValue('')
+    setEditingPreview('')
+  }, [messageUpdatingId])
+
+  const handleConfirmEdit = useCallback(async () => {
+    if (!onEditMessage || !editingMessageId) {
+      return
+    }
+
+    const trimmedValue = editingValue.trim()
+    if (!trimmedValue) {
+      toast({
+        title: 'Message required',
+        description: 'Enter a message before saving your changes.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    await onEditMessage(editingMessageId, trimmedValue)
+    setEditingMessageId(null)
+    setEditingValue('')
+    setEditingPreview('')
+  }, [editingMessageId, editingValue, onEditMessage, toast])
 
   const handleShare = async (message: UnifiedMessage, platform: 'email') => {
     if (!onShareToPlatform) return
@@ -249,6 +341,16 @@ export function UnifiedMessagePane({
     if ((!content && !hasPendingAttachments) || isSending || uploadingAttachments) return
     await onSendMessage(content)
   }
+
+  const handleComposerFocusInternal = useCallback(() => {
+    setIsComposerFocused(true)
+    onComposerFocus?.()
+  }, [onComposerFocus])
+
+  const handleComposerBlurInternal = useCallback(() => {
+    setIsComposerFocused(false)
+    onComposerBlur?.()
+  }, [onComposerBlur])
 
   const handleAttachmentInputChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -407,12 +509,81 @@ export function UnifiedMessagePane({
   }
 
   const renderMessageActions = (message: UnifiedMessage) => {
+    const canManageMessage = Boolean(currentUserId && message.senderId === currentUserId)
+    const isBusy = activeDeletingMessageId === message.id || messageUpdatingId === message.id
+
     return (
-      <>
+      <div className="flex items-center gap-1">
+        {header?.type === 'channel' && onReply && (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 transition-transform hover:scale-105"
+                  disabled={isBusy}
+                  onClick={() => handleReply(message)}
+                >
+                  <Reply className="h-3 w-3" />
+                  <span className="sr-only">Reply in thread</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reply in thread</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {onEditMessage && canManageMessage && (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 transition-transform hover:scale-105"
+                  disabled={isBusy}
+                  onClick={() => handleStartEdit(message)}
+                >
+                  <Pencil className="h-3 w-3" />
+                  <span className="sr-only">Edit message</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit message</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {onDeleteMessage && canManageMessage && (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
+                  disabled={isBusy}
+                  onClick={() => handleRequestDelete(message.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  <span className="sr-only">Delete message</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete message</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         {onShareToPlatform && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Button variant="ghost" size="icon" className="h-6 w-6 transition-transform hover:scale-105" disabled={isBusy}>
                 <Share2 className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -427,11 +598,22 @@ export function UnifiedMessagePane({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-      </>
+      </div>
     )
   }
 
-  const renderMessageAttachments = (message: UnifiedMessage) => {
+  const renderMessageContent = useCallback((message: UnifiedMessage) => {
+    const originalMessage = channelMessagesById.get(message.id)
+
+    return (
+      <MessageContent
+        content={originalMessage?.content ?? message.content ?? ''}
+        mentions={originalMessage?.mentions ?? message.mentions}
+      />
+    )
+  }, [channelMessagesById])
+
+  const renderMessageAttachments = useCallback((message: UnifiedMessage) => {
     if (!message.attachments || message.attachments.length === 0) return null
     
     const attachments: CollaborationAttachment[] = message.attachments.map(a => ({
@@ -442,13 +624,143 @@ export function UnifiedMessagePane({
     }))
     
     return <MessageAttachments attachments={attachments} />
-  }
+  }, [])
 
-  const renderDeletedInfo = (message: UnifiedMessage) => {
-    const info = deletedInfoByMessage?.[message.id]
-    if (!info) return <p className="text-sm italic text-muted-foreground">Message removed</p>
+  const renderDeletedInfo = useCallback((message: UnifiedMessage) => {
+    const info = deletedInfoByMessage?.[message.id] ?? {
+      deletedBy: message.deletedBy ?? null,
+      deletedAt: message.deletedAt ?? null,
+    }
+
+    if (!info.deletedBy && !info.deletedAt) {
+      return <p className="text-sm italic text-muted-foreground">Message removed</p>
+    }
+
     return <DeletedMessageInfo deletedBy={info.deletedBy} deletedAt={info.deletedAt} />
-  }
+  }, [deletedInfoByMessage])
+
+  const renderEditForm = useCallback((message: UnifiedMessage) => {
+    if (editingMessageId !== message.id) {
+      return null
+    }
+
+    return (
+      <MessageEditForm
+        value={editingValue}
+        onChange={setEditingValue}
+        onConfirm={handleConfirmEdit}
+        onCancel={handleCancelEdit}
+        isUpdating={messageUpdatingId === message.id}
+        editingPreview={editingPreview}
+      />
+    )
+  }, [editingMessageId, editingPreview, editingValue, handleCancelEdit, handleConfirmEdit, messageUpdatingId])
+
+  const renderThreadReply = useCallback((reply: CollaborationMessage) => {
+    const message = collaborationToUnifiedMessage(reply)
+    const canManageMessage = Boolean(currentUserId && message.senderId === currentUserId)
+    const isEditing = editingMessageId === message.id
+    const isDeleting = activeDeletingMessageId === message.id
+    const isUpdating = messageUpdatingId === message.id
+    const pendingReaction = reactionPendingByMessage[message.id] ?? null
+
+    return (
+      <div
+        key={reply.id}
+        className={cn(
+          'group relative rounded-md border border-muted/40 bg-muted/15 px-3 py-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+          !message.deleted && 'hover:border-primary/20 hover:bg-muted/25'
+        )}
+      >
+        <div className="min-w-0 space-y-2 pr-14">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">{reply.senderName}</span>
+            {reply.senderRole ? <span>{reply.senderRole}</span> : null}
+            {reply.createdAt ? (
+              <span>
+                {new Date(reply.createdAt).toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            ) : null}
+            {message.edited && !message.deleted ? <span>edited</span> : null}
+          </div>
+
+          {isEditing ? (
+            renderEditForm(message)
+          ) : message.deleted ? (
+            renderDeletedInfo(message)
+          ) : (
+            <>
+              {renderMessageContent(message)}
+              {renderMessageAttachments(message)}
+            </>
+          )}
+
+          {!isEditing && !message.deleted ? (
+            <MessageReactions
+              reactions={reply.reactions ?? []}
+              currentUserId={currentUserId}
+              pendingEmoji={pendingReaction}
+              disabled={isDeleting || isUpdating}
+              onToggle={(emoji) => handleReaction(message.id, emoji)}
+            />
+          ) : null}
+        </div>
+
+        {!isEditing && !message.deleted && canManageMessage ? (
+          <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-[var(--motion-duration-fast)] group-hover:opacity-100 motion-reduce:transition-none">
+            {onEditMessage ? (
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 transition-transform hover:scale-105"
+                      disabled={isDeleting || isUpdating}
+                      onClick={() => handleStartEdit(message)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      <span className="sr-only">Edit reply</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit reply</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+
+            {onDeleteMessage ? (
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
+                      disabled={isDeleting || isUpdating}
+                      onClick={() => handleRequestDelete(message.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      <span className="sr-only">Delete reply</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete reply</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+          </div>
+        ) : null}
+
+        <DeletingOverlay isDeleting={isDeleting} />
+      </div>
+    )
+  }, [activeDeletingMessageId, currentUserId, editingMessageId, handleReaction, handleRequestDelete, handleStartEdit, messageUpdatingId, onDeleteMessage, onEditMessage, reactionPendingByMessage, renderDeletedInfo, renderEditForm, renderMessageAttachments, renderMessageContent])
 
   const renderThreadSection = useCallback((message: UnifiedMessage) => {
     if (header?.type !== 'channel' || message.deleted) {
@@ -492,21 +804,7 @@ export function UnifiedMessagePane({
         onLoadMore={() => handleLoadMoreThread(threadRootId)}
         onReply={() => handleReply(message)}
         canReply={Boolean(onReply)}
-        renderReply={(reply) => (
-          <div key={reply.id} className="rounded-md border border-muted/40 bg-muted/15 px-3 py-2">
-            <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{reply.senderName}</span>
-              {reply.createdAt && (
-                <span>{new Date(reply.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-              )}
-            </div>
-            {reply.isDeleted ? (
-              <p className="text-sm italic text-muted-foreground">Message removed</p>
-            ) : (
-              <MessageContent content={reply.content ?? ''} mentions={reply.mentions} />
-            )}
-          </div>
-        )}
+        renderReply={renderThreadReply}
       />
     )
   }, [
@@ -519,6 +817,7 @@ export function UnifiedMessagePane({
     header?.type,
     onReply,
     resolveThreadRootId,
+    renderThreadReply,
     threadErrorsByRootId,
     threadLoadingByRootId,
     threadMessagesByRootId,
@@ -532,8 +831,8 @@ export function UnifiedMessagePane({
       message={message}
       currentUserId={currentUserId}
       canDelete={!message.deleted && message.senderId === currentUserId && !!onDeleteMessage}
-      onReply={() => handleReply(message)}
-      onDelete={() => handleDelete(message.id)}
+      onReply={!message.deleted && onReply ? () => handleReply(message) : undefined}
+      onDelete={!message.deleted && onDeleteMessage ? () => handleRequestDelete(message.id) : undefined}
     >
       {children}
     </SwipeableMessage>
@@ -674,12 +973,15 @@ export function UnifiedMessagePane({
           updatingMessageId={messageUpdatingId}
           renderMessageExtras={renderMessageExtras}
           renderMessageActions={renderMessageActions}
+          renderMessageContent={renderMessageContent}
           renderMessageAttachments={renderMessageAttachments}
+          renderEditForm={renderEditForm}
           renderDeletedInfo={renderDeletedInfo}
           renderThreadSection={header.type === 'channel' ? renderThreadSection : undefined}
           renderMessageWrapper={renderMessageWrapper}
           emptyState={emptyState}
           variant={header.type === 'channel' ? 'channel' : 'dm'}
+          editingMessageId={editingMessageId}
           focusMessageId={effectiveFocusMessageId}
           focusThreadId={effectiveFocusThreadId}
         />
@@ -693,7 +995,12 @@ export function UnifiedMessagePane({
           disabled={isSending}
           onRemove={(attachmentId) => onRemoveAttachment?.(attachmentId)}
         />
-        <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+        <div
+          className={cn(
+            'w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20',
+            (isComposerFocused || hasPendingAttachments) && 'border-primary/30 shadow-md shadow-primary/5'
+          )}
+        >
           <RichComposer
             value={messageInput}
             onChange={onMessageInputChange}
@@ -701,8 +1008,8 @@ export function UnifiedMessagePane({
             disabled={isSending || uploadingAttachments}
             placeholder={placeholder}
             participants={participants}
-            onFocus={onComposerFocus}
-            onBlur={onComposerBlur}
+            onFocus={handleComposerFocusInternal}
+            onBlur={handleComposerBlurInternal}
             onDrop={handleComposerDrop}
             onDragOver={handleComposerDragOver}
             onPaste={handleComposerPaste}
@@ -718,24 +1025,42 @@ export function UnifiedMessagePane({
           onChange={handleAttachmentInputChange}
         />
         <div className="flex items-center justify-between mt-2">
-          {typingIndicator && (
-            <span className="text-xs text-muted-foreground italic">{typingIndicator}</span>
-          )}
+          <span className="min-h-[1rem] text-xs text-muted-foreground italic transition-opacity duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
+            {typingIndicator || (isComposerFocused ? 'Press Enter to send. Shift+Enter adds a new line.' : '')}
+          </span>
           <div className="flex-1" />
           <Button
             onClick={handleSend}
             disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments}
             size="sm"
+            className="transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
           >
-            {isSending ? (
+            {isSending || uploadingAttachments ? (
               <LoaderCircle className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
             )}
-            <span className="ml-2">Send</span>
+            <span className="ml-2">{uploadingAttachments ? 'Uploading…' : isSending ? 'Sending…' : 'Send'}</span>
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(confirmingDeleteMessageId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancelDelete()
+          }
+        }}
+        title="Delete message"
+        description="This removes the message content for everyone in the conversation and keeps a deleted placeholder in the timeline."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        isLoading={activeDeletingMessageId === confirmingDeleteMessageId}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   )
 }

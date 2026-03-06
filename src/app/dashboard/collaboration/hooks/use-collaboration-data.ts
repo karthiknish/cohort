@@ -72,7 +72,6 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     workspaceId,
     currentUserId,
     selectedChannel,
-    selectedChannelId: selectedChannel?.id ?? null,
     channels,
     channelParticipants,
     fallbackDisplayName,

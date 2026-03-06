@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   BellOff,
@@ -27,6 +27,7 @@ type NotificationsCursor = {
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
 import type { WorkspaceNotification } from '@/types/notifications'
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
@@ -41,6 +42,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { notificationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { parsePageSize } from '@/lib/pagination'
+import { getPreviewNotifications } from '@/lib/preview-data'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
 
 const PAGE_SIZE = 25
@@ -54,6 +56,7 @@ export default function NotificationsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const filterTabs = usePersistedTab<FilterType>({
@@ -67,13 +70,22 @@ export default function NotificationsPage() {
   const activeFilter = filterTabs.value
   const setActiveFilter = filterTabs.setValue
   const [ackInFlight, setAckInFlight] = useState(false)
+  const [previewNotifications, setPreviewNotifications] = useState<WorkspaceNotification[]>([])
+
+  useEffect(() => {
+    if (!isPreviewMode) {
+      return
+    }
+
+    setPreviewNotifications(getPreviewNotifications(selectedClientId ?? null))
+  }, [isPreviewMode, selectedClientId])
 
   const convex = useConvex()
   const workspaceId = user?.agencyId
 
   const notificationsInfiniteQuery = useInfiniteQuery({
     queryKey: ['notificationsPage', workspaceId, user?.role, selectedClientId, activeFilter],
-    enabled: Boolean(workspaceId),
+    enabled: !isPreviewMode && Boolean(workspaceId),
     initialPageParam: null as NotificationsCursor | null,
     queryFn: async ({ pageParam }) => {
       if (!workspaceId) {
@@ -93,8 +105,13 @@ export default function NotificationsPage() {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
   })
 
+  const liveNotifications = useMemo(
+    () => notificationsInfiniteQuery.data?.pages.flatMap((page) => page.notifications ?? []) ?? [],
+    [notificationsInfiniteQuery.data?.pages]
+  )
+
   const notifications = useMemo(() => {
-    let items = notificationsInfiniteQuery.data?.pages.flatMap((page) => page.notifications ?? []) ?? []
+    let items = isPreviewMode ? previewNotifications : liveNotifications
 
     if (activeFilter === 'mentions') {
       items = items.filter((n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
@@ -103,21 +120,48 @@ export default function NotificationsPage() {
     }
 
     return items
-  }, [activeFilter, notificationsInfiniteQuery.data?.pages])
+  }, [activeFilter, isPreviewMode, liveNotifications, previewNotifications])
 
   const ackNotifications = useMutation(notificationsApi.ack)
 
-  const loading = notificationsInfiniteQuery.isLoading
-  const loadingMore = notificationsInfiniteQuery.isFetchingNextPage
-  const error = notificationsInfiniteQuery.isError
+  const loading = isPreviewMode ? false : notificationsInfiniteQuery.isLoading
+  const loadingMore = isPreviewMode ? false : notificationsInfiniteQuery.isFetchingNextPage
+  const error = isPreviewMode
+    ? null
+    : notificationsInfiniteQuery.isError
     ? notificationsInfiniteQuery.error instanceof Error
       ? notificationsInfiniteQuery.error.message
       : 'Failed to load notifications'
     : null
-  const nextCursor = notificationsInfiniteQuery.hasNextPage
+  const nextCursor = isPreviewMode ? false : notificationsInfiniteQuery.hasNextPage
 
   const updateNotificationStatus = useCallback(
     (ids: string[], action: AckAction) => {
+      if (isPreviewMode) {
+        if (ids.length === 0) {
+          return Promise.resolve()
+        }
+
+        setPreviewNotifications((current) => {
+          if (action === 'dismiss') {
+            return current.filter((notification) => !ids.includes(notification.id))
+          }
+
+          return current.map((notification) => (
+            ids.includes(notification.id)
+              ? { ...notification, read: true, acknowledged: true }
+              : notification
+          ))
+        })
+
+        toast({
+          title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
+          description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
+        })
+
+        return Promise.resolve()
+      }
+
       if (!workspaceId || ids.length === 0) {
         return Promise.resolve()
       }
@@ -141,20 +185,30 @@ export default function NotificationsPage() {
           setAckInFlight(false)
         })
     },
-    [ackNotifications, notificationsInfiniteQuery, toast, workspaceId]
+    [ackNotifications, isPreviewMode, notificationsInfiniteQuery, toast, workspaceId]
   )
 
   const handleRefresh = useCallback(() => {
+    if (isPreviewMode) {
+      setPreviewNotifications(getPreviewNotifications(selectedClientId ?? null))
+      toast({ title: 'Preview data refreshed', description: 'Showing sample notifications.' })
+      return
+    }
+
     void notificationsInfiniteQuery.refetch()
-  }, [notificationsInfiniteQuery])
+  }, [isPreviewMode, notificationsInfiniteQuery, selectedClientId, toast])
 
   const handleLoadMore = useCallback(() => {
+    if (isPreviewMode) {
+      return
+    }
+
     if (!notificationsInfiniteQuery.hasNextPage || notificationsInfiniteQuery.isFetchingNextPage) {
       return
     }
 
     void notificationsInfiniteQuery.fetchNextPage()
-  }, [notificationsInfiniteQuery])
+  }, [isPreviewMode, notificationsInfiniteQuery])
 
   const handleDismiss = useCallback(
     (id: string) => {
@@ -262,6 +316,15 @@ export default function NotificationsPage() {
           </Button>
         </div>
       </div>
+
+      {isPreviewMode && (
+        <Alert>
+          <AlertTitle>Preview mode</AlertTitle>
+          <AlertDescription>
+            Notifications on this page use sample data. Read and dismiss actions update the local preview only.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">

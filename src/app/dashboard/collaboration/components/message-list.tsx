@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { LoaderCircle, RefreshCw, Smile } from 'lucide-react'
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
+import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react'
 
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -127,7 +127,6 @@ function groupMessagesByDate(messages: UnifiedMessage[]): Map<string, UnifiedMes
   const seenIds = new Set<string>()
   
   for (const message of messages) {
-    if (message.deleted) continue
     if (seenIds.has(message.id)) continue
     seenIds.add(message.id)
     
@@ -143,7 +142,6 @@ function groupMessagesByDate(messages: UnifiedMessage[]): Map<string, UnifiedMes
 export function MessageList({
   messages,
   currentUserId,
-  currentUserRole,
   isLoading,
   hasMore,
   onLoadMore,
@@ -162,12 +160,6 @@ export function MessageList({
   loadingSkeleton,
   variant = 'dm',
   showAvatars = true,
-  compact = false,
-  onEditMessage,
-  onDeleteMessage,
-  onReply,
-  onCreateTask,
-  onRefresh,
   editingMessageId,
   deletingMessageId,
   updatingMessageId,
@@ -424,7 +416,7 @@ export function MessageList({
                         data-message-id={message.id}
                         data-thread-root-id={message.threadRootId ?? message.id}
                         className={cn(
-                          "group relative flex items-start gap-3 px-6 py-2.5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
+                          "group relative flex items-start gap-3 px-6 py-2.5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none",
                           !message.deleted && "hover:bg-muted/5",
                           message.id === highlightedMessageId && 'bg-primary/10 ring-1 ring-primary/30 rounded-lg'
                         )}
@@ -556,7 +548,10 @@ export function MessageList({
                       key={message.id}
                       data-message-id={message.id}
                       data-thread-root-id={message.threadRootId ?? message.id}
-                      className={cn('flex gap-2 group', isOwn && 'justify-end')}
+                      className={cn(
+                        'group relative flex gap-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
+                        isOwn && 'justify-end'
+                      )}
                     >
                       {showAvatars && !isOwn && (
                         <Avatar className="h-8 w-8 shrink-0">
@@ -568,10 +563,22 @@ export function MessageList({
                       
                       <div className={cn('max-w-[70%] flex flex-col', isOwn && 'items-end')}>
                         <div className={cn(
-                          'rounded-lg px-3 py-2',
-                          isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                          'rounded-lg px-3 py-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+                          message.deleted
+                            ? 'border border-dashed border-muted/60 bg-background/70 text-muted-foreground'
+                            : isOwn
+                              ? 'bg-primary text-primary-foreground shadow-sm'
+                              : 'bg-muted shadow-sm'
                         )}>
-                          {renderMessageContent ? (
+                          {isEditing && renderEditForm ? (
+                            renderEditForm(message)
+                          ) : message.deleted ? (
+                            renderDeletedInfo ? (
+                              renderDeletedInfo(message)
+                            ) : (
+                              <p className="text-sm italic text-muted-foreground">Message removed</p>
+                            )
+                          ) : renderMessageContent ? (
                             renderMessageContent(message)
                           ) : (
                             <p className="text-sm whitespace-pre-wrap break-words">
@@ -587,14 +594,14 @@ export function MessageList({
                           <span className="text-[10px] text-muted-foreground">
                             {formatTime(message.createdAtMs)}
                           </span>
-                          {message.edited && (
+                          {message.edited && !message.deleted && (
                             <span className="text-[10px] text-muted-foreground">(edited)</span>
                           )}
                         </div>
                         
-                        {renderMessageAttachments?.(message)}
+                        {!isEditing && !message.deleted && renderMessageAttachments?.(message)}
                         
-                        {message.reactions && message.reactions.length > 0 && (
+                        {!isEditing && !message.deleted && message.reactions && message.reactions.length > 0 && (
                           <div className={cn('flex flex-wrap gap-1 mt-1', isOwn && 'justify-end')}>
                             {message.reactions.map((reaction) => {
                               const isPending = localReactionPending === `${message.id}-${reaction.emoji}` ||
@@ -628,27 +635,29 @@ export function MessageList({
                         {renderMessageExtras?.(message)}
                         {renderMessageFooter?.(message)}
                         
-                        <div className={cn('flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity', isOwn && 'justify-end')}>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <Smile className="h-3 w-3" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <EmojiPicker
-                                onEmojiClick={(emojiData: EmojiClickData) => {
-                                  handleReaction(message.id, emojiData.emoji)
-                                }}
-                                theme={Theme.LIGHT}
-                                width={300}
-                                height={350}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          
-                          {renderMessageActions?.(message)}
-                        </div>
+                        {!isEditing && !message.deleted && (
+                          <div className={cn('flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity', isOwn && 'justify-end')}>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <Smile className="h-3 w-3" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <EmojiPicker
+                                  onEmojiClick={(emojiData: EmojiClickData) => {
+                                    handleReaction(message.id, emojiData.emoji)
+                                  }}
+                                  theme={Theme.LIGHT}
+                                  width={300}
+                                  height={350}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            
+                            {renderMessageActions?.(message)}
+                          </div>
+                        )}
                       </div>
                       
                       {showAvatars && isOwn && (
@@ -657,6 +666,12 @@ export function MessageList({
                             {getInitials(message.senderName)}
                           </AvatarFallback>
                         </Avatar>
+                      )}
+
+                      {isDeleting && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80">
+                          <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
                       )}
                     </div>
                   )

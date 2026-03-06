@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useMutation } from 'convex/react'
+
+import { usePreview } from '@/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
 import type { Channel } from '../types'
 import { TYPING_TIMEOUT_MS, TYPING_UPDATE_INTERVAL_MS } from './constants'
@@ -14,6 +16,8 @@ interface UseTypingOptions {
 }
 
 export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderDetails }: UseTypingOptions) {
+  const { isPreviewMode } = usePreview()
+  const selectedChannelId = selectedChannel?.id ?? null
   const composerFocusedRef = useRef(false)
   const isTypingRef = useRef(false)
   const lastTypingUpdateRef = useRef(0)
@@ -23,7 +27,7 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
 
   const sendTypingUpdate = useCallback(
     async (isTyping: boolean) => {
-      if (!userId || !workspaceId || !selectedChannel) {
+      if (isPreviewMode || !userId || !workspaceId || !selectedChannel) {
         return
       }
 
@@ -49,7 +53,7 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
         console.warn('[collaboration] failed to update typing status', error)
       }
     },
-    [resolveSenderDetails, selectedChannel, setTyping, userId, workspaceId]
+    [isPreviewMode, resolveSenderDetails, selectedChannel, setTyping, userId, workspaceId]
   )
 
   const stopTyping = useCallback(() => {
@@ -100,10 +104,16 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
   }, [stopTyping])
 
   useEffect(() => {
+    if (selectedChannelId === null) {
+      return () => {
+        stopTyping()
+      }
+    }
+
     return () => {
       stopTyping()
     }
-  }, [selectedChannel?.id, stopTyping])
+  }, [selectedChannelId, stopTyping])
 
   useEffect(() => {
     const handleBeforeUnload = () => {

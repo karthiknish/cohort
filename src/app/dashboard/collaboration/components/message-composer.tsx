@@ -25,9 +25,9 @@ export function PendingAttachmentsList({
   if (attachments.length === 0) return null
 
   return (
-    <div className="space-y-2 rounded-md border border-dashed border-muted/60 bg-muted/20 p-3">
+    <div className="space-y-2 rounded-md border border-dashed border-muted/60 bg-muted/20 p-3 animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Attachments ready to upload</span>
+        <span>{attachments.length} attachment{attachments.length === 1 ? '' : 's'} ready to send</span>
         {uploading && (
           <span className="inline-flex items-center gap-1">
             <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> Uploading…
@@ -40,7 +40,7 @@ export function PendingAttachmentsList({
           return (
             <div
               key={attachment.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-muted/50 bg-background p-2 text-sm"
+              className="flex items-center justify-between gap-3 rounded-md border border-muted/50 bg-background p-2 text-sm animate-in fade-in-50 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
             >
               <div className="flex min-w-0 items-center gap-2">
                 {isImageType ? (
@@ -187,7 +187,7 @@ export function MessageComposer({
             <Button
               onClick={onSend}
               disabled={isSendDisabled}
-              className="inline-flex h-8 items-center gap-2 text-xs"
+              className="inline-flex h-8 items-center gap-2 text-xs transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
             >
               {sending ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
