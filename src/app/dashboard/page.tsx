@@ -1,64 +1,23 @@
 'use client'
 
-import Link from 'next/link'
-import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState, Suspense, useCallback } from 'react'
-import {
-  ArrowUpRight,
-  Shield,
-  Trophy,
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { formatCurrency } from '@/lib/utils'
 import { FadeIn } from '@/components/ui/animate-in'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Skeleton } from '@/components/ui/skeleton'
-import { ActivityWidget } from '@/components/activity/activity-widget'
-import { DashboardFilterBar } from '@/components/dashboard/dashboard-filter-bar'
 import { DashboardHeader } from '@/components/dashboard/dashboard-header'
-
-// Lazy load heavy chart component for better initial page load
-const PerformanceChart = dynamic(
-  () => import('@/components/dashboard/performance-chart').then((m) => m.PerformanceChart),
-  {
-    loading: () => <Skeleton className="h-[350px] w-full rounded-lg" />,
-    ssr: false,
-  }
-)
 
 // New components
 import { OnboardingCard } from '@/components/dashboard/onboarding-card'
-import { QuickActions } from '@/components/dashboard/quick-actions'
 import { StatsCards } from '@/components/dashboard/stats-cards'
-import { TasksCard } from '@/components/dashboard/tasks-card'
-import { ComparisonTable } from '@/components/dashboard/comparison/comparison-table'
-import { ComparisonSummaryTile } from '@/components/dashboard/comparison/comparison-summary-tile'
-import { ComparisonInsights } from '@/components/dashboard/comparison/comparison-insights'
-import { AdInsightsWidget } from '@/components/dashboard/ad-insights-widget'
-import { ClientProposalsCard } from './components/client-proposals-card'
-import { AttentionSummaryCard } from '@/components/dashboard/attention-summary-card'
-import { WorkspaceTrendsCard } from '@/components/dashboard/workspace-trends-card'
-import { AdvancedMetricsPreviewCards } from '@/components/dashboard/advanced-metrics-preview-cards'
-import { PlatformComparisonSummaryCard } from '@/components/dashboard/platform-comparison-summary-card'
+import { DashboardMainColumn } from './components/dashboard-main-column'
+import { DashboardRoleBanner } from './components/dashboard-role-banner'
+import { DashboardSidebar } from './components/dashboard-sidebar'
 
 // Types
 import type { DashboardTaskItem } from '@/types/dashboard'
-import { formatRoas } from '@/lib/dashboard-utils'
-
-// Local page components and utilities
-import { MiniTaskKanban } from './components'
 
 // Extracted hooks and utilities
 import {
@@ -193,25 +152,6 @@ export default function DashboardPage() {
 
   const statsLoading = metricsLoading || tasksLoading
 
-  const advancedMetrics = useMemo(() => {
-    const totals = metrics.reduce(
-      (acc, metric) => {
-        acc.spend += metric.spend
-        acc.revenue += metric.revenue ?? 0
-        acc.clicks += metric.clicks
-        acc.conversions += metric.conversions
-        return acc
-      },
-      { spend: 0, revenue: 0, clicks: 0, conversions: 0 },
-    )
-
-    const mer = totals.spend > 0 ? totals.revenue / totals.spend : 0
-    const aov = totals.conversions > 0 ? totals.revenue / totals.conversions : 0
-    const rpc = totals.clicks > 0 ? totals.revenue / totals.clicks : 0
-
-    return { mer, aov, rpc }
-  }, [metrics])
-
   const errorStates = useMemo(
     () => [
       metricsError && { id: 'metrics', title: 'Ad metrics unavailable', message: metricsError },
@@ -293,52 +233,7 @@ export default function DashboardPage() {
           </FadeIn>
         )}
 
-        {/* Role-specific welcome messages */}
-        {user?.role === 'admin' && (
-          <FadeIn>
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <Shield className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Admin Dashboard</p>
-                  <p className="text-sm text-muted-foreground">
-                    You have full access to all workspaces, team management, and administrative functions.
-                  </p>
-                </div>
-                <Link href="/admin">
-                  <Button variant="outline" size="sm" className="border-primary/20 hover:bg-primary/10">
-                    Admin Panel <ArrowUpRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </FadeIn>
-        )}
-
-        {user?.role === 'client' && (
-          <FadeIn>
-            <Card className="border-green-200 bg-green-50">
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                  <Trophy className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-green-900">Welcome, {user?.name?.split(' ')[0] || 'Client'}!</p>
-                  <p className="text-sm text-green-700">
-                    View your project progress, proposals, and collaborate with your team.
-                  </p>
-                </div>
-                <Link href="/dashboard/collaboration">
-                  <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-100">
-                    Messages <ArrowUpRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </FadeIn>
-        )}
+        <DashboardRoleBanner userRole={user?.role} userDisplayName={user?.name} />
 
         <div id="tour-stats-cards">
           <StatsCards
@@ -348,220 +243,52 @@ export default function DashboardPage() {
           />
         </div>
 
-        <FadeIn>
-          <AttentionSummaryCard
-            taskSummary={taskSummary}
-            proposals={proposals}
-            integrationSummary={integrationSummary}
-            loading={{
-              proposals: proposalsLoading,
-              integrations: integrationsLoading,
-            }}
-          />
-        </FadeIn>
-
-        {/* Advanced metrics preview (MER/AOV/RPC) */}
-        <FadeIn>
-          <AdvancedMetricsPreviewCards
-            mer={advancedMetrics.mer}
-            aov={advancedMetrics.aov}
-            rpc={advancedMetrics.rpc}
-            isLoading={metricsLoading}
-          />
-        </FadeIn>
-
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            <FadeIn id="tour-performance-chart">
-              <PerformanceChart metrics={chartData} loading={statsLoading} />
-            </FadeIn>
+          <DashboardMainColumn
+            userRole={user?.role}
+            clients={clients}
+            canCompareAcrossClients={canCompareAcrossClients}
+            comparisonClientIds={comparisonClientIds}
+            onComparisonClientChange={handleComparisonClientChange}
+            comparisonPeriodDays={comparisonPeriodDays}
+            onComparisonPeriodChange={setComparisonPeriodDays}
+            comparisonHasSelection={comparisonHasSelection}
+            comparisonError={comparisonError}
+            comparisonLoading={comparisonLoading}
+            comparisonSummaries={comparisonSummaries}
+            comparisonAggregate={comparisonAggregate}
+            comparisonTargets={comparisonTargets}
+            chartData={chartData}
+            statsLoading={statsLoading}
+            proposals={proposals}
+            proposalsLoading={proposalsLoading}
+            proposalsError={proposalsError}
+          />
 
-            {/* Comparison section - Admin and Team only */}
-            {user?.role !== 'client' && (
-              <FadeIn>
-                <div className="space-y-4">
-                  <DashboardFilterBar
-                    clients={clients}
-                    selectedClientIds={comparisonClientIds}
-                    onClientChange={handleComparisonClientChange}
-                    periodDays={comparisonPeriodDays}
-                    onPeriodChange={setComparisonPeriodDays}
-                    canCompare={Boolean(canCompareAcrossClients)}
-                  />
-                  {comparisonHasSelection && !comparisonError && (comparisonLoading || comparisonSummaries.length > 0) && (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {comparisonLoading || !comparisonAggregate ? (
-                        <>
-                          <Skeleton className="h-24 w-full" />
-                          <Skeleton className="h-24 w-full" />
-                          <Skeleton className="h-24 w-full" />
-                          <Skeleton className="h-24 w-full" />
-                        </>
-                      ) : (
-                        <>
-                          <ComparisonSummaryTile
-                            label="Combined revenue"
-                            value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalRevenue, comparisonAggregate.currency) : '—'}
-                            helper={comparisonAggregate.mixedCurrencies
-                              ? 'Totals unavailable for mixed currencies'
-                              : `${comparisonAggregate.selectionCount} workspace${comparisonAggregate.selectionCount > 1 ? 's' : ''}`}
-                            tooltip="Total revenue across all selected workspaces"
-                          />
-                          <ComparisonSummaryTile
-                            label="Ad spend"
-                            value={comparisonAggregate.currency ? formatCurrency(comparisonAggregate.totalAdSpend, comparisonAggregate.currency) : '—'}
-                            helper={comparisonAggregate.mixedCurrencies ? 'Align currencies to compare spend' : 'Same selection window'}
-                            tooltip="Total ad spend across all selected workspaces"
-                          />
-                          <ComparisonSummaryTile
-                            label="Conversions"
-                            value={comparisonAggregate.totalConversions.toLocaleString('en-US')}
-                            helper="Combined conversions across selected workspaces"
-                            tooltip="Total conversion events during the selected period"
-                          />
-                          <ComparisonSummaryTile
-                            label="Weighted ROAS"
-                            value={comparisonAggregate.mixedCurrencies || comparisonAggregate.avgRoas === null ? '—' : formatRoas(comparisonAggregate.avgRoas)}
-                            helper={comparisonAggregate.mixedCurrencies ? 'Unavailable for mixed currencies' : 'Revenue ÷ ad spend across selection'}
-                            tooltip="Average ROAS weighted by ad spend"
-                          />
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {comparisonError ? (
-                    <Alert variant="destructive">
-                      <AlertTitle>Comparison data unavailable</AlertTitle>
-                      <AlertDescription>{comparisonError}</AlertDescription>
-                    </Alert>
-                  ) : (
-                    <Card className="shadow-sm">
-                      <CardHeader className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <CardTitle className="text-base">Workspace comparison</CardTitle>
-                          <CardDescription>
-                            {comparisonHasSelection
-                              ? `Tracking ${comparisonTargets.length} workspace${comparisonTargets.length > 1 ? 's' : ''} over the last ${comparisonPeriodDays} days.`
-                              : 'Pick at least one workspace to start comparing performance.'}
-                          </CardDescription>
-                        </div>
-                        {!canCompareAcrossClients && (
-                          <Badge variant="secondary" className="text-xs">Admin view only</Badge>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                        <ComparisonTable rows={comparisonSummaries} loading={comparisonLoading} hasSelection={comparisonHasSelection} />
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </FadeIn>
-            )}
-
-            {/* Client-specific: Project progress overview */}
-            {user?.role === 'client' && (
-              <FadeIn>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <Card className="shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-base">Your Projects</CardTitle>
-                        <CardDescription>Track progress on your active projects</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="text-sm text-muted-foreground">
-                            View your project updates, deliverables, and timelines in the Projects section.
-                          </div>
-                          <Link href="/dashboard/projects">
-                            <Button variant="outline" size="sm">
-                              View All Projects <ArrowUpRight className="ml-1 h-3 w-3" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <ClientProposalsCard proposals={proposals} loading={proposalsLoading} />
-                  </div>
-
-                  {/* Client-focused: recent updates in-context */}
-                  <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                    <ActivityWidget />
-                  </Suspense>
-
-                  {proposalsError && (
-                    <Alert variant="destructive">
-                      <AlertTitle>Proposals unavailable</AlertTitle>
-                      <AlertDescription>{proposalsError}</AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </FadeIn>
-            )}
-          </div>
-
-          <div className="space-y-6">
-            {/* Platform comparison summary */}
-            <FadeIn>
-              <PlatformComparisonSummaryCard metrics={metrics} isLoading={metricsLoading} />
-            </FadeIn>
-            <FadeIn>
-              <QuickActions compact />
-            </FadeIn>
-
-            <FadeIn>
-              <MiniTaskKanban tasks={rawTasks} loading={tasksLoading} />
-            </FadeIn>
-
-            {/* Ad Insights Widget - Show for Admin/Team with ad metrics */}
-            {user?.role !== 'client' && (
-              <FadeIn>
-                <AdInsightsWidget
-                  providerSummaries={providerSummaries}
-                  loading={metricsLoading}
-                  showEmpty={false}
-                />
-              </FadeIn>
-            )}
-
-            {/* Comparison insights - Admin/Team only */}
-            {user?.role !== 'client' && !comparisonError && comparisonHasSelection && (comparisonLoading || comparisonSummaries.length > 0) && (
-              <FadeIn>
-                <Card className="shadow-sm">
-                              {/* Trending across workspaces - Admin only */}
-                              {user?.role === 'admin' && !comparisonError && comparisonTargets.length > 1 && comparisonAggregate && (
-                                <FadeIn>
-                                  <WorkspaceTrendsCard
-                                    summaries={comparisonSummaries}
-                                    periodDays={comparisonPeriodDays}
-                                    mixedCurrencies={comparisonAggregate.mixedCurrencies}
-                                  />
-                                </FadeIn>
-                              )}
-                  <CardHeader>
-                    <CardTitle className="text-base">Workspace highlights</CardTitle>
-                    <CardDescription>Auto-generated callouts based on the selected period.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ComparisonInsights insights={comparisonInsights} loading={comparisonLoading} />
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            )}
-
-            <FadeIn>
-              <TasksCard tasks={filteredUpcomingTasks} loading={tasksLoading} />
-            </FadeIn>
-
-            {user?.role !== 'client' && (
-              <FadeIn>
-                <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                  <ActivityWidget />
-                </Suspense>
-              </FadeIn>
-            )}
-          </div>
+          <DashboardSidebar
+            userRole={user?.role}
+            selectedClient={selectedClient}
+            metrics={metrics}
+            metricsLoading={metricsLoading}
+            taskSummary={taskSummary}
+            tasksLoading={tasksLoading}
+            proposals={proposals}
+            proposalsLoading={proposalsLoading}
+            integrationSummary={integrationSummary}
+            integrationsLoading={integrationsLoading}
+            lastRefreshed={lastRefreshed}
+            rawTasks={rawTasks}
+            filteredUpcomingTasks={filteredUpcomingTasks}
+            providerSummaries={providerSummaries}
+            comparisonError={comparisonError}
+            comparisonHasSelection={comparisonHasSelection}
+            comparisonLoading={comparisonLoading}
+            comparisonSummaries={comparisonSummaries}
+            comparisonInsights={comparisonInsights}
+            comparisonAggregate={comparisonAggregate}
+            comparisonTargets={comparisonTargets}
+            comparisonPeriodDays={comparisonPeriodDays}
+          />
         </div>
       </div>
     </TooltipProvider>

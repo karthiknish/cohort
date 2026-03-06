@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import { memo, useMemo, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 
 import { Card, CardContent, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -65,8 +67,8 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
     !loading && stat.emphasis === 'negative' && 'text-red-600',
   )
 
-  return (
-    <Card className="shadow-sm">
+  const cardBody = (
+    <Card className={cn('shadow-sm transition-colors', stat.href && 'group-hover:border-primary/60 group-hover:shadow-md')}>
       <CardContent className="flex items-center justify-between p-6">
         <div className="space-y-2">
           <CardDescription className="text-xs font-medium uppercase text-muted-foreground">
@@ -74,7 +76,7 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
               {stat.urgency && (
                 <span
                   className={cn('h-2.5 w-2.5 rounded-full', getUrgencyDotClass(stat.urgency))}
-                  aria-label={`${stat.urgency} urgency`}
+                  aria-hidden="true"
                   title={`${stat.urgency} urgency`}
                 />
               )}
@@ -85,6 +87,12 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
           <div className="text-xs text-muted-foreground">
             {loading ? <Skeleton className="h-4 w-32" /> : stat.helper}
           </div>
+          {!loading && stat.href && stat.featureLabel ? (
+            <div className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+              {stat.featureLabel}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </div>
+          ) : null}
         </div>
         <div className="rounded-full bg-primary/10 p-3">
           <Icon className="h-6 w-6 text-primary" />
@@ -92,6 +100,16 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
       </CardContent>
     </Card>
   )
+
+  if (stat.href) {
+    return (
+      <Link href={stat.href} className="group block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+        {cardBody}
+      </Link>
+    )
+  }
+
+  return cardBody
 })
 
 function getUrgencyDotClass(level: SummaryStat['urgency']): string {

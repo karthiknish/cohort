@@ -19,6 +19,8 @@ export type SummaryStat = {
   value: string
   helper: string
   icon: LucideIcon
+  href?: string
+  featureLabel?: string
   emphasis?: 'positive' | 'negative' | 'neutral'
   urgency?: 'high' | 'medium' | 'low'
 }
