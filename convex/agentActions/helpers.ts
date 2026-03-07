@@ -1,11 +1,35 @@
 export {
-  SYSTEM_PROMPT,
-  agentRequestContext,
-  fallbackTitleFromMessage,
-  generateConversationTitle,
-  parseGeminiResponse,
-  requireIdentity,
-} from './prompting'
+  formatConversationHistory,
+  resolveClientIdFromParams,
+  resolveProjectContextFromParams,
+} from './helpers/context'
+
+export {
+  getPeriodWindow,
+  parseDateRangeFromIntent,
+  parseDateToMs,
+  resolveAgentDueDateMs,
+  resolveReportWindow,
+} from './helpers/dates'
+
+export {
+  formatCurrency,
+  formatPercent,
+  formatRatio,
+  formatWholeNumber,
+} from './helpers/formatting'
+
+export {
+  extractCampaignQueryFromIntent,
+  getProviderSummaryLabel,
+  resolveDeterministicAgentIntent,
+  resolveWeakCommandClarification,
+} from './helpers/intents'
+
+export {
+  mergeProposalPatch,
+  resolveProposalId,
+} from './helpers/proposals'
 
 export {
   asErrorMessage,
@@ -26,33 +50,10 @@ export {
 } from './helpers/values'
 
 export {
-  getPeriodWindow,
-  parseDateRangeFromIntent,
-  parseDateToMs,
-  resolveAgentDueDateMs,
-  resolveReportWindow,
-} from './helpers/dates'
-
-export {
-  formatCurrency,
-  formatPercent,
-  formatRatio,
-  formatWholeNumber,
-} from './helpers/formatting'
-
-export {
-  formatConversationHistory,
-  resolveClientIdFromParams,
-} from './helpers/context'
-
-export {
-  mergeProposalPatch,
-  resolveProposalId,
-} from './helpers/proposals'
-
-export {
-  extractCampaignQueryFromIntent,
-  getProviderSummaryLabel,
-  resolveDeterministicAgentIntent,
-  resolveWeakCommandClarification,
-} from './helpers/intents'
+  agentRequestContext,
+  fallbackTitleFromMessage,
+  generateConversationTitle,
+  parseGeminiResponse,
+  requireIdentity,
+  SYSTEM_PROMPT,
+} from './prompting'

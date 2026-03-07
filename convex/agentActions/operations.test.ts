@@ -258,6 +258,61 @@ describe('safeExecuteOperation', () => {
     })
   })
 
+  it('creates tasks from active project context and returns a project task route', async () => {
+    const runQuery = vi.fn().mockResolvedValueOnce({
+      legacyId: 'project_42',
+      name: 'Website Refresh',
+      clientId: 'client_42',
+      clientName: 'Client Forty Two',
+    })
+    const runMutation = vi.fn().mockResolvedValueOnce('task_42')
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'createTask',
+        params: {
+          title: 'Review homepage revisions',
+        },
+        context: {
+          activeProjectId: 'project_42',
+        },
+      },
+    )
+
+    expect(runMutation).toHaveBeenCalledWith(expect.anything(), {
+      workspaceId: 'ws_1',
+      title: 'Review homepage revisions',
+      description: null,
+      status: 'todo',
+      priority: 'medium',
+      assignedTo: [],
+      clientId: 'client_42',
+      client: 'Client Forty Two',
+      projectId: 'project_42',
+      projectName: 'Website Refresh',
+      dueDateMs: null,
+      tags: [],
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      route: '/dashboard/tasks?projectId=project_42&projectName=Website+Refresh&clientId=client_42&clientName=Client+Forty+Two',
+      data: {
+        taskId: 'task_42',
+        title: 'Review homepage revisions',
+        clientId: 'client_42',
+        clientName: 'Client Forty Two',
+        projectId: 'project_42',
+        projectName: 'Website Refresh',
+      },
+      userMessage: 'Created task “Review homepage revisions” (task_42).',
+    })
+  })
+
   it('updates the active project context when no project id param is provided', async () => {
     const runQuery = vi.fn().mockResolvedValueOnce({
       legacyId: 'project_42',

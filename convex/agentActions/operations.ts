@@ -1,3 +1,4 @@
+import { buildProjectRoute, buildProjectTasksRoute } from '../../src/lib/project-routes'
 import { mergeProposalForm } from '../../src/lib/proposals'
 import { api } from '../_generated/api'
 import type { ActionCtx } from '../_generated/server'
@@ -25,6 +26,7 @@ import {
   parseDateToMs,
   resolveAgentDueDateMs,
   resolveClientIdFromParams,
+  resolveProjectContextFromParams,
   resolveProposalId,
   resolveReportWindow,
   unwrapConvexResult,
@@ -334,12 +336,6 @@ function matchesCampaignQuery(value: string | null | undefined, campaignQuery: s
 
   const tokens = campaignQuery.split(' ').filter(Boolean)
   return tokens.length > 0 && tokens.every((token) => normalizedValue.includes(token))
-}
-
-function buildProjectRoute(projectId: string, projectName?: string | null): string {
-  const params = new URLSearchParams({ projectId })
-  if (projectName) params.set('projectName', projectName)
-  return `/dashboard/projects?${params.toString()}`
 }
 
 function buildProviderBreakdownFromRows(
@@ -687,7 +683,22 @@ const operationHandlers: Record<string, OperationHandler> = {
     })
     const tags = asStringArray(input.params.tags)
     const assignedTo = asStringArray(input.params.assignedTo)
-    const { clientId, clientName } = await resolveClientIdFromParams(ctx, input.workspaceId, input.params, input.context)
+    const projectContext = await resolveProjectContextFromParams(ctx, input.workspaceId, input.params, input.context)
+    const resolvedClient = projectContext.clientId
+      ? {
+        clientId: projectContext.clientId,
+        clientName: projectContext.clientName,
+      }
+      : await resolveClientIdFromParams(ctx, input.workspaceId, input.params, input.context)
+
+    const route = projectContext.projectId
+      ? buildProjectTasksRoute({
+        projectId: projectContext.projectId,
+        projectName: projectContext.projectName,
+        clientId: resolvedClient.clientId || undefined,
+        clientName: resolvedClient.clientName,
+      })
+      : '/dashboard/tasks'
 
     const rawResult = await ctx.runMutation(api.tasks.createTask, {
       workspaceId: input.workspaceId,
@@ -696,8 +707,10 @@ const operationHandlers: Record<string, OperationHandler> = {
       status,
       priority,
       assignedTo,
-      clientId,
-      client: clientName ?? null,
+      clientId: resolvedClient.clientId,
+      client: resolvedClient.clientName ?? null,
+      projectId: projectContext.projectId ?? null,
+      projectName: projectContext.projectName ?? null,
       dueDateMs,
       tags,
     })
@@ -713,9 +726,13 @@ const operationHandlers: Record<string, OperationHandler> = {
       data: {
         taskId,
         title,
-        route: '/dashboard/tasks',
+        clientId: resolvedClient.clientId || null,
+        clientName: resolvedClient.clientName ?? null,
+        projectId: projectContext.projectId,
+        projectName: projectContext.projectName,
+        route,
       },
-      route: '/dashboard/tasks',
+      route,
       userMessage: taskId ? `Created task “${title}” (${taskId}).` : `Created task “${title}”.`,
     }
   },
